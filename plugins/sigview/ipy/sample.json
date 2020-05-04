@@ -1,0 +1,19 @@
+{
+    "gui": false,
+    "database": "atlas-3.2.0-rc/itos/rec/atlas/fsw/*.rec",
+    "threads": 4,
+    "block": false,
+
+    "source": {
+        "type": "FILE",
+        "files": "Data/ATL00-1044_20190502000000_P01_01.dat",
+        "format": "CCSDS"
+    },
+
+    "metric": {
+        "key": "CALCULATED_KEY CDS",
+	    "ccsds": {
+	        "A_DFC2.HK": ["SpwRxProtocolIDErr"]
+	    }
+    }
+}       

@@ -1,0 +1,2 @@
+file (GLOB SCRIPTS util/*.lua)
+install (FILES ${SCRIPTS} DESTINATION ${CONFDIR})
