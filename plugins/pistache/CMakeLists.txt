@@ -17,6 +17,7 @@ if (PISTACHE_LIB)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/pistache.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/LuaClient.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RouteHandler.cpp
     )
 
@@ -30,6 +31,7 @@ if (PISTACHE_LIB)
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/pistache.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.h
+            ${CMAKE_CURRENT_LIST_DIR}/LuaClient.h
             ${CMAKE_CURRENT_LIST_DIR}/RouteHandler.h
         DESTINATION
             ${INCDIR}

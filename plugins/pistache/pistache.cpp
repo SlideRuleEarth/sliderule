@@ -40,6 +40,7 @@
 int pistache_open (lua_State *L)
 {
     static const struct luaL_Reg pistache_functions[] = {
+        {"client",      LuaClient::luaCreate},
         {"endpoint",    LuaEndpoint::luaCreate},
         {NULL,          NULL}
     };
