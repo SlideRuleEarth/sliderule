@@ -43,6 +43,12 @@ const struct luaL_Reg LuaClient::LuaMetaTable[] = {
 
 /*----------------------------------------------------------------------------
  * luaCreate - client([<output stream>], [<number of threads>])
+ *
+ *  If an output stream is provided, then the client is asynchronous and will
+ *  post all responses to the provided stream.
+ *
+ *  If no output stream is provided, then the client will block on each request
+ *  and return each response directly back to Lua.
  *----------------------------------------------------------------------------*/
 int LuaClient::luaCreate (lua_State* L)
 {
@@ -99,11 +105,13 @@ LuaClient::~LuaClient(void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaRoute - :request(<action>, <url>, [<body>])
+ * luaRoute - :request(<action>, <url>, [<body>], [<timeout>])
  *----------------------------------------------------------------------------*/
 int LuaClient::luaRequest(lua_State* L)
 {
     bool status = false;
+    bool in_error = false;
+    int num_obj_to_return = 1;
 
     try
     {
@@ -129,10 +137,23 @@ int LuaClient::luaRequest(lua_State* L)
         }
 
         /* Get URL */
-        const char* url = getLuaString(L, 2);
+        const char* url = getLuaString(L, 3);
 
-        /* Get Parameters */
-        const char* body = getLuaString(L, 3, true, NULL);
+        /* Get Body */
+        bool body_provided = false;
+        const char* body = getLuaString(L, 4, true, NULL, &body_provided);
+        if(body_provided && action == LuaEndpoint::GET)
+        {
+            mlog(WARNING, "Body ignored for GET requests\n");
+        }
+
+        /* Get Timeout */
+        bool timeout_provided = false;
+        int timeout = getLuaInteger(L, 5, true, SYS_TIMEOUT, &timeout_provided);
+        if(timeout_provided && lua_obj->outQ)
+        {
+            mlog(WARNING, "Timeout ignored for asynchronous clients\n");
+        }
 
         /* Make Request */
         if(action == LuaEndpoint::GET)
@@ -142,8 +163,66 @@ int LuaClient::luaRequest(lua_State* L)
         }
         else if(action == LuaEndpoint::POST)
         {
+            SafeString lua_result;
             auto resp = lua_obj->client.post(url).body(body).send();
-            status = true;
+            resp.then(  [&](Http::Response response)
+                        {
+                            auto response_body = response.body();
+                            if(lua_obj->outQ)
+                            {
+                                /* Asynchronously Post Response */
+                                if(!response_body.empty())
+                                {
+                                    lua_obj->outQ->postString("%s", response_body.c_str());
+                                }
+                                else if(response.code() != Http::Code::Ok)
+                                {
+                                    mlog(ERROR, "Failed to get respone on post to %s\n", url);
+                                }
+
+                                /* Assume Success */
+                                status = true;
+                            }
+                            else
+                            {
+                                /* Save Off and Signal Response */
+                                lua_obj->requestSignal.lock();
+                                {
+                                    lua_result += response_body.c_str();
+                                    lua_obj->requestSignal.signal(REQUEST_SIGNAL);
+                                }
+                                lua_obj->requestSignal.unlock();
+                            }
+                        },
+                        [&](std::exception_ptr exc)
+                        {
+                            try { std::rethrow_exception(exc); }
+                            catch (const std::exception &e)
+                            {
+                                mlog(CRITICAL, "Failed to get response on post to %s: %s\n", url, e.what());
+                                in_error = true;
+                            }
+                        });
+
+            /* Block on Synchronous Response */
+            if(!lua_obj->outQ)
+            {
+                lua_obj->requestSignal.lock();
+                {
+                    if(lua_obj->requestSignal.wait(REQUEST_SIGNAL, timeout))
+                    {
+                        lua_pushlstring(L, lua_result.getString(), lua_result.getLength());
+                        num_obj_to_return = 2;
+                        status = true;
+                    }
+                    else if(!in_error)
+                    {
+                        mlog(CRITICAL, "Timeout on response on post to %s\n", url);
+                    }
+
+                }
+                lua_obj->requestSignal.unlock();
+            }
         }
         else if(action == LuaEndpoint::PUT)
         {
@@ -157,5 +236,5 @@ int LuaClient::luaRequest(lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status);
+    return returnLuaStatus(L, status, num_obj_to_return);
 }

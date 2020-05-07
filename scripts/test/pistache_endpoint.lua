@@ -21,15 +21,20 @@ server:name("myengine")
 
 sys.wait(1)
 
+client = pistache.client()
+
 print('\n------------------\nTest01: Echo\n------------------')
-os.execute("curl -d hello=world http://127.0.0.01:9081/echo")
-print('')
+body = "hello=world"
+response, retcode = client:request(pistache.POST, "http://127.0.0.01:9081/echo", body)
+runner.check(retcode)
+runner.check(response == body)
+print(response, body)
 
 print('\n------------------\nTest02: Engine\n------------------')
-os.execute(string.format("curl -d '%s' http://127.0.0.01:9081/engine/example_engine_endpoint", json_object))
+--os.execute(string.format("curl -d '%s' http://127.0.0.01:9081/engine/example_engine_endpoint", json_object))
 
 print('\n------------------\nTest03: Source\n------------------')
-os.execute(string.format("curl -d '%s' http://127.0.0.01:9081/source/example_source_endpoint", json_object))
+--os.execute(string.format("curl -d '%s' http://127.0.0.01:9081/source/example_source_endpoint", json_object))
 
 
 -- Report Results --

@@ -145,6 +145,8 @@ LuaEndpoint::~LuaEndpoint(void)
 {
     active = false;
     delete serverPid;
+
+    mlog(CRITICAL, "Shutting down HTTP endpoints on port %s\n", httpEndpoint->getPort().toString().c_str());
     httpEndpoint->shutdown();
 }
 
@@ -301,8 +303,17 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
 void* LuaEndpoint::serverThread (void* parm)
 {
     LuaEndpoint* server = (LuaEndpoint*)parm;
-    server->httpEndpoint->setHandler(server->router.handler());
-    server->httpEndpoint->serveThreaded();
+
+    try
+    {
+        server->httpEndpoint->setHandler(server->router.handler());
+        server->httpEndpoint->serveThreaded();
+    }
+    catch(const std::exception& e)
+    {
+        mlog(CRITICAL, "Failed to start server thread for %s: %s\n", server->getName(), e.what());
+    }
+
     return NULL;
 }
 
