@@ -165,6 +165,11 @@ void LuaEndpoint::echoHandler (const Rest::Request& request, Http::ResponseWrite
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
 
+    /* Build Header */
+    response.headers().add<Http::Header::Server>(ServerHeader.getString());
+    response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
+
+    /* Send Response */
     response.send(Http::Code::Ok, request.body().c_str());
 }
 
