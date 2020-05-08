@@ -1,14 +1,16 @@
-find_library (LUA_LIB lua)
+find_package (Lua "5.3")
 find_library (READLINE_LIB readline)
 
-if (LUA_LIB AND READLINE_LIB)
+if (LUA_FOUND AND READLINE_LIB)
 
     message (STATUS "Including core package")
 
     target_compile_definitions (sliderule PUBLIC _CORE_)
     target_compile_definitions (sliderule PRIVATE LUA_USE_READLINE)
 
-    target_link_libraries (sliderule PUBLIC lua)
+    target_link_libraries (sliderule PUBLIC ${LUA_LIBRARIES})
+    target_include_directories (sliderule PUBLIC ${LUA_INCLUDE_DIR})
+
     target_link_libraries (sliderule PUBLIC readline)
 
     target_sources (sliderule

@@ -6,15 +6,14 @@ A distributed Lua framework for science data processing.
 
 1. Linux Package List (Ubuntu)
    * build-essential
-   * libreadline6-dev
-   * cmake (3.13.0 or greater)
+   * libreadline-dev
+   * liblua5.3-dev
 
-2. Lua (>= 5.3)
-   * Download the latest source from https://www.lua.org (as of this readme, version 5.3.4 has been tested).
-   * Untar/unzip the source and cd into the base directory (e.g. lua-5.3.4)
-   * `make CC="g++" MYCFLAGS="-fpermissive" linux`
-   * `sudo make install`
-   * Note this installs into /usr/local and may supercede a system lua installation
+2. CMake (3.13.0 or greater)
+   * see https://cmake.org/download/ for different options for installing a recent version of cmake
+
+3. Pistache (used for pistache plugin)
+   * see https://github.com/oktal/pistache for instructions on how to install
 
 ## Building with CMake
 
