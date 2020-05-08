@@ -87,7 +87,7 @@ LuaClient::LuaClient(lua_State* L,  const char* outq_name, size_t num_threads):
     }
 
     /* Set Number of Threads */
-    auto opts = Http::Client::options().threads(1).maxConnectionsPerHost(num_threads);
+    auto opts = Http::Client::options().threads(num_threads).maxConnectionsPerHost(8);
     client.init(opts);
 }
 
@@ -97,6 +97,8 @@ LuaClient::LuaClient(lua_State* L,  const char* outq_name, size_t num_threads):
 LuaClient::~LuaClient(void)
 {
     if(outQ) delete outQ;
+
+    mlog(CRITICAL, "Shutting down HTTP client %s\n", getName());
     client.shutdown();
 }
 
