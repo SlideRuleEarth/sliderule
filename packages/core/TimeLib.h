@@ -17,8 +17,8 @@
  * under the License.
  */
 
-/* 
- * Notes: 
+/*
+ * Notes:
  *  1. All GPS times are represented as mechanical milliseconds since GPS epoch of 6 Jan 1980 00:00:00
  *  2. All GMT times are represented as UTC and are expressed in years, days, etc.  These times include leap seconds.
  */
@@ -77,7 +77,7 @@ class TimeLib
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-        
+
         static void         initLib         (void);
         static void         deinitLib       (void);
         static double       latchtime       (void); // system call, returns seconds
@@ -88,8 +88,8 @@ class TimeLib
         static int64_t      gmt2gpstime     (gmt_time_t gmt_time); // returns milliseconds from gps epoch to time specified in gmt_time
         static int64_t      str2gpstime     (const char* time_str); // returns milliseconds from gps epoch to time specified in time_str
         static int          dayofyear       (int year, int month, int day_of_month);
-        static int          getleapmsec    (int64_t current_time, int64_t start_time = TIME_GPS_EPOCH_START);
-    
+        static int          getleapmsec     (int64_t current_time, int64_t start_time = TIME_GPS_EPOCH_START);
+
     private:
 
         /*--------------------------------------------------------------------
@@ -100,13 +100,13 @@ class TimeLib
         static const int HEARTBEAT_PERIOD_MS = 1;
         static const int HEARTBEATS_PER_SECOND = 1000; // must be consistent with HEARTBEAT_PERIOD
         static const int MAX_GPS_YEARS = 100;
-        
+
         static const int GpsDaysToStartOfYear[MAX_GPS_YEARS];
-        
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        
+
         static int64_t  baseTimeMs;
         static int64_t  runningTimeUs;
         static int64_t  stepTimeUs;
@@ -120,9 +120,9 @@ class TimeLib
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-        
+
         static void heartbeat(void);
-        static void parsenistfile(void);	
+        static void parsenistfile(void);
 };
 
 #endif  /* __time_lib__ */

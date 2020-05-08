@@ -37,14 +37,6 @@ if (PISTACHE_LIB)
             ${INCDIR}
     )
 
-    install (
-        FILES
-            ${CMAKE_CURRENT_LIST_DIR}/example_source_endpoint.lua
-            ${CMAKE_CURRENT_LIST_DIR}/example_engine_endpoint.lua
-        DESTINATION
-            ${CONFDIR}
-    )
-
     install (TARGETS pistacheLib LIBRARY DESTINATION ${CONFDIR})
 
 else ()

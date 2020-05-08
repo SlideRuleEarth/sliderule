@@ -153,7 +153,7 @@ int LuaLibraryTime::ltime_cds2gmt (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * ltime_gmt2gps - year, day, hour, minute, second, millisecond = time.cds2gmt(day, millisecond)
+ * ltime_gmt2gps -
  *
  *  gps = time.gmt2gps(year, day of year, hour, minute, second)
  *  gps = time.gmt2gps("<year>:<month>:<day of month>:<hour in day>:<minute in hour>:<second in minute>")

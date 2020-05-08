@@ -11,6 +11,7 @@ console.logger:config(core.INFO)
 runner.script(rd .. "tcp_socket.lua")
 runner.script(rd .. "udp_socket.lua")
 runner.script(rd .. "multicast_device_writer.lua")
+runner.script(rd .. "pistache_endpoint.lua")
 
 -- Run Legacy Unit Tests --
 
