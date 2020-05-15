@@ -7,6 +7,14 @@ local metricq = "metricq" -- metric records
 local threads = 4
 
 --------------------------------------------------------------------------------------
+-- Global Data  -
+--------------------------------------------------------------------------------------
+baseDispatcher = nil
+ccsdsDispatcher = nil
+reportDispatcher = nil
+metricDictionary = {}
+
+--------------------------------------------------------------------------------------
 -- createMetrics  -
 --
 --  metrictable:  { base: { <recname>: [<field>, ... ], ... } 
@@ -25,40 +33,40 @@ local function createMetrics(metrictable, reportfilename)
     local player_key = metrictable["key"] or "RECEIPT_KEY"
 
     -- Create Base Record Metrics --
-    if metrictable["base"] then        
-        local basedis = cmd.exec('TYPE baseDispatcher')
-        if basedis < 0 then
-            cmd.exec(string.format('NEW RECORD_DISPATCHER baseDispatcher %s %s %d', recdataq, player_key, threads))
+    if metrictable["base"] then  
+        if not baseDispatcher then
+            baseDispatcher = core.dispatcher(recdataq, threads, player_key)
+            baseDispatcher:name("baseDispatcher")
         end
         for recname,fieldlist in pairs(metrictable["base"]) do
             for _,fieldname in ipairs(fieldlist) do
                 local metricname = string.format('%s.%sMetric', recname, fieldname)
-                cmd.exec(string.format('NEW METRIC_DISPATCH %s %s %s', metricname, fieldname, metricq))
-                cmd.exec(string.format('%s::PLAYBACK_TEXT ENABLE', metricname))
-                cmd.exec(string.format('%s::PLAYBACK_NAME ENABLE', metricname))
+                metricDictionary[metricname] = core.metric(fieldname, metricq)
+                metricDictionary[metricname]:pbtext(true)
+                metricDictionary[metricname]:pbname(true)
                 numcolumns = numcolumns + 1
                 columnlist[numcolumns] = string.format('%s.%s', recname, fieldname)
-                cmd.exec(string.format('baseDispatcher::ATTACH_DISPATCH %s %s', metricname, recname))
+                baseDispatcher::attach(metricDictionary[metricname], recname)
             end
         end
     end
 
     -- Create CCSDS Record Metrics --
     if metrictable["ccsds"] then
-        local ccsdsdis = cmd.exec('TYPE ccsdsDispatcher')
-        if ccsdsdis < 0 then
-            cmd.exec(string.format('NEW CCSDS_RECORD_DISPATCHER ccsdsDispatcher %s %s %d', scidataq, player_key, threads))
+        if not ccsdsDispatcher then
+            ccsdsDispatcher = ccsds.dispatcher(scidataq, threads, player_key)
+            ccsdsDispatcher:name("ccsdsDispatcher")
         end
         for recname,fieldlist in pairs(metrictable["ccsds"]) do
             for _,fieldname in ipairs(fieldlist) do
                 metricname = string.format('%s.%sMetric', recname, fieldname)
-                cmd.exec(string.format('NEW METRIC_DISPATCH %s %s %s', metricname, fieldname, metricq))
-                cmd.exec(string.format('%s::PLAYBACK_TEXT ENABLE', metricname))
-                cmd.exec(string.format('%s::PLAYBACK_NAME ENABLE', metricname))
+                metricDictionary[metricname] = core.metric(fieldname, metricq)
+                metricDictionary[metricname]:pbtext(true)
+                metricDictionary[metricname]:pbname(true)
                 numcolumns = numcolumns + 1
                 columnlist[numcolumns] = string.format('%s.%s', recname, fieldname)
                 cds_times_present = true
-                cmd.exec(string.format('ccsdsDispatcher::ATTACH_DISPATCH %s %s', metricname, recname))
+                ccsdsDispatcher::attach(metricDictionary[metricname], recname)
             end
         end
     end
@@ -66,27 +74,20 @@ local function createMetrics(metrictable, reportfilename)
     -- Create Report --
     local reportname = nil 
     if reportfilename then
-        -- Create Column List --
-        columns = ""
+        -- Sort Column List --
         table.sort(columnlist)
-        for _,column in ipairs(columnlist) do
-            columns = columns .. " " .. column
-        end
-        if string.len(columns) > 900 then
-            columns = "" -- too long for command processor, so set back to nothing and let metricWriter dynamically create header
-        end    
 
         -- Create Report Dispatch --
         local reportbufsize = (threads - 1) * numcolumns * 256
         if reportbufsize > 65536 then reportbufsize = 65536 end
-        local reportdis = cmd.exec('TYPE reportDispatcher')
-        if reportdis < 0 then
-            cmd.exec(string.format('NEW RECORD_DISPATCHER reportDispatcher %s FIELD_KEY INDEX', metricq))
+        if not reportDispatcher then
+            reportDispatcher = core.dispatcher(recdataq, threads, core.FIELD_KEY, "INDEX")
+            reportDispatcher:name("reportDispatcher")
         end
         reportname = string.format('report_%s', reportfilename)
-        cmd.exec(string.format('NEW REPORT_DISPATCH %s CSV %s %d %s', reportname, reportfilename, reportbufsize, columns))
-        if cds_times_present then cmd.exec(string.format('%s::SET_INDEX_DISPLAY GMT', reportname)) end
-        cmd.exec(string.format('reportDispatcher::ATTACH_DISPATCH %s Metric', reportname))
+        metricDictionary[reportname] = core.report(core.CVS, reportfilename, reportbufsize, columnlist)
+        if cds_times_present then metricDictionary[reportname]:idxdisplay("GMT") end
+        reportDispatcher::attach(metricDictionary[reportname], "Metric")
     end
 
     return reportname
@@ -107,20 +108,20 @@ local function createLimits (limittable)
 
     -- Create Base Record Metrics --
     if limittable["base"] then        
-        local basedis = cmd.exec('TYPE baseDispatcher')
-        if basedis < 0 then
-            cmd.exec(string.format('NEW RECORD_DISPATCHER baseDispatcher %s %s %d', recdataq, player_key, threads))
+        if not baseDispatcher then
+            baseDispatcher = core.dispatcher(recdataq, threads, player_key)
+            baseDispatcher:name("baseDispatcher")
         end
         for i,limit in ipairs(limittable["base"]) do
             local recname = limit["record"]
             local fieldname = limit["field"]
-            local id = limit["id"] or "ALL"
-            local min = limit["min"] or "ALL"
-            local max = limit["max"] or "ALL"
+            local id = limit["id"] or nil
+            local min = limit["min"] or nil
+            local max = limit["max"] or nil
             local limitname = string.format('%s.%sLimit_%d', recname, fieldname, i)
-            cmd.exec(string.format('NEW LIMIT_DISPATCH %s %s %s %s %s NULL NULL', limitname, id, field, min, max))
-            cmd.exec(string.format('%s:SET_LOG_LEVEL CRITICAL', limitname))
-            cmd.exec(string.format('baseDispatcher::ATTACH_DISPATCH %s %s', limitname, recname))
+            metricDictionary[limitname] = core.limit(fieldname, id, min, max)
+            metricDictionary[limitname]:setloglvl(core.CRITICAL)
+            baseDispatcher::attach(metricDictionary[limitname], recname)
         end
     end
 
@@ -133,14 +134,14 @@ local function createLimits (limittable)
         for i,limit in ipairs(limittable["ccsds"]) do
             local recname = limit["record"]
             local fieldname = limit["field"]
-            local id = limit["id"] or "ALL"
-            local min = limit["min"] or "ALL"
-            local max = limit["max"] or "ALL"
+            local id = limit["id"] or nil
+            local min = limit["min"] or nil
+            local max = limit["max"] or nil
             local limitname = string.format('%s.%sLimit_%d', recname, fieldname, i)
-            cmd.exec(string.format('NEW LIMIT_DISPATCH %s %s %s %s %s NULL NULL', limitname, id, fieldname, min, max))
-            cmd.exec(string.format('%s:SET_GMT_DISPLAY ENABLE', limitname))
-            cmd.exec(string.format('%s:SET_LOG_LEVEL CRITICAL', limitname))
-            cmd.exec(string.format('ccsdsDispatcher::ATTACH_DISPATCH %s %s', limitname, recname))
+            metricDictionary[limitname] = core.limit(fieldname, id, min, max)
+            metricDictionary[limitname]:setloglvl(core.CRITICAL)
+            metricDictionary[limitname]:gmtdisplay(true)            
+            ccsdsDispatcher::attach(metricDictionary[limitname], recname)
         end
     end
 

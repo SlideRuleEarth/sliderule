@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - file(<role> <format>, <filename(s)>, [<file i/o>], [<max file size>])
+ * luaCreate - file(<role>, <format>, <filename(s)>, [<file i/o>], [<max file size>])
  *
  *  <role> is either dev.READER or dev.WRITER
  *

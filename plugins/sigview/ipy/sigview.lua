@@ -105,8 +105,10 @@ elseif clp(source["type"]) == "DATASRV" then
     -- Connect to Datasrv --
     if start_time == nil or stop_time == nil then
         -- Real-Time Stream --
-        cmd.exec(string.format('NEW DEVICE_WRITER datasrvCmd TCPSOCK %s 33102 CLIENT datasrv_cmdq', datasrv_ip))
-        cmd.exec(string.format('NEW DEVICE_READER datasrvTlm TCPSOCK %s 35505 CLIENT ccsdsdataq', datasrv_ip))
+        datasrvCmdSock = core.tcp(datasrv_ip, 33102, core.CLIENT)
+        datasrvCmdWriter = core.writer(datasrvCmdSock, "datasrv_cmdq")
+        datasrvTlmSock = core.tcp(datasrv_ip, 35505, core.CLIENT)
+        datasrvTlmReader = core.reader(datasrvTlmSock, "ccsdsdataq")
         -- Send Command to Datasrv to Enable SSR Telemetry --
         datasrv_cmdq = msg.publish("datasrv_cmdq")
         cmd.exec("CCSDS::DEFINE_COMMAND datasrv.cmd NULL 0x06D4 1 8 2")
@@ -141,7 +143,8 @@ elseif clp(source["type"]) == "FILE" then
     elseif  clp(source["format"]) == "CDH"   then parseq = "cdhdataq" end	
     -- Create File Reader --
     local filepaths = clp(source["files"])
-    cmd.exec(string.format('NEW DEVICE_READER sourceFile FILE BINARY %s %s', filepaths, parseq))
+    sourceFile = core.file(dev.READER, dev.BINARY, filepaths)
+    sourceFileReader = core.reader(sourceFile, parseq)
     -- Wait for File Reader to Finish Reading File --
     if block_on_complete then
         cmd.exec("WAIT 1")

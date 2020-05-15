@@ -62,12 +62,14 @@ const struct luaL_Reg ReportDispatch::LuaMetaTable[] = {
  *----------------------------------------------------------------------------*/
 int ReportDispatch::luaCreate (lua_State* L)
 {
+    const char** columns = NULL;
+    int num_results = 0;
+
     try
     {
         const char* format_str      = getLuaString(L, 1);
         const char* out_file_str    = getLuaString(L, 2);
         long        buffer_size     = getLuaInteger(L, 3, true, 0);
-        long        num_columns     = getLuaNumParms(L) - 3;
 
         /* Parse Metric Format */
         format_t file_format = str2format(format_str);
@@ -85,28 +87,32 @@ int ReportDispatch::luaCreate (lua_State* L)
         }
 
         /* Parse Header Columns */
-        const char** columns = NULL;
-        if(num_columns > 0)
+        int num_columns = lua_rawlen(L,4);
+        if(lua_istable(L, 4) && num_columns > 0)
         {
-            columns = new const char* [num_columns];
-            for(int i = 0; i < num_columns; i++)
+            if(num_columns > 0)
             {
-                columns[i] = getLuaString(L, i + 4);
+                columns = new const char* [num_columns];
+                for(int i = 0; i < num_columns; i++)
+                {
+                    lua_rawgeti(L,4,i);
+                    columns[i] = getLuaString(L, -1);
+                }
             }
-        }
-        else
-        {
-            num_columns = 0;
         }
 
         /* Create Report Dispatch */
-        return createLuaObject(L, new ReportDispatch(L, out_file_str, file_format, buffer_size, columns, num_columns));
+        num_results = createLuaObject(L, new ReportDispatch(L, out_file_str, file_format, buffer_size, columns, num_columns));
     }
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
-        return returnLuaStatus(L, false);
+        num_results = returnLuaStatus(L, false);
     }
+
+    /* Clean Up and Return */
+    if(columns) delete [] columns;
+    return num_results;
 }
 
 /******************************************************************************

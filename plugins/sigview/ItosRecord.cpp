@@ -572,7 +572,11 @@ const char* Field::getDisplayName (char* buf)
                 snprintf(tmp, Record::MAX_TOKEN_SIZE, "%s", container->getDisplayName());
                 char* b = strchr(tmp, '[');
                 *b = '\0'; // terminate name string at first bracket
-                snprintf(namestr, Record::MAX_TOKEN_SIZE, "%s[%d].%s", tmp, containerIndex, record->getDisplayName());
+                int namelen = snprintf(namestr, Record::MAX_TOKEN_SIZE, "%s[%d].%s", tmp, containerIndex, record->getDisplayName());
+                if(namelen > Record::MAX_TOKEN_SIZE)
+                {
+                    mlog(WARNING, "Name truncation detected for %s\n", namestr);
+                }
             }
             else
             {

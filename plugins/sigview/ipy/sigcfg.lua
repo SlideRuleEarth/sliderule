@@ -41,10 +41,10 @@ local function startLogs ()
     if pkg.logs_started then return true end
     if not pkg.proc_started then return false end
     pkg.logs_started = true
-    cmd.exec("NEW DEVICE_WRITER sbcdiaglog FILE TEXT sbcdiag.log FLUSHED sbcdiaglogq")
-    cmd.exec("NEW DEVICE_WRITER pce1diaglog FILE TEXT pce1diag.log FLUSHED pce1diaglogq")
-    cmd.exec("NEW DEVICE_WRITER pce2diaglog FILE TEXT pce2diag.log FLUSHED pce2diaglogq")
-    cmd.exec("NEW DEVICE_WRITER pce3diaglog FILE TEXT pce3diag.log FLUSHED pce3diaglogq")
+    sbcdiaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "sbcdiag.log", dev.FLUSHED), "sbcdiaglogq")
+    pce1diaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "pce1diag.log", dev.FLUSHED), "pce1diaglogq")
+    pce2diaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "pce2diag.log", dev.FLUSHED), "pce2diaglogq")
+    pce3diaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "pce3diag.log", dev.FLUSHED), "pce3diaglogq")
     cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProcSbc sbcdiaglogq NULL")
     cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProc1 pce1diaglogq NULL 1")
     cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProc2 pce2diaglogq NULL 2")
@@ -79,7 +79,7 @@ local function startEchoes ()
     if not pkg.db_started then return false end
     if not pkg.proc_started then return false end
     echoe_started = true
-    cmd.exec("NEW DEVICE_WRITER cmdecho FILE TEXT cmdecho.log FLUSHED cmdechoq")
+    cmdecho = core.writer(core.file(dev.WRITER, dev.TEXT, "cmdecho.log", dev.FLUSHED), "cmdechoq")
     cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc1 cmdechoq itosdb 1")
     cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc2 cmdechoq itosdb 2")
     cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc3 cmdechoq itosdb 3")
