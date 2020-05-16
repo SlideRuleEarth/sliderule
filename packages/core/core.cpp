@@ -97,7 +97,7 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "BLOCK",                true);
     LuaEngine::setAttrInt   (L, "QUEUE",                ClusterSocket::QUEUE);
     LuaEngine::setAttrInt   (L, "BUS",                  ClusterSocket::BUS);
-    LuaEngine::setAttrInt   (L, "BUS",                  File::BINARY);
+    LuaEngine::setAttrInt   (L, "BINARY",               File::BINARY);
     LuaEngine::setAttrInt   (L, "ASCII",                File::ASCII);
     LuaEngine::setAttrInt   (L, "TEXT",                 File::TEXT);
     LuaEngine::setAttrInt   (L, "FIFO",                 File::FIFO);

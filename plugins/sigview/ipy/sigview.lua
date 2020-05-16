@@ -10,6 +10,7 @@
 
 -- Paths and Packages --
 package.path = package.path .. ";./?.lua" -- put local scripts in require search path
+console = require("console")
 metric = require("metric")
 packet = require("packet")
 json = require("json")
@@ -56,7 +57,7 @@ local database = clp(rectable["database"])
 metric.threads = threads
 
 -- Set Logging Level to CRITICAL --
-cmd.exec("console::CONFIG CRITICAL")
+console.logger:config(core.CRITICAL)
 
 -- Initialize Sigview --
 cfg.setQDepth()
@@ -143,7 +144,7 @@ elseif clp(source["type"]) == "FILE" then
     elseif  clp(source["format"]) == "CDH"   then parseq = "cdhdataq" end	
     -- Create File Reader --
     local filepaths = clp(source["files"])
-    sourceFile = core.file(dev.READER, dev.BINARY, filepaths)
+    sourceFile = core.file(core.READER, core.BINARY, filepaths)
     sourceFileReader = core.reader(sourceFile, parseq)
     -- Wait for File Reader to Finish Reading File --
     if block_on_complete then

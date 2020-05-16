@@ -95,7 +95,7 @@ int ReportDispatch::luaCreate (lua_State* L)
                 columns = new const char* [num_columns];
                 for(int i = 0; i < num_columns; i++)
                 {
-                    lua_rawgeti(L,4,i);
+                    lua_rawgeti(L, 4, i+1);
                     columns[i] = getLuaString(L, -1);
                 }
             }

@@ -41,10 +41,10 @@ local function startLogs ()
     if pkg.logs_started then return true end
     if not pkg.proc_started then return false end
     pkg.logs_started = true
-    sbcdiaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "sbcdiag.log", dev.FLUSHED), "sbcdiaglogq")
-    pce1diaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "pce1diag.log", dev.FLUSHED), "pce1diaglogq")
-    pce2diaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "pce2diag.log", dev.FLUSHED), "pce2diaglogq")
-    pce3diaglog = core.writer(core.file(dev.WRITER, dev.TEXT, "pce3diag.log", dev.FLUSHED), "pce3diaglogq")
+    sbcdiaglog = core.writer(core.file(core.WRITER, core.TEXT, "sbcdiag.log", core.FLUSHED), "sbcdiaglogq")
+    pce1diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce1diag.log", core.FLUSHED), "pce1diaglogq")
+    pce2diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce2diag.log", core.FLUSHED), "pce2diaglogq")
+    pce3diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce3diag.log", core.FLUSHED), "pce3diaglogq")
     cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProcSbc sbcdiaglogq NULL")
     cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProc1 pce1diaglogq NULL 1")
     cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProc2 pce2diaglogq NULL 2")
@@ -79,7 +79,7 @@ local function startEchoes ()
     if not pkg.db_started then return false end
     if not pkg.proc_started then return false end
     echoe_started = true
-    cmdecho = core.writer(core.file(dev.WRITER, dev.TEXT, "cmdecho.log", dev.FLUSHED), "cmdechoq")
+    cmdecho = core.writer(core.file(core.WRITER, core.TEXT, "cmdecho.log", core.FLUSHED), "cmdechoq")
     cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc1 cmdechoq itosdb 1")
     cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc2 cmdechoq itosdb 2")
     cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc3 cmdechoq itosdb 3")
@@ -263,33 +263,24 @@ local function startPacketParsers ()
     if pkg.parser_started then return true end
     pkg.parser_started = true
     -- create parser modules --
-    cmd.exec("NEW CCSDS_PARSER_MODULE     ccsdsParserModule")
-    cmd.exec("NEW STRIP_PARSER_MODULE     itosParserModule 35")
-    cmd.exec("NEW STRIP_PARSER_MODULE     mocParserModule 12")
-    cmd.exec("NEW STRIP_PARSER_MODULE     spwParserModule 2")
-    cmd.exec("NEW ZFRAME_PARSER_MODULE    adasParserModule FALSE")
-    cmd.exec("NEW ZFRAME_PARSER_MODULE    sisParserModule TRUE")
-    cmd.exec("NEW AOSFRAME_PARSER_MODULE  ssrParserModule 206 6 224 NONE 0 1104 6 2")
-    cmd.exec("NEW AOSFRAME_PARSER_MODULE  cdhParserModule 206 1 224 NONE 0 1115 15 4")
-    -- create packet parsers --
-    cmd.exec("NEW CCSDS_PACKET_PARSER ccsdsParser ccsdsParserModule   SPACE ccsdsdataq    scidataq NULL") -- binary stream of CCSDS packets
-    cmd.exec("NEW CCSDS_PACKET_PARSER itosParser  itosParserModule    SPACE itosdataq     scidataq NULL") -- ITOS archive file format
-    cmd.exec("NEW CCSDS_PACKET_PARSER mocParser   mocParserModule     SPACE mocdataq      scidataq NULL") -- ITOS archive file format as used at the MOC
-    cmd.exec("NEW CCSDS_PACKET_PARSER spwParser   spwParserModule     SPACE spwdataq      scidataq NULL") -- binary stream of SpaceWire packets
-    cmd.exec("NEW CCSDS_PACKET_PARSER adasParser  adasParserModule    SPACE adasdataq     scidataq NULL") -- ADAS real-time data stream (socket)
-    cmd.exec("NEW CCSDS_PACKET_PARSER sisParser   sisParserModule     SPACE sisdataq      scidataq NULL") -- ADAS raw data from SIS (file)
-    cmd.exec("NEW CCSDS_PACKET_PARSER ssrParser   ssrParserModule     SPACE ssrdataq      scidataq NULL") -- ADAS raw data from SSR (file)
-    cmd.exec("NEW CCSDS_PACKET_PARSER cdhParser   cdhParserModule     SPACE cdhdataq      scidataq NULL") -- ADAS raw data from C&DH (file)
+    ccsdsParser = ccsds.parser(ccsds.pktmod(),      ccsds.SPACE, "ccsdsdataq", "scidataq") -- binary stream of CCSDS packets
+    itosParser  = ccsds.parser(ccsds.stripmod(35),  ccsds.SPACE, "itosdataq", "scidataq") -- ITOS archive file format
+    mocParser   = ccsds.parser(ccsds.stripmod(12),  ccsds.SPACE, "mocdataq", "scidataq") -- ITOS archive file format as used at the MOC
+    spwParser   = ccsds.parser(ccsds.stripmod(2),   ccsds.SPACE, "spwdataq", "scidataq") -- binary stream of SpaceWire packets
+    adasParser  = ccsds.parser(ccsds.zmod(false),   ccsds.SPACE, "adasdataq", "scidataq") -- ADAS real-time data stream (socket)
+    sisParser   = ccsds.parser(ccsds.zmod(true),    ccsds.SPACE, "sisdataq", "scidataq") -- ADAS raw data from SIS (file)
+    ssrParser   = ccsds.parser(ccsds.aosmod(206, 6, 224, "NOSYNC", 0, 1104, 6, 2),  ccsds.SPACE, "ssrdataq", "scidataq") -- ADAS raw data from SSR (file)
+    cdhParser   = ccsds.parser(ccsds.aosmod(206, 1, 224, "NOSYNC", 0, 1115, 15, 4), ccsds.SPACE, "cdhdataq", "scidataq") -- ADAS raw data from C&DH (file)
     -- filter for real-time adas parser --
-    cmd.exec("adasParser::FILTER ENABLE ALL")
-    cmd.exec("adasParser::FILTER DISABLE 0x64B") --NTGSE packet that does not have secondary header polluting instrument telemetry stream
-    cmd.exec("adasParser::FILTER DISABLE RANGE 0x4BF 0x4E1") -- ESIM packets
-    cmd.exec("adasParser::FILTER DISABLE RANGE 0x492 0x498") -- ESIM packets
+    adasParser:filter(true, ccsds.ALL_APIDS)
+    adasParser:filter(false, 0x64B) --NTGSE packet that does not have secondary header polluting instrument telemetry stream
+    adasParser:filter(false, 0x4BF, 0x4E1) -- ESIM packets
+    adasParser:filter(false, 0x492, 0x498) -- ESIM packets
     -- filter for SIS adas file parser --
-    cmd.exec("sisParser::FILTER ENABLE ALL")
-    cmd.exec("sisParser::FILTER DISABLE 0x64B") -- NTGSE packet that does not have secondary header polluting instrument telemetry stream
-    cmd.exec("sisParser::FILTER DISABLE RANGE 0x4BF 0x4E1") -- ESIM packets
-    cmd.exec("sisParser::FILTER DISABLE RANGE 0x492 0x498") -- ESIM packets
+    sisParser:filter(true, ccsds.ALL_APIDS)
+    sisParser:filter(false, 0x64B) --NTGSE packet that does not have secondary header polluting instrument telemetry stream
+    sisParser:filter(false, 0x4BF, 0x4E1) -- ESIM packets
+    sisParser:filter(false, 0x492, 0x498) -- ESIM packets
     -- return success -- 
     return true
 end

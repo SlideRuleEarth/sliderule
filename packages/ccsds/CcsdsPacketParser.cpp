@@ -58,8 +58,8 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
         CcsdsParserModule*  _parser     = (CcsdsParserModule*)lockLuaObject(L, 1, CcsdsParserModule::OBJECT_TYPE);
         const char*         type_str    = getLuaString(L, 2);
         const char*         inq_name    = getLuaString(L, 3);
-        const char*         outq_name   = getLuaString(L, 4);
-        const char*         statq_name  = getLuaString(L, 5);
+        const char*         outq_name   = getLuaString(L, 4, true, NULL);
+        const char*         statq_name  = getLuaString(L, 5, true, NULL);
 
         /* Get Packet Type */
         CcsdsPacket::type_t pkt_type = str2pkttype(type_str);
@@ -319,23 +319,12 @@ int CcsdsPacketParser::luaFilterPkt (lua_State* L)
         CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
 
         /* Get Parameters */
-        bool range = false;
         bool enable = getLuaBoolean(L, 2);
         int start_apid = getLuaInteger(L, 3);
-        int stop_apid = getLuaInteger(L, 4, true, start_apid, &range);
+        int stop_apid = getLuaInteger(L, 4, true, start_apid);
 
         /* Set Filter */
-        if(range)
-        {
-            for(int apid = start_apid; apid < stop_apid; apid++)
-            {
-                if(apid >= 0 && apid < CCSDS_NUM_APIDS)
-                {
-                    lua_obj->filter[apid] = enable;
-                }
-            }
-        }
-        else if(start_apid == ALL_APIDS)
+        if(start_apid == ALL_APIDS)
         {
             for(int apid = 0; apid < CCSDS_NUM_APIDS; apid++)
             {
@@ -344,8 +333,13 @@ int CcsdsPacketParser::luaFilterPkt (lua_State* L)
         }
         else
         {
-            throw LuaException("invalid APID supplied to filter: %d", start_apid);
-            return -1;
+            for(int apid = start_apid; apid <= stop_apid; apid++)
+            {
+                if(apid >= 0 && apid < CCSDS_NUM_APIDS)
+                {
+                    lua_obj->filter[apid] = enable;
+                }
+            }
         }
 
         /* Set Success */
