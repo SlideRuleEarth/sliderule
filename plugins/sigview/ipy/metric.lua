@@ -87,7 +87,7 @@ local function createMetrics(metrictable, reportfilename)
         local reportbufsize = (threads - 1) * numcolumns * 256
         if reportbufsize > 65536 then reportbufsize = 65536 end
         if not reportDispatcher then
-            reportDispatcher = core.dispatcher(recdataq, threads, core.FIELD_KEY, "INDEX")
+            reportDispatcher = core.dispatcher(metricq, threads, core.FIELD_KEY, "INDEX")
             reportDispatcher:name("reportDispatcher")
         end
         reportname = string.format('report_%s', reportfilename)

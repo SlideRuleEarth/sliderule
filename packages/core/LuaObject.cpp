@@ -146,6 +146,8 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
             LuaEngine::setAttrFunc(L, "name", associateLuaName);
             LuaEngine::setAttrFunc(L, "destroy", deleteLuaObject);
             LuaEngine::setAttrFunc(L, "__gc", deleteLuaObject);
+
+            mlog(INFO, "Created object of type %s\n", getType());
         }
     }
 }

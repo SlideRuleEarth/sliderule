@@ -286,26 +286,6 @@ local function startPacketParsers ()
 end
 
 -----------------------------
--- Start GUI
------------------------------
-local function startGui ()
-    if pkg.gui_started then return true end
-    if not pkg.sci_started then return false end
-    if not pkg.report_started then return false end
-    if not pkg.proc_started then return false end
-    pkg.gui_started = true
-    cmd.exec("NEW SHELL shell mlogq")
-    cmd.exec("NEW VIEWER viewer recdataq scidataq ttProc1 ttProc2 ttProc3 reportStat timeProc pktProc")
-    --                               ADASFILE      ASCII      BINARY     SIS      ITOSARCH  ADAS      NTGSE    DATASRV    AOS
-    cmd.exec("viewer::SET_PARSERS adasfiledataq ccsdsdataq ccsdsdataq spwdataq itosdataq adasdataq spwdataq ccsdsdataq aosfiledataq")
-    cmd.exec("viewer::SET_PLAY_RATE       50.0")
-    cmd.exec("viewer::SET_DATA_MODE       SAMPLE")
-    cmd.exec("viewer::SET_PLOT_BUF_SIZE   -1")
-    cmd.exec("viewer::SET_PLOT_EMPTY      TRUE")
-    return true
-end
-
------------------------------
 -- Configure Lab
 -----------------------------
 local function configureLab ()
@@ -319,7 +299,6 @@ local function configureLab ()
     if not startBce()               then return false end
     if not startReport()            then return false end
     if not startPacketParsers()     then return false end
-    if not startGui()               then return false end
     return true
 end
 
@@ -336,7 +315,6 @@ pkg.startLaser              = startLaser
 pkg.startBce                = startBce
 pkg.startReport             = startReport
 pkg.startPacketParsers      = startPacketParsers
-pkg.startGui                = startGui
 pkg.configureLab            = configureLab
 
 -----------------------------

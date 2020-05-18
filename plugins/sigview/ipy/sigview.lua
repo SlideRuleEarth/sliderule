@@ -56,8 +56,8 @@ local database = clp(rectable["database"])
 -- Configure metric utility --
 metric.threads = threads
 
--- Set Logging Level to CRITICAL --
-console.logger:config(core.CRITICAL)
+-- Set Logging Level --
+console.logger:config(core.ERROR)
 
 -- Initialize Sigview --
 cfg.setQDepth()
@@ -78,6 +78,8 @@ s1,s2 = string.find(json_input, ".json")
 if s1 then
     outfilename = string.format('%s.csv', string.sub(json_input, 0, s1 - 1))
 end
+
+console.logger:config(core.INFO)
 
 -- Create Metrics --
 if rectable["metric"] then
