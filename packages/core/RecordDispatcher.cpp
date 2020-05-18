@@ -426,30 +426,32 @@ void* RecordDispatcher::dispatcherThread(void* parm)
  *----------------------------------------------------------------------------*/
 void RecordDispatcher::dispatchRecord (RecordObject* record)
 {
-    /* Get Key */
-    okey_t key = 0;
-    if(keyMode == FIELD_KEY_MODE)
-    {
-        RecordObject::field_t key_field = record->getField(keyField);
-        key = (okey_t)record->getValueInteger(key_field);
-    }
-    else if(keyMode == RECEIPT_KEY_MODE)
-    {
-        dispatchMutex.lock();
-        {
-            key = keyRecCnt++;
-        }
-        dispatchMutex.unlock();
-    }
-    else if(keyMode == CALCULATED_KEY_MODE)
-    {
-        key = keyFunc(record->getRecordData(), record->getRecordDataSize());
-    }
-
     /* Dispatch Dispatches */
     try
     {
         dispatch_t& dis = dispatchTable[record->getRecordType()];
+  
+        /* Get Key */
+        okey_t key = 0;
+        if(keyMode == FIELD_KEY_MODE)
+        {
+            RecordObject::field_t key_field = record->getField(keyField);
+            key = (okey_t)record->getValueInteger(key_field);
+        }
+        else if(keyMode == RECEIPT_KEY_MODE)
+        {
+            dispatchMutex.lock();
+            {
+                key = keyRecCnt++;
+            }
+            dispatchMutex.unlock();
+        }
+        else if(keyMode == CALCULATED_KEY_MODE)
+        {
+            key = keyFunc(record->getRecordData(), record->getRecordDataSize());
+        }
+
+        /* Process Record */
         for (int i = 0; i < dis.size; i++)
         {
             dis.list[i]->processRecord(record, key);

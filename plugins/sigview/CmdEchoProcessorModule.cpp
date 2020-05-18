@@ -138,9 +138,10 @@ bool CmdEchoProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         else
         {
             snprintf(echo_msg, ECHO_MSG_STR_SIZE, "[PCE %d CMD] %02d:%03d:%02d:%02d:%02d <%s> %s: ",
+                    pce + 1,
                     gmt_time.year, gmt_time.day,
                     gmt_time.hour, gmt_time.minute, gmt_time.second,
-                    pce + 1, task_prefix, status ? "ACCEPTED" : "REJECTED");
+                    task_prefix, status ? "ACCEPTED" : "REJECTED");
         }
 
         /* Attempt to Pretty Print Command Echo */

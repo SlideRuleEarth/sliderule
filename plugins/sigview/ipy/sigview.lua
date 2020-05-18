@@ -66,11 +66,10 @@ cfg.startLogs()
 cfg.startDatabase(database)
 cfg.startEchoes()     
 cfg.startScienceProcessing() 
-cfg.startLaser()         
-cfg.startBce()         
-cfg.startReport()         
+--cfg.startLaser()         
+--cfg.startBce()         
+--cfg.startReport()         
 cfg.startPacketParsers()     
-if gui then cfg.startGui() end         
 
 -- Create Report Dispatcher: Output File Name  --    
 outfilename = "metric.csv"
