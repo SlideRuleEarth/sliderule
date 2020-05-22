@@ -26,10 +26,6 @@ if(NOT CMAKE_BUILD_PLATFORM)
     set(CMAKE_BUILD_PLATFORM "Linux" CACHE STRING "Choose the target platform." FORCE)
 endif()
 
-# Prefer libraries installed in /usr/local
-INCLUDE_DIRECTORIES(/usr/local/include)
-LINK_DIRECTORIES(/usr/local/lib)
-
 ###################
 # Project Options #
 ###################
@@ -60,6 +56,11 @@ file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
 
 if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
+    # Prefer libraries installed in /usr/local
+    INCLUDE_DIRECTORIES(/usr/local/include)
+    LINK_DIRECTORIES(/usr/local/lib)
+
+    # Set Environment Variables
     set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
     set (EXECDIR ${INSTALLDIR}/bin)
@@ -71,6 +72,7 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Windows")
 
+    # Set Environment Variables
     set (INSTALLDIR "C:\\Program Files\\SlideRule" CACHE STRING "Installation directory for library and executables")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
     set (EXECDIR ${INSTALLDIR}/bin)

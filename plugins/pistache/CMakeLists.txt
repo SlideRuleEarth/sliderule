@@ -1,3 +1,8 @@
+# Prefer static over shared
+list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
+list( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
+
+# Find pistache library
 find_library (PISTACHE_LIB pistache)
 
 if (PISTACHE_LIB)
@@ -11,7 +16,8 @@ if (PISTACHE_LIB)
     set_target_properties (pistacheLib PROPERTIES POSITION_INDEPENDENT_CODE 1) # shared libraries need PIC
 
     target_link_libraries (pistacheLib PUBLIC sliderule)
-    target_link_libraries (pistacheLib PUBLIC pistache)
+    target_link_libraries (pistacheLib PUBLIC ${PISTACHE_LIB})
+    target_link_libraries (pistacheLib PUBLIC ssl)
 
     target_sources(pistacheLib
         PRIVATE
