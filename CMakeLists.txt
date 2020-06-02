@@ -34,8 +34,9 @@ option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" ON)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 
-option (USE_SIGVIEW_PLUGIN "Include the SigView plugin" ON)
+option (USE_ICESAT2_PLUGIN "Include the ICESat-2 plugin" ON)
 option (USE_PISTACHE_PLUGIN "Include the Pistache plugin" ON)
+option (USE_SIGVIEW_PLUGIN "Include the SigView plugin" ON)
 
 set (CMAKE_SKIP_BUILD_RPATH FALSE)
 set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
@@ -111,12 +112,16 @@ add_subdirectory (packages/legacy)
 
 # Add Optional Plugins #
 
-if(${USE_SIGVIEW_PLUGIN})
-    add_subdirectory (plugins/sigview)
+if(${USE_ICESAT2_PLUGIN})
+    add_subdirectory (plugins/icesat2)
 endif()
 
 if(${USE_PISTACHE_PLUGIN})
     add_subdirectory (plugins/pistache)
+endif()
+
+if(${USE_SIGVIEW_PLUGIN})
+    add_subdirectory (plugins/sigview)
 endif()
 
 # Scripts #
