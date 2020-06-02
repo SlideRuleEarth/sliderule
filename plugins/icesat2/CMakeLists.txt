@@ -1,11 +1,13 @@
-# Prefer static over shared
+# Find zlib library
+find_package(ZLIB)
+
+# Find hdf5 library - prefer static over shared
 list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
 list( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
-
-# Find hdf5 library
 find_library (HDF5_LIB hdf5)
 
-if (HDF5_LIB)
+# Build plugin
+if (HDF5_LIB AND ZLIB_FOUND)
 
     message (STATUS "Including icesat2 plugin")
     
@@ -17,6 +19,9 @@ if (HDF5_LIB)
 
     target_link_libraries (icesat2Lib PUBLIC sliderule)
     target_link_libraries (icesat2Lib PUBLIC ${HDF5_LIB})
+    target_link_libraries (icesat2Lib PUBLIC ${ZLIB_LIBRARIES})
+
+    target_compile_definitions (icesat2Lib PUBLIC H5_USE_110_API)
 
     target_sources(icesat2Lib
         PRIVATE
@@ -42,6 +47,6 @@ if (HDF5_LIB)
 
 else ()
 
-    message (STATUS "Unable to include icesat2 plugin... hdf5 library not found")
+    message (STATUS "Unable to include icesat2 plugin... required libraries not found")
 
 endif ()

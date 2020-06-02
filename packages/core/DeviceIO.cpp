@@ -95,7 +95,7 @@ int DeviceIO::luaLogPktStats(lua_State* L)
         DeviceIO* lua_obj = (DeviceIO*)getLuaSelf(L, 1);
 
         /* Get Log Level */
-        log_lvl_t lvl = (log_lvl_t)lua_tointeger(L, 2);
+        log_lvl_t lvl = (log_lvl_t)getLuaInteger(L, 2, true, IGNORE);
 
         /* Create Statistics Table */
         lua_newtable(L);

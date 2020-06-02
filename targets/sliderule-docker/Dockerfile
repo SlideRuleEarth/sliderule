@@ -6,6 +6,7 @@ RUN apt-get update && \
   libreadline8 \
   liblua5.3 \
   libssl1.1 \
+  zlib1g \
   && rm -rf /var/lib/apt/lists/*
 
 COPY . /usr/local

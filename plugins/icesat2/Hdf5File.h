@@ -24,6 +24,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <hdf5.h>
+
 #include "OsApi.h"
 #include "DeviceObject.h"
 
@@ -63,13 +65,16 @@ class Hdf5File: public DeviceObject
 
         const char*         getFilename         (void);
 
+        static int          luaTraverse         (lua_State* L);
+
     protected:
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        fileptr_t       fp;
+        hid_t           file;
+        bool            connected;           
         char*           filename; // user supplied prefix
         char*           config; // <filename>(<type>,<access>,<io>)
 };

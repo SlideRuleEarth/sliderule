@@ -1,10 +1,9 @@
-# Prefer static over shared
+# Find pistache library - prefer static over shared
 list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
 list( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
-
-# Find pistache library
 find_library (PISTACHE_LIB pistache)
 
+# Build plugin
 if (PISTACHE_LIB)
 
     message (STATUS "Including pistache plugin")
