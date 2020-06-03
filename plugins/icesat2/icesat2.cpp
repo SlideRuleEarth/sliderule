@@ -34,24 +34,14 @@
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
-
-/*----------------------------------------------------------------------------
- * lsf - least squares fit
- *----------------------------------------------------------------------------*/
-int lsf (lua_State* L)
-{
-    lua_pushnumber(L, 2.0);
-    return 1;
-}
-
 /*----------------------------------------------------------------------------
  * icesat2_open
  *----------------------------------------------------------------------------*/
 int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
-        {"lsf",         lsf},
-        {"hdf5file",    Hdf5File::luaCreate},
+        {"h5file",      Hdf5File::luaCreate},
+        {"h5dataset",   Hdf5DatasetHandle::luaCreate},
         {NULL,          NULL}
     };
 

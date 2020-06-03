@@ -25,6 +25,7 @@
  ******************************************************************************/
 
 #include "Hdf5File.h"
+#include "Hdf5Handle.h"
 
 /******************************************************************************
  * TYPEDEFS
@@ -45,10 +46,10 @@ typedef enum {
 //
 //          IF (at least 10 photons) AND (at least 20m horizontal spread) THEN
 //              a. select the set of photons from ATL03 (2x20m segments) based on signal_conf_ph_t threshold [sig_thresh]
-//              b. fit sloping line segment to photons 
+//              b. fit sloping line segment to photons
 //              c. calculate robust spread of the residuals [sigma_r]
 //              d. select the set of photons used to fit line AND that fall within max(+/- 1.5m, 3*sigma_r) of line
-//          ELSE 
+//          ELSE
 //              a. add 20m to beginning and end of segment to create 80m segment
 //              b. histogram all photons into 10m vertical bins
 //              c. select the set of photons in the maximum (Nmax) bin AND photons that fall in bins with a count that is Nmax - sqrt(Nmax)
@@ -59,7 +60,7 @@ typedef enum {
 //      (2) Photon-Selection-Refinement Stage {3.2}
 //
 //          WHILE iterations are less than 20 AND subset of photons changes each iteration
-//              a. least-squares fit current set of photons: x = curr_photon - segment_center, y = photon_height 
+//              a. least-squares fit current set of photons: x = curr_photon - segment_center, y = photon_height
 //                  i.  calculate mean height [h_mean]
 //                  ii. calculate slope [dh/dx]
 //              b. calculate robust estimator (similar to standard deviation) of residuals

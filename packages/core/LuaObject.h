@@ -103,8 +103,7 @@ class LuaObject
         static int          deleteLuaObject     (lua_State* L);
         static int          associateLuaName    (lua_State* L);
 
-        static LuaObject*   lockLuaObject       (lua_State* L, int parm, const char* object_type);
-        static LuaObject*   unlockLuaObject     (lua_State* L, int parm, const char* object_type);
+        static LuaObject*   lockLuaObject       (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
         static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
         static int          getLuaNumParms      (lua_State* L);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);

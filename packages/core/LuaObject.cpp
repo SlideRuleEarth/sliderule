@@ -258,7 +258,7 @@ int LuaObject::associateLuaName(lua_State* L)
 /*----------------------------------------------------------------------------
  * lockLuaObject
  *----------------------------------------------------------------------------*/
-LuaObject* LuaObject::lockLuaObject (lua_State* L, int parm, const char* object_type)
+LuaObject* LuaObject::lockLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
 {
     LuaObject* lua_obj = NULL;
 
@@ -289,6 +289,10 @@ LuaObject* LuaObject::lockLuaObject (lua_State* L, int parm, const char* object_
         {
             throw LuaException("%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
         }
+    }
+    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    {
+        return dfltval;
     }
     else
     {
