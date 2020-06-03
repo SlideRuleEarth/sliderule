@@ -814,7 +814,7 @@ RecordObject::valType_t RecordObject::getValueType(field_t f)
 /*----------------------------------------------------------------------------
  * defineRecord
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::defineRecord(const char* rec_type, const char* id_field, int data_size, fieldDef_t* fields, int num_fields, int max_fields)
+RecordObject::recordDefErr_t RecordObject::defineRecord(const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields)
 {
     assert(rec_type);
     return addDefinition(NULL, rec_type, id_field, data_size, fields, num_fields, max_fields);
@@ -1390,7 +1390,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
  *
  *  returns pointer to record definition in rec_def
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, fieldDef_t* fields, int num_fields, int max_fields=MAX_FIELDS)
+RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=MAX_FIELDS)
 {
     recordDefErr_t status = SUCCESS_DEF;
     definition_t* def = NULL;

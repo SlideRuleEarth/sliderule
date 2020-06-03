@@ -24,8 +24,7 @@
 #include <hdf5.h>
 
 #include "Hdf5Handle.h"
-#include "LuaObject.h"
-#include "RecordObject.h"
+#include "core.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -58,11 +57,11 @@ Hdf5Handle::~Hdf5Handle (void) {}
  * Static Data
  *----------------------------------------------------------------------------*/
 
-const char* Hdf5DatasetHandle::datasetRecType = "Hdf5Dataset";
-RecordObject::fieldDef_t Hdf5DatasetHandle::datasetRecDef[] = {
-    {"ID",       INT64,  offsetof(dataset_t, id),       sizeof(((dataset_t*)0)->id),        NATIVE_FLAGS},
-    {"OFFSET",  UINT32,  offsetof(dataset_t, offset),   sizeof(((dataset_t*)0)->offset),    NATIVE_FLAGS},
-    {"SIZE",    UINT32,  offsetof(dataset_t, size),     sizeof(((dataset_t*)0)->size),      NATIVE_FLAGS}
+const char* Hdf5DatasetHandle::recType = "Hdf5Dataset";
+const RecordObject::fieldDef_t Hdf5DatasetHandle::recDef[] = {
+    {"ID",      RecordObject::INT64,    offsetof(h5rec_t, id),      sizeof(((h5rec_t*)0)->id),      NATIVE_FLAGS},
+    {"OFFSET",  RecordObject::UINT32,   offsetof(h5rec_t, offset),  sizeof(((h5rec_t*)0)->offset),  NATIVE_FLAGS},
+    {"SIZE",    RecordObject::UINT32,   offsetof(h5rec_t, size),    sizeof(((h5rec_t*)0)->size),    NATIVE_FLAGS}
 };
 
 const char* Hdf5DatasetHandle::LuaMetaName = "Hdf5DatasetHandle";
@@ -71,7 +70,7 @@ const struct luaL_Reg Hdf5DatasetHandle::LuaMetaTable[] = {
 };
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<dataset name>, [<chunk size>], [<id>])
+ * luaCreate - create(<dataset name>, [<id>])
  *----------------------------------------------------------------------------*/
 int Hdf5DatasetHandle::luaCreate (lua_State* L)
 {
@@ -79,11 +78,10 @@ int Hdf5DatasetHandle::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* dataset_name    = getLuaString(L, 1);
-        long        chunk_size      = getLuaInteger(L, 2, true, INFINITE_CHUNK);
-        long        id              = getLuaInteger(L, 3, true, 0);
+        long        id              = getLuaInteger(L, 2, true, 0);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Hdf5DatasetHandle(L, dataset_name, chunk_size, id));
+        return createLuaObject(L, new Hdf5DatasetHandle(L, dataset_name, id));
     }
     catch(const LuaException& e)
     {
@@ -95,23 +93,22 @@ int Hdf5DatasetHandle::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, long chunk_size, long id):
-    Hdf5Handle(L, meta_name, meta_table)
+Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, long id):
+    Hdf5Handle(L, LuaMetaName, LuaMetaTable)
 {
-    int def_elements = sizeof(datasetRecDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::defineRecord(datasetRecType, "ID", sizeof(dataset_t), datasetRecDef, def_elements, 8);
+    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::defineRecord(recType, "ID", sizeof(h5rec_t), recDef, def_elements, 8);
 
-    LocalLib::set(&dataset, 0, sizeof(dataset));
+    LocalLib::set(&rec, 0, sizeof(rec));
 
     name = StringLib::duplicate(dataset_name);
-    chunk = chunk_size;
-    dataset.id = id;
+    rec.id = id;
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Hdf5DatasetHandle::~Hdf5DatasetHandle (void) 
+Hdf5DatasetHandle::~Hdf5DatasetHandle (void)
 {
     if(name) delete [] name;
 }
@@ -119,38 +116,68 @@ Hdf5DatasetHandle::~Hdf5DatasetHandle (void)
 /*----------------------------------------------------------------------------
  * open
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetHandle::open (hid_t h)
+bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
 {
+    unsigned flags;
+    bool status = false;
 
-    return true;
+    /* Set Flags */
+    if(role == DeviceObject::READER)        flags = H5F_ACC_RDONLY;
+    else if(role == DeviceObject::WRITER)   flags = H5F_ACC_TRUNC;
+    else                                    flags = H5F_ACC_RDWR;
+
+    /* Open File */
+    hid_t file = H5Fopen(filename, flags, H5P_DEFAULT);
+    hid_t dataset = H5Dopen(file, name, H5P_DEFAULT);
+    hid_t space = H5Dget_space(dataset);
+
+    /* Read Data */
+    int ndims = H5Sget_simple_extent_ndims(space);
+    if(ndims <= MAX_NDIMS)
+    {
+        hsize_t* dims = new hsize_t[ndims];
+        H5Sget_simple_extent_dims(space, dims, NULL);
+
+        size_t type_size = H5Tget_size(dataset);
+
+        printf("The size and the dims are: %d, %ld\n", ndims, (long)type_size);
+    }
+    else
+    {
+        mlog(CRITICAL, "Number of dimensions exceeded maximum allowed: %d\n", ndims);
+    }
+
+    H5Fclose(file);
+
+    /* Return Status */
+    return status;
 }
 
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetHandle::read (hid_t h, void* buf, int len)
+int Hdf5DatasetHandle::read (void* buf, int len)
 {
+    (void)buf;
+    (void)len;
 
-    return true;
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
  * write
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetHandle::write (hid_t h, const void* buf, int len)
+int Hdf5DatasetHandle::write (const void* buf, int len)
 {
-    (void)h;
     (void)buf;
     (void)len;
 
-    return true;
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
  * close
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetHandle::close (hid_t h)
+void Hdf5DatasetHandle::close (void)
 {
-
-    return true;
 }

@@ -24,7 +24,6 @@
 #include <hdf5.h>
 
 #include "Hdf5File.h"
-
 #include "core.h"
 
 /******************************************************************************
@@ -32,7 +31,7 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - hdf5file(<role>, <filename>)
+ * luaCreate - hdf5file(<handle>, <role>, <filename>)
  *
  *  <role> is either dev.READER or dev.WRITER
  *
@@ -43,17 +42,18 @@ int Hdf5File::luaCreate(lua_State* L)
     try
     {
         /* Get Parameters */
-        int         role      = (int)getLuaInteger(L, 1);
-        const char* file_str  = getLuaString(L, 2);
+        Hdf5Handle* _handle     = (Hdf5Handle*)lockLuaObject(L, 1, Hdf5Handle::OBJECT_TYPE);
+        int         _role       = (int)getLuaInteger(L, 2);
+        const char* _filename   = getLuaString(L, 3);
 
         /* Check Access Type */
-        if(role != DeviceObject::READER && role != DeviceObject::WRITER)
+        if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
         {
-            throw LuaException("unrecognized file access specified: %d\n", role);
+            throw LuaException("unrecognized file access specified: %d\n", _role);
         }
 
         /* Return File Device Object */
-        return createLuaObject(L, new Hdf5File(L, (DeviceObject::role_t)role, file_str));
+        return createLuaObject(L, new Hdf5File(L, _handle, (DeviceObject::role_t)_role, _filename));
     }
     catch(const LuaException& e)
     {
@@ -65,27 +65,19 @@ int Hdf5File::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5File::Hdf5File (lua_State* L, role_t _role, const char* _filename):
-    DeviceObject(L, _role)
+Hdf5File::Hdf5File (lua_State* L, Hdf5Handle* _handle, DeviceObject::role_t _role, const char* _filename):
+    DeviceObject(L, _role),
+    handle(_handle),
+    filename(StringLib::duplicate(_filename))
 {
     assert(_filename);
+    assert(_handle);
 
     /* Add Additional Meta Functions */
-    LuaEngine::setAttrFunc(L, "dir",    luaTraverse);
-    LuaEngine::setAttrFunc(L, "attach", luaAttach);
-
-    /* Set Filename */
-    filename = StringLib::duplicate(_filename);
-
-    /* Set Flags */
-    unsigned flags =  H5F_ACC_RDWR;
-    if(role == DeviceObject::READER)        flags = H5F_ACC_RDONLY;
-    else if(role == DeviceObject::WRITER)   flags = H5F_ACC_TRUNC;
+    LuaEngine::setAttrFunc(L, "dir", luaTraverse);
 
     /* Open File */
-    file = H5Fopen(filename, flags, H5P_DEFAULT);
-    if(file >= 0)   connected = true;
-    else            connected = false;
+    connected = handle->open(filename, _role);
 
     /* Set Configuration */
     int cfglen = snprintf(NULL, 0, "%s (%s)", filename, role == READER ? "READER" : "WRITER") + 1;
@@ -101,6 +93,9 @@ Hdf5File::~Hdf5File (void)
     closeConnection();
     if(filename) delete [] filename;
     if(config) delete [] config;
+
+    /* Unlock */
+    handle->removeLock();
 }
 
 /*----------------------------------------------------------------------------
@@ -118,11 +113,8 @@ bool Hdf5File::isConnected (int num_open)
  *----------------------------------------------------------------------------*/
 void Hdf5File::closeConnection (void)
 {
-    if(connected)
-    {
-        H5Fclose(file);
-        connected = false;
-    }
+    connected = false;
+    handle->close();
 }
 
 /*----------------------------------------------------------------------------
@@ -130,10 +122,15 @@ void Hdf5File::closeConnection (void)
  *----------------------------------------------------------------------------*/
 int Hdf5File::writeBuffer (const void* buf, int len)
 {
-    (void)buf;
-    (void)len;
+    int bytes = TIMEOUT_RC;
 
-    return 0;
+    if(connected)
+    {
+        bytes = handle->write(buf, len);
+        if(bytes != len) connected = false;
+    }
+
+    return bytes;
 }
 
 /*----------------------------------------------------------------------------
@@ -141,10 +138,15 @@ int Hdf5File::writeBuffer (const void* buf, int len)
  *----------------------------------------------------------------------------*/
 int Hdf5File::readBuffer (void* buf, int len)
 {
-    (void)buf;
-    (void)len;
+    int bytes = TIMEOUT_RC;
 
-    return 0;
+    if(connected)
+    {
+        bytes = handle->read(buf, len);
+        if(bytes < 0) connected = false;
+    }
+
+    return bytes;
 }
 
 /*----------------------------------------------------------------------------
@@ -152,7 +154,7 @@ int Hdf5File::readBuffer (void* buf, int len)
  *----------------------------------------------------------------------------*/
 int Hdf5File::getUniqueId (void)
 {
-    return (int)file;
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -193,7 +195,7 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char *name, const H5L_info_t *info
 
     H5O_info_t object_info;
     H5Oget_info_by_name(loc_id, name, &object_info, H5P_DEFAULT);
-    switch (object_info.type) 
+    switch (object_info.type)
     {
         case H5O_TYPE_GROUP:
         {
@@ -212,8 +214,8 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char *name, const H5L_info_t *info
                 }
                 else
                 {
-                    mlog(RAW, " }\n");   
-                }                
+                    mlog(RAW, " }\n");
+                }
             }
             else
             {
@@ -244,6 +246,8 @@ int Hdf5File::luaTraverse (lua_State* L)
 {
     bool        status = false;
     rdepth_t    recurse = {.data = 0};
+    hid_t       file = INVALID_HID;
+    hid_t       group = INVALID_HID;
 
     try
     {
@@ -251,34 +255,35 @@ int Hdf5File::luaTraverse (lua_State* L)
         Hdf5File* lua_obj = (Hdf5File*)getLuaSelf(L, 1);
 
         /* Check File */
-        H5O_info_t object_info;
         if(!lua_obj->isConnected())
         {
             throw LuaException("Cannot traverse disconnected file");
         }
-        else if(H5Oget_info(lua_obj->file, &object_info) < 0)
-        {
-            throw LuaException("Failed to get file info for: %s", lua_obj->getFilename());
-        }
 
         /* Get Maximum Recursion Depth */
-        uint32_t max_depth = getLuaInteger(L, 2, true, 32);        
+        uint32_t max_depth = getLuaInteger(L, 2, true, 32);
         recurse.curr.max = max_depth;
 
-        /* Get Group */
-        hid_t group = lua_obj->file;
+        /* Open File */
+        file = H5Fopen(lua_obj->filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+        if(file < 0)
+        {
+            throw LuaException("Failed to open file: %s", lua_obj->filename);
+        }
+
+        /* Open Group */
         const char* group_path = getLuaString(L, 3, true, NULL);
         if(group_path)
         {
-            group = H5Gopen(lua_obj->file, group_path, H5P_DEFAULT);
+            group = H5Gopen(group, group_path, H5P_DEFAULT);
             if(group < 0)
             {
                 throw LuaException("Failed to open group: %s", group_path);
             }
         }
-        
+
         /* Display File Structure */
-        if(H5Literate(group, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, hdf5_iter_op_func, (void*)recurse.data) >= 0)
+        if(H5Literate(group > 0 ? group : file, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, hdf5_iter_op_func, (void*)recurse.data) >= 0)
         {
             status = true;
         }
@@ -288,32 +293,9 @@ int Hdf5File::luaTraverse (lua_State* L)
         mlog(CRITICAL, "Error traversing hdf5 file: %s\n", e.errmsg);
     }
 
-    /* Return Status */
-    return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * luaAttach - :attach(<hdf5 handle>)
- *----------------------------------------------------------------------------*/
-int Hdf5File::luaAttach (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        Hdf5File* lua_obj = (Hdf5File*)getLuaSelf(L, 1);
-
-        /* Check File */
-        if(!lua_obj->isConnected())
-        {
-            throw LuaException("Cannot traverse disconnected file");
-        }
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error attaching to hdf5 file: %s\n", e.errmsg);
-    }
+    /* Clean Up */
+    if(file > 0) H5Fclose(file);
+    if(group > 0) H5Gclose(group);
 
     /* Return Status */
     return returnLuaStatus(L, status);

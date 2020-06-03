@@ -110,7 +110,7 @@ class RecordObject
             BIGENDIAN       = 0x00000001,
             POINTER         = 0x00000002
         } fieldFlags_t;
-        
+
         typedef struct {
             fieldType_t     type;               // predefined types
             int32_t         size;               // size in bits of field
@@ -125,7 +125,7 @@ class RecordObject
             int32_t         size;               // bits for BITFIELD, bytes for everything else
             unsigned int    flags;
         } fieldDef_t;
-        
+
         typedef enum {
             SUCCESS_DEF     =  0,
             DUPLICATE_DEF   = -1,
@@ -133,7 +133,7 @@ class RecordObject
             NUMFIELDERR_DEF = -3,
             FIELDERR_DEF    = -4
         } recordDefErr_t;
-                
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -215,9 +215,9 @@ class RecordObject
         valType_t               getValueType        (field_t field);
 
         /* Definition Static Methods */
-        static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, fieldDef_t* fields, int num_fields, int max_fields=MAX_FIELDS);
+        static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=MAX_FIELDS);
         static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags=NATIVE_FLAGS);
-        
+
         /* Utility Static Methods */
         static bool             isRecord            (const char* rec_type);
         static bool             isType              (unsigned char* buffer, int size, const char* rec_type);
@@ -246,12 +246,12 @@ class RecordObject
          *--------------------------------------------------------------------*/
 
         static const int FIELD_HASH_SCALAR = 2;
-        
+
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-        
-        struct definition_t 
+
+        struct definition_t
         {
             const char*             type_name;      // the name of the type of record
             const char*             id_field;       // field name for id
@@ -262,7 +262,7 @@ class RecordObject
 
             definition_t(const char* _type_name, const char* _id_field, int _data_size, int _max_fields):
                 fields(_max_fields)
-                { type_name = StringLib::duplicate(_type_name); 
+                { type_name = StringLib::duplicate(_type_name);
                   type_size = (int)StringLib::size(_type_name) + 1;
                   id_field = StringLib::duplicate(_id_field);
                   data_size = _data_size;
@@ -294,7 +294,7 @@ class RecordObject
         /* Regular Methods */
         bool                    populate            (const char* populate_string); // field_name=value, ...
         field_t                 getPointedToField   (field_t field, bool allow_null);
-        static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, fieldDef_t* fields, int num_fields, int max_fields);
+        static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
         static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags=NATIVE_FLAGS);
 
         /* Overloaded Methods */

@@ -10,7 +10,7 @@ find_library (HDF5_LIB hdf5)
 if (HDF5_LIB AND ZLIB_FOUND)
 
     message (STATUS "Including icesat2 plugin")
-    
+
     add_library (icesat2Lib SHARED "")
 
     set_target_properties (icesat2Lib PROPERTIES OUTPUT_NAME icesat2)
@@ -27,6 +27,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/icesat2.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5File.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Handle.cpp
     )
 
     target_include_directories (icesat2Lib
@@ -39,6 +40,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/icesat2.h
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5File.h
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Handle.h
         DESTINATION
             ${INCDIR}
     )

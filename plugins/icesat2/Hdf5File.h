@@ -28,6 +28,7 @@
 
 #include "OsApi.h"
 #include "DeviceObject.h"
+#include "Hdf5Handle.h"
 
 /******************************************************************************
  * HDF5 FILE CLASS
@@ -38,24 +39,12 @@ class Hdf5File: public DeviceObject
     public:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            char    dataset[MAX_STR_SIZE];
-            int     chunk_size;
-            int     start_offset;
-            int     stop_offset;
-            // TODO: handle dimensions
-        } action_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
 
-                            Hdf5File            (lua_State* L, role_t _role, const char* _filename);
+                            Hdf5File            (lua_State* L, Hdf5Handle* _handle, role_t _role, const char* _filename);
         virtual             ~Hdf5File           ();
 
         virtual bool        isConnected         (int num_open=0);   // is the file open
@@ -68,16 +57,21 @@ class Hdf5File: public DeviceObject
         const char*         getFilename         (void);
 
         static int          luaTraverse         (lua_State* L);
-        static int          luaAttach           (lua_State* L);
 
     protected:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const hid_t INVALID_HID = -1;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        hid_t           file;
-        bool            connected;           
+        Hdf5Handle*     handle;
+        bool            connected;
         char*           filename; // user supplied prefix
         char*           config; // <filename>(<type>,<access>,<io>)
 };
