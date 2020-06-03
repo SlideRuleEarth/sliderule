@@ -21,6 +21,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <hdf5.h>
+
 #include "Hdf5Handle.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
@@ -115,23 +117,40 @@ Hdf5DatasetHandle::~Hdf5DatasetHandle (void)
 }
 
 /*----------------------------------------------------------------------------
- * readRecord
+ * open
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetHandle::readRecord  (RecordObject** record, okey_t* key)
+bool Hdf5DatasetHandle::open (hid_t h)
 {
-    (void)record;
-    (void)key;
 
     return true;
 }
 
 /*----------------------------------------------------------------------------
- * writeRecord
+ * read
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetHandle::writeRecord (RecordObject* record, okey_t key)
+bool Hdf5DatasetHandle::read (hid_t h, void* buf, int len)
 {
-    (void)record;
-    (void)key;
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * write
+ *----------------------------------------------------------------------------*/
+bool Hdf5DatasetHandle::write (hid_t h, const void* buf, int len)
+{
+    (void)h;
+    (void)buf;
+    (void)len;
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * close
+ *----------------------------------------------------------------------------*/
+bool Hdf5DatasetHandle::close (hid_t h)
+{
 
     return true;
 }

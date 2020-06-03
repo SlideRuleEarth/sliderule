@@ -48,8 +48,10 @@ class Hdf5Handle: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual bool readRecord (hid_t h, RecordObject** record, okey_t* key) = 0;
-        virtual bool writeRecord (hid_t h, RecordObject* record, okey_t key) = 0;
+        virtual bool    open    (hid_t h) = 0;
+        virtual bool    read    (hid_t h, void* buf, int len) = 0;
+        virtual bool    write   (hid_t h, const void* buf, int len) = 0;
+        virtual bool    close   (hid_t h) = 0;
 
     protected:
 
@@ -114,8 +116,10 @@ class Hdf5DatasetHandle: public Hdf5Handle
                 Hdf5DatasetHandle   (lua_State* L);
                 ~Hdf5DatasetHandle  (void);
 
-        bool    readRecord          (hid_t h, RecordObject** record, okey_t* key);
-        bool    writeRecord         (hid_t h, RecordObject* record, okey_t key);
+        bool    open                (hid_t h);
+        bool    read                (hid_t h, void* buf, int len);
+        bool    write               (hid_t h, const void* buf, int len);
+        bool    close               (hid_t h);
 };
 
 #endif  /* __hdf5_handle__ */
