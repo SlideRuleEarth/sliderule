@@ -30,7 +30,7 @@
 #include "DeviceObject.h"
 
 /******************************************************************************
- * FILE CLASS
+ * HDF5 FILE CLASS
  ******************************************************************************/
 
 class Hdf5File: public DeviceObject
@@ -38,14 +38,16 @@ class Hdf5File: public DeviceObject
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const long FILENAME_MAX_CHARS = 512;
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+
+        typedef struct {
+            char    dataset[MAX_STR_SIZE];
+            int     chunk_size;
+            int     start_offset;
+            int     stop_offset;
+            // TODO: handle dimensions
+        } action_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -66,6 +68,7 @@ class Hdf5File: public DeviceObject
         const char*         getFilename         (void);
 
         static int          luaTraverse         (lua_State* L);
+        static int          luaAttach           (lua_State* L);
 
     protected:
 

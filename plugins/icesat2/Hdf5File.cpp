@@ -72,20 +72,20 @@ Hdf5File::Hdf5File (lua_State* L, role_t _role, const char* _filename):
 
     /* Add Additional Meta Functions */
     LuaEngine::setAttrFunc(L, "dir",    luaTraverse);
+    LuaEngine::setAttrFunc(L, "attach", luaAttach);
 
     /* Set Filename */
     filename = StringLib::duplicate(_filename);
 
+    /* Set Flags */
+    unsigned flags =  H5F_ACC_RDWR;
+    if(role == DeviceObject::READER)        flags = H5F_ACC_RDONLY;
+    else if(role == DeviceObject::WRITER)   flags = H5F_ACC_TRUNC;
+
     /* Open File */
-    file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-    if(file >= 0)
-    {
-        connected = true;
-    }
-    else
-    {
-        connected = false;
-    }
+    file = H5Fopen(filename, flags, H5P_DEFAULT);
+    if(file >= 0)   connected = true;
+    else            connected = false;
 
     /* Set Configuration */
     int cfglen = snprintf(NULL, 0, "%s (%s)", filename, role == READER ? "READER" : "WRITER") + 1;
@@ -172,12 +172,10 @@ const char* Hdf5File::getFilename (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaTraverse
+ * luaTraverse - :dir([<max depth>], [<starting group>])
  *----------------------------------------------------------------------------*/
-typedef union 
-{
-    struct
-    {
+typedef union {
+    struct {
         uint32_t depth;
         uint32_t max;
     } curr;
@@ -288,6 +286,33 @@ int Hdf5File::luaTraverse (lua_State* L)
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error traversing hdf5 file: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaAttach - :attach(<hdf5 handle>)
+ *----------------------------------------------------------------------------*/
+int Hdf5File::luaAttach (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        Hdf5File* lua_obj = (Hdf5File*)getLuaSelf(L, 1);
+
+        /* Check File */
+        if(!lua_obj->isConnected())
+        {
+            throw LuaException("Cannot traverse disconnected file");
+        }
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error attaching to hdf5 file: %s\n", e.errmsg);
     }
 
     /* Return Status */
