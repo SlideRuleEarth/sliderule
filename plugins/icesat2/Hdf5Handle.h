@@ -82,7 +82,7 @@ class Hdf5DatasetHandle: public Hdf5Handle
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
-        static const int MAX_NDIMS = 16;
+        static const int MAX_NDIMS = 8;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -107,8 +107,8 @@ class Hdf5DatasetHandle: public Hdf5Handle
          *--------------------------------------------------------------------*/
 
         hid_t       handle;
-        const char* name;
         h5rec_t     rec;
+        const char* dataName;
         uint8_t*    dataBuffer;
         int         dataSize;
 

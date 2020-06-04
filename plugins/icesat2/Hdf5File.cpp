@@ -254,8 +254,8 @@ int Hdf5File::luaTraverse (lua_State* L)
 {
     bool        status = false;
     rdepth_t    recurse = {.data = 0};
-    hid_t       file = INVALID_HID;
-    hid_t       group = INVALID_HID;
+    hid_t       file = INVALID_RC;
+    hid_t       group = INVALID_RC;
 
     try
     {

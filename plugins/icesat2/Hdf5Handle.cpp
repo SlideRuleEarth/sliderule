@@ -99,9 +99,16 @@ Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, lo
     int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
     RecordObject::defineRecord(recType, "ID", sizeof(h5rec_t), recDef, def_elements, 8);
 
+    /* Initialize Attributes to Zero */
+    handle = INVALID_RC;
     LocalLib::set(&rec, 0, sizeof(rec));
+    dataSize = 0;
+    dataBuffer = NULL;
 
-    name = StringLib::duplicate(dataset_name);
+    /* Set Name of Dataset */
+    dataName = StringLib::duplicate(dataset_name);
+
+    /* Set ID of Dataset Record */
     rec.id = id;
 }
 
@@ -110,7 +117,7 @@ Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, lo
  *----------------------------------------------------------------------------*/
 Hdf5DatasetHandle::~Hdf5DatasetHandle (void)
 {
-    if(name) delete [] name;
+    if(dataName) delete [] dataName;
 }
 
 /*----------------------------------------------------------------------------
@@ -120,34 +127,97 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
 {
     unsigned flags;
     bool status = false;
+    hid_t file = INVALID_RC;
+    hid_t dataset = INVALID_RC;
+    hid_t space = INVALID_RC;
+
+    /* Check Reentry */
+    if(dataBuffer)
+    {
+        mlog(CRITICAL, "Dataset already opened: %s\n", dataName);
+        return false;
+    }
 
     /* Set Flags */
     if(role == DeviceObject::READER)        flags = H5F_ACC_RDONLY;
     else if(role == DeviceObject::WRITER)   flags = H5F_ACC_TRUNC;
     else                                    flags = H5F_ACC_RDWR;
 
-    /* Open File */
-    hid_t file = H5Fopen(filename, flags, H5P_DEFAULT);
-    hid_t dataset = H5Dopen(file, name, H5P_DEFAULT);
-    hid_t space = H5Dget_space(dataset);
-
-    /* Read Data */
-    int ndims = H5Sget_simple_extent_ndims(space);
-    if(ndims <= MAX_NDIMS)
+    do
     {
-        hsize_t* dims = new hsize_t[ndims];
-        H5Sget_simple_extent_dims(space, dims, NULL);
+        /* Open File */
+        file = H5Fopen(filename, flags, H5P_DEFAULT);
+        if(file < 0)
+        {
+            mlog(CRITICAL, "Failed to open file: %s\n", filename);
+            break;
+        }
 
-        size_t type_size = H5Tget_size(dataset);
+        /* Open Dataset */
+        dataset = H5Dopen(file, dataName, H5P_DEFAULT);
+        if(dataset < 0)
+        {
+            mlog(CRITICAL, "Failed to open dataset: %s\n", dataName);
+            break;
+        }
 
-        printf("The size and the dims are: %d, %ld\n", ndims, (long)type_size);
+        /* Open Dataspace */
+        space = H5Dget_space(dataset);
+        if(space < 0)
+        {
+            mlog(CRITICAL, "Failed to open dataspace on dataset: %s\n", dataName);
+            break;
+        }
+
+        /* Read Data */
+        int ndims = H5Sget_simple_extent_ndims(space);
+        if(ndims <= MAX_NDIMS)
+        {
+            hsize_t* dims = new hsize_t[ndims];
+            H5Sget_simple_extent_dims(space, dims, NULL);
+
+            /* Get Size of Data Buffer */
+            dataSize = sizeof(int);
+            for(int d = 0; d < ndims; d++)
+            {
+                dataSize *= dims[d];
+            }
+
+            /* Allocate Data Buffer */
+            try
+            {
+                dataBuffer = new uint8_t[dataSize];
+            }
+            catch (const std::bad_alloc& e)
+            {
+                mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", dataSize);
+                break;
+            }
+
+            /* Read Dataset */
+            mlog(INFO, "Reading %d bytes of data from %s\n", dataSize, dataName);
+            if(H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataBuffer) > 0)
+            {
+                status = true;
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed to read data from %s\n", dataName);
+                break;
+            }
+        }
+        else
+        {
+            mlog(CRITICAL, "Number of dimensions exceeded maximum allowed: %d\n", ndims);
+            break;
+        }
     }
-    else
-    {
-        mlog(CRITICAL, "Number of dimensions exceeded maximum allowed: %d\n", ndims);
-    }
+    while(false);
 
-    H5Fclose(file);
+    /* Clean Up */
+    if(space > 0) H5Sclose(space);
+    if(dataset > 0) H5Dclose(dataset);
+    if(file > 0) H5Fclose(file);
 
     /* Return Status */
     return status;
