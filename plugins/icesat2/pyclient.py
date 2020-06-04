@@ -3,6 +3,7 @@
 import sys
 import json
 import requests
+import struct
 
 server_url = 'http://127.0.0.1:9081'
 
@@ -78,7 +79,6 @@ def test_time ():
     else:
         print("Failed time test")
 
-
 #
 #  TEST H5
 #
@@ -110,4 +110,4 @@ if __name__ == '__main__':
     # Tests
     test_echo()
     test_time()
-    test_h5()
+#    test_h5()
