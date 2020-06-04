@@ -29,7 +29,7 @@ def source (api, parm):
 #
 def engine (api, parm):
     url = '%s/engine/%s' % (server_url, api)
-    return requests.post(url, data=parm)
+    return requests.post(url, data=parm, stream=True)
 
 
 ###############################################################################
@@ -93,7 +93,8 @@ def test_h5 ():
     print(p)
 
     d = engine("h5", p)
-    print(d)
+    for line in d.iter_lines():
+        print(line)
 
 ###############################################################################
 # MAIN

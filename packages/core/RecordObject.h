@@ -150,6 +150,8 @@ class RecordObject
         static const char*  DEFAULT_LONG_FORMAT;
         static const double FLOAT_MAX_VALUE; // maximum 32bit value as a float
 
+        static const int FIELD_TYPE_BYTES[INVALID_FIELD];
+
         /*--------------------------------------------------------------------
          * Field (subclass)
          *--------------------------------------------------------------------*/

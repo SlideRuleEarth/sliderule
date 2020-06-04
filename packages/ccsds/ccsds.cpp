@@ -116,6 +116,9 @@ void initccsds (void)
     RecordDispatcher::addKeyCalcFunc(CDS_KEY_CALC_NAME, calcCdsTime);
     LuaLibraryMsg::lmsg_addtype('/', createCcsdsRec, "CCSDS", associateCcsdsRec);
 
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_CCSDS_LIBNAME, BINID);
+
     /* Print Status */
     printf("%s package initialized (%s)\n", LUA_CCSDS_LIBNAME, BINID);
 }

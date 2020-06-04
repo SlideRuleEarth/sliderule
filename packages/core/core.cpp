@@ -140,6 +140,9 @@ void initcore (void)
     LuaEngine::extend(LuaLibraryTime::LUA_TIMELIBNAME, LuaLibraryTime::luaopen_timelib);
     LuaEngine::extend(LUA_CORE_LIBNAME, core_open);
 
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_CORE_LIBNAME, BINID);
+
     /* Print Status */
     printf("%s package initialized (%s)\n", LUA_CORE_LIBNAME, BINID);
 }

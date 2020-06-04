@@ -60,7 +60,10 @@ void initicesat2 (void)
 {
     LuaEngine::extend(LUA_ICESAT2_LIBNAME, icesat2_open);
 
-	/* Display Status */
-    printf("ICESat-2 Plugin Initialized (%s)\n", BINID);
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_ICESAT2_LIBNAME, BINID);
+
+    /* Display Status */
+    printf("%s plugin initialized (%s)\n", LUA_ICESAT2_LIBNAME, BINID);
 }
 }

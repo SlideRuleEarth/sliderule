@@ -72,6 +72,7 @@ class LuaEngine
                             ~LuaEngine      (void);
 
         static void         extend          (const char* lib_name, luaOpenLibFunc lib_func);
+        static void         indicate        (const char* pkg_name, const char* pkg_version);
         static mode_t       str2mode        (const char* str);
         static const char*  mode2str        (mode_t _mode);
         static void         setErrno        (lua_State* L, int val);
@@ -111,6 +112,11 @@ class LuaEngine
         } libInitEntry_t;
 
         typedef struct {
+            const char*     pkg_name;
+            const char*     pkg_version;
+        } pkgInitEntry_t;
+
+        typedef struct {
             LuaEngine*      engine;
             int             argc;
             char**          argv;
@@ -128,6 +134,9 @@ class LuaEngine
 
         static List<libInitEntry_t> libInitTable;
         static Mutex                libInitTableMutex;
+
+        static List<pkgInitEntry_t> pkgInitTable;
+        static Mutex                pkgInitTableMutex;
 
         lua_State*                  L;      // lua state variable
         Mutex                       mutL;   // mutex to lua state

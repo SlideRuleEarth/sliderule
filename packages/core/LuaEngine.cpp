@@ -38,6 +38,9 @@ const char* LuaEngine::LUA_ERRNO = "errno";
 List<LuaEngine::libInitEntry_t> LuaEngine::libInitTable;
 Mutex LuaEngine::libInitTableMutex;
 
+List<LuaEngine::pkgInitEntry_t> LuaEngine::pkgInitTable;
+Mutex LuaEngine::pkgInitTableMutex;
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -150,6 +153,21 @@ void LuaEngine::extend(const char* lib_name, luaOpenLibFunc lib_func)
         libInitTable.add(entry);
     }
     libInitTableMutex.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * extend
+ *----------------------------------------------------------------------------*/
+void LuaEngine::indicate(const char* pkg_name, const char* pkg_version)
+{
+    pkgInitTableMutex.lock();
+    {
+        pkgInitEntry_t entry;
+        entry.pkg_name = StringLib::duplicate(pkg_name);
+        entry.pkg_version = StringLib::duplicate(pkg_version);
+        pkgInitTable.add(entry);
+    }
+    pkgInitTableMutex.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -534,6 +552,19 @@ lua_State* LuaEngine::createState(luaStepHook hook)
         }
     }
     libInitTableMutex.unlock();
+
+    /* Register Package Versions */
+    pkgInitTableMutex.lock();
+    {
+        for(int i = 0; i < pkgInitTable.length(); i++)
+        {
+            char pkg_name[MAX_STR_SIZE];
+            StringLib::format(pkg_name, MAX_STR_SIZE, "__%s__", pkgInitTable[i].pkg_name);
+            lua_pushstring(l, pkgInitTable[i].pkg_version);
+            lua_setglobal(l, pkg_name);
+        }
+    }
+    pkgInitTableMutex.unlock();
 
     /* Open Libraries */
     lua_pushboolean(l, 1);  /* signal for libraries to ignore env. vars. */

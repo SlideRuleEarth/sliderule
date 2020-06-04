@@ -131,6 +131,7 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
     hid_t file = INVALID_RC;
     hid_t dataset = INVALID_RC;
     hid_t space = INVALID_RC;
+    hid_t datatype = INVALID_RC;
 
     /* Check Reentry */
     if(dataBuffer)
@@ -171,6 +172,10 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
             break;
         }
 
+        /* Get Datatype */
+        datatype = H5Dget_type(dataset);
+        size_t typesize = H5Tget_size(datatype);
+
         /* Read Data */
         int ndims = H5Sget_simple_extent_ndims(space);
         if(ndims <= MAX_NDIMS)
@@ -179,7 +184,7 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
             H5Sget_simple_extent_dims(space, dims, NULL);
 
             /* Get Size of Data Buffer */
-            dataSize = sizeof(int);
+            dataSize = typesize;
             for(int d = 0; d < ndims; d++)
             {
                 dataSize *= dims[d];
@@ -198,7 +203,7 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
 
             /* Read Dataset */
             mlog(INFO, "Reading %d bytes of data from %s\n", dataSize, dataName);
-            if(H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataBuffer) > 0)
+            if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataBuffer) >= 0)
             {
                 status = true;
             }
@@ -217,6 +222,7 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
     while(false);
 
     /* Clean Up */
+    if(datatype > 0) H5Tclose(datatype);
     if(space > 0) H5Sclose(space);
     if(dataset > 0) H5Dclose(dataset);
     if(file > 0) H5Fclose(file);

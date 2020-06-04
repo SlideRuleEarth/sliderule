@@ -39,6 +39,22 @@ const char* RecordObject::DEFAULT_DOUBLE_FORMAT = "%.6lf";
 const char* RecordObject::DEFAULT_LONG_FORMAT = "%ld";
 const double RecordObject::FLOAT_MAX_VALUE = 4294967296.0;
 
+const int RecordObject::FIELD_TYPE_BYTES[INVALID_FIELD] = {
+    1, // INT8
+    2, // INT16
+    4, // INT32
+    8, // INT64
+    1, // UINT8
+    2, // UINT16
+    4, // UINT32
+    8, // UINT64
+    0, // BITFIELD
+    4, // FLOAT
+    8, // DOUBLE
+    8, // TIME8
+    0, // STRING
+};
+
 /******************************************************************************
  * RECORD OBJECT FIELD METHODS
  ******************************************************************************/

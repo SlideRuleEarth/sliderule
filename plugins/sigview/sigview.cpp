@@ -53,7 +53,10 @@ void initsigview (void)
     cmdProc->registerHandler("BLINK_PROCESSOR",          BlinkProcessorModule::createObject,         1,  "<time processor name>", true);
     cmdProc->registerHandler("TX_TIME_PROCESSOR",        TxTimeProcessor::createObject,              2,  "<Tx time stream> <pce: 1,2,3>");
 
-	/* Display Status */
-    printf("SigView Plugin Initialized (%s)\n", BINID);
+    /* Indicate Presence of Package */
+    LuaEngine::indicate("sigview", BINID);
+
+    /* Display Status */
+    printf("sigview plugin initialized (%s)\n", BINID);
 }
 }

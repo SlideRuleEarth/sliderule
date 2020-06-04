@@ -66,7 +66,10 @@ void initpistache (void)
 {
     LuaEngine::extend(LUA_PISTACHE_LIBNAME, pistache_open);
 
-	/* Display Status */
-    printf("Pistache Plugin Initialized (%s)\n", BINID);
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_PISTACHE_LIBNAME, BINID);
+
+    /* Display Status */
+    printf("%s plugin initialized (%s)\n", LUA_PISTACHE_LIBNAME, BINID);
 }
 }
