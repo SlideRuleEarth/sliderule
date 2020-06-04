@@ -1,6 +1,9 @@
 local runner = require("test_executive")
 local packet = require("packet")
 
+--local console = require("console")
+--console.logger:config(core.INFO)
+
 -- Cfs Interface Unit Test Start --
 
 runner.command("NEW CFS_INTERFACE cfsif cfstlmq cfscmdq 127.0.0.1 5001 127.0.0.1 5002")

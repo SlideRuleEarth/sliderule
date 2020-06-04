@@ -265,7 +265,7 @@ int CcsdsSpacePacket::getLEN(void) const
     int len = (buffer[4] << 8) + (buffer[5] + 7);
     if(max_pkt_len > 0)
     {
-        if(len > max_pkt_len) { mlog(CRITICAL, "out of bounds packet size detected: %d > %d\n", len, max_pkt_len); assert(false); }
+        if(len > max_pkt_len) mlog(CRITICAL, "out of bounds packet size detected: %d > %d\n", len, max_pkt_len);
         return MAX(MIN(len, max_pkt_len), 0);
     }
     else
