@@ -6,6 +6,10 @@ import requests
 
 server_url = 'http://127.0.0.1:9081'
 
+###############################################################################
+# APIs
+###############################################################################
+
 #
 #  ECHO
 #
@@ -29,27 +33,23 @@ def engine (api, parm):
 
 
 ###############################################################################
-# MAIN
+# TESTS
 ###############################################################################
 
-if __name__ == '__main__':
-
-    # Override server URL from command line
-
-    if len(sys.argv) > 1:
-        server_url = sys.argv[1]
-
-    # Test echo api
-
+#
+#  TEST ECHO
+#
+def test_echo ():
     d = echo('{ "hello" : "world" }').json()
-
     if d["hello"] == "world":
         print("Passed echo test")
     else:
         print("Failed echo test")
 
-    # Test time api
-
+#
+#  TEST TIME
+#
+def test_time ():
     rqst_dict = {
         "time": "NOW",
         "input": "NOW",
@@ -78,3 +78,35 @@ if __name__ == '__main__':
     else:
         print("Failed time test")
 
+
+#
+#  TEST H5
+#
+def test_h5 ():
+    rqst_dict = {
+        "filename": "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5",
+        "dataset": "gt2l/heights/dist_ph_along",
+        "id": 0
+    }
+
+    p = json.dumps(rqst_dict)
+    print(p)
+
+    d = engine("h5", p)
+    print(d)
+
+###############################################################################
+# MAIN
+###############################################################################
+
+if __name__ == '__main__':
+
+    # Override server URL from command line
+
+    if len(sys.argv) > 1:
+        server_url = sys.argv[1]
+
+    # Tests
+    test_echo()
+    test_time()
+    test_h5()

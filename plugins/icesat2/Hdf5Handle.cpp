@@ -102,8 +102,9 @@ Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, lo
     /* Initialize Attributes to Zero */
     handle = INVALID_RC;
     LocalLib::set(&rec, 0, sizeof(rec));
-    dataSize = 0;
     dataBuffer = NULL;
+    dataSize = 0;
+    dataOffset = 0;
 
     /* Set Name of Dataset */
     dataName = StringLib::duplicate(dataset_name);
@@ -146,6 +147,7 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
     do
     {
         /* Open File */
+        mlog(INFO, "Opening file: %s\n", filename);
         file = H5Fopen(filename, flags, H5P_DEFAULT);
         if(file < 0)
         {
@@ -228,10 +230,11 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
  *----------------------------------------------------------------------------*/
 int Hdf5DatasetHandle::read (void* buf, int len)
 {
-    (void)buf;
-    (void)len;
-
-    return 0;
+    int bytes_remaining = dataSize - dataOffset;
+    int bytes_to_copy = MIN(len, bytes_remaining);
+    LocalLib::copy(buf, &dataBuffer[dataOffset], bytes_to_copy);
+    dataOffset += bytes_to_copy;
+    return bytes_to_copy;
 }
 
 /*----------------------------------------------------------------------------
@@ -250,4 +253,6 @@ int Hdf5DatasetHandle::write (const void* buf, int len)
  *----------------------------------------------------------------------------*/
 void Hdf5DatasetHandle::close (void)
 {
+    if(dataBuffer) delete [] dataBuffer;
+    dataBuffer = NULL;
 }

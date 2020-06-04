@@ -111,6 +111,7 @@ class Hdf5DatasetHandle: public Hdf5Handle
         const char* dataName;
         uint8_t*    dataBuffer;
         int         dataSize;
+        int         dataOffset;
 
         /*--------------------------------------------------------------------
          * Methods
