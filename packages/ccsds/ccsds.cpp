@@ -35,6 +35,8 @@
  ******************************************************************************/
 
 const char* CDS_KEY_CALC_NAME = "CDS";
+const char* CCSDS_RECORD_CLASS = "CCSDS";
+const char CCSDS_RECORD_PREFIX = '/';
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -114,7 +116,7 @@ void initccsds (void)
 
     /* Install Add On Functions */
     RecordDispatcher::addKeyCalcFunc(CDS_KEY_CALC_NAME, calcCdsTime);
-    LuaLibraryMsg::lmsg_addtype('/', createCcsdsRec, "CCSDS", associateCcsdsRec);
+    LuaLibraryMsg::lmsg_addtype(CCSDS_RECORD_CLASS, CCSDS_RECORD_PREFIX, createCcsdsRec, associateCcsdsRec);
 
     /* Indicate Presence of Package */
     LuaEngine::indicate(LUA_CCSDS_LIBNAME, BINID);

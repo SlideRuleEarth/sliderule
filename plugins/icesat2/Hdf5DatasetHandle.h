@@ -43,9 +43,6 @@ class Hdf5DatasetHandle: public Hdf5Handle
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* recType;
-        static const RecordObject::fieldDef_t recDef[];
-
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
@@ -60,31 +57,21 @@ class Hdf5DatasetHandle: public Hdf5Handle
     private:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            int64_t     id;
-            uint32_t    offset;
-            uint32_t    size;
-        } h5rec_t;
-
-        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         hid_t       handle;
-        h5rec_t     rec;
         const char* dataName;
         uint8_t*    dataBuffer;
         int         dataSize;
         int         dataOffset;
+        bool        rawMode;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                Hdf5DatasetHandle   (lua_State* L, const char* dataset_name, long id);
+                Hdf5DatasetHandle   (lua_State* L, const char* dataset_name, long id, bool raw_mode);
                 ~Hdf5DatasetHandle  (void);
 
         bool    open                (const char* filename, DeviceObject::role_t role);

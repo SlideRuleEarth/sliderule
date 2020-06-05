@@ -50,13 +50,15 @@ class LuaLibraryMsg
          *--------------------------------------------------------------------*/
 
         static const char* LUA_MSGLIBNAME;
+        static const char* REC_TYPE_ATTR;
+        static const char* REC_ID_ATTR;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static void     lmsg_init           (void);
-        static bool     lmsg_addtype        (char prefix, createRecFunc cfunc, const char* recclass, associateRecFunc afunc);
+        static bool     lmsg_addtype        (const char* recclass, char prefix, createRecFunc cfunc, associateRecFunc afunc);
         static int      luaopen_msglib      (lua_State* L);
 
     private:
@@ -80,6 +82,12 @@ class LuaLibraryMsg
             RecordObject*   rec;
         } recUserData_t;
 
+        typedef struct {
+            char                prefix;
+            createRecFunc       create;
+            associateRecFunc    associate;
+        } recClass_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -93,15 +101,15 @@ class LuaLibraryMsg
         static const struct luaL_Reg subLibsM [];
         static const struct luaL_Reg recLibsM [];
 
-        static createRecFunc prefixLookUp[0xFF];
-        static Dictionary<associateRecFunc> typeLookUp;
+        static recClass_t prefixLookUp[0xFF];
+        static Dictionary<recClass_t> typeTable;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static RecordObject* populateRecord (const char* population_string);
-        static RecordObject* associateRecord (const char* record_class, unsigned char* data, int size);
+        static RecordObject* associateRecord (const char* recclass, unsigned char* data, int size);
 
         /* message library functions */
         static int      lmsg_publish        (lua_State* L);
@@ -125,6 +133,8 @@ class LuaLibraryMsg
         static int      lmsg_setfieldvalue  (lua_State* L);
         static int      lmsg_serialize      (lua_State* L);
         static int      lmsg_deserialize    (lua_State* L);
+        static int      lmsg_tabulate       (lua_State* L);
+        static int      lmsg_detabulate     (lua_State* L);
         static int      lmsg_deleterec      (lua_State* L);
 };
 

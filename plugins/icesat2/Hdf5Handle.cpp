@@ -32,6 +32,14 @@
 
 const char* Hdf5Handle::OBJECT_TYPE = "Hdf5Handle";
 
+const char* Hdf5Handle::recType = "Hdf5";
+const RecordObject::fieldDef_t Hdf5Handle::recDef[] = {
+    {"ID",      RecordObject::INT64,    offsetof(h5rec_t, id),      sizeof(((h5rec_t*)0)->id),      NATIVE_FLAGS},
+    {"DATA",    RecordObject::STRING,   offsetof(h5rec_t, data),    sizeof(((h5rec_t*)0)->data),    NATIVE_FLAGS | RecordObject::POINTER},
+    {"OFFSET",  RecordObject::UINT32,   offsetof(h5rec_t, offset),  sizeof(((h5rec_t*)0)->offset),  NATIVE_FLAGS},
+    {"SIZE",    RecordObject::UINT32,   offsetof(h5rec_t, size),    sizeof(((h5rec_t*)0)->size),    NATIVE_FLAGS}
+};
+
 /******************************************************************************
  * HDF5 HANDLE METHODS (PURE VIRTUAL)
  ******************************************************************************/
@@ -42,9 +50,18 @@ const char* Hdf5Handle::OBJECT_TYPE = "Hdf5Handle";
 Hdf5Handle::Hdf5Handle (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
     LuaObject(L, OBJECT_TYPE, meta_name, meta_table)
 {
+    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::defineRecord(recType, "ID", sizeof(h5rec_t), recDef, def_elements, 8);
+
+    recObj = new RecordObject(recType);
+    recData = (h5rec_t*)recObj->getRecordData();
+    recData->data = sizeof(h5rec_t);
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Hdf5Handle::~Hdf5Handle (void) {}
+Hdf5Handle::~Hdf5Handle (void)
+{
+    delete recObj;
+}

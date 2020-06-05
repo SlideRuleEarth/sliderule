@@ -98,10 +98,6 @@ class RecordObject
 
         typedef enum {
             COPY,
-            REPLACE
-        } deserialMode_t;
-
-        typedef enum {
             ALLOCATE,
             REFERENCE
         } serialMode_t;
@@ -190,7 +186,7 @@ class RecordObject
 
         /* Overloaded Methods */
         virtual bool            deserialize         (unsigned char* buffer, int size);
-        virtual int             serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE);
+        virtual int             serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
 
         /* Attribute Methods */
         bool                    isRecordType        (const char* rec_type);

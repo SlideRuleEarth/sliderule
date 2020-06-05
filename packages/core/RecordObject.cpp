@@ -293,7 +293,7 @@ bool RecordObject::deserialize(unsigned char* buffer, int size)
 /*----------------------------------------------------------------------------
  * serialize
  *----------------------------------------------------------------------------*/
-int RecordObject::serialize(unsigned char** buffer, serialMode_t mode)
+int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 {
     assert(buffer);
 
@@ -308,9 +308,15 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode)
         *buffer = new unsigned char[bufsize];
         LocalLib::copy(*buffer, recordMemory, bufsize);
     }
-    else
+    else if (mode == REFERENCE)
     {
         *buffer = (unsigned char*)recordMemory;
+    }
+    else // if (mode == COPY)
+    {
+        assert(*buffer);
+        bufsize = MIN(bufsize, size);
+        LocalLib::copy(*buffer, recordMemory, bufsize);
     }
 
     /* Return Buffer Size */

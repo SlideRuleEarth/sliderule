@@ -65,12 +65,17 @@ const struct luaL_Reg LuaLibraryMsg::recLibsM [] = {
     {"setvalue",      LuaLibraryMsg::lmsg_setfieldvalue},
     {"serialize",     LuaLibraryMsg::lmsg_serialize},
     {"deserialize",   LuaLibraryMsg::lmsg_deserialize},
+    {"tabulate",      LuaLibraryMsg::lmsg_tabulate},
+    {"detabulate",    LuaLibraryMsg::lmsg_detabulate},
     {"__gc",          LuaLibraryMsg::lmsg_deleterec},
     {NULL, NULL}
 };
 
-LuaLibraryMsg::createRecFunc LuaLibraryMsg::prefixLookUp[0xFF];
-Dictionary<LuaLibraryMsg::associateRecFunc> LuaLibraryMsg::typeLookUp;
+LuaLibraryMsg::recClass_t LuaLibraryMsg::prefixLookUp[0xFF];
+Dictionary<LuaLibraryMsg::recClass_t> LuaLibraryMsg::typeTable;
+
+const char* LuaLibraryMsg::REC_TYPE_ATTR = "_type";
+const char* LuaLibraryMsg::REC_ID_ATTR = "_id";
 
 /******************************************************************************
  * LIBRARY METHODS
@@ -87,17 +92,17 @@ void LuaLibraryMsg::lmsg_init (void)
 /*----------------------------------------------------------------------------
  * lmsg_addtype
  *----------------------------------------------------------------------------*/
-bool LuaLibraryMsg::lmsg_addtype (char prefix, createRecFunc cfunc, const char* recclass, associateRecFunc afunc)
+bool LuaLibraryMsg::lmsg_addtype (const char* recclass, char prefix, createRecFunc cfunc, associateRecFunc afunc)
 {
-    if(prefix != '\0')
-    {
-        prefixLookUp[(uint8_t)prefix] = cfunc;
-    }
 
-    if(recclass != NULL)
-    {
-        typeLookUp.add(recclass, afunc);
-    }
+    recClass_t rec_class = {
+        .prefix = prefix,
+        .create = cfunc,
+        .associate = afunc
+    };
+
+    typeTable.add(recclass, rec_class);
+    prefixLookUp[(uint8_t)prefix] = rec_class;
 
     return true;
 }
@@ -141,9 +146,9 @@ RecordObject* LuaLibraryMsg::populateRecord (const char* population_string)
     try
     {
         uint8_t class_prefix = population_string[0];
-        createRecFunc func = prefixLookUp[class_prefix];
-        if(func != NULL)    record = func(&population_string[1]); // skip prefix
-        else                record = new RecordObject(population_string);
+        recClass_t rec_class = prefixLookUp[class_prefix];
+        if(rec_class.create != NULL)    record = rec_class.create(&population_string[1]); // skip prefix
+        else                            record = new RecordObject(population_string);
     }
     catch (const InvalidRecordException& e)
     {
@@ -157,16 +162,16 @@ RecordObject* LuaLibraryMsg::populateRecord (const char* population_string)
 /*----------------------------------------------------------------------------
  * associateRecord
  *----------------------------------------------------------------------------*/
-RecordObject* LuaLibraryMsg::associateRecord (const char* record_class, unsigned char* data, int size)
+RecordObject* LuaLibraryMsg::associateRecord (const char* recclass, unsigned char* data, int size)
 {
     /* Create record */
     RecordObject* record = NULL;
     try
     {
-        if(record_class)
+        if(recclass)
         {
-            associateRecFunc func = typeLookUp[record_class];
-            record = func(data, size);
+            recClass_t rec_class = typeTable[recclass];
+            record = rec_class.associate(data, size);
         }
         else
         {
@@ -176,7 +181,7 @@ RecordObject* LuaLibraryMsg::associateRecord (const char* record_class, unsigned
     catch (const InvalidRecordException& e)
     {
         if(record) delete record;
-        mlog(ERROR, "could not locate record definition for %s: %s\n", record_class, e.what());
+        mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
     }
 
     return record;
@@ -352,18 +357,34 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
 {
     msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
     int timeoutms = (int)lua_tointeger(L, 2);
-    const char* rec_class = NULL;
+    const char* recclass = NULL;
     if(lua_isstring(L, 3))
     {
-        rec_class = (const char*)lua_tostring(L, 3);
+        recclass = (const char*)lua_tostring(L, 3);
     }
 
     Subscriber::msgRef_t ref;
     int status = msg_data->sub->receiveRef(ref, timeoutms);
     if(status > 0)
     {
-        /* Get Record */
-        RecordObject* record = associateRecord(rec_class, (unsigned char*)ref.data, ref.size);
+        /* Create record */
+        RecordObject* record = NULL;
+        try
+        {
+            if(recclass)
+            {
+                recClass_t rec_class = typeTable[recclass];
+                record = rec_class.associate((unsigned char*)ref.data, ref.size);
+            }
+            else
+            {
+                record = new RecordObject((unsigned char*)ref.data, ref.size);
+            }
+        }
+        catch (const InvalidRecordException& e)
+        {
+            mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
+        }
 
         /* Free Reference */
         msg_data->sub->dereference(ref);
@@ -380,7 +401,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
         }
         else
         {
-            mlog(WARNING, "Unable to create record object: %s\n", rec_class);
+            mlog(WARNING, "Unable to create record object: %s\n", recclass);
         }
     }
     else if(status != MsgQ::STATE_TIMEOUT)
@@ -555,6 +576,155 @@ int LuaLibraryMsg::lmsg_deserialize(lua_State* L)
     lua_pushboolean(L, status);
 
     return 1; // number of items returned (status of deserialization)
+}
+
+/*----------------------------------------------------------------------------
+ * lmsg_tabulate - rec:tabulate()
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
+{
+    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    if(rec_data->rec == NULL)
+    {
+        return luaL_error(L, "record does not exist");
+    }
+
+    /* Create Table for Record */
+    lua_newtable(L);
+    LuaEngine::setAttrStr(L, REC_TYPE_ATTR, rec_data->rec->getRecordType());
+    LuaEngine::setAttrInt(L, REC_ID_ATTR, rec_data->rec->getRecordId());
+
+    /* Add Fields to Table */
+    char** fieldnames = NULL;
+    int numfields = rec_data->rec->getFieldNames(&fieldnames);
+    for(int i = 0; i < numfields; i++)
+    {
+        RecordObject::field_t field = rec_data->rec->getField(fieldnames[i]);
+        switch(rec_data->rec->getValueType(field))
+        {
+            case RecordObject::TEXT:
+            {
+                LuaEngine::setAttrStr(L, fieldnames[i], rec_data->rec->getValueText(field));
+                break;
+            }
+            case RecordObject::REAL:
+            {
+                LuaEngine::setAttrNum(L, fieldnames[i], rec_data->rec->getValueReal(field));
+                break;
+            }
+            case RecordObject::INTEGER:
+            {
+                LuaEngine::setAttrInt(L, fieldnames[i], rec_data->rec->getValueInteger(field));
+                break;
+            }
+            default: break;
+        }
+        delete [] fieldnames[i];
+    }
+    delete [] fieldnames;
+
+    /* Return Table */
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lmsg_detabulate - rec:detabulate(<record table>, <record class>)
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_detabulate(lua_State* L)
+{
+    /* Check Parameters */
+    if(lua_type(L, 1) != LUA_TTABLE)
+    {
+        return luaL_error(L, "must supply table");
+    }
+
+    /* Get Record Class */
+    const char* recclass = NULL;
+    if(lua_isstring(L, 2))
+    {
+        recclass = lua_tostring(L, 2);
+    }
+
+    /* Get Record Type */
+    lua_getfield(L, 1, REC_TYPE_ATTR);
+    const char* rec_type = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    if(!rec_type)
+    {
+        return luaL_error(L, "table must have type attribute");
+    }
+
+    /* Create record */
+    RecordObject* record = NULL;
+    try
+    {
+        if(recclass)
+        {
+            recClass_t rec_class = typeTable[recclass];
+            record = rec_class.create(rec_type);
+        }
+        else
+        {
+            record = new RecordObject(rec_type);
+        }
+    }
+    catch (const InvalidRecordException& e)
+    {
+        return luaL_error(L, "could not locate record definition");
+    }
+
+    /* Populate Fields from Table */
+    char** fieldnames = NULL;
+    int numfields = record->getFieldNames(&fieldnames);
+    for(int i = 0; i < numfields; i++)
+    {
+        RecordObject::field_t field = record->getField(fieldnames[i]);
+        lua_getfield(L, 1, fieldnames[i]);
+        switch(record->getValueType(field))
+        {
+            case RecordObject::TEXT:
+            {
+                if(lua_isstring(L, 1))
+                {
+                    const char* val = lua_tostring(L, 1);
+                    record->setValueText(field, val);
+                }
+                break;
+            }
+            case RecordObject::REAL:
+            {
+                if(lua_isnumber(L, 1))
+                {
+                    double val = lua_tonumber(L, 1);
+                    record->setValueReal(field, val);
+                }
+                break;
+            }
+            case RecordObject::INTEGER:
+            {
+                if(lua_isnumber(L, 1))
+                {
+                    long val = lua_tointeger(L, 1);
+                    record->setValueInteger(field, val);
+                }
+                break;
+            }
+            default: break;
+        }
+        lua_pop(L, 1);
+        delete [] fieldnames[i];
+    }
+    delete [] fieldnames;
+
+    /* Assign Record to User Data */
+    LuaLibraryMsg::recUserData_t* rec_data = (LuaLibraryMsg::recUserData_t*)lua_newuserdata(L, sizeof(LuaLibraryMsg::recUserData_t));
+    rec_data->record_str = NULL;
+    rec_data->rec = record;
+    luaL_getmetatable(L, LUA_RECMETANAME);
+    lua_setmetatable(L, -2); // associates the record meta table with the record user data
+
+    /* Return Record User Data */
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

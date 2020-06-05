@@ -30,13 +30,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Hdf5DatasetHandle::recType = "Hdf5Dataset";
-const RecordObject::fieldDef_t Hdf5DatasetHandle::recDef[] = {
-    {"ID",      RecordObject::INT64,    offsetof(h5rec_t, id),      sizeof(((h5rec_t*)0)->id),      NATIVE_FLAGS},
-    {"OFFSET",  RecordObject::UINT32,   offsetof(h5rec_t, offset),  sizeof(((h5rec_t*)0)->offset),  NATIVE_FLAGS},
-    {"SIZE",    RecordObject::UINT32,   offsetof(h5rec_t, size),    sizeof(((h5rec_t*)0)->size),    NATIVE_FLAGS}
-};
-
 const char* Hdf5DatasetHandle::LuaMetaName = "Hdf5DatasetHandle";
 const struct luaL_Reg Hdf5DatasetHandle::LuaMetaTable[] = {
     {NULL,          NULL}
@@ -47,7 +40,7 @@ const struct luaL_Reg Hdf5DatasetHandle::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<dataset name>, [<id>])
+ * luaCreate - create(<dataset name>, [<id>], [<raw>])
  *----------------------------------------------------------------------------*/
 int Hdf5DatasetHandle::luaCreate (lua_State* L)
 {
@@ -56,9 +49,10 @@ int Hdf5DatasetHandle::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* dataset_name    = getLuaString(L, 1);
         long        id              = getLuaInteger(L, 2, true, 0);
+        bool        raw_mode        = getLuaBoolean(L, 3, true, true);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Hdf5DatasetHandle(L, dataset_name, id));
+        return createLuaObject(L, new Hdf5DatasetHandle(L, dataset_name, id, raw_mode));
     }
     catch(const LuaException& e)
     {
@@ -70,24 +64,23 @@ int Hdf5DatasetHandle::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, long id):
+Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, long id, bool raw_mode):
     Hdf5Handle(L, LuaMetaName, LuaMetaTable)
 {
-    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::defineRecord(recType, "ID", sizeof(h5rec_t), recDef, def_elements, 8);
-
     /* Initialize Attributes to Zero */
     handle = INVALID_RC;
-    LocalLib::set(&rec, 0, sizeof(rec));
     dataBuffer = NULL;
     dataSize = 0;
     dataOffset = 0;
+
+    /* Set Mode */
+    rawMode = raw_mode;
 
     /* Set Name of Dataset */
     dataName = StringLib::duplicate(dataset_name);
 
     /* Set ID of Dataset Record */
-    rec.id = id;
+    recData->id = id;
 }
 
 /*----------------------------------------------------------------------------
@@ -213,10 +206,28 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
  *----------------------------------------------------------------------------*/
 int Hdf5DatasetHandle::read (void* buf, int len)
 {
+    int bytes_to_copy = 0;
     int bytes_remaining = dataSize - dataOffset;
-    int bytes_to_copy = MIN(len, bytes_remaining);
-    LocalLib::copy(buf, &dataBuffer[dataOffset], bytes_to_copy);
-    dataOffset += bytes_to_copy;
+
+    if(rawMode)
+    {
+        bytes_to_copy = MIN(len, bytes_remaining);
+        LocalLib::copy(buf, &dataBuffer[dataOffset], bytes_to_copy);
+        dataOffset += bytes_to_copy;
+    }
+    else // record
+    {
+        bytes_to_copy = MIN(len - recObj->getAllocatedMemory(), bytes_remaining);
+        if(bytes_to_copy > 0)
+        {
+            recData->offset = dataOffset;
+            recData->size = bytes_to_copy;
+            unsigned char* rec_buf = (unsigned char*)buf;
+            int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, len);
+            LocalLib::copy(&rec_buf[bytes_written], &dataBuffer[dataOffset], bytes_to_copy);
+        }
+    }
+
     return bytes_to_copy;
 }
 
