@@ -1,5 +1,22 @@
-# Imports
+#
+# Parameters
+#
+server_url = 'http://127.0.0.1:9081'
+api = "h5"
 
+filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
+dataset = "gt2l/heights/dist_ph_along"
+datatag = 0
+
+rqst_dict = {
+        "filename": filename,
+        "dataset": dataset,
+        "id": datatag
+    }
+
+#
+# Imports
+#
 import sys
 import requests
 import json
@@ -12,21 +29,6 @@ from ipywidgets import interact
 from bokeh.io import push_notebook, show, output_notebook
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
-
-#
-# Parameters
-#
-server_url = 'http://127.0.0.1:9081'
-
-filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
-dataset = "gt2l/heights/dist_ph_along"
-datatag = 0
-
-rqst_dict = {
-        "filename": filename,
-        "dataset": dataset,
-        "id": datatag
-    }
 
 #
 # SlideRule API
@@ -100,7 +102,7 @@ if __name__ == '__main__':
         server_url = sys.argv[1]
 
     # Make API Request
-    d = engine("h5", json.dumps(rqst_dict))
+    d = engine(api, json.dumps(rqst_dict))
 
     # Read Response
     data_array = np.empty(1)
