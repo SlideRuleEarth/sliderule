@@ -12,6 +12,7 @@ if __core__ then
     runner.script(rd .. "tcp_socket.lua")
     runner.script(rd .. "udp_socket.lua")
     runner.script(rd .. "multicast_device_writer.lua")
+    runner.script(rd .. "cluster_socket.lua")
 end
 
 -- Run Pistache Unit Tests --
@@ -37,10 +38,6 @@ if __legacy__ then
     runner.script(rd .. "record_dispatcher.lua")
     runner.script(rd .. "limit_dispatch.lua")
 end
-
---[[
-runner.script(rd .. "cluster_socket.lua")
---]]
 
 -- Report Results --
 
