@@ -3,6 +3,7 @@
 #
 server_url = 'http://127.0.0.1:9081'
 api = "h5"
+max_bytes = 0x80000
 
 filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
 dataset = "gt2l/heights/dist_ph_along"
@@ -20,6 +21,7 @@ rqst_dict = {
 import sys
 import requests
 import json
+import binascii
 
 import pandas as pd
 import numpy as np
@@ -105,16 +107,29 @@ if __name__ == '__main__':
     d = engine(api, json.dumps(rqst_dict))
 
     # Read Response
-    data_array = np.empty(1)
-    for line in d.iter_lines():
-        num_elem = int(len(line) / 4)
-        print(num_elem)
-        val_array = np.frombuffer(line, dtype=np.float32, count=num_elem)
-        data_array = np.append(data_array, val_array)
-        break
+    response_bytes = 0
+    responses = []
+    for line in d.iter_content(0x10000):
+        if line:
+            response_bytes += len(line)
+            responses.append(line)
+            if response_bytes >= max_bytes:
+                break
+        else:
+            print("Keep Alive")
 
     # Build DataFrame
-    df = pd.DataFrame(data=data_array, index=[i for i in range(len(data_array))], columns=[dataset])
+    raw = b''.join(responses)
+    size = int(len(raw) / 4)
+    values = np.frombuffer(raw, dtype=np.float32, count=size)
+    df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=[dataset])
 
     # Display Results
     dfbokeh(df, dataset)
+
+
+#
+#   Notes:
+#       print(binascii.hexlify(raw)) # prints ascii hex representation of byte array
+#       data = np.hstack(responses) # efficiently concatenates list of numpy arrays
+#

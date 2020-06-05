@@ -28,6 +28,8 @@ h = icesat2.h5dataset(dataset, id)
 f = icesat2.h5file(h, core.READER, filename)
 r = core.reader(f, rspq)
 
+
+
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
 
 return
