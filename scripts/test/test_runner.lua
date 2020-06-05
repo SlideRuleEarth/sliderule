@@ -20,6 +20,12 @@ if __pistache__ then
     runner.script(rd .. "pistache_endpoint.lua")
 end
 
+-- Run ICESat2 Unit Tests --
+
+if __icesat2__ then
+    runner.script(rd .. "hdf5_file.lua")
+end
+
 -- Run Legacy Unit Tests --
 
 if __legacy__ then
