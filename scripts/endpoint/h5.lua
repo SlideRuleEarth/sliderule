@@ -3,9 +3,9 @@
 --
 -- INPUT:       arg[1] -
 --              {
---                  "filename": "<name of hdf5 file>"
---                  "dataset":  "<name of dataset>"
---                  "id":       <integer id to attach to data>
+--                  "filename":     "<name of hdf5 file>"
+--                  "dataset":      "<name of dataset>"
+--                  "id":           <integer id to attach to data>
 --              }
 --
 --              rspq - output queue to stream results
@@ -27,8 +27,6 @@ local id = parm["id"] or 0
 h = icesat2.h5dataset(dataset, id)
 f = icesat2.h5file(h, core.READER, filename)
 r = core.reader(f, rspq)
-
-
 
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
 

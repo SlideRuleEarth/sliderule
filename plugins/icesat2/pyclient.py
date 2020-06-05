@@ -85,16 +85,13 @@ def test_time ():
 def test_h5 ():
     rqst_dict = {
         "filename": "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5",
-        "dataset": "gt2l/heights/dist_ph_along",
+        "dataset": "ancillary_data/atlas_sdp_gps_epoch",
         "id": 0
     }
 
-    p = json.dumps(rqst_dict)
-    print(p)
-
-    d = engine("h5", p)
-    for line in d.iter_lines():
-        print(line)
+    d = engine("h5", json.dumps(rqst_dict))
+    for line in d.iter_content(0x1000):
+        print(binascii.hexlify(line))
 
 ###############################################################################
 # MAIN
@@ -110,4 +107,4 @@ if __name__ == '__main__':
     # Tests
     test_echo()
     test_time()
-#    test_h5()
+    test_h5()

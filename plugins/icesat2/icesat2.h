@@ -26,6 +26,7 @@
 
 #include "Hdf5File.h"
 #include "Hdf5Handle.h"
+#include "Hdf5DatasetHandle.h"
 
 /******************************************************************************
  * TYPEDEFS

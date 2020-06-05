@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __hdf5_handle__
-#define __hdf5_handle__
+#ifndef __hdf5_dataset__
+#define __hdf5_dataset__
 
 /******************************************************************************
  * INCLUDES
@@ -26,16 +26,16 @@
 
 #include <hdf5.h>
 
+#include "Hdf5Handle.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "Ordering.h"
 #include "DeviceObject.h"
 
 /******************************************************************************
- * HDF5 HANDLER (PURE VIRTUAL)
+ * HDF5 DATASET HANDLER
  ******************************************************************************/
 
-class Hdf5Handle: public LuaObject
+class Hdf5DatasetHandle: public Hdf5Handle
 {
     public:
 
@@ -43,25 +43,54 @@ class Hdf5Handle: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
+        static const char* recType;
+        static const RecordObject::fieldDef_t recDef[];
+
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+
+        static const int MAX_NDIMS = 8;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual bool    open    (const char* filename, DeviceObject::role_t role) = 0;
-        virtual int     read    (void* buf, int len) = 0;
-        virtual int     write   (const void* buf, int len) = 0;
-        virtual void    close   (void) = 0;
+        static int  luaCreate   (lua_State* L);
 
-    protected:
+    private:
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            int64_t     id;
+            uint32_t    offset;
+            uint32_t    size;
+        } h5rec_t;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        hid_t       handle;
+        h5rec_t     rec;
+        const char* dataName;
+        uint8_t*    dataBuffer;
+        int         dataSize;
+        int         dataOffset;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                Hdf5Handle  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-        virtual ~Hdf5Handle (void) = 0;
+                Hdf5DatasetHandle   (lua_State* L, const char* dataset_name, long id);
+                ~Hdf5DatasetHandle  (void);
+
+        bool    open                (const char* filename, DeviceObject::role_t role);
+        int     read                (void* buf, int len);
+        int     write               (const void* buf, int len);
+        void    close               (void);
 };
 
-#endif  /* __hdf5_handle__ */
+#endif  /* __hdf5_dataset__ */
