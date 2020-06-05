@@ -236,10 +236,11 @@ void LuaEngine::setAttrNum (lua_State* L, const char* name, double val)
 /*----------------------------------------------------------------------------
  * setAttrStr
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrStr (lua_State* L, const char* name, const char* val)
+void LuaEngine::setAttrStr (lua_State* L, const char* name, const char* val, int size)
 {
     lua_pushstring(L, name);
-    lua_pushstring(L, val);
+    if(size > 0)    lua_pushlstring(L, val, size);
+    else            lua_pushstring(L, val);
     lua_settable(L, -3);
 }
 

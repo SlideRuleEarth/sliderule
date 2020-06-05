@@ -41,9 +41,10 @@ recdata = rsps3:recvrecord(3000)
 
 rectable = recdata:tabulate()
 print("ID:     "..rectable.ID)
-print("DATA:   "..rectable.DATA)
 print("OFFSET: "..rectable.OFFSET)
 print("SIZE:   "..rectable.SIZE)
+
+runner.check(rectable.ID == 5)
 
 -- Clean Up --
 
