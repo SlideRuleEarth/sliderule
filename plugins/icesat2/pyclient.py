@@ -1,21 +1,4 @@
 #
-# Parameters
-#
-server_url = 'http://127.0.0.1:9081'
-api = "h5"
-max_bytes = 0x80000
-
-filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
-dataset = "gt2l/heights/dist_ph_along"
-datatag = 0
-
-rqst_dict = {
-        "filename": filename,
-        "dataset": dataset,
-        "id": datatag
-    }
-
-#
 # Imports
 #
 import sys
@@ -30,6 +13,18 @@ from ipywidgets import interact
 from bokeh.io import push_notebook, show, output_notebook
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
+
+#
+# Parameters
+#
+server_url = 'http://127.0.0.1:9081'
+api = "h5"
+max_bytes = 0x80000
+
+filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
+dataset = "gt2l/heights/dist_ph_along"
+datatag = 0
+datatype = np.float64
 
 #
 # SlideRule API
@@ -80,7 +75,7 @@ def dfplotvc(df, col, cond_col="", cond_val=0):
 # ... and does not reflect original index in dataframe
 #
 def dfbokeh(df, col, cond_col="", cond_val=0):
-    p = figure(title=col, plot_height=300, plot_width=600)
+    p = figure(title=col, plot_height=500, plot_width=800)
     if cond_col != "":
         c = df[df[cond_col] == cond_val]
         s = c[pd.isnull(c[col]) == False][col]
@@ -102,9 +97,18 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         server_url = sys.argv[1]
 
-    rqst_dict["dataset"] = "/gt1r/geolocation/segment_dist_x"
+#    dataset = "/gt1r/geolocation/segment_dist_x"
+#    datatype = np.float64
+
+    dataset = "/gt1r/geolocation/reference_photon_index"
+    datatype = np.uint32
 
     # Make API Request
+    rqst_dict = {
+        "filename": filename,
+        "dataset": dataset,
+        "id": datatag
+    }
     d = engine(api, json.dumps(rqst_dict))
 
     # Read Response
@@ -116,16 +120,15 @@ if __name__ == '__main__':
             responses.append(line)
             if response_bytes >= max_bytes:
                 break
-        else:
-            print("Keep Alive")
 
     # Build DataFrame
     raw = b''.join(responses)
-    size = int(len(raw) / 8)
-    values = np.frombuffer(raw, dtype=np.float64, count=size)
+    size = int(len(raw) / np.dtype(datatype).itemsize)
+    values = np.frombuffer(raw, dtype=datatype, count=size)
     df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=[dataset])
 
     # Display Results
+    print("Total", dfsum(df, dataset))
     dfbokeh(df, dataset)
 
 
