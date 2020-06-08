@@ -205,7 +205,7 @@ bool Hdf5DatasetHandle::open (const char* filename, DeviceObject::role_t role)
  *----------------------------------------------------------------------------*/
 int Hdf5DatasetHandle::read (void* buf, int len)
 {
-    int bytes_to_copy = 0;
+    int bytes_to_copy = SHUTDOWN_RC;
     int bytes_remaining = dataSize - dataOffset;
 
     if(rawMode)

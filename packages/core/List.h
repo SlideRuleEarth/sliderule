@@ -285,7 +285,7 @@ T& List<T>::get(int index)
 
 /*----------------------------------------------------------------------------
  * set
- * 
+ *
  *  with_delete which is defaulted to true, can be set to false for times when
  *  the list is reordered in place and the caller wants control over deallocation
  *----------------------------------------------------------------------------*/

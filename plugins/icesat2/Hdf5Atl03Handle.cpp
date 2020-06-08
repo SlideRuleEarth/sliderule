@@ -149,11 +149,13 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 uint32_t first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, seg->num_photons[PRT_LEFT] };
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
+//TODO: not populating the segment structure correctly to be picked up by dispatch
+
                     photon_t* ph = &seg->photons[first_photon[t]];
                     for(unsigned p = 0; p < seg->num_photons[t]; p++)
                     {
                         ph->distance_x = segment_dist_x.gt[t][curr_photon] + dist_ph_along.gt[t][curr_photon];
-                        ph->height_y = h_ph.gt[t][curr_photon] + dist_ph_along.gt[t][curr_photon];
+                        ph->height_y = h_ph.gt[t][curr_photon];
                         curr_photon++;
                     }
                 }
@@ -161,6 +163,9 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 /* Add Segment Record */
                 segmentList.add(seg);
             }
+
+            /* Set Success */
+            status = true;
         }
         catch(const std::exception& e)
         {
@@ -185,16 +190,18 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
 int Hdf5Atl03Handle::read (void* buf, int len)
 {
     int bytes_read = 0;
-    int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segmentList[listIndex]->num_photons[PRT_LEFT] + segmentList[listIndex]->num_photons[PRT_LEFT]));
 
     /* Read Next Segment in List */
     if(listIndex < segmentList.length())
     {
+        int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segmentList[listIndex]->num_photons[PRT_LEFT] + segmentList[listIndex]->num_photons[PRT_LEFT]));
+        segment_t* segment = segmentList[listIndex];
+
         if(rawMode)
         {
             if(seg_size <= len)
             {
-                LocalLib::copy(buf, segmentList[listIndex], seg_size);
+                LocalLib::copy(buf, segment, seg_size);
                 bytes_read = seg_size;
             }
             else
@@ -210,9 +217,8 @@ int Hdf5Atl03Handle::read (void* buf, int len)
                 recData->size = seg_size;
                 unsigned char* rec_buf = (unsigned char*)buf;
                 int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, len);
-                LocalLib::copy(&rec_buf[bytes_written], segmentList[listIndex], seg_size);
+                LocalLib::copy(&rec_buf[bytes_written], segment, seg_size);
                 bytes_read = bytes_written + seg_size;
-printf("%s\n", rec_buf);
             }
             else
             {
