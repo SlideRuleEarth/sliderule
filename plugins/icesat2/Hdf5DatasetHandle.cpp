@@ -68,7 +68,6 @@ Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, lo
     Hdf5Handle(L, LuaMetaName, LuaMetaTable)
 {
     /* Initialize Attributes to Zero */
-    handle = INVALID_RC;
     dataBuffer = NULL;
     dataSize = 0;
     dataOffset = 0;

@@ -60,7 +60,6 @@ class Hdf5DatasetHandle: public Hdf5Handle
          * Data
          *--------------------------------------------------------------------*/
 
-        hid_t       handle;
         const char* dataName;
         uint8_t*    dataBuffer;
         int         dataSize;

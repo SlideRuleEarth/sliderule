@@ -29,6 +29,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5File.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5Handle.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5DatasetHandle.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Atl03Handle.cpp
     )
 
     target_include_directories (icesat2Lib
@@ -43,6 +44,9 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5File.h
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5Handle.h
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5DatasetHandle.h
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Atl03Handle.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5Array.h
+            ${CMAKE_CURRENT_LIST_DIR}/GTArray.h
         DESTINATION
             ${INCDIR}
     )

@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __hdf5_atl06__
-#define __hdf5_atl06__
+#ifndef __hdf5_atl03__
+#define __hdf5_atl03__
 
 /******************************************************************************
  * INCLUDES
@@ -27,6 +27,8 @@
 #include <hdf5.h>
 
 #include "Hdf5Handle.h"
+#include "GTArray.h"
+#include "List.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "DeviceObject.h"
@@ -35,7 +37,7 @@
  * HDF5 ATL06 HANDLER
  ******************************************************************************/
 
-class Hdf5Atl06Handle: public Hdf5Handle
+class Hdf5Atl03Handle: public Hdf5Handle
 {
     public:
 
@@ -45,11 +47,6 @@ class Hdf5Atl06Handle: public Hdf5Handle
 
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
-
-        static const int MAX_PHOTONS_PER_SEGMENT = 0x10000;
-        static const int TRACKS_PER_GROUND_TRACK = 2;
-        static const int GT_LEFT = 0;
-        static const int GT_RIGHT = 1;
 
         /*--------------------------------------------------------------------
          * Types
@@ -66,20 +63,19 @@ class Hdf5Atl06Handle: public Hdf5Handle
             CONF_POSSIBLE_TEP = -2
         } signalConf_t;
 
-        /* Segment */
+        /* Photon Fields */
         typedef struct {
-            uint32_t    num_photons;
-            uint32_t    distance_x_offset;  // double[]: dist_ph_along + segment_dist_x
-            uint32_t    height_y_offset;    // double[]: h_ph
-            uint32_t    confidence_offset;  // int8_t[]: signal_conf_ph[0]
-        } segment_t;
+            double      distance_x; // double[]: dist_ph_along + segment_dist_x
+            double      height_y;   // double[]: h_ph
+        } photon_t;
 
-        /* ATL06 Record */
-        typedef struct {            
+        /* Segment Record */
+        typedef struct {
             uint8_t     track;
             uint32_t    segment_id;
-            segment_t   photons[TRACKS_PER_GROUND_TRACK];
-        } atl06Record_t;
+            uint32_t    num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
+            photon_t    photons[]; // zero length field
+        } segment_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -93,19 +89,17 @@ class Hdf5Atl06Handle: public Hdf5Handle
          * Data
          *--------------------------------------------------------------------*/
 
-        hid_t       handle;
-        const char* dataName;
-        uint8_t*    dataBuffer;
-        int         dataSize;
-        int         dataOffset;
-        bool        rawMode;
+        int                 groundTrack;
+        List<segment_t*>    segmentList;
+        int                 listIndex;
+        bool                rawMode;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                Hdf5Atl06Handle   (lua_State* L, const char* dataset_name, long id, bool raw_mode);
-                ~Hdf5Atl06Handle  (void);
+                Hdf5Atl03Handle     (lua_State* L, int track, long id, bool raw_mode);
+                ~Hdf5Atl03Handle    (void);
 
         bool    open                (const char* filename, DeviceObject::role_t role);
         int     read                (void* buf, int len);
@@ -113,4 +107,4 @@ class Hdf5Atl06Handle: public Hdf5Handle
         void    close               (void);
 };
 
-#endif  /* __hdf5_atl06__ */
+#endif  /* __hdf5_atl03__ */

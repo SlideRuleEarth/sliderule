@@ -100,8 +100,8 @@ if __name__ == '__main__':
 #    dataset = "/gt1r/geolocation/segment_dist_x"
 #    datatype = np.float64
 
-    dataset = "/gt1r/geolocation/reference_photon_index"
-    datatype = np.uint32
+    dataset = "/gt1r/geolocation/segment_ph_cnt"
+    datatype = np.int32
 
     # Make API Request
     rqst_dict = {
