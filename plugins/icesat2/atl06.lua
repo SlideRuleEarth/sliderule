@@ -25,15 +25,15 @@ local filename = parm["filename"]
 local track = parm["track"]
 local id = parm["id"] or 0
 
--- ATL03 Inputs --
-h = icesat2.h5atl03(track, id, false)
-f = icesat2.h5file(h, core.READER, filename)
-r = core.reader(f, "recq")
-
 -- ATL06 Dispatch --
 algo = icesat2.atl06(rspq)
 d = core.dispatcher("recq")
 d:attach(algo, "h5rec")
+
+-- ATL03 Inputs --
+h = icesat2.h5atl03(track, id, false)
+f = icesat2.h5file(h, core.READER, filename)
+r = core.reader(f, "recq")
 
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
 

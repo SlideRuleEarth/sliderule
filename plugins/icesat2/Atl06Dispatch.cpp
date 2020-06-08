@@ -86,15 +86,18 @@ Atl06Dispatch::~Atl06Dispatch(void)
  *----------------------------------------------------------------------------*/
 bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
+    (void)key;
+
     Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
     Hdf5Atl03Handle::photon_t* photons = segment->photons;
 
     double height = 0.0;
-    for(int ph = 0; ph < segment->num_photons[PRT_LEFT]; ph++)
+    for(unsigned int ph = 0; ph < segment->num_photons[PRT_LEFT]; ph++)
     {
         height += (photons[ph].height_y / segment->num_photons[PRT_LEFT]);
     }
 
+printf("%lf\n", height);
     if(outQ->postCopy(&height, sizeof(height), SYS_TIMEOUT) > 0)
     {
         return true;

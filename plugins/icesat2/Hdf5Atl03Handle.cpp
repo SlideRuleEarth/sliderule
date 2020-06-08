@@ -145,15 +145,17 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 seg->num_photons[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT][s];
 
                 /* Populate Segment Record Photons */
+                uint32_t curr_photon = 0;
                 uint32_t first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, seg->num_photons[PRT_LEFT] };
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
-//                    if(signal_conf_ph.gt[t][s] >= CONF_SURFACE_LOW)
-//                    {
-                        photon_t* ph = &seg->photons[first_photon[t]];
-                        ph->distance_x = segment_dist_x.gt[t][s] + dist_ph_along.gt[t][s];
-                        ph->height_y = h_ph.gt[t][s] + dist_ph_along.gt[t][s];
-//                    }
+                    photon_t* ph = &seg->photons[first_photon[t]];
+                    for(unsigned p = 0; p < seg->num_photons[t]; p++)
+                    {
+                        ph->distance_x = segment_dist_x.gt[t][curr_photon] + dist_ph_along.gt[t][curr_photon];
+                        ph->height_y = h_ph.gt[t][curr_photon] + dist_ph_along.gt[t][curr_photon];
+                        curr_photon++;
+                    }
                 }
 
                 /* Add Segment Record */
@@ -210,6 +212,7 @@ int Hdf5Atl03Handle::read (void* buf, int len)
                 int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, len);
                 LocalLib::copy(&rec_buf[bytes_written], segmentList[listIndex], seg_size);
                 bytes_read = bytes_written + seg_size;
+printf("%s\n", rec_buf);
             }
             else
             {

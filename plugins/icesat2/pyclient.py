@@ -152,7 +152,7 @@ def atl06endpoint (filename, track):
 if __name__ == '__main__':
 
     parm = 0
-    while parm + 2 < len(sys.argv):
+    while parm + 1 < len(sys.argv):
         # Override server URL from command line
         if sys.argv[parm + 1] == "--url":
             server_url = sys.argv[parm + 2]
@@ -170,5 +170,5 @@ if __name__ == '__main__':
             filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
             track = 1
             df = atl06endpoint(filename, track)
-            dfbokeh(df, dataset)
+            dfbokeh(df, "atl06")
             parm += 1
