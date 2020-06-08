@@ -32,16 +32,6 @@
  * TYPEDEFS
  ******************************************************************************/
 
-/* Signal Confidence per Photon */
-typedef enum {
-    CONF_SURFACE_HIGH = 4,
-    CONF_SURFACE_MEDIUM = 3,
-    CONF_SURFACE_LOW = 2,
-    CONF_WITHIN_10M = 1,
-    CONF_BACKGROUND = 0
-} signal_conf_ph_t;
-
-
 //  FOR each 40m segment:
 //      (1) Photon-Classification Stage {3.1}
 //

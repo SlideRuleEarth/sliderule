@@ -102,6 +102,8 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         server_url = sys.argv[1]
 
+    rqst_dict["dataset"] = "/gt1r/geolocation/segment_dist_x"
+
     # Make API Request
     d = engine(api, json.dumps(rqst_dict))
 
@@ -119,8 +121,8 @@ if __name__ == '__main__':
 
     # Build DataFrame
     raw = b''.join(responses)
-    size = int(len(raw) / 4)
-    values = np.frombuffer(raw, dtype=np.float32, count=size)
+    size = int(len(raw) / 8)
+    values = np.frombuffer(raw, dtype=np.float64, count=size)
     df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=[dataset])
 
     # Display Results
