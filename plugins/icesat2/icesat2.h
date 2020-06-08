@@ -27,6 +27,10 @@
 #include "Hdf5File.h"
 #include "Hdf5Handle.h"
 #include "Hdf5DatasetHandle.h"
+#include "Hdf5Atl03Handle.h"
+#include "Atl06Dispatch.h"
+#include "H5Array.h"
+#include "GTArray.h"
 
 /******************************************************************************
  * TYPEDEFS

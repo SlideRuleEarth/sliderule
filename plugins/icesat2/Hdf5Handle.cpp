@@ -32,7 +32,7 @@
 
 const char* Hdf5Handle::OBJECT_TYPE = "Hdf5Handle";
 
-const char* Hdf5Handle::recType = "Hdf5";
+const char* Hdf5Handle::recType = "h5rec";
 const RecordObject::fieldDef_t Hdf5Handle::recDef[] = {
     {"ID",      RecordObject::INT64,    offsetof(h5rec_t, id),      sizeof(((h5rec_t*)0)->id),      NATIVE_FLAGS},
     {"DATA",    RecordObject::STRING,   offsetof(h5rec_t, data),    sizeof(((h5rec_t*)0)->data),    NATIVE_FLAGS | RecordObject::POINTER},

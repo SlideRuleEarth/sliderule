@@ -42,6 +42,8 @@ int icesat2_open (lua_State *L)
     static const struct luaL_Reg icesat2_functions[] = {
         {"h5file",      Hdf5File::luaCreate},
         {"h5dataset",   Hdf5DatasetHandle::luaCreate},
+        {"h5atl03",     Hdf5Atl03Handle::luaCreate},
+        {"atl06",       Atl06Dispatch::luaCreate},
         {NULL,          NULL}
     };
 

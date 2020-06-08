@@ -18,20 +18,6 @@ from bokeh.models import ColumnDataSource
 # Parameters
 #
 server_url = 'http://127.0.0.1:9081'
-api = "h5"
-max_bytes = 0x80000
-
-filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
-dataset = "gt2l/heights/dist_ph_along"
-datatag = 0
-datatype = np.float64
-
-#
-# SlideRule API
-#
-def engine (api, parm):
-    url = '%s/engine/%s' % (server_url, api)
-    return requests.post(url, data=parm, stream=True)
 
 #
 # Default Matplotlib Plot of Dataframe Column
@@ -86,32 +72,28 @@ def dfbokeh(df, col, cond_col="", cond_val=0):
     r = p.line(x, y, color="#2222aa", line_width=3)
     show(p, notebook_handle=True)
 
+#
+# SlideRule API
+#
+def engine (api, parm):
+    url = '%s/engine/%s' % (server_url, api)
+    return requests.post(url, data=parm, stream=True)
 
-###############################################################################
-# MAIN
-###############################################################################
-
-if __name__ == '__main__':
-
-    # Override server URL from command line
-    if len(sys.argv) > 1:
-        server_url = sys.argv[1]
-
-#    dataset = "/gt1r/geolocation/segment_dist_x"
-#    datatype = np.float64
-
-    dataset = "/gt1r/geolocation/segment_ph_cnt"
-    datatype = np.int32
+#
+# H5 Endpoint
+#
+def h5endpoint (filename, dataset, datatype):
 
     # Make API Request
     rqst_dict = {
         "filename": filename,
         "dataset": dataset,
-        "id": datatag
+        "id": 0
     }
-    d = engine(api, json.dumps(rqst_dict))
+    d = engine("h5", json.dumps(rqst_dict))
 
     # Read Response
+    max_bytes = 0x80000
     response_bytes = 0
     responses = []
     for line in d.iter_content(0x10000):
@@ -127,12 +109,66 @@ if __name__ == '__main__':
     values = np.frombuffer(raw, dtype=datatype, count=size)
     df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=[dataset])
 
-    # Display Results
-    print("Total", dfsum(df, dataset))
-    dfbokeh(df, dataset)
-
+    # Return DataFrame
+    return df
 
 #
-#   Notes:
-#       data = np.hstack(responses) # efficiently concatenates list of numpy arrays
+# ATL06 Endpoint
 #
+def atl06endpoint (filename, track):
+
+    # Make API Request
+    rqst_dict = {
+        "filename": filename,
+        "track": track,
+        "id": 0
+    }
+    d = engine("atl06", json.dumps(rqst_dict))
+
+    # Read Response
+    max_bytes = 0x80000
+    response_bytes = 0
+    responses = []
+    for line in d.iter_content(0x10000):
+        if line:
+            response_bytes += len(line)
+            responses.append(line)
+            if response_bytes >= max_bytes:
+                break
+
+    # Build DataFrame
+    raw = b''.join(responses)
+    size = int(len(raw) / np.dtype(np.double).itemsize)
+    values = np.frombuffer(raw, dtype=np.double, count=size)
+    df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=["atl06"])
+
+    # Return DataFrame
+    return df
+
+###############################################################################
+# MAIN
+###############################################################################
+
+if __name__ == '__main__':
+
+    parm = 0
+    while parm + 2 < len(sys.argv):
+        # Override server URL from command line
+        if sys.argv[parm + 1] == "--url":
+            server_url = sys.argv[parm + 2]
+            parm += 2
+        # H5 Endpoint Example
+        elif sys.argv[parm + 1] == "--h5":
+            filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
+            dataset = "/gt1r/geolocation/segment_ph_cnt"
+            datatype = np.int32
+            df = h5endpoint(filename, dataset, datatype)
+            dfbokeh(df, dataset)
+            parm += 1
+        # H5 Endpoint Example
+        elif sys.argv[parm + 1] == "--atl06":
+            filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
+            track = 1
+            df = atl06endpoint(filename, track)
+            dfbokeh(df, dataset)
+            parm += 1
