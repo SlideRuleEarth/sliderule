@@ -49,6 +49,17 @@ class Atl06Dispatch: public DispatchObject
         static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            uint32_t    h5atl03_rec_cnt;
+            uint32_t    avgheight_out_cnt;
+            uint32_t    post_success_cnt;
+            uint32_t    post_dropped_cnt;
+        } stats_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -61,6 +72,7 @@ class Atl06Dispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         Publisher*  outQ;
+        stats_t     stats;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -69,9 +81,11 @@ class Atl06Dispatch: public DispatchObject
                     Atl06Dispatch       (lua_State* L, const char* otuq_name);
                     ~Atl06Dispatch      (void);
 
-        /* overridden methods */
-        bool        processRecord       (RecordObject* record, okey_t key);
+        bool        processRecord       (RecordObject* record, okey_t key) override;
 
+        double      averageHeightStage  (RecordObject* record, okey_t key);
+
+        static int  luaStats            (lua_State* L);
 };
 
 #endif  /* __atl06_dispatch__ */

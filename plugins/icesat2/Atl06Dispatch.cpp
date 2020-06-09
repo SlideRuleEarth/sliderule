@@ -31,6 +31,7 @@
 
 const char* Atl06Dispatch::LuaMetaName = "Atl06Dispatch";
 const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
+    {"stats",       luaStats},
     {NULL,          NULL}
 };
 
@@ -71,6 +72,7 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name):
     assert(outq_name);
 
     outQ = new Publisher(outq_name);
+    LocalLib::set(&stats, 0, sizeof(stats));
 }
 
 /*----------------------------------------------------------------------------
@@ -86,22 +88,79 @@ Atl06Dispatch::~Atl06Dispatch(void)
  *----------------------------------------------------------------------------*/
 bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
-    (void)key;
-
-    Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
-
-    double height = 0.0;
-    for(unsigned int ph = 0; ph < segment->num_photons[PRT_LEFT]; ph++)
-    {
-        height += (segment->photons[ph].height_y / segment->num_photons[PRT_LEFT]);
-    }
+    double height = averageHeightStage(record, key);
 
     if(outQ->postCopy(&height, sizeof(height), SYS_TIMEOUT) > 0)
     {
+        stats.post_success_cnt++;
         return true;
     }
     else
     {
+        stats.post_dropped_cnt++;
         return false;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * averageHeightStage
+ *----------------------------------------------------------------------------*/
+double Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key)
+{
+    (void)key;
+
+    Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
+
+    /* Count Execution Statistic */
+    stats.avgheight_out_cnt++;
+
+    /* Calculate Left Track Height */
+    double height_l = 0.0;
+    for(unsigned int ph = 0; ph < segment->num_photons[PRT_LEFT]; ph++)
+    {
+        height_l += (segment->photons[ph].height_y / segment->num_photons[PRT_LEFT]);
+    }
+
+    /* Calculate Right Track Height */
+    double height_r = 0.0;
+    for(unsigned int ph = segment->num_photons[PRT_LEFT]; ph < (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]); ph++)
+    {
+        height_r += (segment->photons[ph].height_y / segment->num_photons[PRT_RIGHT]);
+    }
+
+    /* Return Average Track Height */
+    return (height_l + height_r) / 2.0;
+}
+
+/*----------------------------------------------------------------------------
+ * luaStats
+ *----------------------------------------------------------------------------*/
+int Atl06Dispatch::luaStats (lua_State* L)
+{
+    bool status = false;
+    int num_obj_to_return = 1;
+
+    try
+    {
+        /* Get Self */
+        Atl06Dispatch* lua_obj = (Atl06Dispatch*)getLuaSelf(L, 1);
+
+        /* Create Statistics Table */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "h5atl03_rec_cnt",     lua_obj->stats.h5atl03_rec_cnt);
+        LuaEngine::setAttrInt(L, "avgheight_out_cnt",   lua_obj->stats.avgheight_out_cnt);
+        LuaEngine::setAttrInt(L, "post_success_cnt",    lua_obj->stats.post_success_cnt);
+        LuaEngine::setAttrInt(L, "post_dropped_cnt",    lua_obj->stats.post_dropped_cnt);
+
+        /* Set Success */
+        status = true;
+        num_obj_to_return = 2;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_obj_to_return);
 }

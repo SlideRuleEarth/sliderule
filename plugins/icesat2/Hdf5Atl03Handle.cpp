@@ -164,6 +164,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 segment->num_photons[PRT_RIGHT] = 0;
 
                 /* Populate Segment Record Photons */
+                uint32_t ph_out = 0;
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
                     /* Loop Through Each Photon in Segment */
@@ -171,9 +172,10 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     {
                         if(signal_conf_ph.gt[t][ph_in[t]] >= parms.cnf)
                         {
-                            segment->photons[segment->num_photons[t]].distance_x = segment_dist_x.gt[t][s] + dist_ph_along.gt[t][ph_in[t]];
-                            segment->photons[segment->num_photons[t]].height_y = h_ph.gt[t][ph_in[t]];
+                            segment->photons[ph_out].distance_x = segment_dist_x.gt[t][s] + dist_ph_along.gt[t][ph_in[t]];
+                            segment->photons[ph_out].height_y = h_ph.gt[t][ph_in[t]];
                             segment->num_photons[t]++;
+                            ph_out++;
                         }
                         ph_in[t]++;
                     }
@@ -181,7 +183,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
 
                 /* Set Photon Pointer Fields */
                 segment->photon_offset[PRT_LEFT] = sizeof(segment_t); // pointers are set to offset from start of record data
-                segment->photon_offset[PRT_LEFT] = sizeof(segment_t) + (sizeof(photon_t) * segment->num_photons[PRT_LEFT]);
+                segment->photon_offset[PRT_RIGHT] = sizeof(segment_t) + (sizeof(photon_t) * segment->num_photons[PRT_LEFT]);
 
                 /* Add Segment Record */
                 segmentList.add(record);
