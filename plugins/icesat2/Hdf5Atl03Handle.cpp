@@ -33,6 +33,8 @@
 
 const char* Hdf5Atl03Handle::LuaMetaName = "Hdf5Atl03Handle";
 const struct luaL_Reg Hdf5Atl03Handle::LuaMetaTable[] = {
+    {"config",      luaConfig},
+    {"parms",       luaParms},
     {NULL,          NULL}
 };
 
@@ -264,4 +266,72 @@ int Hdf5Atl03Handle::write (const void* buf, int len)
  *----------------------------------------------------------------------------*/
 void Hdf5Atl03Handle::close (void)
 {
+}
+
+/*----------------------------------------------------------------------------
+ * luaConfig
+ *----------------------------------------------------------------------------*/
+int Hdf5Atl03Handle::luaConfig (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        Hdf5Atl03Handle* lua_obj = (Hdf5Atl03Handle*)getLuaSelf(L, 1);
+
+        /* Check Table */
+        if(lua_type(L, 2) != LUA_TTABLE)
+        {
+            throw LuaException("must supply table to configure %s", LuaMetaName);
+        }
+
+        /* Get Configuration Parameters from Table */
+        lua_getfield(L, 2, "srt");
+        lua_obj->extractParms.srt = (surfaceType_t)getLuaInteger(L, -1, true, lua_obj->extractParms.srt);
+
+        lua_getfield(L, 2, "cnf");
+        lua_obj->extractParms.cnf = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->extractParms.cnf);
+
+        /* Set Success */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaParms
+ *----------------------------------------------------------------------------*/
+int Hdf5Atl03Handle::luaParms (lua_State* L)
+{
+    bool status = false;
+    int num_obj_to_return = 1;
+
+    try
+    {
+        /* Get Self */
+        Hdf5Atl03Handle* lua_obj = (Hdf5Atl03Handle*)getLuaSelf(L, 1);
+
+        /* Create Statistics Table */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "srt", lua_obj->extractParms.srt);
+        LuaEngine::setAttrInt(L, "cnf", lua_obj->extractParms.cnf);
+
+        /* Set Success */
+        status = true;
+        num_obj_to_return = 2;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_obj_to_return);
 }

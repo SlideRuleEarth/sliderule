@@ -116,13 +116,16 @@ class Hdf5Atl03Handle: public Hdf5Handle
          * Methods
          *--------------------------------------------------------------------*/
 
-                Hdf5Atl03Handle     (lua_State* L, int track, long id, bool raw_mode);
-                ~Hdf5Atl03Handle    (void);
+                    Hdf5Atl03Handle     (lua_State* L, int track, long id, bool raw_mode);
+                    ~Hdf5Atl03Handle    (void);
 
-        bool    open                (const char* filename, DeviceObject::role_t role);
-        int     read                (void* buf, int len);
-        int     write               (const void* buf, int len);
-        void    close               (void);
+        bool        open                (const char* filename, DeviceObject::role_t role);
+        int         read                (void* buf, int len);
+        int         write               (const void* buf, int len);
+        void        close               (void);
+
+        static int  luaConfig           (lua_State* L);
+        static int  luaParms            (lua_State* L);
 };
 
 #endif  /* __hdf5_atl03__ */

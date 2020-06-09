@@ -84,6 +84,9 @@ def atl06endpoint (filename, track):
         "filename": filename,
         "track": track,
         "id": 0
+        "parms": {
+            "cnf": 3
+        }
     }
     d = engine("atl06", json.dumps(rqst_dict))
 
