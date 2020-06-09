@@ -91,15 +91,12 @@ def atl06endpoint (filename, track):
     d = engine("atl06", json.dumps(rqst_dict))
 
     # Read Response
-    max_bytes = 0x80000
     response_bytes = 0
     responses = []
     for line in d.iter_content(0x10000):
         if line:
             response_bytes += len(line)
             responses.append(line)
-            if response_bytes >= max_bytes:
-                break
 
     # Build DataFrame
     raw = b''.join(responses)
