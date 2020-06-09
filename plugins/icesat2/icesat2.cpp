@@ -47,6 +47,9 @@ int icesat2_open (lua_State *L)
         {NULL,          NULL}
     };
 
+    /* Set Library */
+    luaL_newlib(L, icesat2_functions);
+
     /* Set Globals */
     LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",    Hdf5Atl03Handle::CNF_POSSIBLE_TEP);
     LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",  Hdf5Atl03Handle::CNF_NOT_CONSIDERED);
@@ -60,9 +63,6 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         Hdf5Atl03Handle::SRT_SEA_ICE);
     LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        Hdf5Atl03Handle::SRT_LAND_ICE);
     LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    Hdf5Atl03Handle::SRT_INLAND_WATER);
-
-    /* Set Library */
-    luaL_newlib(L, icesat2_functions);
 
     return 1;
 }

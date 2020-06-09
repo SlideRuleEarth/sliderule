@@ -68,7 +68,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
         /* Extraction Parameters */
         typedef struct {
             surfaceType_t   srt;
-            signalConf_t    conf;
+            signalConf_t    cnf;
         } parms_t;
 
         /* Photon Fields */

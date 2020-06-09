@@ -69,8 +69,6 @@ class H5Array
 template <class T>
 H5Array<T>::H5Array(hid_t file, const char* _name, int col)
 {
-    (void)col; // TODO: support slicing multidimensional arrays
-
     /* Initialize Class Attributes */
     name = StringLib::duplicate(_name);
     size = 1;
@@ -79,9 +77,9 @@ H5Array<T>::H5Array(hid_t file, const char* _name, int col)
     /* Start with Invalid Handles */
     bool status = false;
     hid_t dataset = INVALID_RC;
-    hid_t space = INVALID_RC;
+    hid_t filespace = H5S_ALL;
+    hid_t memspace = H5S_ALL;
     hid_t datatype = INVALID_RC;
-
     do
     {
         /* Open Dataset */
@@ -93,8 +91,8 @@ H5Array<T>::H5Array(hid_t file, const char* _name, int col)
         }
 
         /* Open Dataspace */
-        space = H5Dget_space(dataset);
-        if(space < 0)
+        filespace = H5Dget_space(dataset);
+        if(filespace < 0)
         {
             mlog(CRITICAL, "Failed to open dataspace on dataset: %s\n", name);
             break;
@@ -109,10 +107,42 @@ H5Array<T>::H5Array(hid_t file, const char* _name, int col)
             break;
         }
 
-        /* Read Data */
-        int ndims = H5Sget_simple_extent_ndims(space);
+        /* Get Dimensions of Data */
+        int ndims = H5Sget_simple_extent_ndims(filespace);
         hsize_t* dims = new hsize_t[ndims];
-        H5Sget_simple_extent_dims(space, dims, NULL);
+        H5Sget_simple_extent_dims(filespace, dims, NULL);
+
+        /* Select Specific Column */
+        if(col >= 0)
+        {
+            if(ndims == 2)
+            {
+                /* Allocate Hyperspace Parameters */
+                hsize_t* start = new hsize_t[ndims];
+                hsize_t* count = new hsize_t[ndims];
+
+                /* Create File Hyperspace to Read Selected Column */
+                start[0] = 0;
+                start[1] = col;
+                count[0] = dims[0];
+                count[1] = 1;
+                H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start, NULL, count, NULL);
+
+                /* Create Memory Hyperspace to Write Selected Column */
+                dims[1] = 1; // readjust dimensions to reflect single column being read
+                start[1] = 0; // readjust start to reflect writing to only a single column
+                memspace = H5Screate_simple(ndims, dims, NULL);
+                H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start, NULL, count, NULL);
+
+                /* Free Hyperspace Parameters */
+                delete [] start;
+                delete [] count;
+            }
+            else
+            {
+                mlog(CRITICAL, "Unsupported column selection on dataset of rank: %d\n", ndims);
+            }
+        }
 
         /* Get Size of Data Buffer */
         for(int d = 0; d < ndims; d++)
@@ -133,7 +163,7 @@ H5Array<T>::H5Array(hid_t file, const char* _name, int col)
 
         /* Read Dataset */
         mlog(INFO, "Reading %d elements from %s\n", (int)size, name);
-        if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) >= 0)
+        if(H5Dread(dataset, datatype, memspace, filespace, H5P_DEFAULT, data) >= 0)
         {
             status = true;
         }
@@ -147,7 +177,8 @@ H5Array<T>::H5Array(hid_t file, const char* _name, int col)
 
     /* Clean Up */
     if(datatype > 0) H5Tclose(datatype);
-    if(space > 0) H5Sclose(space);
+    if(filespace != H5S_ALL) H5Sclose(filespace);
+    if(memspace != H5S_ALL) H5Sclose(memspace);
     if(dataset > 0) H5Dclose(dataset);
 
     /* Throw Exception on Failure */
@@ -166,7 +197,6 @@ H5Array<T>::~H5Array(void)
     if(name) delete [] name;
     if(data) delete [] data;
 }
-
 
 /*----------------------------------------------------------------------------
  * []]

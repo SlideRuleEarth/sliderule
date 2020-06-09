@@ -38,7 +38,7 @@ const struct luaL_Reg Hdf5Atl03Handle::LuaMetaTable[] = {
 
 const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
     .srt = SRT_LAND_ICE,
-    .conf = CNF_SURFACE_HIGH
+    .cnf = CNF_SURFACE_HIGH
 };
 
 /******************************************************************************
@@ -123,7 +123,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
             GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
             GTArray<float>      dist_ph_along   (file, track, "heights/dist_ph_along");
             GTArray<float>      h_ph            (file, track, "heights/h_ph");
-//            GTArray<char> signal_conf_ph  (file, "heights/signal_conf_ph",        track);
+            GTArray<char>       signal_conf_ph  (file, track, "heights/signal_conf_ph", extractParms.srt);
 
             /* Get Number of Segments */
             int num_segs = MIN(segment_ph_cnt.gt[PRT_LEFT].size, segment_ph_cnt.gt[PRT_RIGHT].size);
@@ -131,6 +131,9 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
             {
                 mlog(WARNING, "Segment size mismatch in %s for track %d\n", filename, track);
             }
+
+            /* Initialize Photon Pointers per Pair Reference Track */
+            uint32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
 
             /* Go Through Each Segment in File */
             for(int s = 0; s < num_segs; s++)
@@ -149,18 +152,22 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 /* set Attributes of Segment */
                 seg->track = track;
                 seg->segment_id = seg_id;
-                seg->num_photons[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT][s];
-                seg->num_photons[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT][s];
+                seg->num_photons[PRT_LEFT] = 0;
+                seg->num_photons[PRT_RIGHT] = 0;
 
                 /* Populate Segment Record Photons */
-                uint32_t curr_photon = 0;
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
-                    for(unsigned p = 0; p < seg->num_photons[t]; p++)
+                    /* Loop Through Each Photon in Segment */
+                    for(int p = 0; p < segment_ph_cnt.gt[t][s]; p++)
                     {
-                        seg->photons[curr_photon].distance_x = segment_dist_x.gt[t][curr_photon] + dist_ph_along.gt[t][curr_photon];
-                        seg->photons[curr_photon].height_y = h_ph.gt[t][curr_photon];
-                        curr_photon++;
+                        if(signal_conf_ph.gt[t][ph_in[t]] >= extractParms.cnf)
+                        {
+                            seg->photons[seg->num_photons[t]].distance_x = segment_dist_x.gt[t][s] + dist_ph_along.gt[t][ph_in[t]];
+                            seg->photons[seg->num_photons[t]].height_y = h_ph.gt[t][ph_in[t]];
+                            seg->num_photons[t]++;
+                        }
+                        ph_in[t]++;
                     }
                 }
 
