@@ -5,7 +5,6 @@
 --              {
 --                  "filename":     "<name of hdf5 file>"
 --                  "track":        <track number: 1, 2, 3>
---                  "id":           <integer id to attach to data>
 --                  "parms":
 --                  {
 --                      "srt":      <surface type - default = LAND ICE(3)>
@@ -28,7 +27,6 @@ local rqst = json.decode(arg[1])
 -- Request Parameters --
 local filename = rqst["filename"]
 local track = rqst["track"]
-local id = rqst["id"] or 0
 local parms = rqst["parms"]
 
 -- ATL06 Dispatch --

@@ -83,7 +83,6 @@ def atl06endpoint (filename, track):
     rqst_dict = {
         "filename": filename,
         "track": track,
-        "id": 0,
         "parms": {
             "cnf": 4
         }
@@ -113,24 +112,56 @@ def atl06endpoint (filename, track):
 
 if __name__ == '__main__':
 
+    # Default Parameters #
+    filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
+    dataset = "/gt1r/geolocation/segment_ph_cnt"
+    datatype = np.int32
+    track = 1
+
+    # Process Command Line Arguments #
     parm = 0
     while parm + 1 < len(sys.argv):
-        # Override server URL from command line
+
+        # Override server_url
         if sys.argv[parm + 1] == "--url":
             server_url = sys.argv[parm + 2]
             parm += 2
+
+        # Override filename
+        elif sys.argv[parm + 1] == "--file":
+            filename = sys.argv[parm + 2]
+            parm += 2
+
+        # Override dataset
+        elif sys.argv[parm + 1] == "--dataset":
+            dataset = sys.argv[parm + 2]
+            parm += 2
+
+        # Override datatype
+        elif sys.argv[parm + 1] == "--datatype":
+            if sys.argv[parm + 2] == "int32":
+                datatype = np.int32
+            elif sys.argv[parm + 2] == "float":
+                datatype = np.float
+            elif sys.argv[parm + 2] == "double":
+                datatype = np.double
+            elif sys.argv[parm + 2] == "uint8":
+                datatype = np.uint8
+            parm += 2
+
+        # Override track
+        elif sys.argv[parm + 1] == "--track":
+            track = int(sys.argv[parm + 2])
+            parm += 2
+
         # H5 Endpoint Example
         elif sys.argv[parm + 1] == "--h5":
-            filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
-            dataset = "/gt1r/geolocation/segment_ph_cnt"
-            datatype = np.int32
             df = h5endpoint(filename, dataset, datatype)
             dfbokeh(df, dataset)
             parm += 1
+
         # H5 Endpoint Example
         elif sys.argv[parm + 1] == "--atl06":
-            filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
-            track = 1
             df = atl06endpoint(filename, track)
             dfbokeh(df, "atl06")
             parm += 1
