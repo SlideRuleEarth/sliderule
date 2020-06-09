@@ -48,6 +48,20 @@ class Hdf5DatasetHandle: public Hdf5Handle
 
         static const int MAX_NDIMS = 8;
 
+        static const char* recType;
+        static const RecordObject::fieldDef_t recDef[];
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            int64_t     id;
+            uint32_t    data; // record object pointer
+            uint32_t    offset;
+            uint32_t    size;
+        } h5dataset_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -60,11 +74,13 @@ class Hdf5DatasetHandle: public Hdf5Handle
          * Data
          *--------------------------------------------------------------------*/
 
-        const char* dataName;
-        uint8_t*    dataBuffer;
-        int         dataSize;
-        int         dataOffset;
-        bool        rawMode;
+        RecordObject*   recObj;
+        h5dataset_t*    recData;
+        const char*     dataName;
+        uint8_t*        dataBuffer;
+        int             dataSize;
+        int             dataOffset;
+        bool            rawMode;
 
         /*--------------------------------------------------------------------
          * Methods

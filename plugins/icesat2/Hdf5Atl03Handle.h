@@ -81,6 +81,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
         typedef struct {
             uint8_t         track;
             uint32_t        segment_id;
+            uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
             uint32_t        num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
             photon_t        photons[]; // zero length field
         } segment_t;
@@ -91,6 +92,9 @@ class Hdf5Atl03Handle: public Hdf5Handle
 
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
+
+        static const char* recType;
+        static const RecordObject::fieldDef_t recDef[];
 
         static const parms_t DefaultParms;
 
@@ -106,17 +110,16 @@ class Hdf5Atl03Handle: public Hdf5Handle
          * Data
          *--------------------------------------------------------------------*/
 
-        int                 groundTrack;
-        parms_t             extractParms;
-        List<segment_t*>    segmentList;
-        int                 listIndex;
-        bool                rawMode;
+        int                     track;
+        parms_t                 parms;
+        List<RecordObject*>     segmentList;
+        int                     listIndex;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Hdf5Atl03Handle     (lua_State* L, int track, long id, bool raw_mode);
+                    Hdf5Atl03Handle     (lua_State* L, int _track);
                     ~Hdf5Atl03Handle    (void);
 
         bool        open                (const char* filename, DeviceObject::role_t role);

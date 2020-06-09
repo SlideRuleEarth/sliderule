@@ -38,6 +38,16 @@ const struct luaL_Reg Hdf5Atl03Handle::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+const char* Hdf5Atl03Handle::recType = "h5atl03";
+const RecordObject::fieldDef_t Hdf5Atl03Handle::recDef[] = {
+    {"TRACK",       RecordObject::UINT8,    offsetof(segment_t, track),                     sizeof(((segment_t*)0)->track),                     NATIVE_FLAGS},
+    {"SEGMENT_ID",  RecordObject::UINT32,   offsetof(segment_t, segment_id),                sizeof(((segment_t*)0)->segment_id),                NATIVE_FLAGS},
+    {"PHOTONS_L",   RecordObject::STRING,   offsetof(segment_t, photon_offset[PRT_LEFT]),   sizeof(((segment_t*)0)->photon_offset[PRT_LEFT]),   NATIVE_FLAGS | RecordObject::POINTER},
+    {"PHOTONS_R",   RecordObject::STRING,   offsetof(segment_t, photon_offset[PRT_RIGHT]),  sizeof(((segment_t*)0)->photon_offset[PRT_RIGHT]),  NATIVE_FLAGS | RecordObject::POINTER},
+    {"NUM_L",       RecordObject::UINT32,   offsetof(segment_t, num_photons[PRT_LEFT]),     sizeof(((segment_t*)0)->num_photons[PRT_LEFT]),     NATIVE_FLAGS},
+    {"NUM_R",       RecordObject::UINT32,   offsetof(segment_t, num_photons[PRT_RIGHT]),    sizeof(((segment_t*)0)->num_photons[PRT_RIGHT]),    NATIVE_FLAGS}
+};
+
 const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
     .srt = SRT_LAND_ICE,
     .cnf = CNF_SURFACE_HIGH
@@ -48,19 +58,17 @@ const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<track>, [<id>], [<raw>])
+ * luaCreate - create(<track>)
  *----------------------------------------------------------------------------*/
 int Hdf5Atl03Handle::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        int     track       = getLuaInteger(L, 1);
-        long    id          = getLuaInteger(L, 2, true, 0);
-        bool    raw_mode    = getLuaBoolean(L, 3, true, true);
+        int track = getLuaInteger(L, 1);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Hdf5Atl03Handle(L, track, id, raw_mode));
+        return createLuaObject(L, new Hdf5Atl03Handle(L, track));
     }
     catch(const LuaException& e)
     {
@@ -72,23 +80,21 @@ int Hdf5Atl03Handle::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5Atl03Handle::Hdf5Atl03Handle (lua_State* L, int track, long id, bool raw_mode):
+Hdf5Atl03Handle::Hdf5Atl03Handle (lua_State* L, int _track):
     Hdf5Handle(L, LuaMetaName, LuaMetaTable)
 {
-    /* Set Track */
-    groundTrack = track;
+    /* Define Record */
+    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::defineRecord(recType, "TRACK", sizeof(segment_t), recDef, def_elements, 8);
+
+    /* Set Ground Reference Track */
+    track = _track;
 
     /* Set Parameters */
-    extractParms = DefaultParms;
+    parms = DefaultParms;
 
     /* Set Segment List Index */
     listIndex = 0;
-
-    /* Set Mode */
-    rawMode = raw_mode;
-
-    /* Set ID of Dataset Record */
-    recData->id = id;
 }
 
 /*----------------------------------------------------------------------------
@@ -105,7 +111,6 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
 {
     unsigned flags;
     bool status = false;
-    uint8_t track = 1;
 
     /* Set Flags */
     if(role == DeviceObject::READER)        flags = H5F_ACC_RDONLY;
@@ -125,7 +130,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
             GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
             GTArray<float>      dist_ph_along   (file, track, "heights/dist_ph_along");
             GTArray<float>      h_ph            (file, track, "heights/h_ph");
-            GTArray<char>       signal_conf_ph  (file, track, "heights/signal_conf_ph", extractParms.srt);
+            GTArray<char>       signal_conf_ph  (file, track, "heights/signal_conf_ph", parms.srt);
 
             /* Get Number of Segments */
             int num_segs = MIN(segment_ph_cnt.gt[PRT_LEFT].size, segment_ph_cnt.gt[PRT_RIGHT].size);
@@ -147,15 +152,16 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     mlog(WARNING, "Segment ID mismatch in %s for segments %d and %d\n", filename, segment_id.gt[PRT_LEFT][s], segment_id.gt[PRT_RIGHT][s]);
                 }
 
-                /* Allocate Segment Record */
+                /* Allocate Segment Data */
                 size_t seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segment_ph_cnt.gt[PRT_LEFT][s] + segment_ph_cnt.gt[PRT_RIGHT][s]));
-                segment_t* seg = (segment_t*) new uint8_t[seg_size];
+                RecordObject* record = new RecordObject(recType, seg_size); // TODO: overallocated memory... photons filtered below
+                segment_t* segment = (segment_t*)record->getRecordData();
 
-                /* set Attributes of Segment */
-                seg->track = track;
-                seg->segment_id = seg_id;
-                seg->num_photons[PRT_LEFT] = 0;
-                seg->num_photons[PRT_RIGHT] = 0;
+                /* Initialize Attributes of Segment */
+                segment->track = track;
+                segment->segment_id = seg_id;
+                segment->num_photons[PRT_LEFT] = 0;
+                segment->num_photons[PRT_RIGHT] = 0;
 
                 /* Populate Segment Record Photons */
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
@@ -163,18 +169,22 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     /* Loop Through Each Photon in Segment */
                     for(int p = 0; p < segment_ph_cnt.gt[t][s]; p++)
                     {
-                        if(signal_conf_ph.gt[t][ph_in[t]] >= extractParms.cnf)
+                        if(signal_conf_ph.gt[t][ph_in[t]] >= parms.cnf)
                         {
-                            seg->photons[seg->num_photons[t]].distance_x = segment_dist_x.gt[t][s] + dist_ph_along.gt[t][ph_in[t]];
-                            seg->photons[seg->num_photons[t]].height_y = h_ph.gt[t][ph_in[t]];
-                            seg->num_photons[t]++;
+                            segment->photons[segment->num_photons[t]].distance_x = segment_dist_x.gt[t][s] + dist_ph_along.gt[t][ph_in[t]];
+                            segment->photons[segment->num_photons[t]].height_y = h_ph.gt[t][ph_in[t]];
+                            segment->num_photons[t]++;
                         }
                         ph_in[t]++;
                     }
                 }
 
+                /* Set Photon Pointer Fields */
+                segment->photon_offset[PRT_LEFT] = sizeof(segment_t); // pointers are set to offset from start of record data
+                segment->photon_offset[PRT_LEFT] = sizeof(segment_t) + (sizeof(photon_t) * segment->num_photons[PRT_LEFT]);
+
                 /* Add Segment Record */
-                segmentList.add(seg);
+                segmentList.add(record);
             }
 
             /* Set Success */
@@ -203,44 +213,36 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
 int Hdf5Atl03Handle::read (void* buf, int len)
 {
     int bytes_read = 0;
+    unsigned char* rec_buf = (unsigned char*)buf;
 
     /* Read Next Segment in List */
     if(listIndex < segmentList.length())
     {
-        int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segmentList[listIndex]->num_photons[PRT_LEFT] + segmentList[listIndex]->num_photons[PRT_LEFT]));
-        segment_t* segment = segmentList[listIndex];
+        RecordObject* record = segmentList[listIndex];
+        segment_t* segment = (segment_t*)record->getRecordData();
 
-        if(rawMode)
+        /* Calculate Size of Segment Data */
+        int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_LEFT]));
+
+        /* Check If Enough Room In Buffer */
+        if(seg_size <= (len - record->getAllocatedMemory()))
         {
-            if(seg_size <= len)
-            {
-                LocalLib::copy(buf, segment, seg_size);
-                bytes_read = seg_size;
-            }
-            else
-            {
-                mlog(ERROR, "Unable to read ATL03 segment data, buffer too small (%d > %d)\n", seg_size, len);
-            }
+            /* Serialize Record into Buffer */
+            int bytes_written = record->serialize(&rec_buf, RecordObject::COPY, len);
+
+            /* Copy Data into Buffer */
+            LocalLib::copy(&rec_buf[bytes_written], segment, seg_size);
+
+            /* Calucate Total Bytes Written into Buffer */
+            bytes_read = bytes_written + seg_size;
         }
-        else // record
+        else
         {
-            if(seg_size <= (len - recObj->getAllocatedMemory()))
-            {
-                recData->offset = 0;
-                recData->size = seg_size;
-                unsigned char* rec_buf = (unsigned char*)buf;
-                int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, len);
-                LocalLib::copy(&rec_buf[bytes_written], segment, seg_size);
-                bytes_read = bytes_written + seg_size;
-            }
-            else
-            {
-                mlog(ERROR, "Unable to read ATL03 segment record, buffer too small (%d > %d - %d)\n", seg_size, len, recObj->getAllocatedMemory());
-            }
+            mlog(ERROR, "Unable to read ATL03 segment record, buffer too small (%d > %d - %d)\n", seg_size, len, record->getAllocatedMemory());
         }
 
         /* Release Segment Resources */
-        delete [] segmentList[listIndex];
+        delete record;
 
         /* Go To Next Segment */
         listIndex++;
@@ -288,10 +290,10 @@ int Hdf5Atl03Handle::luaConfig (lua_State* L)
 
         /* Get Configuration Parameters from Table */
         lua_getfield(L, 2, "srt");
-        lua_obj->extractParms.srt = (surfaceType_t)getLuaInteger(L, -1, true, lua_obj->extractParms.srt);
+        lua_obj->parms.srt = (surfaceType_t)getLuaInteger(L, -1, true, lua_obj->parms.srt);
 
         lua_getfield(L, 2, "cnf");
-        lua_obj->extractParms.cnf = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->extractParms.cnf);
+        lua_obj->parms.cnf = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.cnf);
 
         /* Set Success */
         status = true;
@@ -320,8 +322,8 @@ int Hdf5Atl03Handle::luaParms (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "srt", lua_obj->extractParms.srt);
-        LuaEngine::setAttrInt(L, "cnf", lua_obj->extractParms.cnf);
+        LuaEngine::setAttrInt(L, "srt", lua_obj->parms.srt);
+        LuaEngine::setAttrInt(L, "cnf", lua_obj->parms.cnf);
 
         /* Set Success */
         status = true;

@@ -34,10 +34,10 @@ local parms = rqst["parms"]
 -- ATL06 Dispatch --
 algo = icesat2.atl06(rspq)
 d = core.dispatcher("recq")
-d:attach(algo, "h5rec")
+d:attach(algo, "h5atl03")
 
 -- ATL03 Data Handle --
-h = icesat2.h5atl03(track, id, false)
+h = icesat2.h5atl03(track)
 if parms then
     h:config(parms)
 end

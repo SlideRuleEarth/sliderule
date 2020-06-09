@@ -35,6 +35,14 @@ const struct luaL_Reg Hdf5DatasetHandle::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+const char* Hdf5DatasetHandle::recType = "h5dataset";
+const RecordObject::fieldDef_t Hdf5DatasetHandle::recDef[] = {
+    {"ID",      RecordObject::INT64,    offsetof(h5dataset_t, id),      sizeof(((h5dataset_t*)0)->id),      NATIVE_FLAGS},
+    {"DATA",    RecordObject::STRING,   offsetof(h5dataset_t, data),    sizeof(((h5dataset_t*)0)->data),    NATIVE_FLAGS | RecordObject::POINTER},
+    {"OFFSET",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  sizeof(((h5dataset_t*)0)->offset),  NATIVE_FLAGS},
+    {"SIZE",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    sizeof(((h5dataset_t*)0)->size),    NATIVE_FLAGS}
+};
+
 /******************************************************************************
  * HDF5 DATASET HANDLE CLASS
  ******************************************************************************/
@@ -67,6 +75,15 @@ int Hdf5DatasetHandle::luaCreate (lua_State* L)
 Hdf5DatasetHandle::Hdf5DatasetHandle (lua_State* L, const char* dataset_name, long id, bool raw_mode):
     Hdf5Handle(L, LuaMetaName, LuaMetaTable)
 {
+    /* Define Record */
+    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
+
+    /* Set Record */
+    recObj = new RecordObject(recType);
+    recData = (h5dataset_t*)recObj->getRecordData();
+    recData->data = sizeof(h5dataset_t);
+
     /* Initialize Attributes to Zero */
     dataBuffer = NULL;
     dataSize = 0;
