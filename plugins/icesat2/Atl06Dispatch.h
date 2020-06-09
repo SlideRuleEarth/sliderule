@@ -28,10 +28,9 @@
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "DispatchObject.h"
-#include "Dictionary.h"
 #include "OsApi.h"
-#include "LogLib.h"
-#include "LimitRecord.h"
+#include "MsgQ.h"
+#include "MathLib.h"
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -55,6 +54,7 @@ class Atl06Dispatch: public DispatchObject
         typedef struct {
             uint32_t    h5atl03_rec_cnt;
             uint32_t    avgheight_out_cnt;
+            uint32_t    leastsquares_out_cnt;
             uint32_t    post_success_cnt;
             uint32_t    post_dropped_cnt;
         } stats_t;
@@ -78,14 +78,15 @@ class Atl06Dispatch: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Atl06Dispatch       (lua_State* L, const char* otuq_name);
-                    ~Atl06Dispatch      (void);
+                        Atl06Dispatch           (lua_State* L, const char* otuq_name);
+                        ~Atl06Dispatch          (void);
 
-        bool        processRecord       (RecordObject* record, okey_t key) override;
+        bool            processRecord           (RecordObject* record, okey_t key) override;
 
-        double      averageHeightStage  (RecordObject* record, okey_t key);
+        double          averageHeightStage      (RecordObject* record, okey_t key);
+        MathLib::lsf_t  leastSquaresFitStage    (RecordObject* record, okey_t key);
 
-        static int  luaStats            (lua_State* L);
+        static int      luaStats                (lua_State* L);
 };
 
 #endif  /* __atl06_dispatch__ */

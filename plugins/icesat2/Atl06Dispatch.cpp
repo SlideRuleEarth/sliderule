@@ -17,12 +17,47 @@
  * under the License.
  */
 
+//  FOR each 40m segment:
+//      (1) Photon-Classification Stage {3.1}
+//
+//          IF (at least 10 photons) AND (at least 20m horizontal spread) THEN
+//              a. select the set of photons from ATL03 (2x20m segments) based on signal_conf_ph_t threshold [sig_thresh]
+//              b. fit sloping line segment to photons
+//              c. calculate robust spread of the residuals [sigma_r]
+//              d. select the set of photons used to fit line AND that fall within max(+/- 1.5m, 3*sigma_r) of line
+//          ELSE
+//              a. add 20m to beginning and end of segment to create 80m segment
+//              b. histogram all photons into 10m vertical bins
+//              c. select the set of photons in the maximum (Nmax) bin AND photons that fall in bins with a count that is Nmax - sqrt(Nmax)
+//              d. select subset of photons above that are within the original 40m segment
+//
+//          FINALY identify height of photons selected by above steps [h_widnow]
+//
+//      (2) Photon-Selection-Refinement Stage {3.2}
+//
+//          WHILE iterations are less than 20 AND subset of photons changes each iteration
+//              a. least-squares fit current set of photons: x = curr_photon - segment_center, y = photon_height
+//                  i.  calculate mean height [h_mean]
+//                  ii. calculate slope [dh/dx]
+//              b. calculate robust estimator (similar to standard deviation) of residuals
+//                  i.  calculate the median height (i.e. middle of the window at given point) [r_med]
+//                  ii. calculate background-corrected spread of distribution [r_o]; force r_o to be at most 5m
+//                  iii.calculate expected spread of return photons [h_expected_rms]
+//              c. select subset of photons that fall within new window
+//                  i.  determine new window: h_window = MAX(6*r_o, 6*h_expected_rms, 0.75 * h_window_last, 3m)
+//                  ii. select photon if distance from r_med falls within h_window/2
+//
+//      (3) Surface Height Quality Stage {3.2.1}
+//
+//          CALCULATE signal to noise significance
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "Atl06Dispatch.h"
 #include "Hdf5Atl03Handle.h"
+#include "MathLib.h"
 #include "core.h"
 
 /******************************************************************************
@@ -89,8 +124,10 @@ Atl06Dispatch::~Atl06Dispatch(void)
 bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
     double height = averageHeightStage(record, key);
+//    MathLib::lsf_t fit = leastSquaresFitStage(record, key);
 
     if(outQ->postCopy(&height, sizeof(height), SYS_TIMEOUT) > 0)
+//    if(outQ->postCopy(&fit.mean, sizeof(fit.mean), SYS_TIMEOUT) > 0)
     {
         stats.post_success_cnt++;
         return true;
@@ -133,6 +170,25 @@ double Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key)
 }
 
 /*----------------------------------------------------------------------------
+ * leastSquaresFitStage
+ *----------------------------------------------------------------------------*/
+MathLib::lsf_t Atl06Dispatch::leastSquaresFitStage (RecordObject* record, okey_t key)
+{
+    (void)key;
+
+    Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
+
+    /* Count Execution Statistic */
+    stats.leastsquares_out_cnt++;
+
+    /* Calculate Least Squares Fit */
+    MathLib::lsf_t fit = MathLib::lsf((MathLib::point_t*)&segment->photons[0], segment->num_photons[PRT_LEFT]);
+
+    /* Return Fit */
+    return fit;
+}
+
+/*----------------------------------------------------------------------------
  * luaStats
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::luaStats (lua_State* L)
@@ -147,10 +203,11 @@ int Atl06Dispatch::luaStats (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "h5atl03_rec_cnt",     lua_obj->stats.h5atl03_rec_cnt);
-        LuaEngine::setAttrInt(L, "avgheight_out_cnt",   lua_obj->stats.avgheight_out_cnt);
-        LuaEngine::setAttrInt(L, "post_success_cnt",    lua_obj->stats.post_success_cnt);
-        LuaEngine::setAttrInt(L, "post_dropped_cnt",    lua_obj->stats.post_dropped_cnt);
+        LuaEngine::setAttrInt(L, "h5atl03_rec_cnt",         lua_obj->stats.h5atl03_rec_cnt);
+        LuaEngine::setAttrInt(L, "avgheight_out_cnt",       lua_obj->stats.avgheight_out_cnt);
+        LuaEngine::setAttrInt(L, "leastsquares_out_cnt",    lua_obj->stats.leastsquares_out_cnt);
+        LuaEngine::setAttrInt(L, "post_success_cnt",        lua_obj->stats.post_success_cnt);
+        LuaEngine::setAttrInt(L, "post_dropped_cnt",        lua_obj->stats.post_dropped_cnt);
 
         /* Set Success */
         status = true;
