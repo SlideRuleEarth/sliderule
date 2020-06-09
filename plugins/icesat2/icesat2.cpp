@@ -47,6 +47,20 @@ int icesat2_open (lua_State *L)
         {NULL,          NULL}
     };
 
+    /* Set Globals */
+    LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",    Hdf5Atl03Handle::CNF_POSSIBLE_TEP);
+    LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",  Hdf5Atl03Handle::CNF_NOT_CONSIDERED);
+    LuaEngine::setAttrInt(L, "CNF_BACKGROUND",      Hdf5Atl03Handle::CNF_BACKGROUND);
+    LuaEngine::setAttrInt(L, "CNF_WITHIN_10M",      Hdf5Atl03Handle::CNF_WITHIN_10M);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_LOW",     Hdf5Atl03Handle::CNF_SURFACE_LOW);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_MEDIUM",  Hdf5Atl03Handle::CNF_SURFACE_MEDIUM);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_HIGH",    Hdf5Atl03Handle::CNF_SURFACE_HIGH);
+    LuaEngine::setAttrInt(L, "SRT_LAND",            Hdf5Atl03Handle::SRT_LAND);
+    LuaEngine::setAttrInt(L, "SRT_OCEAN",           Hdf5Atl03Handle::SRT_OCEAN);
+    LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         Hdf5Atl03Handle::SRT_SEA_ICE);
+    LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        Hdf5Atl03Handle::SRT_LAND_ICE);
+    LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    Hdf5Atl03Handle::SRT_INLAND_WATER);
+
     /* Set Library */
     luaL_newlib(L, icesat2_functions);
 

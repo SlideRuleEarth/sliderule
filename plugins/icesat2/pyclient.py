@@ -8,8 +8,6 @@ import json
 import pandas as pd
 import numpy as np
 
-import matplotlib.pyplot as plt
-from ipywidgets import interact
 from bokeh.io import push_notebook, show, output_notebook
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
@@ -18,42 +16,6 @@ from bokeh.models import ColumnDataSource
 # Parameters
 #
 server_url = 'http://127.0.0.1:9081'
-
-#
-# Default Matplotlib Plot of Dataframe Column
-#
-def dfplot(df, col, cond_col="", cond_val=0):
-    if cond_col != "":
-        c = df[df[cond_col] == cond_val]
-        s = c[pd.isnull(c[col]) == False][col]
-    else:
-        s = df[pd.isnull(df[col]) == False][col]
-    s.plot(figsize=(15,5))
-    plt.title(col)
-    plt.show()
-
-#
-# Sum of Dataframe Column
-#
-def dfsum(df, col, cond_col="", cond_val=0):
-    if cond_col != "":
-        total = df[df[cond_col] == cond_val][col].sum()
-    else:
-        total = df[col].sum()
-    return total
-
-#
-# Matplotlib Histogram of Value Counts in Dataframe Column
-#
-def dfplotvc(df, col, cond_col="", cond_val=0):
-    if cond_col != "":
-        vc = df[df[cond_col] == cond_val][col].value_counts()
-    else:
-        vc = df[col].value_counts()
-    plt.clf()
-    plt.figure(figsize=(15,8))
-    vc.plot(kind='bar')
-    plt.show()
 
 #
 # Interactive Bokeh Plot of Dataframe Column

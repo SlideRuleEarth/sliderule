@@ -36,6 +36,11 @@ const struct luaL_Reg Hdf5Atl03Handle::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
+    .srt = SRT_LAND_ICE,
+    .conf = CNF_SURFACE_HIGH
+};
+
 /******************************************************************************
  * HDF5 DATASET HANDLE CLASS
  ******************************************************************************/
@@ -70,6 +75,9 @@ Hdf5Atl03Handle::Hdf5Atl03Handle (lua_State* L, int track, long id, bool raw_mod
 {
     /* Set Track */
     groundTrack = track;
+
+    /* Set Parameters */
+    extractParms = DefaultParms;
 
     /* Set Segment List Index */
     listIndex = 0;
@@ -146,16 +154,12 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
 
                 /* Populate Segment Record Photons */
                 uint32_t curr_photon = 0;
-                uint32_t first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, seg->num_photons[PRT_LEFT] };
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
-//TODO: not populating the segment structure correctly to be picked up by dispatch
-
-                    photon_t* ph = &seg->photons[first_photon[t]];
                     for(unsigned p = 0; p < seg->num_photons[t]; p++)
                     {
-                        ph->distance_x = segment_dist_x.gt[t][curr_photon] + dist_ph_along.gt[t][curr_photon];
-                        ph->height_y = h_ph.gt[t][curr_photon];
+                        seg->photons[curr_photon].distance_x = segment_dist_x.gt[t][curr_photon] + dist_ph_along.gt[t][curr_photon];
+                        seg->photons[curr_photon].height_y = h_ph.gt[t][curr_photon];
                         curr_photon++;
                     }
                 }

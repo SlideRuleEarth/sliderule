@@ -42,26 +42,34 @@ class Hdf5Atl03Handle: public Hdf5Handle
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
         /* Signal Confidence per Photon */
         typedef enum {
-            CONF_SURFACE_HIGH = 4,
-            CONF_SURFACE_MEDIUM = 3,
-            CONF_SURFACE_LOW = 2,
-            CONF_WITHIN_10M = 1,
-            CONF_BACKGROUND = 0,
-            CONF_NOT_CONSIDERED = -1,
-            CONF_POSSIBLE_TEP = -2
+            CNF_POSSIBLE_TEP = -2,
+            CNF_NOT_CONSIDERED = -1,
+            CNF_BACKGROUND = 0,
+            CNF_WITHIN_10M = 1,
+            CNF_SURFACE_LOW = 2,
+            CNF_SURFACE_MEDIUM = 3,
+            CNF_SURFACE_HIGH = 4
         } signalConf_t;
+
+        /* Surface Types for Signal Confidence */
+        typedef enum {
+            SRT_LAND = 0,
+            SRT_OCEAN = 1,
+            SRT_SEA_ICE = 2,
+            SRT_LAND_ICE = 3,
+            SRT_INLAND_WATER = 4
+        } surfaceType_t;
+
+        /* Extraction Parameters */
+        typedef struct {
+            surfaceType_t   srt;
+            signalConf_t    conf;
+        } parms_t;
 
         /* Photon Fields */
         typedef struct {
@@ -71,11 +79,20 @@ class Hdf5Atl03Handle: public Hdf5Handle
 
         /* Segment Record */
         typedef struct {
-            uint8_t     track;
-            uint32_t    segment_id;
-            uint32_t    num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
-            photon_t    photons[]; // zero length field
+            uint8_t         track;
+            uint32_t        segment_id;
+            uint32_t        num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
+            photon_t        photons[]; // zero length field
         } segment_t;
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+
+        static const parms_t DefaultParms;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -90,6 +107,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
          *--------------------------------------------------------------------*/
 
         int                 groundTrack;
+        parms_t             extractParms;
         List<segment_t*>    segmentList;
         int                 listIndex;
         bool                rawMode;
