@@ -26,6 +26,7 @@ end
 if __icesat2__ then
     runner.script(rd .. "hdf5_file.lua")
     runner.script(rd .. "atl06_elements.lua")
+    runner.script(rd .. "mathlib.lua")
 end
 
 -- Run Legacy Unit Tests --

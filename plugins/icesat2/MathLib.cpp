@@ -70,7 +70,7 @@ MathLib::lsf_t MathLib::lsf (point_t* array, int size)
     double gtg_22 = 0.0;
     double gth_1 = 0.0;
     double gth_2 = 0.0;
-    for(unsigned p = 0; p < size; p++)
+    for(int p = 0; p < size; p++)
     {
         gtg_12_21 += array[p].x;
         gtg_22 += array[p].x * array[p].x;
@@ -79,13 +79,13 @@ MathLib::lsf_t MathLib::lsf (point_t* array, int size)
     }
 
     /* Calculate Inverse of GT*G */
-    double det = (gtg_11 * gtg_22) - (gtg_12_21 * gtg_12_21);
+    double det = 1.0 / ((gtg_11 * gtg_22) - (gtg_12_21 * gtg_12_21));
     double igtg_11 = gtg_22 * det;
     double igtg_12_21 = -1 * gtg_12_21 * det;
     double igtg_22 = gtg_11 * det;
 
     /* Calculate IGTG * GTh */
-    fit.mean = (igtg_11 * gth_1) + (igtg_12_21 * gth_2);
+    fit.intercept = (igtg_11 * gth_1) + (igtg_12_21 * gth_2);
     fit.slope = (igtg_12_21 * gth_1) + (igtg_22 * gth_2);
 
     /* Return Fit */

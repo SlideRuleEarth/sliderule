@@ -17,14 +17,14 @@
  * under the License.
  */
 
-/*
- * Notes:
- *  1. All GPS times are represented as mechanical milliseconds since GPS epoch of 6 Jan 1980 00:00:00
- *  2. All GMT times are represented as UTC and are expressed in years, days, etc.  These times include leap seconds.
- */
-
 #ifndef __math_lib__
 #define __math_lib__
+
+/******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
+
+#include "LuaObject.h"
 
 /******************************************************************************
  * MATH LIBRARY CLASS
@@ -39,7 +39,7 @@ class MathLib
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            double  mean;
+            double  intercept;
             double  slope;
         } lsf_t;
 

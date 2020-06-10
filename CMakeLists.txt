@@ -143,7 +143,7 @@ install (
 if(${PACKAGE_FOR_DEBIAN})
 	set (CPACK_GENERATOR "DEB")
 	set (CPACK_DEBIAN_PACKAGE_MAINTAINER "JP Swinski") # required
-	set (CPACK_DEBIAN_PACKAGE_DESCRIPTION "a distributed Lua framework for science data processing")
+	set (CPACK_DEBIAN_PACKAGE_DESCRIPTION "a framework for on-demand science data processing")
 	set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     string (REGEX MATCHALL "[0123456789]+" SLIDERULE_VERSION_NUMBERS "${TGTVER}")
 	list (GET SLIDERULE_VERSION_NUMBERS 0 CPACK_PACKAGE_VERSION_MAJOR)

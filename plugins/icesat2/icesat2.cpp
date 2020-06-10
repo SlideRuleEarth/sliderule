@@ -44,6 +44,7 @@ int icesat2_open (lua_State *L)
         {"h5dataset",   Hdf5DatasetHandle::luaCreate},
         {"h5atl03",     Hdf5Atl03Handle::luaCreate},
         {"atl06",       Atl06Dispatch::luaCreate},
+        {"ut_mathlib",  UT_MathLib::luaCreate},
         {NULL,          NULL}
     };
 

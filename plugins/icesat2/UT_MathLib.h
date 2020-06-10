@@ -17,31 +17,50 @@
  * under the License.
  */
 
-#ifndef __icesat2__
-#define __icesat2__
+#ifndef __ut_mathlib__
+#define __ut_mathlib__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Hdf5File.h"
-#include "Hdf5Handle.h"
-#include "Hdf5DatasetHandle.h"
-#include "Hdf5Atl03Handle.h"
-#include "Atl06Dispatch.h"
-#include "H5Array.h"
-#include "GTArray.h"
-#include "MathLib.h"
-#include "UT_MathLib.h"
+#include "OsApi.h"
+#include "LuaObject.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * MATH LIBRARY UNIT TEST CLASS
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-}
+class UT_MathLib: public LuaObject
+{
+    public:
 
-#endif  /* __icesat2__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* OBJECT_TYPE;
+
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int  luaCreate   (lua_State* L);
+
+    private:
 
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                        UT_MathLib              (lua_State* L);
+                        ~UT_MathLib             (void);
+
+        static int      luaLsfTest              (lua_State* L);
+};
+
+#endif  /* __ut_mathlib__ */
