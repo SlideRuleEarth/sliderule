@@ -189,7 +189,7 @@ RecordObject::RecordObject(const char* populate_string, int allocated_memory)
     /* Attempt to Initialize Record */
     if(recordDefinition != NULL)
     {
-        /* Set Record Memory */
+        /* Allocate Record Memory */
         if(allocated_memory == 0)
         {
             memoryAllocated = recordDefinition->record_size;
@@ -202,11 +202,12 @@ RecordObject::RecordObject(const char* populate_string, int allocated_memory)
         {
             throw InvalidRecordException();
         }
-
         recordMemory = new char[memoryAllocated];
+
+        /* Populate Record Type */
         LocalLib::copy(&recordMemory[0], recordDefinition->type_name, recordDefinition->type_size);
 
-        /* Set Record Data */
+        /* Zero Out Record Data */
         recordData = (unsigned char*)&recordMemory[recordDefinition->type_size];
         LocalLib::set(recordData, 0, recordDefinition->data_size);
 
@@ -422,6 +423,26 @@ void RecordObject::setIdField (const char* id_field)
         recordDefinition->id_field = StringLib::duplicate(id_field);
     }
     defMut.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * getNumFields
+ *----------------------------------------------------------------------------*/
+bool RecordObject::resizeData (int new_size)
+{
+    bool status = false;
+
+    if(recordDefinition->data_size > new_size)
+    {
+        int new_memory_allocated = recordDefinition->type_size + new_size;
+        if(memoryAllocated >= new_memory_allocated)
+        {
+            memoryAllocated = new_memory_allocated;
+            status = true;
+        }
+    }
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------

@@ -153,7 +153,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 }
 
                 /* Allocate Segment Data */
-                size_t seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segment_ph_cnt.gt[PRT_LEFT][s] + segment_ph_cnt.gt[PRT_RIGHT][s]));
+                int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segment_ph_cnt.gt[PRT_LEFT][s] + segment_ph_cnt.gt[PRT_RIGHT][s]));
                 RecordObject* record = new RecordObject(recType, seg_size); // TODO: overallocated memory... photons filtered below
                 segment_t* segment = (segment_t*)record->getRecordData();
 
@@ -184,6 +184,10 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 /* Set Photon Pointer Fields */
                 segment->photon_offset[PRT_LEFT] = sizeof(segment_t); // pointers are set to offset from start of record data
                 segment->photon_offset[PRT_RIGHT] = sizeof(segment_t) + (sizeof(photon_t) * segment->num_photons[PRT_LEFT]);
+
+                /* Resize Record Data */
+                int new_size = sizeof(segment_t) + (sizeof(photon_t) * (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]));
+                record->resizeData(new_size);
 
                 /* Add Segment Record */
                 segmentList.add(record);
@@ -221,26 +225,16 @@ int Hdf5Atl03Handle::read (void* buf, int len)
     if(listIndex < segmentList.length())
     {
         RecordObject* record = segmentList[listIndex];
-        segment_t* segment = (segment_t*)record->getRecordData();
 
-        /* Calculate Size of Segment Data */
-        int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_LEFT]));
-
-        /* Check If Enough Room In Buffer */
-        if(seg_size <= (len - record->getAllocatedMemory()))
+        /* Check if Enough Room in Buffer to Hold Record */
+        if(len >= record->getAllocatedMemory())
         {
             /* Serialize Record into Buffer */
-            int bytes_written = record->serialize(&rec_buf, RecordObject::COPY, len);
-
-            /* Copy Data into Buffer */
-            LocalLib::copy(&rec_buf[bytes_written], segment, seg_size);
-
-            /* Calucate Total Bytes Written into Buffer */
-            bytes_read = bytes_written + seg_size;
+            bytes_read = record->serialize(&rec_buf, RecordObject::COPY, len);
         }
         else
         {
-            mlog(ERROR, "Unable to read ATL03 segment record, buffer too small (%d > %d - %d)\n", seg_size, len, record->getAllocatedMemory());
+            mlog(ERROR, "Unable to read ATL03 segment record, buffer too small (%d < %d)\n", len, record->getAllocatedMemory());
         }
 
         /* Release Segment Resources */

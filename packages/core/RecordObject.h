@@ -200,6 +200,7 @@ class RecordObject
 
         /* Get/Set Methods */
         void                    setIdField          (const char* id_field);
+        bool                    resizeData          (int new_size);
         int                     getNumFields        (void);
         int                     getFieldNames       (char*** names);
         field_t                 getField            (const char* field_name);
