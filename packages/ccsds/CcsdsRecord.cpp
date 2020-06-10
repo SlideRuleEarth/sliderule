@@ -43,24 +43,12 @@ Mutex CcsdsRecord::pktMut;
  *         is because CcsdsRecords do not prepend the record type string but start
  *         immediately with the CCSDS packet data.
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(const char* populate_string): RecordObject()
+CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
 {
-    assert(populate_string);
+    assert(rec_type);
 
     /* Attempt to Get Record Type */
-    recordDefinition = NULL;
-    int type_len = 0;
-    for(int i = 0; i < MAX_STR_SIZE && populate_string[i] != '\0' && populate_string[i] != ' '; i++) type_len++;
-    if(type_len > 0 && type_len < MAX_STR_SIZE)
-    {
-        /* Pull Out Record Type */
-        char rec_type[MAX_STR_SIZE];
-        LocalLib::copy(rec_type, populate_string, type_len);
-        rec_type[type_len] = '\0';
-
-        /* Get Record Definition */
-        recordDefinition = getDefinition(rec_type);
-    }
+    recordDefinition = getDefinition(rec_type);
 
     /* Attempt to Initialize Record */
     if(recordDefinition != NULL)
@@ -80,7 +68,6 @@ CcsdsRecord::CcsdsRecord(const char* populate_string): RecordObject()
         pktDef = pktDefs[recordDefinition->type_name];
         LocalLib::set(recordMemory, 0, recordDefinition->data_size);
         populateHeader();
-        populate(&populate_string[type_len]);
     }
     catch(std::out_of_range& e)
     {

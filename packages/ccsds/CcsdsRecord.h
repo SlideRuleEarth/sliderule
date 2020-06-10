@@ -58,7 +58,7 @@ class CcsdsRecord: public RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                CcsdsRecord         (const char* populate_string);
+                                CcsdsRecord         (const char* rec_type);
                                 CcsdsRecord         (unsigned char* buffer, int size);
 
         /* Overloaded Methods */

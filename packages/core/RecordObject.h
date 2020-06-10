@@ -180,7 +180,7 @@ class RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                RecordObject        (const char* populate_string, int allocated_memory=0); // must include the record type
+                                RecordObject        (const char* rec_type, int allocated_memory=0); // must include the record type
                                 RecordObject        (unsigned char* buffer, int size);
         virtual                 ~RecordObject       (void);
 
@@ -199,6 +199,7 @@ class RecordObject
         Field*                  createRecordField   (const char* field_name);
 
         /* Get/Set Methods */
+        bool                    populate            (const char* populate_string); // field_name=value, ...
         void                    setIdField          (const char* id_field);
         bool                    resizeData          (int new_size);
         int                     getNumFields        (void);
@@ -291,7 +292,6 @@ class RecordObject
                                 RecordObject        (void);
 
         /* Regular Methods */
-        bool                    populate            (const char* populate_string); // field_name=value, ...
         field_t                 getPointedToField   (field_t field, bool allow_null);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
         static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags=NATIVE_FLAGS);

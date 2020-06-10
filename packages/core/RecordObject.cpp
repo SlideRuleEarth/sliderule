@@ -167,29 +167,17 @@ RecordObject::valType_t RecordObject::Field::getValueType(void)
  *  Attempts to create record from a string specification
  *  format: <rec_type> [[<field>=<value>], ...]
  *----------------------------------------------------------------------------*/
-RecordObject::RecordObject(const char* populate_string, int allocated_memory)
+RecordObject::RecordObject(const char* rec_type, int allocated_memory)
 {
-    assert(populate_string);
+    assert(rec_type);
 
     /* Attempt to Get Record Type */
-    recordDefinition = NULL;
-    int type_len = 0;
-    for(int i = 0; i < MAX_STR_SIZE && populate_string[i] != '\0' && populate_string[i] != ' '; i++) type_len++;
-    if(type_len > 0 && type_len < MAX_STR_SIZE)
-    {
-        /* Pull Out Record Type */
-        char rec_type[MAX_STR_SIZE];
-        LocalLib::copy(rec_type, populate_string, type_len);
-        rec_type[type_len] = '\0';
-
-        /* Get Record Definition */
-        recordDefinition = getDefinition(rec_type);
-    }
+    recordDefinition = getDefinition(rec_type);
 
     /* Attempt to Initialize Record */
     if(recordDefinition != NULL)
     {
-        /* Allocate Record Memory */
+        /* Calculate Memory to Allocate */
         if(allocated_memory == 0)
         {
             memoryAllocated = recordDefinition->record_size;
@@ -202,17 +190,16 @@ RecordObject::RecordObject(const char* populate_string, int allocated_memory)
         {
             throw InvalidRecordException();
         }
+
+        /* Allocate Record Memory */
         recordMemory = new char[memoryAllocated];
 
-        /* Populate Record Type */
+        /* Copy In Record Type */
         LocalLib::copy(&recordMemory[0], recordDefinition->type_name, recordDefinition->type_size);
 
         /* Zero Out Record Data */
         recordData = (unsigned char*)&recordMemory[recordDefinition->type_size];
         LocalLib::set(recordData, 0, recordDefinition->data_size);
-
-        /* Populate Record Data */
-        populate(&populate_string[type_len]);
     }
     else
     {
@@ -410,6 +397,44 @@ RecordObject::Field* RecordObject::createRecordField(const char* field_name)
     }
 
     return rec_field;
+}
+
+/*----------------------------------------------------------------------------
+ * populate
+ *
+ *  <field>=<value>
+ *----------------------------------------------------------------------------*/
+bool RecordObject::populate (const char* populate_string)
+{
+    bool status = true;
+
+    char(*toks)[MAX_STR_SIZE] = new (char[MAX_INITIALIZERS][MAX_STR_SIZE]);
+
+    int numtoks = StringLib::tokenizeLine(populate_string, (int)StringLib::size(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
+
+    for(int i = 0; i < numtoks; i++)
+    {
+        char args[2][MAX_STR_SIZE];
+        if(StringLib::tokenizeLine(toks[i], MAX_STR_SIZE, '=', 2, args) == 2)
+        {
+            char* field_str = args[0];
+            char* value_str = args[1];
+
+            field_t f = getField(field_str);
+            if(f.type != RecordObject::INVALID_FIELD)
+            {
+                setValueText(f, value_str);
+            }
+            else
+            {
+                status = false;
+            }
+        }
+    }
+
+    delete[] toks;
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -1352,44 +1377,6 @@ RecordObject::RecordObject(void)
     recordMemory = NULL;
     recordData = NULL;
     memoryAllocated = 0;
-}
-
-/*----------------------------------------------------------------------------
- * populate
- *
- *  <field>=<value>
- *----------------------------------------------------------------------------*/
-bool RecordObject::populate (const char* populate_string)
-{
-    bool status = true;
-
-    char(*toks)[MAX_STR_SIZE] = new (char[MAX_INITIALIZERS][MAX_STR_SIZE]);
-
-    int numtoks = StringLib::tokenizeLine(populate_string, (int)StringLib::size(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
-
-    for(int i = 0; i < numtoks; i++)
-    {
-        char args[2][MAX_STR_SIZE];
-        if(StringLib::tokenizeLine(toks[i], MAX_STR_SIZE, '=', 2, args) == 2)
-        {
-            char* field_str = args[0];
-            char* value_str = args[1];
-
-            field_t f = getField(field_str);
-            if(f.type != RecordObject::INVALID_FIELD)
-            {
-                setValueText(f, value_str);
-            }
-            else
-            {
-                status = false;
-            }
-        }
-    }
-
-    delete[] toks;
-
-    return status;
 }
 
 /*----------------------------------------------------------------------------

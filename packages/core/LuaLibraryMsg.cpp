@@ -141,14 +141,39 @@ int LuaLibraryMsg::luaopen_msglib (lua_State *L)
  *----------------------------------------------------------------------------*/
 RecordObject* LuaLibraryMsg::populateRecord (const char* population_string)
 {
-    /* Create record */
+    char rec_type[MAX_STR_SIZE];
+    const char* pop_str = NULL;
     RecordObject* record = NULL;
+
+    /* Separate Out Record Type and Population String */
+    int type_len = 0;
+    for(int i = 0; i < MAX_STR_SIZE && population_string[i] != '\0' && population_string[i] != ' '; i++) type_len++;
+    if(type_len > 0 && type_len < MAX_STR_SIZE)
+    {
+        /* Copy Out Record Type */
+        LocalLib::copy(rec_type, population_string, type_len);
+        rec_type[type_len] = '\0';
+
+        /* Point to Population String */
+        if(population_string[type_len] != '\0')
+        {
+            pop_str = &population_string[type_len+1];
+        }
+    }
+
     try
     {
+        /* Create record */
         uint8_t class_prefix = population_string[0];
         recClass_t rec_class = prefixLookUp[class_prefix];
-        if(rec_class.create != NULL)    record = rec_class.create(&population_string[1]); // skip prefix
-        else                            record = new RecordObject(population_string);
+        if(rec_class.create != NULL)    record = rec_class.create(&rec_type[1]); // skip prefix
+        else                            record = new RecordObject(rec_type);
+
+        /* Populate Record */
+        if(pop_str)
+        {
+            record->populate(pop_str);
+        }
     }
     catch (const InvalidRecordException& e)
     {

@@ -60,9 +60,9 @@ okey_t calcCdsTime(unsigned char* buffer, int size)
 /*----------------------------------------------------------------------------
  * createCcsdsRec  -
  *----------------------------------------------------------------------------*/
-RecordObject* createCcsdsRec(const char* str)
+RecordObject* createCcsdsRec(const char* rec_type)
 {
-    return new CcsdsRecord(str);
+    return new CcsdsRecord(rec_type);
 }
 
 /*----------------------------------------------------------------------------
