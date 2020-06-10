@@ -51,10 +51,15 @@ class Atl06Dispatch: public DispatchObject
          * Types
          *--------------------------------------------------------------------*/
 
+        typedef enum {
+            STAGE_AVG = 0,
+            STAGE_LSF = 1,
+            NUM_STAGES = 2
+        } stages_t;
+
         typedef struct {
             uint32_t    h5atl03_rec_cnt;
-            uint32_t    avgheight_out_cnt;
-            uint32_t    leastsquares_out_cnt;
+            uint32_t    algo_out_cnt[NUM_STAGES];
             uint32_t    post_success_cnt;
             uint32_t    post_dropped_cnt;
         } stats_t;
@@ -73,6 +78,7 @@ class Atl06Dispatch: public DispatchObject
 
         Publisher*  outQ;
         stats_t     stats;
+        stages_t    stages;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -87,6 +93,7 @@ class Atl06Dispatch: public DispatchObject
         MathLib::lsf_t  leastSquaresFitStage    (RecordObject* record, okey_t key);
 
         static int      luaStats                (lua_State* L);
+        static int      luaSelect               (lua_State* L);
 };
 
 #endif  /* __atl06_dispatch__ */

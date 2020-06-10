@@ -67,6 +67,7 @@
 const char* Atl06Dispatch::LuaMetaName = "Atl06Dispatch";
 const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
     {"stats",       luaStats},
+    {"select",      luaSelect},
     {NULL,          NULL}
 };
 
@@ -108,6 +109,7 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name):
 
     outQ = new Publisher(outq_name);
     LocalLib::set(&stats, 0, sizeof(stats));
+    stages = STAGE_AVG;
 }
 
 /*----------------------------------------------------------------------------
@@ -123,11 +125,25 @@ Atl06Dispatch::~Atl06Dispatch(void)
  *----------------------------------------------------------------------------*/
 bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
-    double height = averageHeightStage(record, key);
-//    MathLib::lsf_t fit = leastSquaresFitStage(record, key);
+    void*   rsps = NULL;
+    int     size = 0;
 
-    if(outQ->postCopy(&height, sizeof(height), SYS_TIMEOUT) > 0)
-//    if(outQ->postCopy(&fit.mean, sizeof(fit.mean), SYS_TIMEOUT) > 0)
+    /* Execute Algorithm Stages */
+    if(stages == STAGE_AVG)
+    {
+        double height = averageHeightStage(record, key);
+        rsps = (void*)&height;
+        size = sizeof(height);
+    }
+    else if(stages == STAGE_LSF)
+    {
+        MathLib::lsf_t fit = leastSquaresFitStage(record, key);
+        rsps = (void*)&fit.intercept;
+        size = sizeof(fit.intercept);
+    }
+
+    /* Post Response */
+    if(outQ->postCopy(rsps, size, SYS_TIMEOUT) > 0)
     {
         stats.post_success_cnt++;
         return true;
@@ -149,7 +165,7 @@ double Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key)
     Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
 
     /* Count Execution Statistic */
-    stats.avgheight_out_cnt++;
+    stats.algo_out_cnt[STAGE_AVG]++;
 
     /* Calculate Left Track Height */
     double height_l = 0.0;
@@ -179,7 +195,7 @@ MathLib::lsf_t Atl06Dispatch::leastSquaresFitStage (RecordObject* record, okey_t
     Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
 
     /* Count Execution Statistic */
-    stats.leastsquares_out_cnt++;
+    stats.algo_out_cnt[STAGE_LSF]++;
 
     /* Calculate Least Squares Fit */
     MathLib::lsf_t fit = MathLib::lsf((MathLib::point_t*)&segment->photons[0], segment->num_photons[PRT_LEFT]);
@@ -204,8 +220,8 @@ int Atl06Dispatch::luaStats (lua_State* L)
         /* Create Statistics Table */
         lua_newtable(L);
         LuaEngine::setAttrInt(L, "h5atl03_rec_cnt",         lua_obj->stats.h5atl03_rec_cnt);
-        LuaEngine::setAttrInt(L, "avgheight_out_cnt",       lua_obj->stats.avgheight_out_cnt);
-        LuaEngine::setAttrInt(L, "leastsquares_out_cnt",    lua_obj->stats.leastsquares_out_cnt);
+        LuaEngine::setAttrInt(L, "avgheight_out_cnt",       lua_obj->stats.algo_out_cnt[STAGE_AVG]);
+        LuaEngine::setAttrInt(L, "leastsquares_out_cnt",    lua_obj->stats.algo_out_cnt[STAGE_LSF]);
         LuaEngine::setAttrInt(L, "post_success_cnt",        lua_obj->stats.post_success_cnt);
         LuaEngine::setAttrInt(L, "post_dropped_cnt",        lua_obj->stats.post_dropped_cnt);
 
@@ -220,4 +236,36 @@ int Atl06Dispatch::luaStats (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status, num_obj_to_return);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSelect - :select(<algorithm stage>)
+ *----------------------------------------------------------------------------*/
+int Atl06Dispatch::luaSelect (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        Atl06Dispatch* lua_obj = (Atl06Dispatch*)getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        int algo_stage = getLuaInteger(L, 2);
+
+        /* Set Stage */
+        if(algo_stage >= 0 && algo_stage < NUM_STAGES)
+        {
+            mlog(INFO, "Selecting stage: %d\n", algo_stage);
+            lua_obj->stages = (stages_t)algo_stage;
+            status = true;
+        }
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error selecting algorithm stage: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }

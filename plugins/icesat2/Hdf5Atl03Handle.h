@@ -73,7 +73,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
 
         /* Photon Fields */
         typedef struct {
-            double      distance_x; // double[]: dist_ph_along + segment_dist_x
+            double      distance_x; // double[]: dist_ph_along
             double      height_y;   // double[]: h_ph
         } photon_t;
 

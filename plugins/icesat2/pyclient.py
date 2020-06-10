@@ -77,12 +77,13 @@ def h5endpoint (filename, dataset, datatype):
 #
 # ATL06 Endpoint
 #
-def atl06endpoint (filename, track):
+def atl06endpoint (filename, track, stages):
 
     # Make API Request
     rqst_dict = {
         "filename": filename,
         "track": track,
+        "stages": stages,
         "parms": {
             "cnf": -1
         }
@@ -117,6 +118,7 @@ if __name__ == '__main__':
     dataset = "/gt1r/geolocation/segment_ph_cnt"
     datatype = np.int32
     track = 1
+    stages = ["LSF"]
 
     # Process Command Line Arguments #
     parm = 0
@@ -162,6 +164,6 @@ if __name__ == '__main__':
 
         # H5 Endpoint Example
         elif sys.argv[parm + 1] == "--atl06":
-            df = atl06endpoint(filename, track)
+            df = atl06endpoint(filename, track, stages)
             dfbokeh(df, "atl06")
             parm += 1

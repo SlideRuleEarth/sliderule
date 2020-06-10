@@ -5,6 +5,7 @@
 --              {
 --                  "filename":     "<name of hdf5 file>"
 --                  "track":        <track number: 1, 2, 3>
+--                  "stages":       [<algorith stage 1>, ...]
 --                  "parms":
 --                  {
 --                      "srt":      <surface type - default = LAND ICE(3)>
@@ -24,13 +25,22 @@
 local json = require("json")
 local rqst = json.decode(arg[1])
 
+-- Internal Parameters --
+local str2stage = { AVG=icesat2.STAGE_AVG, LSF=icesat2.STAGE_LSF }
+
 -- Request Parameters --
 local filename = rqst["filename"]
 local track = rqst["track"]
+local stages = rqst["stages"]
 local parms = rqst["parms"]
 
 -- ATL06 Dispatch --
 algo = icesat2.atl06(rspq)
+if stages then
+    for k,v in pairs(stages) do
+        algo:select(str2stage[v])
+    end
+end
 d = core.dispatcher("recq")
 d:attach(algo, "h5atl03")
 

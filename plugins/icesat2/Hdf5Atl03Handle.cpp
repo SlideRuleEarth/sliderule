@@ -127,7 +127,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
             /* Read Data from HDF5 File */
             GTArray<int32_t>    segment_ph_cnt  (file, track, "geolocation/segment_ph_cnt");
             GTArray<int32_t>    segment_id      (file, track, "geolocation/segment_id");
-            GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
+//            GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
             GTArray<float>      dist_ph_along   (file, track, "heights/dist_ph_along");
             GTArray<float>      h_ph            (file, track, "heights/h_ph");
             GTArray<char>       signal_conf_ph  (file, track, "heights/signal_conf_ph", parms.srt);
@@ -172,7 +172,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     {
                         if(signal_conf_ph.gt[t][ph_in[t]] >= parms.cnf)
                         {
-                            segment->photons[ph_out].distance_x = segment_dist_x.gt[t][s] + dist_ph_along.gt[t][ph_in[t]];
+                            segment->photons[ph_out].distance_x = dist_ph_along.gt[t][ph_in[t]] /* + segment_dist_x.gt[t][s] */;
                             segment->photons[ph_out].height_y = h_ph.gt[t][ph_in[t]];
                             segment->num_photons[t]++;
                             ph_out++;

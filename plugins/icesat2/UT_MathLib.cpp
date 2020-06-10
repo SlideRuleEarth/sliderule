@@ -91,10 +91,20 @@ int UT_MathLib::luaLsfTest (lua_State* L)
         /* Test 1 */
         const int l1 = 4;
         MathLib::point_t v1[l1] = { {1.0, 2.0}, {2.0, 4.0}, {3.0, 6.0}, {4.0, 8.0} };
-        MathLib::lsf_t fit = MathLib::lsf(v1, l1);
-        if(fit.intercept != 0.0 || fit.slope != 2.0)
+        MathLib::lsf_t fit1 = MathLib::lsf(v1, l1);
+        if(fit1.intercept != 0.0 || fit1.slope != 2.0)
         {
-            mlog(CRITICAL, "Failed LSF test01: %lf, %lf\n", fit.intercept, fit.slope);
+            mlog(CRITICAL, "Failed LSF test01: %lf, %lf\n", fit1.intercept, fit1.slope);
+            tests_passed = false;
+        }
+
+        /* Test 2 */
+        const int l2 = 4;
+        MathLib::point_t v2[l2] = { {1.0, 4.0}, {2.0, 5.0}, {3.0, 6.0}, {4.0, 7.0} };
+        MathLib::lsf_t fit2 = MathLib::lsf(v2, l2);
+        if(fit2.intercept != 3.0 || fit2.slope != 1.0)
+        {
+            mlog(CRITICAL, "Failed LSF test02: %lf, %lf\n", fit2.intercept, fit2.slope);
             tests_passed = false;
         }
 
