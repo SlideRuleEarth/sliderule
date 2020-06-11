@@ -7,6 +7,7 @@ RUN apt-get update && \
   liblua5.3 \
   libssl1.1 \
   zlib1g \
+  curl \
   && rm -rf /var/lib/apt/lists/*
 
 COPY . /usr/local
