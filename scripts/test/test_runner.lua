@@ -12,7 +12,7 @@ if __core__ then
     runner.script(rd .. "tcp_socket.lua")
     runner.script(rd .. "udp_socket.lua")
     runner.script(rd .. "multicast_device_writer.lua")
-    runner.script(rd .. "cluster_socket.lua")
+--    runner.script(rd .. "cluster_socket.lua")
 end
 
 -- Run Pistache Unit Tests --

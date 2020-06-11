@@ -47,6 +47,7 @@ const struct luaL_Reg LuaLibraryMsg::msgLibsF [] = {
 const struct luaL_Reg LuaLibraryMsg::pubLibsM [] = {
     {"sendstring",    LuaLibraryMsg::lmsg_sendstring},
     {"sendrecord",    LuaLibraryMsg::lmsg_sendrecord},
+    {"destroy",       LuaLibraryMsg::lmsg_deletepub},
     {"__gc",          LuaLibraryMsg::lmsg_deletepub},
     {NULL, NULL}
 };
@@ -55,6 +56,7 @@ const struct luaL_Reg LuaLibraryMsg::subLibsM [] = {
     {"recvstring",    LuaLibraryMsg::lmsg_recvstring},
     {"recvrecord",    LuaLibraryMsg::lmsg_recvrecord},
     {"drain",         LuaLibraryMsg::lmsg_drain},
+    {"destroy",       LuaLibraryMsg::lmsg_deletesub},
     {"__gc",          LuaLibraryMsg::lmsg_deletesub},
     {NULL, NULL}
 };
@@ -350,8 +352,19 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
 int LuaLibraryMsg::lmsg_deletepub (lua_State* L)
 {
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
-    if(msg_data->msgq_name) delete [] msg_data->msgq_name;
-    if(msg_data->pub) delete msg_data->pub;
+
+    if(msg_data->msgq_name)
+    {
+        delete [] msg_data->msgq_name;
+        msg_data->msgq_name = NULL;
+    }
+
+    if(msg_data->pub)
+    {
+        delete msg_data->pub;
+        msg_data->pub = NULL;
+    }
+
     return 0;
 }
 
@@ -459,8 +472,19 @@ int LuaLibraryMsg::lmsg_drain (lua_State* L)
 int LuaLibraryMsg::lmsg_deletesub (lua_State* L)
 {
     msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
-    if(msg_data->msgq_name) delete [] msg_data->msgq_name;
-    if(msg_data->sub) delete msg_data->sub;
+
+    if(msg_data->msgq_name)
+    {
+        delete [] msg_data->msgq_name;
+        msg_data->msgq_name = NULL;
+    }
+
+    if(msg_data->sub)
+    {
+        delete msg_data->sub;
+        msg_data->sub = NULL;
+    }
+
     return 0;
 }
 

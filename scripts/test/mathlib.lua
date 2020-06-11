@@ -1,9 +1,9 @@
 local runner = require("test_executive")
-console = require("console")
+local console = require("console")
 
 -- Setup --
 
-console.logger:config(core.INFO)
+--console.logger:config(core.INFO)
 
 -- Unit Test --
 

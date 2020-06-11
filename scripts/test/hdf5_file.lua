@@ -27,6 +27,9 @@ epoch = string.unpack('d', vals)
 
 runner.check(epoch == 1198800018.0, "failed to read correct epoch")
 
+rsps2:destroy()
+r2:destroy()
+
 
 print('\n------------------\nTest03: Read Dataset as Record\n------------------')
 
@@ -45,6 +48,9 @@ print("OFFSET: "..rectable.OFFSET)
 print("SIZE:   "..rectable.SIZE)
 
 runner.check(rectable.ID == 5)
+
+rsps3:destroy()
+r3:destroy()
 
 -- Clean Up --
 
