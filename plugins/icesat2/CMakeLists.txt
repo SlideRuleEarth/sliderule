@@ -59,8 +59,6 @@ if (HDF5_LIB AND ZLIB_FOUND)
 
     install (TARGETS icesat2Lib LIBRARY DESTINATION ${CONFDIR})
 
-    install (FILES ${CMAKE_CURRENT_LIST_DIR}/atl06.lua DESTINATION ${CONFDIR})
-
 else ()
 
     message (STATUS "Unable to include icesat2 plugin... required libraries not found")

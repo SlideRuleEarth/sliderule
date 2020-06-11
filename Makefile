@@ -25,8 +25,10 @@ offline-config:
 docker-image: distclean offline-config default-build install
 	cp targets/sliderule-docker/Dockerfile $(STAGEDIR)
 	cp -R scripts/test $(STAGEDIR)/tests
+	cp plugins/icesat2/server.lua $(STAGEDIR)/etc/sliderule
 	cd $(STAGEDIR); docker build -t sliderule-linux:latest .
 	# docker run -it --rm --name=sliderule1 -v /data:/data sliderule-linux /usr/local/tests/test_runner.lua
+	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/etc/sliderule/server.lua
 
 scan:
 	mkdir -p build
