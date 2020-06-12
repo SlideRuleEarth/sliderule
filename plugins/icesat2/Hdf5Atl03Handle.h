@@ -69,8 +69,9 @@ class Hdf5Atl03Handle: public Hdf5Handle
         typedef struct {
             surfaceType_t   surface_type;           // surface reference type (used to select signal confidence column)
             signalConf_t    signal_confidence;      // minimal allowed signal confidence
-            double          along_track_spread;     // minimal required along track spread of photons in segment
+            double          along_track_spread;     // minimal required along track spread of photons in segment (meters)
             int             photon_count;           // minimal required photons in segment
+            double          segment_length;         // length of ATL06 segment (meters)
         } parms_t;
 
         /* Photon Fields */
@@ -82,9 +83,10 @@ class Hdf5Atl03Handle: public Hdf5Handle
         /* Segment Record */
         typedef struct {
             uint8_t         track;
-            uint32_t        segment_id;
+            uint32_t        segment_id; // the id of the first ATL03 segment in range
+            double          segment_length; // meters
             uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
-            uint32_t        num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t        photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
             photon_t        photons[]; // zero length field
         } segment_t;
 

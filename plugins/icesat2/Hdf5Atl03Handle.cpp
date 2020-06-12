@@ -35,6 +35,7 @@
 #define LUA_PARM_SIGNAL_CONFIDENCE      "cnf"
 #define LUA_PARM_ALONG_TRACK_SPREAD     "ats"
 #define LUA_PARM_PHOTON_COUNT           "cnt"
+#define LUA_PARM_SEGMENT_LENGTH         "res"
 
 #define LUA_STAT_SEGMENTS_READ_L        "read_l"
 #define LUA_STAT_SEGMENTS_READ_R        "read_r"
@@ -59,17 +60,19 @@ const char* Hdf5Atl03Handle::recType = "h5atl03";
 const RecordObject::fieldDef_t Hdf5Atl03Handle::recDef[] = {
     {"TRACK",       RecordObject::UINT8,    offsetof(segment_t, track),                     sizeof(((segment_t*)0)->track),                     NATIVE_FLAGS},
     {"SEGMENT_ID",  RecordObject::UINT32,   offsetof(segment_t, segment_id),                sizeof(((segment_t*)0)->segment_id),                NATIVE_FLAGS},
+    {"SEGMENT_LEN", RecordObject::DOUBLE,   offsetof(segment_t, segment_length),            sizeof(((segment_t*)0)->segment_length),            NATIVE_FLAGS},
     {"PHOTONS_L",   RecordObject::STRING,   offsetof(segment_t, photon_offset[PRT_LEFT]),   sizeof(((segment_t*)0)->photon_offset[PRT_LEFT]),   NATIVE_FLAGS | RecordObject::POINTER},
     {"PHOTONS_R",   RecordObject::STRING,   offsetof(segment_t, photon_offset[PRT_RIGHT]),  sizeof(((segment_t*)0)->photon_offset[PRT_RIGHT]),  NATIVE_FLAGS | RecordObject::POINTER},
-    {"NUM_L",       RecordObject::UINT32,   offsetof(segment_t, num_photons[PRT_LEFT]),     sizeof(((segment_t*)0)->num_photons[PRT_LEFT]),     NATIVE_FLAGS},
-    {"NUM_R",       RecordObject::UINT32,   offsetof(segment_t, num_photons[PRT_RIGHT]),    sizeof(((segment_t*)0)->num_photons[PRT_RIGHT]),    NATIVE_FLAGS}
+    {"CNT_L",       RecordObject::UINT32,   offsetof(segment_t, photon_count[PRT_LEFT]),    sizeof(((segment_t*)0)->photon_count[PRT_LEFT]),    NATIVE_FLAGS},
+    {"CNT_R",       RecordObject::UINT32,   offsetof(segment_t, photon_count[PRT_RIGHT]),   sizeof(((segment_t*)0)->photon_count[PRT_RIGHT]),   NATIVE_FLAGS}
 };
 
 const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
     .surface_type = SRT_LAND_ICE,
     .signal_confidence = CNF_SURFACE_HIGH,
     .along_track_spread = 20.0, // meters
-    .photon_count = 10 // PE
+    .photon_count = 10, // PE
+    .segment_length = 40.0 // meters
 };
 
 /******************************************************************************
@@ -186,8 +189,8 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 /* Initialize Attributes of Segment */
                 segment->track = track;
                 segment->segment_id = seg_id;
-                segment->num_photons[PRT_LEFT] = 0;
-                segment->num_photons[PRT_RIGHT] = 0;
+                segment->photon_count[PRT_LEFT] = 0;
+                segment->photon_count[PRT_RIGHT] = 0;
 
                 /* Populate Segment Record Photons */
                 uint32_t ph_out = 0;
@@ -230,7 +233,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                         {
                             segment->photons[ph_out].distance_x = dist_ph_along.gt[t][p] /* + segment_dist_x.gt[t][s] */;
                             segment->photons[ph_out].height_y = h_ph.gt[t][p];
-                            segment->num_photons[t]++;
+                            segment->photon_count[t]++;
                             ph_out++;
                         }
                     }
@@ -239,14 +242,14 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     ph_in[t] += segment_ph_cnt.gt[t][s];
                 }
 
-                if(segment->num_photons[PRT_LEFT] != 0 || segment->num_photons[PRT_RIGHT] != 0)
+                if(segment->photon_count[PRT_LEFT] != 0 || segment->photon_count[PRT_RIGHT] != 0)
                 {
                     /* Set Photon Pointer Fields */
                     segment->photon_offset[PRT_LEFT] = sizeof(segment_t); // pointers are set to offset from start of record data
-                    segment->photon_offset[PRT_RIGHT] = sizeof(segment_t) + (sizeof(photon_t) * segment->num_photons[PRT_LEFT]);
+                    segment->photon_offset[PRT_RIGHT] = sizeof(segment_t) + (sizeof(photon_t) * segment->photon_count[PRT_LEFT]);
 
                     /* Resize Record Data */
-                    int new_size = sizeof(segment_t) + (sizeof(photon_t) * (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]));
+                    int new_size = sizeof(segment_t) + (sizeof(photon_t) * (segment->photon_count[PRT_LEFT] + segment->photon_count[PRT_RIGHT]));
                     record->resizeData(new_size);
 
                     /* Add Segment Record */
@@ -365,6 +368,9 @@ int Hdf5Atl03Handle::luaConfig (lua_State* L)
         lua_getfield(L, 2, LUA_PARM_PHOTON_COUNT);
         lua_obj->parms.photon_count = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.photon_count);
 
+        lua_getfield(L, 2, LUA_PARM_SEGMENT_LENGTH);
+        lua_obj->parms.segment_length = (signalConf_t)getLuaFloat(L, -1, true, lua_obj->parms.segment_length);
+
         /* Set Success */
         status = true;
     }
@@ -394,8 +400,9 @@ int Hdf5Atl03Handle::luaParms (lua_State* L)
         lua_newtable(L);
         LuaEngine::setAttrInt(L, LUA_PARM_SURFACE_TYPE,         lua_obj->parms.surface_type);
         LuaEngine::setAttrInt(L, LUA_PARM_SIGNAL_CONFIDENCE,    lua_obj->parms.signal_confidence);
-        LuaEngine::setAttrInt(L, LUA_PARM_ALONG_TRACK_SPREAD,   lua_obj->parms.along_track_spread);
+        LuaEngine::setAttrNum(L, LUA_PARM_ALONG_TRACK_SPREAD,   lua_obj->parms.along_track_spread);
         LuaEngine::setAttrInt(L, LUA_PARM_PHOTON_COUNT,         lua_obj->parms.photon_count);
+        LuaEngine::setAttrNum(L, LUA_PARM_SEGMENT_LENGTH,       lua_obj->parms.segment_length);
 
         /* Set Success */
         status = true;

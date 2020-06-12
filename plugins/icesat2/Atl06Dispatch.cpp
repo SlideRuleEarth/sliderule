@@ -182,22 +182,22 @@ bool Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key, double
     stats.algo_out_cnt[STAGE_AVG]++;
 
     /* Calculate Left Track Height */
-    if(segment->num_photons[PRT_LEFT] > 0)
+    if(segment->photon_count[PRT_LEFT] > 0)
     {
         num_heights += 1.0;
-        for(unsigned int ph = 0; ph < segment->num_photons[PRT_LEFT]; ph++)
+        for(unsigned int ph = 0; ph < segment->photon_count[PRT_LEFT]; ph++)
         {
-            height_l += (segment->photons[ph].height_y / segment->num_photons[PRT_LEFT]);
+            height_l += (segment->photons[ph].height_y / segment->photon_count[PRT_LEFT]);
         }
     }
 
     /* Calculate Right Track Height */
-    if(segment->num_photons[PRT_RIGHT] > 0)
+    if(segment->photon_count[PRT_RIGHT] > 0)
     {
         num_heights += 1.0;
-        for(unsigned int ph = segment->num_photons[PRT_LEFT]; ph < (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]); ph++)
+        for(unsigned int ph = segment->photon_count[PRT_LEFT]; ph < (segment->photon_count[PRT_LEFT] + segment->photon_count[PRT_RIGHT]); ph++)
         {
-            height_r += (segment->photons[ph].height_y / segment->num_photons[PRT_RIGHT]);
+            height_r += (segment->photons[ph].height_y / segment->photon_count[PRT_RIGHT]);
         }
     }
 
@@ -220,9 +220,9 @@ bool Atl06Dispatch::leastSquaresFitStage (RecordObject* record, okey_t key, Math
     stats.algo_out_cnt[STAGE_LSF]++;
 
     /* Calculate Least Squares Fit */
-    if(segment->num_photons[PRT_LEFT] > 0)
+    if(segment->photon_count[PRT_LEFT] > 0)
     {
-        *lsf = MathLib::lsf((MathLib::point_t*)&segment->photons[0], segment->num_photons[PRT_LEFT]);
+        *lsf = MathLib::lsf((MathLib::point_t*)&segment->photons[0], segment->photon_count[PRT_LEFT]);
         status = true;
     }
 
