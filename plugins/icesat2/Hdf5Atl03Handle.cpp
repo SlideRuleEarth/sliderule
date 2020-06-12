@@ -197,37 +197,43 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     int32_t photon_count = segment_ph_cnt.gt[t][s];
                     if((photon_count < parms.photon_count) || (photon_count <= 0))
                     {
+                        /* Filter Out Track's Segment */
                         photon_count = 0;
                         stats.segments_filtered[t]++;
                     }
 
                     /* Check Along Track Spread */
-                    uint32_t first_photon = ph_in[t];
-                    uint32_t last_photon = ph_in[t] + photon_count;
+                    int32_t first_photon = ph_in[t];
+                    int32_t last_photon = ph_in[t] + photon_count - 1;
                     if(photon_count > 0)
                     {
                         double along_track_spread = dist_ph_along.gt[t][last_photon] - dist_ph_along.gt[t][first_photon];
                         if(along_track_spread < parms.along_track_spread)
                         {
+                            /* Sanity Check Spread */
+                            if(along_track_spread < 0.0)
+                            {
+                                mlog(WARNING, "Negative along track spread; spread=%lf, track=%d, photon_count=%d\n", along_track_spread, t, photon_count);
+                            }
+
+                            /* Filter Out Track's Segment */
                             photon_count = 0;
-                            last_photon = first_photon;
+                            last_photon = first_photon - 1;
                             stats.segments_filtered[t]++;
                         }
                     }
 
                     /* Loop Through Each Photon in Segment */
-                    for(uint32_t p = first_photon; p < last_photon; p++)
+                    for(int32_t p = first_photon; p <= last_photon; p++)
                     {
                         if(signal_conf_ph.gt[t][ph_in[t]] >= parms.signal_confidence)
                         {
                             segment->photons[ph_out].distance_x = dist_ph_along.gt[t][p] /* + segment_dist_x.gt[t][s] */;
                             segment->photons[ph_out].height_y = h_ph.gt[t][p];
+                            segment->num_photons[t]++;
                             ph_out++;
                         }
                     }
-
-                    /* Set Photon Count */
-                    segment->num_photons[t] = photon_count;
 
                     /* Increment Photon Index */
                     ph_in[t] += segment_ph_cnt.gt[t][s];
