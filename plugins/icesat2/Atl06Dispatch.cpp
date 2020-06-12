@@ -125,83 +125,109 @@ Atl06Dispatch::~Atl06Dispatch(void)
  *----------------------------------------------------------------------------*/
 bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
+    bool    status = false;
     void*   rsps = NULL;
     int     size = 0;
+
+    /* Bump Statistics */
+    stats.h5atl03_rec_cnt++;
 
     /* Execute Algorithm Stages */
     if(stages == STAGE_AVG)
     {
-        double height = averageHeightStage(record, key);
+        double height;
+        status = averageHeightStage(record, key, &height);
         rsps = (void*)&height;
         size = sizeof(height);
     }
     else if(stages == STAGE_LSF)
     {
-        MathLib::lsf_t fit = leastSquaresFitStage(record, key);
+        MathLib::lsf_t fit;
+        status = leastSquaresFitStage(record, key, &fit);
         rsps = (void*)&fit.intercept;
         size = sizeof(fit.intercept);
     }
 
     /* Post Response */
-    if(outQ->postCopy(rsps, size, SYS_TIMEOUT) > 0)
+    if(status)
     {
-        stats.post_success_cnt++;
-        return true;
+        if(outQ->postCopy(rsps, size, SYS_TIMEOUT) > 0)
+        {
+            stats.post_success_cnt++;
+        }
+        else
+        {
+            stats.post_dropped_cnt++;
+            status = false;
+        }
     }
-    else
-    {
-        stats.post_dropped_cnt++;
-        return false;
-    }
+
+    /* Return Status */
+    return status;
 }
 
 /*----------------------------------------------------------------------------
  * averageHeightStage
  *----------------------------------------------------------------------------*/
-double Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key)
+bool Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key, double* height)
 {
     (void)key;
 
     Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
+    double num_heights = 0.0;
+    double height_l = 0.0;
+    double height_r = 0.0;
 
     /* Count Execution Statistic */
     stats.algo_out_cnt[STAGE_AVG]++;
 
     /* Calculate Left Track Height */
-    double height_l = 0.0;
-    for(unsigned int ph = 0; ph < segment->num_photons[PRT_LEFT]; ph++)
+    if(segment->num_photons[PRT_LEFT] > 0)
     {
-        height_l += (segment->photons[ph].height_y / segment->num_photons[PRT_LEFT]);
+        num_heights += 1.0;
+        for(unsigned int ph = 0; ph < segment->num_photons[PRT_LEFT]; ph++)
+        {
+            height_l += (segment->photons[ph].height_y / segment->num_photons[PRT_LEFT]);
+        }
     }
 
     /* Calculate Right Track Height */
-    double height_r = 0.0;
-    for(unsigned int ph = segment->num_photons[PRT_LEFT]; ph < (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]); ph++)
+    if(segment->num_photons[PRT_RIGHT] > 0)
     {
-        height_r += (segment->photons[ph].height_y / segment->num_photons[PRT_RIGHT]);
+        num_heights += 1.0;
+        for(unsigned int ph = segment->num_photons[PRT_LEFT]; ph < (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]); ph++)
+        {
+            height_r += (segment->photons[ph].height_y / segment->num_photons[PRT_RIGHT]);
+        }
     }
 
     /* Return Average Track Height */
-    return (height_l + height_r) / 2.0;
+    *height = (height_l + height_r) / num_heights;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
  * leastSquaresFitStage
  *----------------------------------------------------------------------------*/
-MathLib::lsf_t Atl06Dispatch::leastSquaresFitStage (RecordObject* record, okey_t key)
+bool Atl06Dispatch::leastSquaresFitStage (RecordObject* record, okey_t key, MathLib::lsf_t* lsf)
 {
     (void)key;
 
+    bool status = false;
     Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
 
     /* Count Execution Statistic */
     stats.algo_out_cnt[STAGE_LSF]++;
 
     /* Calculate Least Squares Fit */
-    MathLib::lsf_t fit = MathLib::lsf((MathLib::point_t*)&segment->photons[0], segment->num_photons[PRT_LEFT]);
+    if(segment->num_photons[PRT_LEFT] > 0)
+    {
+        *lsf = MathLib::lsf((MathLib::point_t*)&segment->photons[0], segment->num_photons[PRT_LEFT]);
+        status = true;
+    }
 
-    /* Return Fit */
-    return fit;
+    /* Return Status */
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -217,6 +243,9 @@ int Atl06Dispatch::luaStats (lua_State* L)
         /* Get Self */
         Atl06Dispatch* lua_obj = (Atl06Dispatch*)getLuaSelf(L, 1);
 
+        /* Get Clear Parameter */
+        bool with_clear = getLuaBoolean(L, 2, true, false);
+
         /* Create Statistics Table */
         lua_newtable(L);
         LuaEngine::setAttrInt(L, "h5atl03_rec_cnt",         lua_obj->stats.h5atl03_rec_cnt);
@@ -224,6 +253,9 @@ int Atl06Dispatch::luaStats (lua_State* L)
         LuaEngine::setAttrInt(L, "leastsquares_out_cnt",    lua_obj->stats.algo_out_cnt[STAGE_LSF]);
         LuaEngine::setAttrInt(L, "post_success_cnt",        lua_obj->stats.post_success_cnt);
         LuaEngine::setAttrInt(L, "post_dropped_cnt",        lua_obj->stats.post_dropped_cnt);
+
+        /* Optionally Clear */
+        if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
 
         /* Set Success */
         status = true;

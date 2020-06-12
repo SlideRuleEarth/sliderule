@@ -67,14 +67,16 @@ class Hdf5Atl03Handle: public Hdf5Handle
 
         /* Extraction Parameters */
         typedef struct {
-            surfaceType_t   srt;
-            signalConf_t    cnf;
+            surfaceType_t   surface_type;           // surface reference type (used to select signal confidence column)
+            signalConf_t    signal_confidence;      // minimal allowed signal confidence
+            double          along_track_spread;     // minimal required along track spread of photons in segment
+            int             photon_count;           // minimal required photons in segment
         } parms_t;
 
         /* Photon Fields */
         typedef struct {
-            double      distance_x; // double[]: dist_ph_along
-            double      height_y;   // double[]: h_ph
+            double          distance_x; // double[]: dist_ph_along
+            double          height_y;   // double[]: h_ph
         } photon_t;
 
         /* Segment Record */
@@ -85,6 +87,14 @@ class Hdf5Atl03Handle: public Hdf5Handle
             uint32_t        num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
             photon_t        photons[]; // zero length field
         } segment_t;
+
+        /* Statistics */
+        typedef struct {
+            uint32_t        segments_read[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t        segments_filtered[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t        segments_added;
+            uint32_t        segments_sent;
+        } stats_t;
 
         /*--------------------------------------------------------------------
          * Constants
@@ -112,6 +122,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
 
         int                     track;
         parms_t                 parms;
+        stats_t                 stats;
         List<RecordObject*>     segmentList;
         int                     listIndex;
 
@@ -129,6 +140,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
 
         static int  luaConfig           (lua_State* L);
         static int  luaParms            (lua_State* L);
+        static int  luaStats            (lua_State* L);
 };
 
 #endif  /* __hdf5_atl03__ */

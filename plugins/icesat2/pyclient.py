@@ -85,7 +85,9 @@ def atl06endpoint (filename, track, stages):
         "track": track,
         "stages": stages,
         "parms": {
-            "cnf": -1
+            "cnf": -1,
+            "ats": 0.0,
+            "cnt": 1
         }
     }
     d = engine("atl06", json.dumps(rqst_dict))
@@ -103,6 +105,9 @@ def atl06endpoint (filename, track, stages):
     size = int(len(raw) / np.dtype(np.double).itemsize)
     values = np.frombuffer(raw, dtype=np.double, count=size)
     df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=["atl06"])
+
+    # Print Status #
+    print('Processed %d data points' % (size))
 
     # Return DataFrame
     return df

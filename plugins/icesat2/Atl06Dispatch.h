@@ -51,12 +51,14 @@ class Atl06Dispatch: public DispatchObject
          * Types
          *--------------------------------------------------------------------*/
 
+        /* Algorithm Stages */
         typedef enum {
             STAGE_AVG = 0,
             STAGE_LSF = 1,
             NUM_STAGES = 2
         } stages_t;
 
+        /* Statistics --> Current Use NOT THREAD SAFE */
         typedef struct {
             uint32_t    h5atl03_rec_cnt;
             uint32_t    algo_out_cnt[NUM_STAGES];
@@ -89,8 +91,8 @@ class Atl06Dispatch: public DispatchObject
 
         bool            processRecord           (RecordObject* record, okey_t key) override;
 
-        double          averageHeightStage      (RecordObject* record, okey_t key);
-        MathLib::lsf_t  leastSquaresFitStage    (RecordObject* record, okey_t key);
+        bool            averageHeightStage      (RecordObject* record, okey_t key, double* height);
+        bool            leastSquaresFitStage    (RecordObject* record, okey_t key, MathLib::lsf_t* fit);
 
         static int      luaStats                (lua_State* L);
         static int      luaSelect               (lua_State* L);

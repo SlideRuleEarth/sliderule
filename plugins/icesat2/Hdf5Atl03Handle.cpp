@@ -28,6 +28,22 @@
 #include "core.h"
 
 /******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#define LUA_PARM_SURFACE_TYPE           "srt"
+#define LUA_PARM_SIGNAL_CONFIDENCE      "cnf"
+#define LUA_PARM_ALONG_TRACK_SPREAD     "ats"
+#define LUA_PARM_PHOTON_COUNT           "cnt"
+
+#define LUA_STAT_SEGMENTS_READ_L        "read_l"
+#define LUA_STAT_SEGMENTS_READ_R        "read_r"
+#define LUA_STAT_SEGMENTS_FILTERED_L    "filtered_l"
+#define LUA_STAT_SEGMENTS_FILTERED_R    "filtered_r"
+#define LUA_STAT_SEGMENTS_ADDED         "added"
+#define LUA_STAT_SEGMENTS_SENT          "sent"
+
+/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -35,6 +51,7 @@ const char* Hdf5Atl03Handle::LuaMetaName = "Hdf5Atl03Handle";
 const struct luaL_Reg Hdf5Atl03Handle::LuaMetaTable[] = {
     {"config",      luaConfig},
     {"parms",       luaParms},
+    {"stats",       luaStats},
     {NULL,          NULL}
 };
 
@@ -49,8 +66,10 @@ const RecordObject::fieldDef_t Hdf5Atl03Handle::recDef[] = {
 };
 
 const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
-    .srt = SRT_LAND_ICE,
-    .cnf = CNF_SURFACE_HIGH
+    .surface_type = SRT_LAND_ICE,
+    .signal_confidence = CNF_SURFACE_HIGH,
+    .along_track_spread = 20.0, // meters
+    .photon_count = 10 // PE
 };
 
 /******************************************************************************
@@ -93,6 +112,9 @@ Hdf5Atl03Handle::Hdf5Atl03Handle (lua_State* L, int _track):
     /* Set Parameters */
     parms = DefaultParms;
 
+    /* Clear Statistics */
+    LocalLib::set(&stats, 0, sizeof(stats));
+
     /* Set Segment List Index */
     listIndex = 0;
 }
@@ -130,7 +152,14 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
 //            GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
             GTArray<float>      dist_ph_along   (file, track, "heights/dist_ph_along");
             GTArray<float>      h_ph            (file, track, "heights/h_ph");
-            GTArray<char>       signal_conf_ph  (file, track, "heights/signal_conf_ph", parms.srt);
+            GTArray<char>       signal_conf_ph  (file, track, "heights/signal_conf_ph", parms.surface_type);
+
+            /* Initialize Photon Pointers per Pair Reference Track */
+            uint32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+
+            /* Increment Read Statistics */
+            stats.segments_read[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT].size;
+            stats.segments_read[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT].size;
 
             /* Get Number of Segments */
             int num_segs = MIN(segment_ph_cnt.gt[PRT_LEFT].size, segment_ph_cnt.gt[PRT_RIGHT].size);
@@ -138,9 +167,6 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
             {
                 mlog(WARNING, "Segment size mismatch in %s for track %d\n", filename, track);
             }
-
-            /* Initialize Photon Pointers per Pair Reference Track */
-            uint32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
 
             /* Go Through Each Segment in File */
             for(int s = 0; s < num_segs; s++)
@@ -154,7 +180,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
 
                 /* Allocate Segment Data */
                 int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segment_ph_cnt.gt[PRT_LEFT][s] + segment_ph_cnt.gt[PRT_RIGHT][s]));
-                RecordObject* record = new RecordObject(recType, seg_size); // TODO: overallocated memory... photons filtered below
+                RecordObject* record = new RecordObject(recType, seg_size); // overallocated memory... photons filtered below
                 segment_t* segment = (segment_t*)record->getRecordData();
 
                 /* Initialize Attributes of Segment */
@@ -167,30 +193,65 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 uint32_t ph_out = 0;
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
-                    /* Loop Through Each Photon in Segment */
-                    for(int p = 0; p < segment_ph_cnt.gt[t][s]; p++)
+                    /* Check Photon Count */
+                    int32_t photon_count = segment_ph_cnt.gt[t][s];
+                    if((photon_count < parms.photon_count) || (photon_count <= 0))
                     {
-                        if(signal_conf_ph.gt[t][ph_in[t]] >= parms.cnf)
+                        photon_count = 0;
+                        stats.segments_filtered[t]++;
+                    }
+
+                    /* Check Along Track Spread */
+                    uint32_t first_photon = ph_in[t];
+                    uint32_t last_photon = ph_in[t] + photon_count;
+                    if(photon_count > 0)
+                    {
+                        double along_track_spread = dist_ph_along.gt[t][last_photon] - dist_ph_along.gt[t][first_photon];
+                        if(along_track_spread < parms.along_track_spread)
                         {
-                            segment->photons[ph_out].distance_x = dist_ph_along.gt[t][ph_in[t]] /* + segment_dist_x.gt[t][s] */;
-                            segment->photons[ph_out].height_y = h_ph.gt[t][ph_in[t]];
-                            segment->num_photons[t]++;
+                            photon_count = 0;
+                            last_photon = first_photon;
+                            stats.segments_filtered[t]++;
+                        }
+                    }
+
+                    /* Loop Through Each Photon in Segment */
+                    for(uint32_t p = first_photon; p < last_photon; p++)
+                    {
+                        if(signal_conf_ph.gt[t][ph_in[t]] >= parms.signal_confidence)
+                        {
+                            segment->photons[ph_out].distance_x = dist_ph_along.gt[t][p] /* + segment_dist_x.gt[t][s] */;
+                            segment->photons[ph_out].height_y = h_ph.gt[t][p];
                             ph_out++;
                         }
-                        ph_in[t]++;
                     }
+
+                    /* Set Photon Count */
+                    segment->num_photons[t] = photon_count;
+
+                    /* Increment Photon Index */
+                    ph_in[t] += segment_ph_cnt.gt[t][s];
                 }
 
-                /* Set Photon Pointer Fields */
-                segment->photon_offset[PRT_LEFT] = sizeof(segment_t); // pointers are set to offset from start of record data
-                segment->photon_offset[PRT_RIGHT] = sizeof(segment_t) + (sizeof(photon_t) * segment->num_photons[PRT_LEFT]);
+                if(segment->num_photons[PRT_LEFT] != 0 || segment->num_photons[PRT_RIGHT] != 0)
+                {
+                    /* Set Photon Pointer Fields */
+                    segment->photon_offset[PRT_LEFT] = sizeof(segment_t); // pointers are set to offset from start of record data
+                    segment->photon_offset[PRT_RIGHT] = sizeof(segment_t) + (sizeof(photon_t) * segment->num_photons[PRT_LEFT]);
 
-                /* Resize Record Data */
-                int new_size = sizeof(segment_t) + (sizeof(photon_t) * (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]));
-                record->resizeData(new_size);
+                    /* Resize Record Data */
+                    int new_size = sizeof(segment_t) + (sizeof(photon_t) * (segment->num_photons[PRT_LEFT] + segment->num_photons[PRT_RIGHT]));
+                    record->resizeData(new_size);
 
-                /* Add Segment Record */
-                segmentList.add(record);
+                    /* Add Segment Record */
+                    segmentList.add(record);
+                    stats.segments_added++;
+                }
+                else
+                {
+                    /* Free Resources Associated with Record */
+                    delete record;
+                }
             }
 
             /* Set Success */
@@ -231,6 +292,7 @@ int Hdf5Atl03Handle::read (void* buf, int len)
         {
             /* Serialize Record into Buffer */
             bytes_read = record->serialize(&rec_buf, RecordObject::COPY, len);
+            stats.segments_sent++;
         }
         else
         {
@@ -267,7 +329,7 @@ void Hdf5Atl03Handle::close (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaConfig
+ * luaConfig - :config(<{<key>=<value>, ...}>) --> success/failure
  *----------------------------------------------------------------------------*/
 int Hdf5Atl03Handle::luaConfig (lua_State* L)
 {
@@ -285,11 +347,17 @@ int Hdf5Atl03Handle::luaConfig (lua_State* L)
         }
 
         /* Get Configuration Parameters from Table */
-        lua_getfield(L, 2, "srt");
-        lua_obj->parms.srt = (surfaceType_t)getLuaInteger(L, -1, true, lua_obj->parms.srt);
+        lua_getfield(L, 2, LUA_PARM_SURFACE_TYPE);
+        lua_obj->parms.surface_type = (surfaceType_t)getLuaInteger(L, -1, true, lua_obj->parms.surface_type);
 
-        lua_getfield(L, 2, "cnf");
-        lua_obj->parms.cnf = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.cnf);
+        lua_getfield(L, 2, LUA_PARM_SIGNAL_CONFIDENCE);
+        lua_obj->parms.signal_confidence = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.signal_confidence);
+
+        lua_getfield(L, 2, LUA_PARM_ALONG_TRACK_SPREAD);
+        lua_obj->parms.along_track_spread = (signalConf_t)getLuaFloat(L, -1, true, lua_obj->parms.along_track_spread);
+
+        lua_getfield(L, 2, LUA_PARM_PHOTON_COUNT);
+        lua_obj->parms.photon_count = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.photon_count);
 
         /* Set Success */
         status = true;
@@ -304,7 +372,7 @@ int Hdf5Atl03Handle::luaConfig (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaParms
+ * luaParms - :parms() --> {<key>=<value>, ...} containing parameters
  *----------------------------------------------------------------------------*/
 int Hdf5Atl03Handle::luaParms (lua_State* L)
 {
@@ -316,10 +384,12 @@ int Hdf5Atl03Handle::luaParms (lua_State* L)
         /* Get Self */
         Hdf5Atl03Handle* lua_obj = (Hdf5Atl03Handle*)getLuaSelf(L, 1);
 
-        /* Create Statistics Table */
+        /* Create Parameter Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "srt", lua_obj->parms.srt);
-        LuaEngine::setAttrInt(L, "cnf", lua_obj->parms.cnf);
+        LuaEngine::setAttrInt(L, LUA_PARM_SURFACE_TYPE,         lua_obj->parms.surface_type);
+        LuaEngine::setAttrInt(L, LUA_PARM_SIGNAL_CONFIDENCE,    lua_obj->parms.signal_confidence);
+        LuaEngine::setAttrInt(L, LUA_PARM_ALONG_TRACK_SPREAD,   lua_obj->parms.along_track_spread);
+        LuaEngine::setAttrInt(L, LUA_PARM_PHOTON_COUNT,         lua_obj->parms.photon_count);
 
         /* Set Success */
         status = true;
@@ -327,7 +397,48 @@ int Hdf5Atl03Handle::luaParms (lua_State* L)
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error returning parameters %s: %s\n", LuaMetaName, e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_obj_to_return);
+}
+
+/*----------------------------------------------------------------------------
+ * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
+ *----------------------------------------------------------------------------*/
+int Hdf5Atl03Handle::luaStats (lua_State* L)
+{
+    bool status = false;
+    int num_obj_to_return = 1;
+
+    try
+    {
+        /* Get Self */
+        Hdf5Atl03Handle* lua_obj = (Hdf5Atl03Handle*)getLuaSelf(L, 1);
+
+        /* Get Clear Parameter */
+        bool with_clear = getLuaBoolean(L, 2, true, false);
+
+        /* Create Statistics Table */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ_L,      lua_obj->stats.segments_read[PRT_LEFT]);
+        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ_R,      lua_obj->stats.segments_read[PRT_RIGHT]);
+        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_FILTERED_L,  lua_obj->stats.segments_filtered[PRT_LEFT]);
+        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_FILTERED_R,  lua_obj->stats.segments_filtered[PRT_RIGHT]);
+        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_ADDED,       lua_obj->stats.segments_added);
+        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_SENT,        lua_obj->stats.segments_sent);
+
+        /* Clear if Requested */
+        if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+
+        /* Set Success */
+        status = true;
+        num_obj_to_return = 2;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error returning stats %s: %s\n", LuaMetaName, e.errmsg);
     }
 
     /* Return Status */

@@ -58,7 +58,9 @@ double MathLib::sum(double* array, int size)
 }
 
 /*----------------------------------------------------------------------------
- * sum - double
+ * lsf -
+ *
+ *  TODO: currently no protections against divide-by-zero
  *----------------------------------------------------------------------------*/
 MathLib::lsf_t MathLib::lsf (point_t* array, int size)
 {
