@@ -49,7 +49,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Hdf5Atl03Device::recType = "h5atl03";
+const char* Hdf5Atl03Device::recType = "atl03rec";
 const RecordObject::fieldDef_t Hdf5Atl03Device::recDef[] = {
     {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),       sizeof(((extent_t*)0)->pair_reference_track),       NATIVE_FLAGS},
     {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id),                 sizeof(((extent_t*)0)->segment_id),                 NATIVE_FLAGS},
@@ -108,7 +108,7 @@ Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url):
 {
     /* Define Record */
     int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::defineRecord(recType, "TRACK", sizeof(extent_t), recDef, def_elements, 8);
+    RecordObject::defineRecord(recType, "TRACK", sizeof(extent_t), recDef, def_elements, 16);
 
     /* Set Parameters */
     parms = DefaultParms;
@@ -185,9 +185,10 @@ bool Hdf5Atl03Device::h5open (const char* url)
             stats.segments_read[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT].size;
 
             /* Traverse All Photons In Dataset */
-            while( (ph_in[PRT_LEFT] < dist_ph_along.gt[PRT_LEFT].size) &&
+            while( (ph_in[PRT_LEFT] < dist_ph_along.gt[PRT_LEFT].size) ||
                    (ph_in[PRT_RIGHT] < dist_ph_along.gt[PRT_RIGHT].size) )
             {
+printf("START: %d, %d\n", ph_in[0], ph_in[1]);
                 /* Determine Characteristics of Extent */
                 int extent_size = sizeof(extent_t); // added onto below
                 int32_t first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { ph_in[PRT_LEFT], ph_in[PRT_RIGHT] };
@@ -218,6 +219,7 @@ bool Hdf5Atl03Device::h5open (const char* url)
                             break;
                         }
                     }
+printf("COUNT: %d, %d\n", photon_count[0], photon_count[1]);
 
                     /* Find Next Extent's First Photon (if step > length) */
                     while(next_photon[t] < dist_ph_along.gt[t].size)
@@ -227,11 +229,18 @@ bool Hdf5Atl03Device::h5open (const char* url)
                             along_track_distance += dist_ph_along.gt[t][ph_in[t]++];
                             next_photon[t] = ph_in[t];
                         }
+                        else
+                        {
+                            break;
+                        }
+
                     }
+printf("NEXT: %d, %d\n", next_photon[0], next_photon[1]);
 
                     /* Check Photon Count */
                     if(photon_count[t] < parms.photon_count)
                     {
+printf("FILTERED COUNT\n");
                         /* Filter Out Track's Segment */
                         photon_count[t] = 0;
                         stats.extents_filtered[t]++;
@@ -242,6 +251,7 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     double along_track_spread = dist_ph_along.gt[t][last_photon] - dist_ph_along.gt[t][first_photon[t]];
                     if(along_track_spread < parms.along_track_spread)
                     {
+printf("FILTERED SPREAD\n");
                         /* Sanity Check Spread */
                         if(along_track_spread < 0.0)
                         {

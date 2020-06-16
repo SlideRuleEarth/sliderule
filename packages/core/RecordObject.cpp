@@ -188,7 +188,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
         }
         else
         {
-            throw InvalidRecordException();
+            throw InvalidRecordException("invalid memory allocation in record creation");
         }
 
         /* Allocate Record Memory */
@@ -203,7 +203,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
     }
     else
     {
-        throw InvalidRecordException();
+        throw InvalidRecordException("could not locate record definition");
     }
 }
 
@@ -228,14 +228,14 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
             /* Set Record Data */
             recordData = (unsigned char*)&recordMemory[recordDefinition->type_size];
         }
-        else // buffer passed in not large enough to populate record
+        else
         {
-            throw InvalidRecordException();
+            throw InvalidRecordException("buffer passed in not large enough to populate record");
         }
     }
     else
     {
-        throw InvalidRecordException();
+        throw InvalidRecordException("buffer did not contain defined record");
     }
 }
 

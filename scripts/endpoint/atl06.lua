@@ -44,7 +44,7 @@ end
 
 -- ATL06 Dispatcher --
 d = core.dispatcher("recq")
-d:attach(a, "h5atl03")
+d:attach(a, "atl03rec")
 
 -- ATL03 Device --
 f = icesat2.h5atl03(filename)
