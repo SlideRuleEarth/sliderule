@@ -149,7 +149,7 @@ void* MsgProcessor::processorThread(void* parm)
     bool self_delete = false;
 
     /* Initialize Processing */
-    if (processor->initProcessing() != true)
+    if(processor->initProcessing() != true)
     {
         self_delete = true;
     }
