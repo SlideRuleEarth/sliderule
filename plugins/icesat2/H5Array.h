@@ -55,7 +55,7 @@ class H5Array
          *--------------------------------------------------------------------*/
 
         const char*     name;
-        size_t          size;
+        int32_t         size;
         T*              data;
 };
 
@@ -147,7 +147,7 @@ H5Array<T>::H5Array(hid_t file, const char* _name, int col)
         /* Get Size of Data Buffer */
         for(int d = 0; d < ndims; d++)
         {
-            size *= dims[d];
+            size *= (int32_t)dims[d];
         }
 
         /* Allocate Data Buffer */
@@ -157,12 +157,12 @@ H5Array<T>::H5Array(hid_t file, const char* _name, int col)
         }
         catch (const std::bad_alloc& e)
         {
-            mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", (int)size);
+            mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", size);
             break;
         }
 
         /* Read Dataset */
-        mlog(INFO, "Reading %d elements from %s\n", (int)size, name);
+        mlog(INFO, "Reading %d elements from %s\n", size, name);
         if(H5Dread(dataset, datatype, memspace, filespace, H5P_DEFAULT, data) >= 0)
         {
             status = true;

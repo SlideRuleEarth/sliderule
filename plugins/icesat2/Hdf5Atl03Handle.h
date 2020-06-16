@@ -86,6 +86,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
             uint8_t         pair_reference_track; // 1, 2, or 3
             uint32_t        segment_id; // the id of the first ATL03 segment in range
             double          length; // meters
+            double          gps_time[PAIR_TRACKS_PER_GROUND_TRACK]; // seconds
             double          start_distance[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
             uint32_t        photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
             uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];

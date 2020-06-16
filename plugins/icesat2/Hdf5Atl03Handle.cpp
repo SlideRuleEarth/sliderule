@@ -59,15 +59,17 @@ const struct luaL_Reg Hdf5Atl03Handle::LuaMetaTable[] = {
 
 const char* Hdf5Atl03Handle::recType = "h5atl03";
 const RecordObject::fieldDef_t Hdf5Atl03Handle::recDef[] = {
-    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, track),                      sizeof(((extent_t*)0)->track),                      NATIVE_FLAGS},
-    {"SEGMENT_ID",  RecordObject::UINT32,   offsetof(extent_t, segment_id),                 sizeof(((extent_t*)0)->segment_id),                 NATIVE_FLAGS},
+    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),       sizeof(((extent_t*)0)->pair_reference_track),       NATIVE_FLAGS},
+    {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id),                 sizeof(((extent_t*)0)->segment_id),                 NATIVE_FLAGS},
     {"LENGTH",      RecordObject::DOUBLE,   offsetof(extent_t, length),                     sizeof(((extent_t*)0)->length),                     NATIVE_FLAGS},
-    {"DISTANCE_L",  RecordObject::DOUBLE,   offsetof(extent_t, start_distance[PRT_LEFT]),   sizeof(((extent_t*)0)->start_distance[PRT_LEFT),    NATIVE_FLAGS},
-    {"DISTANCE_R",  RecordObject::DOUBLE,   offsetof(extent_t, start_distance[PRT_RIGHT),   sizeof(((extent_t*)0)->start_distance[PRT_RIGHT),   NATIVE_FLAGS},
+    {"GPS_L",       RecordObject::DOUBLE,   offsetof(extent_t, gps_time[PRT_LEFT]),         sizeof(((extent_t*)0)->gps_time[PRT_LEFT]),         NATIVE_FLAGS},
+    {"GPS_R",       RecordObject::DOUBLE,   offsetof(extent_t, gps_time[PRT_RIGHT]),        sizeof(((extent_t*)0)->gps_time[PRT_RIGHT]),        NATIVE_FLAGS},
+    {"DIST_L",      RecordObject::DOUBLE,   offsetof(extent_t, start_distance[PRT_LEFT]),   sizeof(((extent_t*)0)->start_distance[PRT_LEFT]),   NATIVE_FLAGS},
+    {"DIST_R",      RecordObject::DOUBLE,   offsetof(extent_t, start_distance[PRT_RIGHT]),  sizeof(((extent_t*)0)->start_distance[PRT_RIGHT]),  NATIVE_FLAGS},
     {"CNT_L",       RecordObject::UINT32,   offsetof(extent_t, photon_count[PRT_LEFT]),     sizeof(((extent_t*)0)->photon_count[PRT_LEFT]),     NATIVE_FLAGS},
-    {"CNT_R",       RecordObject::UINT32,   offsetof(extent_t, photon_count[PRT_RIGHT]),    sizeof(((extent_t*)0)->photon_count[PRT_RIGHT]),    NATIVE_FLAGS}
+    {"CNT_R",       RecordObject::UINT32,   offsetof(extent_t, photon_count[PRT_RIGHT]),    sizeof(((extent_t*)0)->photon_count[PRT_RIGHT]),    NATIVE_FLAGS},
     {"PHOTONS_L",   RecordObject::STRING,   offsetof(extent_t, photon_offset[PRT_LEFT]),    sizeof(((extent_t*)0)->photon_offset[PRT_LEFT]),    NATIVE_FLAGS | RecordObject::POINTER},
-    {"PHOTONS_R",   RecordObject::STRING,   offsetof(extent_t, photon_offset[PRT_RIGHT]),   sizeof(((extent_t*)0)->photon_offset[PRT_RIGHT]),   NATIVE_FLAGS | RecordObject::POINTER},
+    {"PHOTONS_R",   RecordObject::STRING,   offsetof(extent_t, photon_offset[PRT_RIGHT]),   sizeof(((extent_t*)0)->photon_offset[PRT_RIGHT]),   NATIVE_FLAGS | RecordObject::POINTER}
 };
 
 const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
@@ -157,6 +159,8 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
         try
         {
             /* Read Data from HDF5 File */
+            H5Array<double>     sdp_gps_epoch   (file, "/ancillary_data/atlas_sdp_gps_epoch");
+            GTArray<float>      delta_time      (file, track, "geolocation/delta_time");
             GTArray<int32_t>    segment_ph_cnt  (file, track, "geolocation/segment_ph_cnt");
             GTArray<int32_t>    segment_id      (file, track, "geolocation/segment_id");
             GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
@@ -179,17 +183,14 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
             {
                 /* Determine Characteristics of Extent */
                 int extent_size = sizeof(extent_t); // added onto below
-                int32_t first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-                int32_t next_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { dist_ph_along.gt[PRT_LEFT], dist_ph_along.gt[PRT_RIGHT] };
+                int32_t first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { ph_in[PRT_LEFT], ph_in[PRT_RIGHT] };
+                int32_t next_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { ph_in[PRT_LEFT], ph_in[PRT_RIGHT] };
                 int32_t photon_count[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
-                    /* Initialize Index to First Photon in Extnet */
-                    first_photon[t] = ph_in[t];
-
                     /* Traverse Photons Until Desired Along Track Distance Reached */
                     double along_track_distance = 0.0;
-                    while(last_photon[t] < dist_ph_along.gt[t].size)
+                    while(ph_in[t] < dist_ph_along.gt[t].size)
                     {
                         /* Update Along Track Distance */
                         along_track_distance += dist_ph_along.gt[t][ph_in[t]++];
@@ -201,8 +202,14 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                         }
 
                         /* Count Photon If Within Extent's Length */
-                        if(along_track_distance < parms.extent_length)  photon_count[t]++;
-                        else                                            break;
+                        if(along_track_distance < parms.extent_length)
+                        {
+                            photon_count[t]++;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
 
                     /* Find Next Extent's First Photon (if step > length) */
@@ -240,9 +247,18 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     }
 
                     /* Find Segment Id */
-                    while( (first_photon[t] < cumulative_photons[t]) && (seg_in[t] < segment_id.gt[t].size) )
+                    while(seg_in[t] < segment_id.gt[t].size)
                     {
-                        cumulative_photons[t] += segment_ph_cnt.gt[t][seg_in[t]++];
+                        int32_t next_cumulative_photons = cumulative_photons[t] + segment_ph_cnt.gt[t][seg_in[t]];
+                        if(first_photon[t] >= next_cumulative_photons)
+                        {
+                            cumulative_photons[t] = next_cumulative_photons;
+                            seg_in[t]++;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
 
                     /* Update Extent Size */
@@ -252,15 +268,18 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                     ph_in[t] = next_photon[t];
                 }
 
-                /* Get Segment ID */
-                uint32_t seg_id = segment_id.gt[PRT_LEFT][seg_in[PRT_LEFT]];
+                /* Get Segment Index */
+                int32_t start_seg = MIN(seg_in[PRT_LEFT], seg_in[PRT_RIGHT]);
                 if(seg_in[PRT_LEFT] != seg_in[PRT_RIGHT])
                 {
-                    mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", filename, seg_in[PRT_LEFT], seg_in[PRT_RIGHT]);
+                    mlog(WARNING, "Segment index mismatch in %s for segments %d and %d\n", filename, seg_in[PRT_LEFT], seg_in[PRT_RIGHT]);
                 }
-                else if(segment_id.gt[PRT_LEFT][seg_in[PRT_LEFT]] != segment_id.gt[PRT_RIGHT][seg_in[PRT_RIGHT]])
+
+                /* Get Segment ID */
+                int32_t seg_id = MIN(segment_id.gt[PRT_LEFT][start_seg], segment_id.gt[PRT_RIGHT][start_seg]);
+                if(segment_id.gt[PRT_LEFT][start_seg] != segment_id.gt[PRT_RIGHT][start_seg])
                 {
-                    mlog(ERROR, "Segment ID mismatch in %s for segments %d and %d\n", filename, segment_id.gt[PRT_LEFT][seg_in[PRT_LEFT]], segment_id.gt[PRT_RIGHT][seg_in[PRT_RIGHT]]);
+                    mlog(ERROR, "Segment ID mismatch in %s for segments %d and %d\n", filename, segment_id.gt[PRT_LEFT][start_seg], segment_id.gt[PRT_RIGHT][start_seg]);
                 }
 
                 /* Allocate and Initialize Extent Record */
@@ -269,8 +288,10 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 extent->pair_reference_track = track;
                 extent->segment_id = seg_id;
                 extent->length = parms.extent_length;
-                extent->start_distance[PRT_LEFT] = segment_dist_x.gt[PRT_LEFT][seg_id];
-                extent->start_distance[PRT_RIGHT] = segment_dist_x.gt[PRT_RIGHT][seg_id];
+                extent->gps_time[PRT_LEFT] = sdp_gps_epoch[0] + delta_time.gt[PRT_LEFT][start_seg];
+                extent->gps_time[PRT_RIGHT] = sdp_gps_epoch[0] + delta_time.gt[PRT_RIGHT][start_seg];
+                extent->start_distance[PRT_LEFT] = segment_dist_x.gt[PRT_LEFT][start_seg];
+                extent->start_distance[PRT_RIGHT] = segment_dist_x.gt[PRT_RIGHT][start_seg];
                 extent->photon_count[PRT_LEFT] = 0;
                 extent->photon_count[PRT_RIGHT] = 0;
 
@@ -278,28 +299,31 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 uint32_t ph_out = 0;
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
-                    int32_t current_cumulative_photons = cumulative_photons[t];
-                    int32_t current_seg_in = seg_in[t];
-
                     /* Loop Through Each Photon in Extent */
+                    int32_t ph_in_seg_cnt = 0;
+                    int32_t curr_seg = start_seg;
+                    double delta_distance = 0.0;
                     for(int32_t p = first_photon[t]; p < (first_photon[t] + photon_count[t]); p++)
                     {
+                        /* Calculate Delta Distance to Current Segment */
+                        while(ph_in_seg_cnt >= segment_ph_cnt.gt[t][curr_seg])
+                        {
+                            ph_in_seg_cnt = 0; // reset photons in segment
+                            curr_seg++; // go to next segment
+                            delta_distance = segment_dist_x.gt[t][curr_seg] - segment_dist_x.gt[t][start_seg]; // calculate delta distance
+                        }
+
+                        /* Check Photon Signal Confidence Level */
                         if(signal_conf_ph.gt[t][p] >= parms.signal_confidence)
                         {
-                            /* Find Segment Id */
-                            while( (p[t] < cumulative_photons[t]) && (seg_in[t] < segment_id.gt[t].size) )
-                            {
-                                cumulative_photons[t] += segment_ph_cnt.gt[t][seg_in[t]++];
-                            }
-
-                            /* Calculate Along Track Distance */
-
-
-                            extent->photons[ph_out].distance_x = dist_ph_along.gt[t][p];
+                            extent->photons[ph_out].distance_x = delta_distance + dist_ph_along.gt[t][p];
                             extent->photons[ph_out].height_y = h_ph.gt[t][p];
                             extent->photon_count[t]++;
                             ph_out++;
                         }
+
+                        /* Count Photon in Segment */
+                        ph_in_seg_cnt++;
                     }
                 }
 
