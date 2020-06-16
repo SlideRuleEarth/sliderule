@@ -75,6 +75,9 @@ const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
     .segment_length = 40.0 // meters
 };
 
+const double Hdf5Atl03Handle::ATL03_SEGMENT_LENGTH = 20.0; // meters
+const double Hdf5Atl03Handle::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
+
 /******************************************************************************
  * HDF5 DATASET HANDLE CLASS
  ******************************************************************************/
@@ -152,13 +155,14 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
             /* Read Data from HDF5 File */
             GTArray<int32_t>    segment_ph_cnt  (file, track, "geolocation/segment_ph_cnt");
             GTArray<int32_t>    segment_id      (file, track, "geolocation/segment_id");
-//            GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
+            GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
             GTArray<float>      dist_ph_along   (file, track, "heights/dist_ph_along");
             GTArray<float>      h_ph            (file, track, "heights/h_ph");
             GTArray<char>       signal_conf_ph  (file, track, "heights/signal_conf_ph", parms.surface_type);
 
-            /* Initialize Photon Pointers per Pair Reference Track */
-            uint32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+            /* Initialize Dataset Scope Variables */
+            uint32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
+            uint32_t ph_seg_start_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
 
             /* Increment Read Statistics */
             stats.segments_read[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT].size;
@@ -180,6 +184,20 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                 {
                     mlog(WARNING, "Segment ID mismatch in %s for segments %d and %d\n", filename, segment_id.gt[PRT_LEFT][s], segment_id.gt[PRT_RIGHT][s]);
                 }
+
+                /* Obtain Extent of Segment */
+                int32_t photon_count[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+                for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+                {
+                    int p = ph_seg_start_in[t];
+                    double along_track_distance = dist_ph_along.gt[t][p];
+
+                    while(along_track_distance < parms.segment_length && p < dist_ph_along.gt[t].size)
+                    {
+
+                    }
+                }
+
 
                 /* Allocate Segment Data */
                 int seg_size = sizeof(segment_t) + (sizeof(photon_t) * (segment_ph_cnt.gt[PRT_LEFT][s] + segment_ph_cnt.gt[PRT_RIGHT][s]));
@@ -226,6 +244,16 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                         }
                     }
 
+                    /* Get Along Track Distance */
+                    double along_track_distance = segment_dist_x.gt[t][s];
+                    if(s > 1) printf("DELTA: %lf\n", along_track_distance - segment_dist_x.gt[t][s-1]);
+                    // TODO: rework this function so that it uses the segment_length to determine what goes into a segment.
+                    // each segment is about 20.0xxx meters... each photon will need to have a current along track distance value
+                    // that fits within the segment length... then the actual distance_x will need to be an offset from the first
+                    // ATL03 segment's sigment_dist_x value
+                    // also... for segment lengths < 20.0, there will need to be an additional ID in the record to identify it
+                    // as well as the along_track_distance for the segment (or maybe just that)
+
                     /* Loop Through Each Photon in Segment */
                     for(int32_t p = first_photon; p <= last_photon; p++)
                     {
@@ -238,7 +266,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
                         }
                     }
 
-                    /* Increment Photon Index */
+                    /* Update Photon Index */
                     ph_in[t] += segment_ph_cnt.gt[t][s];
                 }
 
