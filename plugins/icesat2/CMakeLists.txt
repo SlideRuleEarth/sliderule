@@ -27,9 +27,8 @@ if (HDF5_LIB AND ZLIB_FOUND)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/icesat2.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5File.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Handle.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/Hdf5DatasetHandle.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Atl03Handle.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5DatasetDevice.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Atl03Device.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Atl06Dispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MathLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/UT_MathLib.cpp
@@ -45,9 +44,8 @@ if (HDF5_LIB AND ZLIB_FOUND)
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/icesat2.h
             ${CMAKE_CURRENT_LIST_DIR}/Hdf5File.h
-            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Handle.h
-            ${CMAKE_CURRENT_LIST_DIR}/Hdf5DatasetHandle.h
-            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Atl03Handle.h
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5DatasetDevice.h
+            ${CMAKE_CURRENT_LIST_DIR}/Hdf5Atl03Device.h
             ${CMAKE_CURRENT_LIST_DIR}/Atl06Dispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Array.h
             ${CMAKE_CURRENT_LIST_DIR}/GTArray.h

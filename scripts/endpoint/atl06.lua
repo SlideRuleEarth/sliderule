@@ -34,31 +34,32 @@ local track = rqst["track"]
 local stages = rqst["stages"]
 local parms = rqst["parms"]
 
--- ATL06 Dispatch --
+-- ATL06 Dispatch Algorithm --
 a = icesat2.atl06(rspq)
 if stages then
     for k,v in pairs(stages) do
         a:select(str2stage[v])
     end
 end
+
+-- ATL06 Dispatcher --
 d = core.dispatcher("recq")
 d:attach(a, "h5atl03")
 
--- ATL03 Data Handle --
-h = icesat2.h5atl03(track)
+-- ATL03 Device --
+f = icesat2.h5atl03(filename)
 if parms then
-    h:config(parms)
+    f:config(parms)
 end
 
 -- ATL03 File Reader --
-f = icesat2.h5file(h, core.READER, filename)
 r = core.reader(f, "recq")
 
 -- Wait for Data to Start --
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
 
 -- Display Stats --
-print("ATL03", json.encode(h:stats(true)))
+print("ATL03", json.encode(f:stats(true)))
 print("ATL06", json.encode(a:stats(true)))
 
 return

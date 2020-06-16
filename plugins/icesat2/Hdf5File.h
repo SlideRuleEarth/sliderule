@@ -44,7 +44,7 @@ class Hdf5File: public DeviceObject
 
         static int          luaCreate           (lua_State* L);
 
-                            Hdf5File            (lua_State* L, Hdf5Handle* _handle, role_t _role, const char* _filename);
+                            Hdf5File            (lua_State* L, const char* _filename);
         virtual             ~Hdf5File           ();
 
         virtual bool        isConnected         (int num_open=0);   // is the file open
@@ -64,7 +64,6 @@ class Hdf5File: public DeviceObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Hdf5Handle*     handle;
         bool            connected;
         char*           filename; // user supplied prefix
         char*           config; // <filename>(<type>,<access>,<io>)

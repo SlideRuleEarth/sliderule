@@ -31,31 +31,19 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - hdf5file(<handle>, <role>, <filename>)
+ * luaCreate - hdf5file(<filename>)
  *
- *  <handle> is an Hdf5Handle object
- *
- *  <role> is either dev.READER or dev.WRITER
- *
- *  <filename> is the name ofthe HDF5 file to be read from or written to
+ *  <filename> is the name of the HDF5 file to be read from or written to
  *----------------------------------------------------------------------------*/
 int Hdf5File::luaCreate(lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        Hdf5Handle* _handle     = (Hdf5Handle*)lockLuaObject(L, 1, Hdf5Handle::OBJECT_TYPE, true, NULL);
-        int         _role       = (int)getLuaInteger(L, 2);
-        const char* _filename   = getLuaString(L, 3);
-
-        /* Check Access Type */
-        if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
-        {
-            throw LuaException("unrecognized file access specified: %d\n", _role);
-        }
+        const char* _filename   = getLuaString(L, 1);
 
         /* Return File Device Object */
-        return createLuaObject(L, new Hdf5File(L, _handle, (DeviceObject::role_t)_role, _filename));
+        return createLuaObject(L, new Hdf5File(L, _filename));
     }
     catch(const LuaException& e)
     {
@@ -67,25 +55,15 @@ int Hdf5File::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5File::Hdf5File (lua_State* L, Hdf5Handle* _handle, DeviceObject::role_t _role, const char* _filename):
-    DeviceObject(L, _role),
-    handle(_handle),
+Hdf5File::Hdf5File (lua_State* L, const char* _filename):
+    DeviceObject(L, READER),
+    connected(false),
     filename(StringLib::duplicate(_filename))
 {
     assert(_filename);
 
     /* Add Additional Meta Functions */
     LuaEngine::setAttrFunc(L, "dir", luaTraverse);
-
-    /* Open File */
-    if(handle)
-    {
-        connected = handle->open(filename, _role);
-    }
-    else
-    {
-        connected = false;
-    }
 
     /* Set Configuration */
     int cfglen = snprintf(NULL, 0, "%s (%s)", filename, role == READER ? "READER" : "WRITER") + 1;
@@ -101,9 +79,6 @@ Hdf5File::~Hdf5File (void)
     closeConnection();
     if(filename) delete [] filename;
     if(config) delete [] config;
-
-    /* Unlock */
-    if(handle) handle->removeLock();
 }
 
 /*----------------------------------------------------------------------------
@@ -122,7 +97,6 @@ bool Hdf5File::isConnected (int num_open)
 void Hdf5File::closeConnection (void)
 {
     connected = false;
-    if(handle) handle->close();
 }
 
 /*----------------------------------------------------------------------------
@@ -130,15 +104,10 @@ void Hdf5File::closeConnection (void)
  *----------------------------------------------------------------------------*/
 int Hdf5File::writeBuffer (const void* buf, int len)
 {
-    int bytes = TIMEOUT_RC;
+    (void)buf;
+    (void)len;
 
-    if(connected)
-    {
-        bytes = handle->write(buf, len);
-        if(bytes != len) connected = false;
-    }
-
-    return bytes;
+    return TIMEOUT_RC;
 }
 
 /*----------------------------------------------------------------------------
@@ -146,15 +115,10 @@ int Hdf5File::writeBuffer (const void* buf, int len)
  *----------------------------------------------------------------------------*/
 int Hdf5File::readBuffer (void* buf, int len)
 {
-    int bytes = TIMEOUT_RC;
+    (void)buf;
+    (void)len;
 
-    if(connected)
-    {
-        bytes = handle->read(buf, len);
-        if(bytes < 0) connected = false;
-    }
-
-    return bytes;
+    return TIMEOUT_RC;
 }
 
 /*----------------------------------------------------------------------------
