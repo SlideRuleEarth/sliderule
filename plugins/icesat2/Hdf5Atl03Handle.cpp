@@ -77,7 +77,7 @@ const Hdf5Atl03Handle::parms_t Hdf5Atl03Handle::DefaultParms = {
     .signal_confidence = CNF_SURFACE_HIGH,
     .along_track_spread = 20.0, // meters
     .photon_count = 10, // PE
-    .extent_length = 40.0, // meters
+    .extent_length = 20.0, // meters
     .extent_step = 20.0
 };
 
@@ -160,7 +160,7 @@ bool Hdf5Atl03Handle::open (const char* filename, DeviceObject::role_t role)
         {
             /* Read Data from HDF5 File */
             H5Array<double>     sdp_gps_epoch   (file, "/ancillary_data/atlas_sdp_gps_epoch");
-            GTArray<float>      delta_time      (file, track, "geolocation/delta_time");
+            GTArray<double>     delta_time      (file, track, "geolocation/delta_time");
             GTArray<int32_t>    segment_ph_cnt  (file, track, "geolocation/segment_ph_cnt");
             GTArray<int32_t>    segment_id      (file, track, "geolocation/segment_id");
             GTArray<double>     segment_dist_x  (file, track, "geolocation/segment_dist_x");
@@ -457,6 +457,9 @@ int Hdf5Atl03Handle::luaConfig (lua_State* L)
         lua_getfield(L, 2, LUA_PARM_EXTENT_LENGTH);
         lua_obj->parms.extent_length = (signalConf_t)getLuaFloat(L, -1, true, lua_obj->parms.extent_length);
 
+        lua_getfield(L, 2, LUA_PARM_EXTENT_STEP);
+        lua_obj->parms.extent_step = (signalConf_t)getLuaFloat(L, -1, true, lua_obj->parms.extent_step);
+
         /* Set Success */
         status = true;
     }
@@ -488,7 +491,8 @@ int Hdf5Atl03Handle::luaParms (lua_State* L)
         LuaEngine::setAttrInt(L, LUA_PARM_SIGNAL_CONFIDENCE,    lua_obj->parms.signal_confidence);
         LuaEngine::setAttrNum(L, LUA_PARM_ALONG_TRACK_SPREAD,   lua_obj->parms.along_track_spread);
         LuaEngine::setAttrInt(L, LUA_PARM_PHOTON_COUNT,         lua_obj->parms.photon_count);
-        LuaEngine::setAttrNum(L, LUA_PARM_EXTENT_LENGTH,       lua_obj->parms.extent_length);
+        LuaEngine::setAttrNum(L, LUA_PARM_EXTENT_LENGTH,        lua_obj->parms.extent_length);
+        LuaEngine::setAttrNum(L, LUA_PARM_EXTENT_STEP,          lua_obj->parms.extent_step);
 
         /* Set Success */
         status = true;
