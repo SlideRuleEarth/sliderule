@@ -173,7 +173,7 @@ bool Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key, double
 {
     (void)key;
 
-    Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
+    Hdf5Atl03Handle::extent_t* segment = (Hdf5Atl03Handle::extent_t*)record->getRecordData();
     double num_heights = 0.0;
     double height_l = 0.0;
     double height_r = 0.0;
@@ -214,7 +214,7 @@ bool Atl06Dispatch::leastSquaresFitStage (RecordObject* record, okey_t key, Math
     (void)key;
 
     bool status = false;
-    Hdf5Atl03Handle::segment_t* segment = (Hdf5Atl03Handle::segment_t*)record->getRecordData();
+    Hdf5Atl03Handle::extent_t* segment = (Hdf5Atl03Handle::extent_t*)record->getRecordData();
 
     /* Count Execution Statistic */
     stats.algo_out_cnt[STAGE_LSF]++;

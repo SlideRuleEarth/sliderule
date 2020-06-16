@@ -69,9 +69,10 @@ class Hdf5Atl03Handle: public Hdf5Handle
         typedef struct {
             surfaceType_t   surface_type;           // surface reference type (used to select signal confidence column)
             signalConf_t    signal_confidence;      // minimal allowed signal confidence
-            double          along_track_spread;     // minimal required along track spread of photons in segment (meters)
-            int             photon_count;           // minimal required photons in segment
-            double          segment_length;         // length of ATL06 segment (meters)
+            double          along_track_spread;     // minimal required along track spread of photons in extent (meters)
+            int             photon_count;           // minimal required photons in extent
+            double          extent_length;          // length of ATL06 extent (meters)
+            double          extent_step;            // resolution of the ATL06 extent (meters)
         } parms_t;
 
         /* Photon Fields */
@@ -80,22 +81,23 @@ class Hdf5Atl03Handle: public Hdf5Handle
             double          height_y;   // double[]: h_ph
         } photon_t;
 
-        /* Segment Record */
+        /* Extent Record */
         typedef struct {
-            uint8_t         track;
+            uint8_t         pair_reference_track; // 1, 2, or 3
             uint32_t        segment_id; // the id of the first ATL03 segment in range
-            double          segment_length; // meters
-            uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
+            double          length; // meters
+            double          start_distance[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
             uint32_t        photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
             photon_t        photons[]; // zero length field
-        } segment_t;
+        } extent_t;
 
         /* Statistics */
         typedef struct {
             uint32_t        segments_read[PAIR_TRACKS_PER_GROUND_TRACK];
-            uint32_t        segments_filtered[PAIR_TRACKS_PER_GROUND_TRACK];
-            uint32_t        segments_added;
-            uint32_t        segments_sent;
+            uint32_t        extents_filtered[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t        extents_added;
+            uint32_t        extents_sent;
         } stats_t;
 
         /*--------------------------------------------------------------------
@@ -132,7 +134,7 @@ class Hdf5Atl03Handle: public Hdf5Handle
         int                     track;
         parms_t                 parms;
         stats_t                 stats;
-        List<RecordObject*>     segmentList;
+        List<RecordObject*>     extentList;
         int                     listIndex;
 
         /*--------------------------------------------------------------------
