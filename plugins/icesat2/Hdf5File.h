@@ -28,7 +28,6 @@
 
 #include "OsApi.h"
 #include "DeviceObject.h"
-#include "Hdf5Handle.h"
 
 /******************************************************************************
  * HDF5 FILE CLASS
