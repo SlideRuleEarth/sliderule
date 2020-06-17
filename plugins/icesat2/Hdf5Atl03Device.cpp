@@ -256,21 +256,15 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     /* Add Step to Start Distance */
                     start_distance[t] += parms.extent_step;
 
-                    /* Apply Start Segment Distance Correction */
-                    double segment_distance_correction = 0.0;
-                    int32_t next_segment = extent_segment[t];
-                    while(next_segment < segment_dist_x.gt[t].size)
+                    /* Apply Segment Distance Correction */
+                    if(current_segment != extent_segment[t])
                     {
-                        if(start_distance[t] > segment_dist_x.gt[t][next_segment])
+                        if(current_segment < segment_dist_x.gt[t].size)
                         {
-                            segment_distance_correction += ATL03_SEGMENT_LENGTH;
-                            next_segment++;
-                        }
-                        else
-                        {
-                            segment_distance_correction -= segment_dist_x.gt[t][next_segment] - segment_dist_x.gt[t][extent_segment[t]];
-                            start_distance[t] -= segment_distance_correction;
-                            break;
+                            double segment_distance_correction;
+                            segment_distance_correction = segment_dist_x.gt[t][current_segment] - segment_dist_x.gt[t][extent_segment[t]];
+                            segment_distance_correction -= ATL03_SEGMENT_LENGTH * (current_segment - extent_segment[t]);
+                            start_distance[t] += segment_distance_correction;
                         }
                     }
 
@@ -307,12 +301,8 @@ bool Hdf5Atl03Device::h5open (const char* url)
                 /* Check Segment Index and ID */
                 if(extent_segment[PRT_LEFT] != extent_segment[PRT_RIGHT])
                 {
-                    mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, seg_in[PRT_LEFT], seg_in[PRT_RIGHT]);
+                    mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, extent_segment[PRT_LEFT], extent_segment[PRT_RIGHT]);
 //                    return false;
-                }
-                else if(segment_id.gt[PRT_LEFT][extent_segment[PRT_LEFT]] != segment_id.gt[PRT_RIGHT][extent_segment[PRT_RIGHT]])
-                {
-                    mlog(ERROR, "Segment ID mismatch in %s for segments %d and %d\n", url, segment_id.gt[PRT_LEFT][extent_segment[PRT_LEFT]], segment_id.gt[PRT_RIGHT][extent_segment[PRT_RIGHT]]);
                 }
 
                 /* Create Extent Record */
