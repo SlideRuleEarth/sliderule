@@ -67,10 +67,10 @@ const RecordObject::fieldDef_t Hdf5Atl03Device::recDef[] = {
 const Hdf5Atl03Device::parms_t Hdf5Atl03Device::DefaultParms = {
     .surface_type = SRT_LAND_ICE,
     .signal_confidence = CNF_SURFACE_HIGH,
-    .along_track_spread = 20.0, // meters
+    .along_track_spread = 10.0, // meters
     .photon_count = 10, // PE
-    .extent_length = 20.0, // meters
-    .extent_step = 20.0
+    .extent_length = 40.0, // meters
+    .extent_step = 20.0 // meters
 };
 
 const double Hdf5Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
@@ -178,191 +178,179 @@ bool Hdf5Atl03Device::h5open (const char* url)
             /* Initialize Dataset Scope Variables */
             int32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
             int32_t seg_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // segment index
-            int32_t cumulative_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_ph_cnt.gt[PRT_LEFT][0], segment_ph_cnt.gt[PRT_RIGHT][0] }; // total photons at start of segment
+            int32_t seg_ph[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // current photon index in segment
+            double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][0], segment_dist_x.gt[PRT_RIGHT][0] };
+            bool    track_complete[PAIR_TRACKS_PER_GROUND_TRACK] = { false, false };
 
             /* Increment Read Statistics */
             stats.segments_read[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT].size;
             stats.segments_read[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT].size;
 
             /* Traverse All Photons In Dataset */
-            while( (ph_in[PRT_LEFT] < dist_ph_along.gt[PRT_LEFT].size) ||
-                   (ph_in[PRT_RIGHT] < dist_ph_along.gt[PRT_RIGHT].size) )
+            while( !track_complete[PRT_LEFT] || !track_complete[PRT_RIGHT] )
             {
-printf("START: %d, %d\n", ph_in[0], ph_in[1]);
-                /* Determine Characteristics of Extent */
-                int extent_size = sizeof(extent_t); // added onto below
-                int32_t first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { ph_in[PRT_LEFT], ph_in[PRT_RIGHT] };
-                int32_t next_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { ph_in[PRT_LEFT], ph_in[PRT_RIGHT] };
-                int32_t photon_count[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+                List<photon_t> extent_photons[PAIR_TRACKS_PER_GROUND_TRACK];
+                int32_t extent_segment[PAIR_TRACKS_PER_GROUND_TRACK];
+                bool extent_valid[PAIR_TRACKS_PER_GROUND_TRACK] = { true, true };
+
+                /* Select Photons for Extent from each Track */
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
-                    /* Traverse Photons Until Desired Along Track Distance Reached */
-                    double along_track_distance = 0.0;
-                    while(ph_in[t] < dist_ph_along.gt[t].size)
-                    {
-                        /* Update Along Track Distance */
-                        along_track_distance += dist_ph_along.gt[t][ph_in[t]++];
+                    int32_t current_photon = ph_in[t];
+                    int32_t current_segment = seg_in[t];
+                    int32_t current_count = seg_ph[t]; // number of photons in current segment already accounted for
+                    bool extent_complete = false;
+                    bool step_complete = false;
 
-                        /* Set Next Extent's First Photon to Inremented Photon Index */
-                        if(along_track_distance < parms.extent_step)
+                    /* Set Extent Segment */
+                    extent_segment[t] = seg_in[t];
+
+                    /* Traverse Photons Until Desired Along Track Distance Reached */
+                    while( (!extent_complete || !step_complete) &&              // extent or step not complete
+                           (current_segment < segment_dist_x.gt[t].size) &&     // there are more segments
+                           (current_photon < dist_ph_along.gt[t].size) )        // there are more photons
+                    {
+                        /* Go to Photon's Segment */
+                        current_count++;
+                        while( (current_segment < segment_ph_cnt.gt[t].size) && (current_count > segment_ph_cnt.gt[t][current_segment]) )
                         {
-                            next_photon[t] = ph_in[t];
+                            current_count = 1; // reset photons in segment
+                            current_segment++; // go to next segment
                         }
 
-                        /* Count Photon If Within Extent's Length */
+                        /* Update Along Track Distance */
+                        double delta_distance = segment_dist_x.gt[t][current_segment] - start_distance[t];
+                        double along_track_distance = delta_distance + dist_ph_along.gt[t][current_photon];
+
+                        /* Set Next Extent's First Photon */
+                        if(!step_complete && along_track_distance >= parms.extent_step)
+                        {
+                            ph_in[t] = current_photon;
+                            seg_in[t] = current_segment;
+                            seg_ph[t] = current_count - 1;
+                            step_complete = true;
+                        }
+
+                        /* Check if Photon within Extent's Length */
                         if(along_track_distance < parms.extent_length)
                         {
-                            photon_count[t]++;
+                            /* Check  Photon Signal Confidence Level */
+                            if(signal_conf_ph.gt[t][current_photon] >= parms.signal_confidence)
+                            {
+                                photon_t ph = {
+                                    .distance_x = delta_distance + dist_ph_along.gt[t][current_photon],
+                                    .height_y = h_ph.gt[t][current_photon]
+                                };
+                                extent_photons[t].add(ph);
+                            }
                         }
-                        else
+                        else if(!extent_complete)
                         {
-                            break;
+                            extent_complete = true;
                         }
-                    }
-printf("COUNT: %d, %d\n", photon_count[0], photon_count[1]);
 
-                    /* Find Next Extent's First Photon (if step > length) */
-                    while(next_photon[t] < dist_ph_along.gt[t].size)
+                        /* Go to Next Photon */
+                        current_photon++;
+                    }
+
+                    /* Add Step to Start Distance */
+                    start_distance[t] += parms.extent_step;
+
+                    /* Apply Start Segment Distance Correction */
+                    double segment_distance_correction = 0.0;
+                    int32_t next_segment = extent_segment[t];
+                    while(next_segment < segment_dist_x.gt[t].size)
                     {
-                        if(along_track_distance < parms.extent_step)
+                        if(start_distance[t] > segment_dist_x.gt[t][next_segment])
                         {
-                            along_track_distance += dist_ph_along.gt[t][ph_in[t]++];
-                            next_photon[t] = ph_in[t];
+                            segment_distance_correction += ATL03_SEGMENT_LENGTH;
+                            next_segment++;
                         }
                         else
                         {
+                            segment_distance_correction -= segment_dist_x.gt[t][next_segment] - segment_dist_x.gt[t][extent_segment[t]];
+                            start_distance[t] -= segment_distance_correction;
                             break;
                         }
-
                     }
-printf("NEXT: %d, %d\n", next_photon[0], next_photon[1]);
+
+                    /* Check if Track Complete */
+                    if(current_photon >= dist_ph_along.gt[t].size)
+                    {
+                        track_complete[t] = true;
+                    }
 
                     /* Check Photon Count */
-                    if(photon_count[t] < parms.photon_count)
+                    if(extent_photons[t].length() < parms.photon_count)
                     {
-printf("FILTERED COUNT\n");
-                        /* Filter Out Track's Segment */
-                        photon_count[t] = 0;
-                        stats.extents_filtered[t]++;
+                        extent_valid[t] = false;
                     }
 
                     /* Check Along Track Spread */
-                    int32_t last_photon = first_photon[t] + photon_count[t];
-                    double along_track_spread = dist_ph_along.gt[t][last_photon] - dist_ph_along.gt[t][first_photon[t]];
-                    if(along_track_spread < parms.along_track_spread)
+                    if(extent_photons[t].length() > 1)
                     {
-printf("FILTERED SPREAD\n");
-                        /* Sanity Check Spread */
-                        if(along_track_spread < 0.0)
+                        int32_t last = extent_photons[t].length() - 1;
+                        double along_track_spread = extent_photons[t][last].distance_x - extent_photons[t][0].distance_x;
+                        if(along_track_spread < parms.along_track_spread)
                         {
-                            mlog(WARNING, "Negative along track spread; spread=%lf, track=%d, photon_count=%d\n", along_track_spread, t, photon_count[t]);
+                            extent_valid[t] = false;
                         }
+                    }
 
-                        /* Filter Out Track's Segment */
-                        photon_count[t] = 0;
+                    /* Incrment Statistics if Invalid */
+                    if(!extent_valid[t])
+                    {
                         stats.extents_filtered[t]++;
                     }
+                }
+//printf("SEGID: %d | %d | %d | %d\n", extent_segment[0], seg_in[0], segment_ph_cnt.gt[0][seg_in[0]], seg_ph[0]);
+                /* Check Segment Index and ID */
+                if(extent_segment[PRT_LEFT] != extent_segment[PRT_RIGHT])
+                {
+                    mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, seg_in[PRT_LEFT], seg_in[PRT_RIGHT]);
+//                    return false;
+                }
+                else if(segment_id.gt[PRT_LEFT][extent_segment[PRT_LEFT]] != segment_id.gt[PRT_RIGHT][extent_segment[PRT_RIGHT]])
+                {
+                    mlog(ERROR, "Segment ID mismatch in %s for segments %d and %d\n", url, segment_id.gt[PRT_LEFT][extent_segment[PRT_LEFT]], segment_id.gt[PRT_RIGHT][extent_segment[PRT_RIGHT]]);
+                }
 
-                    /* Find Segment Id */
-                    while(seg_in[t] < segment_id.gt[t].size)
+                /* Create Extent Record */
+                if(extent_valid[PRT_LEFT] || extent_valid[PRT_RIGHT])
+                {
+                    /* Calculate Extent Record Size */
+                    int extent_size = sizeof(extent_t) + (sizeof(photon_t) * (extent_photons[PRT_LEFT].length() + extent_photons[PRT_RIGHT].length()));
+
+                    /* Allocate and Initialize Extent Record */
+                    RecordObject* record = new RecordObject(recType, extent_size); // overallocated memory... photons filtered below
+                    extent_t* extent = (extent_t*)record->getRecordData();
+                    extent->pair_reference_track = track;
+                    extent->segment_id = MIN(segment_id.gt[PRT_LEFT][extent_segment[PRT_LEFT]], segment_id.gt[PRT_RIGHT][extent_segment[PRT_LEFT]]);
+                    extent->length = parms.extent_length;
+
+                    /* Populate Extent */
+                    uint32_t ph_out = 0;
+                    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                     {
-                        int32_t next_cumulative_photons = cumulative_photons[t] + segment_ph_cnt.gt[t][seg_in[t]];
-                        if(first_photon[t] >= next_cumulative_photons)
+                        /* Populate Attributes */
+                        extent->gps_time[t] = sdp_gps_epoch[0] + delta_time.gt[t][extent_segment[t]];
+                        extent->start_distance[t] = segment_dist_x.gt[t][extent_segment[t]];
+                        extent->photon_count[t] = extent_photons[t].length();
+
+                        /* Populate Photons */
+                        for(int32_t p = 0; p < extent_photons[t].length(); p++)
                         {
-                            cumulative_photons[t] = next_cumulative_photons;
-                            seg_in[t]++;
-                        }
-                        else
-                        {
-                            break;
+                            extent->photons[ph_out++] = extent_photons[t][p];
                         }
                     }
 
-                    /* Update Extent Size */
-                    extent_size += sizeof(photon_t) * photon_count[t];
-
-                    /* Update Photon Input Index to Next Extent */
-                    ph_in[t] = next_photon[t];
-                }
-
-                /* Get Segment Index */
-                int32_t start_seg = MIN(seg_in[PRT_LEFT], seg_in[PRT_RIGHT]);
-                if(seg_in[PRT_LEFT] != seg_in[PRT_RIGHT])
-                {
-                    mlog(WARNING, "Segment index mismatch in %s for segments %d and %d\n", url, seg_in[PRT_LEFT], seg_in[PRT_RIGHT]);
-                }
-
-                /* Get Segment ID */
-                int32_t seg_id = MIN(segment_id.gt[PRT_LEFT][start_seg], segment_id.gt[PRT_RIGHT][start_seg]);
-                if(segment_id.gt[PRT_LEFT][start_seg] != segment_id.gt[PRT_RIGHT][start_seg])
-                {
-                    mlog(ERROR, "Segment ID mismatch in %s for segments %d and %d\n", url, segment_id.gt[PRT_LEFT][start_seg], segment_id.gt[PRT_RIGHT][start_seg]);
-                }
-
-                /* Allocate and Initialize Extent Record */
-                RecordObject* record = new RecordObject(recType, extent_size); // overallocated memory... photons filtered below
-                extent_t* extent = (extent_t*)record->getRecordData();
-                extent->pair_reference_track = track;
-                extent->segment_id = seg_id;
-                extent->length = parms.extent_length;
-                extent->gps_time[PRT_LEFT] = sdp_gps_epoch[0] + delta_time.gt[PRT_LEFT][start_seg];
-                extent->gps_time[PRT_RIGHT] = sdp_gps_epoch[0] + delta_time.gt[PRT_RIGHT][start_seg];
-                extent->start_distance[PRT_LEFT] = segment_dist_x.gt[PRT_LEFT][start_seg];
-                extent->start_distance[PRT_RIGHT] = segment_dist_x.gt[PRT_RIGHT][start_seg];
-                extent->photon_count[PRT_LEFT] = 0;
-                extent->photon_count[PRT_RIGHT] = 0;
-
-                /* Populate Extent Photons */
-                uint32_t ph_out = 0;
-                for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
-                {
-                    /* Loop Through Each Photon in Extent */
-                    int32_t ph_in_seg_cnt = 0;
-                    int32_t curr_seg = start_seg;
-                    double delta_distance = 0.0;
-                    for(int32_t p = first_photon[t]; p < (first_photon[t] + photon_count[t]); p++)
-                    {
-                        /* Calculate Delta Distance to Current Segment */
-                        while(ph_in_seg_cnt >= segment_ph_cnt.gt[t][curr_seg])
-                        {
-                            ph_in_seg_cnt = 0; // reset photons in segment
-                            curr_seg++; // go to next segment
-                            delta_distance = segment_dist_x.gt[t][curr_seg] - segment_dist_x.gt[t][start_seg]; // calculate delta distance
-                        }
-
-                        /* Check Photon Signal Confidence Level */
-                        if(signal_conf_ph.gt[t][p] >= parms.signal_confidence)
-                        {
-                            extent->photons[ph_out].distance_x = delta_distance + dist_ph_along.gt[t][p];
-                            extent->photons[ph_out].height_y = h_ph.gt[t][p];
-                            extent->photon_count[t]++;
-                            ph_out++;
-                        }
-
-                        /* Count Photon in Segment */
-                        ph_in_seg_cnt++;
-                    }
-                }
-
-                /* Complete Extent Record */
-                if(extent->photon_count[PRT_LEFT] != 0 || extent->photon_count[PRT_RIGHT] != 0)
-                {
                     /* Set Photon Pointer Fields */
                     extent->photon_offset[PRT_LEFT] = sizeof(extent_t); // pointers are set to offset from start of record data
                     extent->photon_offset[PRT_RIGHT] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[PRT_LEFT]);
 
-                    /* Resize Record Data */
-                    int new_size = sizeof(extent_t) + (sizeof(photon_t) * (extent->photon_count[PRT_LEFT] + extent->photon_count[PRT_RIGHT]));
-                    record->resizeData(new_size);
-
                     /* Add Segment Record */
                     extentList.add(record);
                     stats.extents_added++;
-                }
-                else
-                {
-                    /* Free Resources Associated with Record */
-                    delete record;
                 }
             }
 
@@ -504,16 +492,16 @@ int Hdf5Atl03Device::luaConfig (lua_State* L)
         lua_obj->parms.signal_confidence = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.signal_confidence);
 
         lua_getfield(L, 2, LUA_PARM_ALONG_TRACK_SPREAD);
-        lua_obj->parms.along_track_spread = (signalConf_t)getLuaFloat(L, -1, true, lua_obj->parms.along_track_spread);
+        lua_obj->parms.along_track_spread = getLuaFloat(L, -1, true, lua_obj->parms.along_track_spread);
 
         lua_getfield(L, 2, LUA_PARM_PHOTON_COUNT);
-        lua_obj->parms.photon_count = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.photon_count);
+        lua_obj->parms.photon_count = getLuaInteger(L, -1, true, lua_obj->parms.photon_count);
 
         lua_getfield(L, 2, LUA_PARM_EXTENT_LENGTH);
-        lua_obj->parms.extent_length = (signalConf_t)getLuaFloat(L, -1, true, lua_obj->parms.extent_length);
+        lua_obj->parms.extent_length = getLuaFloat(L, -1, true, lua_obj->parms.extent_length);
 
         lua_getfield(L, 2, LUA_PARM_EXTENT_STEP);
-        lua_obj->parms.extent_step = (signalConf_t)getLuaFloat(L, -1, true, lua_obj->parms.extent_step);
+        lua_obj->parms.extent_step = getLuaFloat(L, -1, true, lua_obj->parms.extent_step);
 
         /* Set Success */
         status = true;

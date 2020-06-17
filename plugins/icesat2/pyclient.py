@@ -86,8 +86,10 @@ def atl06endpoint (filename, track, stages):
         "stages": stages,
         "parms": {
             "cnf": 4,
-            "ats": 5.0,
-            "cnt": 10
+#            "ats": 10.0,
+#            "cnt": 10,
+#            "len": 20.0,
+#            "res": 10.0
         }
     }
     d = engine("atl06", json.dumps(rqst_dict))
