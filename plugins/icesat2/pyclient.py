@@ -76,10 +76,10 @@ def atl06endpoint (filename, track, stages):
         "stages": stages,
         "parms": {
             "cnf": 4,
-            "ats": 10.0,
+            "ats": 20.0,
             "cnt": 10,
-            "len": 20.0,
-            "res": 10.0
+            "len": 40.0,
+            "res": 20.0
         }
     }
 

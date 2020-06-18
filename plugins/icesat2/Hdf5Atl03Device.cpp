@@ -210,6 +210,7 @@ bool Hdf5Atl03Device::h5open (const char* url)
             int32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
             int32_t seg_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // segment index
             int32_t seg_ph[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // current photon index in segment
+            int32_t start_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
             double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][0], segment_dist_x.gt[PRT_RIGHT][0] };
             bool    track_complete[PAIR_TRACKS_PER_GROUND_TRACK] = { false, false };
 
@@ -243,10 +244,14 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     {
                         /* Go to Photon's Segment */
                         current_count++;
-                        while( (current_segment < segment_ph_cnt.gt[t].size) && (current_count > segment_ph_cnt.gt[t][current_segment]) )
+                        while(current_count > segment_ph_cnt.gt[t][current_segment])
                         {
                             current_count = 1; // reset photons in segment
                             current_segment++; // go to next segment
+                            if(current_segment >= segment_dist_x.gt[t].size)
+                            {
+                                break;
+                            }
                         }
 
                         /* Update Along Track Distance */
@@ -287,16 +292,13 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     /* Add Step to Start Distance */
                     start_distance[t] += parms.extent_step;
 
-                    /* Apply Segment Distance Correction */
-                    if(current_segment != extent_segment[t])
+                    /* Apply Segment Distance Correction and Update Start Segment */
+                    while( ((start_segment[t] + 1) < segment_dist_x.gt[t].size) &&
+                           (start_distance[t] >= segment_dist_x.gt[t][start_segment[t] + 1]) )
                     {
-                        if(current_segment < segment_dist_x.gt[t].size)
-                        {
-                            double segment_distance_correction;
-                            segment_distance_correction = segment_dist_x.gt[t][current_segment] - segment_dist_x.gt[t][extent_segment[t]];
-                            segment_distance_correction -= ATL03_SEGMENT_LENGTH * (current_segment - extent_segment[t]);
-                            start_distance[t] += segment_distance_correction;
-                        }
+                        start_distance[t] += segment_dist_x.gt[t][start_segment[t] + 1] - segment_dist_x.gt[t][start_segment[t]];
+                        start_distance[t] -= ATL03_SEGMENT_LENGTH;
+                        start_segment[t]++;
                     }
 
                     /* Check if Track Complete */
@@ -329,15 +331,15 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     }
                 }
 
-                /* Check Segment Index and ID */
-                if(extent_segment[PRT_LEFT] != extent_segment[PRT_RIGHT])
-                {
-//                    mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, extent_segment[PRT_LEFT], extent_segment[PRT_RIGHT]);
-                }
-
                 /* Create Extent Record */
                 if(extent_valid[PRT_LEFT] || extent_valid[PRT_RIGHT])
                 {
+                    /* Check Segment Index and ID */
+//                    if(extent_segment[PRT_LEFT] != extent_segment[PRT_RIGHT])
+//                    {
+//                        mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, extent_segment[PRT_LEFT], extent_segment[PRT_RIGHT]);
+//                    }
+
                     /* Calculate Extent Record Size */
                     int extent_size = sizeof(extent_t) + (sizeof(photon_t) * (extent_photons[PRT_LEFT].length() + extent_photons[PRT_RIGHT].length()));
 
