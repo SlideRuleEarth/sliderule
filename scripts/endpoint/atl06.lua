@@ -47,10 +47,7 @@ d = core.dispatcher("recq")
 d:attach(a, "atl03rec")
 
 -- ATL03 Device --
-f = icesat2.h5atl03(filename)
-if parms then
-    f:config(parms)
-end
+f = icesat2.h5atl03(filename, parms)
 
 -- ATL03 File Reader --
 r = core.reader(f, "recq")

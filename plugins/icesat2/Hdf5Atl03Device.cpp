@@ -89,9 +89,41 @@ int Hdf5Atl03Device::luaCreate (lua_State* L)
     {
         /* Get URL */
         const char* url = getLuaString(L, 1);
+        parms_t parms = DefaultParms;
+
+        /* Check Config Table */
+        if(lua_type(L, 2) == LUA_TTABLE)
+        {
+            bool provided = false;
+
+            /* Get Configuration Parameters from Table */
+            lua_getfield(L, 2, LUA_PARM_SURFACE_TYPE);
+            parms.surface_type = (surfaceType_t)getLuaInteger(L, -1, true, parms.surface_type, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_SURFACE_TYPE, (int)parms.surface_type);
+
+            lua_getfield(L, 2, LUA_PARM_SIGNAL_CONFIDENCE);
+            parms.signal_confidence = (signalConf_t)getLuaInteger(L, -1, true, parms.signal_confidence, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_SIGNAL_CONFIDENCE, (int)parms.signal_confidence);
+
+            lua_getfield(L, 2, LUA_PARM_ALONG_TRACK_SPREAD);
+            parms.along_track_spread = getLuaFloat(L, -1, true, parms.along_track_spread, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_ALONG_TRACK_SPREAD, parms.along_track_spread);
+
+            lua_getfield(L, 2, LUA_PARM_PHOTON_COUNT);
+            parms.photon_count = getLuaInteger(L, -1, true, parms.photon_count, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_PHOTON_COUNT, parms.photon_count);
+
+            lua_getfield(L, 2, LUA_PARM_EXTENT_LENGTH);
+            parms.extent_length = getLuaFloat(L, -1, true, parms.extent_length, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_EXTENT_LENGTH, parms.extent_length);
+
+            lua_getfield(L, 2, LUA_PARM_EXTENT_STEP);
+            parms.extent_step = getLuaFloat(L, -1, true, parms.extent_step, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_EXTENT_STEP, parms.extent_step);
+        }
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Hdf5Atl03Device(L, url));
+        return createLuaObject(L, new Hdf5Atl03Device(L, url, parms));
     }
     catch(const LuaException& e)
     {
@@ -103,7 +135,7 @@ int Hdf5Atl03Device::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url):
+Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url, parms_t _parms):
     DeviceObject(L, READER)
 {
     /* Define Record */
@@ -111,7 +143,7 @@ Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url):
     RecordObject::defineRecord(recType, "TRACK", sizeof(extent_t), recDef, def_elements, 16);
 
     /* Set Parameters */
-    parms = DefaultParms;
+    parms = _parms;
 
     /* Clear Statistics */
     LocalLib::set(&stats, 0, sizeof(stats));
@@ -129,7 +161,6 @@ Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url):
     else        connected = false;
 
     /* Add Additional Meta Functions */
-    LuaEngine::setAttrFunc(L, "config", luaConfig);
     LuaEngine::setAttrFunc(L, "parms",  luaParms);
     LuaEngine::setAttrFunc(L, "stats",  luaStats);
 }
@@ -297,12 +328,11 @@ bool Hdf5Atl03Device::h5open (const char* url)
                         stats.extents_filtered[t]++;
                     }
                 }
-//printf("SEGID: %d | %d | %d | %d\n", extent_segment[0], seg_in[0], segment_ph_cnt.gt[0][seg_in[0]], seg_ph[0]);
+
                 /* Check Segment Index and ID */
                 if(extent_segment[PRT_LEFT] != extent_segment[PRT_RIGHT])
                 {
-                    mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, extent_segment[PRT_LEFT], extent_segment[PRT_RIGHT]);
-//                    return false;
+//                    mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, extent_segment[PRT_LEFT], extent_segment[PRT_RIGHT]);
                 }
 
                 /* Create Extent Record */
@@ -315,7 +345,6 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     RecordObject* record = new RecordObject(recType, extent_size); // overallocated memory... photons filtered below
                     extent_t* extent = (extent_t*)record->getRecordData();
                     extent->pair_reference_track = track;
-                    extent->segment_id = MIN(segment_id.gt[PRT_LEFT][extent_segment[PRT_LEFT]], segment_id.gt[PRT_RIGHT][extent_segment[PRT_LEFT]]);
                     extent->length = parms.extent_length;
 
                     /* Populate Extent */
@@ -323,6 +352,7 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                     {
                         /* Populate Attributes */
+                        extent->segment_id[t] = segment_id.gt[t][extent_segment[t]];
                         extent->gps_time[t] = sdp_gps_epoch[0] + delta_time.gt[t][extent_segment[t]];
                         extent->start_distance[t] = segment_dist_x.gt[t][extent_segment[t]];
                         extent->photon_count[t] = extent_photons[t].length();
@@ -446,63 +476,6 @@ int Hdf5Atl03Device::getUniqueId (void)
 const char* Hdf5Atl03Device::getConfig (void)
 {
     return config;
-}
-
-/*----------------------------------------------------------------------------
- * luaConfig - :config(<{<key>=<value>, ...}>) --> success/failure
- *----------------------------------------------------------------------------*/
-int Hdf5Atl03Device::luaConfig (lua_State* L)
-{
-    bool status = false;
-    Hdf5Atl03Device* lua_obj = NULL;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = (Hdf5Atl03Device*)getLuaSelf(L, 1);
-    }
-    catch(const LuaException& e)
-    {
-        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
-    }
-
-    try
-    {
-        /* Check Table */
-        if(lua_type(L, 2) != LUA_TTABLE)
-        {
-            throw LuaException("must supply table to configure %s", lua_obj->getName());
-        }
-
-        /* Get Configuration Parameters from Table */
-        lua_getfield(L, 2, LUA_PARM_SURFACE_TYPE);
-        lua_obj->parms.surface_type = (surfaceType_t)getLuaInteger(L, -1, true, lua_obj->parms.surface_type);
-
-        lua_getfield(L, 2, LUA_PARM_SIGNAL_CONFIDENCE);
-        lua_obj->parms.signal_confidence = (signalConf_t)getLuaInteger(L, -1, true, lua_obj->parms.signal_confidence);
-
-        lua_getfield(L, 2, LUA_PARM_ALONG_TRACK_SPREAD);
-        lua_obj->parms.along_track_spread = getLuaFloat(L, -1, true, lua_obj->parms.along_track_spread);
-
-        lua_getfield(L, 2, LUA_PARM_PHOTON_COUNT);
-        lua_obj->parms.photon_count = getLuaInteger(L, -1, true, lua_obj->parms.photon_count);
-
-        lua_getfield(L, 2, LUA_PARM_EXTENT_LENGTH);
-        lua_obj->parms.extent_length = getLuaFloat(L, -1, true, lua_obj->parms.extent_length);
-
-        lua_getfield(L, 2, LUA_PARM_EXTENT_STEP);
-        lua_obj->parms.extent_step = getLuaFloat(L, -1, true, lua_obj->parms.extent_step);
-
-        /* Set Success */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error configuring %s: %s\n", lua_obj->getName(), e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------

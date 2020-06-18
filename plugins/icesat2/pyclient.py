@@ -13,11 +13,6 @@ from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 
 #
-# Parameters
-#
-server_url = 'http://127.0.0.1:9081'
-
-#
 # Interactive Bokeh Plot of Dataframe Column
 # ... note that x axis is a recreated list of item number
 # ... and does not reflect original index in dataframe
@@ -35,24 +30,18 @@ def dfbokeh(df, col, cond_col="", cond_val=0):
     show(p, notebook_handle=True)
 
 #
-# SlideRule API
-#
-def engine (api, parm):
-    url = '%s/engine/%s' % (server_url, api)
-    return requests.post(url, data=parm, stream=True)
-
-#
 # H5 Endpoint
 #
-def h5endpoint (filename, dataset, datatype):
+def h5endpoint (filename, dataset, datatype, difference):
 
-    # Make API Request
     rqst_dict = {
         "filename": filename,
         "dataset": dataset,
         "id": 0
     }
-    d = engine("h5", json.dumps(rqst_dict))
+
+    # Make API Request
+    d = requests.post('%s/engine/h5' % (server_url), data=json.dumps(rqst_dict), stream=True)
 
     # Read Response
     max_bytes = 0x80000
@@ -70,6 +59,8 @@ def h5endpoint (filename, dataset, datatype):
     size = int(len(raw) / np.dtype(datatype).itemsize)
     values = np.frombuffer(raw, dtype=datatype, count=size)
     df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=[dataset])
+    if difference:
+        df = df.diff(axis=0)
 
     # Return DataFrame
     return df
@@ -79,20 +70,21 @@ def h5endpoint (filename, dataset, datatype):
 #
 def atl06endpoint (filename, track, stages):
 
-    # Make API Request
     rqst_dict = {
         "filename": filename,
         "track": track,
         "stages": stages,
         "parms": {
             "cnf": 4,
-#            "ats": 10.0,
-#            "cnt": 10,
-#            "len": 20.0,
-#            "res": 10.0
+            "ats": 10.0,
+            "cnt": 10,
+            "len": 20.0,
+            "res": 10.0
         }
     }
-    d = engine("atl06", json.dumps(rqst_dict))
+
+    # Make API Request
+    d = requests.post('%s/engine/atl06' % (server_url), data=json.dumps(rqst_dict), stream=True)
 
     # Read Response
     response_bytes = 0
@@ -121,11 +113,13 @@ def atl06endpoint (filename, track, stages):
 if __name__ == '__main__':
 
     # Default Parameters #
+    server_url = 'http://127.0.0.1:9081'
     filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
     dataset = "/gt1r/geolocation/segment_ph_cnt"
     datatype = np.int32
     track = 1
     stages = ["LSF"]
+    difference = False
 
     # Process Command Line Arguments #
     parm = 0
@@ -163,14 +157,24 @@ if __name__ == '__main__':
             track = int(sys.argv[parm + 2])
             parm += 2
 
-        # H5 Endpoint Example
+        # Enable differencing
+        elif sys.argv[parm + 1] == "--diff":
+            difference = True
+            parm += 1
+
+        # Read H5 dataset
         elif sys.argv[parm + 1] == "--h5":
-            df = h5endpoint(filename, dataset, datatype)
+            df = h5endpoint(filename, dataset, datatype, difference)
             dfbokeh(df, dataset)
             parm += 1
 
-        # H5 Endpoint Example
+        # Execute ATL06 algorithm
         elif sys.argv[parm + 1] == "--atl06":
             df = atl06endpoint(filename, track, stages)
             dfbokeh(df, "atl06")
+            parm += 1
+
+        # Unrecognized
+        else:
+            print("Unrecognized parameter: ", sys.argv[parm + 1])
             parm += 1

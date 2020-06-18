@@ -83,8 +83,8 @@ class Hdf5Atl03Device: public DeviceObject
         /* Extent Record */
         typedef struct {
             uint8_t         pair_reference_track; // 1, 2, or 3
-            uint32_t        segment_id; // the id of the first ATL03 segment in range
             double          length; // meters
+            uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK]; // the id of the first ATL03 segment in range
             double          gps_time[PAIR_TRACKS_PER_GROUND_TRACK]; // seconds
             double          start_distance[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
             uint32_t        photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
@@ -139,7 +139,7 @@ class Hdf5Atl03Device: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Hdf5Atl03Device     (lua_State* L, const char* url);
+                            Hdf5Atl03Device     (lua_State* L, const char* ur, parms_t _parms);
                             ~Hdf5Atl03Device    (void);
 
         bool                h5open              (const char* url);
@@ -151,7 +151,6 @@ class Hdf5Atl03Device: public DeviceObject
         virtual int         getUniqueId         (void);             // returns file descriptor
         virtual const char* getConfig           (void);             // returns filename with attribute list
 
-        static int          luaConfig           (lua_State* L);
         static int          luaParms            (lua_State* L);
         static int          luaStats            (lua_State* L);
 };
