@@ -40,13 +40,13 @@ const char* BlinkStat::rec_type = "BlinkStat";
 
 RecordObject::fieldDef_t BlinkStat::rec_def[] =
 {
-    {"MFC",               UINT64, offsetof(blinkStat_t, mfc),         sizeof(((blinkStat_t*)0)->mfc),           NATIVE_FLAGS},
-    {"SHOT",              UINT8,  offsetof(blinkStat_t, shot),        sizeof(((blinkStat_t*)0)->shot),          NATIVE_FLAGS},
-    {"RX_CNT",            UINT32, offsetof(blinkStat_t, rxcnt),       sizeof(((blinkStat_t*)0)->rxcnt),         NATIVE_FLAGS},
-    {"TX_SC_GPS",         DOUBLE, offsetof(blinkStat_t, tx_sc_gps),   sizeof(((blinkStat_t*)0)->tx_sc_gps),     NATIVE_FLAGS},
-    {"TX_ASC_GPS",        DOUBLE, offsetof(blinkStat_t, tx_asc_gps),  sizeof(((blinkStat_t*)0)->tx_asc_gps),    NATIVE_FLAGS},
-    {"TX_SXP_GPS",        DOUBLE, offsetof(blinkStat_t, tx_sxp_gps),  sizeof(((blinkStat_t*)0)->tx_sxp_gps),    NATIVE_FLAGS},
-    {"TX_PCE_GPS",        DOUBLE, offsetof(blinkStat_t, tx_pce_gps),  sizeof(((blinkStat_t*)0)->tx_pce_gps),    NATIVE_FLAGS}
+    {"MFC",               UINT64, offsetof(blinkStat_t, mfc),         1,    NATIVE_FLAGS},
+    {"SHOT",              UINT8,  offsetof(blinkStat_t, shot),        1,    NATIVE_FLAGS},
+    {"RX_CNT",            UINT32, offsetof(blinkStat_t, rxcnt),       1,    NATIVE_FLAGS},
+    {"TX_SC_GPS",         DOUBLE, offsetof(blinkStat_t, tx_sc_gps),   1,    NATIVE_FLAGS},
+    {"TX_ASC_GPS",        DOUBLE, offsetof(blinkStat_t, tx_asc_gps),  1,    NATIVE_FLAGS},
+    {"TX_SXP_GPS",        DOUBLE, offsetof(blinkStat_t, tx_sxp_gps),  1,    NATIVE_FLAGS},
+    {"TX_PCE_GPS",        DOUBLE, offsetof(blinkStat_t, tx_pce_gps),  1,    NATIVE_FLAGS}
 };
 
 int BlinkStat::rec_elem = sizeof(BlinkStat::rec_def) / sizeof(RecordObject::fieldDef_t);

@@ -109,8 +109,8 @@ class RecordObject
 
         typedef struct {
             fieldType_t     type;               // predefined types
-            int32_t         size;               // size in bits of field
             int32_t         offset;             // offset in bits into structure
+            int32_t         elements;           // size in bits of field
             unsigned int    flags;              // see fieldFlags_t
         } field_t;
 
@@ -118,7 +118,7 @@ class RecordObject
             const char*     name;
             fieldType_t     type;
             int32_t         offset;             // bits for BITFIELD, bytes for everything else
-            int32_t         size;               // bits for BITFIELD, bytes for everything else
+            int32_t         elements;           // bits for BITFIELD, bytes for everything else
             unsigned int    flags;
         } fieldDef_t;
 
@@ -156,7 +156,7 @@ class RecordObject
         {
             public:
 
-                            Field           (RecordObject& _rec, fieldType_t _type, int _offset, int _size, unsigned int _flags=0);
+                            Field           (RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags=0);
                             Field           (RecordObject& _rec, field_t _field);
                             Field           (const Field& f);
                             ~Field          (void);
@@ -294,7 +294,7 @@ class RecordObject
         /* Regular Methods */
         field_t                 getPointedToField   (field_t field, bool allow_null);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
-        static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags=NATIVE_FLAGS);
+        static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, unsigned int flags=NATIVE_FLAGS);
 
         /* Overloaded Methods */
         static definition_t*    getDefinition       (const char* rec_type);

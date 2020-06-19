@@ -6,8 +6,8 @@ console.logger:config(core.INFO)
 -- Record Dispatcher Unit Test Setup --
 
 runner.command("DEFINE test.rec id 8")
-runner.command("ADD_FIELD test.rec id INT32 0 4 NATIVE")
-runner.command("ADD_FIELD test.rec counter INT32 4 4 NATIVE")
+runner.command("ADD_FIELD test.rec id INT32 0 1 NATIVE")
+runner.command("ADD_FIELD test.rec counter INT32 4 1 NATIVE")
 
 idmetric = core.metric("id", "dispatcher_metricq")
 idmetric:pbtext(true)

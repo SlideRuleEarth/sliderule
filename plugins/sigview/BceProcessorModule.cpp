@@ -36,18 +36,18 @@ const char* BceStat::rec_type = "BceStat";
 
 RecordObject::fieldDef_t BceStat::rec_def[] =
 {
-    {"POWER[0]",       DOUBLE, offsetof(bceStat_t, power[0]),  sizeof(((bceStat_t*)0)->power[0]), NATIVE_FLAGS},
-    {"POWER[1]",       DOUBLE, offsetof(bceStat_t, power[1]),  sizeof(((bceStat_t*)0)->power[1]), NATIVE_FLAGS},
-    {"POWER[2]",       DOUBLE, offsetof(bceStat_t, power[2]),  sizeof(((bceStat_t*)0)->power[2]), NATIVE_FLAGS},
-    {"POWER[3]",       DOUBLE, offsetof(bceStat_t, power[3]),  sizeof(((bceStat_t*)0)->power[3]), NATIVE_FLAGS},
-    {"POWER[4]",       DOUBLE, offsetof(bceStat_t, power[4]),  sizeof(((bceStat_t*)0)->power[4]), NATIVE_FLAGS},
-    {"POWER[5]",       DOUBLE, offsetof(bceStat_t, power[5]),  sizeof(((bceStat_t*)0)->power[5]), NATIVE_FLAGS},
-    {"ATTENUATION[0]", DOUBLE, offsetof(bceStat_t, atten[0]),  sizeof(((bceStat_t*)0)->atten[0]), NATIVE_FLAGS},
-    {"ATTENUATION[1]", DOUBLE, offsetof(bceStat_t, atten[1]),  sizeof(((bceStat_t*)0)->atten[1]), NATIVE_FLAGS},
-    {"ATTENUATION[2]", DOUBLE, offsetof(bceStat_t, atten[2]),  sizeof(((bceStat_t*)0)->atten[2]), NATIVE_FLAGS},
-    {"ATTENUATION[3]", DOUBLE, offsetof(bceStat_t, atten[3]),  sizeof(((bceStat_t*)0)->atten[3]), NATIVE_FLAGS},
-    {"ATTENUATION[4]", DOUBLE, offsetof(bceStat_t, atten[4]),  sizeof(((bceStat_t*)0)->atten[4]), NATIVE_FLAGS},
-    {"ATTENUATION[5]", DOUBLE, offsetof(bceStat_t, atten[5]),  sizeof(((bceStat_t*)0)->atten[5]), NATIVE_FLAGS}
+    {"POWER[0]",       DOUBLE, offsetof(bceStat_t, power[0]),  1,   NATIVE_FLAGS},
+    {"POWER[1]",       DOUBLE, offsetof(bceStat_t, power[1]),  1,   NATIVE_FLAGS},
+    {"POWER[2]",       DOUBLE, offsetof(bceStat_t, power[2]),  1,   NATIVE_FLAGS},
+    {"POWER[3]",       DOUBLE, offsetof(bceStat_t, power[3]),  1,   NATIVE_FLAGS},
+    {"POWER[4]",       DOUBLE, offsetof(bceStat_t, power[4]),  1,   NATIVE_FLAGS},
+    {"POWER[5]",       DOUBLE, offsetof(bceStat_t, power[5]),  1,   NATIVE_FLAGS},
+    {"ATTENUATION[0]", DOUBLE, offsetof(bceStat_t, atten[0]),  1,   NATIVE_FLAGS},
+    {"ATTENUATION[1]", DOUBLE, offsetof(bceStat_t, atten[1]),  1,   NATIVE_FLAGS},
+    {"ATTENUATION[2]", DOUBLE, offsetof(bceStat_t, atten[2]),  1,   NATIVE_FLAGS},
+    {"ATTENUATION[3]", DOUBLE, offsetof(bceStat_t, atten[3]),  1,   NATIVE_FLAGS},
+    {"ATTENUATION[4]", DOUBLE, offsetof(bceStat_t, atten[4]),  1,   NATIVE_FLAGS},
+    {"ATTENUATION[5]", DOUBLE, offsetof(bceStat_t, atten[5]),  1,   NATIVE_FLAGS}
 };
 
 int BceStat::rec_elem = sizeof(BceStat::rec_def) / sizeof(RecordObject::fieldDef_t);

@@ -46,8 +46,8 @@ Test3: Valid Ccsds Telemetry
 --]]
 
 cmd.exec("CCSDS::DEFINE_TELEMETRY test.tlm NULL 0x421 12 2")
-cmd.exec("ADD_FIELD test.tlm days UINT16 6 2 LE")
-cmd.exec("ADD_FIELD test.tlm ms UINT32 8 4 LE")
+cmd.exec("ADD_FIELD test.tlm days UINT16 6 1 LE")
+cmd.exec("ADD_FIELD test.tlm ms UINT32 8 1 LE")
 testtlm = msg.create("/test.tlm days=4 ms=300")
 raw = testtlm:serialize()
 io.write("RAW_TLM: ")
@@ -66,7 +66,7 @@ Test4: Valid Ccsds Command
 
 cmd.exec("CCSDS::DEFINE_COMMAND test.cmd NULL 0x420 0 12 2")
 cmd.exec("ADD_FIELD test.cmd CS UINT8 7 1 NA")
-cmd.exec("ADD_FIELD test.cmd counter UINT32 8 4 LE")
+cmd.exec("ADD_FIELD test.cmd counter UINT32 8 1 LE")
 testcmd = msg.create("/test.cmd counter=0x12345678")
 raw = testcmd:serialize()
 cs = packet.computeChecksum(raw)

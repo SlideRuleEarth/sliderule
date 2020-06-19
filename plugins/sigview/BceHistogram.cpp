@@ -39,11 +39,11 @@ const char* BceHistogram::rec_type = "BceHist";
 
 RecordObject::fieldDef_t BceHistogram::rec_def[] =
 {
-    {"GRL",       INT32,  offsetof(bceHist_t, grl),       sizeof(bce->grl),     NATIVE_FLAGS},
-    {"SPOT",      INT32,  offsetof(bceHist_t, spot),      sizeof(bce->spot),    NATIVE_FLAGS},
-    {"OSC_ID",    INT32,  offsetof(bceHist_t, oscId),     sizeof(bce->oscId),   NATIVE_FLAGS},
-    {"OSC_CH",    INT32,  offsetof(bceHist_t, oscCh),     sizeof(bce->oscCh),   NATIVE_FLAGS},
-    {"SUBTYPE",   INT32,  offsetof(bceHist_t, subtype),   sizeof(bce->subtype), NATIVE_FLAGS}
+    {"GRL",       INT32,  offsetof(bceHist_t, grl),       1,    NATIVE_FLAGS},
+    {"SPOT",      INT32,  offsetof(bceHist_t, spot),      1,    NATIVE_FLAGS},
+    {"OSC_ID",    INT32,  offsetof(bceHist_t, oscId),     1,    NATIVE_FLAGS},
+    {"OSC_CH",    INT32,  offsetof(bceHist_t, oscCh),     1,    NATIVE_FLAGS},
+    {"SUBTYPE",   INT32,  offsetof(bceHist_t, subtype),   1,    NATIVE_FLAGS}
 };
 
 int BceHistogram::rec_elem = sizeof(BceHistogram::rec_def) / sizeof(RecordObject::fieldDef_t);

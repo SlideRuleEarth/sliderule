@@ -2291,7 +2291,7 @@ int ItosRecordParser::buildRecordsCmd(int argc, char argv[][MAX_CMD_SIZE])
                         if(bracket_ptr) *bracket_ptr = '\0'; // operates on namebuf
                         char fnamebuf[Itos::Record::MAX_TOKEN_SIZE]; // to hold final field name
                         StringLib::format(fnamebuf, Itos::Record::MAX_TOKEN_SIZE, "%s[%d]", namebuf, e);
-                        CcsdsRecord::defineField(pkt->getName(), fnamebuf, fieldtype, (field->getOffsetInBits() + (e * bit_base)) / 8, field->getLengthInBits() / 8, field->getBigEndian());
+                        CcsdsRecord::defineField(pkt->getName(), fnamebuf, fieldtype, (field->getOffsetInBits() + (e * bit_base)) / 8, 1, field->getBigEndian());
                     }
                 }
             }

@@ -6,8 +6,8 @@ console.logger:config(core.INFO)
 -- Limit Dispatch Unit Test Setup --
 
 runner.command("DEFINE test.rec id 8")
-runner.command("ADD_FIELD test.rec id INT32 0 4 NATIVE")
-runner.command("ADD_FIELD test.rec counter INT32 4 4 NATIVE")
+runner.command("ADD_FIELD test.rec id INT32 0 1 NATIVE")
+runner.command("ADD_FIELD test.rec counter INT32 4 1 NATIVE")
 
 idlimit = core.limit("id", nil, 50, 150, nil, "limit_limitq")
 idlimit:name("idlimit")

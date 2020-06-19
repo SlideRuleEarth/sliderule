@@ -51,17 +51,12 @@
 
 const char* Hdf5Atl03Device::recType = "atl03rec";
 const RecordObject::fieldDef_t Hdf5Atl03Device::recDef[] = {
-    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),       sizeof(((extent_t*)0)->pair_reference_track),       NATIVE_FLAGS},
-    {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id),                 sizeof(((extent_t*)0)->segment_id),                 NATIVE_FLAGS},
-    {"LENGTH",      RecordObject::DOUBLE,   offsetof(extent_t, length),                     sizeof(((extent_t*)0)->length),                     NATIVE_FLAGS},
-    {"GPS_L",       RecordObject::DOUBLE,   offsetof(extent_t, gps_time[PRT_LEFT]),         sizeof(((extent_t*)0)->gps_time[PRT_LEFT]),         NATIVE_FLAGS},
-    {"GPS_R",       RecordObject::DOUBLE,   offsetof(extent_t, gps_time[PRT_RIGHT]),        sizeof(((extent_t*)0)->gps_time[PRT_RIGHT]),        NATIVE_FLAGS},
-    {"DIST_L",      RecordObject::DOUBLE,   offsetof(extent_t, start_distance[PRT_LEFT]),   sizeof(((extent_t*)0)->start_distance[PRT_LEFT]),   NATIVE_FLAGS},
-    {"DIST_R",      RecordObject::DOUBLE,   offsetof(extent_t, start_distance[PRT_RIGHT]),  sizeof(((extent_t*)0)->start_distance[PRT_RIGHT]),  NATIVE_FLAGS},
-    {"CNT_L",       RecordObject::UINT32,   offsetof(extent_t, photon_count[PRT_LEFT]),     sizeof(((extent_t*)0)->photon_count[PRT_LEFT]),     NATIVE_FLAGS},
-    {"CNT_R",       RecordObject::UINT32,   offsetof(extent_t, photon_count[PRT_RIGHT]),    sizeof(((extent_t*)0)->photon_count[PRT_RIGHT]),    NATIVE_FLAGS},
-    {"PHOTONS_L",   RecordObject::STRING,   offsetof(extent_t, photon_offset[PRT_LEFT]),    sizeof(((extent_t*)0)->photon_offset[PRT_LEFT]),    NATIVE_FLAGS | RecordObject::POINTER},
-    {"PHOTONS_R",   RecordObject::STRING,   offsetof(extent_t, photon_offset[PRT_RIGHT]),   sizeof(((extent_t*)0)->photon_offset[PRT_RIGHT]),   NATIVE_FLAGS | RecordObject::POINTER}
+    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),   1,  NATIVE_FLAGS},
+    {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NATIVE_FLAGS},
+    {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NATIVE_FLAGS},
+    {"DIST",        RecordObject::DOUBLE,   offsetof(extent_t, start_distance[0]),      2,  NATIVE_FLAGS},
+    {"COUNT",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),        2,  NATIVE_FLAGS},
+    {"PHOTONS",     RecordObject::STRING,   offsetof(extent_t, photon_offset[0]),       2,  NATIVE_FLAGS | RecordObject::POINTER}
 };
 
 const Hdf5Atl03Device::parms_t Hdf5Atl03Device::DefaultParms = {
@@ -334,12 +329,6 @@ bool Hdf5Atl03Device::h5open (const char* url)
                 /* Create Extent Record */
                 if(extent_valid[PRT_LEFT] || extent_valid[PRT_RIGHT])
                 {
-                    /* Check Segment Index and ID */
-//                    if(extent_segment[PRT_LEFT] != extent_segment[PRT_RIGHT])
-//                    {
-//                        mlog(ERROR, "Segment index mismatch in %s for segments %d and %d\n", url, extent_segment[PRT_LEFT], extent_segment[PRT_RIGHT]);
-//                    }
-
                     /* Calculate Extent Record Size */
                     int extent_size = sizeof(extent_t) + (sizeof(photon_t) * (extent_photons[PRT_LEFT].length() + extent_photons[PRT_RIGHT].length()));
 
@@ -347,7 +336,6 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     RecordObject* record = new RecordObject(recType, extent_size); // overallocated memory... photons filtered below
                     extent_t* extent = (extent_t*)record->getRecordData();
                     extent->pair_reference_track = track;
-                    extent->length = parms.extent_length;
 
                     /* Populate Extent */
                     uint32_t ph_out = 0;
@@ -458,6 +446,11 @@ int Hdf5Atl03Device::readBuffer (void* buf, int len)
 
             /* Go To Next Segment */
             listIndex++;
+        }
+        else
+        {
+            bytes = SHUTDOWN_RC;
+            connected = false;
         }
     }
 

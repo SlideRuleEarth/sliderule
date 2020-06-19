@@ -32,10 +32,10 @@
 
 const char* Hdf5DatasetDevice::recType = "h5dataset";
 const RecordObject::fieldDef_t Hdf5DatasetDevice::recDef[] = {
-    {"ID",      RecordObject::INT64,    offsetof(h5dataset_t, id),      sizeof(((h5dataset_t*)0)->id),      NATIVE_FLAGS},
-    {"DATA",    RecordObject::STRING,   offsetof(h5dataset_t, data),    sizeof(((h5dataset_t*)0)->data),    NATIVE_FLAGS | RecordObject::POINTER},
-    {"OFFSET",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  sizeof(((h5dataset_t*)0)->offset),  NATIVE_FLAGS},
-    {"SIZE",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    sizeof(((h5dataset_t*)0)->size),    NATIVE_FLAGS}
+    {"ID",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NATIVE_FLAGS},
+    {"DATA",    RecordObject::STRING,   offsetof(h5dataset_t, data),    1,  NATIVE_FLAGS | RecordObject::POINTER},
+    {"OFFSET",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NATIVE_FLAGS},
+    {"SIZE",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NATIVE_FLAGS}
 };
 
 /******************************************************************************
@@ -80,7 +80,8 @@ Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* fi
 {
     /* Define Record */
     int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
+    int r = (int)RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
+    printf("GOT: %d\n", r);
 
     /* Set Record */
     recObj = new RecordObject(recType);

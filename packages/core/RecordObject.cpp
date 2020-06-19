@@ -52,7 +52,7 @@ const int RecordObject::FIELD_TYPE_BYTES[INVALID_FIELD] = {
     4, // FLOAT
     8, // DOUBLE
     8, // TIME8
-    0, // STRING
+    1, // STRING
 };
 
 /******************************************************************************
@@ -64,12 +64,12 @@ const int RecordObject::FIELD_TYPE_BYTES[INVALID_FIELD] = {
  *
  *  offset and size are in bits
  *----------------------------------------------------------------------------*/
-RecordObject::Field::Field(RecordObject& _rec, fieldType_t _type, int _offset, int _size, unsigned int _flags):
+RecordObject::Field::Field(RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags):
     record(_rec)
 {
     field.type      = _type;
     field.offset    = _offset;
-    field.size      = _size;
+    field.elements  = _elements;
     field.flags     = _flags;
 }
 
@@ -393,7 +393,7 @@ RecordObject::Field* RecordObject::createRecordField(const char* field_name)
     field_t f = getField(field_name);
     if(f.type != INVALID_FIELD)
     {
-        rec_field = new RecordField(*this, f.type, f.offset, f.size, f.flags);
+        rec_field = new RecordField(*this, f.type, f.offset, f.elements, f.flags);
     }
 
     return rec_field;
@@ -536,14 +536,14 @@ void RecordObject::setValueText(field_t f, const char* val)
     else if(val_type == TEXT)
     {
         int val_len = (int)StringLib::size(val, MAX_VAL_STR_SIZE) + 1;
-        if(TOBITS(val_len) <= f.size)
+        if(val_len <= f.elements)
         {
             LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, val_len);
         }
-        else if(f.size > 0)
+        else if(f.elements > 0)
         {
-            LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, TOBYTES(f.size) - 1);
-            *(recordData + TOBYTES(f.offset) + TOBYTES(f.size) - 1) = '\0';
+            LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, f.elements - 1);
+            *(recordData + TOBYTES(f.offset) + f.elements - 1) = '\0';
         }
     }
     else if(val_type == INTEGER)
@@ -574,7 +574,7 @@ void RecordObject::setValueReal(field_t f, const double val)
         field_t ptr_field = getPointedToField(f, false);
         return setValueReal(ptr_field, val);
     }
-    else if(NATIVE_FLAGS == ((f.flags & BIGENDIAN) == BIGENDIAN)) // architectures match
+    else if(NATIVE_FLAGS == (f.flags & BIGENDIAN)) // architectures match
     {
         switch(f.type)
         {
@@ -586,7 +586,7 @@ void RecordObject::setValueReal(field_t f, const double val)
             case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = (uint16_t)val;  break;
             case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = (uint32_t)val;  break;
             case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = (uint64_t)val;  break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.size, (long)val); break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
             case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = (float)val;   break;
             case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = val;          break;
             case TIME8:     {
@@ -597,7 +597,7 @@ void RecordObject::setValueReal(field_t f, const double val)
                                 *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = subseconds;
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), TOBYTES(f.size), DEFAULT_DOUBLE_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
         }
@@ -614,7 +614,7 @@ void RecordObject::setValueReal(field_t f, const double val)
             case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swaps((uint16_t)val);  break;
             case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapl((uint32_t)val);  break;
             case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapll((uint64_t)val); break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.size, (long)val);                  break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
             case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = LocalLib::swapf((float)val);   break;
             case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = LocalLib::swaplf((double)val); break;
             case TIME8:     {
@@ -625,7 +625,7 @@ void RecordObject::setValueReal(field_t f, const double val)
                                 *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = LocalLib::swapl(subseconds);
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), TOBYTES(f.size), DEFAULT_DOUBLE_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
         }
@@ -642,7 +642,7 @@ void RecordObject::setValueInteger(field_t f, const long val)
         field_t ptr_field = getPointedToField(f, false);
         return setValueInteger(ptr_field, val);
     }
-    else if(NATIVE_FLAGS == ((f.flags & BIGENDIAN) == BIGENDIAN))
+    else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
@@ -654,7 +654,7 @@ void RecordObject::setValueInteger(field_t f, const long val)
             case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = (uint16_t)val;   break;
             case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = (uint32_t)val;   break;
             case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = (uint64_t)val;   break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.size, (long)val);  break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
             case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = (float)val;    break;
             case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = val;           break;
             case TIME8:     {
@@ -665,7 +665,7 @@ void RecordObject::setValueInteger(field_t f, const long val)
                                 *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = subseconds;
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), TOBYTES(f.size), DEFAULT_LONG_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
         }
@@ -682,7 +682,7 @@ void RecordObject::setValueInteger(field_t f, const long val)
             case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swaps((uint16_t)val);  break;
             case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapl((uint32_t)val);  break;
             case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapll((uint64_t)val); break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.size, (long)val);                  break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
             case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = LocalLib::swapf((float)val);   break;
             case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = LocalLib::swaplf((double)val); break;
             case TIME8:     {
@@ -693,7 +693,7 @@ void RecordObject::setValueInteger(field_t f, const long val)
                                 *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = LocalLib::swapl(subseconds);
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), TOBYTES(f.size), DEFAULT_LONG_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
         }
@@ -749,7 +749,7 @@ double RecordObject::getValueReal(field_t f)
         field_t ptr_field = getPointedToField(f, false);
         return getValueReal(ptr_field);
     }
-    else if(NATIVE_FLAGS == ((f.flags & BIGENDIAN) == BIGENDIAN))
+    else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
@@ -761,7 +761,7 @@ double RecordObject::getValueReal(field_t f)
             case UINT16:    return (double)*(uint16_t*)(recordData + TOBYTES(f.offset));
             case UINT32:    return (double)*(uint32_t*)(recordData + TOBYTES(f.offset));
             case UINT64:    return (double)*(uint64_t*)(recordData + TOBYTES(f.offset));
-            case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.size);
+            case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (double)*(float*) (recordData + TOBYTES(f.offset));
             case DOUBLE:    return *(double*)(recordData + TOBYTES(f.offset));
             case TIME8:     {
@@ -784,7 +784,7 @@ double RecordObject::getValueReal(field_t f)
             case UINT16:    return (double)LocalLib::swaps (*(uint16_t*)(recordData + TOBYTES(f.offset)));
             case UINT32:    return (double)LocalLib::swapl (*(uint32_t*)(recordData + TOBYTES(f.offset)));
             case UINT64:    return (double)LocalLib::swapll(*(uint64_t*)(recordData + TOBYTES(f.offset)));
-            case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.size);
+            case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (double)LocalLib::swapf (*(float*) (recordData + TOBYTES(f.offset)));
             case DOUBLE:    return (double)LocalLib::swaplf(*(double*)(recordData + TOBYTES(f.offset)));
             case TIME8:     {
@@ -807,7 +807,7 @@ long RecordObject::getValueInteger(field_t f)
         field_t ptr_field = getPointedToField(f, false);
         return getValueInteger(ptr_field);
     }
-    else if(NATIVE_FLAGS == ((f.flags & BIGENDIAN) == BIGENDIAN))
+    else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
@@ -819,7 +819,7 @@ long RecordObject::getValueInteger(field_t f)
             case UINT16:    return (long)*(uint16_t*)(recordData + TOBYTES(f.offset));
             case UINT32:    return (long)*(uint32_t*)(recordData + TOBYTES(f.offset));
             case UINT64:    return (long)*(uint64_t*)(recordData + TOBYTES(f.offset));
-            case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.size);
+            case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (long)*(float*) (recordData + TOBYTES(f.offset));
             case DOUBLE:    return (long)*(double*)(recordData + TOBYTES(f.offset));
             case TIME8:     {
@@ -842,7 +842,7 @@ long RecordObject::getValueInteger(field_t f)
             case UINT16:    return (long)LocalLib::swaps (*(uint16_t*)(recordData + TOBYTES(f.offset)));
             case UINT32:    return (long)LocalLib::swapl (*(uint32_t*)(recordData + TOBYTES(f.offset)));
             case UINT64:    return (long)LocalLib::swapll(*(uint64_t*)(recordData + TOBYTES(f.offset)));
-            case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.size);
+            case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (long)LocalLib::swapf (*(float*) (recordData + TOBYTES(f.offset)));
             case DOUBLE:    return (long)LocalLib::swaplf(*(double*)(recordData + TOBYTES(f.offset)));
             case TIME8:     {
@@ -1314,10 +1314,10 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
         return retfield;
     }
     *div = '\0';
-    long size;
-    if(StringLib::str2long(size_str, &size))
+    long elements;
+    if(StringLib::str2long(size_str, &elements))
     {
-        f.size = size;
+        f.elements = elements;
     }
     else
     {
@@ -1392,7 +1392,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         field_t ptr_field = f;
         ptr_field.flags &= ~POINTER; // clear pointer flag
         ptr_field.type = INT32;
-        ptr_field.size = 32; // bits
+        ptr_field.elements = 1;
 
         // Update Field
         f.flags &= ~POINTER;
@@ -1404,7 +1404,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         {
             throw AccessRecordException("Attempted to dereference null pointer field!\n");
         }
-        else if((memoryAllocated > 0) && ((f.offset + f.size) > ((memoryAllocated - recordDefinition->type_size) * 8)))
+        else if((memoryAllocated > 0) && ((f.offset + (f.elements * 8)) > ((memoryAllocated - recordDefinition->type_size) * 8)))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
@@ -1459,7 +1459,7 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
     /* Add Fields */
     for(int i = 0; status == SUCCESS_DEF && i < num_fields; i++)
     {
-        status = addField(def, fields[i].name, fields[i].type, fields[i].offset, fields[i].size, fields[i].flags);
+        status = addField(def, fields[i].name, fields[i].type, fields[i].offset, fields[i].elements, fields[i].flags);
     }
 
     /* Return Definition and Status */
@@ -1472,9 +1472,9 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
  *
  *  Notes:
  *   1. Will often fail with multiple calls to create same record definition (this is okay)
- *   2. Offset and size in bytes except for bit field, where it is in bits
+ *   2. Offset in bytes except for bit field, where it is in bits
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags)
+RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, unsigned int flags)
 {
     assert(field_name);
 
@@ -1484,9 +1484,8 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
 
     /* Initialize Parameters */
     recordDefErr_t status = FIELDERR_DEF;
-    int end_of_field = type == BITFIELD ? TOBYTES(offset + size + 7) : offset + size;
+    int end_of_field = type == BITFIELD ? TOBYTES(offset + elements) : offset + (elements * FIELD_TYPE_BYTES[type]);
     int field_offset = type == BITFIELD ? offset : TOBITS(offset);
-    int field_size = type == BITFIELD ? size : TOBITS(size);
 
     /* Define Field */
     if(end_of_field <= def->data_size)
@@ -1494,7 +1493,7 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
         field_t f;
         f.type = type;
         f.offset = field_offset;
-        f.size = field_size;
+        f.elements = elements;
         f.flags = flags;
 
         // uniquely add the field

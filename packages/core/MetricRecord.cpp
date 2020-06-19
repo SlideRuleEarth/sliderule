@@ -32,11 +32,12 @@ const char* MetricRecord::rec_type = "Metric";
 
 RecordObject::fieldDef_t MetricRecord::rec_def[] =
 {
-    {"INDEX",       UINT64, offsetof(metric_t, index),          sizeof(((metric_t*)0)->index),          NATIVE_FLAGS},
-    {"VALUE",       DOUBLE, offsetof(metric_t, value),          sizeof(((metric_t*)0)->value),          NATIVE_FLAGS},
-    {"TEXT",        STRING, offsetof(metric_t, text_offset),    sizeof(((metric_t*)0)->text_offset),    NATIVE_FLAGS | RecordObject::POINTER},
-    {"NAME",        STRING, offsetof(metric_t, name_offset),    sizeof(((metric_t*)0)->name_offset),    NATIVE_FLAGS | RecordObject::POINTER},
-    {"SRC_SIZE",    INT32,  offsetof(metric_t, src_size),       sizeof(((metric_t*)0)->src_size),       NATIVE_FLAGS}
+    {"INDEX",       UINT64, offsetof(metric_t, index),          1,  NATIVE_FLAGS},
+    {"VALUE",       DOUBLE, offsetof(metric_t, value),          1,  NATIVE_FLAGS},
+    {"TEXT",        STRING, offsetof(metric_t, text_offset),    1,  NATIVE_FLAGS | RecordObject::POINTER},
+    {"NAME",        STRING, offsetof(metric_t, name_offset),    1,  NATIVE_FLAGS | RecordObject::POINTER},
+    {"SOURCE",      STRING, offsetof(metric_t, src_offset),     1,  NATIVE_FLAGS | RecordObject::POINTER},
+    {"SRC_SIZE",    INT32,  offsetof(metric_t, src_size),       1,  NATIVE_FLAGS}
 };
 
 int MetricRecord::rec_elem = sizeof(MetricRecord::rec_def) / sizeof(RecordObject::fieldDef_t);

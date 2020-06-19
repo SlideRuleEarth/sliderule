@@ -83,7 +83,6 @@ class Hdf5Atl03Device: public DeviceObject
         /* Extent Record */
         typedef struct {
             uint8_t         pair_reference_track; // 1, 2, or 3
-            double          length; // meters
             uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK]; // the id of the first ATL03 segment in range
             double          gps_time[PAIR_TRACKS_PER_GROUND_TRACK]; // seconds
             double          start_distance[PAIR_TRACKS_PER_GROUND_TRACK]; // meters

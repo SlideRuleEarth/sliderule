@@ -786,7 +786,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             for(int i = 0; i < numfields; i++)
             {
                 RecordObject::field_t field = rec->getField(fieldnames[i]);
-                mlog(RAW, "%-32s %-16s %-8d %-8d   %02X\n", fieldnames[i], RecordObject::vt2str(rec->getValueType(field)), (int)field.offset, (int)field.size, field.flags);
+                mlog(RAW, "%-32s %-16s %-8d %-8d   %02X\n", fieldnames[i], RecordObject::vt2str(rec->getValueType(field)), (int)field.offset, (int)field.elements, field.flags);
                 delete [] fieldnames[i];
             }
             delete [] fieldnames;
@@ -1246,8 +1246,8 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
                 for(int k = 0; k < numfields; k++)
                 {
                     const char* flags_str = RecordObject::flags2str(fields[k]->flags);
-                    if(fields[k]->type == RecordObject::BITFIELD)   post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rectypes[i], fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset, fields[k]->size, flags_str);
-                    else                                            post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rectypes[i], fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset / 8, fields[k]->size / 8, flags_str);
+                    if(fields[k]->type == RecordObject::BITFIELD)   post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rectypes[i], fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset, fields[k]->elements, flags_str);
+                    else                                            post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rectypes[i], fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset / 8, fields[k]->elements, flags_str);
                     if(post_status <= 0)
                     {
                         mlog(CRITICAL, "Failed to post field definition %s for %s on stream %s... aborting\n", fieldnames[k], rectypes[i], qname);
@@ -1283,8 +1283,8 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
             for(int k = 0; k < numfields; k++)
             {
                 const char* flags_str = RecordObject::flags2str(fields[k]->flags);
-                if(fields[k]->type == RecordObject::BITFIELD)   post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rec_type, fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset, fields[k]->size, flags_str);
-                else                                            post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rec_type, fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset / 8, fields[k]->size / 8, flags_str);
+                if(fields[k]->type == RecordObject::BITFIELD)   post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rec_type, fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset, fields[k]->elements, flags_str);
+                else                                            post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rec_type, fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset / 8, fields[k]->elements, flags_str);
                 if(post_status <= 0)
                 {
                     mlog(CRITICAL, "Failed to post field definition %s for %s on stream %s... aborting\n", fieldnames[k], rec_type, qname);
