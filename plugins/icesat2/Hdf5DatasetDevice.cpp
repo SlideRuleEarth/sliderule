@@ -80,8 +80,7 @@ Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* fi
 {
     /* Define Record */
     int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    int r = (int)RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
-    printf("GOT: %d\n", r);
+    RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
 
     /* Set Record */
     recObj = new RecordObject(recType);

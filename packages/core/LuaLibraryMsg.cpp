@@ -510,7 +510,7 @@ int LuaLibraryMsg::lmsg_gettype (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lmsg_getfieldvalue - val = rec:getfieldvalue(<field name>)
+ * lmsg_getfieldvalue - val = rec:getvalue(<field name>)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
 {
@@ -549,7 +549,7 @@ int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lmsg_setfieldvalue - rec:setfieldvalue(<field name>, <value>)
+ * lmsg_setfieldvalue - rec:setvalue(<field name>, <value>)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_setfieldvalue (lua_State* L)
 {

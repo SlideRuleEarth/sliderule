@@ -64,8 +64,9 @@ const int RecordObject::FIELD_TYPE_BYTES[INVALID_FIELD] = {
  *
  *  offset and size are in bits
  *----------------------------------------------------------------------------*/
-RecordObject::Field::Field(RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags):
-    record(_rec)
+RecordObject::Field::Field(RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags, int _element):
+    record(_rec),
+    element(_element)
 {
     field.type      = _type;
     field.offset    = _offset;
@@ -76,9 +77,10 @@ RecordObject::Field::Field(RecordObject& _rec, fieldType_t _type, int _offset, i
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RecordObject::Field::Field(RecordObject& _rec, field_t _field):
+RecordObject::Field::Field(RecordObject& _rec, field_t _field, int _element):
     record(_rec),
-    field(_field)
+    field(_field),
+    element(_element)
 {
 }
 
@@ -87,7 +89,8 @@ RecordObject::Field::Field(RecordObject& _rec, field_t _field):
  *----------------------------------------------------------------------------*/
 RecordObject::Field::Field(const Field& f):
     record(f.record),
-    field(f.field)
+    field(f.field),
+    element(f.element)
 {
 }
 
@@ -112,7 +115,7 @@ RecordObject::Field& RecordObject::Field::operator=(const char* const rhs)
  *----------------------------------------------------------------------------*/
 RecordObject::Field& RecordObject::Field::operator=(double const& rhs)
 {
-    record.setValueReal(field, rhs);
+    record.setValueReal(field, rhs, element);
     return *this;
 }
 
@@ -121,7 +124,7 @@ RecordObject::Field& RecordObject::Field::operator=(double const& rhs)
  *----------------------------------------------------------------------------*/
 RecordObject::Field& RecordObject::Field::operator=(long const& rhs)
 {
-    record.setValueInteger(field, rhs);
+    record.setValueInteger(field, rhs, element);
     return *this;
 }
 
@@ -138,7 +141,7 @@ const char* RecordObject::Field::getValueText(char* valbuf)
  *----------------------------------------------------------------------------*/
 double RecordObject::Field::getValueReal(void)
 {
-    return record.getValueReal(field);
+    return record.getValueReal(field, element);
 }
 
 /*----------------------------------------------------------------------------
@@ -146,7 +149,7 @@ double RecordObject::Field::getValueReal(void)
  *----------------------------------------------------------------------------*/
 long RecordObject::Field::getValueInteger(void)
 {
-    return record.getValueInteger(field);
+    return record.getValueInteger(field, element);
 }
 
 /*----------------------------------------------------------------------------
@@ -531,7 +534,7 @@ void RecordObject::setValueText(field_t f, const char* val)
     {
         field_t ptr_field = getPointedToField(f, false);
         if(val == NULL) throw AccessRecordException("Cannot null existing pointer!");
-        else            return setValueText(ptr_field, val);
+        else            setValueText(ptr_field, val);
     }
     else if(val_type == TEXT)
     {
@@ -567,37 +570,40 @@ void RecordObject::setValueText(field_t f, const char* val)
 /*----------------------------------------------------------------------------
  * setValueReal
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueReal(field_t f, const double val)
+void RecordObject::setValueReal(field_t f, const double val, int element)
 {
+    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false);
-        return setValueReal(ptr_field, val);
+        field_t ptr_field = getPointedToField(f, false, element);
+        setValueReal(ptr_field, val, 0);
     }
     else if(NATIVE_FLAGS == (f.flags & BIGENDIAN)) // architectures match
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + TOBYTES(f.offset)) = (int8_t)val;    break;
-            case INT16:     *(int16_t*) (recordData + TOBYTES(f.offset)) = (int16_t)val;   break;
-            case INT32:     *(int32_t*) (recordData + TOBYTES(f.offset)) = (int32_t)val;   break;
-            case INT64:     *(int64_t*) (recordData + TOBYTES(f.offset)) = (int64_t)val;   break;
-            case UINT8:     *(uint8_t*) (recordData + TOBYTES(f.offset)) = (uint8_t)val;   break;
-            case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = (uint16_t)val;  break;
-            case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = (uint32_t)val;  break;
-            case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = (uint64_t)val;  break;
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;    break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;   break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;   break;
+            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;   break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;   break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;  break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;  break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;  break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
-            case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = (float)val;   break;
-            case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = val;          break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;   break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = val;          break;
             case TIME8:     {
                                 double intpart;
                                 uint32_t seconds = (uint32_t)val;
                                 uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + TOBYTES(f.offset)) = seconds;
-                                *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = subseconds;
+                                *(uint32_t*)(recordData + elem_offset) = seconds;
+                                *(uint32_t*)(recordData + elem_offset + 4) = subseconds;
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_DOUBLE_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
         }
@@ -606,26 +612,26 @@ void RecordObject::setValueReal(field_t f, const double val)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + TOBYTES(f.offset)) = (int8_t)val;                     break;
-            case INT16:     *(int16_t*) (recordData + TOBYTES(f.offset)) = LocalLib::swaps((int16_t)val);   break;
-            case INT32:     *(int32_t*) (recordData + TOBYTES(f.offset)) = LocalLib::swapl((int32_t)val);   break;
-            case INT64:     *(int64_t*) (recordData + TOBYTES(f.offset)) = LocalLib::swapll((int64_t)val);  break;
-            case UINT8:     *(uint8_t*) (recordData + TOBYTES(f.offset)) = (uint8_t)val;                    break;
-            case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swaps((uint16_t)val);  break;
-            case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapl((uint32_t)val);  break;
-            case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapll((uint64_t)val); break;
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                     break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = LocalLib::swaps((int16_t)val);   break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = LocalLib::swapl((int32_t)val);   break;
+            case INT64:     *(int64_t*) (recordData + elem_offset) = LocalLib::swapll((int64_t)val);  break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                    break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = LocalLib::swaps((uint16_t)val);  break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl((uint32_t)val);  break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = LocalLib::swapll((uint64_t)val); break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
-            case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = LocalLib::swapf((float)val);   break;
-            case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = LocalLib::swaplf((double)val); break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = LocalLib::swapf((float)val);   break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = LocalLib::swaplf((double)val); break;
             case TIME8:     {
                                 double intpart;
                                 uint32_t seconds = (uint32_t)val;
                                 uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapl(seconds);
-                                *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = LocalLib::swapl(subseconds);
+                                *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl(seconds);
+                                *(uint32_t*)(recordData + elem_offset + 4) = LocalLib::swapl(subseconds);
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_DOUBLE_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
         }
@@ -635,37 +641,40 @@ void RecordObject::setValueReal(field_t f, const double val)
 /*----------------------------------------------------------------------------
  * setValueInteger
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueInteger(field_t f, const long val)
+void RecordObject::setValueInteger(field_t f, const long val, int element)
 {
+    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false);
-        return setValueInteger(ptr_field, val);
+        field_t ptr_field = getPointedToField(f, false, element);
+        setValueInteger(ptr_field, val, 0);
     }
     else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + TOBYTES(f.offset)) = (int8_t)val;     break;
-            case INT16:     *(int16_t*) (recordData + TOBYTES(f.offset)) = (int16_t)val;    break;
-            case INT32:     *(int32_t*) (recordData + TOBYTES(f.offset)) = (int32_t)val;    break;
-            case INT64:     *(int64_t*) (recordData + TOBYTES(f.offset)) = (int64_t)val;    break;
-            case UINT8:     *(uint8_t*) (recordData + TOBYTES(f.offset)) = (uint8_t)val;    break;
-            case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = (uint16_t)val;   break;
-            case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = (uint32_t)val;   break;
-            case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = (uint64_t)val;   break;
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;     break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;    break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;    break;
+            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;    break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;    break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;   break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;   break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;   break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
-            case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = (float)val;    break;
-            case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = val;           break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;    break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = val;           break;
             case TIME8:     {
                                 double intpart;
                                 uint32_t seconds = (uint32_t)val;
                                 uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + TOBYTES(f.offset)) = seconds;
-                                *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = subseconds;
+                                *(uint32_t*)(recordData + elem_offset) = seconds;
+                                *(uint32_t*)(recordData + elem_offset + 4) = subseconds;
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_LONG_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
         }
@@ -674,26 +683,26 @@ void RecordObject::setValueInteger(field_t f, const long val)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + TOBYTES(f.offset)) = (int8_t)val;                     break;
-            case INT16:     *(int16_t*) (recordData + TOBYTES(f.offset)) = LocalLib::swaps((int16_t)val);   break;
-            case INT32:     *(int32_t*) (recordData + TOBYTES(f.offset)) = LocalLib::swapl((int32_t)val);   break;
-            case INT64:     *(int64_t*)(recordData + TOBYTES(f.offset))  = LocalLib::swapll((int64_t)val);  break;
-            case UINT8:     *(uint8_t*) (recordData + TOBYTES(f.offset)) = (uint8_t)val;                    break;
-            case UINT16:    *(uint16_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swaps((uint16_t)val);  break;
-            case UINT32:    *(uint32_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapl((uint32_t)val);  break;
-            case UINT64:    *(uint64_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapll((uint64_t)val); break;
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                     break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = LocalLib::swaps((int16_t)val);   break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = LocalLib::swapl((int32_t)val);   break;
+            case INT64:     *(int64_t*)(recordData + elem_offset)  = LocalLib::swapll((int64_t)val);  break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                    break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = LocalLib::swaps((uint16_t)val);  break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl((uint32_t)val);  break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = LocalLib::swapll((uint64_t)val); break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
-            case FLOAT:     *(float*) (recordData + TOBYTES(f.offset)) = LocalLib::swapf((float)val);   break;
-            case DOUBLE:    *(double*)(recordData + TOBYTES(f.offset)) = LocalLib::swaplf((double)val); break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = LocalLib::swapf((float)val);   break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = LocalLib::swaplf((double)val); break;
             case TIME8:     {
                                 double intpart;
                                 uint32_t seconds = (uint32_t)val;
                                 uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + TOBYTES(f.offset)) = LocalLib::swapl(seconds);
-                                *(uint32_t*)(recordData + TOBYTES(f.offset) + 4) = LocalLib::swapl(subseconds);
+                                *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl(seconds);
+                                *(uint32_t*)(recordData + elem_offset + 4) = LocalLib::swapl(subseconds);
                                 break;
                             }
-            case STRING:    StringLib::format((char*)(recordData + TOBYTES(f.offset)), f.elements, DEFAULT_LONG_FORMAT, val);
+            case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
         }
@@ -722,7 +731,7 @@ const char* RecordObject::getValueText(field_t f, char* valbuf)
     else if(val_type == TEXT)
     {
         char* str = (char*)(recordData + TOBYTES(f.offset));
-        if(valbuf)  return StringLib::copy(valbuf, str, MAX_VAL_STR_SIZE);
+        if(valbuf)  return StringLib::copy(valbuf, str, f.elements);
         else        return str;
     }
     else if(val_type == INTEGER && valbuf)
@@ -742,31 +751,34 @@ const char* RecordObject::getValueText(field_t f, char* valbuf)
 /*----------------------------------------------------------------------------
  * getValueReal
  *----------------------------------------------------------------------------*/
-double RecordObject::getValueReal(field_t f)
+double RecordObject::getValueReal(field_t f, int element)
 {
+    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false);
-        return getValueReal(ptr_field);
+        field_t ptr_field = getPointedToField(f, false ,element);
+        return getValueReal(ptr_field, 0);
     }
     else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
-            case INT8:      return (double)*(int8_t*)  (recordData + TOBYTES(f.offset));
-            case INT16:     return (double)*(int16_t*) (recordData + TOBYTES(f.offset));
-            case INT32:     return (double)*(int32_t*) (recordData + TOBYTES(f.offset));
-            case INT64:     return (double)*(int64_t*) (recordData + TOBYTES(f.offset));
-            case UINT8:     return (double)*(uint8_t*) (recordData + TOBYTES(f.offset));
-            case UINT16:    return (double)*(uint16_t*)(recordData + TOBYTES(f.offset));
-            case UINT32:    return (double)*(uint32_t*)(recordData + TOBYTES(f.offset));
-            case UINT64:    return (double)*(uint64_t*)(recordData + TOBYTES(f.offset));
+            case INT8:      return (double)*(int8_t*)  (recordData + elem_offset);
+            case INT16:     return (double)*(int16_t*) (recordData + elem_offset);
+            case INT32:     return (double)*(int32_t*) (recordData + elem_offset);
+            case INT64:     return (double)*(int64_t*) (recordData + elem_offset);
+            case UINT8:     return (double)*(uint8_t*) (recordData + elem_offset);
+            case UINT16:    return (double)*(uint16_t*)(recordData + elem_offset);
+            case UINT32:    return (double)*(uint32_t*)(recordData + elem_offset);
+            case UINT64:    return (double)*(uint64_t*)(recordData + elem_offset);
             case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (double)*(float*) (recordData + TOBYTES(f.offset));
-            case DOUBLE:    return *(double*)(recordData + TOBYTES(f.offset));
+            case FLOAT:     return (double)*(float*) (recordData + elem_offset);
+            case DOUBLE:    return *(double*)(recordData + elem_offset);
             case TIME8:     {
-                                uint32_t seconds = *(uint32_t*)(recordData + TOBYTES(f.offset));
-                                uint32_t subseconds = *(uint32_t*)(recordData + TOBYTES(f.offset) + 4);
+                                uint32_t seconds = *(uint32_t*)(recordData + elem_offset);
+                                uint32_t subseconds = *(uint32_t*)(recordData + elem_offset + 4);
                                 return ((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
                             }
             default:        return 0.0;
@@ -776,20 +788,20 @@ double RecordObject::getValueReal(field_t f)
     {
         switch(f.type)
         {
-            case INT8:      return (double)                 *(int8_t*)  (recordData + TOBYTES(f.offset));
-            case INT16:     return (double)LocalLib::swaps (*(int16_t*) (recordData + TOBYTES(f.offset)));
-            case INT32:     return (double)LocalLib::swapl (*(int32_t*) (recordData + TOBYTES(f.offset)));
-            case INT64:     return (double)LocalLib::swapll(*(int64_t*) (recordData + TOBYTES(f.offset)));
-            case UINT8:     return (double)                 *(uint8_t*) (recordData + TOBYTES(f.offset));
-            case UINT16:    return (double)LocalLib::swaps (*(uint16_t*)(recordData + TOBYTES(f.offset)));
-            case UINT32:    return (double)LocalLib::swapl (*(uint32_t*)(recordData + TOBYTES(f.offset)));
-            case UINT64:    return (double)LocalLib::swapll(*(uint64_t*)(recordData + TOBYTES(f.offset)));
+            case INT8:      return (double)                 *(int8_t*)  (recordData + elem_offset);
+            case INT16:     return (double)LocalLib::swaps (*(int16_t*) (recordData + elem_offset));
+            case INT32:     return (double)LocalLib::swapl (*(int32_t*) (recordData + elem_offset));
+            case INT64:     return (double)LocalLib::swapll(*(int64_t*) (recordData + elem_offset));
+            case UINT8:     return (double)                 *(uint8_t*) (recordData + elem_offset);
+            case UINT16:    return (double)LocalLib::swaps (*(uint16_t*)(recordData + elem_offset));
+            case UINT32:    return (double)LocalLib::swapl (*(uint32_t*)(recordData + elem_offset));
+            case UINT64:    return (double)LocalLib::swapll(*(uint64_t*)(recordData + elem_offset));
             case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (double)LocalLib::swapf (*(float*) (recordData + TOBYTES(f.offset)));
-            case DOUBLE:    return (double)LocalLib::swaplf(*(double*)(recordData + TOBYTES(f.offset)));
+            case FLOAT:     return (double)LocalLib::swapf (*(float*) (recordData + elem_offset));
+            case DOUBLE:    return (double)LocalLib::swaplf(*(double*)(recordData + elem_offset));
             case TIME8:     {
-                                uint32_t seconds = LocalLib::swapl(*(uint32_t*)(recordData + TOBYTES(f.offset)));
-                                uint32_t subseconds = LocalLib::swapl(*(uint32_t*)(recordData + TOBYTES(f.offset) + 4));
+                                uint32_t seconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset));
+                                uint32_t subseconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset + 4));
                                 return (double)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
                             }
             default:        return 0.0;
@@ -800,31 +812,34 @@ double RecordObject::getValueReal(field_t f)
 /*----------------------------------------------------------------------------
  * getValueInteger
  *----------------------------------------------------------------------------*/
-long RecordObject::getValueInteger(field_t f)
+long RecordObject::getValueInteger(field_t f, int element)
 {
+    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false);
-        return getValueInteger(ptr_field);
+        field_t ptr_field = getPointedToField(f, false, element);
+        return getValueInteger(ptr_field, 0);
     }
     else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
-            case INT8:      return (long)*(int8_t*)  (recordData + TOBYTES(f.offset));
-            case INT16:     return (long)*(int16_t*) (recordData + TOBYTES(f.offset));
-            case INT32:     return (long)*(int32_t*) (recordData + TOBYTES(f.offset));
-            case INT64:     return (long)*(int64_t*) (recordData + TOBYTES(f.offset));
-            case UINT8:     return (long)*(uint8_t*) (recordData + TOBYTES(f.offset));
-            case UINT16:    return (long)*(uint16_t*)(recordData + TOBYTES(f.offset));
-            case UINT32:    return (long)*(uint32_t*)(recordData + TOBYTES(f.offset));
-            case UINT64:    return (long)*(uint64_t*)(recordData + TOBYTES(f.offset));
+            case INT8:      return (long)*(int8_t*)  (recordData + elem_offset);
+            case INT16:     return (long)*(int16_t*) (recordData + elem_offset);
+            case INT32:     return (long)*(int32_t*) (recordData + elem_offset);
+            case INT64:     return (long)*(int64_t*) (recordData + elem_offset);
+            case UINT8:     return (long)*(uint8_t*) (recordData + elem_offset);
+            case UINT16:    return (long)*(uint16_t*)(recordData + elem_offset);
+            case UINT32:    return (long)*(uint32_t*)(recordData + elem_offset);
+            case UINT64:    return (long)*(uint64_t*)(recordData + elem_offset);
             case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (long)*(float*) (recordData + TOBYTES(f.offset));
-            case DOUBLE:    return (long)*(double*)(recordData + TOBYTES(f.offset));
+            case FLOAT:     return (long)*(float*) (recordData + elem_offset);
+            case DOUBLE:    return (long)*(double*)(recordData + elem_offset);
             case TIME8:     {
-                                uint32_t seconds = *(uint32_t*)(recordData + TOBYTES(f.offset));
-                                uint32_t subseconds = *(uint32_t*)(recordData + TOBYTES(f.offset) + 4);
+                                uint32_t seconds = *(uint32_t*)(recordData + elem_offset);
+                                uint32_t subseconds = *(uint32_t*)(recordData + elem_offset + 4);
                                 return (long)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
                             }
             default:        return 0;
@@ -834,20 +849,20 @@ long RecordObject::getValueInteger(field_t f)
     {
         switch(f.type)
         {
-            case INT8:      return (long)                 *(int8_t*)  (recordData + TOBYTES(f.offset));
-            case INT16:     return (long)LocalLib::swaps (*(int16_t*) (recordData + TOBYTES(f.offset)));
-            case INT32:     return (long)LocalLib::swapl (*(int32_t*) (recordData + TOBYTES(f.offset)));
-            case INT64:     return (long)LocalLib::swapll(*(int64_t*) (recordData + TOBYTES(f.offset)));
-            case UINT8:     return (long)                 *(uint8_t*) (recordData + TOBYTES(f.offset));
-            case UINT16:    return (long)LocalLib::swaps (*(uint16_t*)(recordData + TOBYTES(f.offset)));
-            case UINT32:    return (long)LocalLib::swapl (*(uint32_t*)(recordData + TOBYTES(f.offset)));
-            case UINT64:    return (long)LocalLib::swapll(*(uint64_t*)(recordData + TOBYTES(f.offset)));
+            case INT8:      return (long)                 *(int8_t*)  (recordData + elem_offset);
+            case INT16:     return (long)LocalLib::swaps (*(int16_t*) (recordData + elem_offset));
+            case INT32:     return (long)LocalLib::swapl (*(int32_t*) (recordData + elem_offset));
+            case INT64:     return (long)LocalLib::swapll(*(int64_t*) (recordData + elem_offset));
+            case UINT8:     return (long)                 *(uint8_t*) (recordData + elem_offset);
+            case UINT16:    return (long)LocalLib::swaps (*(uint16_t*)(recordData + elem_offset));
+            case UINT32:    return (long)LocalLib::swapl (*(uint32_t*)(recordData + elem_offset));
+            case UINT64:    return (long)LocalLib::swapll(*(uint64_t*)(recordData + elem_offset));
             case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (long)LocalLib::swapf (*(float*) (recordData + TOBYTES(f.offset)));
-            case DOUBLE:    return (long)LocalLib::swaplf(*(double*)(recordData + TOBYTES(f.offset)));
+            case FLOAT:     return (long)LocalLib::swapf (*(float*) (recordData + elem_offset));
+            case DOUBLE:    return (long)LocalLib::swaplf(*(double*)(recordData + elem_offset));
             case TIME8:     {
-                                uint32_t seconds = LocalLib::swapl(*(uint32_t*)(recordData + TOBYTES(f.offset)));
-                                uint32_t subseconds = LocalLib::swapl(*(uint32_t*)(recordData + TOBYTES(f.offset) + 4));
+                                uint32_t seconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset));
+                                uint32_t subseconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset + 4));
                                 return (long)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
                             }
             default:        return 0;
@@ -1384,7 +1399,7 @@ RecordObject::RecordObject(void)
  *
  *  returns pointer to record definition in rec_def
  *----------------------------------------------------------------------------*/
-RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null)
+RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null, int element)
 {
     if(f.flags & POINTER)
     {
@@ -1404,7 +1419,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         {
             throw AccessRecordException("Attempted to dereference null pointer field!\n");
         }
-        else if((memoryAllocated > 0) && ((f.offset + (f.elements * 8)) > ((memoryAllocated - recordDefinition->type_size) * 8)))
+        else if((memoryAllocated > 0) && ((f.offset + (element * 8)) > ((memoryAllocated - recordDefinition->type_size) * 8)))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
@@ -1484,7 +1499,9 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
 
     /* Initialize Parameters */
     recordDefErr_t status = FIELDERR_DEF;
-    int end_of_field = type == BITFIELD ? TOBYTES(offset + elements) : offset + (elements * FIELD_TYPE_BYTES[type]);
+    int end_of_field;
+    if(flags & POINTER) end_of_field = offset + FIELD_TYPE_BYTES[INT32];
+    else                end_of_field = type == BITFIELD ? TOBYTES(offset + elements) : offset + (elements * FIELD_TYPE_BYTES[type]);
     int field_offset = type == BITFIELD ? offset : TOBITS(offset);
 
     /* Define Field */

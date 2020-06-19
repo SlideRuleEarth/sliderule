@@ -134,7 +134,6 @@ class RecordObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_CVT_NAME_SIZE = 1024;
         static const int MAX_INITIALIZERS = 64;
         static const int MAX_VAL_STR_SIZE = 64;
         static const int MAX_FIELDS = 256;
@@ -156,8 +155,8 @@ class RecordObject
         {
             public:
 
-                            Field           (RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags=0);
-                            Field           (RecordObject& _rec, field_t _field);
+                            Field           (RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags=0, int _element=0);
+                            Field           (RecordObject& _rec, field_t _field, int _element=0);
                             Field           (const Field& f);
                             ~Field          (void);
 
@@ -174,6 +173,7 @@ class RecordObject
 
                 RecordObject&   record;         // parent record
                 field_t         field;          // attributes
+                int             element;        // for arrays
         };
 
         /*--------------------------------------------------------------------
@@ -207,11 +207,11 @@ class RecordObject
         field_t                 getField            (const char* field_name);
         Field                   field               (const char* field_name);
         void                    setValueText        (field_t field, const char* val);
-        void                    setValueReal        (field_t field, const double val);
-        void                    setValueInteger     (field_t field, const long val);
+        void                    setValueReal        (field_t field, const double val, int element=0);
+        void                    setValueInteger     (field_t field, const long val, int element=0);
         const char*             getValueText        (field_t field, char* valbuf=NULL);
-        double                  getValueReal        (field_t field);
-        long                    getValueInteger     (field_t field);
+        double                  getValueReal        (field_t field, int element=0);
+        long                    getValueInteger     (field_t field, int element=0);
         valType_t               getValueType        (field_t field);
 
         /* Definition Static Methods */
@@ -292,7 +292,7 @@ class RecordObject
                                 RecordObject        (void);
 
         /* Regular Methods */
-        field_t                 getPointedToField   (field_t field, bool allow_null);
+        field_t                 getPointedToField   (field_t field, bool allow_null, int element=0);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
         static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, unsigned int flags=NATIVE_FLAGS);
 
