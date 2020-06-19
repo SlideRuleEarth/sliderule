@@ -547,7 +547,7 @@ RecordObject::field_t RecordObject::getField(const char* field_name)
                                 if((field.flags & POINTER) == 0)
                                 {
                                     field.elements -= element;
-                                    field.offset += element * FIELD_TYPE_BYTES[field.type];
+                                    field.offset += TOBITS(element * FIELD_TYPE_BYTES[field.type]);
                                 }
 
                                 /* Return Field */
@@ -1347,7 +1347,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     fieldType_t type = str2ft(type_str);
     if(type == INVALID_FIELD)
     {
-        printf("Invalid field type: %s\n", type_str);
+        dlog("Invalid field type: %s\n", type_str);
         return retfield;
     }
     f.type = type;
@@ -1372,7 +1372,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     }
     else
     {
-        printf("Invalid offset: %s\n", offset_str);
+        dlog("Invalid offset: %s\n", offset_str);
         return retfield;
     }
 

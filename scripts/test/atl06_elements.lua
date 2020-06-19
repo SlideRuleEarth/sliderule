@@ -25,10 +25,22 @@ recq = msg.subscribe("recq")
 extentrec = recq:recvrecord(3000)
 recq:destroy()
 
-print("", extentrec:getfield("TRACK"))
+runner.check(extentrec, "Failed to read an extent record")
+
+if extentrec then
+    runner.check(extentrec:getvalue("TRACK") == 1, extentrec:getvalue("TRACK"))
+    runner.check(extentrec:getvalue("SEG_ID[0]") == 555764, extentrec:getvalue("SEG_ID[0]"))
+    runner.check(extentrec:getvalue("SEG_ID[1]") == 555764, extentrec:getvalue("SEG_ID[1]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("GPS[0]"), 1267339942.127844, 0.0001), extentrec:getvalue("GPS[0]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("GPS[1]"), 1267339942.472445, 0.0001), extentrec:getvalue("GPS[1]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("DIST[0]"), 11132813.466047, 0.0001), extentrec:getvalue("DIST[0]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("DIST[1]"), 11132813.466047, 0.0001), extentrec:getvalue("DIST[1]"))
+    runner.check(extentrec:getvalue("COUNT[0]") == 136, extentrec:getvalue("COUNT[0]"))
+    runner.check(extentrec:getvalue("COUNT[1]") == 539, extentrec:getvalue("COUNT[1]"))
+end
+
 --rectable = recdata:tabulate()
 --print("ID:     "..rectable.ID)
-
 
 -- Clean Up --
 

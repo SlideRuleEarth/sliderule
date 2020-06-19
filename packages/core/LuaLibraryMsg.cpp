@@ -511,6 +511,8 @@ int LuaLibraryMsg::lmsg_gettype (lua_State* L)
 
 /*----------------------------------------------------------------------------
  * lmsg_getfieldvalue - val = rec:getvalue(<field name>)
+ *
+ *  the field name can include an array element, e.g. field[element]
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
 {

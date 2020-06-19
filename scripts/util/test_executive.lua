@@ -40,7 +40,7 @@ local function rootdir (filepath)
         return filepath:sub(1,path_index)
     else
         return "./"
-    end 
+    end
 end
 
 --[[
@@ -64,7 +64,7 @@ local function command (cmd_str)
     local status = cmd.exec(cmd_str)
     if status < 0 then
         results[context]["messages"][results[context]["errors"]] = debug.traceback(cmd_str)
-        results[context]["errors"] = results[context]["errors"] + 1        
+        results[context]["errors"] = results[context]["errors"] + 1
     end
     if status == false then
         if exit_on_error then os.exit() end
@@ -88,7 +88,7 @@ local function check (expression, errmsg)
     end
     if status == false or status == nil then
         results[context]["messages"][results[context]["errors"]] = debug.traceback(errmsg)
-        results[context]["errors"] = results[context]["errors"] + 1        
+        results[context]["errors"] = results[context]["errors"] + 1
         if exit_on_error then os.exit() end
     end
     return status
@@ -108,17 +108,17 @@ local function script (script_str, parms)
     print("--------------------------------------------\n")
     if parms then
         for k,v in pairs(parms) do
-            arg[k] = v        
+            arg[k] = v
             numparms = numparms + 1
         end
     end
     dofile(script_str)
     if parms then
         for i=1,numparms do
-            arg[i] = nil        
+            arg[i] = nil
         end
         for k,v in pairs(argsave) do
-            arg[k] = v        
+            arg[k] = v
         end
     end
     set_context("global")
@@ -129,7 +129,7 @@ Function:   compare
  Purpose:   do a binary comparison of two arbitrary strings
    Notes:   necessary to work around strings created from userdata
 ]]
-local function compare(str1, str2) 
+local function compare(str1, str2)
     local status = true
     bytes1 = {string.byte(str1, 0, -1)}
     bytes2 = {string.byte(str2, 0, -1)}
@@ -147,8 +147,21 @@ local function compare(str1, str2)
     end
     if status == false then
         results[context]["messages"][results[context]["errors"]] = debug.traceback(errmsg)
-        results[context]["errors"] = results[context]["errors"] + 1        
+        results[context]["errors"] = results[context]["errors"] + 1
         if exit_on_error then os.exit() end
+    end
+    return status
+end
+
+--[[
+Function:   cmpfloat
+ Purpose:   compares two floating point numbers within a tolerance
+   Notes:   status is boolean
+]]
+local function cmpfloat (f1, f2, t)
+    local status = true
+    if math.abs(f1 - f2) > t then
+        status = false
     end
     return status
 end
@@ -169,7 +182,7 @@ local function report ()
             print("\n---------------------------------")
             for i = 0, (results[context]["errors"]-1) do
                 print("FAIL: " .. results[context]["messages"][i])
-            end 
+            end
             print("---------------------------------")
             print("Executed test: " .. context)
             print("Number of asserts: " .. tostring(results[context]["asserts"]))
@@ -189,7 +202,7 @@ end
 set_context(context)
 
 for k,v in pairs(arg) do
-    argsave[k] = v        
+    argsave[k] = v
 end
 
 local package = {
@@ -200,6 +213,7 @@ local package = {
     check = check,
     script = script,
     compare = compare,
+    cmpfloat = cmpfloat,
     report = report,
 }
 
