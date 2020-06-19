@@ -86,7 +86,8 @@ class RecordObject
             DOUBLE,
             TIME8,
             STRING,
-            INVALID_FIELD
+            INVALID_FIELD,
+            NUM_FIELD_TYPES
         } fieldType_t;
 
         typedef enum {
@@ -145,7 +146,7 @@ class RecordObject
         static const char*  DEFAULT_LONG_FORMAT;
         static const double FLOAT_MAX_VALUE; // maximum 32bit value as a float
 
-        static const int FIELD_TYPE_BYTES[INVALID_FIELD];
+        static const int FIELD_TYPE_BYTES[NUM_FIELD_TYPES];
 
         /*--------------------------------------------------------------------
          * Field (subclass)

@@ -39,7 +39,7 @@ const char* RecordObject::DEFAULT_DOUBLE_FORMAT = "%.6lf";
 const char* RecordObject::DEFAULT_LONG_FORMAT = "%ld";
 const double RecordObject::FLOAT_MAX_VALUE = 4294967296.0;
 
-const int RecordObject::FIELD_TYPE_BYTES[INVALID_FIELD] = {
+const int RecordObject::FIELD_TYPE_BYTES[NUM_FIELD_TYPES] = {
     1, // INT8
     2, // INT16
     4, // INT32
@@ -53,6 +53,7 @@ const int RecordObject::FIELD_TYPE_BYTES[INVALID_FIELD] = {
     8, // DOUBLE
     8, // TIME8
     1, // STRING
+    0  // INVALID_FIELD
 };
 
 /******************************************************************************
@@ -502,11 +503,66 @@ RecordObject::field_t RecordObject::getField(const char* field_name)
     {
         try
         {
-            return recordDefinition->fields[field_name];
+            /* Return Field (no array access) */
+            field_t field = recordDefinition->fields[field_name];
+            return field;
         }
-        catch(std::out_of_range& e)
+        catch(const std::out_of_range& e1)
         {
-            (void)e;
+            (void)e1;
+
+            /* Attempt Array Access */
+            char fstr[MAX_VAL_STR_SIZE]; // field string
+            StringLib::copy(fstr, field_name, MAX_VAL_STR_SIZE);
+
+            /* Parse Array Format: field[element]
+             *                     ^     ^
+             *                     |     |
+             *                    fstr   estr
+             */
+            char* estr = StringLib::find(&fstr[1], '['); // element string
+            if(estr != NULL)
+            {
+                char* b = estr; // save off in order to terminate later
+                estr = StringLib::find(estr, ']');
+                if(estr != NULL)
+                {
+                    *b = '\0'; // terminate field name
+                    *estr = '\0'; // terminate element string
+                    estr = b + 1; // point to start of element string
+
+                    /* Get Element */
+                    long element;
+                    if(StringLib::str2long(estr, &element))
+                    {
+                        try
+                        {
+                            /* Look Up Field Name */
+                            field_t field = recordDefinition->fields[fstr];
+
+                            /* Check Element Boundary */
+                            if(element < field.elements)
+                            {
+                                /* Modify Elements and Offset if not Pointer */
+                                if((field.flags & POINTER) == 0)
+                                {
+                                    field.elements -= element;
+                                    field.offset += element * FIELD_TYPE_BYTES[field.type];
+                                }
+
+                                /* Return Field */
+                                return field;
+                            }
+                        }
+                        catch(const std::exception& e2)
+                        {
+                            (void)e2;
+                        }
+                    }
+                }
+            }
+
+            /* Return Invalid Field */
             field_t ret_field;
             ret_field.type = INVALID_FIELD;
             return ret_field;
@@ -1271,8 +1327,8 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     field_t f = {INVALID_FIELD, 0, 0, 0};
 
     /* Make Copy of String */
-    char pstr[MAX_STR_SIZE];
-    StringLib::copy(pstr, str, MAX_STR_SIZE);
+    char pstr[MAX_VAL_STR_SIZE];
+    StringLib::copy(pstr, str, MAX_VAL_STR_SIZE);
 
     /* Check Immediate Symbol */
     if(pstr[0] != IMMEDIATE_FIELD_SYMBOL) return retfield;
