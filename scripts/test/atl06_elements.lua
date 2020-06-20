@@ -39,8 +39,12 @@ if extentrec then
     runner.check(extentrec:getvalue("COUNT[1]") == 539, extentrec:getvalue("COUNT[1]"))
 end
 
---rectable = recdata:tabulate()
---print("ID:     "..rectable.ID)
+t2 = extentrec:tabulate()
+
+runner.check(t2.SEG_ID[1] == extentrec:getvalue("SEG_ID[0]"))
+runner.check(t2.SEG_ID[2] == extentrec:getvalue("SEG_ID[1]"))
+runner.check(runner.cmpfloat(t2.GPS[1], extentrec:getvalue("GPS[0]"), 0.0001))
+runner.check(runner.cmpfloat(t2.GPS[2], extentrec:getvalue("GPS[1]"), 0.0001))
 
 -- Clean Up --
 

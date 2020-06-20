@@ -660,12 +660,40 @@ int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
             }
             case RecordObject::REAL:
             {
-                LuaEngine::setAttrNum(L, fieldnames[i], rec_data->rec->getValueReal(field));
+                if(field.elements <= 1)
+                {
+                    LuaEngine::setAttrNum(L, fieldnames[i], rec_data->rec->getValueReal(field));
+                }
+                else
+                {
+                    lua_pushstring(L, fieldnames[i]);
+                    lua_newtable(L);
+                    for(int e = 0; e < field.elements; e++)
+                    {
+                        lua_pushnumber(L, rec_data->rec->getValueReal(field, e));
+                        lua_rawseti(L, -2, e+1);
+                    }
+                    lua_settable(L, -3);
+                }
                 break;
             }
             case RecordObject::INTEGER:
             {
-                LuaEngine::setAttrInt(L, fieldnames[i], rec_data->rec->getValueInteger(field));
+                if(field.elements <= 1)
+                {
+                    LuaEngine::setAttrInt(L, fieldnames[i], rec_data->rec->getValueInteger(field));
+                }
+                else
+                {
+                    lua_pushstring(L, fieldnames[i]);
+                    lua_newtable(L);
+                    for(int e = 0; e < field.elements; e++)
+                    {
+                        lua_pushnumber(L, rec_data->rec->getValueInteger(field, e));
+                        lua_rawseti(L, -2, e+1);
+                    }
+                    lua_settable(L, -3);
+                }
                 break;
             }
             default: break;
@@ -744,19 +772,58 @@ int LuaLibraryMsg::lmsg_detabulate(lua_State* L)
             }
             case RecordObject::REAL:
             {
-                if(lua_isnumber(L, 1))
+                if(field.elements <= 1)
                 {
-                    double val = lua_tonumber(L, 1);
-                    record->setValueReal(field, val);
+                    if(lua_isnumber(L, 1))
+                    {
+                        double val = lua_tonumber(L, 1);
+                        record->setValueReal(field, val);
+                    }
+                }
+                else
+                {
+                    if(lua_type(L, 1) != LUA_TTABLE)
+                    {
+                        for(int e = 0; e < field.elements; e++)
+                        {
+                            lua_rawgeti(L, 1, e+1);
+                            if(lua_isnumber(L, 1))
+                            {
+                                double val = lua_tonumber(L, 1);
+                                record->setValueReal(field, val, e);
+                            }
+                            lua_pop(L, 1);
+                        }
+                    }
+
                 }
                 break;
             }
             case RecordObject::INTEGER:
             {
-                if(lua_isnumber(L, 1))
+                if(field.elements <= 1)
                 {
-                    long val = lua_tointeger(L, 1);
-                    record->setValueInteger(field, val);
+                    if(lua_isnumber(L, 1))
+                    {
+                        long val = lua_tointeger(L, 1);
+                        record->setValueInteger(field, val);
+                    }
+                }
+                else
+                {
+                    if(lua_type(L, 1) != LUA_TTABLE)
+                    {
+                        for(int e = 0; e < field.elements; e++)
+                        {
+                            lua_rawgeti(L, 1, e+1);
+                            if(lua_isnumber(L, 1))
+                            {
+                                long val = lua_tointeger(L, 1);
+                                record->setValueInteger(field, val, e);
+                            }
+                            lua_pop(L, 1);
+                        }
+                    }
                 }
                 break;
             }
