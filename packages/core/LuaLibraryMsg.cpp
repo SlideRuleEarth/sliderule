@@ -41,6 +41,7 @@ const struct luaL_Reg LuaLibraryMsg::msgLibsF [] = {
     {"publish",       LuaLibraryMsg::lmsg_publish},
     {"subscribe",     LuaLibraryMsg::lmsg_subscribe},
     {"create",        LuaLibraryMsg::lmsg_create},
+    {"definition",    LuaLibraryMsg::lmsg_definition},
     {NULL, NULL}
 };
 
@@ -257,7 +258,7 @@ int LuaLibraryMsg::lmsg_subscribe (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lmsg_create -
+ * lmsg_create - rec = msg.create(<population string>)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_create (lua_State* L)
 {
@@ -279,6 +280,56 @@ int LuaLibraryMsg::lmsg_create (lua_State* L)
     lua_setmetatable(L, -2);    /* associates the publisher meta table with the publisher user data */
     return 1;                   /* returns msg_data which is already on stack */
 }
+
+/*----------------------------------------------------------------------------
+ * lmsg_definition - tbl = msg.definition(<record type>)
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_definition(lua_State* L)
+{
+    /* Get Record Type */
+    const char* rectype = lua_tostring(L, 1);
+    if(rectype == NULL)
+    {
+        return luaL_error(L, "invalid record type specified");
+    }
+
+    /* Get Record Definition */
+    char** fieldnames = NULL;
+    RecordObject::field_t** fields = NULL;
+    int numfields = RecordObject::getRecordFields(rectype, &fieldnames, &fields);
+    if(numfields > 0)
+    {
+        lua_newtable(L);
+        for(int i = 0; i < numfields; i++)
+        {
+            const char* typestr = RecordObject::ft2str(fields[i]->type);
+            const char* flagstr = RecordObject::flags2str(fields[i]->flags);
+
+            lua_pushstring(L, fieldnames[i]);
+            lua_newtable(L);
+            LuaEngine::setAttrStr(L, "type", typestr);
+            LuaEngine::setAttrNum(L, "offset", fields[i]->offset);
+            LuaEngine::setAttrNum(L, "elements", fields[i]->elements);
+            LuaEngine::setAttrStr(L, "flags", flagstr);
+            lua_settable(L, -3);
+
+            delete [] flagstr;
+            delete fields[i];
+            delete [] fieldnames[i];
+        }
+        delete [] fields;
+        delete [] fieldnames;
+    }
+    else
+    {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    /* Return Table */
+    return 1;
+}
+
 
 /*----------------------------------------------------------------------------
  * lmsg_sendstring

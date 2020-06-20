@@ -213,9 +213,9 @@ class RecordObject
         const char*             getValueText        (field_t field, char* valbuf=NULL);
         double                  getValueReal        (field_t field, int element=0);
         long                    getValueInteger     (field_t field, int element=0);
-        valType_t               getValueType        (field_t field);
 
         /* Definition Static Methods */
+        static valType_t        getValueType        (field_t field);
         static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=MAX_FIELDS);
         static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags=NATIVE_FLAGS);
 
