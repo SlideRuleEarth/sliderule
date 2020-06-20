@@ -1,5 +1,6 @@
 local runner = require("test_executive")
 console = require("console")
+json = require("json")
 
 -- Setup --
 
@@ -7,7 +8,7 @@ console.logger:config(core.INFO)
 
 -- Unit Test --
 
-print('\n------------------\nTest01: Atl03Device\n------------------')
+print('\n------------------\nTest01: Atl03 Device\n------------------')
 
 f1 = icesat2.h5atl03("", {srt=icesat2.SRT_SEA_ICE, cnf=icesat2.CNF_NOT_CONSIDERED})
 p1 = f1:parms()
@@ -45,6 +46,12 @@ runner.check(t2.SEG_ID[1] == extentrec:getvalue("SEG_ID[0]"))
 runner.check(t2.SEG_ID[2] == extentrec:getvalue("SEG_ID[1]"))
 runner.check(runner.cmpfloat(t2.GPS[1], extentrec:getvalue("GPS[0]"), 0.0001))
 runner.check(runner.cmpfloat(t2.GPS[2], extentrec:getvalue("GPS[1]"), 0.0001))
+
+
+print('\n------------------\nTest03: Atl03 Extent Definition\n------------------')
+
+def = msg.definition("atl03rec")
+print("atl03rec", json.encode(def))
 
 -- Clean Up --
 
