@@ -73,15 +73,24 @@ int Hdf5DatasetDevice::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void Hdf5DatasetDevice::init (void)
+{
+    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d\n", recType, rc);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode):
     DeviceObject(L, _role)
 {
-    /* Define Record */
-    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
-
     /* Set Record */
     recObj = new RecordObject(recType);
     recData = (h5dataset_t*)recObj->getRecordData();

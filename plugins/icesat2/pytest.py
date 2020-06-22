@@ -102,6 +102,21 @@ def test_h5 ():
     else:
         print("Failed h5 test")
 
+#
+#  TEST DEFINITION
+#
+def test_definition ():
+    rqst_dict = {
+        "rectype": "atl03rec",
+    }
+
+    d = source("definition", json.dumps(rqst_dict)).json()
+
+    if(d["GPS"]["offset"] == 128):
+        print("Passed definition test")
+    else:
+        print("Failed definition test")
+
 ###############################################################################
 # MAIN
 ###############################################################################
@@ -117,3 +132,4 @@ if __name__ == '__main__':
     test_echo()
     test_time()
     test_h5()
+    test_definition()

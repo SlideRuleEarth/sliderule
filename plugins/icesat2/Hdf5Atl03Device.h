@@ -113,6 +113,7 @@ class Hdf5Atl03Device: public DeviceObject
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
+        static void init        (void);
 
     private:
 

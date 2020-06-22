@@ -128,15 +128,24 @@ int Hdf5Atl03Device::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void Hdf5Atl03Device::init (void)
+{
+    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, "TRACK", sizeof(extent_t), recDef, def_elements, 16);
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d\n", recType, rc);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url, parms_t _parms):
     DeviceObject(L, READER)
 {
-    /* Define Record */
-    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::defineRecord(recType, "TRACK", sizeof(extent_t), recDef, def_elements, 16);
-
     /* Set Parameters */
     parms = _parms;
 

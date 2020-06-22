@@ -77,6 +77,11 @@ int icesat2_open (lua_State *L)
 extern "C" {
 void initicesat2 (void)
 {
+    /* Initialize Modules */
+    Hdf5DatasetDevice::init();
+    Hdf5Atl03Device::init();
+
+    /* Extend Lua */
     LuaEngine::extend(LUA_ICESAT2_LIBNAME, icesat2_open);
 
     /* Indicate Presence of Package */
