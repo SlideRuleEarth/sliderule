@@ -207,10 +207,10 @@ class RecordObject
         int                     getFieldNames       (char*** names);
         field_t                 getField            (const char* field_name);
         Field                   field               (const char* field_name);
-        void                    setValueText        (field_t field, const char* val);
+        void                    setValueText        (field_t field, const char* val, int element=0);
         void                    setValueReal        (field_t field, const double val, int element=0);
         void                    setValueInteger     (field_t field, const long val, int element=0);
-        const char*             getValueText        (field_t field, char* valbuf=NULL);
+        const char*             getValueText        (field_t field, char* valbuf=NULL, int element=0);
         double                  getValueReal        (field_t field, int element=0);
         long                    getValueInteger     (field_t field, int element=0);
 

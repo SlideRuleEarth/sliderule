@@ -577,6 +577,7 @@ int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
 
     RecordObject::field_t field = rec_data->rec->getField(fldname);
     RecordObject::valType_t valtype = rec_data->rec->getValueType(field);
+
     if(valtype == RecordObject::TEXT)
     {
         char valbuf[RecordObject::MAX_VAL_STR_SIZE];

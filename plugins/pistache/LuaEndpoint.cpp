@@ -268,7 +268,7 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
     Subscriber rspq(id_str);
 
     /* Execute Engine
-     *  the call to execute the script returns immediately (due to IO_CHECK) and which point
+     *  the call to execute the script returns immediately (due to IO_CHECK) at which point
      *  the lua state context is locked and cannot be accessed until the script completes */
     engine->executeEngine(IO_CHECK);
 
@@ -283,6 +283,8 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
         status = rspq.receiveRef(ref, SYS_TIMEOUT);
         if(status == MsgQ::STATE_OKAY)
         {
+            uint32_t size = ref.size;
+            stream.write((const char*)&size, sizeof(size));
             stream.write((const char*)ref.data, ref.size);
         }
         else if(status == MsgQ::STATE_TIMEOUT)

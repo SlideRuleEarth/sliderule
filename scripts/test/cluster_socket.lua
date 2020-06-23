@@ -16,11 +16,6 @@ while attempts > 0 and not client:connected() do
     sys.wait(1)
 end
 
---runner.command("NEW DEVICE_WRITER ClusterServer CLUSTER QUEUE 127.0.0.1 34503 SERVER inq NULL")
---runner.command("NEW DEVICE_READER ClusterClient CLUSTER QUEUE 127.0.0.1 34503 CLIENT outq NULL")
---runner.command("ClusterClient::CONFIG_BLOCK ENABLE")
---runner.command("ClusterClient::WAIT_ON_CONNECT 1 5") -- give time for the connection to occur
-
 local inq = msg.publish("inq")
 local outq = msg.subscribe("outq")
 
@@ -42,6 +37,13 @@ print("Received message 3: " .. message3)
 runner.compare(message1, "HELLO WORLD 1")
 runner.compare(message2, "HELLO WORLD 2")
 runner.compare(message3, "HELLO WORLD 3")
+
+-- Clean Up --
+
+server:destroy()
+client:destroy()
+writer:destroy()
+reader:destroy()
 
 -- Report Results --
 

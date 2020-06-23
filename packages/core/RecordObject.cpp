@@ -581,14 +581,16 @@ RecordObject::Field RecordObject::field(const char* field_name)
 
 /*----------------------------------------------------------------------------
  * setValueText
+ *
+ *  The element parameter is only used when the field is a pointer
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueText(field_t f, const char* val)
+void RecordObject::setValueText(field_t f, const char* val, int element)
 {
     valType_t val_type = getValueType(f);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false);
+        field_t ptr_field = getPointedToField(f, false, element);
         if(val == NULL) throw AccessRecordException("Cannot null existing pointer!");
         else            setValueText(ptr_field, val);
     }
@@ -773,14 +775,15 @@ void RecordObject::setValueInteger(field_t f, const long val, int element)
  *   2. If valbuf not supplied, then non-text fields return NULL and text fields
  *      return a pointer to the string as it resides in the record
  *   3. valbuf, if supplied, is assumed to be of length MAX_VAL_STR_SIZE
+ *   4. The element parameter is only used if the field is a pointer
  *----------------------------------------------------------------------------*/
-const char* RecordObject::getValueText(field_t f, char* valbuf)
+const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
 {
     valType_t val_type = getValueType(f);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, true);
+        field_t ptr_field = getPointedToField(f, true, element);
         if(ptr_field.offset == 0)   return NULL;
         else                        return getValueText(ptr_field, valbuf);
     }
@@ -814,7 +817,7 @@ double RecordObject::getValueReal(field_t f, int element)
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false ,element);
+        field_t ptr_field = getPointedToField(f, false, element);
         return getValueReal(ptr_field, 0);
     }
     else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
@@ -1463,19 +1466,33 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         field_t ptr_field = f;
         ptr_field.flags &= ~POINTER; // clear pointer flag
         ptr_field.type = INT32;
-        ptr_field.elements = 1;
 
         // Update Field
         f.flags &= ~POINTER;
-        f.offset = (int)getValueInteger(ptr_field);
-        if(f.type != BITFIELD) f.offset *= 8;
+        f.offset = (int)getValueInteger(ptr_field, element);
+        if(f.type != BITFIELD) f.offset *= 8; // bit fields are specified in bits from the start
+
+        // Handle String Pointers
+        if(f.type == STRING)
+        {
+            if(memoryAllocated == 0)
+            {
+                // best effort to bound size of pointed to string
+                f.elements = MAX_VAL_STR_SIZE;
+            }
+            else
+            {
+                // string cannot extend past end of record
+                f.elements = memoryAllocated - recordDefinition->type_size - (f.offset / 8);
+            }
+        }
 
         // Check Offset
         if(f.offset == 0 && !allow_null)
         {
             throw AccessRecordException("Attempted to dereference null pointer field!\n");
         }
-        else if((memoryAllocated > 0) && ((f.offset + (element * 8)) > ((memoryAllocated - recordDefinition->type_size) * 8)))
+        else if((memoryAllocated > 0) && (f.offset > ((memoryAllocated - recordDefinition->type_size) * 8)))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
