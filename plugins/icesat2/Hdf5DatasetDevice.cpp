@@ -34,6 +34,7 @@ const char* Hdf5DatasetDevice::recType = "h5dataset";
 const RecordObject::fieldDef_t Hdf5DatasetDevice::recDef[] = {
     {"ID",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS},
     {"DATASET", RecordObject::STRING,   offsetof(h5dataset_t, dataset), 1,  NULL, NATIVE_FLAGS | RecordObject::POINTER},
+    {"DATATYPE",RecordObject::UINT32,   offsetof(h5dataset_t, datatype),1,  NULL, NATIVE_FLAGS},
     {"OFFSET",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NULL, NATIVE_FLAGS},
     {"SIZE",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS},
     {"DATA",    RecordObject::UINT8,    sizeof(h5dataset_t),            0,  NULL, NATIVE_FLAGS}
@@ -44,7 +45,7 @@ const RecordObject::fieldDef_t Hdf5DatasetDevice::recDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<role>, <filename>, <dataset name>, [<id>], [<raw>])
+ * luaCreate - create(<role>, <filename>, <dataset name>, [<id>], [<raw>], [<datatype>])
  *----------------------------------------------------------------------------*/
 int Hdf5DatasetDevice::luaCreate (lua_State* L)
 {
@@ -56,6 +57,7 @@ int Hdf5DatasetDevice::luaCreate (lua_State* L)
         const char* dataset_name    = getLuaString(L, 3);
         long        id              = getLuaInteger(L, 4, true, 0);
         bool        raw_mode        = getLuaBoolean(L, 5, true, true);
+        RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 6, true, RecordObject::INVALID_VALUE);
 
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
@@ -64,7 +66,7 @@ int Hdf5DatasetDevice::luaCreate (lua_State* L)
         }
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Hdf5DatasetDevice(L, (role_t)_role, filename, dataset_name, id, raw_mode));
+        return createLuaObject(L, new Hdf5DatasetDevice(L, (role_t)_role, filename, dataset_name, id, raw_mode, datatype));
     }
     catch(const LuaException& e)
     {
@@ -89,13 +91,14 @@ void Hdf5DatasetDevice::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode):
+Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype):
     DeviceObject(L, _role)
 {
     /* Set Record */
     recObj = new RecordObject(recType);
     recData = (h5dataset_t*)recObj->getRecordData();
     recData->dataset = sizeof(h5dataset_t);
+    recData->datatype = (uint32_t)datatype;
 
     /* Initialize Attributes to Zero */
     dataBuffer = NULL;
@@ -141,6 +144,7 @@ bool Hdf5DatasetDevice::h5open (void)
     hid_t dataset = INVALID_RC;
     hid_t space = INVALID_RC;
     hid_t datatype = INVALID_RC;
+    bool datatype_allocated = false;
 
     /* Check Reentry */
     if(dataBuffer)
@@ -182,7 +186,21 @@ bool Hdf5DatasetDevice::h5open (void)
         }
 
         /* Get Datatype */
-        datatype = H5Dget_type(dataset);
+        if(recData->datatype == RecordObject::INTEGER)
+        {
+            datatype = H5T_NATIVE_INT;
+        }
+        else if(recData->datatype == RecordObject::REAL)
+        {
+            datatype = H5T_NATIVE_DOUBLE;
+        }
+        else
+        {
+            datatype = H5Dget_type(dataset);
+            datatype_allocated = true;
+        }
+
+        /* Get Datatype Size */
         size_t typesize = H5Tget_size(datatype);
 
         /* Read Data */
@@ -231,7 +249,7 @@ bool Hdf5DatasetDevice::h5open (void)
     while(false);
 
     /* Clean Up */
-    if(datatype > 0) H5Tclose(datatype);
+    if(datatype_allocated && datatype > 0) H5Tclose(datatype);
     if(space > 0) H5Sclose(space);
     if(dataset > 0) H5Dclose(dataset);
     if(file > 0) H5Fclose(file);
@@ -276,7 +294,7 @@ int Hdf5DatasetDevice::writeBuffer (const void* buf, int len)
  *----------------------------------------------------------------------------*/
 int Hdf5DatasetDevice::readBuffer (void* buf, int len)
 {
-    int bytes_to_copy = SHUTDOWN_RC;
+    int bytes = SHUTDOWN_RC;
 
     if(connected)
     {
@@ -284,13 +302,14 @@ int Hdf5DatasetDevice::readBuffer (void* buf, int len)
 
         if(rawMode)
         {
-            bytes_to_copy = MIN(len, bytes_remaining);
+            int bytes_to_copy = MIN(len, bytes_remaining);
             LocalLib::copy(buf, &dataBuffer[dataOffset], bytes_to_copy);
             dataOffset += bytes_to_copy;
+            bytes = bytes_to_copy;
         }
         else // record
         {
-            bytes_to_copy = MIN(len - recObj->getAllocatedMemory(), bytes_remaining);
+            int bytes_to_copy = MIN(len - recObj->getAllocatedMemory(), bytes_remaining);
             if(bytes_to_copy > 0)
             {
                 recData->offset = dataOffset;
@@ -299,13 +318,14 @@ int Hdf5DatasetDevice::readBuffer (void* buf, int len)
                 int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, len);
                 LocalLib::copy(&rec_buf[bytes_written], &dataBuffer[dataOffset], bytes_to_copy);
                 dataOffset += bytes_to_copy;
+                bytes = bytes_written + bytes_to_copy;
             }
         }
 
-        if(bytes_to_copy < 0) connected = false;
+        if(bytes < 0) connected = false;
     }
 
-    return bytes_to_copy;
+    return bytes;
 }
 
 /*----------------------------------------------------------------------------

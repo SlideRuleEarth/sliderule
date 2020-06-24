@@ -54,6 +54,7 @@ class Hdf5DatasetDevice: public DeviceObject
         typedef struct {
             int64_t     id;
             uint32_t    dataset; // record object pointer
+            uint32_t    datatype; // RecordObject::valType_t
             uint32_t    offset;
             uint32_t    size;
         } h5dataset_t;
@@ -87,7 +88,7 @@ class Hdf5DatasetDevice: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Hdf5DatasetDevice   (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode);
+                            Hdf5DatasetDevice   (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype);
                             ~Hdf5DatasetDevice  (void);
         bool                h5open              (void);
 

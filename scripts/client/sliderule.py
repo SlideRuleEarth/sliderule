@@ -4,8 +4,9 @@ import sys
 import requests
 import json
 import struct
-import binascii
+import binascii # used for binascii.hexlify(<data>)
 import ctypes
+import array
 
 import pandas as pd
 import numpy as np
@@ -15,7 +16,22 @@ import numpy as np
 ###############################################################################
 
 server_url = 'http://127.0.0.1:9081'
+
 recdef_tbl = {}
+
+datatypes = {
+    "TEXT":     0,
+    "REAL":     1,
+    "INTEGER":  2,
+    "DYNAMIC":  3
+}
+
+datatype2nptype = {
+    datatypes["TEXT"]:      np.byte,
+    datatypes["REAL"]:      np.double,
+    datatypes["INTEGER"]:   np.int32,
+    datatypes["DYNAMIC"]:   np.byte
+}
 
 type2fmt = {
     "INT8":     'b',
@@ -111,8 +127,8 @@ def engine (api, parm):
 
     # Build Response #
     #
-    #   Notes:  1. Only one level of subrecords currently supported
-    #           2. Endianness set not always set per field
+    #   Notes:  1. TODO: Only one level of subrecords currently supported
+    #           2. TODO: Endianness set not always set per field
     #           3. TODO: break this out into helper functions with recursion
     #           4. TODO: general optimization... if subrecord has no arrays, could prebuild fmt string
 
@@ -122,11 +138,11 @@ def engine (api, parm):
         rec = {}
         rectype = ctypes.create_string_buffer(rawrec).value.decode('ascii')
         rawdata = rawrec[len(rectype) + 1:]
-        rec["_rectype"] = rectype
+        rec["@rectype"] = rectype
         if rectype in recdef_tbl:
             recdef = recdef_tbl[rectype]
             for field in recdef.keys():
-                if "@" not in field:
+                if "@" not in field: # @ indicates meta data
                     flags = recdef[field]["flags"]
                     if "LE" in flags:
                         endian = '<'
@@ -135,11 +151,11 @@ def engine (api, parm):
                     if "PTR" not in flags:
                         ftype = recdef[field]["type"]
                         elems = recdef[field]["elements"]
+                        offset = int(recdef[field]["offset"] / 8)
                         if elems <= 0:
-                            elems = len(rawdata) - recdef[field]["offset"]
+                            elems = len(rawdata) - offset
                         if ftype in type2fmt:
                             fmt = endian + str(elems) + type2fmt[ftype]
-                            offset = int(recdef[field]["offset"] / 8)
                             if elems == 1:
                                 val = struct.unpack_from(fmt, rawdata, offset)[0]
                             else:
@@ -152,17 +168,16 @@ def engine (api, parm):
                                 for subfield in subrecdef.keys():
                                     if "@" not in subfield:
                                         subelems = subrecdef[subfield]["elements"]
-                                        suboffset = subrecdef[subfield]["offset"]
+                                        suboffset = int(subrecdef[subfield]["offset"] / 8)
                                         subftype = subrecdef[subfield]["type"]
                                         fmt = endian + str(subelems) + type2fmt[subftype]
-                                        offset = int(suboffset / 8) + int(e * subrecdef["@datasize"])
+                                        offset = suboffset + int(e * subrecdef["@datasize"])
                                         if subelems == 1:
                                             val = struct.unpack_from(fmt, rawdata, offset)[0]
                                         else:
                                             val = struct.unpack_from(fmt, rawdata, offset)
                                         subrec[subfield] = val
                             rec[field] = subrec
-
         rsps.append(rec)
 
     # Return Response #
@@ -209,24 +224,28 @@ if __name__ == '__main__':
         }
     }
 
-    r = engine("atl06", parms)
+#    r = engine("atl06", parms)
 
-    print(r)
+#    print(r)
 
 
     parms = {
         "filename": "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5",
         "dataset": "/gt1r/geolocation/segment_ph_cnt",
+        "datatype": datatypes["INTEGER"],
         "id": 0
     }
 
-#    r = engine("h5", parms)
+    r = engine("h5", parms)
 
-#    print(r)
+    raw = bytes(r[0]["DATA"])
+    datatype = datatype2nptype[r[0]["DATATYPE"]]
+    datasize = int(r[0]["SIZE"] / np.dtype(datatype).itemsize)
+    slicesize = datasize * np.dtype(datatype).itemsize # truncates partial bytes
+    values = np.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
+
+    print(values)
+#    df = pd.DataFrame(data=values, index=[i for i in range(datasize)], columns=["test"])
 
 
-#    datatype = np.int32
-#    datasize = int(len(rsps_recs[0]) / np.dtype(datatype).itemsize)
-#    values = np.frombuffer(raw, dtype=datatype, count=datasize)
-#    print(binascii.hexlify(rec))
-#    df = pd.DataFrame(data=values, index=[i for i in range(datasize)], columns=[dataset])
+#    print()

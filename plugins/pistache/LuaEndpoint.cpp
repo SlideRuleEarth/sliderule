@@ -284,6 +284,7 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
         if(status == MsgQ::STATE_OKAY)
         {
             uint32_t size = ref.size;
+            printf("SIZE: %d\n", size);
             stream.write((const char*)&size, sizeof(size));
             stream.write((const char*)ref.data, ref.size);
         }
