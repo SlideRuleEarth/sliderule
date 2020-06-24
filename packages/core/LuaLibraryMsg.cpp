@@ -302,8 +302,12 @@ int LuaLibraryMsg::lmsg_definition(lua_State* L)
         lua_newtable(L);
         for(int i = 0; i < numfields; i++)
         {
-            const char* typestr = RecordObject::ft2str(fields[i]->type);
             const char* flagstr = RecordObject::flags2str(fields[i]->flags);
+            const char* typestr = fields[i]->exttype;
+            if(fields[i]->type != RecordObject::USER)
+            {
+                typestr = RecordObject::ft2str(fields[i]->type);
+            }
 
             lua_pushstring(L, fieldnames[i]);
             lua_newtable(L);
@@ -329,7 +333,6 @@ int LuaLibraryMsg::lmsg_definition(lua_State* L)
     /* Return Table */
     return 1;
 }
-
 
 /*----------------------------------------------------------------------------
  * lmsg_sendstring

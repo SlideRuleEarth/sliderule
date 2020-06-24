@@ -33,9 +33,10 @@
 const char* Hdf5DatasetDevice::recType = "h5dataset";
 const RecordObject::fieldDef_t Hdf5DatasetDevice::recDef[] = {
     {"ID",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS},
-    {"DATA",    RecordObject::STRING,   offsetof(h5dataset_t, data),    1,  NULL, NATIVE_FLAGS | RecordObject::POINTER},
+    {"DATASET", RecordObject::STRING,   offsetof(h5dataset_t, dataset), 1,  NULL, NATIVE_FLAGS | RecordObject::POINTER},
     {"OFFSET",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NULL, NATIVE_FLAGS},
-    {"SIZE",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS}
+    {"SIZE",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS},
+    {"DATA",    RecordObject::UINT8,    sizeof(h5dataset_t),            0,  NULL, NATIVE_FLAGS}
 };
 
 /******************************************************************************
@@ -94,7 +95,7 @@ Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* fi
     /* Set Record */
     recObj = new RecordObject(recType);
     recData = (h5dataset_t*)recObj->getRecordData();
-    recData->data = sizeof(h5dataset_t);
+    recData->dataset = sizeof(h5dataset_t);
 
     /* Initialize Attributes to Zero */
     dataBuffer = NULL;

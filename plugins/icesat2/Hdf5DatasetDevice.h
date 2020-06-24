@@ -53,7 +53,7 @@ class Hdf5DatasetDevice: public DeviceObject
 
         typedef struct {
             int64_t     id;
-            uint32_t    data; // record object pointer
+            uint32_t    dataset; // record object pointer
             uint32_t    offset;
             uint32_t    size;
         } h5dataset_t;
