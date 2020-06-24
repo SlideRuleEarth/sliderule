@@ -545,6 +545,15 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
             LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, f.elements - 1);
             *(recordData + TOBYTES(f.offset) + f.elements - 1) = '\0';
         }
+        else // variable length
+        {
+            int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
+            if(memory_left > 1)
+            {
+                LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, memory_left - 1);
+                *(recordData + TOBYTES(f.offset) + memory_left - 1) = '\0';
+            }
+        }
     }
     else if(val_type == INTEGER)
     {
@@ -569,7 +578,7 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueReal(field_t f, const double val, int element)
 {
-    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -640,7 +649,7 @@ void RecordObject::setValueReal(field_t f, const double val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueInteger(field_t f, const long val, int element)
 {
-    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -729,8 +738,25 @@ const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
     else if(val_type == TEXT)
     {
         char* str = (char*)(recordData + TOBYTES(f.offset));
-        if(valbuf)  return StringLib::copy(valbuf, str, f.elements);
-        else        return str;
+        if(valbuf)
+        {
+            if(f.elements > 0)
+            {
+                return StringLib::copy(valbuf, str, f.elements);
+            }
+            else // variable length
+            {
+                int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
+                if(memory_left > 1)
+                {
+                    return StringLib::copy(valbuf, str, memory_left);
+                }
+            }
+        }
+        else // valbuf not supplied
+        {
+            return str;
+        }
     }
     else if(val_type == INTEGER && valbuf)
     {
@@ -751,7 +777,7 @@ const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
  *----------------------------------------------------------------------------*/
 double RecordObject::getValueReal(field_t f, int element)
 {
-    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -812,7 +838,7 @@ double RecordObject::getValueReal(field_t f, int element)
  *----------------------------------------------------------------------------*/
 long RecordObject::getValueInteger(field_t f, int element)
 {
-    if(element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -1425,7 +1451,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
             else
             {
                 // string cannot extend past end of record
-                f.elements = memoryAllocated - recordDefinition->type_size - (f.offset / 8);
+                f.elements = memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset);
             }
         }
 
