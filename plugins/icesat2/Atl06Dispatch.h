@@ -31,6 +31,8 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "MathLib.h"
+#include "GTArray.h"
+#include "Hdf5Atl03Device.h"
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -43,6 +45,14 @@ class Atl06Dispatch: public DispatchObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+
+        static const int BATCH_SIZE = 256;
+
+        static const char* elRecType;
+        static const RecordObject::fieldDef_t elRecDef[];
+
+        static const char* atRecType;
+        static const RecordObject::fieldDef_t atRecDef[];
 
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
@@ -58,7 +68,7 @@ class Atl06Dispatch: public DispatchObject
             NUM_STAGES = 2
         } stages_t;
 
-        /* Statistics --> Current Use NOT THREAD SAFE */
+        /* Statistics --> TODO: NOT THREAD SAFE */
         typedef struct {
             uint32_t    h5atl03_rec_cnt;
             uint32_t    algo_out_cnt[NUM_STAGES];
@@ -66,11 +76,36 @@ class Atl06Dispatch: public DispatchObject
             uint32_t    post_dropped_cnt;
         } stats_t;
 
+        /* Elevation Measurement */
+        typedef struct {
+            uint32_t        segment_id;
+            uint16_t        grt;        // ground reference track
+            uint16_t        cycle;
+            double          gps_time;   // seconds from GPS epoch
+            double          distance;   // meters from equator
+            double          latitude;
+            double          longitude;
+            double          elevation;  // meters from ellipsoid
+            double          along_track_slope;
+            double          across_track_slope;
+        } elevation_t;
+
+        /* ATL06 Record */
+        typedef struct {
+            elevation_t     elevation[BATCH_SIZE];
+        } atl06_t;
+
+        /* Algorithm Result */
+        typedef struct {
+            elevation_t     elevation[PAIR_TRACKS_PER_GROUND_TRACK];
+        } result_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
+        static void init        (void);
 
     private:
 
@@ -78,9 +113,15 @@ class Atl06Dispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Publisher*  outQ;
-        stats_t     stats;
-        stages_t    stages;
+        RecordObject*   recObj;
+        atl06_t*        recData;
+        Publisher*      outQ;
+
+        Mutex           elevationMutex;
+        int             elevationIndex;
+
+        stats_t         stats;
+        stages_t        stages;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -90,9 +131,12 @@ class Atl06Dispatch: public DispatchObject
                         ~Atl06Dispatch          (void);
 
         bool            processRecord           (RecordObject* record, okey_t key) override;
+        bool            processTimeout          (void) override;
 
-        bool            averageHeightStage      (RecordObject* record, okey_t key, double* height);
-        bool            leastSquaresFitStage    (RecordObject* record, okey_t key, MathLib::lsf_t* fit);
+        void            populateElevation       (elevation_t* elevation);
+
+        bool            averageHeightStage      (Hdf5Atl03Device::extent_t* extent, result_t* result);
+        bool            leastSquaresFitStage    (Hdf5Atl03Device::extent_t* extent, result_t* result);
 
         static int      luaStats                (lua_State* L);
         static int      luaSelect               (lua_State* L);

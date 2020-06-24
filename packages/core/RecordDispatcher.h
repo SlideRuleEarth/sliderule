@@ -115,7 +115,8 @@ class RecordDispatcher: public LuaObject
         Thread**                threadPool;
         int                     numThreads;
         Subscriber*             inQ;
-        Dictionary<dispatch_t>  dispatchTable;
+        List<DispatchObject*>   dispatchList;   // for processTimeout
+        Dictionary<dispatch_t>  dispatchTable;  // for processRecord
         Mutex                   dispatchMutex;
         keyMode_t               keyMode;        // determines key of metric
         okey_t                  keyRecCnt;      // used with RECEIPT_KEY_MODE

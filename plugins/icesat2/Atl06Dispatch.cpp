@@ -64,6 +64,25 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* Atl06Dispatch::elRecType = "atl06rec.elevation";
+const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
+    {"SEG_ID",  RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
+    {"GRT",     RecordObject::UINT16,   offsetof(elevation_t, grt),                 1,  NULL, NATIVE_FLAGS},
+    {"CYCLE",   RecordObject::UINT16,   offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS},
+    {"GPS",     RecordObject::DOUBLE,   offsetof(elevation_t, gps_time),            1,  NULL, NATIVE_FLAGS},
+    {"DIST",    RecordObject::DOUBLE,   offsetof(elevation_t, distance),            1,  NULL, NATIVE_FLAGS},
+    {"LAT",     RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
+    {"LON",     RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
+    {"ELEV",    RecordObject::DOUBLE,   offsetof(elevation_t, elevation),           1,  NULL, NATIVE_FLAGS},
+    {"ALTS",    RecordObject::DOUBLE,   offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
+    {"ACTS",    RecordObject::DOUBLE,   offsetof(elevation_t, across_track_slope),  1,  NULL, NATIVE_FLAGS}
+};
+
+const char* Atl06Dispatch::atRecType = "atl06rec";
+const RecordObject::fieldDef_t Atl06Dispatch::atRecDef[] = {
+    {"ELEVATION",   RecordObject::USER, offsetof(atl06_t, elevation),               0, elRecType, NATIVE_FLAGS}
+};
+
 const char* Atl06Dispatch::LuaMetaName = "Atl06Dispatch";
 const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
     {"stats",       luaStats},
@@ -95,6 +114,29 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     }
 }
 
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void Atl06Dispatch::init (void)
+{
+    RecordObject::recordDefErr_t el_rc = RecordObject::defineRecord(elRecType, NULL, sizeof(elevation_t), elRecDef, sizeof(elRecDef) / sizeof(RecordObject::fieldDef_t), 16);
+    if(el_rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d\n", elRecType, el_rc);
+    }
+
+    /*
+     * Note: the size associated with this record is only one elevation_t;
+     * this forces any software accessing more than one elevation to manage
+     * the size of the record manually.
+     */
+    RecordObject::recordDefErr_t at_rc = RecordObject::defineRecord(atRecType, NULL, sizeof(elevation_t), atRecDef, sizeof(atRecDef) / sizeof(RecordObject::fieldDef_t), 16);
+    if(at_rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d\n", atRecType, at_rc);
+    }
+}
+
 /******************************************************************************
  * PRIVATE METOHDS
  *******************************************************************************/
@@ -107,7 +149,16 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name):
 {
     assert(outq_name);
 
+    /*
+     * Note: when allocating memory for this record, the full atl06_t size is used;
+     * this extends the memory available past the one elevation_t provided in the
+     * definition.
+     */
+    recObj = new RecordObject(atRecType, sizeof(atl06_t));
+    recData = (atl06_t*)recObj->getRecordData();
+
     outQ = new Publisher(outq_name);
+    elevationIndex = 0;
     LocalLib::set(&stats, 0, sizeof(stats));
     stages = STAGE_AVG;
 }
@@ -125,41 +176,32 @@ Atl06Dispatch::~Atl06Dispatch(void)
  *----------------------------------------------------------------------------*/
 bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
-    bool    status = false;
-    void*   rsps = NULL;
-    int     size = 0;
+    (void)key;
+
+    result_t result;
+    bool status = false;
 
     /* Bump Statistics */
     stats.h5atl03_rec_cnt++;
 
+    /* Get Extent */
+    Hdf5Atl03Device::extent_t* extent = (Hdf5Atl03Device::extent_t*)record->getRecordData();
+
     /* Execute Algorithm Stages */
     if(stages == STAGE_AVG)
     {
-        double height;
-        status = averageHeightStage(record, key, &height);
-        rsps = (void*)&height;
-        size = sizeof(height);
+        status = averageHeightStage(extent, &result);
     }
     else if(stages == STAGE_LSF)
     {
-        MathLib::lsf_t fit;
-        status = leastSquaresFitStage(record, key, &fit);
-        rsps = (void*)&fit.intercept;
-        size = sizeof(fit.intercept);
+        status = leastSquaresFitStage(extent, &result);
     }
 
-    /* Post Response */
+    /* Populate Elevation  */
     if(status)
     {
-        if(outQ->postCopy(rsps, size, SYS_TIMEOUT) > 0)
-        {
-            stats.post_success_cnt++;
-        }
-        else
-        {
-            stats.post_dropped_cnt++;
-            status = false;
-        }
+        populateElevation(&result.elevation[PRT_LEFT]);
+        populateElevation(&result.elevation[PRT_RIGHT]);
     }
 
     /* Return Status */
@@ -167,63 +209,111 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 }
 
 /*----------------------------------------------------------------------------
+ * processTimeout
+ *----------------------------------------------------------------------------*/
+bool Atl06Dispatch::processTimeout (void)
+{
+    populateElevation(NULL);
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * averageHeightStage
  *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::averageHeightStage (RecordObject* record, okey_t key, double* height)
+void Atl06Dispatch::populateElevation (elevation_t* elevation)
 {
-    (void)key;
+    elevationMutex.lock();
+    {
+        /* Populate Elevation */
+        if(elevation)
+        {
+            recData->elevation[elevationIndex++] = *elevation;
+        }
 
-    Hdf5Atl03Device::extent_t* segment = (Hdf5Atl03Device::extent_t*)record->getRecordData();
-    double num_heights = 0.0;
-    double height_l = 0.0;
-    double height_r = 0.0;
+        /* Check If ATL06 Record Should Be Posted*/
+        if(!elevation || elevationIndex == BATCH_SIZE)
+        {
+            /* Serialize Record */
+            unsigned char* buffer;
+            int size = recObj->serialize(&buffer, RecordObject::REFERENCE);
 
+            /* Adjust Size (according to number of elevations) */
+            size -= (BATCH_SIZE - elevationIndex) * sizeof(elevation_t);
+
+            /* Post Record */
+            if(outQ->postCopy(buffer, size, SYS_TIMEOUT) > 0)
+            {
+                stats.post_success_cnt++;
+            }
+            else
+            {
+                stats.post_dropped_cnt++;
+            }
+        }
+    }
+    elevationMutex.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * averageHeightStage
+ *----------------------------------------------------------------------------*/
+bool Atl06Dispatch::averageHeightStage (Hdf5Atl03Device::extent_t* extent, result_t* result)
+{
     /* Count Execution Statistic */
     stats.algo_out_cnt[STAGE_AVG]++;
 
-    /* Calculate Left Track Height */
-    if(segment->photon_count[PRT_LEFT] > 0)
+    /* Clear Results */
+    LocalLib::set(result, 0, sizeof(result_t));
+
+    /* Process Tracks */
+    double height[PAIR_TRACKS_PER_GROUND_TRACK] = { 0.0, 0.0 };
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
-        num_heights += 1.0;
-        for(unsigned int ph = 0; ph < segment->photon_count[PRT_LEFT]; ph++)
+        /* Calculate Average */
+        for(unsigned int ph = 0; ph < extent->photon_count[t]; ph++)
         {
-            height_l += (segment->photons[ph].height_y / segment->photon_count[PRT_LEFT]);
+            height[t] += (extent->photons[ph].height_y / extent->photon_count[t]);
         }
+
+        /* Populate Result */
+        result->elevation[t].elevation = height[t];
     }
 
-    /* Calculate Right Track Height */
-    if(segment->photon_count[PRT_RIGHT] > 0)
-    {
-        num_heights += 1.0;
-        for(unsigned int ph = segment->photon_count[PRT_LEFT]; ph < (segment->photon_count[PRT_LEFT] + segment->photon_count[PRT_RIGHT]); ph++)
-        {
-            height_r += (segment->photons[ph].height_y / segment->photon_count[PRT_RIGHT]);
-        }
-    }
-
-    /* Return Average Track Height */
-    *height = (height_l + height_r) / num_heights;
+    /* Return Status */
     return true;
 }
 
 /*----------------------------------------------------------------------------
  * leastSquaresFitStage
  *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::leastSquaresFitStage (RecordObject* record, okey_t key, MathLib::lsf_t* lsf)
+bool Atl06Dispatch::leastSquaresFitStage (Hdf5Atl03Device::extent_t* extent, result_t* result)
 {
-    (void)key;
-
     bool status = false;
-    Hdf5Atl03Device::extent_t* segment = (Hdf5Atl03Device::extent_t*)record->getRecordData();
 
     /* Count Execution Statistic */
     stats.algo_out_cnt[STAGE_LSF]++;
 
-    /* Calculate Least Squares Fit */
-    if(segment->photon_count[PRT_LEFT] > 0)
+    /* Clear Results */
+    LocalLib::set(result, 0, sizeof(result_t));
+
+    /* Process Tracks */
+    uint32_t first_photon = 0;
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
-        *lsf = MathLib::lsf((MathLib::point_t*)&segment->photons[0], segment->photon_count[PRT_LEFT]);
-        status = true;
+        MathLib::lsf_t lsf;
+
+        /* Calculate Least Squares Fit */
+        if(extent->photon_count[t] > 0)
+        {
+            lsf = MathLib::lsf((MathLib::point_t*)&extent->photons[first_photon], extent->photon_count[t]);
+        }
+
+        /* Increment First Photon to Next Track */
+        first_photon += extent->photon_count[t];
+
+        /* Populate Result */
+        result->elevation[t].elevation = lsf.intercept;
+        result->elevation[t].along_track_slope = lsf.slope;
     }
 
     /* Return Status */

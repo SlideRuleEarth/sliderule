@@ -260,6 +260,9 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
             lua_obj->dispatchTable.add(rec_type, new_dispatch);
         }
 
+        /* Add Dispatch to List */
+        lua_obj->dispatchList.add(dispatch);
+
         /* Start Worker Threads */
         lua_obj->startThreads();
 
@@ -403,7 +406,16 @@ void* RecordDispatcher::dispatcherThread(void* parm)
             /* Dereference Message */
             dispatcher->inQ->dereference(ref);
         }
-        else if(recv_status != MsgQ::STATE_TIMEOUT)
+        else if(recv_status == MsgQ::STATE_TIMEOUT)
+        {
+            /* Signal Timeout to Dispatches */
+            for(int d = 0; dispatcher->dispatchList.length(); d++)
+            {
+                DispatchObject* dis = dispatcher->dispatchList[d];
+                dis->processTimeout();
+            }
+        }
+        else
         {
             /* Break Out on Failure */
             mlog(CRITICAL, "Failed queue receive in %s with error %d\n", dispatcher->ObjectType, recv_status);
@@ -430,7 +442,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record)
     try
     {
         dispatch_t& dis = dispatchTable[record->getRecordType()];
-  
+
         /* Get Key */
         okey_t key = 0;
         if(keyMode == FIELD_KEY_MODE)

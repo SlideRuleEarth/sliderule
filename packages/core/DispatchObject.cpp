@@ -46,3 +46,11 @@ DispatchObject::DispatchObject (lua_State* L, const char* meta_name, const struc
  * Pure Virtual Destructor
  *----------------------------------------------------------------------------*/
 DispatchObject::~DispatchObject (void) {}
+
+/*----------------------------------------------------------------------------
+ * processTimeout
+ *----------------------------------------------------------------------------*/
+bool DispatchObject::processTimeout (void)
+{
+    return true;
+}

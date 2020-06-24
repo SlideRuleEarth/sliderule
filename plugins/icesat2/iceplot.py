@@ -14,8 +14,6 @@ from bokeh.models import ColumnDataSource
 
 #
 # Interactive Bokeh Plot of Dataframe Column
-# ... note that x axis is a recreated list of item number
-# ... and does not reflect original index in dataframe
 #
 def dfbokeh(df, col, cond_col="", cond_val=0):
     p = figure(title=col, plot_height=500, plot_width=800)
