@@ -409,11 +409,11 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         else if(recv_status == MsgQ::STATE_TIMEOUT)
         {
             /* Signal Timeout to Dispatches */
-            for(int d = 0; dispatcher->dispatchList.length(); d++)
-            {
-                DispatchObject* dis = dispatcher->dispatchList[d];
-                dis->processTimeout();
-            }
+//            for(int d = 0; dispatcher->dispatchList.length(); d++)
+//            {
+//                DispatchObject* dis = dispatcher->dispatchList[d];
+//                dis->processTimeout();
+//            }
         }
         else
         {
