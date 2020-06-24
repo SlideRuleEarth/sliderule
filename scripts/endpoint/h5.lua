@@ -24,7 +24,7 @@ local filename = parm["filename"]
 local dataset = parm["dataset"]
 local id = parm["id"] or 0
 
-f = icesat2.h5dataset(core.READER, filename, dataset, id)
+f = icesat2.h5dataset(core.READER, filename, dataset, id, false)
 r = core.reader(f, rspq)
 
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)

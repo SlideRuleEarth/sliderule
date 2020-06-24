@@ -298,6 +298,7 @@ int Hdf5DatasetDevice::readBuffer (void* buf, int len)
                 unsigned char* rec_buf = (unsigned char*)buf;
                 int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, len);
                 LocalLib::copy(&rec_buf[bytes_written], &dataBuffer[dataOffset], bytes_to_copy);
+                dataOffset += bytes_to_copy;
             }
         }
 
