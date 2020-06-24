@@ -139,11 +139,16 @@ int Hdf5Atl03Device::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Hdf5Atl03Device::init (void)
 {
-    int def_elements = sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(exRecType, "TRACK", sizeof(extent_t), exRecDef, def_elements, 16);
-    if(rc != RecordObject::SUCCESS_DEF)
+    RecordObject::recordDefErr_t ex_rc = RecordObject::defineRecord(exRecType, "TRACK", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t), 16);
+    if(ex_rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d\n", exRecType, rc);
+        mlog(CRITICAL, "Failed to define %s: %d\n", exRecType, ex_rc);
+    }
+
+    RecordObject::recordDefErr_t ph_rc = RecordObject::defineRecord(phRecType, NULL, sizeof(extent_t), phRecDef, sizeof(phRecDef) / sizeof(RecordObject::fieldDef_t), 16);
+    if(ph_rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d\n", phRecType, ph_rc);
     }
 }
 

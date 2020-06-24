@@ -98,6 +98,13 @@ def engine (api, parm):
 
     return df
 
+###############################################################################
+# ON IMPORT
+###############################################################################
+
+recdef_tbl["atl03rec"] = source("definition", {"rectype" : "atl03rec"})
+recdef_tbl["h5dataset"] = source("definition", {"rectype" : "h5dataset"})
+recdef_tbl["atl03rec.photons"] = source("definition", {"rectype" : "atl03rec.photons"})
 
 ###############################################################################
 # MAIN
@@ -133,6 +140,8 @@ if __name__ == '__main__':
         "id": 0
     }
 
-    df = engine("h5", parms)
+#    df = engine("h5", parms)
 
-    print(df.head())
+#    print(df.head())
+
+    print(recdef_tbl)
