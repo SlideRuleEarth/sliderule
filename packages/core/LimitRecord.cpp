@@ -32,15 +32,15 @@ const char* LimitRecord::rec_type = "Limit";
 
 RecordObject::fieldDef_t LimitRecord::rec_def[] =
 {
-    {"FILTER_ID",   UINT8,  offsetof(limit_t, filter_id),   1,                      NATIVE_FLAGS},
-    {"LIMIT_MIN",   UINT8,  offsetof(limit_t, limit_min),   1,                      NATIVE_FLAGS},
-    {"LIMIT_MAX",   UINT8,  offsetof(limit_t, limit_max),   1,                      NATIVE_FLAGS},
-    {"ID",          INT64,  offsetof(limit_t, id),          1,                      NATIVE_FLAGS},
-    {"D_MIN",       DOUBLE, offsetof(limit_t, d_min),       1,                      NATIVE_FLAGS},
-    {"D_MAX",       DOUBLE, offsetof(limit_t, d_max),       1,                      NATIVE_FLAGS},
-    {"D_VAL",       DOUBLE, offsetof(limit_t, d_val),       1,                      NATIVE_FLAGS},
-    {"FIELD_NAME",  STRING, offsetof(limit_t, field_name),  MAX_FIELD_NAME_SIZE,    NATIVE_FLAGS},
-    {"RECORD_NAME", STRING, offsetof(limit_t, record_name), MAX_RECORD_NAME_SIZE,   NATIVE_FLAGS}
+    {"FILTER_ID",   UINT8,  offsetof(limit_t, filter_id),   1,                      NULL, NATIVE_FLAGS},
+    {"LIMIT_MIN",   UINT8,  offsetof(limit_t, limit_min),   1,                      NULL, NATIVE_FLAGS},
+    {"LIMIT_MAX",   UINT8,  offsetof(limit_t, limit_max),   1,                      NULL, NATIVE_FLAGS},
+    {"ID",          INT64,  offsetof(limit_t, id),          1,                      NULL, NATIVE_FLAGS},
+    {"D_MIN",       DOUBLE, offsetof(limit_t, d_min),       1,                      NULL, NATIVE_FLAGS},
+    {"D_MAX",       DOUBLE, offsetof(limit_t, d_max),       1,                      NULL, NATIVE_FLAGS},
+    {"D_VAL",       DOUBLE, offsetof(limit_t, d_val),       1,                      NULL, NATIVE_FLAGS},
+    {"FIELD_NAME",  STRING, offsetof(limit_t, field_name),  MAX_FIELD_NAME_SIZE,    NULL, NATIVE_FLAGS},
+    {"RECORD_NAME", STRING, offsetof(limit_t, record_name), MAX_RECORD_NAME_SIZE,   NULL, NATIVE_FLAGS}
 };
 
 int LimitRecord::rec_elem = sizeof(LimitRecord::rec_def) / sizeof(RecordObject::fieldDef_t);

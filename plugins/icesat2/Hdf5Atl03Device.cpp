@@ -49,14 +49,21 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Hdf5Atl03Device::recType = "atl03rec";
-const RecordObject::fieldDef_t Hdf5Atl03Device::recDef[] = {
-    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),   1,  NATIVE_FLAGS},
-    {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NATIVE_FLAGS},
-    {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NATIVE_FLAGS},
-    {"DIST",        RecordObject::DOUBLE,   offsetof(extent_t, start_distance[0]),      2,  NATIVE_FLAGS},
-    {"COUNT",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),        2,  NATIVE_FLAGS},
-    {"PHOTONS",     RecordObject::STRING,   offsetof(extent_t, photon_offset[0]),       2,  NATIVE_FLAGS | RecordObject::POINTER}
+const char* Hdf5Atl03Device::phRecType = "atl03rec.photons";
+const RecordObject::fieldDef_t Hdf5Atl03Device::phRecDef[] = {
+    {"X",           RecordObject::DOUBLE,   offsetof(photon_t, distance_x), 1,  NULL, NATIVE_FLAGS},
+    {"Y",           RecordObject::DOUBLE,   offsetof(photon_t, height_y),   1,  NULL, NATIVE_FLAGS}
+};
+
+const char* Hdf5Atl03Device::exRecType = "atl03rec";
+const RecordObject::fieldDef_t Hdf5Atl03Device::exRecDef[] = {
+    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),   1,  NULL, NATIVE_FLAGS},
+    {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NULL, NATIVE_FLAGS},
+    {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NULL, NATIVE_FLAGS},
+    {"DIST",        RecordObject::DOUBLE,   offsetof(extent_t, start_distance[0]),      2,  NULL, NATIVE_FLAGS},
+    {"COUNT",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),        2,  NULL, NATIVE_FLAGS},
+    {"PHOTONS",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),       2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
+    {"DATA",        RecordObject::USER,     sizeof(extent_t),                           0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
 const Hdf5Atl03Device::parms_t Hdf5Atl03Device::DefaultParms = {
@@ -132,11 +139,11 @@ int Hdf5Atl03Device::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Hdf5Atl03Device::init (void)
 {
-    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, "TRACK", sizeof(extent_t), recDef, def_elements, 16);
+    int def_elements = sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(exRecType, "TRACK", sizeof(extent_t), exRecDef, def_elements, 16);
     if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d\n", recType, rc);
+        mlog(CRITICAL, "Failed to define %s: %d\n", exRecType, rc);
     }
 }
 
@@ -342,7 +349,7 @@ bool Hdf5Atl03Device::h5open (const char* url)
                     int extent_size = sizeof(extent_t) + (sizeof(photon_t) * (extent_photons[PRT_LEFT].length() + extent_photons[PRT_RIGHT].length()));
 
                     /* Allocate and Initialize Extent Record */
-                    RecordObject* record = new RecordObject(recType, extent_size); // overallocated memory... photons filtered below
+                    RecordObject* record = new RecordObject(exRecType, extent_size); // overallocated memory... photons filtered below
                     extent_t* extent = (extent_t*)record->getRecordData();
                     extent->pair_reference_track = track;
 

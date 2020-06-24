@@ -86,6 +86,7 @@ class RecordObject
             DOUBLE,
             TIME8,
             STRING,
+            USER,
             INVALID_FIELD,
             NUM_FIELD_TYPES
         } fieldType_t;
@@ -112,6 +113,7 @@ class RecordObject
             fieldType_t     type;               // predefined types
             int32_t         offset;             // offset in bits into structure
             int32_t         elements;           // size in bits of field
+            const char*     exttype;            // record type when type=USER
             unsigned int    flags;              // see fieldFlags_t
         } field_t;
 
@@ -119,7 +121,8 @@ class RecordObject
             const char*     name;
             fieldType_t     type;
             int32_t         offset;             // bits for BITFIELD, bytes for everything else
-            int32_t         elements;           // bits for BITFIELD, bytes for everything else
+            int32_t         elements;
+            const char*     exttype;
             unsigned int    flags;
         } fieldDef_t;
 
@@ -217,7 +220,7 @@ class RecordObject
         /* Definition Static Methods */
         static valType_t        getValueType        (field_t field);
         static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=MAX_FIELDS);
-        static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags=NATIVE_FLAGS);
+        static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, const char* exttype, unsigned int flags=NATIVE_FLAGS);
 
         /* Utility Static Methods */
         static bool             isRecord            (const char* rec_type);
@@ -294,8 +297,9 @@ class RecordObject
 
         /* Regular Methods */
         field_t                 getPointedToField   (field_t field, bool allow_null, int element=0);
+        static field_t          getUserField        (definition_t* def, const char* field_name);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
-        static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, unsigned int flags=NATIVE_FLAGS);
+        static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags);
 
         /* Overloaded Methods */
         static definition_t*    getDefinition       (const char* rec_type);

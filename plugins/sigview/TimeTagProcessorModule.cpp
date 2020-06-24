@@ -67,18 +67,18 @@ const char* PktStat::rec_type = "PktStat";
 
 RecordObject::fieldDef_t PktStat::rec_def[] =
 {
-    {"PCE",        UINT32, offsetof(pktStat_t, pce),        1,  NATIVE_FLAGS},
-    {"MFC_ERRORS", UINT32, offsetof(pktStat_t, mfc_errors), 1,  NATIVE_FLAGS},
-    {"HDR_ERRORS", UINT32, offsetof(pktStat_t, hdr_errors), 1,  NATIVE_FLAGS},
-    {"FMT_ERRORS", UINT32, offsetof(pktStat_t, fmt_errors), 1,  NATIVE_FLAGS},
-    {"DLB_ERRORS", UINT32, offsetof(pktStat_t, dlb_errors), 1,  NATIVE_FLAGS},
-    {"TAG_ERRORS", UINT32, offsetof(pktStat_t, tag_errors), 1,  NATIVE_FLAGS},
-    {"PKT_ERRORS", UINT32, offsetof(pktStat_t, pkt_errors), 1,  NATIVE_FLAGS},
-    {"WARNINGS",   UINT32, offsetof(pktStat_t, warnings),   1,  NATIVE_FLAGS},
-    {"SUM_TAGS",   UINT32, offsetof(pktStat_t, sum_tags),   1,  NATIVE_FLAGS},
-    {"MIN_TAGS",   UINT32, offsetof(pktStat_t, min_tags),   1,  NATIVE_FLAGS},
-    {"MAX_TAGS",   UINT32, offsetof(pktStat_t, max_tags),   1,  NATIVE_FLAGS},
-    {"AVG_TAGS",   DOUBLE, offsetof(pktStat_t, avg_tags),   1,  NATIVE_FLAGS}
+    {"PCE",        UINT32, offsetof(pktStat_t, pce),        1,  NULL, NATIVE_FLAGS},
+    {"MFC_ERRORS", UINT32, offsetof(pktStat_t, mfc_errors), 1,  NULL, NATIVE_FLAGS},
+    {"HDR_ERRORS", UINT32, offsetof(pktStat_t, hdr_errors), 1,  NULL, NATIVE_FLAGS},
+    {"FMT_ERRORS", UINT32, offsetof(pktStat_t, fmt_errors), 1,  NULL, NATIVE_FLAGS},
+    {"DLB_ERRORS", UINT32, offsetof(pktStat_t, dlb_errors), 1,  NULL, NATIVE_FLAGS},
+    {"TAG_ERRORS", UINT32, offsetof(pktStat_t, tag_errors), 1,  NULL, NATIVE_FLAGS},
+    {"PKT_ERRORS", UINT32, offsetof(pktStat_t, pkt_errors), 1,  NULL, NATIVE_FLAGS},
+    {"WARNINGS",   UINT32, offsetof(pktStat_t, warnings),   1,  NULL, NATIVE_FLAGS},
+    {"SUM_TAGS",   UINT32, offsetof(pktStat_t, sum_tags),   1,  NULL, NATIVE_FLAGS},
+    {"MIN_TAGS",   UINT32, offsetof(pktStat_t, min_tags),   1,  NULL, NATIVE_FLAGS},
+    {"MAX_TAGS",   UINT32, offsetof(pktStat_t, max_tags),   1,  NULL, NATIVE_FLAGS},
+    {"AVG_TAGS",   DOUBLE, offsetof(pktStat_t, avg_tags),   1,  NULL, NATIVE_FLAGS}
 };
 
 int PktStat::rec_elem = sizeof(PktStat::rec_def) / sizeof(RecordObject::fieldDef_t);
@@ -115,25 +115,25 @@ void ChStat::defineRecord(void)
 
     if(status == SUCCESS_DEF)
     {
-        addField(def, "PCE", UINT32, offsetof(chStat_t, pce), 1, NATIVE_FLAGS);
+        addField(def, "PCE", UINT32, offsetof(chStat_t, pce), 1, NULL, NATIVE_FLAGS);
 
         for(int i = 0; i < NUM_CHANNELS; i++)
         {
             char field_name[MAX_FIELD_NAME_SIZE];
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "RX_CNT", i),    UINT32, offsetof(chStat_t, rx_cnt) + (i * sizeof(uint32_t)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "NUM_DUPR", i),  UINT32, offsetof(chStat_t, num_dupr) + (i * sizeof(uint32_t)),  1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "NUM_DUPF", i),  UINT32, offsetof(chStat_t, num_dupf) + (i * sizeof(uint32_t)),  1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "CELL_CNTS", i), UINT32, offsetof(chStat_t, cell_cnts) + (i * sizeof(uint32_t)), 1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "TDC_CALR", i),  DOUBLE, offsetof(chStat_t, tdc_calr) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MIN_CALR", i),  DOUBLE, offsetof(chStat_t, min_calr) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MAX_CALR", i),  DOUBLE, offsetof(chStat_t, max_calr) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "AVG_CALR", i),  DOUBLE, offsetof(chStat_t, avg_calr) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "TDC_CALF", i),  DOUBLE, offsetof(chStat_t, tdc_calf) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MIN_CALF", i),  DOUBLE, offsetof(chStat_t, min_calf) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MAX_CALF", i),  DOUBLE, offsetof(chStat_t, max_calf) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "AVG_CALF", i),  DOUBLE, offsetof(chStat_t, avg_calf) + (i * sizeof(double)),    1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "BIAS", i),      DOUBLE, offsetof(chStat_t, bias) + (i * sizeof(double)),        1, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "DEAD_TIME", i), DOUBLE, offsetof(chStat_t, dead_time) + (i * sizeof(double)),   1, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "RX_CNT", i),    UINT32, offsetof(chStat_t, rx_cnt) + (i * sizeof(uint32_t)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "NUM_DUPR", i),  UINT32, offsetof(chStat_t, num_dupr) + (i * sizeof(uint32_t)),  1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "NUM_DUPF", i),  UINT32, offsetof(chStat_t, num_dupf) + (i * sizeof(uint32_t)),  1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "CELL_CNTS", i), UINT32, offsetof(chStat_t, cell_cnts) + (i * sizeof(uint32_t)), 1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "TDC_CALR", i),  DOUBLE, offsetof(chStat_t, tdc_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MIN_CALR", i),  DOUBLE, offsetof(chStat_t, min_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MAX_CALR", i),  DOUBLE, offsetof(chStat_t, max_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "AVG_CALR", i),  DOUBLE, offsetof(chStat_t, avg_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "TDC_CALF", i),  DOUBLE, offsetof(chStat_t, tdc_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MIN_CALF", i),  DOUBLE, offsetof(chStat_t, min_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MAX_CALF", i),  DOUBLE, offsetof(chStat_t, max_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "AVG_CALF", i),  DOUBLE, offsetof(chStat_t, avg_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "BIAS", i),      DOUBLE, offsetof(chStat_t, bias) + (i * sizeof(double)),        1, NULL, NATIVE_FLAGS);
+            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "DEAD_TIME", i), DOUBLE, offsetof(chStat_t, dead_time) + (i * sizeof(double)),   1, NULL, NATIVE_FLAGS);
         }
     }
 }
@@ -146,19 +146,19 @@ const char* TxStat::rec_type = "TxStat";
 
 RecordObject::fieldDef_t TxStat::rec_def[] =
 {
-    {"PCE",              UINT32, offsetof(txStat_t, pce),         1, NATIVE_FLAGS},
-    {"TXCNT",            UINT32, offsetof(txStat_t, txcnt),       1, NATIVE_FLAGS},
-    {"MIN_TAGS[STRONG]", UINT32, offsetof(txStat_t, min_tags[0]), 1, NATIVE_FLAGS},
-    {"MIN_TAGS[WEAK]",   UINT32, offsetof(txStat_t, min_tags[1]), 1, NATIVE_FLAGS},
-    {"MAX_TAGS[STRONG]", UINT32, offsetof(txStat_t, max_tags[0]), 1, NATIVE_FLAGS},
-    {"MAX_TAGS[WEAK]",   UINT32, offsetof(txStat_t, max_tags[1]), 1, NATIVE_FLAGS},
-    {"AVG_TAGS[STRONG]", DOUBLE, offsetof(txStat_t, avg_tags[0]), 1, NATIVE_FLAGS},
-    {"AVG_TAGS[WEAK]",   DOUBLE, offsetof(txStat_t, avg_tags[1]), 1, NATIVE_FLAGS},
-    {"STD_TAGS[STRONG]", DOUBLE, offsetof(txStat_t, std_tags[0]), 1, NATIVE_FLAGS},
-    {"STD_TAGS[WEAK]",   DOUBLE, offsetof(txStat_t, std_tags[1]), 1, NATIVE_FLAGS},
-    {"MIN_DELTA",        DOUBLE, offsetof(txStat_t, min_delta),   1, NATIVE_FLAGS},
-    {"MAX_DELTA",        DOUBLE, offsetof(txStat_t, max_delta),   1, NATIVE_FLAGS},
-    {"AVG_DELTA",        DOUBLE, offsetof(txStat_t, avg_delta),   1, NATIVE_FLAGS}
+    {"PCE",              UINT32, offsetof(txStat_t, pce),         1, NULL, NATIVE_FLAGS},
+    {"TXCNT",            UINT32, offsetof(txStat_t, txcnt),       1, NULL, NATIVE_FLAGS},
+    {"MIN_TAGS[STRONG]", UINT32, offsetof(txStat_t, min_tags[0]), 1, NULL, NATIVE_FLAGS},
+    {"MIN_TAGS[WEAK]",   UINT32, offsetof(txStat_t, min_tags[1]), 1, NULL, NATIVE_FLAGS},
+    {"MAX_TAGS[STRONG]", UINT32, offsetof(txStat_t, max_tags[0]), 1, NULL, NATIVE_FLAGS},
+    {"MAX_TAGS[WEAK]",   UINT32, offsetof(txStat_t, max_tags[1]), 1, NULL, NATIVE_FLAGS},
+    {"AVG_TAGS[STRONG]", DOUBLE, offsetof(txStat_t, avg_tags[0]), 1, NULL, NATIVE_FLAGS},
+    {"AVG_TAGS[WEAK]",   DOUBLE, offsetof(txStat_t, avg_tags[1]), 1, NULL, NATIVE_FLAGS},
+    {"STD_TAGS[STRONG]", DOUBLE, offsetof(txStat_t, std_tags[0]), 1, NULL, NATIVE_FLAGS},
+    {"STD_TAGS[WEAK]",   DOUBLE, offsetof(txStat_t, std_tags[1]), 1, NULL, NATIVE_FLAGS},
+    {"MIN_DELTA",        DOUBLE, offsetof(txStat_t, min_delta),   1, NULL, NATIVE_FLAGS},
+    {"MAX_DELTA",        DOUBLE, offsetof(txStat_t, max_delta),   1, NULL, NATIVE_FLAGS},
+    {"AVG_DELTA",        DOUBLE, offsetof(txStat_t, avg_delta),   1, NULL, NATIVE_FLAGS}
 };
 
 int TxStat::rec_elem = sizeof(TxStat::rec_def) / sizeof(RecordObject::fieldDef_t);
@@ -179,19 +179,19 @@ const char* SigStat::rec_type = "SigStat";
 
 RecordObject::fieldDef_t SigStat::rec_def[] =
 {
-    {"PCE",            UINT32, offsetof(sigStat_t, pce),          1,    NATIVE_FLAGS},
-    {"RWS[STRONG]",    DOUBLE, offsetof(sigStat_t, rws[0]),       1,    NATIVE_FLAGS},
-    {"RWS[WEAK]",      DOUBLE, offsetof(sigStat_t, rws[1]),       1,    NATIVE_FLAGS},
-    {"RWW[STRONG]",    DOUBLE, offsetof(sigStat_t, rww[0]),       1,    NATIVE_FLAGS},
-    {"RWW[WEAK]",      DOUBLE, offsetof(sigStat_t, rww[1]),       1,    NATIVE_FLAGS},
-    {"SIGRNG[STRONG]", DOUBLE, offsetof(sigStat_t, sigrng[0]),    1,    NATIVE_FLAGS},
-    {"SIGRNG[WEAK]",   DOUBLE, offsetof(sigStat_t, sigrng[1]),    1,    NATIVE_FLAGS},
-    {"BKGND[STRONG]",  DOUBLE, offsetof(sigStat_t, bkgnd[0]),     1,    NATIVE_FLAGS},
-    {"BKGND[WEAK]",    DOUBLE, offsetof(sigStat_t, bkgnd[1]),     1,    NATIVE_FLAGS},
-    {"SIGPES[STRONG]", DOUBLE, offsetof(sigStat_t, sigpes[0]),    1,    NATIVE_FLAGS},
-    {"SIGPES[WEAK]",   DOUBLE, offsetof(sigStat_t, sigpes[1]),    1,    NATIVE_FLAGS},
-    {"TEPPE[STRONG]",  DOUBLE, offsetof(sigStat_t, teppe[0]),     1,    NATIVE_FLAGS},
-    {"TEPPE[WEAK]",    DOUBLE, offsetof(sigStat_t, teppe[1]),     1,    NATIVE_FLAGS},
+    {"PCE",            UINT32, offsetof(sigStat_t, pce),          1,    NULL, NATIVE_FLAGS},
+    {"RWS[STRONG]",    DOUBLE, offsetof(sigStat_t, rws[0]),       1,    NULL, NATIVE_FLAGS},
+    {"RWS[WEAK]",      DOUBLE, offsetof(sigStat_t, rws[1]),       1,    NULL, NATIVE_FLAGS},
+    {"RWW[STRONG]",    DOUBLE, offsetof(sigStat_t, rww[0]),       1,    NULL, NATIVE_FLAGS},
+    {"RWW[WEAK]",      DOUBLE, offsetof(sigStat_t, rww[1]),       1,    NULL, NATIVE_FLAGS},
+    {"SIGRNG[STRONG]", DOUBLE, offsetof(sigStat_t, sigrng[0]),    1,    NULL, NATIVE_FLAGS},
+    {"SIGRNG[WEAK]",   DOUBLE, offsetof(sigStat_t, sigrng[1]),    1,    NULL, NATIVE_FLAGS},
+    {"BKGND[STRONG]",  DOUBLE, offsetof(sigStat_t, bkgnd[0]),     1,    NULL, NATIVE_FLAGS},
+    {"BKGND[WEAK]",    DOUBLE, offsetof(sigStat_t, bkgnd[1]),     1,    NULL, NATIVE_FLAGS},
+    {"SIGPES[STRONG]", DOUBLE, offsetof(sigStat_t, sigpes[0]),    1,    NULL, NATIVE_FLAGS},
+    {"SIGPES[WEAK]",   DOUBLE, offsetof(sigStat_t, sigpes[1]),    1,    NULL, NATIVE_FLAGS},
+    {"TEPPE[STRONG]",  DOUBLE, offsetof(sigStat_t, teppe[0]),     1,    NULL, NATIVE_FLAGS},
+    {"TEPPE[WEAK]",    DOUBLE, offsetof(sigStat_t, teppe[1]),     1,    NULL, NATIVE_FLAGS},
 };
 
 int SigStat::rec_elem = sizeof(SigStat::rec_def) / sizeof(RecordObject::fieldDef_t);

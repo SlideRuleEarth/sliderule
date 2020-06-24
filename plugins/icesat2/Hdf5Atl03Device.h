@@ -103,8 +103,11 @@ class Hdf5Atl03Device: public DeviceObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* recType;
-        static const RecordObject::fieldDef_t recDef[];
+        static const char* phRecType;
+        static const RecordObject::fieldDef_t phRecDef[];
+
+        static const char* exRecType;
+        static const RecordObject::fieldDef_t exRecDef[];
 
         static const parms_t DefaultParms;
 

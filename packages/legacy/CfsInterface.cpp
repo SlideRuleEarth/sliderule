@@ -39,19 +39,19 @@ const char* CfsInterface::PktStats::rec_type = "CfsPktStat";
 
 RecordObject::fieldDef_t CfsInterface::PktStats::rec_def[] =
 {
-    {"APID",            UINT32, offsetof(pktStats_t, apid),             1,  NATIVE_FLAGS},
-    {"SEGS_READ",       UINT32, offsetof(pktStats_t, segs_read),        1,  NATIVE_FLAGS},
-    {"SEGS_ERRORS",     UINT32, offsetof(pktStats_t, segs_errors),      1,  NATIVE_FLAGS},
-    {"SEGS_FORWARDED",  UINT32, offsetof(pktStats_t, segs_forwarded),   1,  NATIVE_FLAGS},
-    {"SEGS_DROPPED",    UINT32, offsetof(pktStats_t, segs_dropped),     1,  NATIVE_FLAGS},
-    {"TOTAL_BYTES",     UINT32, offsetof(pktStats_t, total_bytes),      1,  NATIVE_FLAGS},
-    {"TOTAL_PKTS",      UINT32, offsetof(pktStats_t, total_pkts),       1,  NATIVE_FLAGS},
-    {"SEQ_ERRORS",      UINT32, offsetof(pktStats_t, seq_errors),       1,  NATIVE_FLAGS},
-    {"SEG_ERRORS",      UINT32, offsetof(pktStats_t, seg_errors),       1,  NATIVE_FLAGS},
-    {"LEN_ERRORS",      UINT32, offsetof(pktStats_t, len_errors),       1,  NATIVE_FLAGS},
-    {"CHKSUM_ERRORS",   UINT32, offsetof(pktStats_t, chksum_errors),    1,  NATIVE_FLAGS},
-    {"FILTER_FACTOR",   UINT32, offsetof(pktStats_t, filter_factor),    1,  NATIVE_FLAGS},
-    {"AVG_BPS",         DOUBLE, offsetof(pktStats_t, avg_bps),          1,  NATIVE_FLAGS}
+    {"APID",            UINT32, offsetof(pktStats_t, apid),             1,  NULL, NATIVE_FLAGS},
+    {"SEGS_READ",       UINT32, offsetof(pktStats_t, segs_read),        1,  NULL, NATIVE_FLAGS},
+    {"SEGS_ERRORS",     UINT32, offsetof(pktStats_t, segs_errors),      1,  NULL, NATIVE_FLAGS},
+    {"SEGS_FORWARDED",  UINT32, offsetof(pktStats_t, segs_forwarded),   1,  NULL, NATIVE_FLAGS},
+    {"SEGS_DROPPED",    UINT32, offsetof(pktStats_t, segs_dropped),     1,  NULL, NATIVE_FLAGS},
+    {"TOTAL_BYTES",     UINT32, offsetof(pktStats_t, total_bytes),      1,  NULL, NATIVE_FLAGS},
+    {"TOTAL_PKTS",      UINT32, offsetof(pktStats_t, total_pkts),       1,  NULL, NATIVE_FLAGS},
+    {"SEQ_ERRORS",      UINT32, offsetof(pktStats_t, seq_errors),       1,  NULL, NATIVE_FLAGS},
+    {"SEG_ERRORS",      UINT32, offsetof(pktStats_t, seg_errors),       1,  NULL, NATIVE_FLAGS},
+    {"LEN_ERRORS",      UINT32, offsetof(pktStats_t, len_errors),       1,  NULL, NATIVE_FLAGS},
+    {"CHKSUM_ERRORS",   UINT32, offsetof(pktStats_t, chksum_errors),    1,  NULL, NATIVE_FLAGS},
+    {"FILTER_FACTOR",   UINT32, offsetof(pktStats_t, filter_factor),    1,  NULL, NATIVE_FLAGS},
+    {"AVG_BPS",         DOUBLE, offsetof(pktStats_t, avg_bps),          1,  NULL, NATIVE_FLAGS}
 };
 
 int CfsInterface::PktStats::rec_elem = sizeof(CfsInterface::PktStats::rec_def) / sizeof(RecordObject::fieldDef_t);

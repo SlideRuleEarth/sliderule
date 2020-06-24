@@ -53,6 +53,7 @@ const int RecordObject::FIELD_TYPE_BYTES[NUM_FIELD_TYPES] = {
     8, // DOUBLE
     8, // TIME8
     1, // STRING
+    0, // USER
     0  // INVALID_FIELD
 };
 
@@ -490,6 +491,9 @@ int RecordObject::getFieldNames(char*** names)
     return recordDefinition->fields.getKeys(names);
 }
 
+
+// todo - need another function that takes pointer to record definition, and field name, called by this function and is static
+
 /*----------------------------------------------------------------------------
  * getField
  *----------------------------------------------------------------------------*/
@@ -501,72 +505,7 @@ RecordObject::field_t RecordObject::getField(const char* field_name)
     }
     else
     {
-        try
-        {
-            /* Return Field (no array access) */
-            field_t field = recordDefinition->fields[field_name];
-            return field;
-        }
-        catch(const std::out_of_range& e1)
-        {
-            (void)e1;
-
-            /* Attempt Array Access */
-            char fstr[MAX_VAL_STR_SIZE]; // field string
-            StringLib::copy(fstr, field_name, MAX_VAL_STR_SIZE);
-
-            /* Parse Array Format: field[element]
-             *                     ^     ^
-             *                     |     |
-             *                    fstr   estr
-             */
-            char* estr = StringLib::find(&fstr[1], '['); // element string
-            if(estr != NULL)
-            {
-                char* b = estr; // save off in order to terminate later
-                estr = StringLib::find(estr, ']');
-                if(estr != NULL)
-                {
-                    *b = '\0'; // terminate field name
-                    *estr = '\0'; // terminate element string
-                    estr = b + 1; // point to start of element string
-
-                    /* Get Element */
-                    long element;
-                    if(StringLib::str2long(estr, &element))
-                    {
-                        try
-                        {
-                            /* Look Up Field Name */
-                            field_t field = recordDefinition->fields[fstr];
-
-                            /* Check Element Boundary */
-                            if(element < field.elements)
-                            {
-                                /* Modify Elements and Offset if not Pointer */
-                                if((field.flags & POINTER) == 0)
-                                {
-                                    field.elements -= element;
-                                    field.offset += TOBITS(element * FIELD_TYPE_BYTES[field.type]);
-                                }
-
-                                /* Return Field */
-                                return field;
-                            }
-                        }
-                        catch(const std::exception& e2)
-                        {
-                            (void)e2;
-                        }
-                    }
-                }
-            }
-
-            /* Return Invalid Field */
-            field_t ret_field;
-            ret_field.type = INVALID_FIELD;
-            return ret_field;
-        }
+        return getUserField(recordDefinition, field_name);
     }
 }
 
@@ -949,6 +888,7 @@ RecordObject::valType_t RecordObject::getValueType(field_t f)
         case DOUBLE:    return REAL;
         case TIME8:     return REAL;
         case STRING:    return TEXT;
+        case USER:      return INVALID_VALUE;
         default:        return INVALID_VALUE;
     }
 }
@@ -965,12 +905,12 @@ RecordObject::recordDefErr_t RecordObject::defineRecord(const char* rec_type, co
 /*----------------------------------------------------------------------------
  * defineField
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::defineField(const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, unsigned int flags)
+RecordObject::recordDefErr_t RecordObject::defineField(const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, const char* exttype, unsigned int flags)
 {
     assert(rec_type);
     assert(field_name);
 
-    return addField(getDefinition(rec_type), field_name, type, offset, size, flags);
+    return addField(getDefinition(rec_type), field_name, type, offset, size, exttype, flags);
 }
 
 /*----------------------------------------------------------------------------
@@ -1161,6 +1101,7 @@ RecordObject::fieldType_t RecordObject::str2ft (const char* str)
     else if(StringLib::match(str, "DOUBLE"))    return DOUBLE;
     else if(StringLib::match(str, "TIME8"))     return TIME8;
     else if(StringLib::match(str, "STRING"))    return STRING;
+    else if(StringLib::match(str, "USER"))      return USER;
     else if(StringLib::match(str, "INT16BE"))   return INT16;
     else if(StringLib::match(str, "INT32BE"))   return INT32;
     else if(StringLib::match(str, "INT64BE"))   return INT64;
@@ -1243,6 +1184,7 @@ const char* RecordObject::ft2str (fieldType_t ft)
         case DOUBLE:    return "DOUBLE";
         case TIME8:     return "TIME8";
         case STRING:    return "STRING";
+        case USER:      return "USER";
         default:        return "INVALID_FIELD";
     }
 }
@@ -1326,8 +1268,8 @@ void RecordObject::packBitField (unsigned char* buf, int bit_offset, int bit_len
  *----------------------------------------------------------------------------*/
 RecordObject::field_t RecordObject::parseImmediateField(const char* str)
 {
-    field_t retfield = {INVALID_FIELD, 0, 0, 0};
-    field_t f = {INVALID_FIELD, 0, 0, 0};
+    field_t retfield = {INVALID_FIELD, 0, 0, NULL, 0};
+    field_t f = {INVALID_FIELD, 0, 0, NULL, 0};
 
     /* Make Copy of String */
     char pstr[MAX_VAL_STR_SIZE];
@@ -1504,6 +1446,104 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
 }
 
 /*----------------------------------------------------------------------------
+ * getUserField
+ *----------------------------------------------------------------------------*/
+RecordObject::field_t RecordObject::getUserField (definition_t* def, const char* field_name)
+{
+    field_t field = { INVALID_FIELD, 0, 0, NULL, NATIVE_FLAGS };
+    long element = -1;
+
+    /* Attempt Direct Access */
+    try
+    {
+        field = def->fields[field_name];
+    }
+    catch(const std::out_of_range& e)
+    {
+        (void)e;
+    }
+
+    /* Attempt Indirect Access (array and/or struct) */
+    try
+    {
+        /* Make Mutable Copy of Field Name */
+        char fstr[MAX_VAL_STR_SIZE]; // field string
+        StringLib::copy(fstr, field_name, MAX_VAL_STR_SIZE);
+
+        /* Parse Dotted Notation
+        *      field.subfield
+        *      ^     ^
+        *      |     |
+        *     fstr  subfield..
+        */
+        char* subfield_name = StringLib::find(&fstr[1], '.'); // user structure
+        if(subfield_name)
+        {
+            *subfield_name = '\0';
+            subfield_name += 1;
+        }
+
+        /* Parse Bracket Notation:
+        *      field[element]
+        *      ^     ^      ^
+        *      |     |      |
+        *     fstr  ele..  tstr
+        */
+        char* element_str = StringLib::find(&fstr[1], '['); // element string
+        if(element_str != NULL)
+        {
+            char* tstr = StringLib::find(element_str, ']');
+            if(tstr != NULL)
+            {
+                *element_str = '\0'; // terminate field name
+                *tstr = '\0'; // terminate element string
+                element_str += 1; // point to start of element string
+
+                /* Get Element */
+                if(!StringLib::str2long(element_str, &element))
+                {
+                    throw AccessRecordException("Invalid array element!");
+                }
+            }
+        }
+
+        /* Look Up Field Name */
+        field = def->fields[fstr];
+        if(field.type != USER)
+        {
+            /* Check Element Boundary */
+            if(element >= 0 && (element < field.elements || field.elements <= 0))
+            {
+                /* Modify Elements and Offset if not Pointer */
+                if((field.flags & POINTER) == 0)
+                {
+                    if(field.elements > 0) field.elements -= element;
+                    field.offset += TOBITS(element * FIELD_TYPE_BYTES[field.type]);
+                }
+            }
+        }
+        else
+        {
+            definition_t* subdef = definitions[field.exttype];
+            field_t subfield = getUserField(subdef, subfield_name);
+            subfield.offset += field.offset;
+            field = subfield;
+        }
+    }
+    catch(const AccessRecordException& e)
+    {
+        dlog("Failed to parse field %s: %s\n", field_name, e.what());
+    }
+    catch(const std::out_of_range& e)
+    {
+        dlog("Failed to find subrecord definition for field %s\n", field_name);
+    }
+
+    /* Return Field */
+    return field;
+}
+
+/*----------------------------------------------------------------------------
  * addDefinition
  *
  *  returns pointer to record definition in rec_def
@@ -1547,7 +1587,7 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
     /* Add Fields */
     for(int i = 0; status == SUCCESS_DEF && i < num_fields; i++)
     {
-        status = addField(def, fields[i].name, fields[i].type, fields[i].offset, fields[i].elements, fields[i].flags);
+        status = addField(def, fields[i].name, fields[i].type, fields[i].offset, fields[i].elements, fields[i].exttype, fields[i].flags);
     }
 
     /* Return Definition and Status */
@@ -1562,7 +1602,7 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
  *   1. Will often fail with multiple calls to create same record definition (this is okay)
  *   2. Offset in bytes except for bit field, where it is in bits
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, unsigned int flags)
+RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags)
 {
     assert(field_name);
 
@@ -1584,6 +1624,7 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
         f.type = type;
         f.offset = field_offset;
         f.elements = elements;
+        f.exttype = exttype;
         f.flags = flags;
 
         // uniquely add the field

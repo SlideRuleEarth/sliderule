@@ -1183,7 +1183,7 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE])
     unsigned int flags = RecordObject::str2flags(flags_str);
 
     /* Define Field */
-    RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, field_name, field_type, offset, size, flags);
+    RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, field_name, field_type, offset, size, NULL, flags);
     if(status == RecordObject::DUPLICATE_DEF)
     {
         mlog(WARNING, "Attempting to define field %s that is already defined for record %s\n", field_name, rec_type);
