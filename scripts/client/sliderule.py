@@ -80,7 +80,6 @@ def engine (api, parm):
     stream = requests.post(url, data=rqst, stream=True)
 
     # Read and Parse Stream #
-
     rsps_recs = []
 
     rec_size_size = 4
@@ -131,9 +130,7 @@ def engine (api, parm):
     #           2. TODO: Endianness set not always set per field
     #           3. TODO: break this out into helper functions with recursion
     #           4. TODO: general optimization... if subrecord has no arrays, could prebuild fmt string
-
     rsps = []
-
     for rawrec in rsps_recs:
         rec = {}
         rectype = ctypes.create_string_buffer(rawrec).value.decode('ascii')
@@ -181,7 +178,6 @@ def engine (api, parm):
         rsps.append(rec)
 
     # Return Response #
-
     return rsps
 
 #
@@ -191,61 +187,26 @@ def populate(rectype):
     global recdef_tbl
     recdef_tbl[rectype] = source("definition", {"rectype" : rectype})
 
+#
+#  SET_URL
+#
+def set_url(new_url):
+    global server_url
+    server_url = new_url
 
-###############################################################################
-# MAIN
-###############################################################################
-
-if __name__ == '__main__':
-
-    # Override server URL from command line
-
-    if len(sys.argv) > 1:
-        server_url = sys.argv[1]
-
-    # Get record definitions
-
-    populate("atl03rec")
-    populate("h5dataset")
-    populate("atl03rec.photons")
-
-    # Request Dataset
-
-    parms = {
-        "filename": "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5",
-        "track": 1,
-        "stages": ["LSF"],
-        "parms": {
-            "cnf": 4,
-            "ats": 20.0,
-            "cnt": 10,
-            "len": 40.0,
-            "res": 20.0
-        }
-    }
-
-#    r = engine("atl06", parms)
-
-#    print(r)
-
-
-    parms = {
-        "filename": "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5",
-        "dataset": "/gt1r/geolocation/segment_ph_cnt",
-        "datatype": datatypes["INTEGER"],
-        "id": 0
-    }
-
-    r = engine("h5", parms)
-
-    raw = bytes(r[0]["DATA"])
-    datatype = datatype2nptype[r[0]["DATATYPE"]]
-    datasize = int(r[0]["SIZE"] / np.dtype(datatype).itemsize)
+#
+#  GET_VALUES
+#
+def get_values(data, dtype, size):
+    """
+    data:   tuple of bytes
+    dtype:  element of datatypes
+    size:   bytes in data
+    """
+    raw = bytes(data)
+    datatype = datatype2nptype[dtype]
+    datasize = int(size / np.dtype(datatype).itemsize)
     slicesize = datasize * np.dtype(datatype).itemsize # truncates partial bytes
     values = np.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
 
-    print(values)
-#    df = pd.DataFrame(data=values, index=[i for i in range(datasize)], columns=["test"])
-
-
-#    print()
+    return values
