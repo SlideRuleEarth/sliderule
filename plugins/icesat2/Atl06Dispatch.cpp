@@ -231,7 +231,7 @@ void Atl06Dispatch::populateElevation (elevation_t* elevation)
         }
 
         /* Check If ATL06 Record Should Be Posted*/
-        if(!elevation || elevationIndex == BATCH_SIZE)
+        if((!elevation && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
         {
             /* Serialize Record */
             unsigned char* buffer;
@@ -239,6 +239,9 @@ void Atl06Dispatch::populateElevation (elevation_t* elevation)
 
             /* Adjust Size (according to number of elevations) */
             size -= (BATCH_SIZE - elevationIndex) * sizeof(elevation_t);
+
+            /* Reset Elevation Index */
+            elevationIndex = 0;
 
             /* Post Record */
             if(outQ->postCopy(buffer, size, SYS_TIMEOUT) > 0)
