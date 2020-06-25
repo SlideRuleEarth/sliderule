@@ -88,6 +88,9 @@ def __decode(rectype, rawdata):
         # decode basic type
         if ftype in basictypes:
 
+            # check if array
+            is_array = not (elems == 1)
+
             # get number of elements
             if elems <= 0:
                 elems = int((len(rawdata) - offset) / basictypes[ftype]["size"])
@@ -95,11 +98,14 @@ def __decode(rectype, rawdata):
             # build format string
             fmt = endian + str(elems) + basictypes[ftype]["fmt"]
 
-            # return parsed data
-            if elems == 1:
-                rec[fieldname] = struct.unpack_from(fmt, rawdata, offset)[0]
+            # parse data
+            value = struct.unpack_from(fmt, rawdata, offset)
+
+            # set field
+            if is_array:
+                rec[fieldname] = value
             else:
-                rec[fieldname] = struct.unpack_from(fmt, rawdata, offset)
+                rec[fieldname] = value[0]
 
         # decode user type
         elif ftype in recdef_tbl:
@@ -107,18 +113,21 @@ def __decode(rectype, rawdata):
             subrec = {}
             subrecdef = recdef_tbl[ftype]
 
+            # check if array
+            is_array = not (elems == 1)
+
             # get number of elements
             if elems <= 0:
                 elems = int((len(rawdata) - offset) / subrecdef["@datasize"])
 
             # return parsed data
-            if elems == 1:
+            if is_array:
                 rec[fieldname] = __decode(ftype, rawdata[offset:])
             else:
                 rec[fieldname] = []
                 for e in range(elems):
-                    offset += subrecdef["@datasize"]
                     rec[fieldname].append(__decode(ftype, rawdata[offset:]))
+                    offset += subrecdef["@datasize"]
 
     # return record #
     return rec
