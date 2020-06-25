@@ -19,35 +19,102 @@ server_url = 'http://127.0.0.1:9081'
 
 recdef_tbl = {}
 
-datatypes = {
-    "TEXT":     0,
-    "REAL":     1,
-    "INTEGER":  2,
-    "DYNAMIC":  3
+basic_types = {
+    "INT8":     { "fmt": 'b', "size": 1 },
+    "INT16":    { "fmt": 'h', "size": 2 },
+    "INT32":    { "fmt": 'i', "size": 4 },
+    "INT64":    { "fmt": 'q', "size": 8 },
+    "UINT8":    { "fmt": 'B', "size": 1 },
+    "UINT16":   { "fmt": 'H', "size": 2 },
+    "UINT32":   { "fmt": 'I', "size": 4 },
+    "UINT64":   { "fmt": 'Q', "size": 8 },
+    "BITFIELD": { "fmt": 'x', "size": 0 },    # unsupported
+    "FLOAT":    { "fmt": 'f', "size": 4 },
+    "DOUBLE":   { "fmt": 'd', "size": 8 },
+    "TIME8":    { "fmt": 'Q', "size": 8 },
+    "STRING":   { "fmt": 's', "size": 1 }
 }
 
-datatype2nptype = {
-    datatypes["TEXT"]:      np.byte,
-    datatypes["REAL"]:      np.double,
-    datatypes["INTEGER"]:   np.int32,
-    datatypes["DYNAMIC"]:   np.byte
-}
+###############################################################################
+# UTILITIES
+###############################################################################
 
-type2fmt = {
-    "INT8":     'b',
-    "INT16":    'h',
-    "INT32":    'i',
-    "INT64":    'q',
-    "UINT8":    'B',
-    "UINT16":   'H',
-    "UINT32":   'I',
-    "UINT64":   'Q',
-    "BITFIELD": 'x',    # unsupported
-    "FLOAT":    'f',
-    "DOUBLE":   'd',
-    "TIME8":    'Q',
-    "STRING":   's'
-}
+def __decode(rectype, rawdata):
+    """
+    rectype: record type supplied in response (string)
+    rawdata: payload supplied in response (byte array)
+    """
+
+    # initialize record
+    rec = { "@rectype": rectype }
+
+    # get record definition
+    if rectype in recdef_tbl:
+        recdef = recdef_tbl[rectype]
+    else:
+        return rec
+
+    # iterate through each field in definition
+    for fieldname in recdef.keys():
+
+        # @ indicates meta data
+        if "@" in fieldname:
+            continue
+
+        # get field properties
+        field = recdef[fieldname]
+        ftype = field["type"]
+        offset = int(field["offset"] / 8)
+        elems = field["elements"]
+        flags = field["flags"]
+
+        # do not process pointers
+        if "PTR" in flags:
+            continue
+
+        # get endianess
+        if "LE" in flags:
+            endian = '<'
+        else:
+            endian = '>'
+
+        # decode basic type
+        if ftype in basic_types:
+
+            # get number of elements
+            if elems <= 0:
+                elems = (len(rawdata) - offset) / basic_types[ftype]["size"]
+
+            # build format string
+            fmt = endian + str(elems) + basic_types[ftype]["fmt"]
+
+            # return parsed data
+            if elems == 1:
+                rec[fieldname] = struct.unpack_from(fmt, rawdata, offset)[0]
+            else:
+                rec[fieldname] = struct.unpack_from(fmt, rawdata, offset)
+
+        # decode user type
+        elif ftype in recdef_tbl:
+
+            subrec = {}
+            subrecdef = recdef_tbl[ftype]
+
+            # get number of elements
+            if elems <= 0:
+                elems = (len(rawdata) - offset) / subrecdef["@datasize"]
+
+            # return parsed data
+            if elems == 1:
+                rec[fieldname] = __decode(ftype, rawdata[offset:])
+            else:
+                rec[fieldname] = []
+                for e in range(elems):
+                    offset += subrecdef["@datasize"]
+                    rec[fieldname].append(__decode(ftype, rawdata[offset:]))
+
+    # return record #
+    return rec
 
 ###############################################################################
 # APIs
@@ -125,56 +192,11 @@ def engine (api, parm):
                 i += bytes_to_append
 
     # Build Response #
-    #
-    #   Notes:  1. TODO: Only one level of subrecords currently supported
-    #           2. TODO: Endianness set not always set per field
-    #           3. TODO: break this out into helper functions with recursion
-    #           4. TODO: general optimization... if subrecord has no arrays, could prebuild fmt string
     rsps = []
     for rawrec in rsps_recs:
-        rec = {}
         rectype = ctypes.create_string_buffer(rawrec).value.decode('ascii')
         rawdata = rawrec[len(rectype) + 1:]
-        rec["@rectype"] = rectype
-        if rectype in recdef_tbl:
-            recdef = recdef_tbl[rectype]
-            for field in recdef.keys():
-                if "@" not in field: # @ indicates meta data
-                    flags = recdef[field]["flags"]
-                    if "LE" in flags:
-                        endian = '<'
-                    else:
-                        endian = '>'
-                    if "PTR" not in flags:
-                        ftype = recdef[field]["type"]
-                        elems = recdef[field]["elements"]
-                        offset = int(recdef[field]["offset"] / 8)
-                        if elems <= 0:
-                            elems = len(rawdata) - offset
-                        if ftype in type2fmt:
-                            fmt = endian + str(elems) + type2fmt[ftype]
-                            if elems == 1:
-                                val = struct.unpack_from(fmt, rawdata, offset)[0]
-                            else:
-                                val = struct.unpack_from(fmt, rawdata, offset)
-                            rec[field] = val
-                        elif ftype in recdef_tbl:
-                            subrec = {}
-                            subrecdef = recdef_tbl[ftype]
-                            for e in range(elems):
-                                for subfield in subrecdef.keys():
-                                    if "@" not in subfield:
-                                        subelems = subrecdef[subfield]["elements"]
-                                        suboffset = int(subrecdef[subfield]["offset"] / 8)
-                                        subftype = subrecdef[subfield]["type"]
-                                        fmt = endian + str(subelems) + type2fmt[subftype]
-                                        offset = suboffset + int(e * subrecdef["@datasize"])
-                                        if subelems == 1:
-                                            val = struct.unpack_from(fmt, rawdata, offset)[0]
-                                        else:
-                                            val = struct.unpack_from(fmt, rawdata, offset)
-                                        subrec[subfield] = val
-                            rec[field] = subrec
+        rec     = __decode(rectype, rawdata)
         rsps.append(rec)
 
     # Return Response #
@@ -203,6 +225,21 @@ def get_values(data, dtype, size):
     dtype:  element of datatypes
     size:   bytes in data
     """
+
+    datatypes = {
+        "TEXT":     0,
+        "REAL":     1,
+        "INTEGER":  2,
+        "DYNAMIC":  3
+    }
+
+    datatype2nptype = {
+        datatypes["TEXT"]:      np.byte,
+        datatypes["REAL"]:      np.double,
+        datatypes["INTEGER"]:   np.int32,
+        datatypes["DYNAMIC"]:   np.byte
+    }
+
     raw = bytes(data)
     datatype = datatype2nptype[dtype]
     datasize = int(size / np.dtype(datatype).itemsize)

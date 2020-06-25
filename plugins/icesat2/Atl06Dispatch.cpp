@@ -309,6 +309,7 @@ bool Atl06Dispatch::leastSquaresFitStage (Hdf5Atl03Device::extent_t* extent, res
         if(extent->photon_count[t] > 0)
         {
             lsf = MathLib::lsf((MathLib::point_t*)&extent->photons[first_photon], extent->photon_count[t]);
+            status = true;
         }
 
         /* Increment First Photon to Next Track */
@@ -341,11 +342,11 @@ int Atl06Dispatch::luaStats (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "h5atl03_rec_cnt",         lua_obj->stats.h5atl03_rec_cnt);
-        LuaEngine::setAttrInt(L, "avgheight_out_cnt",       lua_obj->stats.algo_out_cnt[STAGE_AVG]);
-        LuaEngine::setAttrInt(L, "leastsquares_out_cnt",    lua_obj->stats.algo_out_cnt[STAGE_LSF]);
-        LuaEngine::setAttrInt(L, "post_success_cnt",        lua_obj->stats.post_success_cnt);
-        LuaEngine::setAttrInt(L, "post_dropped_cnt",        lua_obj->stats.post_dropped_cnt);
+        LuaEngine::setAttrInt(L, "h5atl03",         lua_obj->stats.h5atl03_rec_cnt);
+        LuaEngine::setAttrInt(L, "avgheight",       lua_obj->stats.algo_out_cnt[STAGE_AVG]);
+        LuaEngine::setAttrInt(L, "leastsquares",    lua_obj->stats.algo_out_cnt[STAGE_LSF]);
+        LuaEngine::setAttrInt(L, "posted",          lua_obj->stats.post_success_cnt);
+        LuaEngine::setAttrInt(L, "dropped",         lua_obj->stats.post_dropped_cnt);
 
         /* Optionally Clear */
         if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
