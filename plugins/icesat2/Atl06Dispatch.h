@@ -85,7 +85,7 @@ class Atl06Dispatch: public DispatchObject
             double          distance;   // meters from equator
             double          latitude;
             double          longitude;
-            double          elevation;  // meters from ellipsoid
+            double          height;     // meters from ellipsoid
             double          along_track_slope;
             double          across_track_slope;
         } elevation_t;

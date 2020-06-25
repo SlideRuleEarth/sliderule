@@ -73,7 +73,7 @@ const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
     {"DIST",    RecordObject::DOUBLE,   offsetof(elevation_t, distance),            1,  NULL, NATIVE_FLAGS},
     {"LAT",     RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
     {"LON",     RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
-    {"ELEV",    RecordObject::DOUBLE,   offsetof(elevation_t, elevation),           1,  NULL, NATIVE_FLAGS},
+    {"HEIGHT",  RecordObject::DOUBLE,   offsetof(elevation_t, height),              1,  NULL, NATIVE_FLAGS},
     {"ALTS",    RecordObject::DOUBLE,   offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
     {"ACTS",    RecordObject::DOUBLE,   offsetof(elevation_t, across_track_slope),  1,  NULL, NATIVE_FLAGS}
 };
@@ -279,7 +279,7 @@ bool Atl06Dispatch::averageHeightStage (Hdf5Atl03Device::extent_t* extent, resul
         }
 
         /* Populate Result */
-        result->elevation[t].elevation = height[t];
+        result->elevation[t].height = height[t];
     }
 
     /* Return Status */
@@ -316,7 +316,7 @@ bool Atl06Dispatch::leastSquaresFitStage (Hdf5Atl03Device::extent_t* extent, res
         first_photon += extent->photon_count[t];
 
         /* Populate Result */
-        result->elevation[t].elevation = lsf.intercept;
+        result->elevation[t].height = lsf.intercept;
         result->elevation[t].along_track_slope = lsf.slope;
     }
 

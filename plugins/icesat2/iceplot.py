@@ -32,48 +32,6 @@ def dfbokeh(df, col, cond_col="", cond_val=0):
     r = p.line(x, y, color="#2222aa", line_width=3)
     show(p, notebook_handle=True)
 
-
-#
-# ATL06 Result Processing
-#
-def atl06(filename, track, stages):
-
-    rqst_dict = {
-        "filename": filename,
-        "track": track,
-        "stages": stages,
-        "parms": {
-            "cnf": 4,
-            "ats": 20.0,
-            "cnt": 10,
-            "len": 40.0,
-            "res": 20.0
-        }
-    }
-
-    # Make API Request
-    d = requests.post('%s/engine/atl06' % (server_url), data=json.dumps(rqst_dict), stream=True)
-
-    # Read Response
-    response_bytes = 0
-    responses = []
-    for line in d.iter_content(0x10000):
-        if line:
-            response_bytes += len(line)
-            responses.append(line)
-
-    # Build DataFrame
-    raw = b''.join(responses)
-    size = int(len(raw) / np.dtype(np.double).itemsize)
-    values = np.frombuffer(raw, dtype=np.double, count=size)
-    df = pd.DataFrame(data=values, index=[i for i in range(size)], columns=["atl06"])
-
-    # Print Status #
-    print('Processed %d data points' % (size))
-
-    # Return DataFrame
-    return df
-
 ###############################################################################
 # MAIN
 ###############################################################################
@@ -117,7 +75,7 @@ if __name__ == '__main__':
     sliderule.populate("atl06rec")
     sliderule.populate("atl06rec.elevation")
 
-    # Execute ATL06 algorithm
+    # Build ATL06 Request
     rqst = {
         "filename": filename,
         "track": track,
@@ -131,15 +89,12 @@ if __name__ == '__main__':
         }
     }
 
-#    t = sliderule.source("definition", {"rectype" : "atl06rec.elevation"})
-#    print(t)
-
+    # Execute ATL06 Algorithm
     rsps = sliderule.engine("atl06", rqst)
 
     # Build Dataframe
+    heights = [rsps[r]["ELEVATION"][i]["HEIGHT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
+    df = pd.DataFrame(data=heights, index=[i for i in range(len(heights))], columns=["atl06"])
 
-    print(rsps)
-
-    #df = atl06(filename, track, stages)
-    #dfbokeh(df, "atl06")
-
+    # Plot Dataframe
+    dfbokeh(df, "atl06")

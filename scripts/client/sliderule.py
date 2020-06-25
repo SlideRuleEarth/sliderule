@@ -178,12 +178,12 @@ def __decode(rectype, rawdata):
 
             # return parsed data
             if is_array:
-                rec[fieldname] = __decode(ftype, rawdata[offset:])
-            else:
                 rec[fieldname] = []
                 for e in range(elems):
                     rec[fieldname].append(__decode(ftype, rawdata[offset:]))
                     offset += subrecdef["@datasize"]
+            else:
+                rec[fieldname] = __decode(ftype, rawdata[offset:])
 
     # return record #
     return rec

@@ -24,8 +24,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <hdf5.h>
-
 #include "GTArray.h"
 #include "List.h"
 #include "LuaObject.h"
