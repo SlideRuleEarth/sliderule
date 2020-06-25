@@ -19,7 +19,14 @@ server_url = 'http://127.0.0.1:9081'
 
 recdef_tbl = {}
 
-basic_types = {
+datatypes = {
+    "TEXT":     0,
+    "REAL":     1,
+    "INTEGER":  2,
+    "DYNAMIC":  3
+}
+
+basictypes = {
     "INT8":     { "fmt": 'b', "size": 1 },
     "INT16":    { "fmt": 'h', "size": 2 },
     "INT32":    { "fmt": 'i', "size": 4 },
@@ -79,14 +86,14 @@ def __decode(rectype, rawdata):
             endian = '>'
 
         # decode basic type
-        if ftype in basic_types:
+        if ftype in basictypes:
 
             # get number of elements
             if elems <= 0:
-                elems = (len(rawdata) - offset) / basic_types[ftype]["size"]
+                elems = int((len(rawdata) - offset) / basictypes[ftype]["size"])
 
             # build format string
-            fmt = endian + str(elems) + basic_types[ftype]["fmt"]
+            fmt = endian + str(elems) + basictypes[ftype]["fmt"]
 
             # return parsed data
             if elems == 1:
@@ -102,7 +109,7 @@ def __decode(rectype, rawdata):
 
             # get number of elements
             if elems <= 0:
-                elems = (len(rawdata) - offset) / subrecdef["@datasize"]
+                elems = int((len(rawdata) - offset) / subrecdef["@datasize"])
 
             # return parsed data
             if elems == 1:
@@ -225,13 +232,6 @@ def get_values(data, dtype, size):
     dtype:  element of datatypes
     size:   bytes in data
     """
-
-    datatypes = {
-        "TEXT":     0,
-        "REAL":     1,
-        "INTEGER":  2,
-        "DYNAMIC":  3
-    }
 
     datatype2nptype = {
         datatypes["TEXT"]:      np.byte,
