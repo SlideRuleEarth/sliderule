@@ -46,6 +46,62 @@ basictypes = {
 # UTILITIES
 ###############################################################################
 
+#
+#  __parse
+#
+def __parse(stream):
+    """
+    stream: request response stream
+    """
+    recs = []
+
+    rec_size_size = 4
+    rec_size_index = 0
+    rec_size_rsps = []
+
+    rec_size = 0
+    rec_index = 0
+    rec_rsps = []
+
+    for line in stream.iter_content(0x10000):
+
+        i = 0
+        while i < len(line):
+
+            # Parse Record Size
+            if(rec_size_index < rec_size_size):
+                bytes_available = len(line)  - i
+                bytes_remaining = rec_size_size - rec_size_index
+                bytes_to_append = min(bytes_available, bytes_remaining)
+                rec_size_rsps.append(line[i:i+bytes_to_append])
+                rec_size_index += bytes_to_append
+                if(rec_size_index >= rec_size_size):
+                    raw = b''.join(rec_size_rsps)
+                    rec_size = struct.unpack('i', raw)[0]
+                    rec_size_rsps.clear()
+                i += bytes_to_append
+
+            # Parse Record
+            elif(rec_size > 0):
+                bytes_available = len(line) - i
+                bytes_remaining = rec_size - rec_index
+                bytes_to_append = min(bytes_available, bytes_remaining)
+                rec_rsps.append(line[i:i+bytes_to_append])
+                rec_index += bytes_to_append
+                if(rec_index >= rec_size):
+                    raw = b''.join(rec_rsps)
+                    recs.append(raw)
+                    rec_rsps.clear()
+                    rec_size_index = 0
+                    rec_size = 0
+                    rec_index = 0
+                i += bytes_to_append
+
+    return recs
+
+#
+#  __decode
+#
 def __decode(rectype, rawdata):
     """
     rectype: record type supplied in response (string)
@@ -163,49 +219,7 @@ def engine (api, parm):
     stream = requests.post(url, data=rqst, stream=True)
 
     # Read and Parse Stream #
-    rsps_recs = []
-
-    rec_size_size = 4
-    rec_size_index = 0
-    rec_size_rsps = []
-
-    rec_size = 0
-    rec_index = 0
-    rec_rsps = []
-
-    for line in stream.iter_content(0x10000):
-
-        i = 0
-        while i < len(line):
-
-            # Parse Record Size
-            if(rec_size_index < rec_size_size):
-                bytes_available = len(line)  - i
-                bytes_remaining = rec_size_size - rec_size_index
-                bytes_to_append = min(bytes_available, bytes_remaining)
-                rec_size_rsps.append(line[i:i+bytes_to_append])
-                rec_size_index += bytes_to_append
-                if(rec_size_index >= rec_size_size):
-                    raw = b''.join(rec_size_rsps)
-                    rec_size_rsps.clear()
-                    rec_size = struct.unpack('i', raw)[0]
-                i += bytes_to_append
-
-            # Parse Record
-            elif(rec_size > 0):
-                bytes_available = len(line) - i
-                bytes_remaining = rec_size - rec_index
-                bytes_to_append = min(bytes_available, bytes_remaining)
-                rec_rsps.append(line[i:i+bytes_to_append])
-                rec_index += bytes_to_append
-                if(rec_index >= rec_size):
-                    raw = b''.join(rec_rsps)
-                    rsps_recs.append(raw)
-                    rec_rsps.clear()
-                    rec_size_index = 0
-                    rec_size = 0
-                    rec_index = 0
-                i += bytes_to_append
+    rsps_recs = __parse(stream)
 
     # Build Response #
     rsps = []
