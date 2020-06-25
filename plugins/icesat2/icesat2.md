@@ -1,7 +1,15 @@
+ICESat-2 (SlideRule)
+====================
+
+The ICESat-2 plugin provides science data processing algorithms for derived ATL06 data products.
+
+## Building
+
+This plugin requires the `h5` plugin to be enabled and installed.
 
 ## Setting Up Python Environment
 
-The easiest (and recommended) way to interact with sliderule from a python script is to use the Anaconda distribution.  It includes everything needed to run the sliderule and icesat2 plugin python scripts.  Alternatively, a local python environment can be setup using the steps below.
+The easiest (and recommended) way to interact with sliderule from a python script is to use the Anaconda distribution.  It includes everything needed to run the icesat2 plugin python scripts.  Alternatively, a local python environment can be setup using the steps below.
 
 ### 1. Installing and Configuring Python
 

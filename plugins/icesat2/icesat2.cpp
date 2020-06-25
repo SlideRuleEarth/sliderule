@@ -40,9 +40,7 @@
 int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
-        {"h5file",      Hdf5File::luaCreate},
-        {"h5dataset",   Hdf5DatasetDevice::luaCreate},
-        {"h5atl03",     Hdf5Atl03Device::luaCreate},
+        {"atl03",       Atl03Device::luaCreate},
         {"atl06",       Atl06Dispatch::luaCreate},
         {"ut_mathlib",  UT_MathLib::luaCreate},
         {NULL,          NULL}
@@ -52,18 +50,18 @@ int icesat2_open (lua_State *L)
     luaL_newlib(L, icesat2_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",    Hdf5Atl03Device::CNF_POSSIBLE_TEP);
-    LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",  Hdf5Atl03Device::CNF_NOT_CONSIDERED);
-    LuaEngine::setAttrInt(L, "CNF_BACKGROUND",      Hdf5Atl03Device::CNF_BACKGROUND);
-    LuaEngine::setAttrInt(L, "CNF_WITHIN_10M",      Hdf5Atl03Device::CNF_WITHIN_10M);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_LOW",     Hdf5Atl03Device::CNF_SURFACE_LOW);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_MEDIUM",  Hdf5Atl03Device::CNF_SURFACE_MEDIUM);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_HIGH",    Hdf5Atl03Device::CNF_SURFACE_HIGH);
-    LuaEngine::setAttrInt(L, "SRT_LAND",            Hdf5Atl03Device::SRT_LAND);
-    LuaEngine::setAttrInt(L, "SRT_OCEAN",           Hdf5Atl03Device::SRT_OCEAN);
-    LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         Hdf5Atl03Device::SRT_SEA_ICE);
-    LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        Hdf5Atl03Device::SRT_LAND_ICE);
-    LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    Hdf5Atl03Device::SRT_INLAND_WATER);
+    LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",    Atl03Device::CNF_POSSIBLE_TEP);
+    LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",  Atl03Device::CNF_NOT_CONSIDERED);
+    LuaEngine::setAttrInt(L, "CNF_BACKGROUND",      Atl03Device::CNF_BACKGROUND);
+    LuaEngine::setAttrInt(L, "CNF_WITHIN_10M",      Atl03Device::CNF_WITHIN_10M);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_LOW",     Atl03Device::CNF_SURFACE_LOW);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_MEDIUM",  Atl03Device::CNF_SURFACE_MEDIUM);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_HIGH",    Atl03Device::CNF_SURFACE_HIGH);
+    LuaEngine::setAttrInt(L, "SRT_LAND",            Atl03Device::SRT_LAND);
+    LuaEngine::setAttrInt(L, "SRT_OCEAN",           Atl03Device::SRT_OCEAN);
+    LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         Atl03Device::SRT_SEA_ICE);
+    LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        Atl03Device::SRT_LAND_ICE);
+    LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    Atl03Device::SRT_INLAND_WATER);
     LuaEngine::setAttrInt(L, "STAGE_AVG",           Atl06Dispatch::STAGE_AVG);
     LuaEngine::setAttrInt(L, "STAGE_LSF",           Atl06Dispatch::STAGE_LSF);
 
@@ -78,8 +76,7 @@ extern "C" {
 void initicesat2 (void)
 {
     /* Initialize Modules */
-    Hdf5DatasetDevice::init();
-    Hdf5Atl03Device::init();
+    Atl03Device::init();
     Atl06Dispatch::init();
 
     /* Extend Lua */

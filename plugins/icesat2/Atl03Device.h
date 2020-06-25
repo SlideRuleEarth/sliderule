@@ -34,7 +34,7 @@
  * HDF5 ATL06 HANDLER
  ******************************************************************************/
 
-class Hdf5Atl03Device: public DeviceObject
+class Atl03Device: public DeviceObject
 {
     public:
 
@@ -140,8 +140,8 @@ class Hdf5Atl03Device: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Hdf5Atl03Device     (lua_State* L, const char* ur, parms_t _parms);
-                            ~Hdf5Atl03Device    (void);
+                            Atl03Device     (lua_State* L, const char* ur, parms_t _parms);
+                            ~Atl03Device    (void);
 
         bool                h5open              (const char* url);
 

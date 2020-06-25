@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
-#include <dirent.h>
 #include <signal.h>
 #include <string.h>
 
@@ -95,42 +94,62 @@ static void* signal_thread (void* parm)
  */
 static void ldplugins(void)
 {
-    DIR *dir;
-    if((dir = opendir(CONFIGPATH)) != NULL)
+    /* Get path to plugin config file */
+    char conf_path[MAX_STR_SIZE];
+    StringLib::format(conf_path, MAX_STR_SIZE, "%s%cplugins.conf", CONFIGPATH, PATH_DELIMETER);
+
+    /* Open file */
+    FILE* fp = fopen(conf_path, "r");
+    if(fp)
     {
-        struct dirent *ent;
-        while((ent = readdir(dir)) != NULL)
+        /* Read each line */
+        char plugin_name[MAX_STR_SIZE];
+        while(fgets(plugin_name, MAX_STR_SIZE, fp))
         {
-            int plugin_offset = StringLib::find(ent->d_name, ".so");
-            if(plugin_offset >= 0)
+            /* Trim white space */
+            for(int i = 0; i < MAX_STR_SIZE; i++)
             {
-                printf("Loading plug-in %s ... ", ent->d_name);
-                char plugin_path[MAX_STR_SIZE];
-                StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s", CONFIGPATH, PATH_DELIMETER, ent->d_name);
-                void* plugin = dlopen(plugin_path, RTLD_NOW);
-                if(plugin)
+                if(isspace(plugin_name[i]))
                 {
-                    char plugin_name[MAX_STR_SIZE];
-                    StringLib::copy(plugin_name, ent->d_name, plugin_offset + 1);
-                    char plugin_init[MAX_STR_SIZE];
-                    StringLib::format(plugin_init, MAX_STR_SIZE, "init%s", plugin_name);
-                    init_f init = (init_f)dlsym(plugin, plugin_init);
-                    if(init)
-                    {
-                        init();
-                    }
-                    else
-                    {
-                       printf("cannot find initialization function %s: %s\n", plugin_init, dlerror());
-                    }
+                    plugin_name[i] = '\0';
+                    break;
+                }
+            }
+
+            /* Build full path to plugin */
+            char plugin_path[MAX_STR_SIZE];
+            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFIGPATH, PATH_DELIMETER, plugin_name);
+
+            /* Attempt to load plugin */
+            printf("Loading plug-in %s ... ", plugin_name);
+            void* plugin = dlopen(plugin_path, RTLD_NOW);
+            if(plugin)
+            {
+                /* Call plugin initialization function */
+                char init_func[MAX_STR_SIZE];
+                StringLib::format(init_func, MAX_STR_SIZE, "init%s", plugin_name);
+                init_f init = (init_f)dlsym(plugin, init_func);
+                if(init)
+                {
+                    init();
                 }
                 else
                 {
-                    printf("cannot load %s: %s\n", ent->d_name, dlerror());
+                    printf("cannot find initialization function %s: %s\n", init_func, dlerror());
                 }
             }
+            else
+            {
+                printf("cannot load %s: %s\n", plugin_name, dlerror());
+            }
         }
-        closedir(dir);
+
+        /* Close file */
+        fclose(fp);
+    }
+    else
+    {
+        printf("cannot open plugin file: %s\n", conf_path);
     }
 }
 

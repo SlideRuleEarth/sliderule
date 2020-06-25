@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __hdf5_dataset__
-#define __hdf5_dataset__
+#ifndef __h5_dataset__
+#define __h5_dataset__
 
 /******************************************************************************
  * INCLUDES
@@ -34,7 +34,7 @@
  * HDF5 DATASET HANDLER
  ******************************************************************************/
 
-class Hdf5DatasetDevice: public DeviceObject
+class H5DatasetDevice: public DeviceObject
 {
     public:
 
@@ -88,8 +88,8 @@ class Hdf5DatasetDevice: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Hdf5DatasetDevice   (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype);
-                            ~Hdf5DatasetDevice  (void);
+                            H5DatasetDevice     (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype);
+                            ~H5DatasetDevice    (void);
         bool                h5open              (void);
 
         virtual bool        isConnected         (int num_open=0);   // is the file open
@@ -100,4 +100,4 @@ class Hdf5DatasetDevice: public DeviceObject
         virtual const char* getConfig           (void);             // returns filename with attribute list
 };
 
-#endif  /* __hdf5_dataset__ */
+#endif  /* __h5_dataset__ */

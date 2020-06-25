@@ -10,7 +10,7 @@ find_library (HDF5_LIB hdf5)
 if (HDF5_LIB AND ZLIB_FOUND)
 
     message (STATUS "Including h5 plugin")
-
+    message (STATUS ${HDF5_LIB})
     add_library (h5Lib SHARED "")
 
     set_target_properties (h5Lib PROPERTIES OUTPUT_NAME h5)

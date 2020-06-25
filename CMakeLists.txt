@@ -34,6 +34,7 @@ option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" ON)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 
+option (USE_H5_PLUGIN "Include the HDF5 plugin" ON)
 option (USE_ICESAT2_PLUGIN "Include the ICESat-2 plugin" ON)
 option (USE_PISTACHE_PLUGIN "Include the Pistache plugin" ON)
 option (USE_SIGVIEW_PLUGIN "Include the SigView plugin" ON)
@@ -112,6 +113,10 @@ add_subdirectory (packages/legacy)
 
 # Add Optional Plugins #
 
+if(${USE_H5_PLUGIN})
+    add_subdirectory (plugins/h5)
+endif()
+
 if(${USE_ICESAT2_PLUGIN})
     add_subdirectory (plugins/icesat2)
 endif()
@@ -131,6 +136,7 @@ add_subdirectory (scripts)
 # Installation #
 
 install(TARGETS sliderule DESTINATION ${EXECDIR})
+install (FILES targets/sliderule-linux/plugins.conf DESTINATION ${CONFDIR})
 
 install (
     DIRECTORY

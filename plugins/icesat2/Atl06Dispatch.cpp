@@ -56,7 +56,7 @@
  ******************************************************************************/
 
 #include "Atl06Dispatch.h"
-#include "Hdf5Atl03Device.h"
+#include "Atl03Device.h"
 #include "MathLib.h"
 #include "core.h"
 
@@ -185,7 +185,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
     stats.h5atl03_rec_cnt++;
 
     /* Get Extent */
-    Hdf5Atl03Device::extent_t* extent = (Hdf5Atl03Device::extent_t*)record->getRecordData();
+    Atl03Device::extent_t* extent = (Atl03Device::extent_t*)record->getRecordData();
 
     /* Execute Algorithm Stages */
     if(stages == STAGE_AVG)
@@ -260,7 +260,7 @@ void Atl06Dispatch::populateElevation (elevation_t* elevation)
 /*----------------------------------------------------------------------------
  * averageHeightStage
  *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::averageHeightStage (Hdf5Atl03Device::extent_t* extent, result_t* result)
+bool Atl06Dispatch::averageHeightStage (Atl03Device::extent_t* extent, result_t* result)
 {
     /* Count Execution Statistic */
     stats.algo_out_cnt[STAGE_AVG]++;
@@ -289,7 +289,7 @@ bool Atl06Dispatch::averageHeightStage (Hdf5Atl03Device::extent_t* extent, resul
 /*----------------------------------------------------------------------------
  * leastSquaresFitStage
  *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::leastSquaresFitStage (Hdf5Atl03Device::extent_t* extent, result_t* result)
+bool Atl06Dispatch::leastSquaresFitStage (Atl03Device::extent_t* extent, result_t* result)
 {
     bool status = false;
 

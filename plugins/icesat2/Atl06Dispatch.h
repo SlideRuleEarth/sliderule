@@ -32,7 +32,7 @@
 #include "MsgQ.h"
 #include "MathLib.h"
 #include "GTArray.h"
-#include "Hdf5Atl03Device.h"
+#include "Atl03Device.h"
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -135,8 +135,8 @@ class Atl06Dispatch: public DispatchObject
 
         void            populateElevation       (elevation_t* elevation);
 
-        bool            averageHeightStage      (Hdf5Atl03Device::extent_t* extent, result_t* result);
-        bool            leastSquaresFitStage    (Hdf5Atl03Device::extent_t* extent, result_t* result);
+        bool            averageHeightStage      (Atl03Device::extent_t* extent, result_t* result);
+        bool            leastSquaresFitStage    (Atl03Device::extent_t* extent, result_t* result);
 
         static int      luaStats                (lua_State* L);
         static int      luaSelect               (lua_State* L);

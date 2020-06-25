@@ -23,7 +23,7 @@
 
 #include <hdf5.h>
 
-#include "Hdf5File.h"
+#include "H5File.h"
 #include "core.h"
 
 /******************************************************************************
@@ -31,11 +31,11 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - hdf5file(<filename>)
+ * luaCreate - H5File(<filename>)
  *
  *  <filename> is the name of the HDF5 file to be read from or written to
  *----------------------------------------------------------------------------*/
-int Hdf5File::luaCreate(lua_State* L)
+int H5File::luaCreate(lua_State* L)
 {
     try
     {
@@ -43,7 +43,7 @@ int Hdf5File::luaCreate(lua_State* L)
         const char* _filename   = getLuaString(L, 1);
 
         /* Return File Device Object */
-        return createLuaObject(L, new Hdf5File(L, _filename));
+        return createLuaObject(L, new H5File(L, _filename));
     }
     catch(const LuaException& e)
     {
@@ -55,7 +55,7 @@ int Hdf5File::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5File::Hdf5File (lua_State* L, const char* _filename):
+H5File::H5File (lua_State* L, const char* _filename):
     DeviceObject(L, READER),
     connected(false),
     filename(StringLib::duplicate(_filename))
@@ -74,7 +74,7 @@ Hdf5File::Hdf5File (lua_State* L, const char* _filename):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Hdf5File::~Hdf5File (void)
+H5File::~H5File (void)
 {
     closeConnection();
     if(filename) delete [] filename;
@@ -84,7 +84,7 @@ Hdf5File::~Hdf5File (void)
 /*----------------------------------------------------------------------------
  * isConnected
  *----------------------------------------------------------------------------*/
-bool Hdf5File::isConnected (int num_open)
+bool H5File::isConnected (int num_open)
 {
     (void)num_open;
 
@@ -94,7 +94,7 @@ bool Hdf5File::isConnected (int num_open)
 /*----------------------------------------------------------------------------
  * closeConnection
  *----------------------------------------------------------------------------*/
-void Hdf5File::closeConnection (void)
+void H5File::closeConnection (void)
 {
     connected = false;
 }
@@ -102,7 +102,7 @@ void Hdf5File::closeConnection (void)
 /*----------------------------------------------------------------------------
  * writeBuffer
  *----------------------------------------------------------------------------*/
-int Hdf5File::writeBuffer (const void* buf, int len)
+int H5File::writeBuffer (const void* buf, int len)
 {
     (void)buf;
     (void)len;
@@ -113,7 +113,7 @@ int Hdf5File::writeBuffer (const void* buf, int len)
 /*----------------------------------------------------------------------------
  * readBuffer
  *----------------------------------------------------------------------------*/
-int Hdf5File::readBuffer (void* buf, int len)
+int H5File::readBuffer (void* buf, int len)
 {
     (void)buf;
     (void)len;
@@ -124,7 +124,7 @@ int Hdf5File::readBuffer (void* buf, int len)
 /*----------------------------------------------------------------------------
  * getUniqueId
  *----------------------------------------------------------------------------*/
-int Hdf5File::getUniqueId (void)
+int H5File::getUniqueId (void)
 {
     return 0;
 }
@@ -132,7 +132,7 @@ int Hdf5File::getUniqueId (void)
 /*----------------------------------------------------------------------------
  * getConfig
  *----------------------------------------------------------------------------*/
-const char* Hdf5File::getConfig (void)
+const char* H5File::getConfig (void)
 {
     return config;
 }
@@ -140,7 +140,7 @@ const char* Hdf5File::getConfig (void)
 /*----------------------------------------------------------------------------
  * getFilename
  *----------------------------------------------------------------------------*/
-const char* Hdf5File::getFilename (void)
+const char* H5File::getFilename (void)
 {
     return filename;
 }
@@ -214,7 +214,7 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char *name, const H5L_info_t *info
     return retval;
 }
 
-int Hdf5File::luaTraverse (lua_State* L)
+int H5File::luaTraverse (lua_State* L)
 {
     bool        status = false;
     rdepth_t    recurse = {.data = 0};
@@ -224,7 +224,7 @@ int Hdf5File::luaTraverse (lua_State* L)
     try
     {
         /* Get Self */
-        Hdf5File* lua_obj = (Hdf5File*)getLuaSelf(L, 1);
+        H5File* lua_obj = (H5File*)getLuaSelf(L, 1);
 
         /* Get Maximum Recursion Depth */
         uint32_t max_depth = getLuaInteger(L, 2, true, 32);

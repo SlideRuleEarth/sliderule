@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __h5array__
-#define __h5array__
+#ifndef __h5_array__
+#define __h5_array__
 
 /******************************************************************************
  * INCLUDES
@@ -207,4 +207,4 @@ T& H5Array<T>::operator[](int index)
     return data[index];
 }
 
-#endif  /* __h5array__ */
+#endif  /* __h5_array__ */

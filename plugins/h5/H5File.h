@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __hdf5file__
-#define __hdf5file__
+#ifndef __h5_file__
+#define __h5_file__
 
 /******************************************************************************
  * INCLUDES
@@ -33,7 +33,7 @@
  * HDF5 FILE CLASS
  ******************************************************************************/
 
-class Hdf5File: public DeviceObject
+class H5File: public DeviceObject
 {
     public:
 
@@ -43,8 +43,8 @@ class Hdf5File: public DeviceObject
 
         static int          luaCreate           (lua_State* L);
 
-                            Hdf5File            (lua_State* L, const char* _filename);
-        virtual             ~Hdf5File           ();
+                            H5File              (lua_State* L, const char* _filename);
+        virtual             ~H5File             ();
 
         virtual bool        isConnected         (int num_open=0);   // is the file open
         virtual void        closeConnection     (void);             // close the file
@@ -68,4 +68,4 @@ class Hdf5File: public DeviceObject
         char*           config; // <filename>(<type>,<access>,<io>)
 };
 
-#endif  /* __hdf5file__ */
+#endif  /* __h5_file__ */

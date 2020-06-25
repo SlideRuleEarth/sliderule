@@ -21,7 +21,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "Hdf5Atl03Device.h"
+#include "Atl03Device.h"
 #include "GTArray.h"
 #include "core.h"
 
@@ -47,14 +47,14 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Hdf5Atl03Device::phRecType = "atl03rec.photons";
-const RecordObject::fieldDef_t Hdf5Atl03Device::phRecDef[] = {
+const char* Atl03Device::phRecType = "atl03rec.photons";
+const RecordObject::fieldDef_t Atl03Device::phRecDef[] = {
     {"X",           RecordObject::DOUBLE,   offsetof(photon_t, distance_x), 1,  NULL, NATIVE_FLAGS},
     {"Y",           RecordObject::DOUBLE,   offsetof(photon_t, height_y),   1,  NULL, NATIVE_FLAGS}
 };
 
-const char* Hdf5Atl03Device::exRecType = "atl03rec";
-const RecordObject::fieldDef_t Hdf5Atl03Device::exRecDef[] = {
+const char* Atl03Device::exRecType = "atl03rec";
+const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
     {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),   1,  NULL, NATIVE_FLAGS},
     {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NULL, NATIVE_FLAGS},
     {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NULL, NATIVE_FLAGS},
@@ -64,7 +64,7 @@ const RecordObject::fieldDef_t Hdf5Atl03Device::exRecDef[] = {
     {"DATA",        RecordObject::USER,     sizeof(extent_t),                           0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const Hdf5Atl03Device::parms_t Hdf5Atl03Device::DefaultParms = {
+const Atl03Device::parms_t Atl03Device::DefaultParms = {
     .surface_type = SRT_LAND_ICE,
     .signal_confidence = CNF_SURFACE_HIGH,
     .along_track_spread = 10.0, // meters
@@ -73,8 +73,8 @@ const Hdf5Atl03Device::parms_t Hdf5Atl03Device::DefaultParms = {
     .extent_step = 20.0 // meters
 };
 
-const double Hdf5Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
-const double Hdf5Atl03Device::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
+const double Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
+const double Atl03Device::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
 
 /******************************************************************************
  * HDF5 DATASET HANDLE CLASS
@@ -83,7 +83,7 @@ const double Hdf5Atl03Device::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
 /*----------------------------------------------------------------------------
  * luaCreate - create(<url>)
  *----------------------------------------------------------------------------*/
-int Hdf5Atl03Device::luaCreate (lua_State* L)
+int Atl03Device::luaCreate (lua_State* L)
 {
     try
     {
@@ -123,11 +123,11 @@ int Hdf5Atl03Device::luaCreate (lua_State* L)
         }
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Hdf5Atl03Device(L, url, parms));
+        return createLuaObject(L, new Atl03Device(L, url, parms));
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error creating Hdf5Atl03Device: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating Atl03Device: %s\n", e.errmsg);
         return returnLuaStatus(L, false);
     }
 }
@@ -135,7 +135,7 @@ int Hdf5Atl03Device::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Hdf5Atl03Device::init (void)
+void Atl03Device::init (void)
 {
     RecordObject::recordDefErr_t ex_rc = RecordObject::defineRecord(exRecType, "TRACK", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t), 16);
     if(ex_rc != RecordObject::SUCCESS_DEF)
@@ -153,7 +153,7 @@ void Hdf5Atl03Device::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url, parms_t _parms):
+Atl03Device::Atl03Device (lua_State* L, const char* url, parms_t _parms):
     DeviceObject(L, READER)
 {
     /* Set Parameters */
@@ -182,7 +182,7 @@ Hdf5Atl03Device::Hdf5Atl03Device (lua_State* L, const char* url, parms_t _parms)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Hdf5Atl03Device::~Hdf5Atl03Device (void)
+Atl03Device::~Atl03Device (void)
 {
     if(config) delete [] config;
 
@@ -198,7 +198,7 @@ Hdf5Atl03Device::~Hdf5Atl03Device (void)
  *  TODO: run this concurrent with readBuffer
  *  TODO: open and process all tracks in url
  *----------------------------------------------------------------------------*/
-bool Hdf5Atl03Device::h5open (const char* url)
+bool Atl03Device::h5open (const char* url)
 {
     bool status = false;
     int track = 1; // hardcode for now
@@ -406,7 +406,7 @@ bool Hdf5Atl03Device::h5open (const char* url)
 /*----------------------------------------------------------------------------
  * isConnected
  *----------------------------------------------------------------------------*/
-bool Hdf5Atl03Device::isConnected (int num_open)
+bool Atl03Device::isConnected (int num_open)
 {
     (void)num_open;
 
@@ -416,7 +416,7 @@ bool Hdf5Atl03Device::isConnected (int num_open)
 /*----------------------------------------------------------------------------
  * closeConnection
  *----------------------------------------------------------------------------*/
-void Hdf5Atl03Device::closeConnection (void)
+void Atl03Device::closeConnection (void)
 {
     connected = false;
 }
@@ -424,7 +424,7 @@ void Hdf5Atl03Device::closeConnection (void)
 /*----------------------------------------------------------------------------
  * writeBuffer
  *----------------------------------------------------------------------------*/
-int Hdf5Atl03Device::writeBuffer (const void* buf, int len)
+int Atl03Device::writeBuffer (const void* buf, int len)
 {
     (void)buf;
     (void)len;
@@ -435,7 +435,7 @@ int Hdf5Atl03Device::writeBuffer (const void* buf, int len)
 /*----------------------------------------------------------------------------
  * readBuffer
  *----------------------------------------------------------------------------*/
-int Hdf5Atl03Device::readBuffer (void* buf, int len)
+int Atl03Device::readBuffer (void* buf, int len)
 {
     int bytes = TIMEOUT_RC;
 
@@ -479,7 +479,7 @@ int Hdf5Atl03Device::readBuffer (void* buf, int len)
 /*----------------------------------------------------------------------------
  * getUniqueId
  *----------------------------------------------------------------------------*/
-int Hdf5Atl03Device::getUniqueId (void)
+int Atl03Device::getUniqueId (void)
 {
     return 0;
 }
@@ -487,7 +487,7 @@ int Hdf5Atl03Device::getUniqueId (void)
 /*----------------------------------------------------------------------------
  * getConfig
  *----------------------------------------------------------------------------*/
-const char* Hdf5Atl03Device::getConfig (void)
+const char* Atl03Device::getConfig (void)
 {
     return config;
 }
@@ -495,16 +495,16 @@ const char* Hdf5Atl03Device::getConfig (void)
 /*----------------------------------------------------------------------------
  * luaParms - :parms() --> {<key>=<value>, ...} containing parameters
  *----------------------------------------------------------------------------*/
-int Hdf5Atl03Device::luaParms (lua_State* L)
+int Atl03Device::luaParms (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Hdf5Atl03Device* lua_obj = NULL;
+    Atl03Device* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = (Hdf5Atl03Device*)getLuaSelf(L, 1);
+        lua_obj = (Atl03Device*)getLuaSelf(L, 1);
     }
     catch(const LuaException& e)
     {
@@ -538,16 +538,16 @@ int Hdf5Atl03Device::luaParms (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
  *----------------------------------------------------------------------------*/
-int Hdf5Atl03Device::luaStats (lua_State* L)
+int Atl03Device::luaStats (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Hdf5Atl03Device* lua_obj = NULL;
+    Atl03Device* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = (Hdf5Atl03Device*)getLuaSelf(L, 1);
+        lua_obj = (Atl03Device*)getLuaSelf(L, 1);
     }
     catch(const LuaException& e)
     {

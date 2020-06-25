@@ -23,15 +23,15 @@
 
 #include <hdf5.h>
 
-#include "Hdf5DatasetDevice.h"
+#include "H5DatasetDevice.h"
 #include "core.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* Hdf5DatasetDevice::recType = "h5dataset";
-const RecordObject::fieldDef_t Hdf5DatasetDevice::recDef[] = {
+const char* H5DatasetDevice::recType = "h5dataset";
+const RecordObject::fieldDef_t H5DatasetDevice::recDef[] = {
     {"ID",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS},
     {"DATASET", RecordObject::STRING,   offsetof(h5dataset_t, dataset), 1,  NULL, NATIVE_FLAGS | RecordObject::POINTER},
     {"DATATYPE",RecordObject::UINT32,   offsetof(h5dataset_t, datatype),1,  NULL, NATIVE_FLAGS},
@@ -47,7 +47,7 @@ const RecordObject::fieldDef_t Hdf5DatasetDevice::recDef[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - create(<role>, <filename>, <dataset name>, [<id>], [<raw>], [<datatype>])
  *----------------------------------------------------------------------------*/
-int Hdf5DatasetDevice::luaCreate (lua_State* L)
+int H5DatasetDevice::luaCreate (lua_State* L)
 {
     try
     {
@@ -66,11 +66,11 @@ int Hdf5DatasetDevice::luaCreate (lua_State* L)
         }
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Hdf5DatasetDevice(L, (role_t)_role, filename, dataset_name, id, raw_mode, datatype));
+        return createLuaObject(L, new H5DatasetDevice(L, (role_t)_role, filename, dataset_name, id, raw_mode, datatype));
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error creating Hdf5DatasetDevice: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating H5DatasetDevice: %s\n", e.errmsg);
         return returnLuaStatus(L, false);
     }
 }
@@ -78,7 +78,7 @@ int Hdf5DatasetDevice::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Hdf5DatasetDevice::init (void)
+void H5DatasetDevice::init (void)
 {
     int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
     RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, "ID", sizeof(h5dataset_t), recDef, def_elements, 8);
@@ -91,7 +91,7 @@ void Hdf5DatasetDevice::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype):
+H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype):
     DeviceObject(L, _role)
 {
     /* Set Record */
@@ -125,7 +125,7 @@ Hdf5DatasetDevice::Hdf5DatasetDevice (lua_State* L, role_t _role, const char* fi
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Hdf5DatasetDevice::~Hdf5DatasetDevice (void)
+H5DatasetDevice::~H5DatasetDevice (void)
 {
     closeConnection();
     if(config) delete [] config;
@@ -136,7 +136,7 @@ Hdf5DatasetDevice::~Hdf5DatasetDevice (void)
 /*----------------------------------------------------------------------------
  * h5open
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetDevice::h5open (void)
+bool H5DatasetDevice::h5open (void)
 {
     unsigned flags;
     bool status = false;
@@ -261,7 +261,7 @@ bool Hdf5DatasetDevice::h5open (void)
 /*----------------------------------------------------------------------------
  * isConnected
  *----------------------------------------------------------------------------*/
-bool Hdf5DatasetDevice::isConnected (int num_open)
+bool H5DatasetDevice::isConnected (int num_open)
 {
     (void)num_open;
 
@@ -271,7 +271,7 @@ bool Hdf5DatasetDevice::isConnected (int num_open)
 /*----------------------------------------------------------------------------
  * closeConnection
  *----------------------------------------------------------------------------*/
-void Hdf5DatasetDevice::closeConnection (void)
+void H5DatasetDevice::closeConnection (void)
 {
     connected = false;
     if(dataBuffer) delete [] dataBuffer;
@@ -281,7 +281,7 @@ void Hdf5DatasetDevice::closeConnection (void)
 /*----------------------------------------------------------------------------
  * writeBuffer
  *----------------------------------------------------------------------------*/
-int Hdf5DatasetDevice::writeBuffer (const void* buf, int len)
+int H5DatasetDevice::writeBuffer (const void* buf, int len)
 {
     (void)buf;
     (void)len;
@@ -292,7 +292,7 @@ int Hdf5DatasetDevice::writeBuffer (const void* buf, int len)
 /*----------------------------------------------------------------------------
  * readBuffer
  *----------------------------------------------------------------------------*/
-int Hdf5DatasetDevice::readBuffer (void* buf, int len)
+int H5DatasetDevice::readBuffer (void* buf, int len)
 {
     int bytes = SHUTDOWN_RC;
 
@@ -331,7 +331,7 @@ int Hdf5DatasetDevice::readBuffer (void* buf, int len)
 /*----------------------------------------------------------------------------
  * getUniqueId
  *----------------------------------------------------------------------------*/
-int Hdf5DatasetDevice::getUniqueId (void)
+int H5DatasetDevice::getUniqueId (void)
 {
     return 0;
 }
@@ -339,7 +339,7 @@ int Hdf5DatasetDevice::getUniqueId (void)
 /*----------------------------------------------------------------------------
  * getConfig
  *----------------------------------------------------------------------------*/
-const char* Hdf5DatasetDevice::getConfig (void)
+const char* H5DatasetDevice::getConfig (void)
 {
     return config;
 }
