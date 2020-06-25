@@ -1,6 +1,8 @@
 
 ## Setting Up Python Environment
 
+The easiest (and recommended) way to interact with sliderule from a python script is to use the Anaconda distribution.  It includes everything needed to run the sliderule and icesat2 plugin python scripts.  Alternatively, a local python environment can be setup using the steps below.
+
 ### 1. Installing and Configuring Python
 
 Install python packages (Ubuntu)
@@ -21,6 +23,9 @@ Activate your virtual environment and update and install the necessary packages.
 $ source .venv/bin/activate
 $ pip install -U setuptools pip
 $ pip install requests
+$ pip install numpy
+$ pip install pandas
+$ pip install bokeh
 ````
 
 ### 2. Using the Python Client
