@@ -1,6 +1,6 @@
 file (GLOB SCRIPTS 
-    endpoints/*.lua
-    extensions/*.lua
+    endpoints/*
+    extensions/*
 )
 
 install (FILES ${SCRIPTS} DESTINATION ${CONFDIR})
