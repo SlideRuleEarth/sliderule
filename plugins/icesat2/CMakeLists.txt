@@ -36,4 +36,10 @@ install (
         ${INCDIR}
 )
 
+file (GLOB SCRIPTS
+    endpoints/*.lua
+)
+
+install (FILES ${SCRIPTS} DESTINATION ${CONFDIR})
+
 install (TARGETS icesat2Lib LIBRARY DESTINATION ${CONFDIR})

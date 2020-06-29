@@ -7,9 +7,7 @@ import struct
 import binascii # used for binascii.hexlify(<data>)
 import ctypes
 import array
-
-import pandas as pd
-import numpy as np
+import numpy
 
 ###############################################################################
 # GLOBALS
@@ -257,16 +255,16 @@ def get_values(data, dtype, size):
     """
 
     datatype2nptype = {
-        datatypes["TEXT"]:      np.byte,
-        datatypes["REAL"]:      np.double,
-        datatypes["INTEGER"]:   np.int32,
-        datatypes["DYNAMIC"]:   np.byte
+        datatypes["TEXT"]:      numpy.byte,
+        datatypes["REAL"]:      numpy.double,
+        datatypes["INTEGER"]:   numpy.int32,
+        datatypes["DYNAMIC"]:   numpy.byte
     }
 
     raw = bytes(data)
     datatype = datatype2nptype[dtype]
-    datasize = int(size / np.dtype(datatype).itemsize)
-    slicesize = datasize * np.dtype(datatype).itemsize # truncates partial bytes
-    values = np.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
+    datasize = int(size / numpy.dtype(datatype).itemsize)
+    slicesize = datasize * numpy.dtype(datatype).itemsize # truncates partial bytes
+    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
 
     return values
