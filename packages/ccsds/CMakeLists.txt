@@ -1,6 +1,6 @@
 message (STATUS "Including ccsds package")
 
-target_compile_definitions (sliderule PUBLIC _CCSDS_)
+target_compile_definitions (sliderule PUBLIC __ccsds__)
 
 target_sources (sliderule
     PRIVATE

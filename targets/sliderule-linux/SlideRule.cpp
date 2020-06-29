@@ -10,6 +10,7 @@
 
 #include "core.h"
 #include "ccsds.h"
+#include "h5.h"
 #include "legacy.h"
 
 #include <stdlib.h>
@@ -184,8 +185,18 @@ int main (int argc, char* argv[])
 
     /* Initialize Built-In Packages */
     initcore();
-    initccsds();
-    initlegacy();
+
+    #ifdef __ccsds__
+        initccsds();
+    #endif
+
+    #ifdef __h5__
+        inith5();
+    #endif
+
+    #ifdef __legacy__
+        initlegacy();
+    #endif
 
     /* Load Plug-ins */
     ldplugins();
@@ -207,8 +218,18 @@ int main (int argc, char* argv[])
     delete [] lua_argv;
 
     /* Full Clean Up */
-    deinitlegacy();
-    deinitccsds();
+    #ifdef __legacy__
+        deinitlegacy();
+    #endif
+
+    #ifdef __h5__
+        deinith5();
+    #endif
+
+    #ifdef __ccsds__
+        deinitccsds();
+    #endif
+
     deinitcore();
 
     /* Exit Thread Managing Signals */

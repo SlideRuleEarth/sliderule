@@ -21,14 +21,6 @@ if __pistache__ then
     runner.script(rd .. "pistache_endpoint.lua")
 end
 
--- Run ICESat2 Unit Tests --
-
-if __icesat2__ then
-    runner.script(rd .. "hdf5_file.lua")
-    runner.script(rd .. "atl06_elements.lua")
-    runner.script(rd .. "mathlib.lua")
-end
-
 -- Run Legacy Unit Tests --
 
 if __legacy__ then
@@ -39,6 +31,14 @@ if __legacy__ then
     runner.script(rd .. "cfs_interface.lua")
     runner.script(rd .. "record_dispatcher.lua")
     runner.script(rd .. "limit_dispatch.lua")
+end
+
+-- Run ICESat2 Unit Tests --
+
+if __icesat2__ then
+    runner.script(rd .. "hdf5_file.lua")
+    runner.script(rd .. "atl06_elements.lua")
+    runner.script(rd .. "mathlib.lua")
 end
 
 -- Report Results --

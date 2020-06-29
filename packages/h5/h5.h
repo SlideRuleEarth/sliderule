@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __h5__
-#define __h5__
+#ifndef __h5pkg__
+#define __h5pkg__
 
 /******************************************************************************
  * INCLUDES
@@ -35,8 +35,9 @@
 
 extern "C" {
 void inith5 (void);
+void deinith5 (void);
 }
 
-#endif  /* __h5__ */
+#endif  /* __h5pkg__ */
 
 

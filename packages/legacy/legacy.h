@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __legacy_pkg__
-#define __legacy_pkg__
+#ifndef __legacypkg__
+#define __legacypkg__
 
 /******************************************************************************
  * INCLUDES
@@ -45,7 +45,7 @@
 #include "UT_TimeLib.h"
 
 /******************************************************************************
- * dEFINES
+ * DEFINES
  ******************************************************************************/
 
 #define CMDQ "cmdq"
@@ -57,4 +57,4 @@
 void initlegacy (void);
 void deinitlegacy (void);
 
-#endif  /* __legacy_pkg__ */
+#endif  /* __legacypkg__ */

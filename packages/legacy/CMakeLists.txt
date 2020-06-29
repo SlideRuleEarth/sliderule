@@ -1,6 +1,6 @@
 message (STATUS "Including legacy package")
 
-target_compile_definitions (sliderule PUBLIC _LEGACY_)
+target_compile_definitions (sliderule PUBLIC __legacy__)
 
 target_sources (sliderule
     PRIVATE

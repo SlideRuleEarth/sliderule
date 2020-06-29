@@ -70,4 +70,8 @@ void inith5 (void)
     /* Display Status */
     printf("%s plugin initialized (%s)\n", LUA_H5_LIBNAME, BINID);
 }
+
+void deinith5 (void)
+{
+}
 }

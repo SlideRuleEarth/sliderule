@@ -34,7 +34,11 @@ option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" ON)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 
-option (USE_H5_PLUGIN "Include the HDF5 plugin" ON)
+
+option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
+option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
+option (USE_H5_PACKAGE "Include the HDF5 package" ON)
+
 option (USE_ICESAT2_PLUGIN "Include the ICESat-2 plugin" ON)
 option (USE_PISTACHE_PLUGIN "Include the Pistache plugin" ON)
 option (USE_SIGVIEW_PLUGIN "Include the SigView plugin" ON)
@@ -108,21 +112,27 @@ endif ()
 # Add Packages #
 
 add_subdirectory (packages/core)
-add_subdirectory (packages/ccsds)
-add_subdirectory (packages/legacy)
 
-# Add Optional Plugins #
-
-if(${USE_H5_PLUGIN})
-    add_subdirectory (plugins/h5)
+if(${USE_CCSDS_PACKAGE})
+    add_subdirectory (packages/ccsds)
 endif()
 
-if(${USE_ICESAT2_PLUGIN})
-    add_subdirectory (plugins/icesat2)
+if(${USE_LEGACY_PACKAGE})
+    add_subdirectory (packages/legacy)
+endif()
+
+if(${USE_H5_PACKAGE})
+    add_subdirectory (packages/h5)
 endif()
 
 if(${USE_PISTACHE_PLUGIN})
     add_subdirectory (plugins/pistache)
+endif()
+
+# Add Plugins #
+
+if(${USE_ICESAT2_PLUGIN})
+    add_subdirectory (plugins/icesat2)
 endif()
 
 if(${USE_SIGVIEW_PLUGIN})

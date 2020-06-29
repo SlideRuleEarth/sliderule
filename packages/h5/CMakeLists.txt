@@ -6,24 +6,18 @@ list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
 list( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
 find_library (HDF5_LIB hdf5)
 
-# Build plugin
+# Build package
 if (HDF5_LIB AND ZLIB_FOUND)
 
-    message (STATUS "Including h5 plugin")
-    message (STATUS ${HDF5_LIB})
-    add_library (h5Lib SHARED "")
+    message (STATUS "Including h5 package")
 
-    set_target_properties (h5Lib PROPERTIES OUTPUT_NAME h5)
-    set_target_properties (h5Lib PROPERTIES PREFIX "")
-    set_target_properties (h5Lib PROPERTIES POSITION_INDEPENDENT_CODE 1) # shared libraries need PIC
+    target_compile_definitions (sliderule PUBLIC __h5__)
+    target_compile_definitions (sliderule PUBLIC H5_USE_110_API)
 
-    target_link_libraries (h5Lib PUBLIC sliderule)
-    target_link_libraries (h5Lib PUBLIC ${HDF5_LIB})
-    target_link_libraries (h5Lib PUBLIC ${ZLIB_LIBRARIES})
+    target_link_libraries (sliderule PUBLIC ${HDF5_LIB})
+    target_link_libraries (sliderule PUBLIC ${ZLIB_LIBRARIES})
 
-    target_compile_definitions (h5Lib PUBLIC H5_USE_110_API)
-
-    target_sources(h5Lib
+    target_sources(sliderule
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/h5.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5File.cpp
@@ -31,7 +25,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5IO.cpp
     )
 
-    target_include_directories (h5Lib
+    target_include_directories (sliderule
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
@@ -48,10 +42,8 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${INCDIR}
     )
 
-    install (TARGETS h5Lib LIBRARY DESTINATION ${CONFDIR})
-
 else ()
 
-    message (STATUS "Unable to include h5 plugin... required libraries not found")
+    message (STATUS "Unable to include h5 package... required libraries not found")
 
 endif ()

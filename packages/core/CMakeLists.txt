@@ -5,7 +5,7 @@ if (LUA_FOUND AND READLINE_LIB)
 
     message (STATUS "Including core package")
 
-    target_compile_definitions (sliderule PUBLIC _CORE_)
+    target_compile_definitions (sliderule PUBLIC __core__)
     target_compile_definitions (sliderule PRIVATE LUA_USE_READLINE)
 
     target_link_libraries (sliderule PRIVATE ${LUA_LIBRARIES})
