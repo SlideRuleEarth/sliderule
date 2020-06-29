@@ -11,6 +11,12 @@
 --                      "srt":      <surface type - default = LAND ICE(3)>
 --                      "cnf":      <signal confidence level - default = SURFACE HIGH(4)>
 --                  }
+--                  "hsds":
+--                  {
+--                      "endpoint": "<url for hsds server>"
+--                      "username": "<username>"
+--                      "password": "<password>"
+--                  }
 --              }
 --
 --              rspq - output queue to stream results
@@ -33,6 +39,14 @@ local filename = rqst["filename"]
 local track = rqst["track"]
 local stages = rqst["stages"]
 local parms = rqst["parms"]
+local hsds = rqst["hsds"]
+
+-- Setup HSDS Envirnment --
+if hsds then
+    os.execute(string.format('export HSDS_ENDPOINT=%s', hsds["endpoint"] or "http://localhost:9082/hsds"))
+    os.execute(string.format('export HSDS_USERNAME=%s', hsds["username"] or "icesat2"))
+    os.execute(string.format('export HSDS_PASSWORD=%s', hsds["password"] or ""))
+end
 
 -- ATL06 Dispatch Algorithm --
 a = icesat2.atl06(rspq)

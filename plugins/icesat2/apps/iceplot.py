@@ -87,6 +87,10 @@ if __name__ == '__main__':
             "len": 40.0,
             "res": 20.0
         }
+        "hsds" : {
+            "endpoint": "http://localhost:9082/hsds"
+            "username": "icesat2"
+        }
     }
 
     # Execute ATL06 Algorithm
