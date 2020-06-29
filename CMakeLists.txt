@@ -33,7 +33,7 @@ endif()
 option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" ON)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
-
+option (ENABLE_H5_REST_VOL "Install and use the REST VOL plugin for H5 access" OFF)
 
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
@@ -51,6 +51,8 @@ set (CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 #####################
 # Target: SlideRule #
 #####################
+
+# Create Target #
 
 add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/sliderule-linux/SlideRule.cpp)
 

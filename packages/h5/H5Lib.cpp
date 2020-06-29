@@ -22,6 +22,9 @@
  ******************************************************************************/
 
 #include <hdf5.h>
+#ifdef H5_USE_REST_VOL
+#include <rest_vol_public.h>
+#endif
 
 #include "H5Lib.h"
 #include "core.h"
@@ -122,7 +125,7 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char* name, const H5L_info_t* info
 void H5Lib::init (void)
 {
     #ifdef H5_USE_REST_VOL
-        RVinit();
+        H5rest_init();
         file_access_properties = H5Pcreate(H5P_FILE_ACCESS);
         H5Pset_fapl_rest_vol(file_access_properties);
     #endif
@@ -135,7 +138,7 @@ void H5Lib::deinit (void)
 {
     #ifdef H5_USE_REST_VOL
         H5Pclose(file_access_properties);
-        RVterm();
+        H5rest_term();
     #endif
 }
 
