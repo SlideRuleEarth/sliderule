@@ -6,19 +6,15 @@ find_library (PISTACHE_LIB pistache)
 # Build plugin
 if (PISTACHE_LIB)
 
-    message (STATUS "Including pistache plugin")
+    message (STATUS "Including pistache package")
 
-    add_library (pistacheLib SHARED "")
+    target_compile_definitions (sliderule PUBLIC __pistache__)
 
-    set_target_properties (pistacheLib PROPERTIES OUTPUT_NAME pistache)
-    set_target_properties (pistacheLib PROPERTIES PREFIX "")
-    set_target_properties (pistacheLib PROPERTIES POSITION_INDEPENDENT_CODE 1) # shared libraries need PIC
+    target_link_libraries (sliderule PUBLIC ${PISTACHE_LIB})
+    target_link_libraries (sliderule PUBLIC ssl)
+    target_link_libraries (sliderule PUBLIC crypto)
 
-    target_link_libraries (pistacheLib PUBLIC sliderule)
-    target_link_libraries (pistacheLib PUBLIC ${PISTACHE_LIB})
-    target_link_libraries (pistacheLib PUBLIC ssl)
-
-    target_sources(pistacheLib
+    target_sources(sliderule
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/pistache.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.cpp
@@ -26,7 +22,7 @@ if (PISTACHE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/RouteHandler.cpp
     )
 
-    target_include_directories (pistacheLib
+    target_include_directories (sliderule
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
@@ -42,10 +38,8 @@ if (PISTACHE_LIB)
             ${INCDIR}
     )
 
-    install (TARGETS pistacheLib LIBRARY DESTINATION ${CONFDIR})
-
 else ()
 
-    message (STATUS "Unable to include pistache plugin... library not found")
+    message (STATUS "Unable to include pistache package... library not found")
 
 endif ()

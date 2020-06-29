@@ -36,11 +36,11 @@ option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer t
 
 
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
-option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
+option (USE_PISTACHE_PACKAGE "Include the Pistache package" ON)
+option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 
 option (USE_ICESAT2_PLUGIN "Include the ICESat-2 plugin" ON)
-option (USE_PISTACHE_PLUGIN "Include the Pistache plugin" ON)
 option (USE_SIGVIEW_PLUGIN "Include the SigView plugin" ON)
 
 set (CMAKE_SKIP_BUILD_RPATH FALSE)
@@ -117,16 +117,16 @@ if(${USE_CCSDS_PACKAGE})
     add_subdirectory (packages/ccsds)
 endif()
 
-if(${USE_LEGACY_PACKAGE})
-    add_subdirectory (packages/legacy)
-endif()
-
 if(${USE_H5_PACKAGE})
     add_subdirectory (packages/h5)
 endif()
 
-if(${USE_PISTACHE_PLUGIN})
-    add_subdirectory (plugins/pistache)
+if(${USE_PISTACHE_PACKAGE})
+    add_subdirectory (packages/pistache)
+endif()
+
+if(${USE_LEGACY_PACKAGE})
+    add_subdirectory (packages/legacy)
 endif()
 
 # Add Plugins #

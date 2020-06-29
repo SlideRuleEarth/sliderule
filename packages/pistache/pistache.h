@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __pistache__
-#define __pistache__
+#ifndef __pistachepkg__
+#define __pistachepkg__
 
 /******************************************************************************
  * INCLUDES
@@ -35,8 +35,9 @@
 
 extern "C" {
 void initpistache (void);
+void deinitpistache (void);
 }
 
-#endif  /* __pistache__ */
+#endif  /* __pistachepkg__ */
 
 

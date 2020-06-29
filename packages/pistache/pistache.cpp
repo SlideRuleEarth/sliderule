@@ -72,4 +72,8 @@ void initpistache (void)
     /* Display Status */
     printf("%s plugin initialized (%s)\n", LUA_PISTACHE_LIBNAME, BINID);
 }
+
+void deinitpistache (void)
+{
+}
 }

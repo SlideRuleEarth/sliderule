@@ -11,6 +11,7 @@
 #include "core.h"
 #include "ccsds.h"
 #include "h5.h"
+#include "pistache.h"
 #include "legacy.h"
 
 #include <stdlib.h>
@@ -194,6 +195,10 @@ int main (int argc, char* argv[])
         inith5();
     #endif
 
+    #ifdef __pistache__
+        initpistache();
+    #endif
+
     #ifdef __legacy__
         initlegacy();
     #endif
@@ -220,6 +225,10 @@ int main (int argc, char* argv[])
     /* Full Clean Up */
     #ifdef __legacy__
         deinitlegacy();
+    #endif
+
+    #ifdef __pistache__
+        deinitpistache();
     #endif
 
     #ifdef __h5__
