@@ -24,8 +24,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <hdf5.h>
-
 #include "OsApi.h"
 #include "DeviceObject.h"
 

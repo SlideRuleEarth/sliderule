@@ -140,10 +140,10 @@ class Atl03Device: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Device     (lua_State* L, const char* ur, parms_t _parms);
-                            ~Atl03Device    (void);
+                            Atl03Device         (lua_State* L, const char* ur, parms_t _parms);
+                            ~Atl03Device        (void);
 
-        bool                h5open              (const char* url);
+        bool                bufferData          (const char* url);
 
         virtual bool        isConnected         (int num_open=0);   // is the file open
         virtual void        closeConnection     (void);             // close the file

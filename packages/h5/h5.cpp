@@ -40,8 +40,8 @@
 int h5_open (lua_State *L)
 {
     static const struct luaL_Reg h5_functions[] = {
-        {"h5file",      H5File::luaCreate},
-        {"h5dataset",   H5DatasetDevice::luaCreate},
+        {"file",        H5File::luaCreate},
+        {"dataset",     H5DatasetDevice::luaCreate},
         {NULL,          NULL}
     };
 

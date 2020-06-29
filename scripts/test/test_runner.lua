@@ -15,6 +15,12 @@ if __core__ then
     runner.script(rd .. "cluster_socket.lua")
 end
 
+-- Run H5 Unit Tests --
+
+if __h5__ then
+    runner.script(rd .. "hdf5_file.lua")
+end
+
 -- Run Pistache Unit Tests --
 
 if __pistache__ then
@@ -36,7 +42,6 @@ end
 -- Run ICESat2 Unit Tests --
 
 if __icesat2__ then
-    runner.script(rd .. "hdf5_file.lua")
     runner.script(rd .. "atl06_elements.lua")
     runner.script(rd .. "mathlib.lua")
 end

@@ -24,8 +24,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <hdf5.h>
-
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "DeviceObject.h"
@@ -41,8 +39,6 @@ class H5DatasetDevice: public DeviceObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const int MAX_NDIMS = 8;
 
         static const char* recType;
         static const RecordObject::fieldDef_t recDef[];

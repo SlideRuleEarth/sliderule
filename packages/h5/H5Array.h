@@ -67,7 +67,7 @@ H5Array<T>::H5Array(const char* url, const char* dataset, int col)
 {
     data = NULL;
     name = StringLib::duplicate(dataset);
-    size = H5IO::read(url, dataset, col, sizeof(T), &data);
+    size = H5IO::read(url, dataset, col, sizeof(T), (uint8_t**)&data);
 }
 
 /*----------------------------------------------------------------------------

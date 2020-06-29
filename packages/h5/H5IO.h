@@ -24,7 +24,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <hdf5.h>
+#include "RecordObject.h"
 
 /******************************************************************************
  * HDF5 I/O CLASS
@@ -34,7 +34,11 @@ class H5IO
 {
     public:
 
-        static int read (const char* url, const char* datasetname, int col, size_t datatypesize, void* _data);
+        static const int MAX_NDIMS = 8;
+
+        static int read (const char* url, const char* datasetname, int col, size_t datatypesize, uint8_t** data);
+        static int readAs (const char* url, const char* datasetname, RecordObject::valType_t valtype, uint8_t** data);
+        static bool traverse (const char* url, int max_depth, const char* start_group);
 };
 
 #endif  /* __h5_io__ */

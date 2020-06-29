@@ -21,9 +21,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <hdf5.h>
-
 #include "H5DatasetDevice.h"
+#include "H5IO.h"
 #include "core.h"
 
 /******************************************************************************
@@ -138,14 +137,6 @@ H5DatasetDevice::~H5DatasetDevice (void)
  *----------------------------------------------------------------------------*/
 bool H5DatasetDevice::h5open (void)
 {
-    unsigned flags;
-    bool status = false;
-    hid_t file = INVALID_RC;
-    hid_t dataset = INVALID_RC;
-    hid_t space = INVALID_RC;
-    hid_t datatype = INVALID_RC;
-    bool datatype_allocated = false;
-
     /* Check Reentry */
     if(dataBuffer)
     {
@@ -153,109 +144,11 @@ bool H5DatasetDevice::h5open (void)
         return false;
     }
 
-    /* Set Flags */
-    if(role == DeviceObject::READER)        flags = H5F_ACC_RDONLY;
-    else if(role == DeviceObject::WRITER)   flags = H5F_ACC_TRUNC;
-    else                                    flags = H5F_ACC_RDWR;
-
-    do
-    {
-        /* Open File */
-        mlog(INFO, "Opening file: %s\n", fileName);
-        file = H5Fopen(fileName, flags, H5P_DEFAULT);
-        if(file < 0)
-        {
-            mlog(CRITICAL, "Failed to open file: %s\n", fileName);
-            break;
-        }
-
-        /* Open Dataset */
-        dataset = H5Dopen(file, dataName, H5P_DEFAULT);
-        if(dataset < 0)
-        {
-            mlog(CRITICAL, "Failed to open dataset: %s\n", dataName);
-            break;
-        }
-
-        /* Open Dataspace */
-        space = H5Dget_space(dataset);
-        if(space < 0)
-        {
-            mlog(CRITICAL, "Failed to open dataspace on dataset: %s\n", dataName);
-            break;
-        }
-
-        /* Get Datatype */
-        if(recData->datatype == RecordObject::INTEGER)
-        {
-            datatype = H5T_NATIVE_INT;
-        }
-        else if(recData->datatype == RecordObject::REAL)
-        {
-            datatype = H5T_NATIVE_DOUBLE;
-        }
-        else
-        {
-            datatype = H5Dget_type(dataset);
-            datatype_allocated = true;
-        }
-
-        /* Get Datatype Size */
-        size_t typesize = H5Tget_size(datatype);
-
-        /* Read Data */
-        int ndims = H5Sget_simple_extent_ndims(space);
-        if(ndims <= MAX_NDIMS)
-        {
-            hsize_t* dims = new hsize_t[ndims];
-            H5Sget_simple_extent_dims(space, dims, NULL);
-
-            /* Get Size of Data Buffer */
-            dataSize = typesize;
-            for(int d = 0; d < ndims; d++)
-            {
-                dataSize *= dims[d];
-            }
-
-            /* Allocate Data Buffer */
-            try
-            {
-                dataBuffer = new uint8_t[dataSize];
-            }
-            catch (const std::bad_alloc& e)
-            {
-                mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", dataSize);
-                break;
-            }
-
-            /* Read Dataset */
-            mlog(INFO, "Reading %d bytes of data from %s\n", dataSize, dataName);
-            if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataBuffer) >= 0)
-            {
-                status = true;
-            }
-            else
-            {
-                mlog(CRITICAL, "Failed to read data from %s\n", dataName);
-                break;
-            }
-        }
-        else
-        {
-            mlog(CRITICAL, "Number of dimensions exceeded maximum allowed: %d\n", ndims);
-            break;
-        }
-    }
-    while(false);
-
-    /* Clean Up */
-    if(datatype_allocated && datatype > 0) H5Tclose(datatype);
-    if(space > 0) H5Sclose(space);
-    if(dataset > 0) H5Dclose(dataset);
-    if(file > 0) H5Fclose(file);
+    /* Read File */
+    dataSize = H5IO::readAs(fileName, dataName, (RecordObject::valType_t)recData->datatype, (uint8_t**)&dataBuffer);
 
     /* Return Status */
-    return status;
+    return (dataSize > 0);
 }
 
 /*----------------------------------------------------------------------------

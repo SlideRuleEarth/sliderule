@@ -171,7 +171,7 @@ Atl03Device::Atl03Device (lua_State* L, const char* url, parms_t _parms):
     sprintf(config, "%s (%s)", url, role == READER ? "READER" : "WRITER");
 
     /* Open URL */
-    if(url[0])  connected = h5open(url);
+    if(url[0])  connected = bufferData(url);
     else        connected = false;
 
     /* Add Additional Meta Functions */
@@ -193,12 +193,12 @@ Atl03Device::~Atl03Device (void)
 }
 
 /*----------------------------------------------------------------------------
- * h5open
+ * bufferData
  *
  *  TODO: run this concurrent with readBuffer
  *  TODO: open and process all tracks in url
  *----------------------------------------------------------------------------*/
-bool Atl03Device::h5open (const char* url)
+bool Atl03Device::bufferData (const char* url)
 {
     bool status = false;
     int track = 1; // hardcode for now

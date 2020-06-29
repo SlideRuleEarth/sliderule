@@ -47,7 +47,7 @@ d = core.dispatcher("recq")
 d:attach(a, "atl03rec")
 
 -- ATL03 Device --
-f = icesat2.h5atl03(filename, parms)
+f = icesat2.atl03(filename, parms)
 
 -- ATL03 File Reader --
 r = core.reader(f, "recq")
