@@ -41,6 +41,11 @@ typedef union {
     uint64_t data;
 } rdepth_t;
 
+/******************************************************************************
+ * FILE DATA
+ ******************************************************************************/
+
+hid_t file_access_properties = H5P_DEFAULT;
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -108,8 +113,31 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char* name, const H5L_info_t* info
 }
 
 /******************************************************************************
- * HDF5 I/O CLASS
+ * HDF5 LIBRARY CLASS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void H5Lib::init (void)
+{
+    #ifdef H5_USE_REST_VOL
+        RVinit();
+        file_access_properties = H5Pcreate(H5P_FILE_ACCESS);
+        H5Pset_fapl_rest_vol(file_access_properties);
+    #endif
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void H5Lib::deinit (void)
+{
+    #ifdef H5_USE_REST_VOL
+        H5Pclose(file_access_properties);
+        RVterm();
+    #endif
+}
 
 /*----------------------------------------------------------------------------
  * read
@@ -127,7 +155,7 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
     do
     {
         mlog(INFO, "Opening resource: %s\n", url);
-        file = H5Fopen(url, H5F_ACC_RDONLY, H5P_DEFAULT);
+        file = H5Fopen(url, H5F_ACC_RDONLY, file_access_properties);
         if(file < 0)
         {
             mlog(CRITICAL, "Failed to open resource: %s\n", url);
@@ -254,7 +282,7 @@ int H5Lib::readAs (const char* url, const char* datasetname, RecordObject::valTy
     {
         /* Open File */
         mlog(INFO, "Opening file: %s\n", url);
-        file = H5Fopen(url, H5F_ACC_RDONLY, H5P_DEFAULT);
+        file = H5Fopen(url, H5F_ACC_RDONLY, file_access_properties);
         if(file < 0)
         {
             mlog(CRITICAL, "Failed to open file: %s\n", url);
@@ -365,7 +393,7 @@ bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
         recurse.curr.max = max_depth;
 
         /* Open File */
-        file = H5Fopen(url, H5F_ACC_RDONLY, H5P_DEFAULT);
+        file = H5Fopen(url, H5F_ACC_RDONLY, file_access_properties);
         if(file < 0)
         {
             mlog(CRITICAL, "Failed to open resource: %s", url);

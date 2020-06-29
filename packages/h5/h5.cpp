@@ -59,6 +59,7 @@ extern "C" {
 void inith5 (void)
 {
     /* Initialize Modules */
+    H5Lib::init();
     H5DatasetDevice::init();
 
     /* Extend Lua */
@@ -73,5 +74,6 @@ void inith5 (void)
 
 void deinith5 (void)
 {
+    H5Lib::deinit();
 }
 }

@@ -13,6 +13,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
 
     target_compile_definitions (sliderule PUBLIC __h5__)
     target_compile_definitions (sliderule PUBLIC H5_USE_110_API)
+#    target_compile_definitions (sliderule PUBLIC H5_USE_REST_VOL)
 
     target_link_libraries (sliderule PUBLIC ${HDF5_LIB})
     target_link_libraries (sliderule PUBLIC ${ZLIB_LIBRARIES})
