@@ -28,6 +28,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/h5.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5File.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/H5IO.cpp
     )
 
     target_include_directories (h5Lib
@@ -41,6 +42,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/h5.h
             ${CMAKE_CURRENT_LIST_DIR}/H5File.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5IO.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Array.h
         DESTINATION
             ${INCDIR}

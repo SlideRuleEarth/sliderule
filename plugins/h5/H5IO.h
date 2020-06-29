@@ -17,26 +17,24 @@
  * under the License.
  */
 
-#ifndef __h5__
-#define __h5__
+#ifndef __h5_io__
+#define __h5_io__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "H5File.h"
-#include "H5DatasetDevice.h"
-#include "H5IO.h"
-#include "H5Array.h"
+#include <hdf5.h>
 
 /******************************************************************************
- * PROTOTYPES
+ * HDF5 I/O CLASS
  ******************************************************************************/
 
-extern "C" {
-void inith5 (void);
-}
+class H5IO
+{
+    public:
 
-#endif  /* __h5__ */
+        static int read (const char* url, const char* datasetname, int col, size_t datatypesize, void* _data);
+};
 
-
+#endif  /* __h5_io__ */

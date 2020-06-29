@@ -24,6 +24,7 @@
 #include <hdf5.h>
 
 #include "H5File.h"
+#include "H5Array.h"
 #include "core.h"
 
 /******************************************************************************
@@ -262,6 +263,74 @@ int H5File::luaTraverse (lua_State* L)
     /* Clean Up */
     if(file > 0) H5Fclose(file);
     if(group > 0) H5Gclose(group);
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaInspect - :inspect(<dataset>, <datatype>)
+ *----------------------------------------------------------------------------*/
+int H5File::luaInspect (lua_State* L)
+{
+    bool    status = true;
+
+    try
+    {
+        /* Get Self */
+        H5File* lua_obj = (H5File*)getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        const char* dataset_name = getLuaString(L, 2);
+        const char* datatype_name = getLuaString(L, 3, true, "double");
+
+        /* Open Dataset */
+        if(StringLib::match("double", datatype_name))
+        {
+            H5Array<double> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%lf\n", values[i]);
+        }
+        else if(StringLib::match("float", datatype_name))
+        {
+            H5Array<float> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%f\n", values[i]);
+        }
+        else if(StringLib::match("float", datatype_name))
+        {
+            H5Array<float> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%f\n", values[i]);
+        }
+        else if(StringLib::match("long", datatype_name))
+        {
+            H5Array<long> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%ld\n", values[i]);
+        }
+        else if(StringLib::match("int", datatype_name))
+        {
+            H5Array<int> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%d\n", values[i]);
+        }
+        else if(StringLib::match("short", datatype_name))
+        {
+            H5Array<short> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%d\n", values[i]);
+        }
+        else if(StringLib::match("char", datatype_name))
+        {
+            H5Array<char> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%c\n", values[i]);
+        }
+        else if(StringLib::match("byte", datatype_name))
+        {
+            H5Array<unsigned char> values(lua_obj->filename, dataset_name);
+            for(int i = 0; i < values.size; i++) printf("%02X\n", values[i]);
+        }
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error inspecting hdf5 file: %s\n", e.errmsg);
+        status = false;
+    }
 
     /* Return Status */
     return returnLuaStatus(L, status);

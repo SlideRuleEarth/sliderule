@@ -24,13 +24,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <hdf5.h>
 #include "H5Array.h"
 #include "StringLib.h"
-
-#include <stdlib.h>
-#include <assert.h>
-#include <stdexcept>
 
 /******************************************************************************
  * DEFINES
@@ -53,7 +48,7 @@ class GTArray
          * Methods
          *--------------------------------------------------------------------*/
 
-                    GTArray     (hid_t file, int track, const char* gt_dataset, int col=-1);
+                    GTArray     (const char* url, int track, const char* gt_dataset, int col=-1);
         virtual     ~GTArray    (void);
 
         H5Array<T>& operator[]  (int index);
@@ -73,9 +68,9 @@ class GTArray
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-GTArray<T>::GTArray(hid_t file, int track, const char* gt_dataset, int col):
-    gt{ H5Array<T>(file, SafeString("/gt%dl/%s", track, gt_dataset).getString(), col),
-        H5Array<T>(file, SafeString("/gt%dr/%s", track, gt_dataset).getString(), col) }
+GTArray<T>::GTArray(const char* url, int track, const char* gt_dataset, int col):
+    gt{ H5Array<T>(url, SafeString("/gt%dl/%s", track, gt_dataset).getString(), col),
+        H5Array<T>(url, SafeString("/gt%dr/%s", track, gt_dataset).getString(), col) }
 {
 }
 

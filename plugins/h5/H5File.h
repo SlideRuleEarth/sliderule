@@ -56,6 +56,7 @@ class H5File: public DeviceObject
         const char*         getFilename         (void);
 
         static int          luaTraverse         (lua_State* L);
+        static int          luaInspect          (lua_State* L);
 
     protected:
 

@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __hdf5_atl03__
-#define __hdf5_atl03__
+#ifndef __atl03_device__
+#define __atl03_device__
 
 /******************************************************************************
  * INCLUDES
@@ -156,4 +156,4 @@ class Atl03Device: public DeviceObject
         static int          luaStats            (lua_State* L);
 };
 
-#endif  /* __hdf5_atl03__ */
+#endif  /* __atl03_device__ */
