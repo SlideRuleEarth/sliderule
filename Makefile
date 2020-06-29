@@ -22,16 +22,27 @@ offline-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) ..
 
-docker-image: distclean offline-config default-build install
+docker-config:
+	mkdir -p build
+	cd build; cmake -DENABLE_H5_REST_VOL=ON -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) ..
+
+docker-image: distclean docker-config default-build install
 	cp targets/sliderule-docker/Dockerfile $(STAGEDIR)
+	# copy over scripts #
 	mkdir $(STAGEDIR)/scripts
 	cp -R scripts/apps $(STAGEDIR)/scripts/apps
 	cp -R scripts/tests $(STAGEDIR)/scripts/tests
+	# copy over tests #
 	mkdir -p $(STAGEDIR)/plugins/icesat2/tests
 	cp plugins/icesat2/tests/* $(STAGEDIR)/plugins/icesat2/tests
+	# copy over library dependencies #
+	mkdir -p $(STAGEDIR)/lib
+	cp /usr/local/lib/libhdf5_vol_rest.so $(STAGEDIR)/lib
+	cp /usr/local/lib/libyajl.so* $(STAGEDIR)/lib
+	# build image #
 	cd $(STAGEDIR); docker build -t sliderule-linux:latest .
-	# docker run -it --rm --name=sliderule1 -v /data:/data sliderule-linux /usr/local/scripts/apps/test_runner.lua
-	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/scripts/apps/server.lua
+	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://localhost:9082/hsds sliderule-linux /usr/local/scripts/apps/test_runner.lua
+	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://localhost:9082/hsds sliderule-linux /usr/local/scripts/apps/server.lua
 
 scan:
 	mkdir -p build

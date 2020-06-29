@@ -12,9 +12,9 @@ A C++/Lua framework for science data processing.
 
 2. CMake (3.13.0 or greater)
 
-3. HDF5 (needed for h5 package, see [h5.md](packages/pistahce/h5.md) for installation instructions)
+3. HDF5 (needed for h5 package, see [h5.md](packages/h5/h5.md) for installation instructions)
 
-4. Pistache (needed for pistache package, see [pistache.md](packages/pistahce/pistache.md) for installation instructions)
+4. Pistache (needed for pistache package, see [pistache.md](packages/pistache/pistache.md) for installation instructions)
 
 
 ## Building with CMake
@@ -41,6 +41,7 @@ To set compile options exposed by cmake (e.g. disable plugin compilation):
 Options include:
 * `-DINSTALLDIR=[prefix]`: location to install sliderule; default: /usr/local
 * `-DRUNTIMEDIR=[directory]`: runtime location for plugins, configuration files, and lua scripts; default /usr/local/etc/sliderule
+* `-DENABLE_H5_REST_VOL=[ON|OFF]`: configure H5 package to use REST VOL plugin
 * `-DUSE_H5_PACKAGE=[ON|OFF]`: hdf5 reading/writing
 * `-DUSE_PISTACHE_PACKAGE=[ON|OFF]`: http server and client
 * `-DUSE_ICESAT2_PLUGIN=[ON|OFF]`: ICESat-2 science data processing
@@ -69,7 +70,7 @@ Once the shared library is built, copy the shared object into the sliderule conf
 
 ### scripts
 
-Contains Lua scripts that can be used for tests and higher level implementations of functionality.
+Contains Lua and Python scripts that can be used for tests and higher level implementations of functionality.
 
 ### targets
 
