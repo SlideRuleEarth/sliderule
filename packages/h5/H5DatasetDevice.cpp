@@ -22,7 +22,7 @@
  ******************************************************************************/
 
 #include "H5DatasetDevice.h"
-#include "H5IO.h"
+#include "H5Lib.h"
 #include "core.h"
 
 /******************************************************************************
@@ -145,7 +145,7 @@ bool H5DatasetDevice::h5open (void)
     }
 
     /* Read File */
-    dataSize = H5IO::readAs(fileName, dataName, (RecordObject::valType_t)recData->datatype, (uint8_t**)&dataBuffer);
+    dataSize = H5Lib::readAs(fileName, dataName, (RecordObject::valType_t)recData->datatype, (uint8_t**)&dataBuffer);
 
     /* Return Status */
     return (dataSize > 0);

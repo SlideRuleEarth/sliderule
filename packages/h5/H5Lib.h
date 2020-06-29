@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __h5_io__
-#define __h5_io__
+#ifndef __h5_lib__
+#define __h5_lib__
 
 /******************************************************************************
  * INCLUDES
@@ -41,4 +41,4 @@ class H5Lib
         static bool traverse (const char* url, int max_depth, const char* start_group);
 };
 
-#endif  /* __h5_io__ */
+#endif  /* __h5_lib__ */

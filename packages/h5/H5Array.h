@@ -26,7 +26,7 @@
 
 #include "StringLib.h"
 #include "LogLib.h"
-#include "H5IO.h"
+#include "H5Lib.h"
 
 /******************************************************************************
  * H5Array TEMPLATE
@@ -67,7 +67,7 @@ H5Array<T>::H5Array(const char* url, const char* dataset, int col)
 {
     data = NULL;
     name = StringLib::duplicate(dataset);
-    size = H5IO::read(url, dataset, col, sizeof(T), (uint8_t**)&data);
+    size = H5Lib::read(url, dataset, col, sizeof(T), (uint8_t**)&data);
 }
 
 /*----------------------------------------------------------------------------

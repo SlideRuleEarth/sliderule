@@ -26,7 +26,7 @@
 
 #include "H5File.h"
 #include "H5DatasetDevice.h"
-#include "H5IO.h"
+#include "H5Lib.h"
 #include "H5Array.h"
 
 /******************************************************************************

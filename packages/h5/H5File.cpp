@@ -162,7 +162,7 @@ int H5File::luaTraverse (lua_State* L)
         const char* group_path = getLuaString(L, 3, true, NULL);
 
         /* Traverse File */
-        status = H5IO::traverse(lua_obj->filename, max_depth, group_path);
+        status = H5Lib::traverse(lua_obj->filename, max_depth, group_path);
     }
     catch(const LuaException& e)
     {
