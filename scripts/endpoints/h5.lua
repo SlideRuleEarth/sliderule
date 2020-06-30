@@ -1,5 +1,5 @@
 --
--- ENDPOINT:    /source/time
+-- ENDPOINT:    /engine/h5
 --
 -- INPUT:       arg[1] -
 --              {
@@ -15,7 +15,7 @@
 --
 -- NOTES:       1. The arg[1] input is a json object provided by caller
 --              2. The rspq is the system provided output queue name string
---              3. The output is a raw binary blob containing a native integer array
+--              3. The output is a raw binary blob containing serialized 'h5dataset' RecordObjects
 --
 
 local json = require("json")

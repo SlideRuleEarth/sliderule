@@ -1,5 +1,5 @@
 --
--- ENDPOINT:    /source/time
+-- ENDPOINT:    /engine/atl06
 --
 -- INPUT:       rqst -
 --              {
@@ -19,7 +19,7 @@
 --
 -- NOTES:       1. The rqst is provided by arg[1] which is a json object provided by caller
 --              2. The rspq is the system provided output queue name string
---              3. The output is a raw binary blob containing the output of tha algorithm
+--              3. The output is a raw binary blob containing serialized 'atl06rec' and 'atl06rec.elevation' RecordObjects
 --
 
 local json = require("json")

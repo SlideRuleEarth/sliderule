@@ -3,15 +3,15 @@ ICESat-2 (SlideRule)
 
 The ICESat-2 plugin provides science data processing algorithms for derived ATL06 data products.
 
-## Building
+## I. Building
 
-This plugin requires the `h5` plugin to be enabled and installed.
+This plugin requires the `h5` and `pistache` packages to be enabled.
 
-## Setting Up Python Environment
+## II. Setting Up Python Environment
 
 The easiest (and recommended) way to interact with sliderule from a python script is to use the Anaconda distribution.  It includes everything needed to run the icesat2 plugin python scripts.  Alternatively, a local python environment can be setup using the steps below.
 
-### 1. Installing and Configuring Python
+### Installing and Configuring Python
 
 Install python packages (Ubuntu)
 ````bash
@@ -36,17 +36,33 @@ $ pip install pandas
 $ pip install bokeh
 ````
 
-### 2. Using the Python Client
+## III. Quick Start for the ICESat-2 Plugin
 
-To use ***icesat2's*** python client for sliderule, first make sure the sliderule server is running and then follow the steps below.
+The first step is to run the sliderule server:
+```bash
+$ sliderule scripts/apps/server.lua
+```
 
+Then use ***icesat2's*** python client for sliderule:
 ````bash
-$ cd sliderule
-$ source .venv/bin/activate
-$ python plugins/icesat2/pyclient.py
+$ cd sliderule; source .venv/bin/activate # only needed if using a locally configured python environment as detailed above 
+$ python plugins/icesat2/apps/iceplot.py
 ````
 
-To exit from the python virtual environment, execute the following in the terminal with the activated environment.
+To exit from the local python virtual environment, execute the following in the terminal with the activated environment.
 ````bash
 $ deactivate
 ````
+
+## IV. Programmatic Access to ICESat-2 Plugin
+
+Any python script can access the APIs provided by the ICESat-2 plugin by importing and using the [sliderule.py](../../scripts/extensions/sliderule.py) module.
+
+The plugin supplies the following record types:
+* `atl03rec`: a variable along-track extent of ATL03 photon data
+* `atl03rec.photons`: individual ATL03 photons
+* `atl06rec`: ATL06 algorithm result record
+* `atl06rec.elevation`: individual ATL06 elevations
+
+The plugin supplies the following endpoints:
+* [atl06](endpoints/atl06.lua): process ATL03 photon data to produce gridded elevations
