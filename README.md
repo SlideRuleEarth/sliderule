@@ -62,7 +62,22 @@ Options include:
                                        default: ON
 ```
 
-## III. Directory Structure
+
+## III. Quick Start
+
+After building and installing sliderule, here are some quick steps you can take to get up and running.
+
+### Self Test
+```bash
+$ sliderule scripts/apps/test_runner.lua
+```
+
+### Server
+```bash
+$ sliderule scripts/apps/server.lua
+```
+
+## IV. Directory Structure
 
 ### platforms
 
@@ -91,7 +106,7 @@ Contains Lua and Python scripts that can be used for tests and higher level impl
 Contains the source files to make the various executable targets. By convention, targets are named as follows: {application}-{platform}.
 
 
-## IV. Delivering the Code
+## V. Delivering the Code
 
 Run [RELEASE.sh](RELEASE.sh) to create a tarball that can be distributed: `./RELEASE.sh X.Y.Z`
 
@@ -106,7 +121,7 @@ Using a released version of the code, the following two Makefile targets can be 
    * which can be run via `docker run -it --rm --name sliderule1 sliderule-linux`
 
 
-## V. Licensing
+## VI. Licensing
 
 Sliderule is licensed under the Apache License, Version 2.0
 to the University of Washington under one or more contributor

@@ -1,6 +1,25 @@
-file (GLOB SCRIPTS 
-    endpoints/*
-    extensions/*
+
+# Endpoints #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_engine_endpoint.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_source_endpoint.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
+    DESTINATION
+        ${CONFDIR}
 )
 
-install (FILES ${SCRIPTS} DESTINATION ${CONFDIR})
+# Extensions #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/console.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/csv.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/json.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/packet.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/sliderule.py
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/test_executive.lua
+    DESTINATION
+        ${CONFDIR}
+)
