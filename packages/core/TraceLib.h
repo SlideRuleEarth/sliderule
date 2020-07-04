@@ -25,18 +25,21 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "Ordering.h"
+#include <atomic>
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
 #ifdef LTTNG_TRACING
-#define start_trace() {}
-#define stop_trace() {}
+#define start_trace(parent, name, attributes) TraceLib::startTrace(parent, name, attributes)
+#define start_trace_ext(parent, name, fmt, ...) TraceLib::startTraceExt(parent, name, fmt, __VA_ARGS__)
+#define stop_trace(id) TraceLib::stopTrace(id)
 #else
-#define start_trace(...) {}
-#define stop_trace(...) {}
+#define start_trace() {}
+#define start_trace_ext() {}
+#define stop_trace() {}
+#define tracepoint(...) {}
 #endif
 
 /******************************************************************************
@@ -51,55 +54,22 @@ class TraceLib
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_LOG_ENTRY_SIZE = 512;
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            uint32_t    id;
-            uint32_t    parent;
-        } trace_t;
-
-        typedef int (*logFunc_t) (const char* str, int size, void* parm);
+        static const uint32_t   ORIGIN = 0;
+        static const int        MAX_ATTR_SIZE = 128;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static  okey_t      createLog   (log_lvl_t lvl, logFunc_t handler, void* parm);
-        static  bool        deleteLog   (okey_t id);
-        static  bool        setLevel    (okey_t id, log_lvl_t lvl);
-        static  log_lvl_t   getLevel    (okey_t id);
-        static  int         getLvlCnts  (log_lvl_t lvl);
-        static  bool        str2lvl     (const char* str, log_lvl_t* lvl);
-        static  void        logMsg      (const char* file_name, unsigned int line_number, log_lvl_t lvl, const char* format_string, ...) VARG_CHECK(printf, 4, 5);
-        static  void        initLib     (void);
-        static  void        deinitLib   (void);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct
-        {
-            okey_t      id;
-            log_lvl_t   level;
-            logFunc_t   handler;
-            void*       parm;
-        } log_t;
+        static uint32_t startTrace      (uint32_t parent, const char* name, const char* attributes);
+        static uint32_t startTraceExt   (uint32_t parent, const char* name, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
+        static void     stopTrace       (uint32_t id);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static okey_t           logIdPool;
-        static Ordering<log_t>  logList;
-        static Mutex            logMut;
-        static int              logLvlCnts[RAW + 1];
+        static std::atomic<uint32_t> unique_id;
 };
 
-#endif  /* __loglib__ */
+#endif  /* __tracelib__ */
