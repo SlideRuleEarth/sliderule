@@ -4,6 +4,42 @@ The core package is written in C++ and provides a set of APIs for building scien
 
 The core library is kept as clean of dependencies as possible (only depending upon Lua), with the intention that extensions in functionality are provided through _packages_ (compile-time extensions) and _plugins_ (run-time extensions).
 
+### Installing Support for LTTng
+
+Tracing support in the core package is provided through the _Linux Tracing Toolkit: next generation (LTTng)_ framework.  See https://lttng.org/ for the latest installation instructions and documentation.
+
+For convenience, the following steps can be used to install LTTng on Ubuntu 20.04:
+```bash
+# Install Dependencies
+$ sudo apt install uuid-dev libpopt-dev liburcu-dev libxml2-dev libnuma-dev
+# Install LTTng-modules
+$ cd $(mktemp -d) &&
+wget http://lttng.org/files/lttng-modules/lttng-modules-latest-2.12.tar.bz2 &&
+tar -xf lttng-modules-latest-2.12.tar.bz2 &&
+cd lttng-modules-2.12.* &&
+make &&
+sudo make modules_install &&
+sudo depmod -a
+# Install LTTng-UST
+cd $(mktemp -d) &&
+wget http://lttng.org/files/lttng-ust/lttng-ust-latest-2.12.tar.bz2 &&
+tar -xf lttng-ust-latest-2.12.tar.bz2 &&
+cd lttng-ust-2.12.* &&
+./configure &&
+make &&
+sudo make install &&
+sudo ldconfig
+# Install LTTng-tools
+cd $(mktemp -d) &&
+wget http://lttng.org/files/lttng-tools/lttng-tools-latest-2.12.tar.bz2 &&
+tar -xf lttng-tools-latest-2.12.tar.bz2 &&
+cd lttng-tools-2.12.* &&
+./configure &&
+make &&
+sudo make install &&
+sudo ldconfig
+```
+
 ### Core Library Modules
 
 | **_Layer_** | **_Modules_** | **_Description_** |

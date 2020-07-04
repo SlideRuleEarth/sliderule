@@ -31,7 +31,9 @@
  * DEFINES
  ******************************************************************************/
 
-#ifdef LTTNG_TRACING
+#define ORIGIN  0
+
+#ifdef __lttng_tracing__
 #define start_trace(parent, name, attributes) TraceLib::startTrace(parent, name, attributes)
 #define start_trace_ext(parent, name, fmt, ...) TraceLib::startTraceExt(parent, name, fmt, __VA_ARGS__)
 #define stop_trace(id) TraceLib::stopTrace(id)
@@ -54,8 +56,7 @@ class TraceLib
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const uint32_t   ORIGIN = 0;
-        static const int        MAX_ATTR_SIZE = 128;
+        static const int MAX_ATTR_SIZE = 128;
 
         /*--------------------------------------------------------------------
          * Methods

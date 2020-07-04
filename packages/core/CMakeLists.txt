@@ -11,6 +11,11 @@ if (LUA_FOUND AND READLINE_LIB)
     target_link_libraries (sliderule PRIVATE ${LUA_LIBRARIES})
     target_include_directories (sliderule PUBLIC ${LUA_INCLUDE_DIR})
 
+    if(ENABLE_LTTNG_TRACING)
+        target_compile_definitions (sliderule PUBLIC __lttng_tracing__)
+        target_link_libraries (sliderule PRIVATE lttng-ust)
+    endif()
+
     target_link_libraries (sliderule PUBLIC readline)
 
     target_sources (sliderule

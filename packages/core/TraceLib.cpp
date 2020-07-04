@@ -24,7 +24,8 @@
 #include "OsApi.h"
 #include "TraceLib.h"
 
-#ifdef LTTNG_TRACING
+#ifdef __lttng_tracing__
+#define TRACEPOINT_DEFINE
 #include "lltng-core.h"
 #endif
 
