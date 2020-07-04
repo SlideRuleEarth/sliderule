@@ -26,7 +26,7 @@
 
 #ifdef __lttng_tracing__
 #define TRACEPOINT_DEFINE
-#include "lltng-core.h"
+#include "lttng-core.h"
 #endif
 
 #include <cstdarg>
@@ -47,6 +47,12 @@ std::atomic<uint32_t> TraceLib::unique_id{0};
  *----------------------------------------------------------------------------*/
 inline uint32_t TraceLib::startTrace(uint32_t parent, const char* name, const char* attributes)
 {
+    #ifndef __lttng_tracing__
+    (void)parent;
+    (void)name;
+    (void)attributes;
+    #endif
+
     uint32_t id = unique_id++;
     tracepoint(sliderule, start, id, parent, name, attributes);
     return id;
@@ -57,6 +63,11 @@ inline uint32_t TraceLib::startTrace(uint32_t parent, const char* name, const ch
  *----------------------------------------------------------------------------*/
 uint32_t TraceLib::startTraceExt(uint32_t parent, const char* name, const char* fmt, ...)
 {
+    #ifndef __lttng_tracing__
+    (void)parent;
+    (void)name;
+    #endif
+
     /* Build Formatted Attribute String */
     char attributes[MAX_ATTR_SIZE];
     va_list args;
@@ -68,7 +79,7 @@ uint32_t TraceLib::startTraceExt(uint32_t parent, const char* name, const char* 
     attributes[msglen] = '\0';
 
     /* Execute Trace */
-    startTrace(parent, name, attributes);
+    return startTrace(parent, name, attributes);
 }
 
 /*----------------------------------------------------------------------------
@@ -76,5 +87,9 @@ uint32_t TraceLib::startTraceExt(uint32_t parent, const char* name, const char* 
  *----------------------------------------------------------------------------*/
 inline void TraceLib::stopTrace(uint32_t id)
 {
+    #ifndef __lttng_tracing__
+    (void)id;
+    #endif
+
     tracepoint(sliderule, stop, id);
 }

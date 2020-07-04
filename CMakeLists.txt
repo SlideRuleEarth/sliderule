@@ -34,7 +34,7 @@ option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" ON)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_H5_REST_VOL "Install and use the REST VOL plugin for H5 access" OFF)
-option (ENABLE_LTTNG_TRACING, "Instantiate LTTng trace points" OFF)
+option (ENABLE_LTTNG_TRACING "Instantiate LTTng trace points" ON)
 
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
@@ -108,7 +108,7 @@ target_compile_definitions (sliderule PUBLIC CONFIGPATH="${RUNTIMEDIR}")
 target_compile_definitions (sliderule PUBLIC ${TOOLCHAIN})
 target_compile_definitions (sliderule PUBLIC ${ENDIAN})
 
-if (ENABLE_TIME_HEARTBEAT)
+if (${ENABLE_TIME_HEARTBEAT})
     target_compile_definitions (sliderule PUBLIC TIME_USE_HEARTBEAT)
 endif ()
 

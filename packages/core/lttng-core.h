@@ -2,7 +2,7 @@
 #define TRACEPOINT_PROVIDER core
 
 #undef TRACEPOINT_INCLUDE
-#define TRACEPOINT_INCLUDE "./lltng-core.h"
+#define TRACEPOINT_INCLUDE "./lttng-core.h"
 
 #if !defined(_TP_H) || defined(TRACEPOINT_HEADER_MULTI_READ)
 #define _TP_H

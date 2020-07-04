@@ -11,7 +11,8 @@ if (LUA_FOUND AND READLINE_LIB)
     target_link_libraries (sliderule PRIVATE ${LUA_LIBRARIES})
     target_include_directories (sliderule PUBLIC ${LUA_INCLUDE_DIR})
 
-    if(ENABLE_LTTNG_TRACING)
+    if(${ENABLE_LTTNG_TRACING})
+        message (STATUS "LTTng tracing support enabled")
         target_compile_definitions (sliderule PUBLIC __lttng_tracing__)
         target_link_libraries (sliderule PRIVATE lttng-ust)
     endif()
@@ -49,6 +50,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/TraceLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Uart.cpp
             ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.cpp
     )
@@ -76,6 +78,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/List.h
             ${CMAKE_CURRENT_LIST_DIR}/Logger.h
             ${CMAKE_CURRENT_LIST_DIR}/LogLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/lttng-core.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibrarySys.h
@@ -93,6 +96,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.h
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.h
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/TraceLib.h
             ${CMAKE_CURRENT_LIST_DIR}/Uart.h
             ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.h
         DESTINATION

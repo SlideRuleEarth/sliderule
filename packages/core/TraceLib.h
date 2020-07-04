@@ -63,7 +63,7 @@ class TraceLib
          *--------------------------------------------------------------------*/
 
         static uint32_t startTrace      (uint32_t parent, const char* name, const char* attributes);
-        static uint32_t startTraceExt   (uint32_t parent, const char* name, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
+        static uint32_t startTraceExt   (uint32_t parent, const char* name, const char* fmt, ...) VARG_CHECK(printf, 3, 4);
         static void     stopTrace       (uint32_t id);
 
         /*--------------------------------------------------------------------
