@@ -24,6 +24,7 @@
 #include "LuaObject.h"
 #include "LuaEngine.h"
 #include "LogLib.h"
+#include "TraceLib.h"
 #include "StringLib.h"
 #include "Ordering.h"
 #include "OsApi.h"
@@ -131,6 +132,8 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     LuaMetaName(meta_name),
     LuaState(L)
 {
+    traceId = start_trace_ext(ORIGIN, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
+
     isLocked = false;
 
     if(L)
@@ -157,6 +160,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
  *----------------------------------------------------------------------------*/
 LuaObject::~LuaObject (void)
 {
+    stop_trace(traceId);
     mlog(INFO, "Deleting %s of type %s\n", getName(), getType());
     if(ObjectName) delete [] ObjectName;
 }

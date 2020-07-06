@@ -26,6 +26,7 @@
 
 #ifdef __lttng_tracing__
 #define TRACEPOINT_DEFINE
+#define TRACEPOINT_CREATE_PROBES
 #include "lttng-core.h"
 #endif
 
@@ -45,7 +46,7 @@ std::atomic<uint32_t> TraceLib::unique_id{0};
 /*----------------------------------------------------------------------------
  * startTrace
  *----------------------------------------------------------------------------*/
-inline uint32_t TraceLib::startTrace(uint32_t parent, const char* name, const char* attributes)
+uint32_t TraceLib::startTrace(uint32_t parent, const char* name, const char* attributes)
 {
     #ifndef __lttng_tracing__
     (void)parent;
@@ -54,6 +55,7 @@ inline uint32_t TraceLib::startTrace(uint32_t parent, const char* name, const ch
     #endif
 
     uint32_t id = unique_id++;
+
     tracepoint(sliderule, start, id, parent, name, attributes);
     return id;
 }
@@ -85,7 +87,7 @@ uint32_t TraceLib::startTraceExt(uint32_t parent, const char* name, const char* 
 /*----------------------------------------------------------------------------
  * stopTrace
  *----------------------------------------------------------------------------*/
-inline void TraceLib::stopTrace(uint32_t id)
+void TraceLib::stopTrace(uint32_t id)
 {
     #ifndef __lttng_tracing__
     (void)id;

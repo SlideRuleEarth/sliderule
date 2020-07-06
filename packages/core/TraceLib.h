@@ -34,14 +34,19 @@
 #define ORIGIN  0
 
 #ifdef __lttng_tracing__
+
 #define start_trace(parent, name, attributes) TraceLib::startTrace(parent, name, attributes)
 #define start_trace_ext(parent, name, fmt, ...) TraceLib::startTraceExt(parent, name, fmt, __VA_ARGS__)
 #define stop_trace(id) TraceLib::stopTrace(id)
-#else
-#define start_trace() {}
-#define start_trace_ext() {}
+
+#else /* no __lttng_tracing__ */
+
+#define start_trace() {ORIGIN}
+#define start_trace_ext() {ORIGIN}
 #define stop_trace() {}
+
 #define tracepoint(...) {}
+
 #endif
 
 /******************************************************************************

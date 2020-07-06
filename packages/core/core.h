@@ -57,6 +57,7 @@
 #include "StringLib.h"
 #include "TcpSocket.h"
 #include "TimeLib.h"
+#include "TraceLib.h"
 #include "Uart.h"
 #include "UdpSocket.h"
 

@@ -124,6 +124,7 @@ class LuaObject
 
         okey_t                      lockKey;
         bool                        isLocked;
+        uint32_t                    traceId;
 };
 
 #endif  /* __lua_object__ */
