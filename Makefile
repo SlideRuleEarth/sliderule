@@ -18,6 +18,10 @@ release-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
 
+trace-config:
+	mkdir -p build
+	cd build; cmake -DENABLE_LTTNG_TRACING=ON ..
+
 offline-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) ..
