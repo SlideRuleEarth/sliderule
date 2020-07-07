@@ -1,0 +1,1 @@
+LD_PRELOAD=/usr/local/lib/liblttng-ust-libc-wrapper.so:/usr/local/lib/liblttng-ust-pthread-wrapper.so sliderule $1

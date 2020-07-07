@@ -1,3 +1,3 @@
-lttng destroy
+sudo lttng destroy
 
-chown -R $(whoami) /tmp/sliderule-session
+sudo chown -R $(whoami) /tmp/sliderule-session
