@@ -26,6 +26,7 @@
 
 #include "OsApi.h"
 #include "StringLib.h"
+#include "TraceLib.h"
 #include "MsgQ.h"
 #include "List.h"
 
@@ -47,6 +48,7 @@ class LuaEngine
 
         static const char* LUA_SELFKEY;
         static const char* LUA_ERRNO;
+        static const char* LUA_TRACEID;
         static const int MAX_LUA_ARG = MAX_STR_SIZE;
 
         /*--------------------------------------------------------------------
@@ -67,8 +69,8 @@ class LuaEngine
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaEngine       (const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], luaStepHook hook=NULL, bool paused=false); // protected mode
-                            LuaEngine       (const char* name, const char* script, const char* arg, luaStepHook hook=NULL, bool paused=false); // direct mode
+                            LuaEngine       (const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // protected mode
+                            LuaEngine       (const char* name, const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
                             ~LuaEngine      (void);
 
         static void         extend          (const char* lib_name, luaOpenLibFunc lib_func);
@@ -147,6 +149,7 @@ class LuaEngine
         Cond                        engineSignal;
 
         mode_t                      mode;
+        uint32_t                    traceId;
         protectedThread_t*          pInfo;
         directThread_t*             dInfo;
 

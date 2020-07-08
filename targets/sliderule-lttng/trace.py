@@ -3,6 +3,34 @@ import sys
 import datetime
 
 ###############################################################################
+# GLOBALS
+###############################################################################
+
+TRACE_ORIGIN = 0
+
+###############################################################################
+# FUNCTIONS
+###############################################################################
+
+def display_trace(trace, depth):
+    # Correct missing stops
+    if trace["stop"] == None:
+        trace["stop"] = trace["start"]
+    # Get values of trace
+    start_time      = trace["start"].default_clock_snapshot.ns_from_origin
+    stop_time       = trace["stop"].default_clock_snapshot.ns_from_origin
+    sec_from_origin = start_time / 1e9
+    sec_duration    = (stop_time - start_time) / 1e9
+    dt              = datetime.datetime.fromtimestamp(sec_from_origin)
+    name            = trace["start"].event.payload_field['name']
+    attributes      = trace["start"].event.payload_field['attributes']
+    # Print trace
+    print('{} ({:12.6f} sec):{:{indent}}{:{width}} {}'.format(dt, sec_duration, "", str(name), attributes, indent=depth, width=30-depth))
+    # Recurse on children
+    for child in trace["children"]:
+        display_trace(child, depth + 2)
+
+###############################################################################
 # MAIN
 ###############################################################################
 
@@ -14,40 +42,45 @@ if __name__ == '__main__':
     # Create a trace collection message iterator with this path.
     msg_it = bt2.TraceCollectionMessageIterator(path)
 
-    # Dictionary of traces indexed by id #
+    # Dictionary of traces indexed by trace id, and list of origin traces
     traces = {}
+    origins = []
 
-    # Iterate the trace messages.
+    # Iterate over each trace point to create traces
     for msg in msg_it:
 
         # `bt2._EventMessageConst` is the Python type of an event message.
         if type(msg) is bt2._EventMessageConst:
 
+            # Populate traces dictionary
             try:
-                # Populate trace dictionary
                 trace_id = msg.event.payload_field['id']
                 if msg.event.name == "sliderule:start":
                     if trace_id not in traces.keys():                        
-                        traces[trace_id] = [msg, None]
+                        # Populate start of span
+                        traces[trace_id] = {"start": msg, "stop": None, "children": []}
+                        # Link to parent
+                        parent_trace_id = msg.event.payload_field['parent']
+                        if parent_trace_id != TRACE_ORIGIN:
+                            if parent_trace_id in traces.keys():
+                                traces[parent_trace_id]["children"].append(traces[trace_id])
+                            else:
+                                raise Exception("parent not found")
+                        else:
+                            origins.append(traces[trace_id])
                     else:
                         raise Exception("double start")
                 elif msg.event.name == "sliderule:stop":
                     if trace_id in traces.keys():
-                        traces[trace_id][1] = msg
+                        # Populate stop of span
+                        traces[trace_id]["stop"] = msg
                     else:
                         raise Exception("stop without start")
             except Exception as inst:
                 print(inst)
 
     # Print traces
-    for t in traces.keys():
-        trace = traces[t]
+    for trace in origins:
+        display_trace(trace, 1)
 
-        # Get time, duration, and date of trace
-        sec_from_origin = trace[0].default_clock_snapshot.ns_from_origin / 1e9
-        sec_duration = (trace[1].default_clock_snapshot.ns_from_origin - trace[0].default_clock_snapshot.ns_from_origin) / 1e9
-        dt = datetime.datetime.fromtimestamp(sec_from_origin)
-
-        # Print trace
-        print('{} ({:.6f} s): {} {}'.format(dt, sec_duration, trace[0].event.payload_field['name'], trace[0].event.payload_field['attributes']))
 

@@ -106,7 +106,7 @@ LuaInterpreter::LuaInterpreter(CommandProcessor* cmd_proc, const char* obj_name,
     if(safe) hook = abortHook;
 
     /* Start Interpreter Thread */
-    luaEngine = new LuaEngine(obj_name, lua_argc, lua_argv, hook);
+    luaEngine = new LuaEngine(obj_name, lua_argc, lua_argv, ORIGIN, hook);
 }
 
 /*----------------------------------------------------------------------------

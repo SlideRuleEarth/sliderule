@@ -8,6 +8,8 @@ lttng enable-event --userspace sliderule:stop
 lttng enable-event --userspace lttng_ust_pthread:*
 lttng enable-event --userspace lttng_ust_libc:*
 
+# lttng add-context --userspace --type=perf:thread:cache-misses
+
 if [ $# -gt 0 ]; then
 if [ $OPTION = "kernel" ]; then
     echo "Enabling kernel trace points"

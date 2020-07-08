@@ -34,6 +34,7 @@
 
 const char* LuaEngine::LUA_SELFKEY = "_this";
 const char* LuaEngine::LUA_ERRNO = "errno";
+const char* LuaEngine::LUA_TRACEID = "_traceid";
 
 List<LuaEngine::libInitEntry_t> LuaEngine::libInitTable;
 Mutex LuaEngine::libInitTableMutex;
@@ -50,11 +51,12 @@ Mutex LuaEngine::pkgInitTableMutex;
  *
  *  PROTECTED_MODE
  *----------------------------------------------------------------------------*/
-LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], luaStepHook hook, bool paused)
+LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id, luaStepHook hook, bool paused)
 {
     /* Initialize Parameters */
     engineName  = StringLib::duplicate(name);
     mode        = PROTECTED_MODE;
+    traceId     = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\"}", name);
     dInfo       = NULL;
     L           = createState(hook);
 
@@ -87,11 +89,12 @@ LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG
  *
  *  DIRECT_MODE
  *----------------------------------------------------------------------------*/
-LuaEngine::LuaEngine(const char* name, const char* script, const char* arg, luaStepHook hook, bool paused)
+LuaEngine::LuaEngine(const char* name, const char* script, const char* arg, uint32_t trace_id, luaStepHook hook, bool paused)
 {
     /* Initialize Parameters */
     engineName  = StringLib::duplicate(name);
     mode        = DIRECT_MODE;
+    traceId     = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\", \"script\":\"%s\"}", name, script);
     pInfo       = NULL;
     L           = createState(hook);
 
@@ -121,6 +124,8 @@ LuaEngine::~LuaEngine(void)
     lua_close(L);
 
     delete [] engineName;
+
+    stop_trace(traceId);
 
     if(dInfo)
     {
@@ -575,6 +580,10 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     /* Set Errno */
     lua_pushnumber(l, 0);
     lua_setglobal(l, LUA_ERRNO);
+
+    /* Set Trace ID */
+    lua_pushnumber(l, traceId);
+    lua_setglobal(l, LUA_TRACEID);
 
     /* Set Starting Lua Path */
     SafeString lpath(CONFIGPATH);

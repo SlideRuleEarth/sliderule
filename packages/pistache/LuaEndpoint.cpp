@@ -163,7 +163,7 @@ void LuaEndpoint::echoHandler (const Rest::Request& request, Http::ResponseWrite
     getUniqueId(id_str);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(ORIGIN, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
+    uint32_t trace_id = start_trace_ext(traceId, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -188,7 +188,7 @@ void LuaEndpoint::infoHandler (const Rest::Request& request, Http::ResponseWrite
     getUniqueId(id_str);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(ORIGIN, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
+    uint32_t trace_id = start_trace_ext(traceId, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -219,7 +219,7 @@ void LuaEndpoint::sourceHandler (const Rest::Request& request, Http::ResponseWri
     std::string script_name = request.param(":name").as<std::string>();
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(ORIGIN, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
+    uint32_t trace_id = start_trace_ext(traceId, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -230,7 +230,7 @@ void LuaEndpoint::sourceHandler (const Rest::Request& request, Http::ResponseWri
 
     /* Launch Engine */
     const char* script_pathname = sanitize(script_name.c_str());
-    LuaEngine* engine = new LuaEngine(id_str, script_pathname, request.body().c_str(), NULL, true);
+    LuaEngine* engine = new LuaEngine(id_str, script_pathname, request.body().c_str(), trace_id, NULL, true);
     bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
     /* Send Response */
@@ -271,7 +271,7 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
     std::string script_name = request.param(":name").as<std::string>();
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(ORIGIN, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
+    uint32_t trace_id = start_trace_ext(traceId, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -282,7 +282,7 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
 
     /* Create Engine */
     const char* script_pathname = sanitize(script_name.c_str());
-    LuaEngine* engine = new LuaEngine(id_str, script_pathname, request.body().c_str(), NULL, true);
+    LuaEngine* engine = new LuaEngine(id_str, script_pathname, request.body().c_str(), trace_id, NULL, true);
 
     /* Supply and Setup Request Queue */
     engine->setString(RESPONSE_QUEUE, id_str);

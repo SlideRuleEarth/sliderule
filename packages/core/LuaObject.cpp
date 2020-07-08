@@ -132,12 +132,17 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     LuaMetaName(meta_name),
     LuaState(L)
 {
-    traceId = start_trace_ext(ORIGIN, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
+    uint32_t engine_trace_id = ORIGIN;
 
     isLocked = false;
 
     if(L)
     {
+        /* Trace from Lua Engine */
+        lua_getglobal(L, LuaEngine::LUA_TRACEID);
+        engine_trace_id = lua_tonumber(L, -1);
+
+        /* Associate Meta Table */
         if(luaL_newmetatable(L, meta_name))
         {
             /* Add Child Class Functions */
@@ -153,6 +158,10 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
             mlog(INFO, "Created object of type %s\n", getType());
         }
     }
+
+    /* Start Trace */
+    traceId = start_trace_ext(engine_trace_id, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
+
 }
 
 /*----------------------------------------------------------------------------

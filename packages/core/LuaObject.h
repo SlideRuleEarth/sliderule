@@ -112,6 +112,14 @@ class LuaObject
         static bool         getLuaBoolean       (lua_State* L, int parm, bool optional=false, bool dfltval=false, bool* provided=NULL);
         static const char*  getLuaString        (lua_State* L, int parm, bool optional=false, const char* dfltval=NULL, bool* provided=NULL);
 
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        uint32_t                    traceId;
+
     private:
 
         /*--------------------------------------------------------------------
@@ -124,7 +132,6 @@ class LuaObject
 
         okey_t                      lockKey;
         bool                        isLocked;
-        uint32_t                    traceId;
 };
 
 #endif  /* __lua_object__ */

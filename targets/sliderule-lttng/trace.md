@@ -15,7 +15,7 @@
 
 ## II. Start and Stop a Trace
 
-1. To run a fully instrumented version of sliderule, run the `instrument_and_run.sh` script and pass it the same parameters you would `sliderule`.  This script preloads wrappers for memory allocation and pthread mutex functions so that they can be correlated with other userspace traces.
+1. To run a fully instrumented version of sliderule, run the `instrument_and_run.sh` script and pass it the same parameters you would `sliderule`.  This script preloads wrappers for memory allocation and pthread mutex functions so that they can be correlated with other userspace traces.  If you don't want the wrappers, and just want the sliderule provided traces, then just run `sliderule` as you normally would.
 
 2. To start a trace, run the `sudo create_trace.sh [kernel]` script.  The "kernel" option will enable kernel level traces and is usefull when analyzing the trace with tracecompass.
 

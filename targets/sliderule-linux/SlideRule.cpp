@@ -213,7 +213,7 @@ int main (int argc, char* argv[])
     for(int i = 1; i < argc; i++) StringLib::copy(lua_argv[i], argv[i], LuaEngine::MAX_LUA_ARG);
 
     /* Create Lua Engine */
-    LuaEngine* interpreter = new LuaEngine("sliderule", lua_argc, lua_argv, lua_abort_hook);
+    LuaEngine* interpreter = new LuaEngine("sliderule", lua_argc, lua_argv, ORIGIN, lua_abort_hook);
 
     /* Run Application */
     while(checkactive()) LocalLib::sleep(1);
