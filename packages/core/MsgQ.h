@@ -84,8 +84,8 @@ class MsgQ
                 int     getState        (void);
                 bool    isFull          (void);
 
-        static  void    initQ           (void);
-        static  void    deinitQ         (void);
+        static  void    init            (void);
+        static  void    deinit          (void);
         static  bool    existQ          (const char* qname);
         static  int     numQ            (void); // number of registered queues
         static  int     listQ           (queueDisplay_t* list, int list_size);

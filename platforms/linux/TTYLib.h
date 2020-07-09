@@ -34,8 +34,8 @@ class TTYLib
 {
     public:
 
-        static void         initLib             (void); // initializes library
-        static void         deinitLib           (void); // de-initializes library
+        static void         init                (void); // initializes library
+        static void         deinit              (void); // de-initializes library
         static int          ttyopen             (const char* device, int baud, char parity);
         static void         ttyclose            (int fd);
         static int          ttywrite            (int fd, const void* buf, int size, int timeout);

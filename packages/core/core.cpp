@@ -123,12 +123,13 @@ int core_open (lua_State *L)
 void initcore (void)
 {
     /* Initialize Libraries */
-    LocalLib::initLib();
-    SockLib::initLib();
-    TTYLib::initLib();
-    TimeLib::initLib();
-    LogLib::initLib();
-    MsgQ::initQ();
+    LocalLib::init();
+    SockLib::init();
+    TTYLib::init();
+    TimeLib::init();
+    TraceLib::init();
+    LogLib::init();
+    MsgQ::init();
 
     /* Attach OsApi Print Function */
     LocalLib::setPrint(os_print);
@@ -161,12 +162,13 @@ void deinitcore (void)
     /* Clean up libraries initialized in initcore() */
     printf("Exiting...\n");
     LuaObject::releaseLockedLuaObjects();
-    MsgQ::deinitQ();        printf("Message Queues Uninitialized\n");
-    LogLib::deinitLib();    printf("Logging Capability Uninitialized\n");
-    TimeLib::deinitLib();   printf("Time Library Uninitialized\n");
-    TTYLib::deinitLib();    printf("TTY Library Uninitialized\n");
-    SockLib::deinitLib();   printf("Socket Library Uninitialized\n");
-    LocalLib::deinitLib();  printf("Local Library Uninitialized\n");
+    MsgQ::deinit();     printf("Message Queues Uninitialized\n");
+    LogLib::deinit();   printf("Logging Library Uninitialized\n");
+    TraceLib::deinit(); printf("Tracing Library Unitialized\n");
+    TimeLib::deinit();  printf("Time Library Uninitialized\n");
+    TTYLib::deinit();   printf("TTY Library Uninitialized\n");
+    SockLib::deinit();  printf("Socket Library Uninitialized\n");
+    LocalLib::deinit(); printf("Local Library Uninitialized\n");
     printf("Cleanup Complete\n");
 }
 

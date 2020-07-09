@@ -67,15 +67,23 @@ class TraceLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static uint32_t startTrace      (uint32_t parent, const char* name, const char* attributes);
-        static uint32_t startTraceExt   (uint32_t parent, const char* name, const char* fmt, ...) VARG_CHECK(printf, 3, 4);
-        static void     stopTrace       (uint32_t id);
+        static void         init            (void);
+        static void         deinit          (void);
+
+        static uint32_t     startTrace      (uint32_t parent, const char* name, const char* attributes);
+        static uint32_t     startTraceExt   (uint32_t parent, const char* name, const char* fmt, ...) VARG_CHECK(printf, 3, 4);
+        static void         stopTrace       (uint32_t id);
+
+        static void         stashId         (uint32_t id);
+        static uint32_t     grabId          (void);
+
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static std::atomic<uint32_t> unique_id;
+        static LocalLib::key_t trace_key;
 };
 
 #endif  /* __tracelib__ */

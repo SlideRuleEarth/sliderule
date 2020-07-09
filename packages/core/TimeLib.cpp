@@ -64,9 +64,9 @@ int64_t* TimeLib::leapSeconds = NULL;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * initLib
+ * init
  *----------------------------------------------------------------------------*/
-void TimeLib::initLib(void)
+void TimeLib::init(void)
 {
     /* Setup Base Time */
     parsenistfile();
@@ -99,9 +99,9 @@ void TimeLib::initLib(void)
 }
 
 /*----------------------------------------------------------------------------
- * deinitLib
+ * deinit
  *----------------------------------------------------------------------------*/
-void TimeLib::deinitLib(void)
+void TimeLib::deinit(void)
 {
     if(heartBeat) delete heartBeat;
 }

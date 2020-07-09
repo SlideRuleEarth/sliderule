@@ -72,6 +72,8 @@ class LogLib
          * Methods
          *--------------------------------------------------------------------*/
 
+        static  void        init        (void);
+        static  void        deinit      (void);
         static  okey_t      createLog   (log_lvl_t lvl, logFunc_t handler, void* parm);
         static  bool        deleteLog   (okey_t id);
         static  bool        setLevel    (okey_t id, log_lvl_t lvl);
@@ -79,8 +81,6 @@ class LogLib
         static  int         getLvlCnts  (log_lvl_t lvl);
         static  bool        str2lvl     (const char* str, log_lvl_t* lvl);
         static  void        logMsg      (const char* file_name, unsigned int line_number, log_lvl_t lvl, const char* format_string, ...) VARG_CHECK(printf, 4, 5);
-        static  void        initLib     (void);
-        static  void        deinitLib   (void);
 
     private:
 

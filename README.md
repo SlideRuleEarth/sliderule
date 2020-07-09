@@ -1,6 +1,6 @@
 # sliderule
 
-A C++/Lua framework for science data processing.
+A C++/Lua framework for on-demand data processing.
 
 
 ## I. Prerequisites

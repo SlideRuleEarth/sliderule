@@ -149,6 +149,10 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
 {
     int size = 1;
 
+    /* Start Trace */
+    uint32_t parent_trace_id = TraceLib::grabId();
+    uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+
     /* Start with Invalid Handles */
     hid_t file = INVALID_RC;
     hid_t dataset = INVALID_RC;
@@ -263,6 +267,9 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
     if(filespace != H5S_ALL) H5Sclose(filespace);
     if(memspace != H5S_ALL) H5Sclose(memspace);
     if(dataset > 0) H5Dclose(dataset);
+
+    /* Stop Trace */
+    stop_trace(trace_id);
 
     /* Return Size of Data (number of elements) */
     return size;

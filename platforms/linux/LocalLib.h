@@ -34,14 +34,16 @@ class LocalLib
 {
     public:
 
+        typedef pthread_key_t key_t;
+
         typedef void    (*print_func_t)         (const char* file_name, unsigned int line_number, const char* message);
 
         static const int SYS_CLK = 0; // system clock that can be converted into civil time
         static const int CPU_CLK = 1; // processor clock that only counts ticks
         static const int MAX_PRINT_MESSAGE = 256;
     
-        static void         initLib             (void); // initializes library
-        static void         deinitLib           (void); // de-initializes library
+        static void         init                (void); // initializes library
+        static void         deinit              (void); // de-initializes library
         static void         setPrint            (print_func_t _print_func);
         static void         print               (const char* file_name, unsigned int line_number, const char* format_string, ...)  __attribute__((format(printf, 3, 4)));
         static void         sleep               (int secs);
@@ -62,7 +64,11 @@ class LocalLib
         static void         setIOTimeout        (int timeout);
         static int          getIOTimeout        (void);
         static int          performIOTimeout    (void);
-        
+
+        static key_t        createGlobal        (void);
+        static int          setGlobal           (key_t key, void* value);
+        static void*        getGlobal           (key_t key);
+
     private:
         
         static print_func_t print_func;

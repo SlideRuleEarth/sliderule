@@ -55,14 +55,14 @@ int LocalLib::io_maxsize = IO_DEFAULT_MAXSIZE;
 /*----------------------------------------------------------------------------
  * initLib
  *----------------------------------------------------------------------------*/
-void LocalLib::initLib()
+void LocalLib::init()
 {
 }
 
 /*----------------------------------------------------------------------------
  * deinitLib
  *----------------------------------------------------------------------------*/
-void LocalLib::deinitLib(void)
+void LocalLib::deinit(void)
 {
 }
 
@@ -285,4 +285,30 @@ int LocalLib::performIOTimeout(void)
     if(io_timeout >= 1000) LocalLib::sleep(io_timeout / 1000);
     else                   LocalLib::sleep(1);
     return TIMEOUT_RC;
+}
+
+/*----------------------------------------------------------------------------
+ * createGlobal
+ *----------------------------------------------------------------------------*/
+LocalLib::key_t LocalLib::createGlobal (void)
+{
+    pthread_key_t key;
+    pthread_key_create(&key, NULL);
+    return (key_t)key;
+}
+
+/*----------------------------------------------------------------------------
+ * setGlobal
+ *----------------------------------------------------------------------------*/
+int LocalLib::setGlobal (key_t key, void* value)
+{
+    return pthread_setspecific((pthread_key_t)key, value); 
+}
+
+/*----------------------------------------------------------------------------
+ * getGlobal
+ *----------------------------------------------------------------------------*/
+void* LocalLib::getGlobal (key_t key)
+{
+    return pthread_getspecific((pthread_key_t)key);
 }

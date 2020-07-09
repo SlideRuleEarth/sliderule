@@ -196,21 +196,21 @@ bool MsgQ::isFull(void)
 }
 
 /*----------------------------------------------------------------------------
- * initQ
+ * init
  *
  *  assumed thread safe context
  *----------------------------------------------------------------------------*/
-void MsgQ::initQ(void)
+void MsgQ::init(void)
 {
 }
 
 /*----------------------------------------------------------------------------
- * deinitQ
+ * deinit
  *
  *  assumed thread safe context
  *  free blocks cleaned up in the subscriber class
  *----------------------------------------------------------------------------*/
-void MsgQ::deinitQ(void)
+void MsgQ::deinit(void)
 {
     message_queue_t* curr_q = NULL;
     const char* curr_name = queues.first(&curr_q);

@@ -41,8 +41,8 @@ class SockLib
         static const int HOST_STR_LEN = 64;
         static const int SERV_STR_LEN = 64;
         
-        static void         initLib             (void); // initializes library
-        static void         deinitLib           (void); // de-initializes library
+        static void         init                (void); // initializes library
+        static void         deinit              (void); // de-initializes library
         static void         signalexit          (void); // de-initializes library
         static int          sockstream          (const char* ip_addr, int port, bool is_server, bool* block);
         static int          sockdatagram        (const char* ip_addr, int port, bool is_server, bool* block, const char* multicast_group);

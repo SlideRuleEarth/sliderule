@@ -78,8 +78,8 @@ class TimeLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         initLib         (void);
-        static void         deinitLib       (void);
+        static void         init            (void);
+        static void         deinit          (void);
         static double       latchtime       (void); // system call, returns seconds
         static int64_t      gettimems       (void); // optimized, returns milliseconds since gps epoch
         static gmt_time_t   gettime         (void); // returns GMT time (includes leap seconds)

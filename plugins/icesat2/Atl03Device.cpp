@@ -203,6 +203,9 @@ bool Atl03Device::bufferData (const char* url)
     bool status = false;
     int track = 1; // hardcode for now
 
+    /* Set Thread Specific Trace ID */
+    TraceLib::stashId (traceId);
+
     try
     {
         /* Read Data from HDF5 File */
