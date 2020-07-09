@@ -8,7 +8,7 @@ local client = core.cluster(core.READER, core.QUEUE, "127.0.0.1", 34503, core.CL
 local writer = core.writer(server)
 local reader = core.reader(client)
 
-reader:block(enable)
+reader:block(true)
 local attempts = 10
 while attempts > 0 and not client:connected() do
     attempts = attempts - 1
