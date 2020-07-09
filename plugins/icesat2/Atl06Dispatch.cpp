@@ -70,7 +70,6 @@ const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
     {"GRT",     RecordObject::UINT16,   offsetof(elevation_t, grt),                 1,  NULL, NATIVE_FLAGS},
     {"CYCLE",   RecordObject::UINT16,   offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS},
     {"GPS",     RecordObject::DOUBLE,   offsetof(elevation_t, gps_time),            1,  NULL, NATIVE_FLAGS},
-    {"DIST",    RecordObject::DOUBLE,   offsetof(elevation_t, distance),            1,  NULL, NATIVE_FLAGS},
     {"LAT",     RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
     {"LON",     RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
     {"HEIGHT",  RecordObject::DOUBLE,   offsetof(elevation_t, height),              1,  NULL, NATIVE_FLAGS},
@@ -157,10 +156,14 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name):
     recObj = new RecordObject(atRecType, sizeof(atl06_t));
     recData = (atl06_t*)recObj->getRecordData();
 
+    /* Initialize class members */
     outQ = new Publisher(outq_name);
     elevationIndex = 0;
     LocalLib::set(&stats, 0, sizeof(stats));
-    stages = STAGE_AVG;
+
+    /* Provide default stages */
+    stages[STAGE_LSF] = true;
+    stages[STAGE_RSR] = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -187,22 +190,16 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
     /* Get Extent */
     Atl03Device::extent_t* extent = (Atl03Device::extent_t*)record->getRecordData();
 
+    /* Clear Results */
+    LocalLib::set(&result, 0, sizeof(result_t));
+
     /* Execute Algorithm Stages */
-    if(stages == STAGE_AVG)
-    {
-        status = averageHeightStage(extent, &result);
-    }
-    else if(stages == STAGE_LSF)
-    {
-        status = leastSquaresFitStage(extent, &result);
-    }
+    if(stages[STAGE_LSF])           status = leastSquaresFitStage(extent, &result);
+    if(status && stages[STAGE_RSR]) status = robustSpreadOfResidualsStage(extent, &result);
 
     /* Populate Elevation  */
-    if(status)
-    {
-        populateElevation(&result.elevation[PRT_LEFT]);
-        populateElevation(&result.elevation[PRT_RIGHT]);
-    }
+    if(result.status[PRT_LEFT])     populateElevation(&result.elevation[PRT_LEFT]);
+    if(result.status[PRT_RIGHT])    populateElevation(&result.elevation[PRT_RIGHT]);
 
     /* Return Status */
     return status;
@@ -218,7 +215,7 @@ bool Atl06Dispatch::processTimeout (void)
 }
 
 /*----------------------------------------------------------------------------
- * averageHeightStage
+ * populateElevation
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::populateElevation (elevation_t* elevation)
 {
@@ -258,46 +255,11 @@ void Atl06Dispatch::populateElevation (elevation_t* elevation)
 }
 
 /*----------------------------------------------------------------------------
- * averageHeightStage
- *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::averageHeightStage (Atl03Device::extent_t* extent, result_t* result)
-{
-    /* Count Execution Statistic */
-    stats.algo_out_cnt[STAGE_AVG]++;
-
-    /* Clear Results */
-    LocalLib::set(result, 0, sizeof(result_t));
-
-    /* Process Tracks */
-    double height[PAIR_TRACKS_PER_GROUND_TRACK] = { 0.0, 0.0 };
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
-    {
-        /* Calculate Average */
-        for(unsigned int ph = 0; ph < extent->photon_count[t]; ph++)
-        {
-            height[t] += (extent->photons[ph].height_y / extent->photon_count[t]);
-        }
-
-        /* Populate Result */
-        result->elevation[t].height = height[t];
-    }
-
-    /* Return Status */
-    return true;
-}
-
-/*----------------------------------------------------------------------------
  * leastSquaresFitStage
  *----------------------------------------------------------------------------*/
 bool Atl06Dispatch::leastSquaresFitStage (Atl03Device::extent_t* extent, result_t* result)
 {
     bool status = false;
-
-    /* Count Execution Statistic */
-    stats.algo_out_cnt[STAGE_LSF]++;
-
-    /* Clear Results */
-    LocalLib::set(result, 0, sizeof(result_t));
 
     /* Process Tracks */
     uint32_t first_photon = 0;
@@ -309,15 +271,47 @@ bool Atl06Dispatch::leastSquaresFitStage (Atl03Device::extent_t* extent, result_
         if(extent->photon_count[t] > 0)
         {
             lsf = MathLib::lsf((MathLib::point_t*)&extent->photons[first_photon], extent->photon_count[t]);
+
+            /* Populate Result */
+            result->elevation[t].height = lsf.intercept;
+            result->elevation[t].along_track_slope = lsf.slope;
+            result->status[t] = true;
+
+            /* At least one track processed */
             status = true;
         }
 
         /* Increment First Photon to Next Track */
         first_photon += extent->photon_count[t];
+    }
 
-        /* Populate Result */
-        result->elevation[t].height = lsf.intercept;
-        result->elevation[t].along_track_slope = lsf.slope;
+    /* Return Status */
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * robustSpreadOfResidualsStage
+ *----------------------------------------------------------------------------*/
+bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent, result_t* result)
+{
+    bool status = false;
+
+    /* Process Tracks */
+    uint32_t first_photon = 0;
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        /* Calculate Least Squares Fit */
+        if(extent->photon_count[t] > 0)
+        {
+            MathLib::lsf_t lsf = { result->elevation[t].height, result->elevation[t].along_track_slope };
+            MathLib::rsr(lsf, (MathLib::point_t*)&extent->photons[first_photon], NULL, extent->photon_count[t]);
+
+            /* At least one track processed */
+            status = true;
+        }
+
+        /* Increment First Photon to Next Track */
+        first_photon += extent->photon_count[t];
     }
 
     /* Return Status */
@@ -343,8 +337,6 @@ int Atl06Dispatch::luaStats (lua_State* L)
         /* Create Statistics Table */
         lua_newtable(L);
         LuaEngine::setAttrInt(L, "h5atl03",         lua_obj->stats.h5atl03_rec_cnt);
-        LuaEngine::setAttrInt(L, "avgheight",       lua_obj->stats.algo_out_cnt[STAGE_AVG]);
-        LuaEngine::setAttrInt(L, "leastsquares",    lua_obj->stats.algo_out_cnt[STAGE_LSF]);
         LuaEngine::setAttrInt(L, "posted",          lua_obj->stats.post_success_cnt);
         LuaEngine::setAttrInt(L, "dropped",         lua_obj->stats.post_dropped_cnt);
 
@@ -365,7 +357,7 @@ int Atl06Dispatch::luaStats (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaSelect - :select(<algorithm stage>)
+ * luaSelect - :select(<algorithm stage>, <enable/disable>)
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::luaSelect (lua_State* L)
 {
@@ -378,13 +370,18 @@ int Atl06Dispatch::luaSelect (lua_State* L)
 
         /* Get Parameters */
         int algo_stage = getLuaInteger(L, 2);
+        bool enable = getLuaBoolean(L, 3);
 
         /* Set Stage */
         if(algo_stage >= 0 && algo_stage < NUM_STAGES)
         {
             mlog(INFO, "Selecting stage: %d\n", algo_stage);
-            lua_obj->stages = (stages_t)algo_stage;
+            lua_obj->stages[algo_stage] = enable;
             status = true;
+        }
+        else
+        {
+            throw LuaException("Invalid stage specified: %d\n", algo_stage);
         }
     }
     catch(const LuaException& e)

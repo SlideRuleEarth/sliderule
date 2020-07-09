@@ -26,7 +26,7 @@ local json = require("json")
 local rqst = json.decode(arg[1])
 
 -- Internal Parameters --
-local str2stage = { AVG=icesat2.STAGE_AVG, LSF=icesat2.STAGE_LSF }
+local str2stage = { LSF=icesat2.STAGE_LSF, RSR=icesat2.STAGE_RSR }
 
 -- Request Parameters --
 local filename = rqst["filename"]
@@ -38,7 +38,7 @@ local parms = rqst["parms"]
 a = icesat2.atl06(rspq)
 if stages then
     for k,v in pairs(stages) do
-        a:select(str2stage[v])
+        a:select(str2stage[v], true)
     end
 end
 

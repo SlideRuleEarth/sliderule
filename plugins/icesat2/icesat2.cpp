@@ -62,8 +62,8 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         Atl03Device::SRT_SEA_ICE);
     LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        Atl03Device::SRT_LAND_ICE);
     LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    Atl03Device::SRT_INLAND_WATER);
-    LuaEngine::setAttrInt(L, "STAGE_AVG",           Atl06Dispatch::STAGE_AVG);
     LuaEngine::setAttrInt(L, "STAGE_LSF",           Atl06Dispatch::STAGE_LSF);
+    LuaEngine::setAttrInt(L, "STAGE_RSR",           Atl06Dispatch::STAGE_RSR);
 
     return 1;
 }
@@ -76,6 +76,7 @@ extern "C" {
 void initicesat2 (void)
 {
     /* Initialize Modules */
+    MathLib::init();
     Atl03Device::init();
     Atl06Dispatch::init();
 

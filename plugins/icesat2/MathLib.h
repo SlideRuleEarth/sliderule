@@ -52,10 +52,21 @@ class MathLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         initLib         (void);
-        static void         deinitLib       (void);
-        static double       sum             (double* array, int size);
-        static lsf_t        lsf             (point_t* array, int size);
+        static void     init            (void);
+        static void     deinit          (void);
+        static double   sum             (double* array, int size);
+        static lsf_t    lsf             (point_t* array, int size);
+        static double   rsr             (lsf_t fit, point_t* array, double* residuals, int size);
+        static void     sort            (double* array, int size);
+        
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static void     quicksort           (double* array, int start, int end);
+        static int      quicksortpartition  (double* array, int start, int end);   
 };
 
 #endif  /* __math_lib__ */

@@ -61,6 +61,7 @@ class UT_MathLib: public LuaObject
                         ~UT_MathLib             (void);
 
         static int      luaLsfTest              (lua_State* L);
+        static int      luaSortTest             (lua_State* L);
 };
 
 #endif  /* __ut_mathlib__ */
