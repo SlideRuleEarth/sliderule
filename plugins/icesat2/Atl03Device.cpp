@@ -203,8 +203,9 @@ bool Atl03Device::bufferData (const char* url)
     bool status = false;
     int track = 1; // hardcode for now
 
-    /* Set Thread Specific Trace ID */
-    TraceLib::stashId (traceId);
+    /* Start Trace */
+    uint32_t trace_id = start_trace_ext(traceId, "atl03_buffer_data", "{\"url\":\"%s\"}", url);
+    TraceLib::stashId (trace_id); // set thread specific trace id for H5Lib
 
     try
     {
@@ -286,7 +287,7 @@ bool Atl03Device::bufferData (const char* url)
                         if(signal_conf_ph.gt[t][current_photon] >= parms.signal_confidence)
                         {
                             photon_t ph = {
-                                .distance_x = delta_distance + dist_ph_along.gt[t][current_photon],
+                                .distance_x = delta_distance + dist_ph_along.gt[t][current_photon] - (parms.extent_step / 2.0),
                                 .height_y = h_ph.gt[t][current_photon]
                             };
                             extent_photons[t].add(ph);
@@ -388,6 +389,9 @@ bool Atl03Device::bufferData (const char* url)
     {
         mlog(CRITICAL, "Unable to process resource %s: %s\n", url, e.what());
     }
+
+    /* Stop Trace */
+    stop_trace(trace_id);
 
     /* Return Status */
     return status;
