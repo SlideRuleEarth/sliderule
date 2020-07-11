@@ -82,8 +82,9 @@ class Atl03Device: public DeviceObject
         typedef struct {
             uint8_t         pair_reference_track; // 1, 2, or 3
             uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK]; // the id of the first ATL03 segment in range
+            double          segment_size[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
+            double          background_rate[PAIR_TRACKS_PER_GROUND_TRACK]; // PE per second
             double          gps_time[PAIR_TRACKS_PER_GROUND_TRACK]; // seconds
-            double          start_distance[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
             uint32_t        photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
             uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
             photon_t        photons[]; // zero length field

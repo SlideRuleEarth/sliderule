@@ -174,6 +174,21 @@ int UT_MathLib::luaSortTest (lua_State* L)
             }
         }
 
+        /* Test 4 */
+        double a4[10] = { 9.0, 8.0, 1.0, 7.0, 6.0, 3.0, 5.0, 4.0, 2.0, 0.0 };
+        int     x[10] = { 0,   1,   2,   3,   4,   5,   6,   7,   8,   9 };
+        int     s[10] = { 9,   2,   8,   5,   7,   6,   4,   3,   1,   0 };
+        MathLib::sort(a4, 10, x);
+        for(int i = 0; i < 10; i++)
+        {
+            if(x[i] != s[i])
+            {
+                mlog(CRITICAL, "Failed sort test04 at: %d\n", i);
+                tests_passed = false;            
+                break;
+            }
+        }
+
         /* Set Status */
         status = tests_passed;
     }

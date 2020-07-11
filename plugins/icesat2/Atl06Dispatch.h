@@ -46,6 +46,13 @@ class Atl06Dispatch: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const double PULSE_REPITITION_FREQUENCY;
+        static const double SPACECRAFT_GROUND_SPEED;
+        static const double RDE_SCALE_FACTOR;
+        static const double SIGMA_BEAM;
+        static const double SIGMA_XMIT;
+        static const double H_WIN_MIN;
+
         static const int BATCH_SIZE = 256;
 
         static const char* elRecType;
@@ -90,8 +97,10 @@ class Atl06Dispatch: public DispatchObject
 
         /* Algorithm Result */
         typedef struct {
-            bool            status[PAIR_TRACKS_PER_GROUND_TRACK];
-            elevation_t     elevation[PAIR_TRACKS_PER_GROUND_TRACK];
+            bool                    status[PAIR_TRACKS_PER_GROUND_TRACK];
+            elevation_t             elevation[PAIR_TRACKS_PER_GROUND_TRACK];
+            int32_t                 photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
+            Atl03Device::photon_t*  photons[PAIR_TRACKS_PER_GROUND_TRACK];
         } result_t;
 
         /* ATL06 Record */

@@ -24,6 +24,13 @@
 #include "OsApi.h"
 #include "MathLib.h"
 
+
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const double MathLib::SPEED_OF_LIGHT = 299792458.0; // meters per second
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -95,27 +102,21 @@ MathLib::lsf_t MathLib::lsf (point_t* array, int size)
 }
 
 /*----------------------------------------------------------------------------
- * rsr - robust spread of residuals
+ * residuals
  *----------------------------------------------------------------------------*/
-double MathLib::rsr (lsf_t fit, point_t* array, double* residuals, int size)
+void MathLib::residuals (lsf_t fit, point_t* array, int size, double* residuals)
 {
     /* Calculate Residuals */
     for(int p = 0; p < size; p++)
     {
         residuals[p] = array[p].y - (fit.intercept + (array[p].x * fit.slope));
     }
-
-    /* Sort Residuals */
-    sort(residuals, size);
-
-    /* Return RSR */
-    return 0.0;
 }
 
 /*----------------------------------------------------------------------------
  * sort
  *----------------------------------------------------------------------------*/
-void MathLib::sort (double* array, int size)
+void MathLib::sort (double* array, int size, int* indices)
 {
     quicksort(array, 0, size-1);
 }
@@ -123,33 +124,40 @@ void MathLib::sort (double* array, int size)
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-void MathLib::quicksort(double* array, int start, int end)
+void MathLib::quicksort(double* array, int start, int end, int* indices)
 {
     if(start < end)
     {
-        int partition = quicksortpartition(array, start, end);
-        quicksort(array, start, partition);
-        quicksort(array, partition + 1, end);
+        int partition = quicksortpartition(array, start, end, indices);
+        quicksort(array, start, partition, indices);
+        quicksort(array, partition + 1, end, indices);
     }
 }
 
 /*----------------------------------------------------------------------------
  * quicksortpartition
  *----------------------------------------------------------------------------*/
-int MathLib::quicksortpartition(double* array, int start, int end)
+int MathLib::quicksortpartition(double* array, int start, int end, int* indices)
 {
-    int middle = (start + end) / 2;
-    int pivot = array[middle];
-    int i = start - 1;
-    int j = end + 1;
+    int pivot = array[(start + end) / 2];
 
+    start--;
+    end++;
     while(true)
     {
-        do { i++; } while (array[i] < pivot);
-        do { j--; } while (array[j] > pivot);
-        if (i >= j) return j;
-        double tmp = array[i];
-        array[i] = array[j];
-        array[j] = tmp;
+        while (array[++start] < pivot);
+        while (array[--end] > pivot);
+        if (start >= end) return end;
+
+        double tmp1 = array[start];
+        array[start] = array[end];
+        array[end] = tmp1;
+
+        if(indices)
+        {
+            int tmp2 = indices[start];
+            indices[start] = indices[end];
+            indices[end] = tmp2;
+        }
     }
 }

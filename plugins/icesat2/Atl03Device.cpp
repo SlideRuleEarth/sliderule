@@ -57,8 +57,8 @@ const char* Atl03Device::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
     {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),   1,  NULL, NATIVE_FLAGS},
     {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NULL, NATIVE_FLAGS},
+    {"SEG_SIZE",    RecordObject::DOUBLE,   offsetof(extent_t, segment_size[0]),        2,  NULL, NATIVE_FLAGS},
     {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NULL, NATIVE_FLAGS},
-    {"DIST",        RecordObject::DOUBLE,   offsetof(extent_t, start_distance[0]),      2,  NULL, NATIVE_FLAGS},
     {"COUNT",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),        2,  NULL, NATIVE_FLAGS},
     {"PHOTONS",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),       2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
     {"DATA",        RecordObject::USER,     sizeof(extent_t),                           0,  phRecType, NATIVE_FLAGS} // variable length
@@ -210,14 +210,16 @@ bool Atl03Device::bufferData (const char* url)
     try
     {
         /* Read Data from HDF5 File */
-        H5Array<double>     sdp_gps_epoch   (url, "/ancillary_data/atlas_sdp_gps_epoch");
-        GTArray<double>     delta_time      (url, track, "geolocation/delta_time");
-        GTArray<int32_t>    segment_ph_cnt  (url, track, "geolocation/segment_ph_cnt");
-        GTArray<int32_t>    segment_id      (url, track, "geolocation/segment_id");
-        GTArray<double>     segment_dist_x  (url, track, "geolocation/segment_dist_x");
-        GTArray<float>      dist_ph_along   (url, track, "heights/dist_ph_along");
-        GTArray<float>      h_ph            (url, track, "heights/h_ph");
-        GTArray<char>       signal_conf_ph  (url, track, "heights/signal_conf_ph", parms.surface_type);
+        H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
+        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time");
+        GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
+        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id");
+        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x");
+        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along");
+        GTArray<float>      h_ph                (url, track, "heights/h_ph");
+        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", parms.surface_type);
+        GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time");
+        GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate");
 
         /* Initialize Dataset Scope Variables */
         int32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
@@ -226,6 +228,7 @@ bool Atl03Device::bufferData (const char* url)
         int32_t start_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
         double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][0], segment_dist_x.gt[PRT_RIGHT][0] };
         bool    track_complete[PAIR_TRACKS_PER_GROUND_TRACK] = { false, false };
+        int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
         /* Increment Read Statistics */
         stats.segments_read[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT].size;
@@ -359,10 +362,24 @@ bool Atl03Device::bufferData (const char* url)
                 uint32_t ph_out = 0;
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
+                    /* Find Background */
+                    while(bckgrd_in[t] < bckgrd_rate.gt[t].size)
+                    {
+                        if(bckgrd_delta_time.gt[t][bckgrd_in[t]] >= segment_delta_time.gt[t][extent_segment[t]])
+                        {
+                            break; // on first index where time exceeds segment time
+                        }
+                        else
+                        {
+                            bckgrd_in[t]++;
+                        }
+                    }
+
                     /* Populate Attributes */
                     extent->segment_id[t] = segment_id.gt[t][extent_segment[t]];
-                    extent->gps_time[t] = sdp_gps_epoch[0] + delta_time.gt[t][extent_segment[t]];
-                    extent->start_distance[t] = segment_dist_x.gt[t][extent_segment[t]];
+                    extent->gps_time[t] = sdp_gps_epoch[0] + segment_delta_time.gt[t][extent_segment[t]];
+                    extent->segment_size[t] = parms.extent_step;
+                    extent->background_rate[t] = bckgrd_rate.gt[t][bckgrd_in[t]];
                     extent->photon_count[t] = extent_photons[t].length();
 
                     /* Populate Photons */
