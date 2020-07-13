@@ -118,7 +118,7 @@ void MathLib::residuals (lsf_t fit, point_t* array, int size, double* residuals)
  *----------------------------------------------------------------------------*/
 void MathLib::sort (double* array, int size, int* indices)
 {
-    quicksort(array, 0, size-1);
+    quicksort(array, 0, size-1, indices);
 }
 
 /*----------------------------------------------------------------------------

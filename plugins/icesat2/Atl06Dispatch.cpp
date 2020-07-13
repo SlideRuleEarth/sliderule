@@ -314,8 +314,10 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
     uint32_t first_photon = 0;
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
-        /* Calculate Least Squares Fit */
-        if(extent->photon_count[t] > 0)
+        int size = extent->photon_count[t];
+
+        /* Select Photons in Window */
+        if(size > 0)
         {
             double robust_dispersion_estimate = 0.0;
 
@@ -329,8 +331,8 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
             MathLib::residuals(lsf, (MathLib::point_t*)&extent->photons[first_photon], extent->photon_count[t], residuals);
 
             /* Sort Residuals */
-            int* indices = new int[extent->photon_count[t]];
-            for(int i = 0; i < extent->photon_count[t]; i++) indices[i] = i;
+            int* indices = new int[size];
+            for(int i = 0; i < size; i++) indices[i] = i;
             MathLib::sort(residuals, size, indices);
 
             /* Get Max and Min */
@@ -340,29 +342,29 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
 
             /* Get Background and Signal Estimates */
             double background_estimate = background_density / zdelta; // bckgrd, section 5.9, procedure 1a
-            int32_t signal_count = extent->photon_count[t] - background_density; // N_sig, section 5.9, procedure 1b
+            int32_t signal_count = size - background_density; // N_sig, section 5.9, procedure 1b
 
             /* Calculate Robust Dispersion Estimate */
             if(signal_count <= 1)
             {
-                robust_dispersion_estimate = zdelta / extent->photon_count[t];
+                robust_dispersion_estimate = zdelta / size;
             }
             else
             {
                 /* Find Smallest Potential Percentiles (0) */
                 int32_t i0 = 0;
-                while(i0 < extent->photon_count[t])
+                while(i0 < size)
                 {
-                    double spp = (0.25 * signal_count) + ((residuals[i0] - zmin) * background_esimate); // section 5.9, procedure 4a
-                    if( (((double)i0) + 1.0 - 0.5) < spp )  i0++
+                    double spp = (0.25 * signal_count) + ((residuals[i0] - zmin) * background_estimate); // section 5.9, procedure 4a
+                    if( (((double)i0) + 1.0 - 0.5) < spp )  i0++;
                     else                                    break;
                 }
 
                 /* Find Smallest Potential Percentiles (1) */
-                int32_t i1 = extent->photon_count[t];
+                int32_t i1 = size;
                 while(i1 >= 0)
                 {
-                    double spp = (0.75 * signal_count) + ((residuals[i1] - zmin) * background_esimate); // section 5.9, procedure 4a
+                    double spp = (0.75 * signal_count) + ((residuals[i1] - zmin) * background_estimate); // section 5.9, procedure 4a
                     if( (((double)i1) - 1.0 - 0.5) > spp )  i1--;
                     else                                    break;
                 }
@@ -370,19 +372,19 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
                 /* Check Need to Refind Percentiles */
                 if(i1 < i0)
                 {
-                    double spp0 = (extent->photon_count[t] / 4.0) - (signal_count / 2.0); // section 5.9, procedure 5a
-                    double spp1 = (extent->photon_count[t] / 4.0) + (signal_count / 2.0); // section 5.9, procedure 5b
+                    double spp0 = (size / 4.0) - (signal_count / 2.0); // section 5.9, procedure 5a
+                    double spp1 = (size / 4.0) + (signal_count / 2.0); // section 5.9, procedure 5b
 
                     /* Find Spread of Central Values (0) */
                     i0 = 0;
-                    while(i0 < extent->photon_count[t])
+                    while(i0 < size)
                     {
-                        if( (((double)i0) + 1.0 - 0.5) < spp0 ) i0++
+                        if( (((double)i0) + 1.0 - 0.5) < spp0 ) i0++;
                         else                                    break;
                     }
 
                     /* Find Spread of Central Values (1) */
-                    i1 = extent->photon_count[t];
+                    i1 = size;
                     while(i1 >= 0)
                     {
                         if( (((double)i1) - 1.0 - 0.5) > spp1 ) i1--;
@@ -404,9 +406,9 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
 
             /* Filter Out Photons */
             int32_t ph_in = 0;
-            photons_t* photons = new photons_t[extent->photon_count[t]];
+            Atl03Device::photon_t* photons = new Atl03Device::photon_t[size];
             double window_spread = window_height / 2.0;
-            for(int r = 0; r < extent->photon_count[t]; r++)
+            for(int r = 0; r < size; r++)
             {
                 if(abs(residuals[r]) < window_spread)
                 {
@@ -420,7 +422,7 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
         }
 
         /* Increment First Photon to Next Track */
-        first_photon += extent->photon_count[t];
+        first_photon += size;
     }
 
     /* Return Status */
