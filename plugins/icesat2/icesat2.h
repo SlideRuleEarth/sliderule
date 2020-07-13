@@ -27,8 +27,7 @@
 #include "Atl03Device.h"
 #include "Atl06Dispatch.h"
 #include "GTArray.h"
-#include "MathLib.h"
-#include "UT_MathLib.h"
+#include "UT_Atl06Dispatch.h"
 
 /******************************************************************************
  * PROTOTYPES

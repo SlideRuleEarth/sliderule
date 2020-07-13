@@ -41,9 +41,9 @@
 
 #else /* no __lttng_tracing__ */
 
-#define start_trace() {ORIGIN}
-#define start_trace_ext() {ORIGIN}
-#define stop_trace() {}
+#define start_trace(...) {ORIGIN}
+#define start_trace_ext(...) {ORIGIN}
+#define stop_trace(id,...) {(void)id;}
 
 #define tracepoint(...) {}
 

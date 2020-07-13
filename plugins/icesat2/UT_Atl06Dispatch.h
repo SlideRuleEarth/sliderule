@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __ut_mathlib__
-#define __ut_mathlib__
+#ifndef __ut_atl06dispatch__
+#define __ut_atl06dispatch__
 
 /******************************************************************************
  * INCLUDES
@@ -31,7 +31,7 @@
  * MATH LIBRARY UNIT TEST CLASS
  ******************************************************************************/
 
-class UT_MathLib: public LuaObject
+class UT_Atl06Dispatch: public LuaObject
 {
     public:
 
@@ -57,11 +57,11 @@ class UT_MathLib: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        UT_MathLib              (lua_State* L);
-                        ~UT_MathLib             (void);
+                        UT_Atl06Dispatch        (lua_State* L);
+                        ~UT_Atl06Dispatch       (void);
 
         static int      luaLsfTest              (lua_State* L);
         static int      luaSortTest             (lua_State* L);
 };
 
-#endif  /* __ut_mathlib__ */
+#endif  /* __ut_atl06dispatch__ */

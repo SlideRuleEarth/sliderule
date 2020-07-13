@@ -30,7 +30,6 @@
 #include "DispatchObject.h"
 #include "OsApi.h"
 #include "MsgQ.h"
-#include "MathLib.h"
 #include "GTArray.h"
 #include "Atl03Device.h"
 
@@ -166,6 +165,9 @@ class Atl06Dispatch: public DispatchObject
         static lsf_t    lsf                             (point_t* array, int size);
         static void     quicksort                       (point_t* array, int start, int end);
         static int      quicksortpartition              (point_t* array, int start, int end);
+
+        // Unit Tests */
+        friend class UT_Atl06Dispatch;
 };
 
 #endif  /* __atl06_dispatch__ */

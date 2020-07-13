@@ -21,18 +21,18 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "UT_MathLib.h"
-#include "MathLib.h"
+#include "UT_Atl06Dispatch.h"
+#include "Atl06Dispatch.h"
 #include "core.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* UT_MathLib::OBJECT_TYPE = "UT_MathLib";
+const char* UT_Atl06Dispatch::OBJECT_TYPE = "UT_Atl06Dispatch";
 
-const char* UT_MathLib::LuaMetaName = "UT_MathLib";
-const struct luaL_Reg UT_MathLib::LuaMetaTable[] = {
+const char* UT_Atl06Dispatch::LuaMetaName = "UT_Atl06Dispatch";
+const struct luaL_Reg UT_Atl06Dispatch::LuaMetaTable[] = {
     {"lsftest",     luaLsfTest},
     {"sorttest",    luaSortTest},
     {NULL,          NULL}
@@ -43,14 +43,14 @@ const struct luaL_Reg UT_MathLib::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :ut_mathlib()
+ * luaCreate - :UT_Atl06Dispatch()
  *----------------------------------------------------------------------------*/
-int UT_MathLib::luaCreate (lua_State* L)
+int UT_Atl06Dispatch::luaCreate (lua_State* L)
 {
     try
     {
         /* Create Math Library Unit Test */
-        return createLuaObject(L, new UT_MathLib(L));
+        return createLuaObject(L, new UT_Atl06Dispatch(L));
     }
     catch(const LuaException& e)
     {
@@ -66,7 +66,7 @@ int UT_MathLib::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-UT_MathLib::UT_MathLib (lua_State* L):
+UT_Atl06Dispatch::UT_Atl06Dispatch (lua_State* L):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
 }
@@ -74,14 +74,14 @@ UT_MathLib::UT_MathLib (lua_State* L):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_MathLib::~UT_MathLib(void)
+UT_Atl06Dispatch::~UT_Atl06Dispatch(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * luaLsfTest
  *----------------------------------------------------------------------------*/
-int UT_MathLib::luaLsfTest (lua_State* L)
+int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
 {
     bool status = false;
 
@@ -91,8 +91,8 @@ int UT_MathLib::luaLsfTest (lua_State* L)
 
         /* Test 1 */
         const int l1 = 4;
-        MathLib::point_t v1[l1] = { {1.0, 2.0}, {2.0, 4.0}, {3.0, 6.0}, {4.0, 8.0} };
-        MathLib::lsf_t fit1 = MathLib::lsf(v1, l1);
+        Atl06Dispatch::point_t v1[l1] = { {1.0, 2.0, 0.0}, {2.0, 4.0, 0.0}, {3.0, 6.0, 0.0}, {4.0, 8.0, 0.0} };
+        Atl06Dispatch::lsf_t fit1 = Atl06Dispatch::lsf(v1, l1);
         if(fit1.intercept != 0.0 || fit1.slope != 2.0)
         {
             mlog(CRITICAL, "Failed LSF test01: %lf, %lf\n", fit1.intercept, fit1.slope);
@@ -101,8 +101,8 @@ int UT_MathLib::luaLsfTest (lua_State* L)
 
         /* Test 2 */
         const int l2 = 4;
-        MathLib::point_t v2[l2] = { {1.0, 4.0}, {2.0, 5.0}, {3.0, 6.0}, {4.0, 7.0} };
-        MathLib::lsf_t fit2 = MathLib::lsf(v2, l2);
+        Atl06Dispatch::point_t v2[l2] = { {1.0, 4.0, 0.0}, {2.0, 5.0, 0.0}, {3.0, 6.0, 0.0}, {4.0, 7.0, 0.0} };
+        Atl06Dispatch::lsf_t fit2 = Atl06Dispatch::lsf(v2, l2);
         if(fit2.intercept != 3.0 || fit2.slope != 1.0)
         {
             mlog(CRITICAL, "Failed LSF test02: %lf, %lf\n", fit2.intercept, fit2.slope);
@@ -124,7 +124,7 @@ int UT_MathLib::luaLsfTest (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaSortTest
  *----------------------------------------------------------------------------*/
-int UT_MathLib::luaSortTest (lua_State* L)
+int UT_Atl06Dispatch::luaSortTest (lua_State* L)
 {
     bool status = false;
 
@@ -133,12 +133,12 @@ int UT_MathLib::luaSortTest (lua_State* L)
         bool tests_passed = true;
 
         /* Test 1 */
-        double a1[10] = { 0.0, 5.0, 1.0, 4.0, 2.0, 3.0, 9.0, 6.0, 7.0, 8.0 };
-        double b1[10] = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
-        MathLib::sort(a1, 10);
+        Atl06Dispatch::point_t a1[10] = { {0,0,0}, {0,0,5}, {0,0,1}, {0,0,4}, {0,0,2}, {0,0,3}, {0,0,9}, {0,0,6}, {0,0,7}, {0,0,8} };
+        Atl06Dispatch::point_t b1[10] = { {0,0,0}, {0,0,1}, {0,0,2}, {0,0,3}, {0,0,4}, {0,0,5}, {0,0,6}, {0,0,7}, {0,0,8}, {0,0,9} };
+        Atl06Dispatch::quicksort(a1, 0, 9);
         for(int i = 0; i < 10; i++)
         {
-            if(a1[i] != b1[i])
+            if(a1[i].r != b1[i].r)
             {
                 mlog(CRITICAL, "Failed sort test01 at: %d\n", i);
                 tests_passed = false;            
@@ -147,12 +147,12 @@ int UT_MathLib::luaSortTest (lua_State* L)
         }
 
         /* Test 2 */
-        double a2[10] = { 1.0, 1.0, 1.0, 3.0, 2.0, 3.0, 3.0, 6.0, 9.0, 9.0 };
-        double b2[10] = { 1.0, 1.0, 1.0, 2.0, 3.0, 3.0, 3.0, 6.0, 9.0, 9.0 };
-        MathLib::sort(a2, 10);
+        Atl06Dispatch::point_t a2[10] = { {0,0,1}, {0,0,1}, {0,0,1}, {0,0,3}, {0,0,2}, {0,0,3}, {0,0,3}, {0,0,6}, {0,0,9}, {0,0,9} };
+        Atl06Dispatch::point_t b2[10] = { {0,0,1}, {0,0,1}, {0,0,1}, {0,0,2}, {0,0,3}, {0,0,3}, {0,0,3}, {0,0,6}, {0,0,9}, {0,0,9} };
+        Atl06Dispatch::quicksort(a2, 0, 9);
         for(int i = 0; i < 10; i++)
         {
-            if(a2[i] != b2[i])
+            if(a2[i].r != b2[i].r)
             {
                 mlog(CRITICAL, "Failed sort test02 at: %d\n", i);
                 tests_passed = false;            
@@ -161,29 +161,14 @@ int UT_MathLib::luaSortTest (lua_State* L)
         }
 
         /* Test 3 */
-        double a3[10] = { 9.0, 8.0, 1.0, 7.0, 6.0, 3.0, 5.0, 4.0, 2.0, 0.0 };
-        double b3[10] = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0 };
-        MathLib::sort(a3, 10);
+        Atl06Dispatch::point_t a3[10] = { {0,0,9}, {0,0,8}, {0,0,1}, {0,0,7}, {0,0,6}, {0,0,3}, {0,0,5}, {0,0,4}, {0,0,2}, {0,0,0} };
+        Atl06Dispatch::point_t b3[10] = { {0,0,0}, {0,0,1}, {0,0,2}, {0,0,3}, {0,0,4}, {0,0,5}, {0,0,6}, {0,0,7}, {0,0,8}, {0,0,9} };
+        Atl06Dispatch::quicksort(a3, 0, 9);
         for(int i = 0; i < 10; i++)
         {
-            if(a3[i] != b3[i])
+            if(a3[i].r != b3[i].r)
             {
                 mlog(CRITICAL, "Failed sort test03 at: %d\n", i);
-                tests_passed = false;            
-                break;
-            }
-        }
-
-        /* Test 4 */
-        double a4[10] = { 9.0, 8.0, 1.0, 7.0, 6.0, 3.0, 5.0, 4.0, 2.0, 0.0 };
-        int     x[10] = { 0,   1,   2,   3,   4,   5,   6,   7,   8,   9 };
-        int     s[10] = { 9,   2,   8,   5,   7,   6,   4,   3,   1,   0 };
-        MathLib::sort(a4, 10, x);
-        for(int i = 0; i < 10; i++)
-        {
-            if(x[i] != s[i])
-            {
-                mlog(CRITICAL, "Failed sort test04 at: %d\n", i);
                 tests_passed = false;            
                 break;
             }

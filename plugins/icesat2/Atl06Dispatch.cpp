@@ -57,7 +57,6 @@
 
 #include "Atl06Dispatch.h"
 #include "Atl03Device.h"
-#include "MathLib.h"
 #include "core.h"
 
 #include <math.h>
@@ -390,7 +389,7 @@ bool Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* 
             }
 
             /* Calculate Sigma Expected */
-            double se1 = pow((MathLib::SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
+            double se1 = pow((SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
             double se2 = pow(SIGMA_BEAM, 2) * pow(result[t].elevation.along_track_slope, 2);
             double sigma_expected = sqrt(se1 + se2);
 

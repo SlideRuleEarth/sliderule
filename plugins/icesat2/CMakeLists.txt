@@ -14,8 +14,7 @@ target_sources(icesat2Lib
         ${CMAKE_CURRENT_LIST_DIR}/icesat2.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Atl03Device.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Atl06Dispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/MathLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_MathLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/UT_Atl06Dispatch.cpp
 )
 
 target_include_directories (icesat2Lib
@@ -30,8 +29,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/Atl03Device.h
         ${CMAKE_CURRENT_LIST_DIR}/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/GTArray.h
-        ${CMAKE_CURRENT_LIST_DIR}/MathLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_MathLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/UT_Atl06Dispatch.h
     DESTINATION
         ${INCDIR}
 )
