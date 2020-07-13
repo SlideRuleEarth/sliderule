@@ -21,20 +21,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "Atl03Device.h"
-#include "GTArray.h"
+#include "icesat2.h"
 #include "core.h"
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
-
-#define LUA_PARM_SURFACE_TYPE           "srt"
-#define LUA_PARM_SIGNAL_CONFIDENCE      "cnf"
-#define LUA_PARM_ALONG_TRACK_SPREAD     "ats"
-#define LUA_PARM_PHOTON_COUNT           "cnt"
-#define LUA_PARM_EXTENT_LENGTH          "len"
-#define LUA_PARM_EXTENT_STEP            "res"
 
 #define LUA_STAT_SEGMENTS_READ_L        "read_l"
 #define LUA_STAT_SEGMENTS_READ_R        "read_r"

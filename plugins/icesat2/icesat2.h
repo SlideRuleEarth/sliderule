@@ -30,6 +30,18 @@
 #include "UT_Atl06Dispatch.h"
 
 /******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#define LUA_PARM_SURFACE_TYPE           "srt"
+#define LUA_PARM_SIGNAL_CONFIDENCE      "cnf"
+#define LUA_PARM_ALONG_TRACK_SPREAD     "ats"
+#define LUA_PARM_PHOTON_COUNT           "cnt"
+#define LUA_PARM_EXTENT_LENGTH          "len"
+#define LUA_PARM_EXTENT_STEP            "res"
+#define LUA_PARM_MAX_ITERATIONS         "maxi"
+
+/******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 

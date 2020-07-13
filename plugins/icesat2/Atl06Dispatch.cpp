@@ -55,8 +55,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "Atl06Dispatch.h"
-#include "Atl03Device.h"
+#include "icesat2.h"
 #include "core.h"
 
 #include <math.h>
@@ -98,6 +97,11 @@ const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+const Atl06Dispatch::parms_t Atl06Dispatch::DefaultParms = {
+    .stages = { true },
+    .max_iterations = 20,
+};
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -111,9 +115,21 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
+        parms_t parms = DefaultParms;
+
+        /* Check Config Table */
+        if(lua_type(L, 2) == LUA_TTABLE)
+        {
+            bool provided = false;
+
+            /* Get Configuration Parameters from Table */
+            lua_getfield(L, 2, LUA_PARM_MAX_ITERATIONS);
+            parms.max_iterations = getLuaInteger(L, -1, true, parms.max_iterations, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_MAX_ITERATIONS, (int)parms.max_iterations);
+        }
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new Atl06Dispatch(L, outq_name));
+        return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
     }
     catch(const LuaException& e)
     {
@@ -152,7 +168,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const parms_t _parms):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
@@ -165,13 +181,15 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name):
     recObj = new RecordObject(atRecType, sizeof(atl06_t));
     recData = (atl06_t*)recObj->getRecordData();
 
-    /* Initialize class members */
+    /* Initialize Publisher */
     outQ = new Publisher(outq_name);
     elevationIndex = 0;
+    
+    /* Initialize Statistics */
     LocalLib::set(&stats, 0, sizeof(stats));
 
-    /* Provide default stages */
-    stages[STAGE_LSF] = true;
+    /* Initialize Parameters */
+    parms = _parms;
 }
 
 /*----------------------------------------------------------------------------
@@ -219,7 +237,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
     }
 
     /* Execute Algorithm Stages */
-    if(stages[STAGE_LSF])           status = iterativeFitStage(extent, result);
+    if(parms.stages[STAGE_LSF]) status = iterativeFitStage(extent, result);
 
     /* Populate Elevation  */
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
@@ -305,113 +323,125 @@ bool Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* 
     /* Process Tracks */
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
+        /* Get and Number of Photons */
         int size = result[t].photon_count;
-        if(size > 0)
+        if(size <= 0) continue;
+
+        int iteration = 0;
+        bool done = false;        
+        while(!done)
         {
             /* Calculate Least Squares Fit */
             lsf_t fit = lsf(result[t].photons, size);
-
-            /* Calculate Residuals */
-            for(int p = 0; p < size; p++)
-            {
-                result[t].photons[p].r = result[t].photons[p].y - (fit.intercept + (result[t].photons[p].x * fit.slope));
-            }
-
-            /* Sort Points by Residuals */
-            quicksort(result[t].photons, 0, size-1);
-
-            /* Select Photons in Window */
-            double robust_dispersion_estimate = 0.0;
-
-            /* Calculate Background Density */
-            double pulses_in_segment = (extent->segment_size[t] * PULSE_REPITITION_FREQUENCY) / SPACECRAFT_GROUND_SPEED; // N_seg_pulses, section 5.4, procedure 1d
-/* candidate for result */            double background_density = pulses_in_segment * extent->background_rate[t] / (SPEED_OF_LIGHT / 2.0); // BG_density 
-
-            /* Get Max and Min */
-            double zmin = result[t].photons[0].r;
-            double zmax = result[t].photons[size - 1].r;
-            double zdelta = zmax - zmin;
-
-            /* Get Background and Signal Estimates */
-            double background_estimate = background_density / zdelta; // bckgrd, section 5.9, procedure 1a
-            int32_t signal_count = size - background_density; // N_sig, section 5.9, procedure 1b
-
-            /* Calculate Robust Dispersion Estimate */
-            if(signal_count <= 1)
-            {
-                robust_dispersion_estimate = zdelta / size;
-            }
-            else
-            {
-                /* Find Smallest Potential Percentiles (0) */
-                int32_t i0 = 0;
-                while(i0 < size)
-                {
-                    double spp = (0.25 * signal_count) + ((result[t].photons[i0].r - zmin) * background_estimate); // section 5.9, procedure 4a
-                    if( (((double)i0) + 1.0 - 0.5) < spp )  i0++;
-                    else                                    break;
-                }
-
-                /* Find Smallest Potential Percentiles (1) */
-                int32_t i1 = size;
-                while(i1 >= 0)
-                {
-                    double spp = (0.75 * signal_count) + ((result[t].photons[i1].r - zmin) * background_estimate); // section 5.9, procedure 4a
-                    if( (((double)i1) - 1.0 - 0.5) > spp )  i1--;
-                    else                                    break;
-                }
-
-                /* Check Need to Refind Percentiles */
-                if(i1 < i0)
-                {
-                    double spp0 = (size / 4.0) - (signal_count / 2.0); // section 5.9, procedure 5a
-                    double spp1 = (size / 4.0) + (signal_count / 2.0); // section 5.9, procedure 5b
-
-                    /* Find Spread of Central Values (0) */
-                    i0 = 0;
-                    while(i0 < size)
-                    {
-                        if( (((double)i0) + 1.0 - 0.5) < spp0 ) i0++;
-                        else                                    break;
-                    }
-
-                    /* Find Spread of Central Values (1) */
-                    i1 = size;
-                    while(i1 >= 0)
-                    {
-                        if( (((double)i1) - 1.0 - 0.5) > spp1 ) i1--;
-                        else                                    break;
-                    }
-                }
-
-                /* Calculate Robust Dispersion Estimate */
-                robust_dispersion_estimate = (result[t].photons[i1].r - result[t].photons[i0].r) / RDE_SCALE_FACTOR; // section 5.9, procedure 6
-            }
-
-            /* Calculate Sigma Expected */
-            double se1 = pow((SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
-            double se2 = pow(SIGMA_BEAM, 2) * pow(result[t].elevation.along_track_slope, 2);
-            double sigma_expected = sqrt(se1 + se2);
-
-            /* Calculate Window Height */
-            double window_height = MAX(MAX(H_WIN_MIN, 6.0 * sigma_expected), 6.0 * robust_dispersion_estimate); // H_win, section 5.5, procedure 4e
-
-            /* Filtered Out Photons in Results */
-            int32_t ph_in = 0;
-            double window_spread = window_height / 2.0;
-            for(int p = 0; p < size; p++)
-            {
-                if(abs(result[t].photons[p].r) < window_spread)
-                {
-                    result[t].photons[ph_in++] = result[t].photons[p];
-                }
-            }
-
-            /* Populate Results */
-            result[t].photon_count = ph_in; // from filtering above
             result[t].elevation.height = fit.intercept;
             result[t].elevation.along_track_slope = fit.slope;
-            result[t].status = true; // successfully fit track
+            result[t].status = true;
+
+            if(iteration < parms.max_iterations)
+            {
+                /* Calculate Residuals */
+                for(int p = 0; p < size; p++)
+                {
+                    result[t].photons[p].r = result[t].photons[p].y - (fit.intercept + (result[t].photons[p].x * fit.slope));
+                }
+
+                /* Sort Points by Residuals */
+                quicksort(result[t].photons, 0, size-1);
+
+                /* Select Photons in Window */
+                double robust_dispersion_estimate = 0.0;
+
+                /* Calculate Background Density */
+                double pulses_in_segment = (extent->segment_size[t] * PULSE_REPITITION_FREQUENCY) / SPACECRAFT_GROUND_SPEED; // N_seg_pulses, section 5.4, procedure 1d
+    /* candidate for result */            double background_density = pulses_in_segment * extent->background_rate[t] / (SPEED_OF_LIGHT / 2.0); // BG_density 
+
+                /* Get Max and Min */
+                double zmin = result[t].photons[0].r;
+                double zmax = result[t].photons[size - 1].r;
+                double zdelta = zmax - zmin;
+
+                /* Get Background and Signal Estimates */
+                double background_estimate = background_density / zdelta; // bckgrd, section 5.9, procedure 1a
+                int32_t signal_count = size - background_density; // N_sig, section 5.9, procedure 1b
+
+                /* Calculate Robust Dispersion Estimate */
+                if(signal_count <= 1)
+                {
+                    robust_dispersion_estimate = zdelta / size;
+                }
+                else
+                {
+                    /* Find Smallest Potential Percentiles (0) */
+                    int32_t i0 = 0;
+                    while(i0 < size)
+                    {
+                        double spp = (0.25 * signal_count) + ((result[t].photons[i0].r - zmin) * background_estimate); // section 5.9, procedure 4a
+                        if( (((double)i0) + 1.0 - 0.5) < spp )  i0++;
+                        else                                    break;
+                    }
+
+                    /* Find Smallest Potential Percentiles (1) */
+                    int32_t i1 = size;
+                    while(i1 >= 0)
+                    {
+                        double spp = (0.75 * signal_count) + ((result[t].photons[i1].r - zmin) * background_estimate); // section 5.9, procedure 4a
+                        if( (((double)i1) - 1.0 - 0.5) > spp )  i1--;
+                        else                                    break;
+                    }
+
+                    /* Check Need to Refind Percentiles */
+                    if(i1 < i0)
+                    {
+                        double spp0 = (size / 4.0) - (signal_count / 2.0); // section 5.9, procedure 5a
+                        double spp1 = (size / 4.0) + (signal_count / 2.0); // section 5.9, procedure 5b
+
+                        /* Find Spread of Central Values (0) */
+                        i0 = 0;
+                        while(i0 < size)
+                        {
+                            if( (((double)i0) + 1.0 - 0.5) < spp0 ) i0++;
+                            else                                    break;
+                        }
+
+                        /* Find Spread of Central Values (1) */
+                        i1 = size;
+                        while(i1 >= 0)
+                        {
+                            if( (((double)i1) - 1.0 - 0.5) > spp1 ) i1--;
+                            else                                    break;
+                        }
+                    }
+
+                    /* Calculate Robust Dispersion Estimate */
+                    robust_dispersion_estimate = (result[t].photons[i1].r - result[t].photons[i0].r) / RDE_SCALE_FACTOR; // section 5.9, procedure 6
+                }
+
+                /* Calculate Sigma Expected */
+                double se1 = pow((SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
+                double se2 = pow(SIGMA_BEAM, 2) * pow(result[t].elevation.along_track_slope, 2);
+                double sigma_expected = sqrt(se1 + se2);
+
+                /* Calculate Window Height */
+                double window_height = MAX(MAX(H_WIN_MIN, 6.0 * sigma_expected), 6.0 * robust_dispersion_estimate); // H_win, section 5.5, procedure 4e
+
+                /* Filtered Out Photons in Results */
+                int32_t ph_in = 0;
+                double window_spread = window_height / 2.0;
+                for(int p = 0; p < size; p++)
+                {
+                    if(abs(result[t].photons[p].r) < window_spread)
+                    {
+                        result[t].photons[ph_in++] = result[t].photons[p];
+                    }
+                }
+
+                /* Set New Number of Photons */
+                result[t].photon_count = ph_in; // from filtering above
+            }
+            else // max iterations reached
+            {
+                done = true;
+            }
         }
     }
 
@@ -476,8 +506,17 @@ int Atl06Dispatch::luaSelect (lua_State* L)
         /* Set Stage */
         if(algo_stage >= 0 && algo_stage < NUM_STAGES)
         {
-            mlog(INFO, "Selecting stage: %d\n", algo_stage);
-            lua_obj->stages[algo_stage] = enable;
+            mlog(INFO, "%s stage: %d\n", enable ? "Enabling" : "Disabling", algo_stage);
+            lua_obj->parms.stages[algo_stage] = enable;
+            status = true;
+        }
+        else if(algo_stage == NUM_STAGES)
+        {
+            mlog(INFO, "%s all stages\n", enable ? "Enabling" : "Disabling");
+            for(int s = 0; s < NUM_STAGES; s++)
+            {
+                lua_obj->parms.stages[s] = enable;
+            }   
             status = true;
         }
         else

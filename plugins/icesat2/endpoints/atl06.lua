@@ -26,7 +26,7 @@ local json = require("json")
 local rqst = json.decode(arg[1])
 
 -- Internal Parameters --
-local str2stage = { LSF=icesat2.STAGE_LSF, RSR=icesat2.STAGE_RSR }
+local str2stage = { LSF=icesat2.STAGE_LSF }
 
 -- Request Parameters --
 local filename = rqst["filename"]
@@ -35,8 +35,9 @@ local stages = rqst["stages"]
 local parms = rqst["parms"]
 
 -- ATL06 Dispatch Algorithm --
-a = icesat2.atl06(rspq)
+a = icesat2.atl06(rspq, parms)
 if stages then
+    a:select(icesat2.ALL_STAGES, false)
     for k,v in pairs(stages) do
         a:select(str2stage[v], true)
     end

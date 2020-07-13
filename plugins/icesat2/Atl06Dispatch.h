@@ -74,6 +74,12 @@ class Atl06Dispatch: public DispatchObject
             NUM_STAGES = 1
         } stages_t;
 
+        /* Extraction Parameters */
+        typedef struct {
+            bool            stages[NUM_STAGES];
+            int             max_iterations;
+        } parms_t;
+
         /* Statistics --> TODO: NOT THREAD SAFE */
         typedef struct {
             uint32_t    h5atl03_rec_cnt;
@@ -107,6 +113,12 @@ class Atl06Dispatch: public DispatchObject
         static void init        (void);
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+        
+        static const parms_t DefaultParms;
 
         /*--------------------------------------------------------------------
          * Types
@@ -143,13 +155,13 @@ class Atl06Dispatch: public DispatchObject
         int             elevationIndex;
 
         stats_t         stats;
-        bool            stages[NUM_STAGES];
+        parms_t         parms;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06Dispatch                   (lua_State* L, const char* otuq_name);
+                        Atl06Dispatch                   (lua_State* L, const char* outq_name, const parms_t _parms);
                         ~Atl06Dispatch                  (void);
 
         bool            processRecord                   (RecordObject* record, okey_t key) override;
