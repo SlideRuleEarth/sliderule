@@ -66,6 +66,7 @@
  * STATIC DATA
  ******************************************************************************/
 
+const double Atl06Dispatch::SPEED_OF_LIGHT = 299792458.0; // meters per second
 const double Atl06Dispatch::PULSE_REPITITION_FREQUENCY = .0001; // 10Khz
 const double Atl06Dispatch::SPACECRAFT_GROUND_SPEED = 7000; // meters per second
 const double Atl06Dispatch::RDE_SCALE_FACTOR = 1.3490;
@@ -172,7 +173,6 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name):
 
     /* Provide default stages */
     stages[STAGE_LSF] = true;
-    stages[STAGE_RSR] = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -190,7 +190,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
-    result_t result;
+    result_t result[PAIR_TRACKS_PER_GROUND_TRACK];
     bool status = false;
 
     /* Bump Statistics */
@@ -200,15 +200,45 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
     Atl03Device::extent_t* extent = (Atl03Device::extent_t*)record->getRecordData();
 
     /* Clear Results */
-    LocalLib::set(&result, 0, sizeof(result_t));
+    LocalLib::set(&result, 0, sizeof(result_t) * PAIR_TRACKS_PER_GROUND_TRACK);
+
+    /* Copy In Initial Set of Photons */
+    int first_photon = 0;
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        result[t].photon_count = extent->photon_count[t];
+        if(result[t].photon_count > 0)
+        {
+            result[t].photons = new point_t[result[t].photon_count];
+            for(int p = 0; p < result[t].photon_count; p++)
+            {
+                result[t].photons[p].x = extent->photons[first_photon + p].distance_x;
+                result[t].photons[p].y = extent->photons[first_photon + p].height_y;
+            }
+            first_photon += result[t].photon_count;
+        }
+    }
 
     /* Execute Algorithm Stages */
-    if(stages[STAGE_LSF])           status = leastSquaresFitStage(extent, &result);
-    if(status && stages[STAGE_RSR]) status = robustSpreadOfResidualsStage(extent, &result);
+    if(stages[STAGE_LSF])           status = iterativeFitStage(extent, result);
 
     /* Populate Elevation  */
-    if(result.status[PRT_LEFT])     populateElevation(&result.elevation[PRT_LEFT]);
-    if(result.status[PRT_RIGHT])    populateElevation(&result.elevation[PRT_RIGHT]);
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        if(result[t].status)
+        {
+            populateElevation(&result[t].elevation);
+        }
+    }
+
+    /* Clean Up Results */
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        if(result[t].photons)
+        {
+            delete result[t].photons;
+        }
+    }    
 
     /* Return Status */
     return status;
@@ -264,80 +294,43 @@ void Atl06Dispatch::populateElevation (elevation_t* elevation)
 }
 
 /*----------------------------------------------------------------------------
- * leastSquaresFitStage
- *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::leastSquaresFitStage (Atl03Device::extent_t* extent, result_t* result)
-{
-    bool status = false;
-
-    /* Process Tracks */
-    uint32_t first_photon = 0;
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
-    {
-        MathLib::lsf_t lsf;
-
-        /* Calculate Least Squares Fit */
-        if(extent->photon_count[t] > 0)
-        {
-            lsf = MathLib::lsf((MathLib::point_t*)&extent->photons[first_photon], extent->photon_count[t]);
-
-            /* Populate Result */
-            result->elevation[t].height = lsf.intercept;
-            result->elevation[t].along_track_slope = lsf.slope;
-            result->status[t] = true;
-
-            /* At least one track processed */
-            status = true;
-        }
-
-        /* Increment First Photon to Next Track */
-        first_photon += extent->photon_count[t];
-    }
-
-    /* Return Status */
-    return status;
-}
-
-/*----------------------------------------------------------------------------
- * robustSpreadOfResidualsStage
+ * iterativeFitStage
  * 
  *  Note: Section 5.5 - Signal selection based on ATL03 flags
  *        Procedures 4b and after
  * 
  *  TODO: replace spacecraft ground speed constant with value provided in ATL03
  *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent, result_t* result)
+bool Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* result)
 {
-    bool status = false;
-
     /* Process Tracks */
-    uint32_t first_photon = 0;
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
-        int size = extent->photon_count[t];
-
-        /* Select Photons in Window */
+        int size = result[t].photon_count;
         if(size > 0)
         {
+            /* Calculate Least Squares Fit */
+            lsf_t fit = lsf(result[t].photons, size);
+
+            /* Calculate Residuals */
+            for(int p = 0; p < size; p++)
+            {
+                result[t].photons[p].r = result[t].photons[p].y - (fit.intercept + (result[t].photons[p].x * fit.slope));
+            }
+
+            /* Sort Points by Residuals */
+            quicksort(result[t].photons, 0, size-1);
+
+            /* Select Photons in Window */
             double robust_dispersion_estimate = 0.0;
 
             /* Calculate Background Density */
             double pulses_in_segment = (extent->segment_size[t] * PULSE_REPITITION_FREQUENCY) / SPACECRAFT_GROUND_SPEED; // N_seg_pulses, section 5.4, procedure 1d
-            double background_density = pulses_in_segment * extent->background_rate[t] / (MathLib::SPEED_OF_LIGHT / 2.0); // BG_density 
-
-            /* Calculate Residuals */
-            MathLib::lsf_t lsf = { result->elevation[t].height, result->elevation[t].along_track_slope };
-            double* residuals = new double[extent->photon_count[t]];
-            MathLib::residuals(lsf, (MathLib::point_t*)&extent->photons[first_photon], extent->photon_count[t], residuals);
-
-            /* Sort Residuals */
-            int* indices = new int[size];
-            for(int i = 0; i < size; i++) indices[i] = i;
-            MathLib::sort(residuals, size, indices);
+/* candidate for result */            double background_density = pulses_in_segment * extent->background_rate[t] / (SPEED_OF_LIGHT / 2.0); // BG_density 
 
             /* Get Max and Min */
-            double zmin = residuals[0];
-            double zmax = residuals[size - 1];
+            double zmin = result[t].photons[0].r;
+            double zmax = result[t].photons[size - 1].r;
             double zdelta = zmax - zmin;
 
             /* Get Background and Signal Estimates */
@@ -355,7 +348,7 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
                 int32_t i0 = 0;
                 while(i0 < size)
                 {
-                    double spp = (0.25 * signal_count) + ((residuals[i0] - zmin) * background_estimate); // section 5.9, procedure 4a
+                    double spp = (0.25 * signal_count) + ((result[t].photons[i0].r - zmin) * background_estimate); // section 5.9, procedure 4a
                     if( (((double)i0) + 1.0 - 0.5) < spp )  i0++;
                     else                                    break;
                 }
@@ -364,7 +357,7 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
                 int32_t i1 = size;
                 while(i1 >= 0)
                 {
-                    double spp = (0.75 * signal_count) + ((residuals[i1] - zmin) * background_estimate); // section 5.9, procedure 4a
+                    double spp = (0.75 * signal_count) + ((result[t].photons[i1].r - zmin) * background_estimate); // section 5.9, procedure 4a
                     if( (((double)i1) - 1.0 - 0.5) > spp )  i1--;
                     else                                    break;
                 }
@@ -393,40 +386,38 @@ bool Atl06Dispatch::robustSpreadOfResidualsStage (Atl03Device::extent_t* extent,
                 }
 
                 /* Calculate Robust Dispersion Estimate */
-                robust_dispersion_estimate = (residuals[i1] - residuals[i0]) / RDE_SCALE_FACTOR; // section 5.9, procedure 6
+                robust_dispersion_estimate = (result[t].photons[i1].r - result[t].photons[i0].r) / RDE_SCALE_FACTOR; // section 5.9, procedure 6
             }
 
             /* Calculate Sigma Expected */
             double se1 = pow((MathLib::SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
-            double se2 = pow(SIGMA_BEAM, 2) * pow(result->elevation[t].along_track_slope, 2);
+            double se2 = pow(SIGMA_BEAM, 2) * pow(result[t].elevation.along_track_slope, 2);
             double sigma_expected = sqrt(se1 + se2);
 
             /* Calculate Window Height */
             double window_height = MAX(MAX(H_WIN_MIN, 6.0 * sigma_expected), 6.0 * robust_dispersion_estimate); // H_win, section 5.5, procedure 4e
 
-            /* Filter Out Photons */
+            /* Filtered Out Photons in Results */
             int32_t ph_in = 0;
-            Atl03Device::photon_t* photons = new Atl03Device::photon_t[size];
             double window_spread = window_height / 2.0;
-            for(int r = 0; r < size; r++)
+            for(int p = 0; p < size; p++)
             {
-                if(abs(residuals[r]) < window_spread)
+                if(abs(result[t].photons[p].r) < window_spread)
                 {
-                    int32_t r_index = indices[r];
-                    photons[ph_in++] = extent->photons[first_photon + r_index];
+                    result[t].photons[ph_in++] = result[t].photons[p];
                 }
             }
 
-            /* At least one track processed */
-            status = true;
+            /* Populate Results */
+            result[t].photon_count = ph_in; // from filtering above
+            result[t].elevation.height = fit.intercept;
+            result[t].elevation.along_track_slope = fit.slope;
+            result[t].status = true; // successfully fit track
         }
-
-        /* Increment First Photon to Next Track */
-        first_photon += size;
     }
 
     /* Return Status */
-    return status;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -502,4 +493,75 @@ int Atl06Dispatch::luaSelect (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * lsf - least squares fit
+ *
+ *  TODO: currently no protections against divide-by-zero
+ *----------------------------------------------------------------------------*/
+Atl06Dispatch::lsf_t Atl06Dispatch::lsf (point_t* array, int size)
+{
+    lsf_t fit;
+
+    /* Calculate GT*G and GT*h*/
+    double gtg_11 = size;
+    double gtg_12_21 = 0.0;
+    double gtg_22 = 0.0;
+    double gth_1 = 0.0;
+    double gth_2 = 0.0;
+    for(int p = 0; p < size; p++)
+    {
+        gtg_12_21 += array[p].x;
+        gtg_22 += array[p].x * array[p].x;
+        gth_1 += array[p].y;
+        gth_2 += array[p].x * array[p].y;
+    }
+
+    /* Calculate Inverse of GT*G */
+    double det = 1.0 / ((gtg_11 * gtg_22) - (gtg_12_21 * gtg_12_21));
+    double igtg_11 = gtg_22 * det;
+    double igtg_12_21 = -1 * gtg_12_21 * det;
+    double igtg_22 = gtg_11 * det;
+
+    /* Calculate IGTG * GTh */
+    fit.intercept = (igtg_11 * gth_1) + (igtg_12_21 * gth_2);
+    fit.slope = (igtg_12_21 * gth_1) + (igtg_22 * gth_2);
+
+    /* Return Fit */
+    return fit;
+}
+
+/*----------------------------------------------------------------------------
+ * quicksort
+ *----------------------------------------------------------------------------*/
+void Atl06Dispatch::quicksort(point_t* array, int start, int end)
+{
+    if(start < end)
+    {
+        int partition = quicksortpartition(array, start, end);
+        quicksort(array, start, partition);
+        quicksort(array, partition + 1, end);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * quicksortpartition
+ *----------------------------------------------------------------------------*/
+int Atl06Dispatch::quicksortpartition(point_t* array, int start, int end)
+{
+    int pivot = array[(start + end) / 2].r;
+
+    start--;
+    end++;
+    while(true)
+    {
+        while (array[++start].r < pivot);
+        while (array[--end].r > pivot);
+        if (start >= end) return end;
+
+        point_t tmp = array[start];
+        array[start] = array[end];
+        array[end] = tmp;
+    }
 }

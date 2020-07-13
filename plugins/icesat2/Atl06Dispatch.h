@@ -46,6 +46,7 @@ class Atl06Dispatch: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const double SPEED_OF_LIGHT;
         static const double PULSE_REPITITION_FREQUENCY;
         static const double SPACECRAFT_GROUND_SPEED;
         static const double RDE_SCALE_FACTOR;
@@ -71,8 +72,7 @@ class Atl06Dispatch: public DispatchObject
         /* Algorithm Stages */
         typedef enum {
             STAGE_LSF = 0,  // least squares fit
-            STAGE_RSR = 1,  // robust spread of residuals
-            NUM_STAGES = 2
+            NUM_STAGES = 1
         } stages_t;
 
         /* Statistics --> TODO: NOT THREAD SAFE */
@@ -95,14 +95,6 @@ class Atl06Dispatch: public DispatchObject
             double          across_track_slope;
         } elevation_t;
 
-        /* Algorithm Result */
-        typedef struct {
-            bool                    status[PAIR_TRACKS_PER_GROUND_TRACK];
-            elevation_t             elevation[PAIR_TRACKS_PER_GROUND_TRACK];
-            int32_t                 photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
-            Atl03Device::photon_t*  photons[PAIR_TRACKS_PER_GROUND_TRACK];
-        } result_t;
-
         /* ATL06 Record */
         typedef struct {
             elevation_t     elevation[BATCH_SIZE];
@@ -116,6 +108,29 @@ class Atl06Dispatch: public DispatchObject
         static void init        (void);
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            double  intercept;
+            double  slope;
+        } lsf_t;
+
+        typedef struct {
+            double  x;  // distance
+            double  y;  // height
+            double  r;  // residual
+        } point_t;
+
+       /* Algorithm Result */
+        typedef struct {
+            bool                status;
+            elevation_t         elevation;
+            int32_t             photon_count;
+            point_t*            photons;
+        } result_t;
 
         /*--------------------------------------------------------------------
          * Data
@@ -143,11 +158,14 @@ class Atl06Dispatch: public DispatchObject
 
         void            populateElevation               (elevation_t* elevation);
 
-        bool            leastSquaresFitStage            (Atl03Device::extent_t* extent, result_t* result);
-        bool            robustSpreadOfResidualsStage    (Atl03Device::extent_t* extent, result_t* result);
+        bool            iterativeFitStage               (Atl03Device::extent_t* extent, result_t* result);
 
         static int      luaStats                        (lua_State* L);
         static int      luaSelect                       (lua_State* L);
+
+        static lsf_t    lsf                             (point_t* array, int size);
+        static void     quicksort                       (point_t* array, int start, int end);
+        static int      quicksortpartition              (point_t* array, int start, int end);
 };
 
 #endif  /* __atl06_dispatch__ */

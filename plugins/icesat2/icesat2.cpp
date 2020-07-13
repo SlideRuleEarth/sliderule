@@ -63,7 +63,6 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        Atl03Device::SRT_LAND_ICE);
     LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    Atl03Device::SRT_INLAND_WATER);
     LuaEngine::setAttrInt(L, "STAGE_LSF",           Atl06Dispatch::STAGE_LSF);
-    LuaEngine::setAttrInt(L, "STAGE_RSR",           Atl06Dispatch::STAGE_RSR);
 
     return 1;
 }
