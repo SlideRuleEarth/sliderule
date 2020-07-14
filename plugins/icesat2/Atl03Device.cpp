@@ -57,12 +57,12 @@ const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
 };
 
 const Atl03Device::parms_t Atl03Device::DefaultParms = {
-    .surface_type = SRT_LAND_ICE,
-    .signal_confidence = CNF_SURFACE_HIGH,
-    .along_track_spread = 10.0, // meters
-    .photon_count = 10, // PE
-    .extent_length = 40.0, // meters
-    .extent_step = 20.0 // meters
+    .surface_type = ATL06_DEFAULT_SURFACE_TYPE,
+    .signal_confidence = ATL06_DEFAULT_SIGNAL_CONFIDENCE,
+    .along_track_spread = ATL06_DEFAULT_ALONG_TRACK_SPREAD,
+    .minimum_photon_count = ATL06_DEFAULT_MIN_PHOTON_COUNT,
+    .extent_length = ATL06_DEFAULT_EXTENT_LENGTH,
+    .extent_step = ATL06_DEFAULT_EXTENT_STEP
 };
 
 const double Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
@@ -101,9 +101,9 @@ int Atl03Device::luaCreate (lua_State* L)
             parms.along_track_spread = getLuaFloat(L, -1, true, parms.along_track_spread, &provided);
             if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_ALONG_TRACK_SPREAD, parms.along_track_spread);
 
-            lua_getfield(L, 2, LUA_PARM_PHOTON_COUNT);
-            parms.photon_count = getLuaInteger(L, -1, true, parms.photon_count, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_PHOTON_COUNT, parms.photon_count);
+            lua_getfield(L, 2, LUA_PARM_MIN_PHOTON_COUNT);
+            parms.minimum_photon_count = getLuaInteger(L, -1, true, parms.minimum_photon_count, &provided);
+            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_MIN_PHOTON_COUNT, parms.minimum_photon_count);
 
             lua_getfield(L, 2, LUA_PARM_EXTENT_LENGTH);
             parms.extent_length = getLuaFloat(L, -1, true, parms.extent_length, &provided);
@@ -316,7 +316,7 @@ bool Atl03Device::bufferData (const char* url)
                 }
 
                 /* Check Photon Count */
-                if(extent_photons[t].length() < parms.photon_count)
+                if(extent_photons[t].length() < parms.minimum_photon_count)
                 {
                     extent_valid[t] = false;
                 }
@@ -521,7 +521,7 @@ int Atl03Device::luaParms (lua_State* L)
         LuaEngine::setAttrInt(L, LUA_PARM_SURFACE_TYPE,         lua_obj->parms.surface_type);
         LuaEngine::setAttrInt(L, LUA_PARM_SIGNAL_CONFIDENCE,    lua_obj->parms.signal_confidence);
         LuaEngine::setAttrNum(L, LUA_PARM_ALONG_TRACK_SPREAD,   lua_obj->parms.along_track_spread);
-        LuaEngine::setAttrInt(L, LUA_PARM_PHOTON_COUNT,         lua_obj->parms.photon_count);
+        LuaEngine::setAttrInt(L, LUA_PARM_MIN_PHOTON_COUNT,     lua_obj->parms.minimum_photon_count);
         LuaEngine::setAttrNum(L, LUA_PARM_EXTENT_LENGTH,        lua_obj->parms.extent_length);
         LuaEngine::setAttrNum(L, LUA_PARM_EXTENT_STEP,          lua_obj->parms.extent_step);
 

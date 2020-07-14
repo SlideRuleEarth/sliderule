@@ -33,13 +33,25 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_PARM_SURFACE_TYPE           "srt"
-#define LUA_PARM_SIGNAL_CONFIDENCE      "cnf"
-#define LUA_PARM_ALONG_TRACK_SPREAD     "ats"
-#define LUA_PARM_PHOTON_COUNT           "cnt"
-#define LUA_PARM_EXTENT_LENGTH          "len"
-#define LUA_PARM_EXTENT_STEP            "res"
-#define LUA_PARM_MAX_ITERATIONS         "maxi"
+#define LUA_PARM_SURFACE_TYPE                   "srt"
+#define LUA_PARM_SIGNAL_CONFIDENCE              "cnf"
+#define LUA_PARM_ALONG_TRACK_SPREAD             "ats"
+#define LUA_PARM_MIN_PHOTON_COUNT               "cnt"
+#define LUA_PARM_EXTENT_LENGTH                  "len"
+#define LUA_PARM_EXTENT_STEP                    "res"
+#define LUA_PARM_MAX_ITERATIONS                 "maxi"
+#define LUA_PARM_MIN_WINDOW                     "H_min_win"
+#define LUA_PARM_MAX_ROBUST_DISPERSION          "sigma_r_max"
+
+#define ATL06_DEFAULT_SURFACE_TYPE              SRT_LAND_ICE        
+#define ATL06_DEFAULT_SIGNAL_CONFIDENCE         CNF_SURFACE_HIGH
+#define ATL06_DEFAULT_ALONG_TRACK_SPREAD        20.0 // meters
+#define ATL06_DEFAULT_MIN_PHOTON_COUNT          10
+#define ATL06_DEFAULT_EXTENT_LENGTH             40.0 // meters
+#define ATL06_DEFAULT_EXTENT_STEP               20.0 // meters
+#define ATL06_DEFAULT_MAX_ITERATIONS            20
+#define ATL06_DEFAULT_MIN_WINDOW                3.0 // meters
+#define ATL06_DEFAULT_MAX_ROBUST_DISPERSION     5.0 // meters
 
 /******************************************************************************
  * PROTOTYPES

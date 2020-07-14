@@ -67,7 +67,7 @@ class Atl03Device: public DeviceObject
             surfaceType_t   surface_type;           // surface reference type (used to select signal confidence column)
             signalConf_t    signal_confidence;      // minimal allowed signal confidence
             double          along_track_spread;     // minimal required along track spread of photons in extent (meters)
-            int             photon_count;           // minimal required photons in extent
+            int             minimum_photon_count;   // minimal required photons in extent
             double          extent_length;          // length of ATL06 extent (meters)
             double          extent_step;            // resolution of the ATL06 extent (meters)
         } parms_t;

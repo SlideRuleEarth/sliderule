@@ -51,7 +51,6 @@ class Atl06Dispatch: public DispatchObject
         static const double RDE_SCALE_FACTOR;
         static const double SIGMA_BEAM;
         static const double SIGMA_XMIT;
-        static const double H_WIN_MIN;
 
         static const int BATCH_SIZE = 256;
 
@@ -78,6 +77,10 @@ class Atl06Dispatch: public DispatchObject
         typedef struct {
             bool            stages[NUM_STAGES];
             int             max_iterations;
+            double          along_track_spread;
+            double          minimum_photon_count;
+            double          minimum_window;
+            double          maximum_robust_dispersion;
         } parms_t;
 
         /* Statistics --> TODO: NOT THREAD SAFE */
@@ -127,6 +130,8 @@ class Atl06Dispatch: public DispatchObject
         typedef struct {
             double  intercept;
             double  slope;
+            double  x_min;
+            double  x_max;
         } lsf_t;
 
         typedef struct {
@@ -137,8 +142,12 @@ class Atl06Dispatch: public DispatchObject
 
        /* Algorithm Result */
         typedef struct {
-            bool                status;
+            bool                provided;
+            bool                violated_spread;
+            bool                violated_count;
+            bool                violated_iterations;
             elevation_t         elevation;
+            double              window_height;
             int32_t             photon_count;
             point_t*            photons;
         } result_t;
@@ -169,7 +178,7 @@ class Atl06Dispatch: public DispatchObject
 
         void            populateElevation               (elevation_t* elevation);
 
-        bool            iterativeFitStage               (Atl03Device::extent_t* extent, result_t* result);
+        void            iterativeFitStage               (Atl03Device::extent_t* extent, result_t* result);
 
         static int      luaStats                        (lua_State* L);
         static int      luaSelect                       (lua_State* L);
