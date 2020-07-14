@@ -337,7 +337,7 @@ bool Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* 
             result[t].elevation.along_track_slope = fit.slope;
             result[t].status = true;
 
-            if(iteration < parms.max_iterations)
+            if(iteration++ < parms.max_iterations)
             {
                 /* Calculate Residuals */
                 for(int p = 0; p < size; p++)
@@ -436,7 +436,14 @@ bool Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* 
                 }
 
                 /* Set New Number of Photons */
-                result[t].photon_count = ph_in; // from filtering above
+                if(ph_in != result[t].photon_count)
+                {
+                    result[t].photon_count = ph_in; // from filtering above
+                }
+                else // no change in photons
+                {
+                    done = true;
+                }
             }
             else // max iterations reached
             {
@@ -588,7 +595,7 @@ void Atl06Dispatch::quicksort(point_t* array, int start, int end)
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::quicksortpartition(point_t* array, int start, int end)
 {
-    int pivot = array[(start + end) / 2].r;
+    double pivot = array[(start + end) / 2].r;
 
     start--;
     end++;

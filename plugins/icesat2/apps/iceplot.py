@@ -86,7 +86,7 @@ if __name__ == '__main__':
             "cnt": 10,
             "len": 40.0,
             "res": 20.0,
-            "maxi": 0
+            "maxi": 4
         }
     }
 
@@ -96,6 +96,7 @@ if __name__ == '__main__':
     # Build Dataframe
     heights = [rsps[r]["ELEVATION"][i]["HEIGHT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
     df = pd.DataFrame(data=heights, index=[i for i in range(len(heights))], columns=["atl06"])
+    print("Plotting {} points".format(len(heights)))
 
     # Plot Dataframe
     dfbokeh(df, "atl06")
