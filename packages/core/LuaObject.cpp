@@ -62,9 +62,9 @@ LuaException::LuaException(const char* _errmsg, ...):
 }
 
 /*----------------------------------------------------------------------------
- * releaseLockedLuaObjects
+ * releaseLuaObjects
  *----------------------------------------------------------------------------*/
-void LuaObject::releaseLockedLuaObjects (void)
+void LuaObject::releaseLuaObjects (void)
 {
     LuaObject* lua_obj;
     okey_t key = lockList.first(&lua_obj);
@@ -117,6 +117,102 @@ const char* LuaObject::getName (void)
 {
     if(ObjectName)  return ObjectName;
     else            return "<unnamed>";
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaNumParms
+ *----------------------------------------------------------------------------*/
+int LuaObject::getLuaNumParms (lua_State* L)
+{
+    return lua_gettop(L);
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaInteger
+ *----------------------------------------------------------------------------*/
+long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltval, bool* provided)
+{
+    if(provided) *provided = false;
+
+    if(lua_isinteger(L, parm))
+    {
+        if(provided) *provided = true;
+        return lua_tointeger(L, parm);
+    }
+    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    {
+        return dfltval;
+    }
+    else
+    {
+        throw LuaException("must supply an integer for parameter #%d", parm);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaFloat
+ *----------------------------------------------------------------------------*/
+double LuaObject::getLuaFloat (lua_State* L, int parm, bool optional, double dfltval, bool* provided)
+{
+    if(provided) *provided = false;
+
+    if(lua_isnumber(L, parm))
+    {
+        if(provided) *provided = true;
+        return lua_tonumber(L, parm);
+    }
+    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    {
+        return dfltval;
+    }
+    else
+    {
+        throw LuaException("must supply a floating point number for parameter #%d", parm);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaBoolean
+ *----------------------------------------------------------------------------*/
+bool LuaObject::getLuaBoolean (lua_State* L, int parm, bool optional, bool dfltval, bool* provided)
+{
+    if(provided) *provided = false;
+
+    if(lua_isboolean(L, parm))
+    {
+        if(provided) *provided = true;
+        return lua_toboolean(L, parm);
+    }
+    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    {
+        return dfltval;
+    }
+    else
+    {
+        throw LuaException("must supply a boolean for parameter #%d", parm);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaString
+ *----------------------------------------------------------------------------*/
+const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, const char* dfltval, bool* provided)
+{
+    if(provided) *provided = false;
+
+    if(lua_isstring(L, parm))
+    {
+        if(provided) *provided = true;
+        return lua_tostring(L, parm);
+    }
+    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    {
+        return dfltval;
+    }
+    else
+    {
+        throw LuaException("must supply a string for parameter #%d", parm);
+    }
 }
 
 /******************************************************************************
@@ -327,14 +423,6 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
 }
 
 /*----------------------------------------------------------------------------
- * getLuaNumParms
- *----------------------------------------------------------------------------*/
-int LuaObject::getLuaNumParms (lua_State* L)
-{
-    return lua_gettop(L);
-}
-
-/*----------------------------------------------------------------------------
  * getLuaSelf
  *----------------------------------------------------------------------------*/
 LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
@@ -361,93 +449,5 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
     else
     {
         throw LuaException("calling object method from something not an object");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * getLuaInteger
- *----------------------------------------------------------------------------*/
-long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltval, bool* provided)
-{
-    if(provided) *provided = false;
-
-    if(lua_isinteger(L, parm))
-    {
-        if(provided) *provided = true;
-        return lua_tointeger(L, parm);
-    }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
-    {
-        return dfltval;
-    }
-    else
-    {
-        throw LuaException("must supply an integer for parameter #%d", parm);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * getLuaFloat
- *----------------------------------------------------------------------------*/
-double LuaObject::getLuaFloat (lua_State* L, int parm, bool optional, double dfltval, bool* provided)
-{
-    if(provided) *provided = false;
-
-    if(lua_isnumber(L, parm))
-    {
-        if(provided) *provided = true;
-        return lua_tonumber(L, parm);
-    }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
-    {
-        return dfltval;
-    }
-    else
-    {
-        throw LuaException("must supply a floating point number for parameter #%d", parm);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * getLuaBoolean
- *----------------------------------------------------------------------------*/
-bool LuaObject::getLuaBoolean (lua_State* L, int parm, bool optional, bool dfltval, bool* provided)
-{
-    if(provided) *provided = false;
-
-    if(lua_isboolean(L, parm))
-    {
-        if(provided) *provided = true;
-        return lua_toboolean(L, parm);
-    }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
-    {
-        return dfltval;
-    }
-    else
-    {
-        throw LuaException("must supply a boolean for parameter #%d", parm);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * getLuaString
- *----------------------------------------------------------------------------*/
-const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, const char* dfltval, bool* provided)
-{
-    if(provided) *provided = false;
-
-    if(lua_isstring(L, parm))
-    {
-        if(provided) *provided = true;
-        return lua_tostring(L, parm);
-    }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
-    {
-        return dfltval;
-    }
-    else
-    {
-        throw LuaException("must supply a string for parameter #%d", parm);
     }
 }

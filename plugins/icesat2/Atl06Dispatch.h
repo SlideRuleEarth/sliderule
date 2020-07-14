@@ -32,6 +32,7 @@
 #include "MsgQ.h"
 #include "GTArray.h"
 #include "Atl03Device.h"
+#include "lua_parms.h"
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -66,22 +67,6 @@ class Atl06Dispatch: public DispatchObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-
-        /* Algorithm Stages */
-        typedef enum {
-            STAGE_LSF = 0,  // least squares fit
-            NUM_STAGES = 1
-        } stages_t;
-
-        /* Extraction Parameters */
-        typedef struct {
-            bool            stages[NUM_STAGES];
-            int             max_iterations;
-            double          along_track_spread;
-            double          minimum_photon_count;
-            double          minimum_window;
-            double          maximum_robust_dispersion;
-        } parms_t;
 
         /* Statistics --> TODO: NOT THREAD SAFE */
         typedef struct {
@@ -118,38 +103,32 @@ class Atl06Dispatch: public DispatchObject
     private:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-        
-        static const parms_t DefaultParms;
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            double  intercept;
-            double  slope;
-            double  x_min;
-            double  x_max;
+            double      intercept;
+            double      slope;
+            double      x_min;
+            double      x_max;
         } lsf_t;
 
         typedef struct {
-            double  x;  // distance
-            double  y;  // height
-            double  r;  // residual
+            double      x;  // distance
+            double      y;  // height
+            double      r;  // residual
         } point_t;
 
        /* Algorithm Result */
         typedef struct {
-            bool                provided;
-            bool                violated_spread;
-            bool                violated_count;
-            bool                violated_iterations;
-            elevation_t         elevation;
-            double              window_height;
-            int32_t             photon_count;
-            point_t*            photons;
+            bool        provided;
+            bool        violated_spread;
+            bool        violated_count;
+            bool        violated_iterations;
+            elevation_t elevation;
+            double      window_height;
+            int32_t     photon_count;
+            point_t*    photons;
         } result_t;
 
         /*--------------------------------------------------------------------
@@ -163,14 +142,14 @@ class Atl06Dispatch: public DispatchObject
         Mutex           elevationMutex;
         int             elevationIndex;
 
+        atl06_parms_t   parms;
         stats_t         stats;
-        parms_t         parms;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06Dispatch                   (lua_State* L, const char* outq_name, const parms_t _parms);
+                        Atl06Dispatch                   (lua_State* L, const char* outq_name, const atl06_parms_t _parms);
                         ~Atl06Dispatch                  (void);
 
         bool            processRecord                   (RecordObject* record, okey_t key) override;

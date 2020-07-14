@@ -161,7 +161,7 @@ void deinitcore (void)
 {
     /* Clean up libraries initialized in initcore() */
     printf("Exiting...\n");
-    LuaObject::releaseLockedLuaObjects();
+    LuaObject::releaseLuaObjects();
     MsgQ::deinit();     printf("Message Queues Uninitialized\n");
     LogLib::deinit();   printf("Logging Library Uninitialized\n");
     TraceLib::deinit(); printf("Tracing Library Unitialized\n");

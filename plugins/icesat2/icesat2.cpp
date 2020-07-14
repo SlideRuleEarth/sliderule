@@ -50,20 +50,20 @@ int icesat2_open (lua_State *L)
     luaL_newlib(L, icesat2_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",    Atl03Device::CNF_POSSIBLE_TEP);
-    LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",  Atl03Device::CNF_NOT_CONSIDERED);
-    LuaEngine::setAttrInt(L, "CNF_BACKGROUND",      Atl03Device::CNF_BACKGROUND);
-    LuaEngine::setAttrInt(L, "CNF_WITHIN_10M",      Atl03Device::CNF_WITHIN_10M);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_LOW",     Atl03Device::CNF_SURFACE_LOW);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_MEDIUM",  Atl03Device::CNF_SURFACE_MEDIUM);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_HIGH",    Atl03Device::CNF_SURFACE_HIGH);
-    LuaEngine::setAttrInt(L, "SRT_LAND",            Atl03Device::SRT_LAND);
-    LuaEngine::setAttrInt(L, "SRT_OCEAN",           Atl03Device::SRT_OCEAN);
-    LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         Atl03Device::SRT_SEA_ICE);
-    LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        Atl03Device::SRT_LAND_ICE);
-    LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    Atl03Device::SRT_INLAND_WATER);
-    LuaEngine::setAttrInt(L, "STAGE_LSF",           Atl06Dispatch::STAGE_LSF);
-    LuaEngine::setAttrInt(L, "ALL_STAGES",          Atl06Dispatch::NUM_STAGES);
+    LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",    CNF_POSSIBLE_TEP);
+    LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",  CNF_NOT_CONSIDERED);
+    LuaEngine::setAttrInt(L, "CNF_BACKGROUND",      CNF_BACKGROUND);
+    LuaEngine::setAttrInt(L, "CNF_WITHIN_10M",      CNF_WITHIN_10M);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_LOW",     CNF_SURFACE_LOW);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_MEDIUM",  CNF_SURFACE_MEDIUM);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_HIGH",    CNF_SURFACE_HIGH);
+    LuaEngine::setAttrInt(L, "SRT_LAND",            SRT_LAND);
+    LuaEngine::setAttrInt(L, "SRT_OCEAN",           SRT_OCEAN);
+    LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         SRT_SEA_ICE);
+    LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        SRT_LAND_ICE);
+    LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    SRT_INLAND_WATER);
+    LuaEngine::setAttrInt(L, "STAGE_LSF",           STAGE_LSF);
+    LuaEngine::setAttrInt(L, "ALL_STAGES",          NUM_STAGES);
 
     return 1;
 }

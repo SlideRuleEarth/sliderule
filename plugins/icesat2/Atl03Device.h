@@ -25,6 +25,7 @@
  ******************************************************************************/
 
 #include "GTArray.h"
+#include "lua_parms.h"
 #include "List.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
@@ -41,36 +42,6 @@ class Atl03Device: public DeviceObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-
-        /* Signal Confidence per Photon */
-        typedef enum {
-            CNF_POSSIBLE_TEP = -2,
-            CNF_NOT_CONSIDERED = -1,
-            CNF_BACKGROUND = 0,
-            CNF_WITHIN_10M = 1,
-            CNF_SURFACE_LOW = 2,
-            CNF_SURFACE_MEDIUM = 3,
-            CNF_SURFACE_HIGH = 4
-        } signalConf_t;
-
-        /* Surface Types for Signal Confidence */
-        typedef enum {
-            SRT_LAND = 0,
-            SRT_OCEAN = 1,
-            SRT_SEA_ICE = 2,
-            SRT_LAND_ICE = 3,
-            SRT_INLAND_WATER = 4
-        } surfaceType_t;
-
-        /* Extraction Parameters */
-        typedef struct {
-            surfaceType_t   surface_type;           // surface reference type (used to select signal confidence column)
-            signalConf_t    signal_confidence;      // minimal allowed signal confidence
-            double          along_track_spread;     // minimal required along track spread of photons in extent (meters)
-            int             minimum_photon_count;   // minimal required photons in extent
-            double          extent_length;          // length of ATL06 extent (meters)
-            double          extent_step;            // resolution of the ATL06 extent (meters)
-        } parms_t;
 
         /* Photon Fields */
         typedef struct {
@@ -108,8 +79,6 @@ class Atl03Device: public DeviceObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
-        static const parms_t DefaultParms;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -130,7 +99,7 @@ class Atl03Device: public DeviceObject
          * Data
          *--------------------------------------------------------------------*/
 
-        parms_t                 parms;
+        atl06_parms_t           parms;
         stats_t                 stats;
         List<RecordObject*>     extentList;
         int                     listIndex;
@@ -141,7 +110,7 @@ class Atl03Device: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Device         (lua_State* L, const char* ur, parms_t _parms);
+                            Atl03Device         (lua_State* L, const char* ur, atl06_parms_t _parms);
                             ~Atl03Device        (void);
 
         bool                bufferData          (const char* url);

@@ -76,10 +76,16 @@ class LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void releaseLockedLuaObjects (void);
-        void        removeLock              (void);
-        const char* getType                 (void);
-        const char* getName                 (void);
+        static void         releaseLuaObjects   (void); // pairs with lockLuaObject(...)
+        void                removeLock          (void);
+        const char*         getType             (void);
+        const char*         getName             (void);
+
+        static int          getLuaNumParms      (lua_State* L);
+        static long         getLuaInteger       (lua_State* L, int parm, bool optional=false, long dfltval=0, bool* provided=NULL);
+        static double       getLuaFloat         (lua_State* L, int parm, bool optional=false, double dfltval=0.0, bool* provided=NULL);
+        static bool         getLuaBoolean       (lua_State* L, int parm, bool optional=false, bool dfltval=false, bool* provided=NULL);
+        static const char*  getLuaString        (lua_State* L, int parm, bool optional=false, const char* dfltval=NULL, bool* provided=NULL);
 
     protected:
 
@@ -105,14 +111,7 @@ class LuaObject
 
         static LuaObject*   lockLuaObject       (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
         static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
-        static int          getLuaNumParms      (lua_State* L);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
-        static long         getLuaInteger       (lua_State* L, int parm, bool optional=false, long dfltval=0, bool* provided=NULL);
-        static double       getLuaFloat         (lua_State* L, int parm, bool optional=false, double dfltval=0.0, bool* provided=NULL);
-        static bool         getLuaBoolean       (lua_State* L, int parm, bool optional=false, bool dfltval=false, bool* provided=NULL);
-        static const char*  getLuaString        (lua_State* L, int parm, bool optional=false, const char* dfltval=NULL, bool* provided=NULL);
-
-    protected:
 
         /*--------------------------------------------------------------------
          * Data

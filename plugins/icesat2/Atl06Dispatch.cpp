@@ -97,15 +97,6 @@ const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const Atl06Dispatch::parms_t Atl06Dispatch::DefaultParms = {
-    .stages = { true },
-    .max_iterations = ATL06_DEFAULT_MAX_ITERATIONS,
-    .along_track_spread = ATL06_DEFAULT_ALONG_TRACK_SPREAD,
-    .minimum_photon_count = ATL06_DEFAULT_MIN_PHOTON_COUNT,
-    .minimum_window = ATL06_DEFAULT_MIN_WINDOW,
-    .maximum_robust_dispersion = ATL06_DEFAULT_MAX_ROBUST_DISPERSION
-};
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -119,34 +110,7 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms_t parms = DefaultParms;
-
-        /* Check Config Table */
-        if(lua_type(L, 2) == LUA_TTABLE)
-        {
-            bool provided = false;
-
-            /* Get Configuration Parameters from Table */
-            lua_getfield(L, 2, LUA_PARM_MAX_ITERATIONS);
-            parms.max_iterations = getLuaInteger(L, -1, true, parms.max_iterations, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_MAX_ITERATIONS, (int)parms.max_iterations);
-
-            lua_getfield(L, 2, LUA_PARM_ALONG_TRACK_SPREAD);
-            parms.along_track_spread = getLuaFloat(L, -1, true, parms.along_track_spread, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_ALONG_TRACK_SPREAD, parms.along_track_spread);
-
-            lua_getfield(L, 2, LUA_PARM_MIN_PHOTON_COUNT);
-            parms.minimum_photon_count = getLuaInteger(L, -1, true, parms.minimum_photon_count, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_MIN_PHOTON_COUNT, parms.minimum_photon_count);
-
-            lua_getfield(L, 2, LUA_PARM_MIN_WINDOW);
-            parms.minimum_window = getLuaFloat(L, -1, true, parms.minimum_window, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_MIN_WINDOW, parms.minimum_window);
-
-            lua_getfield(L, 2, LUA_PARM_MAX_ROBUST_DISPERSION);
-            parms.maximum_robust_dispersion = getLuaFloat(L, -1, true, parms.maximum_robust_dispersion, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_MAX_ROBUST_DISPERSION, parms.maximum_robust_dispersion);
-        }
+        atl06_parms_t parms = lua_parms_process(L, 2);
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
@@ -188,7 +152,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const parms_t _parms):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const atl06_parms_t _parms):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);

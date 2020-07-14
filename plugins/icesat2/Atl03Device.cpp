@@ -56,15 +56,6 @@ const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
     {"DATA",        RecordObject::USER,     sizeof(extent_t),                           0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const Atl03Device::parms_t Atl03Device::DefaultParms = {
-    .surface_type = ATL06_DEFAULT_SURFACE_TYPE,
-    .signal_confidence = ATL06_DEFAULT_SIGNAL_CONFIDENCE,
-    .along_track_spread = ATL06_DEFAULT_ALONG_TRACK_SPREAD,
-    .minimum_photon_count = ATL06_DEFAULT_MIN_PHOTON_COUNT,
-    .extent_length = ATL06_DEFAULT_EXTENT_LENGTH,
-    .extent_step = ATL06_DEFAULT_EXTENT_STEP
-};
-
 const double Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
 const double Atl03Device::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
 
@@ -81,38 +72,7 @@ int Atl03Device::luaCreate (lua_State* L)
     {
         /* Get URL */
         const char* url = getLuaString(L, 1);
-        parms_t parms = DefaultParms;
-
-        /* Check Config Table */
-        if(lua_type(L, 2) == LUA_TTABLE)
-        {
-            bool provided = false;
-
-            /* Get Configuration Parameters from Table */
-            lua_getfield(L, 2, LUA_PARM_SURFACE_TYPE);
-            parms.surface_type = (surfaceType_t)getLuaInteger(L, -1, true, parms.surface_type, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_SURFACE_TYPE, (int)parms.surface_type);
-
-            lua_getfield(L, 2, LUA_PARM_SIGNAL_CONFIDENCE);
-            parms.signal_confidence = (signalConf_t)getLuaInteger(L, -1, true, parms.signal_confidence, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_SIGNAL_CONFIDENCE, (int)parms.signal_confidence);
-
-            lua_getfield(L, 2, LUA_PARM_ALONG_TRACK_SPREAD);
-            parms.along_track_spread = getLuaFloat(L, -1, true, parms.along_track_spread, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_ALONG_TRACK_SPREAD, parms.along_track_spread);
-
-            lua_getfield(L, 2, LUA_PARM_MIN_PHOTON_COUNT);
-            parms.minimum_photon_count = getLuaInteger(L, -1, true, parms.minimum_photon_count, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_MIN_PHOTON_COUNT, parms.minimum_photon_count);
-
-            lua_getfield(L, 2, LUA_PARM_EXTENT_LENGTH);
-            parms.extent_length = getLuaFloat(L, -1, true, parms.extent_length, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_EXTENT_LENGTH, parms.extent_length);
-
-            lua_getfield(L, 2, LUA_PARM_EXTENT_STEP);
-            parms.extent_step = getLuaFloat(L, -1, true, parms.extent_step, &provided);
-            if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_EXTENT_STEP, parms.extent_step);
-        }
+        atl06_parms_t parms = lua_parms_process(L, 2);
 
         /* Return Dispatch Object */
         return createLuaObject(L, new Atl03Device(L, url, parms));
@@ -145,7 +105,7 @@ void Atl03Device::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Device::Atl03Device (lua_State* L, const char* url, parms_t _parms):
+Atl03Device::Atl03Device (lua_State* L, const char* url, atl06_parms_t _parms):
     DeviceObject(L, READER)
 {
     /* Set Parameters */
