@@ -51,6 +51,8 @@ const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
     {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NULL, NATIVE_FLAGS},
     {"SEG_SIZE",    RecordObject::DOUBLE,   offsetof(extent_t, segment_size[0]),        2,  NULL, NATIVE_FLAGS},
     {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NULL, NATIVE_FLAGS},
+    {"LAT",         RecordObject::DOUBLE,   offsetof(extent_t, latitude[0]),            2,  NULL, NATIVE_FLAGS},
+    {"LON",         RecordObject::DOUBLE,   offsetof(extent_t, longitude[0]),           2,  NULL, NATIVE_FLAGS},
     {"COUNT",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),        2,  NULL, NATIVE_FLAGS},
     {"PHOTONS",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),       2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
     {"DATA",        RecordObject::USER,     sizeof(extent_t),                           0,  phRecType, NATIVE_FLAGS} // variable length
@@ -167,6 +169,8 @@ bool Atl03Device::bufferData (const char* url)
         GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
         GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id");
         GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x");
+        GTArray<double>     segment_lat         (url, track, "geolocation/reference_photon_lat");
+        GTArray<double>     segment_lon         (url, track, "geolocation/reference_photon_lon");
         GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along");
         GTArray<float>      h_ph                (url, track, "heights/h_ph");
         GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", parms.surface_type);
@@ -328,11 +332,13 @@ bool Atl03Device::bufferData (const char* url)
                     }
 
                     /* Populate Attributes */
-                    extent->segment_id[t] = segment_id.gt[t][extent_segment[t]];
-                    extent->gps_time[t] = sdp_gps_epoch[0] + segment_delta_time.gt[t][extent_segment[t]];
-                    extent->segment_size[t] = parms.extent_step;
-                    extent->background_rate[t] = bckgrd_rate.gt[t][bckgrd_in[t]];
-                    extent->photon_count[t] = extent_photons[t].length();
+                    extent->segment_id[t]       = segment_id.gt[t][extent_segment[t]];
+                    extent->segment_size[t]     = parms.extent_step;
+                    extent->background_rate[t]  = bckgrd_rate.gt[t][bckgrd_in[t]];
+                    extent->gps_time[t]         = sdp_gps_epoch[0] + segment_delta_time.gt[t][extent_segment[t]];
+                    extent->latitude[t]         = segment_lat.gt[t][extent_segment[t]];
+                    extent->longitude[t]        = segment_lon.gt[t][extent_segment[t]];
+                    extent->photon_count[t]     = extent_photons[t].length();
 
                     /* Populate Photons */
                     for(int32_t p = 0; p < extent_photons[t].length(); p++)

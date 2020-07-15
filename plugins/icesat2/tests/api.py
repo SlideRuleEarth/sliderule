@@ -117,8 +117,8 @@ if __name__ == '__main__':
     # Populate record definitions
 
     sliderule.populate("atl03rec")
-    sliderule.populate("h5dataset")
     sliderule.populate("atl03rec.photons")
+    sliderule.populate("h5dataset")
 
     # Override server URL from command line
 

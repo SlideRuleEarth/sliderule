@@ -66,3 +66,13 @@ The plugin supplies the following record types:
 
 The plugin supplies the following endpoints:
 * [atl06](endpoints/atl06.lua): process ATL03 photon data to produce gridded elevations
+
+## V. Notes
+
+1. To use the MPI_ICESat2_ATL03.py script provided at https://github.com/tsutterley/read-ICESat-2/blob/master/scripts/MPI_ICESat2_ATL03.py, the following steps must be taken to setup an python environment (using the Anaconda distribution):
+    * export PYTHONPATH={path/to/read-ICESat-2}:$PYTHONPATH
+    * conda create -n icesat2
+    * conda activate icesat2
+    * conda install -c conda-forge "h5py>=2.9=mpi*"
+    * conda install scipy
+    * conda install scikit-learn

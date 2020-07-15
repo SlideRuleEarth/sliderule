@@ -6,7 +6,7 @@ import sys
 import pandas as pd
 import numpy as np
 
-from bokeh.io import push_notebook, show, output_notebook
+from bokeh.io import show
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 
@@ -30,7 +30,7 @@ def dfbokeh(df, col, cond_col="", cond_val=0):
     y = s.values
     x = [i for i in range(len(y))]
     r = p.line(x, y, color="#2222aa", line_width=3)
-    show(p, notebook_handle=True)
+    show(p)
 
 ###############################################################################
 # MAIN

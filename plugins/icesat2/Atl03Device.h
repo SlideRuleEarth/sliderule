@@ -56,6 +56,8 @@ class Atl03Device: public DeviceObject
             double          segment_size[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
             double          background_rate[PAIR_TRACKS_PER_GROUND_TRACK]; // PE per second
             double          gps_time[PAIR_TRACKS_PER_GROUND_TRACK]; // seconds
+            double          latitude[PAIR_TRACKS_PER_GROUND_TRACK];
+            double          longitude[PAIR_TRACKS_PER_GROUND_TRACK];
             uint32_t        photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
             uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
             photon_t        photons[]; // zero length field
