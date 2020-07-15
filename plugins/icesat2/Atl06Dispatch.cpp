@@ -202,10 +202,17 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
     /* Clear Results */
     LocalLib::set(&result, 0, sizeof(result_t) * PAIR_TRACKS_PER_GROUND_TRACK);
 
-    /* Copy In Initial Set of Photons */
+    /* Initialize Results */
     int first_photon = 0;
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
+        /* Set Carry-Over Elements */
+        result[t].elevation.segment_id = extent->segment_id[t];
+        result[t].elevation.gps_time = extent->gps_time[t];
+        result[t].elevation.latitude = extent->latitude[t];
+        result[t].elevation.longitude = extent->longitude[t];
+
+        /* Copy In Initial Set of Photons */
         result[t].photon_count = extent->photon_count[t];
         if(result[t].photon_count > 0)
         {

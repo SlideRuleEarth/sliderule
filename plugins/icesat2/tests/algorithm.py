@@ -5,6 +5,7 @@ import sys
 
 import pandas as pd
 import numpy as np
+import math
 
 from bokeh.io import show
 from bokeh.palettes import Spectral11
@@ -19,24 +20,24 @@ sys.path.append("/usr/local/etc/sliderule")
 import sliderule
 
 #
-# Interactive Bokeh Plot of Actual vs Expected
+# Distance between two coordinates
 #
-def bokeh_compare(act, col_act, exp, col_exp):
+def geodist(lat1, lon1, lat2, lon2):
 
-    p = figure(title="Actual vs. Expected", plot_height=500, plot_width=800)
+    lat1 = math.radians(lat1)
+    lon1 = math.radians(lon1)
+    lat2 = math.radians(lat2)
+    lon2 = math.radians(lon2)
 
-    y_act = act[col_act].values
-    x_act = [i for i in range(len(y_act))]
+    dlon = lon2 - lon1  
+    dlat = lat2 - lat1 
 
-    y_exp = exp[col_exp].values
-    x_exp = [i for i in range(len(y_exp))]
+    dist = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+ #   dist = 2.0 * math.asin(math.sqrt(dist))  
+    dist = 2.0 * math.atan2(math.sqrt(dist), math.sqrt(1.0 - dist))
+    dist = 6373.0 * dist
 
-    r = p.multi_line(xs=[x_act, x_exp],
-                     ys=[y_act, y_exp],
-                     line_color=Spectral11[0:2],
-                     line_width=3)
-
-    show(p)
+    return dist
 
 #
 # SlideRule Processing Request
@@ -61,43 +62,70 @@ def algoexec():
     # Execute ATL06 Algorithm
     rsps = sliderule.engine("atl06", rqst)
 
-    # Build Dataframe of SlideRule Responses
+    # Process Response Data
+    latitudes = [rsps[r]["ELEVATION"][i]["LAT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
+    longitudes = [rsps[r]["ELEVATION"][i]["LON"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
     heights = [rsps[r]["ELEVATION"][i]["HEIGHT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
-    df = pd.DataFrame(data=heights, index=[i for i in range(len(heights))], columns=["sliderule"])
+
+    # Build Dataframe of SlideRule Responses
+    lat_origin = latitudes[0]
+    lon_origin = longitudes[0]
+    dist = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
+    df = pd.DataFrame(data=heights, index=dist, columns=["sliderule"])
 
     # Return DataFrame
     print("Retrieved {} points from SlideRule".format(len(heights)))
     return df
 
 #
-# ATL06 (read-ICESat-2) Read Request
+# Parse Responses from Dataset
 #
-def expread():
-
-    # Read ATL06 (read-ICESat-2) Heights
-    rqst = {
-        "filename": "/data/ATLAS/ATL06_20181019065445_03150111_003_01.h5",
-        "dataset": "/gt1r/land_ice_segments/h_li",
-        "datatype": sliderule.datatypes["REAL"],
-        "id": 0
-    }
-
-    # Execute H5 Retrieval
-    rsps = sliderule.engine("h5", rqst)
+def recoverdata(rsps):
     datatype = rsps[0]["DATATYPE"]
     data = ()
     size = 0
     for d in rsps:
         data = data + d["DATA"] 
         size = size + d["SIZE"]
-    heights = sliderule.get_values(data, datatype, size)
+    return sliderule.get_values(data, datatype, size)
+
+#
+# ATL06 (read-ICESat-2) Read Request
+#
+def expread():
+
+    # Baseline Request
+    rqst = {
+        "filename": "/data/ATLAS/ATL06_20181019065445_03150111_003_01.h5",
+        "datatype": sliderule.datatypes["REAL"],
+        "id": 0
+    }
+
+    # Read ATL06 (read-ICESat-2) Heights
+    rqst["dataset"] = "/gt1r/land_ice_segments/h_li"
+    rsps = sliderule.engine("h5", rqst)
+    heights = recoverdata(rsps)
+
+    # Read ATL06 (read-ICESat-2) Latitudes
+    rqst["dataset"] = "/gt1r/land_ice_segments/latitude"
+    rsps = sliderule.engine("h5", rqst)
+    latitudes = recoverdata(rsps)
+
+    # Read ATL06 (read-ICESat-2) Longitudes
+    rqst["dataset"] = "/gt1r/land_ice_segments/longitude"
+    rsps = sliderule.engine("h5", rqst)
+    longitudes = recoverdata(rsps)
 
     # Build Dataframe of SlideRule Responses
-    df = pd.DataFrame(data=heights, index=[i for i in range(len(heights))], columns=["atl06"])
+    lat_origin = latitudes[0]
+    lon_origin = longitudes[0]
+    dist = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
+    df = pd.DataFrame(data=heights, index=dist, columns=["atl06"])
 
-    # Filter Heights
+    # Filter Dataframe
     df = df[df["atl06"] < 25000.0]
     df = df[df["atl06"] > -25000.0]
+    df = df[df.index < 4000.0]
 
     # Return DataFrame
     print("Retrieved {} points from ATL06, returning {} points".format(len(heights), len(df.values)))
@@ -117,10 +145,22 @@ if __name__ == '__main__':
     sliderule.populate("h5dataset")
 
     # Execute SlideRule Algorithm
-    act = algoexec()
+    if len(sys.argv) > 1 and sys.argv[1] == "ro":
+        # Skip algorithm and populate dummy dataframe
+        act = pd.DataFrame(data=[0,1,2], index=[0,1,2], columns=["sliderule"])
+    else:
+        act = algoexec()
 
     # Read ATL06 Expected Results
     exp = expread()
 
     # Plot Dataframe
-    bokeh_compare(act, "sliderule", exp, "atl06")
+    p = figure(title="Actual vs. Expected", plot_height=500, plot_width=800)
+    for data, name, color in zip([act, exp], ["sliderule", "atl06"], Spectral11[:2]):
+        p.line(list(data.index), data[name], line_width=3, color=color, alpha=0.8, legend_label=name)
+    p.legend.location = "top_left"
+    p.legend.click_policy="hide"
+    show(p)
+
+
+
