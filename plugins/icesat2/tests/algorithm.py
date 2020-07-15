@@ -63,15 +63,18 @@ def algoexec():
     rsps = sliderule.engine("atl06", rqst)
 
     # Process Response Data
+    segments = [rsps[r]["ELEVATION"][i]["SEG_ID"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
     latitudes = [rsps[r]["ELEVATION"][i]["LAT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
     longitudes = [rsps[r]["ELEVATION"][i]["LON"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
     heights = [rsps[r]["ELEVATION"][i]["HEIGHT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
 
-    # Build Dataframe of SlideRule Responses
+    # Calculate Distances
     lat_origin = latitudes[0]
     lon_origin = longitudes[0]
-    dist = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
-    df = pd.DataFrame(data=heights, index=dist, columns=["sliderule"])
+    distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
+
+    # Build Dataframe of SlideRule Responses
+    df = pd.DataFrame(data=list(zip(heights, distances)), index=segments, columns=["height", "distance"])
 
     # Return DataFrame
     print("Retrieved {} points from SlideRule".format(len(heights)))
@@ -101,6 +104,11 @@ def expread():
         "id": 0
     }
 
+    # Read ATL06 (read-ICESat-2) Segments
+    rqst["dataset"] = "/gt1r/land_ice_segments/segment_id"
+    rsps = sliderule.engine("h5", rqst)
+    segments = recoverdata(rsps)
+
     # Read ATL06 (read-ICESat-2) Heights
     rqst["dataset"] = "/gt1r/land_ice_segments/h_li"
     rsps = sliderule.engine("h5", rqst)
@@ -119,13 +127,8 @@ def expread():
     # Build Dataframe of SlideRule Responses
     lat_origin = latitudes[0]
     lon_origin = longitudes[0]
-    dist = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
-    df = pd.DataFrame(data=heights, index=dist, columns=["atl06"])
-
-    # Filter Dataframe
-    df = df[df["atl06"] < 25000.0]
-    df = df[df["atl06"] > -25000.0]
-    df = df[df.index < 4000.0]
+    distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
+    df = pd.DataFrame(data=list(zip(heights, distances)), index=segments, columns=["height", "distance"])
 
     # Return DataFrame
     print("Retrieved {} points from ATL06, returning {} points".format(len(heights), len(df.values)))
@@ -145,11 +148,7 @@ if __name__ == '__main__':
     sliderule.populate("h5dataset")
 
     # Execute SlideRule Algorithm
-    if len(sys.argv) > 1 and sys.argv[1] == "ro":
-        # Skip algorithm and populate dummy dataframe
-        act = pd.DataFrame(data=[0,1,2], index=[0,1,2], columns=["sliderule"])
-    else:
-        act = algoexec()
+    act = algoexec()
 
     # Read ATL06 Expected Results
     exp = expread()
@@ -157,7 +156,10 @@ if __name__ == '__main__':
     # Plot Dataframe
     p = figure(title="Actual vs. Expected", plot_height=500, plot_width=800)
     for data, name, color in zip([act, exp], ["sliderule", "atl06"], Spectral11[:2]):
-        p.line(list(data.index), data[name], line_width=3, color=color, alpha=0.8, legend_label=name)
+        data = data[data["height"] < 25000.0]
+        data = data[data["height"] > -25000.0]
+        data = data[data["distance"] < 4000.0]
+        p.line(list(data.index), data["height"], line_width=3, color=color, alpha=0.8, legend_label=name)
     p.legend.location = "top_left"
     p.legend.click_policy="hide"
     show(p)
