@@ -272,6 +272,8 @@ LuaObject::~LuaObject (void)
 
 /*----------------------------------------------------------------------------
  * createLuaObject
+ * 
+ *  Note: if object is an alias, all calls into it from Lua must be thread safe
  *----------------------------------------------------------------------------*/
 int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)
 {
