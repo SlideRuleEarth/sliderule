@@ -3,11 +3,8 @@ local asset = require("asset")
 
 console.logger:config(core.INFO)
 
-assets = asset.load("asset_directory.csv")
-for k,v in pairs(assets) do
-    id = string.format("%s (%s)", k, v["format"])
-    print(string.format("%s: %s", id, v["url"]))
-end
+asset_directory = asset.load("asset_directory.csv")
+assets = asset.index(asset_directory)
 
 server = pistache.endpoint(9081)
 server:name("SlideRuleServer")

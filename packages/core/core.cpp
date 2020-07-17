@@ -73,6 +73,7 @@ int core_open (lua_State *L)
         {"metric",      MetricDispatch::luaCreate},
         {"publish",     PublisherDispatch::luaCreate},
         {"report",      ReportDispatch::luaCreate},
+        {"asset",       AssetIndex::luaCreate},
         {NULL,          NULL}
     };
 

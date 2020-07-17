@@ -22,6 +22,7 @@ if (LUA_FOUND AND READLINE_LIB)
     target_sources (sliderule
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/core.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.cpp
@@ -64,6 +65,7 @@ if (LUA_FOUND AND READLINE_LIB)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/core.h
+            ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.h
             ${CMAKE_CURRENT_LIST_DIR}/DeviceIO.h

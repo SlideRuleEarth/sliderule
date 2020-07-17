@@ -26,6 +26,7 @@
 
 #include "OsApi.h"
 
+#include "AssetIndex.h"
 #include "CaptureDispatch.h"
 #include "ClusterSocket.h"
 #include "DispatchObject.h"

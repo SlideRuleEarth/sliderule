@@ -56,7 +56,7 @@ class Dictionary
         virtual     ~Dictionary     (void);
 
         bool        add             (const char* key, T& data, bool unique=false);
-        T&          get             (const char* key); // returns NULL if not found
+        T&          get             (const char* key);
         bool        find            (const char* key);
         bool        remove          (const char* key);
         int         length          (void);
@@ -240,16 +240,9 @@ bool Dictionary<T>::add(const char* key, T& data, bool unique)
 template <class T>
 T& Dictionary<T>::get(const char* key)
 {
-    if(key != NULL)
-    {
-        unsigned int index = getNode(key);
-        if(index != NULL_INDEX)
-        {
-            return hashTable[index].data;
-        }
-    }
-
-    throw std::out_of_range("key not found");
+    unsigned int index = getNode(key);
+    if(index != NULL_INDEX) return hashTable[index].data;
+    else                    throw std::out_of_range("key not found");
 }
 
 /*----------------------------------------------------------------------------
@@ -510,9 +503,7 @@ const char* Dictionary<T>::last (T* data)
 template <class T>
 T& Dictionary<T>::operator[](const char* key)
 {
-    unsigned int index = getNode(key);
-    if(index != NULL_INDEX) return hashTable[index].data;
-    else                    throw std::out_of_range("key not found");
+    return get(key);
 }
 
 /*----------------------------------------------------------------------------
