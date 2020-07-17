@@ -24,6 +24,6 @@ $ mkdir -p build
 $ cd build
 $ cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DPISTACHE_USE_SSL=true ..
 $ make
-$ make install
+$ sudo make install
 $ sudo ldconfig
 ```
