@@ -47,17 +47,16 @@ const struct luaL_Reg AssetIndex::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, <format>, <url>, <index_file>)
+ * luaCreate - create(<name>, [<format>, <url>, <index_file>])
  *----------------------------------------------------------------------------*/
 int AssetIndex::luaCreate (lua_State* L)
 {
     try
     {
-        /* Get Parameters */
-        const char* name        = getLuaString(L, 1);
-        const char* format      = getLuaString(L, 2);
-        const char* url         = getLuaString(L, 3);
-        const char* index_file  = getLuaString(L, 4);
+        bool alias = false;
+
+        /* Get Required Parameters */
+        const char* name = getLuaString(L, 1);
 
         /* Determine if AssetIndex Exists */
         AssetIndex* asset = NULL;
@@ -66,6 +65,7 @@ int AssetIndex::luaCreate (lua_State* L)
             if(assets.find(name))
             {
                 asset = assets.get(name);
+                alias = true;
             }
         }
         assetsMut.unlock();
@@ -73,11 +73,14 @@ int AssetIndex::luaCreate (lua_State* L)
         /* Check if AssetIndex Needs to be Created */
         if(asset == NULL)
         {
+            const char* format      = getLuaString(L, 2);
+            const char* url         = getLuaString(L, 3);
+            const char* index_file  = getLuaString(L, 4);
             asset = new AssetIndex(L, name, format, url, index_file);
         }        
 
         /* Return AssetIndex Object */
-        return createLuaObject(L, asset);
+        return createLuaObject(L, asset, alias);
     }
     catch(const LuaException& e)
     {

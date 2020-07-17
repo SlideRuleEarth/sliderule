@@ -273,7 +273,7 @@ LuaObject::~LuaObject (void)
 /*----------------------------------------------------------------------------
  * createLuaObject
  *----------------------------------------------------------------------------*/
-int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
+int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)
 {
     /* Create Lua User Data Object */
     luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
@@ -284,6 +284,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 
     /* Return User Data to Lua */
     user_data->luaObj = lua_obj;
+    user_data->alias = alias;
     luaL_getmetatable(L, lua_obj->LuaMetaName);
     lua_setmetatable(L, -2);
     return 1;
@@ -299,31 +300,34 @@ int LuaObject::deleteLuaObject (lua_State* L)
         luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
         if(user_data)
         {
-            LuaObject* lua_obj = user_data->luaObj;
-            if(lua_obj)
+            if(!user_data->alias)
             {
-                mlog(INFO, "Garbage collecting object %s of type %s\n", lua_obj->getName(), lua_obj->getType());
-                lockMut.lock();
+                LuaObject* lua_obj = user_data->luaObj;
+                if(lua_obj)
                 {
-                    if(!lua_obj->isLocked)
+                    mlog(INFO, "Garbage collecting object %s of type %s\n", lua_obj->getName(), lua_obj->getType());
+                    lockMut.lock();
                     {
-                        /* Delete Object */
-                        delete lua_obj;
-                        user_data->luaObj = NULL;
+                        if(!lua_obj->isLocked)
+                        {
+                            /* Delete Object */
+                            delete lua_obj;
+                            user_data->luaObj = NULL;
+                        }
+                        else
+                        {
+                            mlog(INFO, "Delaying delete on locked object %s\n", lua_obj->getName());
+                        }
                     }
-                    else
-                    {
-                        mlog(INFO, "Delaying delete on locked object %s\n", lua_obj->getName());
-                    }
+                    lockMut.unlock();
                 }
-                lockMut.unlock();
-            }
-            else
-            {
-                /* This will occurr, for instance, when a device is closed
-                 * explicitly, and then also deleted when the lua variable
-                 * goes out of scope and is garbage collected */
-                mlog(INFO, "Vacuous delete of lua object that has already been deleted\n");
+                else
+                {
+                    /* This will occurr, for instance, when a device is closed
+                    * explicitly, and then also deleted when the lua variable
+                    * goes out of scope and is garbage collected */
+                    mlog(INFO, "Vacuous delete of lua object that has already been deleted\n");
+                }
             }
         }
         else

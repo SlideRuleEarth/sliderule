@@ -69,7 +69,8 @@ class LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            LuaObject* luaObj;
+            LuaObject*  luaObj;
+            bool        alias;
         } luaUserData_t;
 
         /*--------------------------------------------------------------------
@@ -105,7 +106,7 @@ class LuaObject
                             LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]);
         virtual             ~LuaObject          (void);
 
-        static int          createLuaObject     (lua_State* L, LuaObject* lua_obj);
+        static int          createLuaObject     (lua_State* L, LuaObject* lua_obj, bool alias=false);
         static int          deleteLuaObject     (lua_State* L);
         static int          associateLuaName    (lua_State* L);
 

@@ -15,13 +15,21 @@ expected = {
 
 -- Unit Test --
 
-print('\n------------------\nTest01\n------------------')
+print('\n------------------\nTest01: Print Info\n------------------')
 for _,v in pairs(assets) do
     name, format, url, status = v:info()
     runner.compare(format, expected[name]["format"])
     runner.compare(url, expected[name]["url"])
     runner.check(status)
 end
+
+print('\n------------------\nTest02: Retrieve Existing Asset\n------------------')
+a1 = core.asset("dataset1")
+name, format, url, status = a1:info()
+runner.compare(name, "dataset1")
+runner.compare(format, expected["dataset1"]["format"])
+runner.compare(url, expected["dataset1"]["url"])
+
 
 -- Clean Up --
 
