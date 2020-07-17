@@ -37,6 +37,7 @@ Mutex                   AssetIndex::assetsMut;
 const char* AssetIndex::OBJECT_TYPE = "AssetIndex";
 const char* AssetIndex::LuaMetaName = "AssetIndex";
 const struct luaL_Reg AssetIndex::LuaMetaTable[] = {
+    {"info",        luaInfo},
     {NULL,          NULL}
 };
 
@@ -143,14 +144,21 @@ AssetIndex::~AssetIndex (void)
 
 
 /*----------------------------------------------------------------------------
- * luaIndex - :index(<index>) --> objects
+ * luaInfo - :info() --> name, format, url
  *----------------------------------------------------------------------------*/
-int AssetIndex::luaIndex (lua_State* L)
+int AssetIndex::luaInfo (lua_State* L)
 {
     bool status = false;
 
     try
     {
+        /* Get Self */
+        AssetIndex* lua_obj = (AssetIndex*)getLuaSelf(L, 1);
+
+        /* Push Info */
+        lua_pushlstring(L, lua_obj->name,   StringLib::size(lua_obj->name));
+        lua_pushlstring(L, lua_obj->format, StringLib::size(lua_obj->format));
+        lua_pushlstring(L, lua_obj->url,    StringLib::size(lua_obj->url));
 
         /* Set Status */
         status = true;
@@ -161,5 +169,5 @@ int AssetIndex::luaIndex (lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, 2);
+    return returnLuaStatus(L, status, 4);
 }

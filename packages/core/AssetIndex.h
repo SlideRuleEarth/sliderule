@@ -77,7 +77,7 @@ class AssetIndex: public LuaObject
                         AssetIndex      (lua_State* L, const char* name, const char* format, const char* url, const char* index_file);
         virtual         ~AssetIndex     (void);
 
-        static int      luaIndex        (lua_State* L);
+        static int      luaInfo         (lua_State* L);
 };
 
 #endif  /* __asset_index__ */

@@ -1,0 +1,3 @@
+asset,format,url,index
+dataset1,json,/data/1,dataset1.index
+dataset2,binary,/data/2,dataset2.index

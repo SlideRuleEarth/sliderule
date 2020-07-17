@@ -48,10 +48,14 @@ Function:   scriptsrc
  Purpose:   pattern matching on source info to return calling script
    Notes:   none
 ]]
-local function srcscript ()
+local function srcscript (fullpath)
     local info = debug.getinfo(2,'S');
-    local src = info.source:match("^.+/(.+)$")
-    return src
+    if fullpath then
+        return info.source
+    else
+        local src = info.source:match("^.+/(.+)$")
+        return src
+    end
 end
 
 --[[
@@ -135,6 +139,7 @@ local function compare(str1, str2)
     bytes2 = {string.byte(str2, 0, -1)}
     if #bytes1 ~= #bytes2 then
         print("Strings are of unequal length: " .. tostring(#bytes1) .. " ~= " .. tostring(#bytes2))
+        print(str1, str2)
         status = false
     else
         for i=1,#bytes1 do
