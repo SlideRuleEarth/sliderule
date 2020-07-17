@@ -6,11 +6,7 @@
 --                  "filename":     "<name of hdf5 file>"
 --                  "track":        <track number: 1, 2, 3>
 --                  "stages":       [<algorith stage 1>, ...]
---                  "parms":
---                  {
---                      "srt":      <surface type - default = LAND ICE(3)>
---                      "cnf":      <signal confidence level - default = SURFACE HIGH(4)>
---                  }
+--                  "parms":        {<table of parameters>}
 --              }
 --
 --              rspq - output queue to stream results
@@ -23,12 +19,12 @@
 --
 
 local json = require("json")
-local rqst = json.decode(arg[1])
 
 -- Internal Parameters --
 local str2stage = { LSF=icesat2.STAGE_LSF }
 
 -- Request Parameters --
+local rqst = json.decode(arg[1])
 local filename = rqst["filename"]
 local track = rqst["track"]
 local stages = rqst["stages"]

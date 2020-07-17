@@ -99,4 +99,4 @@ if __name__ == '__main__':
     print("Plotting {} points".format(len(heights)))
 
     # Plot Dataframe
-    dfbokeh(df, "atl06")
+#    dfbokeh(df, "atl06")

@@ -1071,9 +1071,11 @@ int LuaEngine::pmain (lua_State *L)
         lua_readline_interpreter = li; /* install current engine for readline support */
         rl_event_hook = readlinecb; /* install call-back for readline */
 
-        /* Start Interactive Mode */
-        lua_writestring(LUA_COPYRIGHT, StringLib::size(LUA_COPYRIGHT));
-        lua_writeline();
+        /* Start Interactive Mode 
+         * lua_writestring(LUA_COPYRIGHT, StringLib::size(LUA_COPYRIGHT));
+         * lua_writeline();
+         */
+        LocalLib::sleep(1);
         li->doREPL();  /* do read-eval-print loop */
     }
 

@@ -36,10 +36,12 @@ install (
         ${INCDIR}
 )
 
-file (GLOB SCRIPTS
-    endpoints/*.lua
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06.lua
+        ${CMAKE_CURRENT_LIST_DIR}/config/asset_directory.csv
+    DESTINATION
+        ${CONFDIR}
 )
-
-install (FILES ${SCRIPTS} DESTINATION ${CONFDIR})
 
 install (TARGETS icesat2Lib LIBRARY DESTINATION ${CONFDIR})
