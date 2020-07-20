@@ -41,7 +41,7 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, int col=-1);
+                H5Array     (const char* url, const char* dataset, unsigned col=0);
         virtual ~H5Array    (void);
 
         T&      operator[]  (int index);
@@ -63,7 +63,7 @@ class H5Array
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const char* url, const char* dataset, int col)
+H5Array<T>::H5Array(const char* url, const char* dataset, unsigned col)
 {
     name = NULL;
     data = NULL;

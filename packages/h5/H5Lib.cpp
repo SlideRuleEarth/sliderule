@@ -145,7 +145,7 @@ void H5Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, int col, int maxrows)
+H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, unsigned col, unsigned maxrows)
 {
     info_t info;
     bool status = false;
@@ -211,39 +211,25 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         hsize_t* dims = new hsize_t[ndims];
         H5Sget_simple_extent_dims(dataspace, dims, NULL);
 
-        /* Select Specific Column */
-        if( ((col >= 0) && (ndims == 2)) || ((col == 0) && (ndims == 1)) )
-        {
-            /* Allocate Hyperspace Parameters */
-            hsize_t* start = new hsize_t[ndims];
-            hsize_t* count = new hsize_t[ndims];
+        /* Allocate Hyperspace Parameters */
+        hsize_t* start = new hsize_t[ndims];
+        hsize_t* count = new hsize_t[ndims];
 
-            /* Readjust First Dimension */
-            dims[0] = MAX(maxrows, (int)dims[0]);
+        /* Readjust First Dimension */
+        if(maxrows > 0) dims[0] = MIN(maxrows, dims[0]);
 
-            /* Create File Hyperspace to Read Selected Column */
-            start[0] = 0;
-            start[1] = col;
-            count[0] = dims[0];
-            count[1] = 1;
-            H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, start, NULL, count, NULL);
+        /* Create File Hyperspace to Read Selected Column */
+        start[0] = 0;
+        start[1] = col;
+        count[0] = dims[0];
+        count[1] = 1;
+        H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, start, NULL, count, NULL);
 
-            /* Create Memory Hyperspace to Write Selected Column */
-            dims[1] = 1; // readjust dimensions to reflect single column being read
-            start[1] = 0; // readjust start to reflect writing to only a single column
-            memspace = H5Screate_simple(ndims, dims, NULL);
-            H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start, NULL, count, NULL);
-
-            /* Free Hyperspace Parameters */
-            delete [] start;
-            delete [] count;
-        }
-        else if(col >= 0)
-        {
-            mlog(CRITICAL, "Unsupported column selection of %d on dataset of rank %d\n", col, ndims);
-            delete [] dims;
-            break;
-        }
+        /* Create Memory Hyperspace to Write Selected Column */
+        dims[1] = 1; // readjust dimensions to reflect single column being read
+        start[1] = 0; // readjust start to reflect writing to only a single column
+        memspace = H5Screate_simple(ndims, dims, NULL);
+        H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start, NULL, count, NULL);
 
         /* Get Number of Elements */
         int elements = 1;
@@ -252,8 +238,10 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             elements *= (int32_t)dims[d];
         }
 
-        /* Free Dimension Array */
+        /* Free Hyperspace Parameters */
         delete [] dims;
+        delete [] start;
+        delete [] count;
 
         /* Get Size of Data */
         long datasize = elements * typesize;

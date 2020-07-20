@@ -48,7 +48,7 @@ class GTArray
          * Methods
          *--------------------------------------------------------------------*/
 
-                    GTArray     (const char* url, int track, const char* gt_dataset, int col=-1);
+                    GTArray     (const char* url, int track, const char* gt_dataset, unsigned col=0);
         virtual     ~GTArray    (void);
 
         H5Array<T>& operator[]  (int index);
@@ -68,7 +68,7 @@ class GTArray
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-GTArray<T>::GTArray(const char* url, int track, const char* gt_dataset, int col):
+GTArray<T>::GTArray(const char* url, int track, const char* gt_dataset, unsigned col):
     gt{ H5Array<T>(url, SafeString("/gt%dl/%s", track, gt_dataset).getString(), col),
         H5Array<T>(url, SafeString("/gt%dr/%s", track, gt_dataset).getString(), col) }
 {

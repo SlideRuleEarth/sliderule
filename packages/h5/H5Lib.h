@@ -44,7 +44,7 @@ struct H5Lib
     static void init(void);
     static void deinit(void);
 
-    static info_t read (const char* url, const char* datasetname, RecordObject::valType_t valtype=RecordObject::DYNAMIC, int col=-1, int maxrows=-1);
+    static info_t read (const char* url, const char* datasetname, RecordObject::valType_t valtype=RecordObject::DYNAMIC, unsigned col=0, unsigned maxrows=0);
     static bool traverse (const char* url, int max_depth, const char* start_group);
 };
 
