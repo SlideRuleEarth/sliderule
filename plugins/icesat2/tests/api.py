@@ -7,6 +7,9 @@ sys.path.append("/usr/local/etc/sliderule")
 import json
 import sliderule
 
+#h5file = "/home/user1/demo/ATL03_20181014040628_02370109_002_01.h5"
+h5file = "/data/ATLAS/ATL03_20181014040628_02370109_002_01.h5"
+
 ###############################################################################
 # TESTS
 ###############################################################################
@@ -59,7 +62,7 @@ def test_time ():
 #
 def test_h5 ():
     rqst = {
-        "filename": "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5",
+        "filename": h5file,
         "dataset": "ancillary_data/atlas_sdp_gps_epoch",
         "datatype": sliderule.datatypes["REAL"],
         "id": 0
@@ -79,7 +82,7 @@ def test_h5 ():
 #
 def test_variable_length ():
     rqst = {
-        "filename": "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5",
+        "filename": h5file,
         "dataset": "/gt1r/geolocation/segment_ph_cnt",
         "datatype": sliderule.datatypes["INTEGER"],
         "id": 0
@@ -88,7 +91,7 @@ def test_variable_length ():
     d = sliderule.engine("h5", rqst)
     v = sliderule.get_values(d[0]["DATA"], d[0]["DATATYPE"], d[0]["SIZE"])
 
-    if v[0] == 292 and v[1] == 299 and v[2] == 264:
+    if v[0] == 75 and v[1] == 82 and v[2] == 61:
         print("Passed variable length test")
     else:
         print("Failed variable length test")
