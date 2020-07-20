@@ -147,6 +147,7 @@ void H5Lib::deinit (void)
  *----------------------------------------------------------------------------*/
 int H5Lib::read (const char* url, const char* datasetname, int col, size_t datatypesize, uint8_t** data)
 {
+    bool status = false;
     int size = 1;
 
     /* Start Trace */
@@ -251,7 +252,11 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
 
         /* Read Dataset */
         mlog(INFO, "Reading %d elements from %s\n", size, datasetname);
-        if(H5Dread(dataset, datatype, memspace, filespace, H5P_DEFAULT, *data) < 0)
+        if(H5Dread(dataset, datatype, memspace, filespace, H5P_DEFAULT, *data) >= 0)
+        {
+            status = true;
+        }
+        else
         {
             mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
             delete [] *data;
@@ -272,8 +277,8 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
     stop_trace(trace_id);
 
     /* Return Size of Data (number of elements) */
-    if(size <= 0)   throw std::runtime_error("H5Lib");
-    else            return size;
+    if(status) return size;
+    else       throw std::runtime_error("H5Lib");
 }
 
 /*----------------------------------------------------------------------------
@@ -281,6 +286,7 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
  *----------------------------------------------------------------------------*/
 int H5Lib::readAs (const char* url, const char* datasetname, RecordObject::valType_t valtype, uint8_t** data)
 {
+    bool status = false;
     int size = 0;
 
     hid_t file = INVALID_RC;
@@ -362,7 +368,11 @@ int H5Lib::readAs (const char* url, const char* datasetname, RecordObject::valTy
 
             /* Read Dataset */
             mlog(INFO, "Reading %d bytes of data from %s\n", size, datasetname);
-            if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, *data) < 0)
+            if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, *data) >= 0)
+            {
+                status = true;
+            }
+            else
             {
                 mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
                 delete [] *data;
@@ -385,8 +395,8 @@ int H5Lib::readAs (const char* url, const char* datasetname, RecordObject::valTy
     if(file > 0) H5Fclose(file);
 
     /* Return Size */
-    if(size <= 0)   throw std::runtime_error("H5Lib");
-    else            return size;
+    if(status)  return size;
+    else        throw std::runtime_error("H5Lib");
 }
 
 /*----------------------------------------------------------------------------
