@@ -272,7 +272,8 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
     stop_trace(trace_id);
 
     /* Return Size of Data (number of elements) */
-    return size;
+    if(size <= 0)   throw std::runtime_error("H5Lib");
+    else            return size;
 }
 
 /*----------------------------------------------------------------------------
@@ -384,7 +385,8 @@ int H5Lib::readAs (const char* url, const char* datasetname, RecordObject::valTy
     if(file > 0) H5Fclose(file);
 
     /* Return Size */
-    return size;
+    if(size <= 0)   throw std::runtime_error("H5Lib");
+    else            return size;
 }
 
 /*----------------------------------------------------------------------------

@@ -114,16 +114,16 @@ def test_definition ():
 
 if __name__ == '__main__':
 
+    # Override server URL from command line
+
+    if len(sys.argv) > 1:
+        sliderule.set_url(sys.argv[1])
+
     # Populate record definitions
 
     sliderule.populate("atl03rec")
     sliderule.populate("atl03rec.photons")
     sliderule.populate("h5dataset")
-
-    # Override server URL from command line
-
-    if len(sys.argv) > 1:
-        sliderule.set_url(sys.argv[1])
 
     # Tests
 

@@ -117,8 +117,18 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     config = new char[cfglen];
     sprintf(config, "%s (%s)", fileName, role == READER ? "READER" : "WRITER");
 
-    /* Open File */
-    connected = h5open();
+    /* Read File */
+    try
+    {
+        dataSize = H5Lib::readAs(fileName, dataName, (RecordObject::valType_t)recData->datatype, (uint8_t**)&dataBuffer);
+        connected = true;
+    }
+    catch (const std::runtime_error& e)
+    {
+        mlog(CRITICAL, "Failed to create H5DatasetDevice: %s\n", e.what());
+        dataSize = false;
+        connected = false;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -130,25 +140,6 @@ H5DatasetDevice::~H5DatasetDevice (void)
     if(config) delete [] config;
     if(dataName) delete [] dataName;
     if(fileName) delete [] fileName;
-}
-
-/*----------------------------------------------------------------------------
- * h5open
- *----------------------------------------------------------------------------*/
-bool H5DatasetDevice::h5open (void)
-{
-    /* Check Reentry */
-    if(dataBuffer)
-    {
-        mlog(CRITICAL, "Dataset already opened: %s\n", dataName);
-        return false;
-    }
-
-    /* Read File */
-    dataSize = H5Lib::readAs(fileName, dataName, (RecordObject::valType_t)recData->datatype, (uint8_t**)&dataBuffer);
-
-    /* Return Status */
-    return (dataSize > 0);
 }
 
 /*----------------------------------------------------------------------------

@@ -39,7 +39,6 @@ def dfbokeh(df, col, cond_col="", cond_val=0):
 if __name__ == '__main__':
 
     # Default Parameters #
-    server_url = 'http://127.0.0.1:9081'
     filename = "/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5"
     track = 1
     stages = ["LSF"]
@@ -50,7 +49,7 @@ if __name__ == '__main__':
 
         # Override server_url
         if sys.argv[parm + 1] == "--url":
-            server_url = sys.argv[parm + 2]
+            sliderule.set_url(sys.argv[parm + 2])
             parm += 2
 
         # Override filename
@@ -99,4 +98,4 @@ if __name__ == '__main__':
     print("Plotting {} points".format(len(heights)))
 
     # Plot Dataframe
-#    dfbokeh(df, "atl06")
+    dfbokeh(df, "atl06")

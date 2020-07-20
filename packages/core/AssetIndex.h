@@ -70,6 +70,20 @@ class AssetIndex: public LuaObject
         const char*                     indexFile;
         bool                            registered;
 
+
+// TODO: timeseries index t1, t2
+// TODO: geospatial index lat1,lon1,lat2,lon2
+// TODO: fieldhash index (for all other fields in index file)
+
+// parse index file and build all of the above indexes if the data is present in the index file (note that t1, t2, lat1, ... are all keywords)
+
+// provide lua functions:
+//  range([list of time ranges]) --> list of objects
+//  polygon([list of lat,lon polygons]) --> list of objects
+//  select([list of field value expressions]) --> list of objects
+
+// note that the expression should include NOT, AND, OR, ==, <, >, <=, >=
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
