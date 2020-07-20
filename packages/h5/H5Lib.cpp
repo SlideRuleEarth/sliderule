@@ -145,10 +145,10 @@ void H5Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-int H5Lib::read (const char* url, const char* datasetname, int col, size_t datatypesize, uint8_t** data)
+H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, int col, int maxrows)
 {
+    info_t info;
     bool status = false;
-    int size = 1;
 
     /* Start Trace */
     uint32_t parent_trace_id = TraceLib::grabId();
@@ -160,6 +160,8 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
     hid_t filespace = H5S_ALL;
     hid_t memspace = H5S_ALL;
     hid_t datatype = INVALID_RC;
+    bool datatype_allocated = false;
+
     do
     {
         mlog(INFO, "Opening resource: %s\n", url);
@@ -187,142 +189,6 @@ int H5Lib::read (const char* url, const char* datasetname, int col, size_t datat
         }
 
         /* Get Datatype */
-        datatype = H5Dget_type(dataset);
-        size_t typesize = H5Tget_size(datatype);
-        if(typesize != datatypesize)
-        {
-            mlog(CRITICAL, "Incompatible type provided (%d != %d) for dataset: %s\n", (int)typesize, (int)datatypesize, datasetname);
-            break;
-        }
-
-        /* Get Dimensions of Data */
-        int ndims = H5Sget_simple_extent_ndims(filespace);
-        hsize_t* dims = new hsize_t[ndims];
-        H5Sget_simple_extent_dims(filespace, dims, NULL);
-
-        /* Select Specific Column */
-        if(col >= 0)
-        {
-            if(ndims == 2)
-            {
-                /* Allocate Hyperspace Parameters */
-                hsize_t* start = new hsize_t[ndims];
-                hsize_t* count = new hsize_t[ndims];
-
-                /* Create File Hyperspace to Read Selected Column */
-                start[0] = 0;
-                start[1] = col;
-                count[0] = dims[0];
-                count[1] = 1;
-                H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start, NULL, count, NULL);
-
-                /* Create Memory Hyperspace to Write Selected Column */
-                dims[1] = 1; // readjust dimensions to reflect single column being read
-                start[1] = 0; // readjust start to reflect writing to only a single column
-                memspace = H5Screate_simple(ndims, dims, NULL);
-                H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start, NULL, count, NULL);
-
-                /* Free Hyperspace Parameters */
-                delete [] start;
-                delete [] count;
-            }
-            else
-            {
-                mlog(CRITICAL, "Unsupported column selection on dataset of rank: %d\n", ndims);
-            }
-        }
-
-        /* Get Size of Data Buffer */
-        for(int d = 0; d < ndims; d++)
-        {
-            size *= (int32_t)dims[d];
-        }
-
-        /* Allocate Data Buffer */
-        try
-        {
-            *data = new uint8_t[datatypesize * size];
-        }
-        catch (const std::bad_alloc& e)
-        {
-            mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", size);
-            size = 0;
-            break;
-        }
-
-        /* Read Dataset */
-        mlog(INFO, "Reading %d elements from %s\n", size, datasetname);
-        if(H5Dread(dataset, datatype, memspace, filespace, H5P_DEFAULT, *data) >= 0)
-        {
-            status = true;
-        }
-        else
-        {
-            mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
-            delete [] *data;
-            size = 0;
-            break;
-        }
-    }
-    while(false);
-
-    /* Clean Up */
-    if(file > 0) H5Fclose(file);
-    if(datatype > 0) H5Tclose(datatype);
-    if(filespace != H5S_ALL) H5Sclose(filespace);
-    if(memspace != H5S_ALL) H5Sclose(memspace);
-    if(dataset > 0) H5Dclose(dataset);
-
-    /* Stop Trace */
-    stop_trace(trace_id);
-
-    /* Return Size of Data (number of elements) */
-    if(status) return size;
-    else       throw std::runtime_error("H5Lib");
-}
-
-/*----------------------------------------------------------------------------
- * readAs
- *----------------------------------------------------------------------------*/
-int H5Lib::readAs (const char* url, const char* datasetname, RecordObject::valType_t valtype, uint8_t** data)
-{
-    bool status = false;
-    int size = 0;
-
-    hid_t file = INVALID_RC;
-    hid_t dataset = INVALID_RC;
-    hid_t space = INVALID_RC;
-    hid_t datatype = INVALID_RC;
-    bool datatype_allocated = false;
-
-    do
-    {
-        /* Open File */
-        mlog(INFO, "Opening file: %s\n", url);
-        file = H5Fopen(url, H5F_ACC_RDONLY, file_access_properties);
-        if(file < 0)
-        {
-            mlog(CRITICAL, "Failed to open file: %s\n", url);
-            break;
-        }
-
-        /* Open Dataset */
-        dataset = H5Dopen(file, datasetname, H5P_DEFAULT);
-        if(dataset < 0)
-        {
-            mlog(CRITICAL, "Failed to open dataset: %s\n", datasetname);
-            break;
-        }
-
-        /* Open Dataspace */
-        space = H5Dget_space(dataset);
-        if(space < 0)
-        {
-            mlog(CRITICAL, "Failed to open dataspace on dataset: %s\n", datasetname);
-            break;
-        }
-
-        /* Get Datatype */
         if(valtype == RecordObject::INTEGER)
         {
             datatype = H5T_NATIVE_INT;
@@ -337,65 +203,99 @@ int H5Lib::readAs (const char* url, const char* datasetname, RecordObject::valTy
             datatype_allocated = true;
         }
 
-        /* Get Datatype Size */
+        /* Get Type Size */
         size_t typesize = H5Tget_size(datatype);
 
-        /* Read Data */
-        int ndims = H5Sget_simple_extent_ndims(space);
-        if(ndims <= MAX_NDIMS)
+        /* Get Dimensions of Data */
+        int ndims = H5Sget_simple_extent_ndims(filespace);
+        hsize_t* dims = new hsize_t[ndims];
+        H5Sget_simple_extent_dims(filespace, dims, NULL);
+
+        /* Select Specific Column */
+        if( ((col >= 0) && (ndims == 2)) || ((col == 0) && (ndims == 1)) )
         {
-            hsize_t* dims = new hsize_t[ndims];
-            H5Sget_simple_extent_dims(space, dims, NULL);
+            /* Allocate Hyperspace Parameters */
+            hsize_t* start = new hsize_t[ndims];
+            hsize_t* count = new hsize_t[ndims];
 
-            /* Get Size of Data Buffer */
-            size = typesize;
-            for(int d = 0; d < ndims; d++)
-            {
-                size *= dims[d];
-            }
+            /* Create File Hyperspace to Read Selected Column */
+            start[0] = 0;
+            start[1] = col;
+            count[0] = MAX(maxrows, (int)dims[0]);
+            count[1] = 1;
+            H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start, NULL, count, NULL);
 
-            /* Allocate Data Buffer */
-            try
-            {
-                *data = new uint8_t[size];
-            }
-            catch (const std::bad_alloc& e)
-            {
-                mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", size);
-                size = 0;
-                break;
-            }
+            /* Create Memory Hyperspace to Write Selected Column */
+            dims[1] = 1; // readjust dimensions to reflect single column being read
+            start[1] = 0; // readjust start to reflect writing to only a single column
+            memspace = H5Screate_simple(ndims, dims, NULL);
+            H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start, NULL, count, NULL);
 
-            /* Read Dataset */
-            mlog(INFO, "Reading %d bytes of data from %s\n", size, datasetname);
-            if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, *data) >= 0)
-            {
-                status = true;
-            }
-            else
-            {
-                mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
-                delete [] *data;
-                size = 0;
-                break;
-            }
+            /* Free Hyperspace Parameters */
+            delete [] start;
+            delete [] count;
+        }
+        else if(col >= 0)
+        {
+            mlog(CRITICAL, "Unsupported column selection of %d on dataset of rank %d\n", col, ndims);
+            break;
+        }
+
+        /* Get Number of Elements */
+        int elements = 1;
+        for(int d = 0; d < ndims; d++)
+        {
+            elements *= (int32_t)dims[d];
+        }
+
+        /* Get Size of Data */
+        long datasize = elements * typesize;
+
+        /* Allocate Data Buffer */
+        uint8_t* data = NULL;
+        try
+        {
+            data = new uint8_t[datasize];
+        }
+        catch (const std::bad_alloc& e)
+        {
+            mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", elements);
+            break;
+        }
+
+        /* Read Dataset */
+        mlog(INFO, "Reading %d elements (%ld bytes) from %s\n", elements, datasize, datasetname);
+        if(H5Dread(dataset, datatype, memspace, filespace, H5P_DEFAULT, data) >= 0)
+        {
+            status = true;
         }
         else
         {
-            mlog(CRITICAL, "Number of dimensions exceeded maximum allowed: %d\n", ndims);
+            mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
+            delete [] data;
             break;
         }
+
+        /* Set Info Return Structure */
+        info.elements = elements;
+        info.typesize = typesize;
+        info.datasize = datasize;
+        info.data = data;
     }
     while(false);
 
     /* Clean Up */
-    if(datatype_allocated && datatype > 0) H5Tclose(datatype);
-    if(space > 0) H5Sclose(space);
-    if(dataset > 0) H5Dclose(dataset);
     if(file > 0) H5Fclose(file);
+    if(datatype_allocated && datatype > 0) H5Tclose(datatype);
+    if(filespace != H5S_ALL) H5Sclose(filespace);
+    if(memspace != H5S_ALL) H5Sclose(memspace);
+    if(dataset > 0) H5Dclose(dataset);
 
-    /* Return Size */
-    if(status)  return size;
+    /* Stop Trace */
+    stop_trace(trace_id);
+
+    /* Return Info */
+    if(status)  return info;
     else        throw std::runtime_error("H5Lib");
 }
 

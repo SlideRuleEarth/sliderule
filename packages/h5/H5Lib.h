@@ -34,11 +34,17 @@ struct H5Lib
 {
     static const int MAX_NDIMS = 8;
 
+    typedef struct {
+        int elements;   // number of elements in dataset
+        int typesize;   // number of bytes per element
+        int datasize;   // total number of bytes in dataset
+        uint8_t* data;  // point to allocated data buffer
+    } info_t;
+
     static void init(void);
     static void deinit(void);
 
-    static int read (const char* url, const char* datasetname, int col, size_t datatypesize, uint8_t** data);
-    static int readAs (const char* url, const char* datasetname, RecordObject::valType_t valtype, uint8_t** data);
+    static info_t read (const char* url, const char* datasetname, RecordObject::valType_t valtype=RecordObject::DYNAMIC, int col=-1, int maxrows=-1);
     static bool traverse (const char* url, int max_depth, const char* start_group);
 };
 

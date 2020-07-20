@@ -91,7 +91,7 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "STRING",               RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                 RecordObject::REAL);
     LuaEngine::setAttrInt   (L, "INTEGER",              RecordObject::INTEGER);
-    LuaEngine::setAttrInt   (L, "DYNAMIC",              RecordObject::INVALID_VALUE);
+    LuaEngine::setAttrInt   (L, "DYNAMIC",              RecordObject::DYNAMIC);
     LuaEngine::setAttrInt   (L, "READER",               DeviceObject::READER);
     LuaEngine::setAttrInt   (L, "WRITER",               DeviceObject::WRITER);
     LuaEngine::setAttrInt   (L, "DUPLEX",               DeviceObject::DUPLEX);

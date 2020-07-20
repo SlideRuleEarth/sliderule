@@ -914,8 +914,8 @@ RecordObject::valType_t RecordObject::getValueType(field_t f)
         case DOUBLE:    return REAL;
         case TIME8:     return REAL;
         case STRING:    return TEXT;
-        case USER:      return INVALID_VALUE;
-        default:        return INVALID_VALUE;
+        case USER:      return DYNAMIC;
+        default:        return DYNAMIC;
     }
 }
 
@@ -1225,7 +1225,7 @@ const char* RecordObject::vt2str (valType_t vt)
         case TEXT:      return "TEXT";
         case REAL:      return "REAL";
         case INTEGER:   return "INTEGER";
-        default:        return "INVALID_VALUE";
+        default:        return "DYNAMIC";
     }
 }
 

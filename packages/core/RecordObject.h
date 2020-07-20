@@ -95,7 +95,7 @@ class RecordObject
             TEXT,
             REAL,
             INTEGER,
-            INVALID_VALUE
+            DYNAMIC
         } valType_t;
 
         typedef enum {

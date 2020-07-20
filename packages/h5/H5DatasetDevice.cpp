@@ -56,7 +56,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         const char* dataset_name    = getLuaString(L, 3);
         long        id              = getLuaInteger(L, 4, true, 0);
         bool        raw_mode        = getLuaBoolean(L, 5, true, true);
-        RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 6, true, RecordObject::INVALID_VALUE);
+        RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 6, true, RecordObject::DYNAMIC);
 
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
@@ -120,7 +120,9 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     /* Read File */
     try
     {
-        dataSize = H5Lib::readAs(fileName, dataName, (RecordObject::valType_t)recData->datatype, (uint8_t**)&dataBuffer);
+        H5Lib::info_t info = H5Lib::read(fileName, dataName, (RecordObject::valType_t)recData->datatype);
+        dataBuffer = info.data;
+        dataSize = info.datasize;
         connected = true;
     }
     catch (const std::runtime_error& e)

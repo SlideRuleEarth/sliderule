@@ -65,9 +65,15 @@ class H5Array
 template <class T>
 H5Array<T>::H5Array(const char* url, const char* dataset, int col)
 {
+    name = NULL;
     data = NULL;
+    size = 0;
+    
+    H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col);
+
     name = StringLib::duplicate(dataset);
-    size = H5Lib::read(url, dataset, col, sizeof(T), (uint8_t**)&data);
+    data = (T*)info.data;
+    size = info.elements;
 }
 
 /*----------------------------------------------------------------------------
