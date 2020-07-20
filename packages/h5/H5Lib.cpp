@@ -157,8 +157,8 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     /* Start with Invalid Handles */
     hid_t file = INVALID_RC;
     hid_t dataset = INVALID_RC;
-    hid_t filespace = H5S_ALL;
     hid_t memspace = H5S_ALL;
+    hid_t dataspace = H5S_ALL;
     hid_t datatype = INVALID_RC;
     bool datatype_allocated = false;
 
@@ -181,8 +181,8 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         }
 
         /* Open Dataspace */
-        filespace = H5Dget_space(dataset);
-        if(filespace < 0)
+        dataspace = H5Dget_space(dataset);
+        if(dataspace < 0)
         {
             mlog(CRITICAL, "Failed to open dataspace on dataset: %s\n", datasetname);
             break;
@@ -207,9 +207,9 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         size_t typesize = H5Tget_size(datatype);
 
         /* Get Dimensions of Data */
-        int ndims = H5Sget_simple_extent_ndims(filespace);
+        int ndims = H5Sget_simple_extent_ndims(dataspace);
         hsize_t* dims = new hsize_t[ndims];
-        H5Sget_simple_extent_dims(filespace, dims, NULL);
+        H5Sget_simple_extent_dims(dataspace, dims, NULL);
 
         /* Select Specific Column */
         if( ((col >= 0) && (ndims == 2)) || ((col == 0) && (ndims == 1)) )
@@ -218,12 +218,15 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             hsize_t* start = new hsize_t[ndims];
             hsize_t* count = new hsize_t[ndims];
 
+            /* Readjust First Dimension */
+            dims[0] = MAX(maxrows, (int)dims[0]);
+
             /* Create File Hyperspace to Read Selected Column */
             start[0] = 0;
             start[1] = col;
-            count[0] = MAX(maxrows, (int)dims[0]);
+            count[0] = dims[0];
             count[1] = 1;
-            H5Sselect_hyperslab(filespace, H5S_SELECT_SET, start, NULL, count, NULL);
+            H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, start, NULL, count, NULL);
 
             /* Create Memory Hyperspace to Write Selected Column */
             dims[1] = 1; // readjust dimensions to reflect single column being read
@@ -238,6 +241,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         else if(col >= 0)
         {
             mlog(CRITICAL, "Unsupported column selection of %d on dataset of rank %d\n", col, ndims);
+            delete [] dims;
             break;
         }
 
@@ -247,6 +251,9 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         {
             elements *= (int32_t)dims[d];
         }
+
+        /* Free Dimension Array */
+        delete [] dims;
 
         /* Get Size of Data */
         long datasize = elements * typesize;
@@ -265,7 +272,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
         /* Read Dataset */
         mlog(INFO, "Reading %d elements (%ld bytes) from %s\n", elements, datasize, datasetname);
-        if(H5Dread(dataset, datatype, memspace, filespace, H5P_DEFAULT, data) >= 0)
+        if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
         {
             status = true;
         }
@@ -287,7 +294,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     /* Clean Up */
     if(file > 0) H5Fclose(file);
     if(datatype_allocated && datatype > 0) H5Tclose(datatype);
-    if(filespace != H5S_ALL) H5Sclose(filespace);
+    if(dataspace != H5S_ALL) H5Sclose(dataspace);
     if(memspace != H5S_ALL) H5Sclose(memspace);
     if(dataset > 0) H5Dclose(dataset);
 
