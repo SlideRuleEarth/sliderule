@@ -18,6 +18,7 @@ A C++/Lua framework for on-demand data processing.
 
 5. Pistache (optional, enable USE_PISTACHE_PACKAGE, see [pistache.md](packages/pistache/pistache.md) for installation instructions)
 
+5. AWS SDK (optional, enable USE_AWS_PACKAGE, see [aws.md](packages/aws/aws.md) for installation instructions)
 
 ## II. Building with CMake
 
@@ -53,6 +54,9 @@ Options include:
 
    -DENABLE_LTTNG_TRACING=[ON|OFF]     configure use of LTTng tracking
                                        default: OFF
+
+   -DUSE_AWS_PACKAGE=[ON|OFF]          AWS S3 access
+                                       default: ON
 
    -DUSE_H5_PACKAGE=[ON|OFF]           hdf5 reading/writing
                                        default: ON

@@ -82,13 +82,23 @@ bool S3Lib::get (const char* bucket, const char* key, const char* file, const ch
     transfer_config.s3Client = s3_client;
 
     /* Create Transfer Manager */
-    auto transferManager = Aws::Transfer::TransferManager::Create(transfer_config);
+    auto transfer_manager = Aws::Transfer::TransferManager::Create(transfer_config);
 
     /* Download File */
-    auto transferHandle = transferManager->DownloadFile(bucket_name, key_name, file_name);
-    transferHandle->WaitUntilFinished();
+    auto transfer_handle = transfer_manager->DownloadFile(bucket_name, key_name, file_name);
 
-    return true;
+    /* Return Status */
+    transfer_handle->WaitUntilFinished();
+    auto transfer_status = transfer_handle->GetStatus();
+    if(transfer_status != Aws::Transfer::TransferStatus::COMPLETED)
+    {
+        mlog(CRITICAL, "Failed to transfer S3 object: %d\n", (int)transfer_status);
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 /*----------------------------------------------------------------------------
