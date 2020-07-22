@@ -215,6 +215,17 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
     }
 }
 
+/*----------------------------------------------------------------------------
+ * returnLuaStatus
+ *----------------------------------------------------------------------------*/
+int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return)
+{
+    if(!status) lua_pushnil(L);
+    else        lua_pushboolean(L, true);
+
+    return num_obj_to_return;
+}
+
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -415,17 +426,6 @@ LuaObject* LuaObject::lockLuaObject (lua_State* L, int parm, const char* object_
     }
 
     return lua_obj;
-}
-
-/*----------------------------------------------------------------------------
- * returnLuaStatus
- *----------------------------------------------------------------------------*/
-int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return)
-{
-    if(!status) lua_pushnil(L);
-    else        lua_pushboolean(L, true);
-
-    return num_obj_to_return;
 }
 
 /*----------------------------------------------------------------------------

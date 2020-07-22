@@ -87,6 +87,7 @@ class LuaObject
         static double       getLuaFloat         (lua_State* L, int parm, bool optional=false, double dfltval=0.0, bool* provided=NULL);
         static bool         getLuaBoolean       (lua_State* L, int parm, bool optional=false, bool dfltval=false, bool* provided=NULL);
         static const char*  getLuaString        (lua_State* L, int parm, bool optional=false, const char* dfltval=NULL, bool* provided=NULL);
+        static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
 
     protected:
 
@@ -111,7 +112,6 @@ class LuaObject
         static int          associateLuaName    (lua_State* L);
 
         static LuaObject*   lockLuaObject       (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
-        static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
 
         /*--------------------------------------------------------------------

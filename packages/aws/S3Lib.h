@@ -21,6 +21,12 @@
 #define __s3_lib__
 
 /******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
+
+#include <lua.h>
+
+/******************************************************************************
  * AWS S3 LIBRARY CLASS
  ******************************************************************************/
 
@@ -29,7 +35,9 @@ struct S3Lib
     static void init    (void);
     static void deinit  (void);
 
-    static void get     (const char* bucket, const char* key, const char* local_file);
+    static bool get     (const char* bucket, const char* key, const char* file, const char* endpoint=NULL);
+
+    static int  luaGet  (lua_State* L);
 };
 
 #endif  /* __s3_lib__ */

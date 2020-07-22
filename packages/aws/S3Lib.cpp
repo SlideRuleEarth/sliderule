@@ -25,8 +25,13 @@
 #include "S3Lib.h"
 #include "core.h"
 
+#include <aws/core/Aws.h>
+#include <aws/transfer/TransferManager.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetObjectRequest.h>
 #include <assert.h>
 #include <stdexcept>
+#include <lua.h>
 
 
 /******************************************************************************
@@ -50,9 +55,61 @@ void S3Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-void S3Lib::get (const char* bucket, const char* key, const char* local_file)
+bool S3Lib::get (const char* bucket, const char* key, const char* file, const char* endpoint)
 {
-    (void)bucket;
-    (void)key;
-    (void)local_file;
+    (void)endpoint;
+
+    const char* ALLOC_TAG = __FUNCTION__;
+
+    const Aws::String bucket_name = bucket;
+    const Aws::String key_name = key;
+    const Aws::String file_name = file;
+
+    /* Create S3 Client Configuration */
+    Aws::Client::ClientConfiguration client_config;
+    if(endpoint)
+    {
+        client_config.endpointOverride = endpoint;
+        client_config.region = "US_WEST_2";
+    }
+
+    /* Create S3 Client */
+    auto s3_client = Aws::MakeShared<Aws::S3::S3Client>(ALLOC_TAG, client_config);
+
+    /* Create Transfer Configuration */
+    auto thread_executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(ALLOC_TAG, 4);
+    Aws::Transfer::TransferManagerConfiguration transfer_config(thread_executor.get());
+    transfer_config.s3Client = s3_client;
+
+    /* Create Transfer Manager */
+    auto transferManager = Aws::Transfer::TransferManager::Create(transfer_config);
+
+    /* Download File */
+    auto transferHandle = transferManager->DownloadFile(bucket_name, key_name, file_name);
+    transferHandle->WaitUntilFinished();
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGet - s3get(<filename>, <bucket>, <key>, [endpoint])
+ *----------------------------------------------------------------------------*/
+int S3Lib::luaGet(lua_State* L)
+{
+    try
+    {
+        /* Get Parameters */
+        const char* filename    = LuaObject::getLuaString(L, 1);
+        const char* bucket      = LuaObject::getLuaString(L, 2);
+        const char* key         = LuaObject::getLuaString(L, 3);
+        const char* endpoint    = LuaObject::getLuaString(L, 4, true, NULL);
+
+        /* Get Object and Write to File */
+        return LuaObject::returnLuaStatus(L, get(bucket, key, filename, endpoint));
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "ERror getting S3 object: %s\n", e.errmsg);
+        return LuaObject::returnLuaStatus(L, false);
+    }
 }
