@@ -30,14 +30,25 @@
  * AWS S3 LIBRARY CLASS
  ******************************************************************************/
 
-struct S3Lib
+class S3Lib
 {
-    static void init    (void);
-    static void deinit  (void);
+    public:
 
-    static bool get     (const char* bucket, const char* key, const char* file, const char* endpoint=NULL);
+        static const char* DEFAULT_ENDPOINT;
+        static const char* DEFAULT_REGION;
 
-    static int  luaGet  (lua_State* L);
+        static void init        (void);
+        static void deinit      (void);
+
+        static bool get         (const char* bucket, const char* key, const char* file);
+
+        static int  luaGet      (lua_State* L);
+        static int  luaConfig   (lua_State* L);
+
+    private:
+
+        static const char* endpoint;
+        static const char* region;
 };
 
 #endif  /* __s3_lib__ */

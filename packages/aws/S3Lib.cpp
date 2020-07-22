@@ -33,6 +33,15 @@
 #include <stdexcept>
 #include <lua.h>
 
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* S3Lib::DEFAULT_ENDPOINT = "https://s3.us-west-2.amazonaws.com";
+const char* S3Lib::DEFAULT_REGION = "us-west-2";
+
+const char* S3Lib::endpoint = NULL;
+const char* S3Lib::region = NULL;
 
 /******************************************************************************
  * AWS S3 LIBRARY CLASS
@@ -43,6 +52,8 @@
  *----------------------------------------------------------------------------*/
 void S3Lib::init (void)
 {
+    endpoint = StringLib::duplicate(DEFAULT_ENDPOINT);
+    region = StringLib::duplicate(DEFAULT_REGION);
 }
 
 /*----------------------------------------------------------------------------
@@ -50,12 +61,14 @@ void S3Lib::init (void)
  *----------------------------------------------------------------------------*/
 void S3Lib::deinit (void)
 {
+    delete [] endpoint;
+    delete [] region;
 }
 
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-bool S3Lib::get (const char* bucket, const char* key, const char* file, const char* endpoint)
+bool S3Lib::get (const char* bucket, const char* key, const char* file)
 {
     (void)endpoint;
 
@@ -67,11 +80,8 @@ bool S3Lib::get (const char* bucket, const char* key, const char* file, const ch
 
     /* Create S3 Client Configuration */
     Aws::Client::ClientConfiguration client_config;
-    if(endpoint)
-    {
-        client_config.endpointOverride = endpoint;
-        client_config.region = "US_WEST_2";
-    }
+    client_config.endpointOverride = endpoint;
+    client_config.region = region;
 
     /* Create S3 Client */
     auto s3_client = Aws::MakeShared<Aws::S3::S3Client>(ALLOC_TAG, client_config);
@@ -112,14 +122,42 @@ int S3Lib::luaGet(lua_State* L)
         const char* filename    = LuaObject::getLuaString(L, 1);
         const char* bucket      = LuaObject::getLuaString(L, 2);
         const char* key         = LuaObject::getLuaString(L, 3);
-        const char* endpoint    = LuaObject::getLuaString(L, 4, true, NULL);
 
         /* Get Object and Write to File */
-        return LuaObject::returnLuaStatus(L, get(bucket, key, filename, endpoint));
+        return LuaObject::returnLuaStatus(L, get(bucket, key, filename));
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "ERror getting S3 object: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error getting S3 object: %s\n", e.errmsg);
+        return LuaObject::returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaConfig - s3config(<endpoint>, <region>)
+ * 
+ *  Note: Should only be called once at start of program
+ *----------------------------------------------------------------------------*/
+int S3Lib::luaConfig(lua_State* L)
+{
+    try
+    {
+        /* Get Parameters */
+        const char* _endpoint   = LuaObject::getLuaString(L, 1);
+        const char* _region     = LuaObject::getLuaString(L, 2);
+
+        /* Change Endpoint and Region */
+        delete [] endpoint;
+        delete [] region;
+        endpoint = StringLib::duplicate(_endpoint);
+        endpoint = StringLib::duplicate(_region);
+        
+        /* Get Object and Write to File */
+        return LuaObject::returnLuaStatus(L, true);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error configuring S3 access: %s\n", e.errmsg);
         return LuaObject::returnLuaStatus(L, false);
     }
 }

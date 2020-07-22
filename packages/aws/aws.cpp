@@ -49,6 +49,7 @@ int aws_open (lua_State *L)
 {
     static const struct luaL_Reg aws_functions[] = {
         {"s3get",       S3Lib::luaGet},
+        {"s3config",    S3Lib::luaConfig},
         {NULL,          NULL}
     };
 
