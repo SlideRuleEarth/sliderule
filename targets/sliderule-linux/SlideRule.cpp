@@ -9,6 +9,7 @@
  ******************************************************************************/
 
 #include "core.h"
+#include "aws.h"
 #include "ccsds.h"
 #include "h5.h"
 #include "pistache.h"
@@ -187,6 +188,10 @@ int main (int argc, char* argv[])
     /* Initialize Built-In Packages */
     initcore();
 
+    #ifdef __aws__
+        initaws();
+    #endif
+
     #ifdef __ccsds__
         initccsds();
     #endif
@@ -237,6 +242,10 @@ int main (int argc, char* argv[])
 
     #ifdef __ccsds__
         deinitccsds();
+    #endif
+
+    #ifdef __aws__
+        deinitaws();
     #endif
 
     deinitcore();

@@ -200,11 +200,6 @@ int H5File::luaInspect (lua_State* L)
             H5Array<float> values(lua_obj->filename, dataset_name);
             for(int i = 0; i < values.size; i++) printf("%f\n", values[i]);
         }
-        else if(StringLib::match("float", datatype_name))
-        {
-            H5Array<float> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%f\n", values[i]);
-        }
         else if(StringLib::match("long", datatype_name))
         {
             H5Array<long> values(lua_obj->filename, dataset_name);

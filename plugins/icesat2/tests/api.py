@@ -85,7 +85,10 @@ def test_variable_length ():
         "dataset": "/gt1r/geolocation/segment_ph_cnt",
         "datatype": sliderule.datatypes["INTEGER"],
 #        "dataset": "/gt1r/heights/h_ph",
-#        "dataset": "/atlas_impulse_response/pce1_spot1/tep_histogram/tep_hist", # real, works
+#        "datatype": sliderule.datatypes["REAL"], # cores
+#        "dataset": "/gt1r/geolocation/delta_time", # works
+#        "datatype": sliderule.datatypes["REAL"],
+#        "dataset": "/atlas_impulse_response/pce1_spot1/tep_histogram/tep_hist", # works
 #        "datatype": sliderule.datatypes["REAL"],
         "id": 0
     }

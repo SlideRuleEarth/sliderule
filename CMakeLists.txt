@@ -36,6 +36,7 @@ option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer t
 option (ENABLE_H5_REST_VOL "Install and use the REST VOL plugin for H5 access" OFF)
 option (ENABLE_LTTNG_TRACING "Instantiate LTTng trace points" OFF)
 
+option (USE_AWS_PACKAGE "Include the AWS package" ON)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
 option (USE_PISTACHE_PACKAGE "Include the Pistache package" ON)
@@ -115,6 +116,10 @@ endif ()
 # Add Packages #
 
 add_subdirectory (packages/core)
+
+if(${USE_AWS_PACKAGE})
+    add_subdirectory (packages/aws)
+endif()
 
 if(${USE_CCSDS_PACKAGE})
     add_subdirectory (packages/ccsds)
