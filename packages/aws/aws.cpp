@@ -66,7 +66,9 @@ extern "C" {
 void initaws (void)
 {
     /* Initialize AWS SDK */
+    #ifdef ENABLE_AWS_LOGGING
     options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
+    #endif
     Aws::InitAPI(options);
 
     /* Initialize Modules */
