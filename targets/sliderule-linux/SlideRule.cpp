@@ -9,11 +9,26 @@
  ******************************************************************************/
 
 #include "core.h"
+
+#ifdef __aws__
 #include "aws.h"
+#endif
+
+#ifdef __ccsds__
 #include "ccsds.h"
+#endif
+
+#ifdef __h5__
 #include "h5.h"
+#endif
+
+#ifdef __pistache__
 #include "pistache.h"
+#endif
+
+#ifdef __legacy__
 #include "legacy.h"
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
