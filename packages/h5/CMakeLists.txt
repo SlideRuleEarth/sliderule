@@ -1,8 +1,3 @@
-
-# Find hdf5 library - prefer static over shared
-list ( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
-list ( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
-
 # Find standard HDF5 libraries
 find_library (HDF5_LIB hdf5)
 find_package (ZLIB)

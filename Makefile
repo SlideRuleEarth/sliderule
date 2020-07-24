@@ -16,11 +16,11 @@ default-config:
 
 release-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON ..
 
-trace-config:
+debug-config:
 	mkdir -p build
-	cd build; cmake -DENABLE_LTTNG_TRACING=ON ..
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_LTTNG_TRACING=ON -DENABLE_H5_REST_VOL=ON ..
 
 offline-config:
 	mkdir -p build

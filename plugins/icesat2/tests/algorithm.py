@@ -130,6 +130,11 @@ def expread():
     distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
     df = pd.DataFrame(data=list(zip(heights, distances)), index=segments, columns=["height", "distance"])
 
+    # Filter Dataframe
+    df = df[df["height"] < 25000.0]
+    df = df[df["height"] > -25000.0]
+    df = df[df["distance"] < 4000.0]
+    
     # Return DataFrame
     print("Retrieved {} points from ATL06, returning {} points".format(len(heights), len(df.values)))
     return df
@@ -159,10 +164,8 @@ if __name__ == '__main__':
     # Plot Dataframe
     p = figure(title="Actual vs. Expected", plot_height=500, plot_width=800)
     for data, name, color in zip([act, exp], ["sliderule", "atl06"], Spectral11[:2]):
-        data = data[data["height"] < 25000.0]
-        data = data[data["height"] > -25000.0]
-        data = data[data["distance"] < 4000.0]
-        p.line(list(data.index), data["height"], line_width=3, color=color, alpha=0.8, legend_label=name)
+#        p.line(list(data.index), data["height"], line_width=3, color=color, alpha=0.8, legend_label=name)
+        p.line(data["distance"], data["height"], line_width=3, color=color, alpha=0.8, legend_label=name)
     p.legend.location = "top_left"
     p.legend.click_policy="hide"
     show(p)
