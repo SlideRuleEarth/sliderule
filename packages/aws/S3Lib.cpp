@@ -223,6 +223,7 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
     cacheMut.unlock();
 
     /* Return Success */
+    *file = cache_filepath.getString(true);
     return true;
 }
 
