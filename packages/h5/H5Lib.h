@@ -32,7 +32,22 @@
 
 struct H5Lib
 {
+    /*--------------------------------------------------------------------
+     * Constants
+     *--------------------------------------------------------------------*/
+    
     static const int MAX_NDIMS = 8;
+
+    /*--------------------------------------------------------------------
+     * Types
+     *--------------------------------------------------------------------*/
+
+    typedef enum {
+        FILE,
+        HSDS,
+        S3,
+        UNKNOWN
+    } driver_t;
 
     typedef struct {
         int elements;   // number of elements in dataset
@@ -41,11 +56,16 @@ struct H5Lib
         uint8_t* data;  // point to allocated data buffer
     } info_t;
 
-    static void init(void);
-    static void deinit(void);
+    /*--------------------------------------------------------------------
+     * Methods
+     *--------------------------------------------------------------------*/
 
-    static info_t read (const char* url, const char* datasetname, RecordObject::valType_t valtype=RecordObject::DYNAMIC, unsigned col=0, unsigned maxrows=0);
-    static bool traverse (const char* url, int max_depth, const char* start_group);
+    static void     init        (void);
+    static void     deinit      (void);
+
+    static driver_t url2driver  (const char* url);
+    static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, unsigned col=0, unsigned maxrows=0);
+    static bool     traverse    (const char* url, int max_depth, const char* start_group);
 };
 
 #endif  /* __h5_lib__ */

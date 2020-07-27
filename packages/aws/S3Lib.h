@@ -25,6 +25,9 @@
  ******************************************************************************/
 
 #include <lua.h>
+#include "OsApi.h"
+#include "Dictionary.h"
+#include "Ordering.h"
 
 /******************************************************************************
  * AWS S3 LIBRARY CLASS
@@ -34,21 +37,42 @@ class S3Lib
 {
     public:
 
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
         static const char* DEFAULT_ENDPOINT;
         static const char* DEFAULT_REGION;
 
-        static void init        (void);
+        static const int DEFAULT_MAX_CACHE_FILES = 16;
+        
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static void init        (const char* cache_root="./cache", int max_cache_files=DEFAULT_MAX_CACHE_FILES);
         static void deinit      (void);
 
-        static bool get         (const char* bucket, const char* key, const char* file);
+        static bool get         (const char* bucket, const char* key, const char** file);
 
         static int  luaGet      (lua_State* L);
         static int  luaConfig   (lua_State* L);
 
     private:
+        
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
         static const char* endpoint;
         static const char* region;
+
+        static const char* cacheRoot;
+        static int cacheMaxSize;
+        static Mutex cacheMut;
+        static okey_t cacheIndex;
+        static Dictionary<okey_t> cacheLookUp;
+        static MgOrdering<const char*> cacheFiles;
 };
 
 #endif  /* __s3_lib__ */

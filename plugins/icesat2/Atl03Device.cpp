@@ -110,6 +110,8 @@ void Atl03Device::init (void)
 Atl03Device::Atl03Device (lua_State* L, const char* url, atl06_parms_t _parms):
     DeviceObject(L, READER)
 {
+    assert(url);
+    
     /* Set Parameters */
     parms = _parms;
 

@@ -33,6 +33,24 @@
 #include <stdexcept>
 
 /******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#ifdef H5_USE_REST_VOL
+#ifndef DEFAULT_HSDS_ENDPOINT
+#define DEFAULT_HSDS_ENDPOINT   "http://localhost"
+#endif
+
+#ifndef DEFAULT_HSDS_USERNAME
+#define DEFAULT_HSDS_USERNAME   "username"
+#endif
+
+#ifndef DEFAULT_HSDS_PASSWORD
+#define DEFAULT_HSDS_PASSWORD   "password"
+#endif
+#endif
+
+/******************************************************************************
  * TYPEDEFS
  ******************************************************************************/
 
@@ -48,7 +66,7 @@ typedef union {
  * FILE DATA
  ******************************************************************************/
 
-hid_t file_access_properties = H5P_DEFAULT;
+hid_t rest_vol_fapl = H5P_DEFAULT;
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -125,9 +143,13 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char* name, const H5L_info_t* info
 void H5Lib::init (void)
 {
     #ifdef H5_USE_REST_VOL
+        setenv("HSDS_ENDPOINT", DEFAULT_HSDS_ENDPOINT, 0);
+        setenv("HSDS_USERNAME", DEFAULT_HSDS_USERNAME, 0);
+        setenv("HSDS_PASSWORD", DEFAULT_HSDS_PASSWORD, 0);
+
         H5rest_init();
-        file_access_properties = H5Pcreate(H5P_FILE_ACCESS);
-        H5Pset_fapl_rest_vol(file_access_properties);
+        rest_vol_fapl = H5Pcreate(H5P_FILE_ACCESS);
+        H5Pset_fapl_rest_vol(rest_vol_fapl);
     #endif
 }
 
@@ -137,9 +159,20 @@ void H5Lib::init (void)
 void H5Lib::deinit (void)
 {
     #ifdef H5_USE_REST_VOL
-        H5Pclose(file_access_properties);
+        H5Pclose(rest_vol_fapl);
         H5rest_term();
     #endif
+}
+
+/*----------------------------------------------------------------------------
+ * read
+ *----------------------------------------------------------------------------*/
+H5Lib::driver_t H5Lib::url2driver (const char* url)
+{
+    if     (StringLib::find(url, "file://"))    return FILE;
+    else if(StringLib::find(url, "s3://"))      return S3;
+    else if(StringLib::find(url, "hsds://"))    return HSDS;
+    else                                        return UNKNOWN;
 }
 
 /*----------------------------------------------------------------------------
@@ -155,6 +188,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Start with Invalid Handles */
+    hid_t fapl = H5P_DEFAULT;
     hid_t file = INVALID_RC;
     hid_t dataset = INVALID_RC;
     hid_t memspace = H5S_ALL;
@@ -164,8 +198,31 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
     do
     {
+        /* Initialize Driver */
+        driver_t driver = url2driver(url);
+        if(driver == FILE)
+        {
+            // do nothing
+        }
+        else if(driver == HSDS)
+        {
+            fapl = rest_vol_fapl;
+        }
+        else if(driver == S3)
+        {
+            // TODO
+//            S3Lib::get(const char* bucket, const char* key, const char* file);
+
+        }
+        else // driver == UNKNOWN
+        {
+            mlog(CRITICAL, "Invalid url: %s\n", url);
+            break;
+        }
+
+        /* Open Resource */
         mlog(INFO, "Opening resource: %s\n", url);
-        file = H5Fopen(url, H5F_ACC_RDONLY, file_access_properties);
+        file = H5Fopen(url, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
             mlog(CRITICAL, "Failed to open resource: %s\n", url);
@@ -310,7 +367,7 @@ bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
         recurse.curr.max = max_depth;
 
         /* Open File */
-        file = H5Fopen(url, H5F_ACC_RDONLY, file_access_properties);
+        file = H5Fopen(url, H5F_ACC_RDONLY, rest_vol_fapl);
         if(file < 0)
         {
             mlog(CRITICAL, "Failed to open resource: %s", url);

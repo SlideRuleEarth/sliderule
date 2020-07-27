@@ -45,8 +45,8 @@ docker-image: distclean docker-config default-build install
 	cp /usr/local/lib/libyajl.so* $(STAGEDIR)/lib
 	# build image #
 	cd $(STAGEDIR); docker build -t sliderule-linux:latest .
-	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://localhost:9082/hsds sliderule-linux /usr/local/scripts/apps/test_runner.lua
-	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://localhost:9082/hsds sliderule-linux /usr/local/scripts/apps/server.lua
+	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/scripts/apps/test_runner.lua
+	# docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/scripts/apps/server.lua
 
 scan:
 	mkdir -p build

@@ -29,9 +29,12 @@
 #include <aws/transfer/TransferManager.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/GetObjectRequest.h>
-#include <assert.h>
-#include <stdexcept>
+
 #include <lua.h>
+#include <assert.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <dirent.h>
 
 /******************************************************************************
  * STATIC DATA
@@ -43,6 +46,13 @@ const char* S3Lib::DEFAULT_REGION = "us-west-2";
 const char* S3Lib::endpoint = NULL;
 const char* S3Lib::region = NULL;
 
+const char* S3Lib::cacheRoot = NULL;
+int S3Lib::cacheMaxSize = 0;
+okey_t S3Lib::cacheIndex = 0;
+Mutex S3Lib::cacheMut;
+Dictionary<okey_t> S3Lib::cacheLookUp;
+MgOrdering<const char*> S3Lib::cacheFiles(NULL, NULL, MgOrdering<const char*>::INFINITE_LIST_SIZE, true);
+
 /******************************************************************************
  * AWS S3 LIBRARY CLASS
  ******************************************************************************/
@@ -50,10 +60,50 @@ const char* S3Lib::region = NULL;
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void S3Lib::init (void)
+void S3Lib::init (const char* cache_root, int max_cache_files)
 {
+    int file_count = 0;
+
+    /* Set AWS Attributes */
     endpoint = StringLib::duplicate(DEFAULT_ENDPOINT);
     region = StringLib::duplicate(DEFAULT_REGION);
+
+    /* Set Cache Attributes */
+    cacheRoot = StringLib::duplicate(cache_root);
+    cacheMaxSize = max_cache_files;
+
+    /* Create Directory (if it doesn't exist) */
+    mkdir(cacheRoot, 0600);
+
+    /* Traverse Directory and Build Cache (if it does exist) */
+    DIR *dir;
+    if((dir = opendir(cacheRoot)) != NULL)
+    {
+        struct dirent *ent;
+        while((ent = readdir(dir)) != NULL)
+        {
+            if(file_count++ < cacheMaxSize)
+            {
+                char cache_filename[MAX_STR_SIZE];
+                StringLib::format(cache_filename, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
+                const char* cache_key = StringLib::find(cache_filename, '#', false);
+                if(cache_key)   cache_key++;
+                else            cache_key = ent->d_name;
+                
+                /* Add File to Cache */
+                cacheIndex++;
+                cacheLookUp.add(cache_key, cacheIndex);
+                cacheFiles.add(cacheIndex, cache_key);
+            }
+        }
+        closedir(dir);
+    }
+
+    /* Log Status */
+    if(file_count > 0)
+    {
+        mlog(CRITICAL, "Loaded %ld of %d files into S3 cache\n", cacheFiles.length(), file_count);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -63,20 +113,48 @@ void S3Lib::deinit (void)
 {
     delete [] endpoint;
     delete [] region;
+
+    delete [] cacheRoot;
 }
 
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-bool S3Lib::get (const char* bucket, const char* key, const char* file)
+bool S3Lib::get (const char* bucket, const char* key, const char** file)
 {
-    (void)endpoint;
-
     const char* ALLOC_TAG = __FUNCTION__;
+    SafeString path_delimeter_str("%c", PATH_DELIMETER);
 
+    /* Check Cache */
+    bool found_in_cache = false;
+    cacheMut.lock();
+    {
+        if(cacheLookUp.find(key))
+        {
+            cacheIndex++;
+            cacheFiles.remove(cacheLookUp[key]);
+            cacheFiles.add(cacheIndex, key);
+            found_in_cache = true;
+        }        
+    }
+    cacheMut.unlock();
+
+    /* Build Cache Filename */
+    SafeString cache_filename("%s", key);
+    cache_filename.replace(path_delimeter_str.getString(), "#");
+    SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.getString());
+
+    /* Quick Exit If Cache Hit */
+    if(found_in_cache)
+    {
+        *file = cache_filepath.getString(true);
+        return true;
+    }
+
+    /* Build AWS String Parameters */
     const Aws::String bucket_name = bucket;
     const Aws::String key_name = key;
-    const Aws::String file_name = file;
+    const Aws::String file_name = cache_filename.getString();
 
     /* Create S3 Client Configuration */
     Aws::Client::ClientConfiguration client_config;
@@ -97,7 +175,7 @@ bool S3Lib::get (const char* bucket, const char* key, const char* file)
     /* Download File */
     auto transfer_handle = transfer_manager->DownloadFile(bucket_name, key_name, file_name);
 
-    /* Return Status */
+    /* Wait for Download to Complete */
     transfer_handle->WaitUntilFinished();
     auto transfer_status = transfer_handle->GetStatus();
     if(transfer_status != Aws::Transfer::TransferStatus::COMPLETED)
@@ -105,26 +183,63 @@ bool S3Lib::get (const char* bucket, const char* key, const char* file)
         mlog(CRITICAL, "Failed to transfer S3 object: %d\n", (int)transfer_status);
         return false;
     }
-    else
+
+    /* Populate Cache */
+    cacheMut.lock();
     {
-        return true;
+        if(cacheLookUp.length() >= cacheMaxSize)
+        {
+            /* Get Oldest File from Cache */
+            const char* oldest_key = NULL;
+            okey_t index = cacheFiles.first(&oldest_key);
+            if(oldest_key != NULL)
+            {
+                /* Delete File in Local File System */
+                cacheFiles.remove(index);
+                SafeString oldest_filename("%s", oldest_key);
+                oldest_filename.replace(path_delimeter_str.getString(), "#");
+                SafeString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.getString());
+                remove(oldest_filepath.getString());
+            }
+        }
+
+        /* Add New File to Cache */
+        cacheIndex++;
+        cacheLookUp.add(key, cacheIndex);
+        cacheFiles.add(cacheIndex, key);
     }
+    cacheMut.unlock();
+
+    /* Return Success */
+    return true;
 }
 
 /*----------------------------------------------------------------------------
- * luaGet - s3get(<filename>, <bucket>, <key>, [endpoint])
+ * luaGet - s3get(<bucket>, <key>) -> filename
  *----------------------------------------------------------------------------*/
 int S3Lib::luaGet(lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        const char* filename    = LuaObject::getLuaString(L, 1);
-        const char* bucket      = LuaObject::getLuaString(L, 2);
-        const char* key         = LuaObject::getLuaString(L, 3);
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+
+        /* Download File */
+        const char* filename = NULL;
+        bool status = get(bucket, key, &filename);
+        if(status)
+        {
+            lua_pushstring(L, filename);
+            delete [] filename;
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
 
         /* Get Object and Write to File */
-        return LuaObject::returnLuaStatus(L, get(bucket, key, filename));
+        return LuaObject::returnLuaStatus(L, status, 2);
     }
     catch(const LuaException& e)
     {
