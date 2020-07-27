@@ -62,7 +62,7 @@ def test_time ():
 #
 def test_h5 ():
     rqst = {
-        "filename": asset + h5file,
+        "resource": asset + h5file,
         "dataset": "ancillary_data/atlas_sdp_gps_epoch",
         "datatype": sliderule.datatypes["REAL"],
         "id": 0
@@ -82,7 +82,7 @@ def test_h5 ():
 #
 def test_variable_length ():
     rqst = {
-        "filename": asset + h5file,
+        "resource": asset + h5file,
         "dataset": "/gt1r/geolocation/segment_ph_cnt",
         "datatype": sliderule.datatypes["INTEGER"],
         "id": 0
