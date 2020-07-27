@@ -86,9 +86,9 @@ void S3Lib::init (const char* cache_root, int max_cache_files)
             {
                 if(file_count++ < cacheMaxSize)
                 {
-                    char cache_filename[MAX_STR_SIZE];
-                    StringLib::format(cache_filename, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
-                    const char* key_ptr = StringLib::find(cache_filename, '#', false);
+                    char cache_filepath[MAX_STR_SIZE];
+                    StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
+                    const char* key_ptr = StringLib::find(cache_filepath, '#', false);
                     if(key_ptr) key_ptr++;
                     else        key_ptr = ent->d_name;
                     
@@ -153,7 +153,7 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
     SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.getString());
 
     /* Log Operation */
-    mlog(INFO, "S3 %s object %s in bucket %s: %s\n", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filename.getString());
+    mlog(INFO, "S3 %s object %s in bucket %s: %s\n", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.getString());
 
     /* Quick Exit If Cache Hit */
     if(found_in_cache)
@@ -165,7 +165,7 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
     /* Build AWS String Parameters */
     const Aws::String bucket_name = bucket;
     const Aws::String key_name = key;
-    const Aws::String file_name = cache_filename.getString();
+    const Aws::String file_name = cache_filepath.getString();
 
     /* Create S3 Client Configuration */
     Aws::Client::ClientConfiguration client_config;
