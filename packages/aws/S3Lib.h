@@ -50,7 +50,7 @@ class S3Lib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void init        (const char* cache_root="./cache", int max_cache_files=DEFAULT_MAX_CACHE_FILES);
+        static void init        (const char* cache_root="./.cache", int max_cache_files=DEFAULT_MAX_CACHE_FILES);
         static void deinit      (void);
 
         static bool get         (const char* bucket, const char* key, const char** file);

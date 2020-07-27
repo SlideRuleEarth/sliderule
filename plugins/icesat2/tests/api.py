@@ -7,6 +7,7 @@ sys.path.append("/usr/local/etc/sliderule")
 import json
 import sliderule
 
+asset = "file://"
 h5file = "/data/ATLAS/ATL03_20181014040628_02370109_002_01.h5"
 
 ###############################################################################
@@ -61,7 +62,7 @@ def test_time ():
 #
 def test_h5 ():
     rqst = {
-        "filename": h5file,
+        "filename": asset + h5file,
         "dataset": "ancillary_data/atlas_sdp_gps_epoch",
         "datatype": sliderule.datatypes["REAL"],
         "id": 0
@@ -81,7 +82,7 @@ def test_h5 ():
 #
 def test_variable_length ():
     rqst = {
-        "filename": h5file,
+        "filename": asset + h5file,
         "dataset": "/gt1r/geolocation/segment_ph_cnt",
         "datatype": sliderule.datatypes["INTEGER"],
         "id": 0

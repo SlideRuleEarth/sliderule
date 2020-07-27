@@ -3,7 +3,7 @@
 --
 -- INPUT:       rqst -
 --              {
---                  "filename":     "<name of hdf5 file>"
+--                  "resource":     "<url of hdf5 file or object>"
 --                  "track":        <track number: 1, 2, 3>
 --                  "stages":       [<algorith stage 1>, ...]
 --                  "parms":        {<table of parameters>}
@@ -25,7 +25,7 @@ local str2stage = { LSF=icesat2.STAGE_LSF }
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local filename = rqst["filename"]
+local resource = rqst["resource"]
 local track = rqst["track"]
 local stages = rqst["stages"]
 local parms = rqst["parms"]
@@ -44,7 +44,7 @@ d = core.dispatcher("recq")
 d:attach(a, "atl03rec")
 
 -- ATL03 Device --
-f = icesat2.atl03(filename, parms)
+f = icesat2.atl03(resource, parms)
 
 -- ATL03 File Reader --
 r = core.reader(f, "recq")

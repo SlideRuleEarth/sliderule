@@ -3,7 +3,7 @@
 --
 -- INPUT:       arg[1] -
 --              {
---                  "filename":     "<name of hdf5 file>"
+--                  "resource":     "<url of hdf5 file or object>"
 --                  "dataset":      "<name of dataset>"
 --                  "datatype":     <RecordObject::valType_t>
 --                  "id":           <integer id to attach to data>
@@ -21,12 +21,12 @@
 local json = require("json")
 local parm = json.decode(arg[1])
 
-local filename = parm["filename"]
+local resource = parm["resource"]
 local dataset = parm["dataset"]
 local datatype = parm["datatype"] or core.DYNAMIC
 local id = parm["id"] or 0
 
-f = h5.dataset(core.READER, filename, dataset, id, false, datatype)
+f = h5.dataset(core.READER, resource, dataset, id, false, datatype)
 r = core.reader(f, rspq)
 
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)

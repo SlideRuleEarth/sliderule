@@ -434,7 +434,7 @@ char* StringLib::copy(char* str1, const char* str2, int _size)
  *
  *  returns -1 if string not found
  *----------------------------------------------------------------------------*/
-int StringLib::find(const char* big, const char* little, int len)
+char* StringLib::find(const char* big, const char* little, int len)
 {
     int little_len = strnlen(little, len);
     int big_len = strnlen(big, len);
@@ -445,12 +445,12 @@ int StringLib::find(const char* big, const char* little, int len)
         {
             if((big[i] == little[0]) && StringLib::match(&big[i], little, little_len))
             {
-                return i;
+                return (char*)&big[i];
             }
         }
     }
 
-    return -1;
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------

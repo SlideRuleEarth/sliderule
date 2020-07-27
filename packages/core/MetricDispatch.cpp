@@ -353,7 +353,7 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
             lua_obj->keyOffset = Ordering<serialBuffer_t>::INVALID_KEY;
             status = true;
         }
-        else if(StringLib::find(offset_str, ":") >= 0)
+        else if(StringLib::find(offset_str, ':'))
         {
             lua_obj->keyOffset = (okey_t)TimeLib::str2gpstime(offset_str);
             mlog(CRITICAL, "Setting key offset to: %llu\n", lua_obj->keyOffset);
@@ -395,7 +395,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         {
             min_key = Ordering<serialBuffer_t>::INVALID_KEY;
         }
-        else if(StringLib::find(min_str, ":") >= 0)
+        else if(StringLib::find(min_str, ':'))
         {
             min_key = (okey_t)TimeLib::str2gpstime(min_str);
             mlog(CRITICAL, "Setting minimum key to: %llu\n", min_key);
@@ -412,7 +412,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         {
             max_key = Ordering<serialBuffer_t>::INVALID_KEY;
         }
-        else if(StringLib::find(max_str, ":") >= 0)
+        else if(StringLib::find(max_str, ':'))
         {
             max_key = (okey_t)TimeLib::str2gpstime(max_str);
             mlog(CRITICAL, "Setting maximum key to: %llu\n", max_key);

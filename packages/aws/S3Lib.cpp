@@ -54,6 +54,12 @@ Dictionary<okey_t> S3Lib::cacheLookUp;
 MgOrdering<const char*> S3Lib::cacheFiles(NULL, NULL, MgOrdering<const char*>::INFINITE_LIST_SIZE, true);
 
 /******************************************************************************
+ * FILE DATA
+ ******************************************************************************/
+
+SafeString path_delimeter_str("%c", PATH_DELIMETER);
+
+/******************************************************************************
  * AWS S3 LIBRARY CLASS
  ******************************************************************************/
 
@@ -73,7 +79,7 @@ void S3Lib::init (const char* cache_root, int max_cache_files)
     cacheMaxSize = max_cache_files;
 
     /* Create Directory (if it doesn't exist) */
-    mkdir(cacheRoot, 0600);
+    mkdir(cacheRoot, 0700);
 
     /* Traverse Directory and Build Cache (if it does exist) */
     DIR *dir;
@@ -82,18 +88,26 @@ void S3Lib::init (const char* cache_root, int max_cache_files)
         struct dirent *ent;
         while((ent = readdir(dir)) != NULL)
         {
-            if(file_count++ < cacheMaxSize)
+            if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
             {
-                char cache_filename[MAX_STR_SIZE];
-                StringLib::format(cache_filename, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
-                const char* cache_key = StringLib::find(cache_filename, '#', false);
-                if(cache_key)   cache_key++;
-                else            cache_key = ent->d_name;
-                
-                /* Add File to Cache */
-                cacheIndex++;
-                cacheLookUp.add(cache_key, cacheIndex);
-                cacheFiles.add(cacheIndex, cache_key);
+                if(file_count++ < cacheMaxSize)
+                {
+                    char cache_filename[MAX_STR_SIZE];
+                    StringLib::format(cache_filename, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
+                    const char* key_ptr = StringLib::find(cache_filename, '#', false);
+                    if(key_ptr) key_ptr++;
+                    else        key_ptr = ent->d_name;
+                    
+                    /* Reformat Filename to Key */
+                    SafeString key("%s", key_ptr);
+                    key.replace("#", path_delimeter_str.getString());
+
+                    /* Add File to Cache */
+                    cacheIndex++;
+                    cacheLookUp.add(key.getString(), cacheIndex);
+                    const char* cache_key = StringLib::duplicate(key.getString());
+                    cacheFiles.add(cacheIndex, cache_key);
+                }
             }
         }
         closedir(dir);
@@ -102,7 +116,7 @@ void S3Lib::init (const char* cache_root, int max_cache_files)
     /* Log Status */
     if(file_count > 0)
     {
-        mlog(CRITICAL, "Loaded %ld of %d files into S3 cache\n", cacheFiles.length(), file_count);
+        printf("Loaded %ld of %d files into S3 cache\n", cacheFiles.length(), file_count);
     }
 }
 
@@ -123,7 +137,6 @@ void S3Lib::deinit (void)
 bool S3Lib::get (const char* bucket, const char* key, const char** file)
 {
     const char* ALLOC_TAG = __FUNCTION__;
-    SafeString path_delimeter_str("%c", PATH_DELIMETER);
 
     /* Check Cache */
     bool found_in_cache = false;
@@ -133,7 +146,8 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
         {
             cacheIndex++;
             cacheFiles.remove(cacheLookUp[key]);
-            cacheFiles.add(cacheIndex, key);
+            const char* cache_key = StringLib::duplicate(key);
+            cacheFiles.add(cacheIndex, cache_key);
             found_in_cache = true;
         }        
     }
@@ -206,7 +220,8 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
         /* Add New File to Cache */
         cacheIndex++;
         cacheLookUp.add(key, cacheIndex);
-        cacheFiles.add(cacheIndex, key);
+        const char* cache_key = StringLib::duplicate(key);
+        cacheFiles.add(cacheIndex, cache_key);
     }
     cacheMut.unlock();
 

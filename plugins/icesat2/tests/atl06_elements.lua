@@ -19,7 +19,7 @@ runner.check(p1.cnf == icesat2.CNF_NOT_CONSIDERED, "Failed to set signal confide
 
 print('\n------------------\nTest02: Atl03 Extent Record\n------------------')
 
-f2 = icesat2.atl03("/data/ATLAS/ATL03_20200304065203_10470605_003_01.h5")
+f2 = icesat2.atl03("file:///data/ATLAS/ATL03_20200304065203_10470605_003_01.h5")
 r2 = core.reader(f2, "recq")
 
 recq = msg.subscribe("recq")

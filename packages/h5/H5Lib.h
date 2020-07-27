@@ -63,7 +63,6 @@ struct H5Lib
     static void     init        (void);
     static void     deinit      (void);
 
-    static driver_t url2driver  (const char* url);
     static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, unsigned col=0, unsigned maxrows=0);
     static bool     traverse    (const char* url, int max_depth, const char* start_group);
 };

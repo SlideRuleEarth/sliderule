@@ -26,6 +26,10 @@
 #include <rest_vol_public.h>
 #endif
 
+#ifdef __aws__
+#include "S3Lib.h"
+#endif
+
 #include "H5Lib.h"
 #include "core.h"
 
@@ -71,6 +75,46 @@ hid_t rest_vol_fapl = H5P_DEFAULT;
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * url2driver
+ *----------------------------------------------------------------------------*/
+H5Lib::driver_t url2driver (const char* url, const char** resource, hid_t* fapl)
+{
+    const char* rptr = StringLib::find(url, "//");
+    if(rptr)
+    {
+        *resource = rptr + 2;
+
+        if(StringLib::find(url, "file://"))
+        {
+            *fapl = H5P_DEFAULT;
+            return H5Lib::FILE;
+        }
+        else if(StringLib::find(url, "s3://"))      
+        {
+            #ifdef __aws__
+                const char* bucket = *resource;
+                const char* key = StringLib::find(bucket, PATH_DELIMETER);
+                if(key)
+                {
+                    if(S3Lib::get(bucket, key + 1, resource))
+                    {
+                        *fapl = H5P_DEFAULT;
+                        return H5Lib::S3;
+                    }
+                }
+            #endif
+        }
+        else if(StringLib::find(url, "hsds://"))    
+        {
+            *fapl = rest_vol_fapl;
+            return H5Lib::HSDS;
+        }
+    }
+
+    return H5Lib::UNKNOWN;
+}
 
 /*----------------------------------------------------------------------------
  * hdf5_iter_op_func
@@ -167,17 +211,6 @@ void H5Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lib::driver_t H5Lib::url2driver (const char* url)
-{
-    if     (StringLib::find(url, "file://"))    return FILE;
-    else if(StringLib::find(url, "s3://"))      return S3;
-    else if(StringLib::find(url, "hsds://"))    return HSDS;
-    else                                        return UNKNOWN;
-}
-
-/*----------------------------------------------------------------------------
- * read
- *----------------------------------------------------------------------------*/
 H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, unsigned col, unsigned maxrows)
 {
     info_t info;
@@ -188,6 +221,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Start with Invalid Handles */
+    const char* resource = NULL;
     hid_t fapl = H5P_DEFAULT;
     hid_t file = INVALID_RC;
     hid_t dataset = INVALID_RC;
@@ -199,22 +233,8 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     do
     {
         /* Initialize Driver */
-        driver_t driver = url2driver(url);
-        if(driver == FILE)
-        {
-            // do nothing
-        }
-        else if(driver == HSDS)
-        {
-            fapl = rest_vol_fapl;
-        }
-        else if(driver == S3)
-        {
-            // TODO
-//            S3Lib::get(const char* bucket, const char* key, const char* file);
-
-        }
-        else // driver == UNKNOWN
+        driver_t driver = url2driver(url, &resource, &fapl);
+        if(driver == UNKNOWN)
         {
             mlog(CRITICAL, "Invalid url: %s\n", url);
             break;
@@ -222,7 +242,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
         /* Open Resource */
         mlog(INFO, "Opening resource: %s\n", url);
-        file = H5Fopen(url, H5F_ACC_RDONLY, fapl);
+        file = H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
             mlog(CRITICAL, "Failed to open resource: %s\n", url);
@@ -359,6 +379,8 @@ bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
     bool        status = false;
     hid_t       file = INVALID_RC;
     hid_t       group = INVALID_RC;
+    hid_t       fapl = H5P_DEFAULT;
+    const char* resource = NULL;
 
     do
     {
@@ -366,8 +388,16 @@ bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
         rdepth_t recurse = {.data = 0};
         recurse.curr.max = max_depth;
 
+        /* Initialize Driver */
+        driver_t driver = url2driver(url, &resource, &fapl);
+        if(driver == UNKNOWN)
+        {
+            mlog(CRITICAL, "Invalid url: %s\n", url);
+            break;
+        }
+
         /* Open File */
-        file = H5Fopen(url, H5F_ACC_RDONLY, rest_vol_fapl);
+        file = H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
             mlog(CRITICAL, "Failed to open resource: %s", url);

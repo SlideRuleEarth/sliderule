@@ -42,11 +42,11 @@ def geodist(lat1, lon1, lat2, lon2):
 #
 # SlideRule Processing Request
 #
-def algoexec():
+def algoexec(asset):
 
     # Build ATL06 Request
     rqst = {
-        "filename": "/data/ATLAS/ATL03_20181019065445_03150111_003_01.h5",
+        "resource": asset + "/data/ATLAS/ATL03_20181019065445_03150111_003_01.h5",
         "track": 1,
         "stages": ["LSF"],
         "parms": {
@@ -95,11 +95,11 @@ def recoverdata(rsps):
 #
 # ATL06 (read-ICESat-2) Read Request
 #
-def expread():
+def expread(asset):
 
     # Baseline Request
     rqst = {
-        "filename": "/data/ATLAS/ATL06_20181019065445_03150111_003_01.h5",
+        "resource": asset + "/data/ATLAS/ATL06_20181019065445_03150111_003_01.h5",
         "datatype": sliderule.datatypes["REAL"],
         "id": 0
     }
@@ -145,8 +145,13 @@ def expread():
 
 if __name__ == '__main__':
 
+    asset = "file://"
+
     if len(sys.argv) > 1:
         sliderule.set_url(sys.argv[1])
+
+    if len(sys.argv) > 2:
+        asset = sys.argv[2]
 
     # Populate Record Definitions
     sliderule.populate("atl03rec")
@@ -156,10 +161,10 @@ if __name__ == '__main__':
     sliderule.populate("h5dataset")
 
     # Execute SlideRule Algorithm
-    act = algoexec()
+    act = algoexec(asset)
 
     # Read ATL06 Expected Results
-    exp = expread()
+    exp = expread(asset)
 
     # Plot Dataframe
     p = figure(title="Actual vs. Expected", plot_height=500, plot_width=800)
