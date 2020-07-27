@@ -137,6 +137,39 @@ void SafeString::appendChar(char c)
 }
 
 /*----------------------------------------------------------------------------
+ * findChar
+ *----------------------------------------------------------------------------*/
+int SafeString::findChar (char c, int start)
+{
+    if(start >= 0)
+    {
+        for(int i = start; i < len; i++)
+        {
+            if(str[i] == c)
+            {
+                return i;
+            }
+        }
+    }
+
+    return -1;
+}
+
+/*----------------------------------------------------------------------------
+ * setChar
+ *----------------------------------------------------------------------------*/
+bool SafeString::setChar (char c, int index)
+{
+    if(index >= 0 && index < len)
+    {
+        str[index] = c;
+        return true;
+    }
+
+    return false;
+}
+
+/*----------------------------------------------------------------------------
  * replace
  *
  *  replaces all occurrences

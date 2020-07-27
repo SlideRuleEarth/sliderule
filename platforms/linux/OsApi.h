@@ -55,6 +55,7 @@
 #endif
 
 #define PATH_DELIMETER '/'
+#define PATH_DELIMETER_STR "/"
 
 /******************************************************************************
  * TYPEDEFS

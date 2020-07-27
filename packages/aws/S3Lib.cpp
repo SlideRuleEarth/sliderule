@@ -54,12 +54,6 @@ Dictionary<okey_t> S3Lib::cacheLookUp;
 MgOrdering<const char*> S3Lib::cacheFiles(NULL, NULL, MgOrdering<const char*>::INFINITE_LIST_SIZE, true);
 
 /******************************************************************************
- * FILE DATA
- ******************************************************************************/
-
-SafeString path_delimeter_str("%c", PATH_DELIMETER);
-
-/******************************************************************************
  * AWS S3 LIBRARY CLASS
  ******************************************************************************/
 
@@ -100,7 +94,7 @@ void S3Lib::init (const char* cache_root, int max_cache_files)
                     
                     /* Reformat Filename to Key */
                     SafeString key("%s", key_ptr);
-                    key.replace("#", path_delimeter_str.getString());
+                    key.replace("#", PATH_DELIMETER_STR);
 
                     /* Add File to Cache */
                     cacheIndex++;
@@ -155,8 +149,11 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
 
     /* Build Cache Filename */
     SafeString cache_filename("%s", key);
-    cache_filename.replace(path_delimeter_str.getString(), "#");
+    cache_filename.replace(PATH_DELIMETER_STR, "#");
     SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.getString());
+
+    /* Log Operation */
+    mlog(INFO, "S3 %s object %s in bucket %s: %s\n", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filename.getString());
 
     /* Quick Exit If Cache Hit */
     if(found_in_cache)
@@ -211,7 +208,7 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
                 /* Delete File in Local File System */
                 cacheFiles.remove(index);
                 SafeString oldest_filename("%s", oldest_key);
-                oldest_filename.replace(path_delimeter_str.getString(), "#");
+                oldest_filename.replace(PATH_DELIMETER_STR, "#");
                 SafeString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.getString());
                 remove(oldest_filepath.getString());
             }

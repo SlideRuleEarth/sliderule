@@ -91,20 +91,21 @@ H5Lib::driver_t url2driver (const char* url, const char** resource, hid_t* fapl)
             *fapl = H5P_DEFAULT;
             return H5Lib::FILE;
         }
-        else if(StringLib::find(url, "s3://"))      
+        else if(StringLib::find(url, "s3://"))
         {
-            #ifdef __aws__
-                const char* bucket = *resource;
-                const char* key = StringLib::find(bucket, PATH_DELIMETER);
-                if(key)
-                {
-                    if(S3Lib::get(bucket, key + 1, resource))
+            const char* key_ptr = StringLib::find(*resource, PATH_DELIMETER);
+            SafeString bucket("%s", *resource);
+            bucket.setChar('\0', bucket.findChar(PATH_DELIMETER));
+            if(key_ptr)
+            {
+                #ifdef __aws__
+                    if(S3Lib::get(bucket.getString(), key_ptr + 1, resource))
                     {
                         *fapl = H5P_DEFAULT;
                         return H5Lib::S3;
                     }
-                }
-            #endif
+                #endif
+            }
         }
         else if(StringLib::find(url, "hsds://"))    
         {
