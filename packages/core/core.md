@@ -11,7 +11,7 @@ Tracing support in the core package is provided through the _Linux Tracing Toolk
 For convenience, the following steps can be used to install LTTng on Ubuntu 20.04:
 ```bash
 # Install Dependencies
-$ sudo apt install uuid-dev libpopt-dev liburcu-dev libxml2-dev libnuma-dev
+$ sudo apt install uuid-dev libpopt-dev liburcu-dev libxml2-dev libnuma-dev python
 # Install LTTng-modules
 $ cd $(mktemp -d) &&
 wget http://lttng.org/files/lttng-modules/lttng-modules-latest-2.12.tar.bz2 &&
