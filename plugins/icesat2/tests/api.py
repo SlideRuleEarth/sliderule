@@ -124,6 +124,11 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         sliderule.set_url(sys.argv[1])
 
+    # Override asset from command line
+
+    if len(sys.argv) > 2:
+        asset = sys.argv[2]
+
     # Populate record definitions
 
     sliderule.populate("atl03rec")

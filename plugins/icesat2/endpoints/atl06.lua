@@ -57,7 +57,7 @@ local atl03_reader = core.reader(atl03_device, "recq")
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
 
 -- Display Stats --
-print("ATL03", json.encode(atl03_reader:stats(true)))
+print("ATL03", json.encode(atl03_device:stats(true)))
 print("ATL06", json.encode(atl06_algo:stats(true)))
 
 return
