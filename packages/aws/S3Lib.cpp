@@ -291,12 +291,9 @@ int S3Lib::luaCreateCache(lua_State* L)
                         {
                             char cache_filepath[MAX_STR_SIZE];
                             StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
-                            const char* key_ptr = StringLib::find(cache_filepath, '#', false);
-                            if(key_ptr) key_ptr++;
-                            else        key_ptr = ent->d_name;
                             
                             /* Reformat Filename to Key */
-                            SafeString key("%s", key_ptr);
+                            SafeString key("%s", ent->d_name);
                             key.replace("#", PATH_DELIMETER_STR);
 
                             /* Add File to Cache */
