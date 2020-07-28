@@ -7,8 +7,10 @@ sys.path.append("/usr/local/etc/sliderule")
 import json
 import sliderule
 
-asset = "file://"
-h5file = "/data/ATLAS/ATL03_20181014040628_02370109_002_01.h5"
+#asset = "file://"
+#h5file = "/data/ATLAS/ATL03_20181014040628_02370109_002_01.h5"
+asset = "s3://"
+h5file = "slideruledemo/atl03samples/ATL03_20181014040628_02370109_002_01.h5"
 
 ###############################################################################
 # TESTS

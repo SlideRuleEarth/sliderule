@@ -1,3 +1,0 @@
-asset,format,url,index
-atl03-local,hdf5,/data/ATLAS,atl03-local.index
-atl03-cloud,hsds,http://hsds.sliderule.demo,atl03-cloud.index

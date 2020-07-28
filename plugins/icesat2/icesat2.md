@@ -5,7 +5,9 @@ The ICESat-2 plugin provides science data processing algorithms for derived ATL0
 
 ## I. Building
 
-This plugin requires the `h5` and `pistache` packages to be enabled.
+This plugin requires the `aws`, `h5` and `pistache` packages to be enabled.
+
+Also, make sure the /usr/local/etc/sliderule.plugin.conf file includes an entry for `icesat2`.
 
 ## II. Setting Up Python Environment
 

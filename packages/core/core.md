@@ -20,8 +20,10 @@ cd lttng-modules-2.12.* &&
 make &&
 sudo make modules_install &&
 sudo depmod -a
+```
+```bash
 # Install LTTng-UST
-cd $(mktemp -d) &&
+$ cd $(mktemp -d) &&
 wget http://lttng.org/files/lttng-ust/lttng-ust-latest-2.12.tar.bz2 &&
 tar -xf lttng-ust-latest-2.12.tar.bz2 &&
 cd lttng-ust-2.12.* &&
@@ -29,8 +31,10 @@ cd lttng-ust-2.12.* &&
 make &&
 sudo make install &&
 sudo ldconfig
+```
+```bash
 # Install LTTng-tools
-cd $(mktemp -d) &&
+$ cd $(mktemp -d) &&
 wget http://lttng.org/files/lttng-tools/lttng-tools-latest-2.12.tar.bz2 &&
 tar -xf lttng-tools-latest-2.12.tar.bz2 &&
 cd lttng-tools-2.12.* &&

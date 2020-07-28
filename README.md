@@ -18,7 +18,7 @@ A C++/Lua framework for on-demand data processing.
 
 5. Pistache (optional, enable USE_PISTACHE_PACKAGE, see [pistache.md](packages/pistache/pistache.md) for installation instructions)
 
-5. AWS SDK (optional, enable USE_AWS_PACKAGE, see [aws.md](packages/aws/aws.md) for installation instructions)
+6. AWS SDK (optional, enable USE_AWS_PACKAGE, see [aws.md](packages/aws/aws.md) for installation instructions)
 
 ## II. Building with CMake
 
@@ -55,17 +55,23 @@ Options include:
    -DENABLE_LTTNG_TRACING=[ON|OFF]     configure use of LTTng tracking
                                        default: OFF
 
-   -DUSE_AWS_PACKAGE=[ON|OFF]          AWS S3 access
+   -DUSE_CCSDS_PACKAGE=[ON|OFF]        CCSDS command and telemetry packet support
                                        default: ON
+
+   -DUSE_LEGACY_PACKAGE=[ON|OFF]       legacy code that supports older applications
+                                       default: ON
+
+   -DUSE_AWS_PACKAGE=[ON|OFF]          AWS S3 access
+                                       default: OFF
 
    -DUSE_H5_PACKAGE=[ON|OFF]           hdf5 reading/writing
-                                       default: ON
+                                       default: OFF
 
    -DUSE_PISTACHE_PACKAGE=[ON|OFF]     http server and client
-                                       default: ON
+                                       default: OFF
 
    -DUSE_ICESAT2_PLUGIN=[ON|OFF]       ICESat-2 science data processing
-                                       default: ON
+                                       default: OFF
 
    -DUSE_SIGVIEW_PLUGIN=[ON|OFF]       ATLAS raw telemetry processing
                                        default: ON
@@ -74,19 +80,101 @@ Options include:
 
 ## III. Quick Start
 
-After building and installing sliderule, here are some quick steps you can take to get up and running.
+Here are some quick steps you can take to setup a basic development environment and get up and running.
 
-### Self Test
+### 1. Install the base packages needed to build SlideRule
+
+The SlideRule framework is divided up into packages (which are compile-time modules) and plugins (which are run-time modules).  The ___core___ package provides the base functionality of SlideRule and must be compiled.  All other packages and all plugins extend the functionality of SlideRule and are conditionally compiled.  
+
+Install the basic packages needed to build the core package
 ```bash
-$ sliderule scripts/apps/test_runner.lua
+$ sudo apt install build-essential libreadline-dev liblua5.3-dev
 ```
 
-### Server
+Install analysis and utility packages used when developing and testing the code
+```bash
+$ sudo apt install curl meld cppcheck valgrind kcachegrind clang clang-tools lcov
+```
+
+### 2. Install a recent version of CMake (>= 3.13.0)
+
+SlideRule uses a relatively recent version of CMake in order to take advantage of some of the later improvements to the tool.  If using Ubuntu 20.04, then the system package is sufficient.  If using an older version of Ubuntu, or another distribution which has an older version of CMake, then it needs to be manually installed.
+
+Navigate to https://cmake.org/download/ and grab the latest stable binary installer for linux.  (As of this writing: cmake-3.17.2-Linux-x86_64.sh). 
+
+Install cmake into /opt with the commands below (assuming the install script is in Downloads):
+```bash
+$ cd /opt
+$ sudo sh cmake-3.17.2-Linux-x86_64.sh # accept license and default install location
+$ sudo ln -s cmake-3.17.2-Linux-x86_64 cmake
+```
+#### Update .bashrc
+```bash
+export PATH=$PATH:/opt/cmake/bin
+```
+
+### 3. Installing Docker
+
+The official Docker installation instructions found at https://docs.docker.com/engine/install/ubuntu/.
+
+For Ubuntu 20.04, Docker can be installed with the following commands:
+```bash
+$ sudo apt install docker.io
+```
+
+In order to run docker without having to be root, use the following commands:
+```bash
+$ sudo usermod -aG docker {username}
+$ newgrp docker # apply group to user
+```
+
+### 4. Install all dependencies
+
+If additional packages are needed, navigate to the packages readme (the {package}.md file found in each package directory) for instructions on how to build and configure that package.  Once the proper dependencies are installed, the corresponding option must be passed to cmake to ensure the package is built.
+
+For example, if the H5 package was needed, first the installation instructions at `packages/h5/h5.md` need to be followed, and then the `-DUSE_H5_PACKAGE=ON` needs to be passed to cmake when configuring the build.
+
+### 5. Build and install SlideRule
+
+The provided Makefile has targets for typical configurations.  See the [II. Building with CMake](#ii-building-with-cmake) section for more details.
+
+```bash
+$ make config
+$ make
+$ sudo make install
+```
+
+### 6. Run SlideRule
+
+SlideRule requires a lua script to be passed to it runs in order to establish which components are run. "Using" SlideRule means to develop the lua scripts needed to configure and insgantiate the needed SlideRule components. Two stock lua scripts are provided in the repository and can be used as a starting point for developing a project-specific lua script.
+
+A REST server running at port 9081 can be started via:
 ```bash
 $ sliderule scripts/apps/server.lua
 ```
 
+A self-test that dynamically checks which packages and plugins are present and runs their associated unit tests can be started via:
+```bash
+$ sliderule scripts/apps/test_runner.lua
+```
+
+### 7. Running SlideRule in a Docker container
+
+If you want to run SlideRule in a docker container, then the following steps can be taken:
+```bash
+$ make docker-image
+$ docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/scripts/apps/server.lua
+```
+
+As an example, this runs the server application inside the Docker container.  The following steps can be taken to configure what is run:
+* Inside the `make docker-image` makefile target, different cmake options are specified and can be changed to enable and disable different options
+* A script other than `/usr/local/scripts/apps/server.lua` can be passed to the SlideRule executable running inside the Docker container
+* Environment variables can be passed via `-e {parameter=value}` on the command line to docker
+
+
 ## IV. Directory Structure
+
+This section details the directory structure of the SlideRule repository to help you navigate where different functionality resides.
 
 ### platforms
 

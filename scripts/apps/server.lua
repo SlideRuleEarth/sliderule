@@ -5,5 +5,9 @@ console.logger:config(core.INFO)
 
 assets = asset.load()
 
-server = pistache.endpoint(9081)
-server:name("SlideRuleServer")
+if __pistache__ then
+    server = pistache.endpoint(9081)
+    server:name("SlideRuleServer")
+else
+    print("Must build pistache package to run server")
+end
