@@ -65,6 +65,7 @@ int AssetIndex::luaCreate (lua_State* L)
             if(assets.find(name))
             {
                 asset = assets.get(name);
+                associateMetaTable(L, LuaMetaName, LuaMetaTable);
                 alias = true;
             }
         }

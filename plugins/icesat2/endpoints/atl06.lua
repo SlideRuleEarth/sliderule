@@ -1,8 +1,9 @@
 --
 -- ENDPOINT:    /engine/atl06
 --
--- INPUT:       rqst -
+-- INPUT:       rqst
 --              {
+--                  "asset":        "<name of asset to use, defaults to atl03-local>"
 --                  "resource":     "<url of hdf5 file or object>"
 --                  "track":        <track number: 1, 2, 3>
 --                  "stages":       [<algorith stage 1>, ...]
@@ -19,41 +20,44 @@
 --
 
 local json = require("json")
+local asset = require("asset")
 
 -- Internal Parameters --
 local str2stage = { LSF=icesat2.STAGE_LSF }
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
+local asset_name = rqst["asset"] or "atl03-local"
 local resource = rqst["resource"]
 local track = rqst["track"]
 local stages = rqst["stages"]
 local parms = rqst["parms"]
 
 -- ATL06 Dispatch Algorithm --
-a = icesat2.atl06(rspq, parms)
+local atl06_algo = icesat2.atl06(rspq, parms)
 if stages then
-    a:select(icesat2.ALL_STAGES, false)
+    atl06_algo:select(icesat2.ALL_STAGES, false)
     for k,v in pairs(stages) do
-        a:select(str2stage[v], true)
+        atl06_algo:select(str2stage[v], true)
     end
 end
 
 -- ATL06 Dispatcher --
-d = core.dispatcher("recq")
-d:attach(a, "atl03rec")
+local atl06_disp = core.dispatcher("recq")
+atl06_disp:attach(atl06_algo, "atl03rec")
 
 -- ATL03 Device --
-f = icesat2.atl03(resource, parms)
+local resource_url = asset.buildurl(asset_name, resource)
+local atl03_device = icesat2.atl03(resource_url, parms)
 
 -- ATL03 File Reader --
-r = core.reader(f, "recq")
+local atl03_reader = core.reader(atl03_device, "recq")
 
 -- Wait for Data to Start --
 sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
 
 -- Display Stats --
-print("ATL03", json.encode(f:stats(true)))
-print("ATL06", json.encode(a:stats(true)))
+print("ATL03", json.encode(atl03_reader:stats(true)))
+print("ATL06", json.encode(atl06_algo:stats(true)))
 
 return

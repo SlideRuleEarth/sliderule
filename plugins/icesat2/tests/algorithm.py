@@ -33,7 +33,6 @@ def geodist(lat1, lon1, lat2, lon2):
     dlat = lat2 - lat1 
 
     dist = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
- #   dist = 2.0 * math.asin(math.sqrt(dist))  
     dist = 2.0 * math.atan2(math.sqrt(dist), math.sqrt(1.0 - dist))
     dist = 6373.0 * dist
 
@@ -46,7 +45,8 @@ def algoexec(asset):
 
     # Build ATL06 Request
     rqst = {
-        "resource": asset + "/data/ATLAS/ATL03_20181019065445_03150111_003_01.h5",
+        "asset" : asset,
+        "resource": "ATL03_20181019065445_03150111_003_01.h5",
         "track": 1,
         "stages": ["LSF"],
         "parms": {
@@ -99,7 +99,8 @@ def expread(asset):
 
     # Baseline Request
     rqst = {
-        "resource": asset + "/data/ATLAS/ATL06_20181019065445_03150111_003_01.h5",
+        "asset" : asset,
+        "resource": "ATL06_20181019065445_03150111_003_01.h5",
         "datatype": sliderule.datatypes["REAL"],
         "id": 0
     }
@@ -145,11 +146,10 @@ def expread(asset):
 
 if __name__ == '__main__':
 
-    asset = "file://"
-
     if len(sys.argv) > 1:
         sliderule.set_url(sys.argv[1])
 
+    asset = "atl03-local"
     if len(sys.argv) > 2:
         asset = sys.argv[2]
 

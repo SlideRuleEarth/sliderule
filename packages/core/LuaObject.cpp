@@ -250,20 +250,8 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
         engine_trace_id = lua_tonumber(L, -1);
 
         /* Associate Meta Table */
-        if(luaL_newmetatable(L, meta_name))
-        {
-            /* Add Child Class Functions */
-            lua_pushvalue(L, -1);
-            lua_setfield(L, -2, "__index");
-            luaL_setfuncs(L, meta_table, 0);
-
-            /* Add Base Class Functions */
-            LuaEngine::setAttrFunc(L, "name", associateLuaName);
-            LuaEngine::setAttrFunc(L, "destroy", deleteLuaObject);
-            LuaEngine::setAttrFunc(L, "__gc", deleteLuaObject);
-
-            mlog(INFO, "Created object of type %s\n", getType());
-        }
+        associateMetaTable(L, meta_name, meta_table);
+        mlog(INFO, "Created object of type %s\n", getType());
     }
 
     /* Start Trace */
@@ -279,6 +267,25 @@ LuaObject::~LuaObject (void)
     stop_trace(traceId);
     mlog(INFO, "Deleting %s of type %s\n", getName(), getType());
     if(ObjectName) delete [] ObjectName;
+}
+
+/*----------------------------------------------------------------------------
+ * associateMetaTable
+ *----------------------------------------------------------------------------*/
+void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[])
+{
+    if(luaL_newmetatable(L, meta_name))
+    {
+        /* Add Child Class Functions */
+        lua_pushvalue(L, -1);
+        lua_setfield(L, -2, "__index");
+        luaL_setfuncs(L, meta_table, 0);
+
+        /* Add Base Class Functions */
+        LuaEngine::setAttrFunc(L, "name", associateLuaName);
+        LuaEngine::setAttrFunc(L, "destroy", deleteLuaObject);
+        LuaEngine::setAttrFunc(L, "__gc", deleteLuaObject);
+    }
 }
 
 /*----------------------------------------------------------------------------
