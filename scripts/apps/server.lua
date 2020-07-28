@@ -20,13 +20,22 @@ end
 -- Pull Out Parameters --
 local loglvl = cfgtbl["loglvl"] or core.INFO
 local port = cfgtbl["port"] or 9081
-local assets_file = cfgtbl["assets"] or nil
+local asset_directory = cfgtbl["asset_directory"] or nil
+local cache_root = cfgtbl["cache_root"]
+local cache_size = cfgtbl["cache_size"]
 
 -- Configure Logging --
 console.logger:config(loglvl)
 
 -- Configure Assets --
-assets = asset.load(assets_file)
+assets = asset.load(asset_directory)
+
+-- Configure S3 Cache --
+if __aws__ then
+    if cache_root then
+        aws.s3cache(cache_root, cache_size)
+    end
+end
 
 -- Configure and Run Server --
 if __pistache__ then

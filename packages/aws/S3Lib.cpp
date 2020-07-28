@@ -46,7 +46,9 @@ const char* S3Lib::DEFAULT_REGION = "us-west-2";
 const char* S3Lib::endpoint = NULL;
 const char* S3Lib::region = NULL;
 
+const char* S3Lib::DEFAULT_CACHE_ROOT = ".cache";
 const char* S3Lib::cacheRoot = NULL;
+
 int S3Lib::cacheMaxSize = 0;
 okey_t S3Lib::cacheIndex = 0;
 Mutex S3Lib::cacheMut;
@@ -60,58 +62,15 @@ MgOrdering<const char*> S3Lib::cacheFiles(NULL, NULL, MgOrdering<const char*>::I
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void S3Lib::init (const char* cache_root, int max_cache_files)
+void S3Lib::init (void)
 {
-    int file_count = 0;
-
     /* Set AWS Attributes */
     endpoint = StringLib::duplicate(DEFAULT_ENDPOINT);
     region = StringLib::duplicate(DEFAULT_REGION);
 
     /* Set Cache Attributes */
-    cacheRoot = StringLib::duplicate(cache_root);
-    cacheMaxSize = max_cache_files;
-
-    /* Create Directory (if it doesn't exist) */
-    mkdir(cacheRoot, 0700);
-
-    /* Traverse Directory and Build Cache (if it does exist) */
-    DIR *dir;
-    if((dir = opendir(cacheRoot)) != NULL)
-    {
-        struct dirent *ent;
-        while((ent = readdir(dir)) != NULL)
-        {
-            if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
-            {
-                if(file_count++ < cacheMaxSize)
-                {
-                    char cache_filepath[MAX_STR_SIZE];
-                    StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
-                    const char* key_ptr = StringLib::find(cache_filepath, '#', false);
-                    if(key_ptr) key_ptr++;
-                    else        key_ptr = ent->d_name;
-                    
-                    /* Reformat Filename to Key */
-                    SafeString key("%s", key_ptr);
-                    key.replace("#", PATH_DELIMETER_STR);
-
-                    /* Add File to Cache */
-                    cacheIndex++;
-                    cacheLookUp.add(key.getString(), cacheIndex);
-                    const char* cache_key = StringLib::duplicate(key.getString());
-                    cacheFiles.add(cacheIndex, cache_key);
-                }
-            }
-        }
-        closedir(dir);
-    }
-
-    /* Log Status */
-    if(file_count > 0)
-    {
-        printf("Loaded %ld of %d files into S3 cache\n", cacheFiles.length(), file_count);
-    }
+    cacheRoot = StringLib::duplicate(DEFAULT_CACHE_ROOT);
+    cacheMaxSize = DEFAULT_MAX_CACHE_FILES;
 }
 
 /*----------------------------------------------------------------------------
@@ -286,6 +245,112 @@ int S3Lib::luaConfig(lua_State* L)
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error configuring S3 access: %s\n", e.errmsg);
+        return LuaObject::returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaCreateCache - s3cache(<root>, <max_files>)
+ *----------------------------------------------------------------------------*/
+int S3Lib::luaCreateCache(lua_State* L)
+{
+    try
+    {
+        /* Get Parameters */
+        const char* cache_root  = LuaObject::getLuaString(L, 1);
+        int         max_files   = LuaObject::getLuaInteger(L, 2, true, DEFAULT_MAX_CACHE_FILES);
+
+        /* Create Cache */
+        cacheMut.lock();
+        {
+            /* Set Cache Root */
+            if(cacheRoot) delete [] cacheRoot;
+            cacheRoot = StringLib::duplicate(cache_root);
+
+            /* Create Cache Directory (if it doesn't exist) */
+            mkdir(cacheRoot, 0700);
+
+            /* Set Maximum Number of Files */
+            cacheMaxSize = max_files;
+
+            /* Clear Out Cache Lookup Table and Files */
+            cacheLookUp.clear();
+            cacheFiles.clear();
+
+            /* Traverse Directory and Build Cache (if it does exist) */
+            DIR *dir;
+            if((dir = opendir(cacheRoot)) != NULL)
+            {
+                int file_count = 0;
+                struct dirent *ent;
+                while((ent = readdir(dir)) != NULL)
+                {
+                    if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
+                    {
+                        if(file_count++ < cacheMaxSize)
+                        {
+                            char cache_filepath[MAX_STR_SIZE];
+                            StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
+                            const char* key_ptr = StringLib::find(cache_filepath, '#', false);
+                            if(key_ptr) key_ptr++;
+                            else        key_ptr = ent->d_name;
+                            
+                            /* Reformat Filename to Key */
+                            SafeString key("%s", key_ptr);
+                            key.replace("#", PATH_DELIMETER_STR);
+
+                            /* Add File to Cache */
+                            cacheIndex++;
+                            cacheLookUp.add(key.getString(), cacheIndex);
+                            const char* cache_key = StringLib::duplicate(key.getString());
+                            cacheFiles.add(cacheIndex, cache_key);
+                            mlog(CRITICAL, "Caching %s for S3 retrieval\n", key.getString());
+                        }
+                    }
+                }
+                closedir(dir);
+
+                /* Log Status */
+                if(file_count > 0)
+                {
+                    mlog(CRITICAL, "Loaded %ld of %d files into S3 cache\n", cacheFiles.length(), file_count);
+                }
+            }
+        }
+        cacheMut.unlock();
+        
+        /* Get Object and Write to File */
+        return LuaObject::returnLuaStatus(L, true);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error creating S3 cache: %s\n", e.errmsg);
+        return LuaObject::returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaFlushCache - s3flush()
+ *----------------------------------------------------------------------------*/
+int S3Lib::luaFlushCache(lua_State* L)
+{
+    try
+    {
+        /* Flush Cache */
+        cacheMut.lock();
+        {
+            mlog(CRITICAL, "Flushing %ld files out of S3 cache\n", cacheFiles.length());
+            cacheLookUp.clear();
+            cacheFiles.clear();
+        }
+        cacheMut.unlock();
+        
+        /* Get Object and Write to File */
+        return LuaObject::returnLuaStatus(L, true);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error flushing S3 cache: %s\n", e.errmsg);
         return LuaObject::returnLuaStatus(L, false);
     }
 }

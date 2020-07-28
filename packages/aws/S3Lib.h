@@ -44,19 +44,22 @@ class S3Lib
         static const char* DEFAULT_ENDPOINT;
         static const char* DEFAULT_REGION;
 
+        static const char* DEFAULT_CACHE_ROOT;
         static const int DEFAULT_MAX_CACHE_FILES = 16;
         
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void init        (const char* cache_root="./.cache", int max_cache_files=DEFAULT_MAX_CACHE_FILES);
-        static void deinit      (void);
+        static void init            (void);
+        static void deinit          (void);
 
-        static bool get         (const char* bucket, const char* key, const char** file);
+        static bool get             (const char* bucket, const char* key, const char** file);
 
-        static int  luaGet      (lua_State* L);
-        static int  luaConfig   (lua_State* L);
+        static int  luaGet          (lua_State* L);
+        static int  luaConfig       (lua_State* L);
+        static int  luaCreateCache  (lua_State* L);
+        static int  luaFlushCache   (lua_State* L);
 
     private:
         
