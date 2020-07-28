@@ -21,7 +21,7 @@ local function load(file, quiet)
             directory[fields["asset"]] = fields
         end
     else
-        print(string.format("Unable to load asset directory: %s", full_path))
+        print(string.format("Unable to load asset directory: %s", file))
     end
 
     for k,v in pairs(directory) do

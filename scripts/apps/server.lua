@@ -26,7 +26,7 @@ local assets_file = cfgtbl["assets"] or nil
 console.logger:config(loglvl)
 
 -- Configure Assets --
-assets = asset.load(assets)
+assets = asset.load(assets_file)
 
 -- Configure and Run Server --
 if __pistache__ then
