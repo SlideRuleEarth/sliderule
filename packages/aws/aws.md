@@ -10,27 +10,14 @@ $ sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev
 Clone the repo:
 ```bash
 git clone git@github.com:aws/aws-sdk-cpp.git
+git checkout version1.8 # switch to the version 1.8 branch
 ```
 
 Build and install the library:
 ```bash
 mkdir aws_sdk_build
 cd aws_sdk_build
-cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release
+cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
 make
 sudo make install
-```
-
-## Using Version 1.8
-
-Version 1.8 of the SDK provides greater control over what is being built and is recommended for use.
-
-Switch to the version 1.8 branch:
-```bash
-git checkout version1.8
-```
-
-Use the following cmake line when building the code:
-```bash
-cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
 ```
