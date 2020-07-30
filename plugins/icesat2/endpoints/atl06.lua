@@ -27,7 +27,7 @@ local str2stage = { LSF=icesat2.STAGE_LSF }
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local asset_name = rqst["asset"] or "atl03-local"
+local asset_name = rqst["asset"] or "atl03-hsds"
 local resource = rqst["resource"]
 local track = rqst["track"]
 local stages = rqst["stages"]
