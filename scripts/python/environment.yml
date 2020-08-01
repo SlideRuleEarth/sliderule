@@ -1,0 +1,9 @@
+name: sliderule
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.6
+  - notebook
+  - numpy
+  - pandas
+  - bokeh
