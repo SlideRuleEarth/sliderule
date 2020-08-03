@@ -28,7 +28,7 @@
  * DEFINES
  ******************************************************************************/
 
-#define ATL06_DEFAULT_SURFACE_TYPE              SRT_LAND_ICE        
+#define ATL06_DEFAULT_SURFACE_TYPE              SRT_LAND_ICE
 #define ATL06_DEFAULT_SIGNAL_CONFIDENCE         CNF_SURFACE_HIGH
 #define ATL06_DEFAULT_ALONG_TRACK_SPREAD        20.0 // meters
 #define ATL06_DEFAULT_MIN_PHOTON_COUNT          10
@@ -67,39 +67,39 @@ atl06_parms_t lua_parms_process (lua_State* L, int index)
     {
         bool provided = false;
 
-        lua_getfield(L, 2, LUA_PARM_SURFACE_TYPE);
+        lua_getfield(L, index, LUA_PARM_SURFACE_TYPE);
         parms.surface_type = (surface_type_t)LuaObject::getLuaInteger(L, -1, true, parms.surface_type, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_SURFACE_TYPE, (int)parms.surface_type);
 
-        lua_getfield(L, 2, LUA_PARM_SIGNAL_CONFIDENCE);
+        lua_getfield(L, index, LUA_PARM_SIGNAL_CONFIDENCE);
         parms.signal_confidence = (signal_conf_t)LuaObject::getLuaInteger(L, -1, true, parms.signal_confidence, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_SIGNAL_CONFIDENCE, (int)parms.signal_confidence);
 
-        lua_getfield(L, 2, LUA_PARM_MAX_ITERATIONS);
+        lua_getfield(L, index, LUA_PARM_MAX_ITERATIONS);
         parms.max_iterations = LuaObject::getLuaInteger(L, -1, true, parms.max_iterations, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %d\n", LUA_PARM_MAX_ITERATIONS, (int)parms.max_iterations);
 
-        lua_getfield(L, 2, LUA_PARM_ALONG_TRACK_SPREAD);
+        lua_getfield(L, index, LUA_PARM_ALONG_TRACK_SPREAD);
         parms.along_track_spread = LuaObject::getLuaFloat(L, -1, true, parms.along_track_spread, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_ALONG_TRACK_SPREAD, parms.along_track_spread);
 
-        lua_getfield(L, 2, LUA_PARM_MIN_PHOTON_COUNT);
+        lua_getfield(L, index, LUA_PARM_MIN_PHOTON_COUNT);
         parms.minimum_photon_count = LuaObject::getLuaInteger(L, -1, true, parms.minimum_photon_count, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_MIN_PHOTON_COUNT, parms.minimum_photon_count);
 
-        lua_getfield(L, 2, LUA_PARM_MIN_WINDOW);
+        lua_getfield(L, index, LUA_PARM_MIN_WINDOW);
         parms.minimum_window = LuaObject::getLuaFloat(L, -1, true, parms.minimum_window, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_MIN_WINDOW, parms.minimum_window);
 
-        lua_getfield(L, 2, LUA_PARM_MAX_ROBUST_DISPERSION);
+        lua_getfield(L, index, LUA_PARM_MAX_ROBUST_DISPERSION);
         parms.maximum_robust_dispersion = LuaObject::getLuaFloat(L, -1, true, parms.maximum_robust_dispersion, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_MAX_ROBUST_DISPERSION, parms.maximum_robust_dispersion);
 
-        lua_getfield(L, 2, LUA_PARM_EXTENT_LENGTH);
+        lua_getfield(L, index, LUA_PARM_EXTENT_LENGTH);
         parms.extent_length = LuaObject::getLuaFloat(L, -1, true, parms.extent_length, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_EXTENT_LENGTH, parms.extent_length);
 
-        lua_getfield(L, 2, LUA_PARM_EXTENT_STEP);
+        lua_getfield(L, index, LUA_PARM_EXTENT_STEP);
         parms.extent_step = LuaObject::getLuaFloat(L, -1, true, parms.extent_step, &provided);
         if(provided) mlog(CRITICAL, "Setting %s to %lf\n", LUA_PARM_EXTENT_STEP, parms.extent_step);
     }

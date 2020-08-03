@@ -105,7 +105,7 @@ def test_definition ():
 
     d = sliderule.source("definition", rqst)
 
-    if(d["gps"]["offset"] == 384):
+    if(d["gps"]["offset"] == 448):
         print("Passed definition test")
     else:
         print("Failed definition test", d["gps"]["offset"])

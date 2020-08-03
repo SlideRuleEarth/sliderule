@@ -197,7 +197,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
     stats.h5atl03_rec_cnt++;
 
     /* Get Extent */
-    Atl03Device::extent_t* extent = (Atl03Device::extent_t*)record->getRecordData();
+    Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Clear Results */
     LocalLib::set(&result, 0, sizeof(result_t) * PAIR_TRACKS_PER_GROUND_TRACK);
@@ -308,7 +308,7 @@ void Atl06Dispatch::populateElevation (elevation_t* elevation)
  *
  *  TODO: replace spacecraft ground speed constant with value provided in ATL03
  *----------------------------------------------------------------------------*/
-void Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* result)
+void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* result)
 {
     /* Process Tracks */
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)

@@ -29,12 +29,14 @@
 #include "List.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
+#include "MsgQ.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * ATL03 READER
  ******************************************************************************/
 
-class Atl03Reader
+class Atl03Reader: public LuaObject
 {
     public:
 
@@ -71,8 +73,9 @@ class Atl03Reader
         typedef struct {
             uint32_t        segments_read[PAIR_TRACKS_PER_GROUND_TRACK];
             uint32_t        extents_filtered[PAIR_TRACKS_PER_GROUND_TRACK];
-            uint32_t        extents_added;
             uint32_t        extents_sent;
+            uint32_t        extents_dropped;
+            uint32_t        extents_retried;
         } stats_t;
 
         /*--------------------------------------------------------------------
@@ -85,6 +88,11 @@ class Atl03Reader
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
+        static const char* OBJECT_TYPE;
+
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -93,6 +101,16 @@ class Atl03Reader
         static void init        (void);
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            Atl03Reader*    reader;
+            const char*     url;
+            int             track;
+        } info_t;
 
         /*--------------------------------------------------------------------
          * Constants
@@ -105,29 +123,22 @@ class Atl03Reader
          * Data
          *--------------------------------------------------------------------*/
 
+        bool                    active;
+        Thread*                 readerPid[NUM_TRACKS];
+        Publisher*              outQ;
         atl06_parms_t           parms;
         stats_t                 stats;
-        List<RecordObject*>     extentList;
-        int                     listIndex;
-        bool                    connected;
-        char*                   config;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader         (lua_State* L, const char* ur, atl06_parms_t _parms);
+                            Atl03Reader         (lua_State* L, const char* url, const char* outq_name, atl06_parms_t _parms, int track=ALL_TRACKS);
                             ~Atl03Reader        (void);
 
-        bool                bufferData          (const char* url, int track);
+        bool                readData            (const char* url, int track);
 
-        virtual bool        isConnected         (int num_open=0);   // is the file open
-        virtual void        closeConnection     (void);             // close the file
-        virtual int         writeBuffer         (const void* buf, int len);
-        virtual int         readBuffer          (void* buf, int len);
-        virtual int         getUniqueId         (void);             // returns file descriptor
-        virtual const char* getConfig           (void);             // returns filename with attribute list
-
+        static void*        readerThread        (void* parm);
         static int          luaParms            (lua_State* L);
         static int          luaStats            (lua_State* L);
 };

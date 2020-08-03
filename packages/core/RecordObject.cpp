@@ -1562,7 +1562,10 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     }
     catch(const std::out_of_range& e)
     {
-        dlog("Failed to find subrecord definition for field %s\n", field_name);
+        if(field_name)
+        {
+            dlog("Failed to find subrecord definition for field %s\n", field_name);
+        }
     }
 
     /* Return Field */

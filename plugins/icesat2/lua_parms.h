@@ -44,6 +44,15 @@
  * TYPEDEFS
  ******************************************************************************/
 
+/* Tracks */
+typedef enum {
+    ALL_TRACKS = 0,
+    RPT_1 = 1,
+    RPT_2 = 2,
+    RPT_3 = 3,
+    NUM_TRACKS = 3
+} track_t;
+
 /* Signal Confidence per Photon */
 typedef enum {
     CNF_POSSIBLE_TEP = -2,

@@ -31,7 +31,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "GTArray.h"
-#include "Atl03Device.h"
+#include "Atl03Reader.h"
 #include "lua_parms.h"
 
 /******************************************************************************
@@ -157,7 +157,7 @@ class Atl06Dispatch: public DispatchObject
 
         void            populateElevation               (elevation_t* elevation);
 
-        void            iterativeFitStage               (Atl03Device::extent_t* extent, result_t* result);
+        void            iterativeFitStage               (Atl03Reader::extent_t* extent, result_t* result);
 
         static int      luaStats                        (lua_State* L);
         static int      luaSelect                       (lua_State* L);
