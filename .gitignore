@@ -1,4 +1,13 @@
 .vscode/
 build/
+dist/
 .venv/
 stage/
+develop-eggs/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+__pycache__
+*.pyc
+.ipynb_checkpoints
