@@ -1,5 +1,5 @@
 #
-# System Imports
+# Imports
 #
 import sys
 
@@ -11,11 +11,6 @@ from bokeh.io import show
 from bokeh.palettes import Spectral11
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
-
-#
-# Import SlideRule
-#
-sys.path.append("/usr/local/etc/sliderule")
 
 import sliderule
 
@@ -29,8 +24,8 @@ def geodist(lat1, lon1, lat2, lon2):
     lat2 = math.radians(lat2)
     lon2 = math.radians(lon2)
 
-    dlon = lon2 - lon1  
-    dlat = lat2 - lat1 
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
 
     dist = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
     dist = 2.0 * math.atan2(math.sqrt(dist), math.sqrt(1.0 - dist))
@@ -88,7 +83,7 @@ def recoverdata(rsps):
     data = ()
     size = 0
     for d in rsps:
-        data = data + d["DATA"] 
+        data = data + d["DATA"]
         size = size + d["SIZE"]
     return sliderule.get_values(data, datatype, size)
 
@@ -135,7 +130,7 @@ def expread(asset):
     df = df[df["height"] < 25000.0]
     df = df[df["height"] > -25000.0]
     df = df[df["distance"] < 4000.0]
-    
+
     # Return DataFrame
     print("Retrieved {} points from ATL06, returning {} points".format(len(heights), len(df.values)))
     return df

@@ -5,5 +5,4 @@ dependencies:
   - python>=3.6
   - notebook
   - numpy
-  - pandas
-  - bokeh
+  - requests

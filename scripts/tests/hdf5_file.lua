@@ -1,5 +1,5 @@
 local runner = require("test_executive")
-console = require("console")
+local console = require("console")
 
 -- Setup --
 
