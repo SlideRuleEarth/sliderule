@@ -53,7 +53,7 @@ class Atl03Reader: public LuaObject
         /* Extent Record */
         typedef struct {
             uint8_t         reference_pair_track; // 1, 2, or 3
-            uint8_t         spacecraft_orientation; // backward (0), forward (1), transition (2)
+            uint8_t         spacecraft_orientation; // sc_orient_t
             uint16_t        reference_ground_track_start;
             uint16_t        reference_ground_track_end;
             uint16_t        cycle_start;

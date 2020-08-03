@@ -70,16 +70,17 @@ class Atl06Dispatch: public DispatchObject
 
         /* Statistics --> TODO: NOT THREAD SAFE */
         typedef struct {
-            uint32_t    h5atl03_rec_cnt;
-            uint32_t    post_success_cnt;
-            uint32_t    post_dropped_cnt;
+            uint32_t        h5atl03_rec_cnt;
+            uint32_t        post_success_cnt;
+            uint32_t        post_dropped_cnt;
         } stats_t;
 
         /* Elevation Measurement */
         typedef struct {
             uint32_t        segment_id;
-            uint16_t        grt[2];                 // ground reference track, start and end
-            uint16_t        cycle[2];               // cycle number, start and end
+            uint16_t        rgt;                    // reference ground track
+            uint16_t        cycle;                  // cycle number
+            uint8_t         beam;                   // 1 through 6, or 0 if unknown
             double          gps_time;               // seconds from GPS epoch
             double          latitude;
             double          longitude;
@@ -155,7 +156,8 @@ class Atl06Dispatch: public DispatchObject
         bool            processRecord                   (RecordObject* record, okey_t key) override;
         bool            processTimeout                  (void) override;
 
-        void            populateElevation               (elevation_t* elevation);
+        void            calculateBeam                   (sc_orient_t sc_orient, track_t track, result_t* result);
+        void            postResult                      (elevation_t* elevation);
 
         void            iterativeFitStage               (Atl03Reader::extent_t* extent, result_t* result);
 
