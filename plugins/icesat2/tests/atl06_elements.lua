@@ -29,21 +29,21 @@ recq:destroy()
 runner.check(extentrec, "Failed to read an extent record")
 
 if extentrec then
-    runner.check(extentrec:getvalue("TRACK") == 1, extentrec:getvalue("TRACK"))
-    runner.check(extentrec:getvalue("SEG_ID[0]") == 555764, extentrec:getvalue("SEG_ID[0]"))
-    runner.check(extentrec:getvalue("SEG_ID[1]") == 555764, extentrec:getvalue("SEG_ID[1]"))
-    runner.check(runner.cmpfloat(extentrec:getvalue("GPS[0]"), 1267339942.127844, 0.0001), extentrec:getvalue("GPS[0]"))
-    runner.check(runner.cmpfloat(extentrec:getvalue("GPS[1]"), 1267339942.472445, 0.0001), extentrec:getvalue("GPS[1]"))
-    runner.check(extentrec:getvalue("COUNT[0]") == 136, extentrec:getvalue("COUNT[0]"))
-    runner.check(extentrec:getvalue("COUNT[1]") == 539, extentrec:getvalue("COUNT[1]"))
+    runner.check(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
+    runner.check(extentrec:getvalue("seg_id[0]") == 555764, extentrec:getvalue("seg_id[0]"))
+    runner.check(extentrec:getvalue("seg_id[1]") == 555764, extentrec:getvalue("seg_id[1]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("gps[0]"), 1267339942.127844, 0.0001), extentrec:getvalue("gps[0]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("gps[1]"), 1267339942.472445, 0.0001), extentrec:getvalue("gps[1]"))
+    runner.check(extentrec:getvalue("count[0]") == 136, extentrec:getvalue("count[0]"))
+    runner.check(extentrec:getvalue("count[1]") == 539, extentrec:getvalue("count[1]"))
 end
 
 t2 = extentrec:tabulate()
 
-runner.check(t2.SEG_ID[1] == extentrec:getvalue("SEG_ID[0]"))
-runner.check(t2.SEG_ID[2] == extentrec:getvalue("SEG_ID[1]"))
-runner.check(runner.cmpfloat(t2.GPS[1], extentrec:getvalue("GPS[0]"), 0.0001))
-runner.check(runner.cmpfloat(t2.GPS[2], extentrec:getvalue("GPS[1]"), 0.0001))
+runner.check(t2.SEG_ID[1] == extentrec:getvalue("seg_id[0]"))
+runner.check(t2.SEG_ID[2] == extentrec:getvalue("seg_id[1]"))
+runner.check(runner.cmpfloat(t2.GPS[1], extentrec:getvalue("gps[0]"), 0.0001))
+runner.check(runner.cmpfloat(t2.GPS[2], extentrec:getvalue("gps[1]"), 0.0001))
 
 
 print('\n------------------\nTest03: Atl03 Extent Definition\n------------------')

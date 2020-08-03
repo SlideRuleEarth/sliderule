@@ -31,12 +31,12 @@
 
 const char* H5DatasetDevice::recType = "h5dataset";
 const RecordObject::fieldDef_t H5DatasetDevice::recDef[] = {
-    {"ID",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS},
-    {"DATASET", RecordObject::STRING,   offsetof(h5dataset_t, dataset), 1,  NULL, NATIVE_FLAGS | RecordObject::POINTER},
-    {"DATATYPE",RecordObject::UINT32,   offsetof(h5dataset_t, datatype),1,  NULL, NATIVE_FLAGS},
-    {"OFFSET",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NULL, NATIVE_FLAGS},
-    {"SIZE",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS},
-    {"DATA",    RecordObject::UINT8,    sizeof(h5dataset_t),            0,  NULL, NATIVE_FLAGS}
+    {"id",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS},
+    {"dataset", RecordObject::STRING,   offsetof(h5dataset_t, dataset), 1,  NULL, NATIVE_FLAGS | RecordObject::POINTER},
+    {"datatype",RecordObject::UINT32,   offsetof(h5dataset_t, datatype),1,  NULL, NATIVE_FLAGS},
+    {"offset",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NULL, NATIVE_FLAGS},
+    {"size",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS},
+    {"data",    RecordObject::UINT8,    sizeof(h5dataset_t),            0,  NULL, NATIVE_FLAGS}
 };
 
 /******************************************************************************

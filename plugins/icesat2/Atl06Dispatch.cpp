@@ -74,20 +74,20 @@ const double Atl06Dispatch::SIGMA_XMIT = 0.000000068; // seconds
 
 const char* Atl06Dispatch::elRecType = "atl06rec.elevation";
 const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
-    {"SEG_ID",  RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
-    {"GRT",     RecordObject::UINT16,   offsetof(elevation_t, grt),                 1,  NULL, NATIVE_FLAGS},
-    {"CYCLE",   RecordObject::UINT16,   offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS},
-    {"GPS",     RecordObject::DOUBLE,   offsetof(elevation_t, gps_time),            1,  NULL, NATIVE_FLAGS},
-    {"LAT",     RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
-    {"LON",     RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
-    {"HEIGHT",  RecordObject::DOUBLE,   offsetof(elevation_t, height),              1,  NULL, NATIVE_FLAGS},
-    {"ALTS",    RecordObject::DOUBLE,   offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
-    {"ACTS",    RecordObject::DOUBLE,   offsetof(elevation_t, across_track_slope),  1,  NULL, NATIVE_FLAGS}
+    {"seg_id",  RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
+    {"gps",     RecordObject::DOUBLE,   offsetof(elevation_t, gps_time),            1,  NULL, NATIVE_FLAGS},
+    {"lat",     RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
+    {"lon",     RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
+    {"height",  RecordObject::DOUBLE,   offsetof(elevation_t, height),              1,  NULL, NATIVE_FLAGS},
+    {"alts",    RecordObject::DOUBLE,   offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
+    {"acts",    RecordObject::DOUBLE,   offsetof(elevation_t, across_track_slope),  1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl06Dispatch::atRecType = "atl06rec";
 const RecordObject::fieldDef_t Atl06Dispatch::atRecDef[] = {
-    {"ELEVATION",   RecordObject::USER, offsetof(atl06_t, elevation),               0, elRecType, NATIVE_FLAGS}
+    {"rgt",     RecordObject::UINT16,   offsetof(elevation_t, grt),                 2,  NULL, NATIVE_FLAGS},
+    {"cycle",   RecordObject::UINT16,   offsetof(elevation_t, cycle),               2,  NULL, NATIVE_FLAGS},
+    {"elevation",   RecordObject::USER, offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS}
 };
 
 const char* Atl06Dispatch::LuaMetaName = "Atl06Dispatch";
@@ -168,7 +168,7 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const atl06_p
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
     elevationIndex = 0;
-    
+
     /* Initialize Statistics */
     LocalLib::set(&stats, 0, sizeof(stats));
 
@@ -245,7 +245,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
         {
             delete result[t].photons;
         }
-    }    
+    }
 
     /* Return Status */
     return true;
@@ -302,10 +302,10 @@ void Atl06Dispatch::populateElevation (elevation_t* elevation)
 
 /*----------------------------------------------------------------------------
  * iterativeFitStage
- * 
+ *
  *  Note: Section 5.5 - Signal selection based on ATL03 flags
  *        Procedures 4b and after
- * 
+ *
  *  TODO: replace spacecraft ground speed constant with value provided in ATL03
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* result)
@@ -324,7 +324,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* 
         while(!done)
         {
             int num_photons = result[t].photon_count;
-    
+
             /* Check Photon Count */
             if(num_photons < parms.minimum_photon_count)
             {
@@ -459,10 +459,10 @@ void Atl06Dispatch::iterativeFitStage (Atl03Device::extent_t* extent, result_t* 
                 }
             }
 
-            /* 
+            /*
              * TODO: section 5.7, procedure 2h
-             * undo the window_height and selected PE 
-             * if along_track_spread and minimum_photon_count not reached 
+             * undo the window_height and selected PE
+             * if along_track_spread and minimum_photon_count not reached
              */
 
             /* Set New Number of Photons */
@@ -545,7 +545,7 @@ int Atl06Dispatch::luaSelect (lua_State* L)
             for(int s = 0; s < NUM_STAGES; s++)
             {
                 lua_obj->parms.stages[s] = enable;
-            }   
+            }
             status = true;
         }
         else

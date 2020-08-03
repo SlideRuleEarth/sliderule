@@ -51,9 +51,14 @@ class Atl03Device: public DeviceObject
 
         /* Extent Record */
         typedef struct {
-            uint8_t         pair_reference_track; // 1, 2, or 3
-            uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK]; // the id of the first ATL03 segment in range
-            double          segment_size[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
+            uint8_t         reference_pair_track; // 1, 2, or 3
+            uint8_t         spacecraft_orientation; // backward (0), forward (1), transition (2)
+            uint16_t        reference_ground_track_start;
+            uint16_t        reference_ground_track_end;
+            uint16_t        cycle_start;
+            uint16_t        cycle_end;
+            uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK]; // the id of the first ATL03 segment in range; TODO: just need one per extent
+            double          segment_size[PAIR_TRACKS_PER_GROUND_TRACK]; // meters; TODO: just need one per extent
             double          background_rate[PAIR_TRACKS_PER_GROUND_TRACK]; // PE per second
             double          gps_time[PAIR_TRACKS_PER_GROUND_TRACK]; // seconds
             double          latitude[PAIR_TRACKS_PER_GROUND_TRACK];
@@ -115,7 +120,7 @@ class Atl03Device: public DeviceObject
                             Atl03Device         (lua_State* L, const char* ur, atl06_parms_t _parms);
                             ~Atl03Device        (void);
 
-        bool                bufferData          (const char* url);
+        bool                bufferData          (const char* url, int track);
 
         virtual bool        isConnected         (int num_open=0);   // is the file open
         virtual void        closeConnection     (void);             // close the file

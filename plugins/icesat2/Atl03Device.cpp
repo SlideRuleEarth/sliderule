@@ -41,21 +41,23 @@
 
 const char* Atl03Device::phRecType = "atl03rec.photons";
 const RecordObject::fieldDef_t Atl03Device::phRecDef[] = {
-    {"X",           RecordObject::DOUBLE,   offsetof(photon_t, distance_x), 1,  NULL, NATIVE_FLAGS},
-    {"Y",           RecordObject::DOUBLE,   offsetof(photon_t, height_y),   1,  NULL, NATIVE_FLAGS}
+    {"x",           RecordObject::DOUBLE,   offsetof(photon_t, distance_x), 1,  NULL, NATIVE_FLAGS},
+    {"y",           RecordObject::DOUBLE,   offsetof(photon_t, height_y),   1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl03Device::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
-    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),   1,  NULL, NATIVE_FLAGS},
-    {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NULL, NATIVE_FLAGS},
-    {"SEG_SIZE",    RecordObject::DOUBLE,   offsetof(extent_t, segment_size[0]),        2,  NULL, NATIVE_FLAGS},
-    {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NULL, NATIVE_FLAGS},
-    {"LAT",         RecordObject::DOUBLE,   offsetof(extent_t, latitude[0]),            2,  NULL, NATIVE_FLAGS},
-    {"LON",         RecordObject::DOUBLE,   offsetof(extent_t, longitude[0]),           2,  NULL, NATIVE_FLAGS},
-    {"COUNT",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),        2,  NULL, NATIVE_FLAGS},
-    {"PHOTONS",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),       2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
-    {"DATA",        RecordObject::USER,     sizeof(extent_t),                           0,  phRecType, NATIVE_FLAGS} // variable length
+    {"track",       RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),           1,  NULL, NATIVE_FLAGS},
+    {"rgt",         RecordObject::UINT16,   offsetof(extent_t, reference_ground_track_start),   2,  NULL, NATIVE_FLAGS},
+    {"cycle",       RecordObject::UINT16,   offsetof(extent_t, cycle_start),                    2,  NULL, NATIVE_FLAGS},
+    {"seg_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),                  2,  NULL, NATIVE_FLAGS},
+    {"seg_size",    RecordObject::DOUBLE,   offsetof(extent_t, segment_size[0]),                2,  NULL, NATIVE_FLAGS},
+    {"gsp",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),                    2,  NULL, NATIVE_FLAGS},
+    {"lat",         RecordObject::DOUBLE,   offsetof(extent_t, latitude[0]),                    2,  NULL, NATIVE_FLAGS},
+    {"lon",         RecordObject::DOUBLE,   offsetof(extent_t, longitude[0]),                   2,  NULL, NATIVE_FLAGS},
+    {"count",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),                2,  NULL, NATIVE_FLAGS},
+    {"photons",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),               2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
+    {"data",        RecordObject::USER,     sizeof(extent_t),                                   0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
 const double Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
@@ -111,7 +113,7 @@ Atl03Device::Atl03Device (lua_State* L, const char* url, atl06_parms_t _parms):
     DeviceObject(L, READER)
 {
     assert(url);
-    
+
     /* Set Parameters */
     parms = _parms;
 
@@ -127,7 +129,7 @@ Atl03Device::Atl03Device (lua_State* L, const char* url, atl06_parms_t _parms):
     sprintf(config, "%s (%s)", url, role == READER ? "READER" : "WRITER");
 
     /* Open URL */
-    if(url[0])  connected = bufferData(url);
+    if(url[0])  connected = bufferData(url, 1); // open thread for each track
     else        connected = false;
 
     /* Add Additional Meta Functions */
@@ -154,10 +156,9 @@ Atl03Device::~Atl03Device (void)
  *  TODO: run this concurrent with readBuffer
  *  TODO: open and process all tracks in url
  *----------------------------------------------------------------------------*/
-bool Atl03Device::bufferData (const char* url)
+bool Atl03Device::bufferData (const char* url, int track)
 {
     bool status = false;
-    int track = 1; // hardcode for now
 
     /* Start Trace */
     uint32_t trace_id = start_trace_ext(traceId, "atl03_buffer_data", "{\"url\":\"%s\"}", url);
@@ -167,6 +168,11 @@ bool Atl03Device::bufferData (const char* url)
     {
         /* Read Data from HDF5 File */
         H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
+        H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient");
+        H5Array<int32_t>    start_rgt           (url, "/ancillary_data/start_rgt");
+        H5Array<int32_t>    end_rgt             (url, "/ancillary_data/end_rgt");
+        H5Array<int32_t>    start_cycle         (url, "/ancillary_data/start_cycle");
+        H5Array<int32_t>    end_cycle           (url, "/ancillary_data/end_cycle");
         GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time");
         GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
         GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id");
@@ -314,7 +320,12 @@ bool Atl03Device::bufferData (const char* url)
                 /* Allocate and Initialize Extent Record */
                 RecordObject* record = new RecordObject(exRecType, extent_size); // overallocated memory... photons filtered below
                 extent_t* extent = (extent_t*)record->getRecordData();
-                extent->pair_reference_track = track;
+                extent->reference_pair_track = track;
+                extent->spacecraft_orientation = sc_orient[0];
+                extent->reference_ground_track_start = start_rgt[0];
+                extent->reference_ground_track_end = end_rgt[0];
+                extent->cycle_start = start_cycle[0];
+                extent->cycle_end = end_cycle[0];
 
                 /* Populate Extent */
                 uint32_t ph_out = 0;

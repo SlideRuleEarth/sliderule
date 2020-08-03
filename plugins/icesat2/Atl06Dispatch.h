@@ -78,8 +78,8 @@ class Atl06Dispatch: public DispatchObject
         /* Elevation Measurement */
         typedef struct {
             uint32_t        segment_id;
-            uint16_t        grt;                    // ground reference track
-            uint16_t        cycle;
+            uint16_t        grt[2];                 // ground reference track, start and end
+            uint16_t        cycle[2];               // cycle number, start and end
             double          gps_time;               // seconds from GPS epoch
             double          latitude;
             double          longitude;

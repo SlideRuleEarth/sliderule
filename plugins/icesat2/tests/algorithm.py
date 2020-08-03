@@ -58,10 +58,10 @@ def algoexec(asset):
     rsps = sliderule.engine("atl06", rqst)
 
     # Process Response Data
-    segments = [rsps[r]["ELEVATION"][i]["SEG_ID"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
-    latitudes = [rsps[r]["ELEVATION"][i]["LAT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
-    longitudes = [rsps[r]["ELEVATION"][i]["LON"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
-    heights = [rsps[r]["ELEVATION"][i]["HEIGHT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
+    segments = [rsps[r]["elevation"][i]["seg_id"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    latitudes = [rsps[r]["elevation"][i]["lat"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    longitudes = [rsps[r]["elevation"][i]["lon"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    heights = [rsps[r]["elevation"][i]["height"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
 
     # Calculate Distances
     lat_origin = latitudes[0]
@@ -79,12 +79,12 @@ def algoexec(asset):
 # Parse Responses from Dataset
 #
 def recoverdata(rsps):
-    datatype = rsps[0]["DATATYPE"]
+    datatype = rsps[0]["datatype"]
     data = ()
     size = 0
     for d in rsps:
-        data = data + d["DATA"]
-        size = size + d["SIZE"]
+        data = data + d["data"]
+        size = size + d["size"]
     return sliderule.get_values(data, datatype, size)
 
 #

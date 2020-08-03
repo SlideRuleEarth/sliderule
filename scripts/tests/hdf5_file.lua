@@ -41,11 +41,11 @@ r3 = core.reader(f3, recq)
 recdata = rsps3:recvrecord(3000)
 
 rectable = recdata:tabulate()
-print("ID:     "..rectable.ID)
-print("OFFSET: "..rectable.OFFSET)
-print("SIZE:   "..rectable.SIZE)
+print("ID:     "..rectable.id)
+print("OFFSET: "..rectable.offset)
+print("SIZE:   "..rectable.size)
 
-runner.check(rectable.ID == 5)
+runner.check(rectable.id == 5)
 
 rsps3:destroy()
 r3:destroy()
