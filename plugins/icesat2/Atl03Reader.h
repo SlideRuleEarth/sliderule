@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __atl03_device__
-#define __atl03_device__
+#ifndef __atl03_reader__
+#define __atl03_reader__
 
 /******************************************************************************
  * INCLUDES
@@ -29,13 +29,12 @@
 #include "List.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "DeviceObject.h"
 
 /******************************************************************************
- * HDF5 ATL06 HANDLER
+ * ATL03 READER
  ******************************************************************************/
 
-class Atl03Device: public DeviceObject
+class Atl03Reader
 {
     public:
 
@@ -117,8 +116,8 @@ class Atl03Device: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Device         (lua_State* L, const char* ur, atl06_parms_t _parms);
-                            ~Atl03Device        (void);
+                            Atl03Reader         (lua_State* L, const char* ur, atl06_parms_t _parms);
+                            ~Atl03Reader        (void);
 
         bool                bufferData          (const char* url, int track);
 
@@ -133,4 +132,4 @@ class Atl03Device: public DeviceObject
         static int          luaStats            (lua_State* L);
 };
 
-#endif  /* __atl03_device__ */
+#endif  /* __atl03_reader__ */

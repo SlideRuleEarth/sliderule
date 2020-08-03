@@ -40,7 +40,7 @@
 int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
-        {"atl03",       Atl03Device::luaCreate},
+        {"atl03",       Atl03Reader::luaCreate},
         {"atl06",       Atl06Dispatch::luaCreate},
         {"ut_atl06",    UT_Atl06Dispatch::luaCreate},
         {NULL,          NULL}
@@ -76,7 +76,7 @@ extern "C" {
 void initicesat2 (void)
 {
     /* Initialize Modules */
-    Atl03Device::init();
+    Atl03Reader::init();
     Atl06Dispatch::init();
 
     /* Extend Lua */

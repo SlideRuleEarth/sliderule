@@ -39,14 +39,14 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl03Device::phRecType = "atl03rec.photons";
-const RecordObject::fieldDef_t Atl03Device::phRecDef[] = {
+const char* Atl03Reader::phRecType = "atl03rec.photons";
+const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
     {"x",           RecordObject::DOUBLE,   offsetof(photon_t, distance_x), 1,  NULL, NATIVE_FLAGS},
     {"y",           RecordObject::DOUBLE,   offsetof(photon_t, height_y),   1,  NULL, NATIVE_FLAGS}
 };
 
-const char* Atl03Device::exRecType = "atl03rec";
-const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
+const char* Atl03Reader::exRecType = "atl03rec";
+const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"track",       RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),           1,  NULL, NATIVE_FLAGS},
     {"rgt",         RecordObject::UINT16,   offsetof(extent_t, reference_ground_track_start),   2,  NULL, NATIVE_FLAGS},
     {"cycle",       RecordObject::UINT16,   offsetof(extent_t, cycle_start),                    2,  NULL, NATIVE_FLAGS},
@@ -60,8 +60,8 @@ const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
     {"data",        RecordObject::USER,     sizeof(extent_t),                                   0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const double Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
-const double Atl03Device::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
+const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
+const double Atl03Reader::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
 
 /******************************************************************************
  * HDF5 DATASET HANDLE CLASS
@@ -70,7 +70,7 @@ const double Atl03Device::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
 /*----------------------------------------------------------------------------
  * luaCreate - create(<url>)
  *----------------------------------------------------------------------------*/
-int Atl03Device::luaCreate (lua_State* L)
+int Atl03Reader::luaCreate (lua_State* L)
 {
     try
     {
@@ -79,11 +79,11 @@ int Atl03Device::luaCreate (lua_State* L)
         atl06_parms_t parms = lua_parms_process(L, 2);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Atl03Device(L, url, parms));
+        return createLuaObject(L, new Atl03Reader(L, url, parms));
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error creating Atl03Device: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating Atl03Reader: %s\n", e.errmsg);
         return returnLuaStatus(L, false);
     }
 }
@@ -91,7 +91,7 @@ int Atl03Device::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Atl03Device::init (void)
+void Atl03Reader::init (void)
 {
     RecordObject::recordDefErr_t ex_rc = RecordObject::defineRecord(exRecType, "TRACK", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t), 16);
     if(ex_rc != RecordObject::SUCCESS_DEF)
@@ -109,8 +109,7 @@ void Atl03Device::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Device::Atl03Device (lua_State* L, const char* url, atl06_parms_t _parms):
-    DeviceObject(L, READER)
+Atl03Reader::Atl03Reader (lua_State* L, const char* url, atl06_parms_t _parms):
 {
     assert(url);
 
@@ -140,7 +139,7 @@ Atl03Device::Atl03Device (lua_State* L, const char* url, atl06_parms_t _parms):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Atl03Device::~Atl03Device (void)
+Atl03Reader::~Atl03Reader (void)
 {
     if(config) delete [] config;
 
@@ -156,7 +155,7 @@ Atl03Device::~Atl03Device (void)
  *  TODO: run this concurrent with readBuffer
  *  TODO: open and process all tracks in url
  *----------------------------------------------------------------------------*/
-bool Atl03Device::bufferData (const char* url, int track)
+bool Atl03Reader::bufferData (const char* url, int track)
 {
     bool status = false;
 
@@ -388,7 +387,7 @@ bool Atl03Device::bufferData (const char* url, int track)
 /*----------------------------------------------------------------------------
  * isConnected
  *----------------------------------------------------------------------------*/
-bool Atl03Device::isConnected (int num_open)
+bool Atl03Reader::isConnected (int num_open)
 {
     (void)num_open;
 
@@ -398,7 +397,7 @@ bool Atl03Device::isConnected (int num_open)
 /*----------------------------------------------------------------------------
  * closeConnection
  *----------------------------------------------------------------------------*/
-void Atl03Device::closeConnection (void)
+void Atl03Reader::closeConnection (void)
 {
     connected = false;
 }
@@ -406,7 +405,7 @@ void Atl03Device::closeConnection (void)
 /*----------------------------------------------------------------------------
  * writeBuffer
  *----------------------------------------------------------------------------*/
-int Atl03Device::writeBuffer (const void* buf, int len)
+int Atl03Reader::writeBuffer (const void* buf, int len)
 {
     (void)buf;
     (void)len;
@@ -417,7 +416,7 @@ int Atl03Device::writeBuffer (const void* buf, int len)
 /*----------------------------------------------------------------------------
  * readBuffer
  *----------------------------------------------------------------------------*/
-int Atl03Device::readBuffer (void* buf, int len)
+int Atl03Reader::readBuffer (void* buf, int len)
 {
     int bytes = TIMEOUT_RC;
 
@@ -461,7 +460,7 @@ int Atl03Device::readBuffer (void* buf, int len)
 /*----------------------------------------------------------------------------
  * getUniqueId
  *----------------------------------------------------------------------------*/
-int Atl03Device::getUniqueId (void)
+int Atl03Reader::getUniqueId (void)
 {
     return 0;
 }
@@ -469,7 +468,7 @@ int Atl03Device::getUniqueId (void)
 /*----------------------------------------------------------------------------
  * getConfig
  *----------------------------------------------------------------------------*/
-const char* Atl03Device::getConfig (void)
+const char* Atl03Reader::getConfig (void)
 {
     return config;
 }
@@ -477,16 +476,16 @@ const char* Atl03Device::getConfig (void)
 /*----------------------------------------------------------------------------
  * luaParms - :parms() --> {<key>=<value>, ...} containing parameters
  *----------------------------------------------------------------------------*/
-int Atl03Device::luaParms (lua_State* L)
+int Atl03Reader::luaParms (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Atl03Device* lua_obj = NULL;
+    Atl03Reader* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Device*)getLuaSelf(L, 1);
+        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
     }
     catch(const LuaException& e)
     {
@@ -520,16 +519,16 @@ int Atl03Device::luaParms (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
  *----------------------------------------------------------------------------*/
-int Atl03Device::luaStats (lua_State* L)
+int Atl03Reader::luaStats (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Atl03Device* lua_obj = NULL;
+    Atl03Reader* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Device*)getLuaSelf(L, 1);
+        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
     }
     catch(const LuaException& e)
     {
