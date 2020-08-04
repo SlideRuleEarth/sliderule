@@ -9,7 +9,7 @@ $ sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev
 
 Clone the repo:
 ```bash
-git clone git@github.com:aws/aws-sdk-cpp.git
+git clone https://github.com/aws/aws-sdk-cpp.git
 git checkout version1.8 # switch to the version 1.8 branch
 ```
 

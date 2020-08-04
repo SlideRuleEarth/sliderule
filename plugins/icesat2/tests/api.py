@@ -1,9 +1,6 @@
 # python
 
 import sys
-
-sys.path.append("/usr/local/etc/sliderule")
-
 import json
 import sliderule
 
