@@ -32,56 +32,69 @@
 #define LUA_STAT_SEGMENTS_READ_R        "read_r"
 #define LUA_STAT_EXTENTS_FILTERED_L     "filtered_l"
 #define LUA_STAT_EXTENTS_FILTERED_R     "filtered_r"
-#define LUA_STAT_EXTENTS_ADDED          "added"
 #define LUA_STAT_EXTENTS_SENT           "sent"
+#define LUA_STAT_EXTENTS_DROPPED        "dropped"
+#define LUA_STAT_EXTENTS_RETRIED        "retried"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl03Device::phRecType = "atl03rec.photons";
-const RecordObject::fieldDef_t Atl03Device::phRecDef[] = {
-    {"X",           RecordObject::DOUBLE,   offsetof(photon_t, distance_x), 1,  NULL, NATIVE_FLAGS},
-    {"Y",           RecordObject::DOUBLE,   offsetof(photon_t, height_y),   1,  NULL, NATIVE_FLAGS}
+const char* Atl03Reader::phRecType = "atl03rec.photons";
+const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
+    {"x",           RecordObject::DOUBLE,   offsetof(photon_t, distance_x), 1,  NULL, NATIVE_FLAGS},
+    {"y",           RecordObject::DOUBLE,   offsetof(photon_t, height_y),   1,  NULL, NATIVE_FLAGS}
 };
 
-const char* Atl03Device::exRecType = "atl03rec";
-const RecordObject::fieldDef_t Atl03Device::exRecDef[] = {
-    {"TRACK",       RecordObject::UINT8,    offsetof(extent_t, pair_reference_track),   1,  NULL, NATIVE_FLAGS},
-    {"SEG_ID",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),          2,  NULL, NATIVE_FLAGS},
-    {"SEG_SIZE",    RecordObject::DOUBLE,   offsetof(extent_t, segment_size[0]),        2,  NULL, NATIVE_FLAGS},
-    {"GPS",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),            2,  NULL, NATIVE_FLAGS},
-    {"LAT",         RecordObject::DOUBLE,   offsetof(extent_t, latitude[0]),            2,  NULL, NATIVE_FLAGS},
-    {"LON",         RecordObject::DOUBLE,   offsetof(extent_t, longitude[0]),           2,  NULL, NATIVE_FLAGS},
-    {"COUNT",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),        2,  NULL, NATIVE_FLAGS},
-    {"PHOTONS",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),       2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
-    {"DATA",        RecordObject::USER,     sizeof(extent_t),                           0,  phRecType, NATIVE_FLAGS} // variable length
+const char* Atl03Reader::exRecType = "atl03rec";
+const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
+    {"track",       RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),           1,  NULL, NATIVE_FLAGS},
+    {"rgt",         RecordObject::UINT16,   offsetof(extent_t, reference_ground_track_start),   2,  NULL, NATIVE_FLAGS},
+    {"cycle",       RecordObject::UINT16,   offsetof(extent_t, cycle_start),                    2,  NULL, NATIVE_FLAGS},
+    {"seg_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),                  2,  NULL, NATIVE_FLAGS},
+    {"seg_size",    RecordObject::DOUBLE,   offsetof(extent_t, segment_size[0]),                2,  NULL, NATIVE_FLAGS},
+    {"gps",         RecordObject::DOUBLE,   offsetof(extent_t, gps_time[0]),                    2,  NULL, NATIVE_FLAGS},
+    {"lat",         RecordObject::DOUBLE,   offsetof(extent_t, latitude[0]),                    2,  NULL, NATIVE_FLAGS},
+    {"lon",         RecordObject::DOUBLE,   offsetof(extent_t, longitude[0]),                   2,  NULL, NATIVE_FLAGS},
+    {"count",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),                2,  NULL, NATIVE_FLAGS},
+    {"photons",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),               2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
+    {"data",        RecordObject::USER,     sizeof(extent_t),                                   0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const double Atl03Device::ATL03_SEGMENT_LENGTH = 20.0; // meters
-const double Atl03Device::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
+const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
+const double Atl03Reader::MAX_ATL06_SEGMENT_LENGTH = 40.0; // meters
+
+const char* Atl03Reader::OBJECT_TYPE = "Atl03Reader";
+const char* Atl03Reader::LuaMetaName = "Atl03Reader";
+const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
+    {"parms",       luaParms},
+    {"stats",       luaStats},
+    {NULL,          NULL}
+};
 
 /******************************************************************************
  * HDF5 DATASET HANDLE CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<url>)
+ * luaCreate - create(<url>, <outq_name>, [<parms>], [<track>])
  *----------------------------------------------------------------------------*/
-int Atl03Device::luaCreate (lua_State* L)
+int Atl03Reader::luaCreate (lua_State* L)
 {
     try
     {
         /* Get URL */
         const char* url = getLuaString(L, 1);
-        atl06_parms_t parms = lua_parms_process(L, 2);
+        const char* outq_name = getLuaString(L, 2);
+        atl06_parms_t parms = lua_parms_process(L, 3);
+        int track = getLuaInteger(L, 4, true, ALL_TRACKS);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Atl03Device(L, url, parms));
+        return createLuaObject(L, new Atl03Reader(L, url, outq_name, parms, track));
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error creating Atl03Device: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating Atl03Reader: %s\n", e.errmsg);
         return returnLuaStatus(L, false);
     }
 }
@@ -89,9 +102,9 @@ int Atl03Device::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Atl03Device::init (void)
+void Atl03Reader::init (void)
 {
-    RecordObject::recordDefErr_t ex_rc = RecordObject::defineRecord(exRecType, "TRACK", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t), 16);
+    RecordObject::recordDefErr_t ex_rc = RecordObject::defineRecord(exRecType, "track", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t), 16);
     if(ex_rc != RecordObject::SUCCESS_DEF)
     {
         mlog(CRITICAL, "Failed to define %s: %d\n", exRecType, ex_rc);
@@ -107,66 +120,93 @@ void Atl03Device::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Device::Atl03Device (lua_State* L, const char* url, atl06_parms_t _parms):
-    DeviceObject(L, READER)
+Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, atl06_parms_t _parms, int track):
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(url);
-    
+    assert(outq_name);
+
+    /* Create Publisher */
+    outQ = new Publisher(outq_name);
+
     /* Set Parameters */
     parms = _parms;
 
     /* Clear Statistics */
     LocalLib::set(&stats, 0, sizeof(stats));
 
-    /* Set Segment List Index */
-    listIndex = 0;
+    /* Set Active */
+    active = true;
 
-    /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s (%s)", url, role == READER ? "READER" : "WRITER") + 1;
-    config = new char[cfglen];
-    sprintf(config, "%s (%s)", url, role == READER ? "READER" : "WRITER");
+    /* Initialize Readers */
+    LocalLib::set(readerPid, 0, sizeof(readerPid));
 
-    /* Open URL */
-    if(url[0])  connected = bufferData(url);
-    else        connected = false;
-
-    /* Add Additional Meta Functions */
-    LuaEngine::setAttrFunc(L, "parms",  luaParms);
-    LuaEngine::setAttrFunc(L, "stats",  luaStats);
+    /* Read ATL03 Data */
+#if 0
+    if(track == ALL_TRACKS)
+    {
+        /* Create Readers */
+        for(int t = 0; t < NUM_TRACKS; t++)
+        {
+            info_t* info = new info_t;
+            info->reader = this;
+            info->url = StringLib::duplicate(url);
+            info->track = t + 1;
+            readerPid[t] = new Thread(readerThread, info);
+        }
+    }
+    else 
+#endif    
+    if(track >= 1 && track <= 3)
+    {
+        /* Execute Reader */
+        info_t* info = new info_t;
+        info->reader = this;
+        info->url = StringLib::duplicate(url);
+        info->track = track;
+        readerThread(info);
+    }
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Atl03Device::~Atl03Device (void)
+Atl03Reader::~Atl03Reader (void)
 {
-    if(config) delete [] config;
+    active = false;
 
-    for(int i = listIndex; i < extentList.length(); i++)
+    for(int t = 0; t < NUM_TRACKS; t++)
     {
-        delete extentList[i];
+        if(readerPid[t]) delete readerPid[t];
     }
+
+    delete outQ;
 }
 
 /*----------------------------------------------------------------------------
- * bufferData
- *
- *  TODO: run this concurrent with readBuffer
- *  TODO: open and process all tracks in url
+ * readerThread
  *----------------------------------------------------------------------------*/
-bool Atl03Device::bufferData (const char* url)
+void* Atl03Reader::readerThread (void* parm)
 {
-    bool status = false;
-    int track = 1; // hardcode for now
+    /* Get Thread Info */
+    info_t* info = (info_t*)parm;
+    Atl03Reader* reader = info->reader;
+    const char* url = info->url;
+    int track = info->track;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(traceId, "atl03_buffer_data", "{\"url\":\"%s\"}", url);
+    uint32_t trace_id = start_trace_ext(reader->traceId, "atl03_reader", "{\"url\":\"%s\", \"track\":%d}", url, track);
     TraceLib::stashId (trace_id); // set thread specific trace id for H5Lib
 
     try
     {
         /* Read Data from HDF5 File */
         H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
+        H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient");
+        H5Array<int32_t>    start_rgt           (url, "/ancillary_data/start_rgt");
+        H5Array<int32_t>    end_rgt             (url, "/ancillary_data/end_rgt");
+        H5Array<int32_t>    start_cycle         (url, "/ancillary_data/start_cycle");
+        H5Array<int32_t>    end_cycle           (url, "/ancillary_data/end_cycle");
         GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time");
         GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
         GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id");
@@ -175,7 +215,7 @@ bool Atl03Device::bufferData (const char* url)
         GTArray<double>     segment_lon         (url, track, "geolocation/reference_photon_lon");
         GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along");
         GTArray<float>      h_ph                (url, track, "heights/h_ph");
-        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", parms.surface_type);
+        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", reader->parms.surface_type);
         GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time");
         GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate");
 
@@ -189,11 +229,11 @@ bool Atl03Device::bufferData (const char* url)
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
         /* Increment Read Statistics */
-        stats.segments_read[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT].size;
-        stats.segments_read[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT].size;
+        reader->stats.segments_read[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT].size; // TODO: not thread safe
+        reader->stats.segments_read[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT].size;  // TODO: not thread safe
 
         /* Traverse All Photons In Dataset */
-        while( !track_complete[PRT_LEFT] || !track_complete[PRT_RIGHT] )
+        while( reader->active && (!track_complete[PRT_LEFT] || !track_complete[PRT_RIGHT]) )
         {
             List<photon_t> extent_photons[PAIR_TRACKS_PER_GROUND_TRACK];
             int32_t extent_segment[PAIR_TRACKS_PER_GROUND_TRACK];
@@ -233,7 +273,7 @@ bool Atl03Device::bufferData (const char* url)
                     double along_track_distance = delta_distance + dist_ph_along.gt[t][current_photon];
 
                     /* Set Next Extent's First Photon */
-                    if(!step_complete && along_track_distance >= parms.extent_step)
+                    if(!step_complete && along_track_distance >= reader->parms.extent_step)
                     {
                         ph_in[t] = current_photon;
                         seg_in[t] = current_segment;
@@ -242,13 +282,13 @@ bool Atl03Device::bufferData (const char* url)
                     }
 
                     /* Check if Photon within Extent's Length */
-                    if(along_track_distance < parms.extent_length)
+                    if(along_track_distance < reader->parms.extent_length)
                     {
                         /* Check  Photon Signal Confidence Level */
-                        if(signal_conf_ph.gt[t][current_photon] >= parms.signal_confidence)
+                        if(signal_conf_ph.gt[t][current_photon] >= reader->parms.signal_confidence)
                         {
                             photon_t ph = {
-                                .distance_x = delta_distance + dist_ph_along.gt[t][current_photon] - (parms.extent_step / 2.0),
+                                .distance_x = delta_distance + dist_ph_along.gt[t][current_photon] - (reader->parms.extent_step / 2.0),
                                 .height_y = h_ph.gt[t][current_photon]
                             };
                             extent_photons[t].add(ph);
@@ -264,7 +304,7 @@ bool Atl03Device::bufferData (const char* url)
                 }
 
                 /* Add Step to Start Distance */
-                start_distance[t] += parms.extent_step;
+                start_distance[t] += reader->parms.extent_step;
 
                 /* Apply Segment Distance Correction and Update Start Segment */
                 while( ((start_segment[t] + 1) < segment_dist_x.gt[t].size) &&
@@ -282,7 +322,7 @@ bool Atl03Device::bufferData (const char* url)
                 }
 
                 /* Check Photon Count */
-                if(extent_photons[t].length() < parms.minimum_photon_count)
+                if(extent_photons[t].length() < reader->parms.minimum_photon_count)
                 {
                     extent_valid[t] = false;
                 }
@@ -292,7 +332,7 @@ bool Atl03Device::bufferData (const char* url)
                 {
                     int32_t last = extent_photons[t].length() - 1;
                     double along_track_spread = extent_photons[t][last].distance_x - extent_photons[t][0].distance_x;
-                    if(along_track_spread < parms.along_track_spread)
+                    if(along_track_spread < reader->parms.along_track_spread)
                     {
                         extent_valid[t] = false;
                     }
@@ -301,7 +341,7 @@ bool Atl03Device::bufferData (const char* url)
                 /* Incrment Statistics if Invalid */
                 if(!extent_valid[t])
                 {
-                    stats.extents_filtered[t]++;
+                    reader->stats.extents_filtered[t]++; // TODO: not thread safe
                 }
             }
 
@@ -312,9 +352,14 @@ bool Atl03Device::bufferData (const char* url)
                 int extent_size = sizeof(extent_t) + (sizeof(photon_t) * (extent_photons[PRT_LEFT].length() + extent_photons[PRT_RIGHT].length()));
 
                 /* Allocate and Initialize Extent Record */
-                RecordObject* record = new RecordObject(exRecType, extent_size); // overallocated memory... photons filtered below
+                RecordObject* record = new RecordObject(exRecType, extent_size);
                 extent_t* extent = (extent_t*)record->getRecordData();
-                extent->pair_reference_track = track;
+                extent->reference_pair_track = track;
+                extent->spacecraft_orientation = sc_orient[0];
+                extent->reference_ground_track_start = start_rgt[0];
+                extent->reference_ground_track_end = end_rgt[0];
+                extent->cycle_start = start_cycle[0];
+                extent->cycle_end = end_cycle[0];
 
                 /* Populate Extent */
                 uint32_t ph_out = 0;
@@ -335,7 +380,7 @@ bool Atl03Device::bufferData (const char* url)
 
                     /* Populate Attributes */
                     extent->segment_id[t]       = segment_id.gt[t][extent_segment[t]];
-                    extent->segment_size[t]     = parms.extent_step;
+                    extent->segment_size[t]     = reader->parms.extent_step;
                     extent->background_rate[t]  = bckgrd_rate.gt[t][bckgrd_in[t]];
                     extent->gps_time[t]         = sdp_gps_epoch[0] + segment_delta_time.gt[t][extent_segment[t]];
                     extent->latitude[t]         = segment_lat.gt[t][extent_segment[t]];
@@ -353,14 +398,24 @@ bool Atl03Device::bufferData (const char* url)
                 extent->photon_offset[PRT_LEFT] = sizeof(extent_t); // pointers are set to offset from start of record data
                 extent->photon_offset[PRT_RIGHT] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[PRT_LEFT]);
 
-                /* Add Segment Record */
-                extentList.add(record);
-                stats.extents_added++;
+                /* Post Segment Record */
+                uint8_t* rec_buf = NULL;
+                int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+                int post_status = MsgQ::STATE_ERROR;
+                while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) <= 0)
+                {
+                    reader->stats.extents_retried++; // TODO: not thread safe
+                    mlog(DEBUG, "Atl03 reader failed to post to stream %s: %d\n", reader->outQ->getName(), post_status);
+                }
+
+                /* Update Statistics */
+                if(post_status > 0) reader->stats.extents_sent++; // TODO: not thread safe
+                else                reader->stats.extents_dropped++;  // TODO: not thread safe
+
+                /* Clean Up Record */
+                delete record;
             }
         }
-
-        /* Set Success */
-        status = true;
     }
     catch(const std::exception& e)
     {
@@ -370,112 +425,27 @@ bool Atl03Device::bufferData (const char* url)
     /* Stop Trace */
     stop_trace(trace_id);
 
-    /* Return Status */
-    return status;
-}
+    /* Clean Up Info */
+    delete [] info->url;
+    delete [] info;
 
-/*----------------------------------------------------------------------------
- * isConnected
- *----------------------------------------------------------------------------*/
-bool Atl03Device::isConnected (int num_open)
-{
-    (void)num_open;
-
-    return connected;
-}
-
-/*----------------------------------------------------------------------------
- * closeConnection
- *----------------------------------------------------------------------------*/
-void Atl03Device::closeConnection (void)
-{
-    connected = false;
-}
-
-/*----------------------------------------------------------------------------
- * writeBuffer
- *----------------------------------------------------------------------------*/
-int Atl03Device::writeBuffer (const void* buf, int len)
-{
-    (void)buf;
-    (void)len;
-
-    return TIMEOUT_RC;
-}
-
-/*----------------------------------------------------------------------------
- * readBuffer
- *----------------------------------------------------------------------------*/
-int Atl03Device::readBuffer (void* buf, int len)
-{
-    int bytes = TIMEOUT_RC;
-
-    if(connected)
-    {
-        unsigned char* rec_buf = (unsigned char*)buf;
-
-        /* Read Next Segment in List */
-        if(listIndex < extentList.length())
-        {
-            RecordObject* record = extentList[listIndex];
-
-            /* Check if Enough Room in Buffer to Hold Record */
-            if(len >= record->getAllocatedMemory())
-            {
-                /* Serialize Record into Buffer */
-                bytes = record->serialize(&rec_buf, RecordObject::COPY, len);
-                stats.extents_sent++;
-            }
-            else
-            {
-                mlog(ERROR, "Unable to read ATL03 extent record, buffer too small (%d < %d)\n", len, record->getAllocatedMemory());
-            }
-
-            /* Release Segment Resources */
-            delete record;
-
-            /* Go To Next Segment */
-            listIndex++;
-        }
-        else
-        {
-            bytes = SHUTDOWN_RC;
-            connected = false;
-        }
-    }
-
-    return bytes;
-}
-
-/*----------------------------------------------------------------------------
- * getUniqueId
- *----------------------------------------------------------------------------*/
-int Atl03Device::getUniqueId (void)
-{
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
- * getConfig
- *----------------------------------------------------------------------------*/
-const char* Atl03Device::getConfig (void)
-{
-    return config;
+    /* Return */
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
  * luaParms - :parms() --> {<key>=<value>, ...} containing parameters
  *----------------------------------------------------------------------------*/
-int Atl03Device::luaParms (lua_State* L)
+int Atl03Reader::luaParms (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Atl03Device* lua_obj = NULL;
+    Atl03Reader* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Device*)getLuaSelf(L, 1);
+        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
     }
     catch(const LuaException& e)
     {
@@ -509,16 +479,16 @@ int Atl03Device::luaParms (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
  *----------------------------------------------------------------------------*/
-int Atl03Device::luaStats (lua_State* L)
+int Atl03Reader::luaStats (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Atl03Device* lua_obj = NULL;
+    Atl03Reader* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Device*)getLuaSelf(L, 1);
+        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
     }
     catch(const LuaException& e)
     {
@@ -534,10 +504,11 @@ int Atl03Device::luaStats (lua_State* L)
         lua_newtable(L);
         LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ_L,      lua_obj->stats.segments_read[PRT_LEFT]);
         LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ_R,      lua_obj->stats.segments_read[PRT_RIGHT]);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED_L,  lua_obj->stats.extents_filtered[PRT_LEFT]);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED_R,  lua_obj->stats.extents_filtered[PRT_RIGHT]);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_ADDED,        lua_obj->stats.extents_added);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_SENT,        lua_obj->stats.extents_sent);
+        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED_L,   lua_obj->stats.extents_filtered[PRT_LEFT]);
+        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED_R,   lua_obj->stats.extents_filtered[PRT_RIGHT]);
+        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_SENT,         lua_obj->stats.extents_sent);
+        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_DROPPED,      lua_obj->stats.extents_dropped);
+        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_RETRIED,      lua_obj->stats.extents_retried);
 
         /* Clear if Requested */
         if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));

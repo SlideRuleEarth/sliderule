@@ -25,7 +25,7 @@
  ******************************************************************************/
 
 #include "lua_parms.h"
-#include "Atl03Device.h"
+#include "Atl03Reader.h"
 #include "Atl06Dispatch.h"
 #include "GTArray.h"
 #include "UT_Atl06Dispatch.h"

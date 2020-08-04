@@ -290,7 +290,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
 
 /*----------------------------------------------------------------------------
  * createLuaObject
- * 
+ *
  *  Note: if object is an alias, all calls into it from Lua must be thread safe
  *----------------------------------------------------------------------------*/
 int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)

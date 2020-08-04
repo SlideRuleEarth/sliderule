@@ -67,7 +67,7 @@ def test_h5 ():
     }
 
     d = sliderule.engine("h5", rqst)
-    v = sliderule.get_values(d[0]["DATA"], d[0]["DATATYPE"], d[0]["SIZE"])
+    v = sliderule.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
 
     epoch_offset = v[0]
     if(epoch_offset == 1198800018.0):
@@ -88,7 +88,7 @@ def test_variable_length ():
     }
 
     d = sliderule.engine("h5", rqst)
-    v = sliderule.get_values(d[0]["DATA"], d[0]["DATATYPE"], d[0]["SIZE"])
+    v = sliderule.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
 
     if v[0] == 75 and v[1] == 82 and v[2] == 61:
         print("Passed variable length test")
@@ -105,10 +105,10 @@ def test_definition ():
 
     d = sliderule.source("definition", rqst)
 
-    if(d["GPS"]["offset"] == 384):
+    if(d["gps"]["offset"] == 448):
         print("Passed definition test")
     else:
-        print("Failed definition test", d["GPS"]["offset"])
+        print("Failed definition test", d["gps"]["offset"])
 
 ###############################################################################
 # MAIN

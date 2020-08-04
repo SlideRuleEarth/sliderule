@@ -40,7 +40,7 @@
 int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
-        {"atl03",       Atl03Device::luaCreate},
+        {"atl03",       Atl03Reader::luaCreate},
         {"atl06",       Atl06Dispatch::luaCreate},
         {"ut_atl06",    UT_Atl06Dispatch::luaCreate},
         {NULL,          NULL}
@@ -64,6 +64,11 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    SRT_INLAND_WATER);
     LuaEngine::setAttrInt(L, "STAGE_LSF",           STAGE_LSF);
     LuaEngine::setAttrInt(L, "ALL_STAGES",          NUM_STAGES);
+    LuaEngine::setAttrInt(L, "ALL_TRACKS",          ALL_TRACKS);
+    LuaEngine::setAttrInt(L, "RPT_1",               RPT_1);
+    LuaEngine::setAttrInt(L, "RPT_2",               RPT_2);
+    LuaEngine::setAttrInt(L, "RPT_3",               RPT_3);
+    LuaEngine::setAttrInt(L, "NUM_TRACKS",          NUM_TRACKS);
 
     return 1;
 }
@@ -76,7 +81,7 @@ extern "C" {
 void initicesat2 (void)
 {
     /* Initialize Modules */
-    Atl03Device::init();
+    Atl03Reader::init();
     Atl06Dispatch::init();
 
     /* Extend Lua */

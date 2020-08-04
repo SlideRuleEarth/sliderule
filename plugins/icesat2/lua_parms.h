@@ -44,6 +44,33 @@
  * TYPEDEFS
  ******************************************************************************/
 
+/* Tracks */
+typedef enum {
+    ALL_TRACKS = 0,
+    RPT_1 = 1,
+    RPT_2 = 2,
+    RPT_3 = 3,
+    NUM_TRACKS = 3
+} track_t;
+
+/* Spots */
+typedef enum {
+    SPOT_1 = 1,
+    SPOT_2 = 2,
+    SPOT_3 = 3,
+    SPOT_4 = 4,
+    SPOT_5 = 5,
+    SPOT_6 = 6,
+    NUM_SPOTS = 6
+} spot_t;
+
+/* Spacecraft Orientation */
+typedef enum {
+    SC_BACKWARD = 0,
+    SC_FORWARD = 1,
+    SC_TRANSITION = 2
+} sc_orient_t;
+
 /* Signal Confidence per Photon */
 typedef enum {
     CNF_POSSIBLE_TEP = -2,

@@ -7,10 +7,8 @@ import pandas as pd
 import numpy as np
 import math
 
-from bokeh.io import show
-from bokeh.palettes import Spectral11
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
 
 import sliderule
 
@@ -58,10 +56,13 @@ def algoexec(asset):
     rsps = sliderule.engine("atl06", rqst)
 
     # Process Response Data
-    segments = [rsps[r]["ELEVATION"][i]["SEG_ID"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
-    latitudes = [rsps[r]["ELEVATION"][i]["LAT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
-    longitudes = [rsps[r]["ELEVATION"][i]["LON"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
-    heights = [rsps[r]["ELEVATION"][i]["HEIGHT"] for r in range(len(rsps)) for i in range(len(rsps[r]["ELEVATION"]))]
+    segments = [rsps[r]["elevation"][i]["seg_id"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    latitudes = [rsps[r]["elevation"][i]["lat"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    longitudes = [rsps[r]["elevation"][i]["lon"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    heights = [rsps[r]["elevation"][i]["height"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    rgt = [rsps[r]["elevation"][i]["rgt"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    cycle = [rsps[r]["elevation"][i]["cycle"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    beam = [rsps[r]["elevation"][i]["beam"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
 
     # Calculate Distances
     lat_origin = latitudes[0]
@@ -69,9 +70,11 @@ def algoexec(asset):
     distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
 
     # Build Dataframe of SlideRule Responses
-    df = pd.DataFrame(data=list(zip(heights, distances)), index=segments, columns=["height", "distance"])
+    df = pd.DataFrame(data=list(zip(heights, distances, latitudes, longitudes, beam)), index=segments, columns=["height", "distance", "latitude", "longitude", "beam"])
 
     # Return DataFrame
+    print("Reference Ground Tracks: {} to {}".format(min(rgt), max(rgt)))
+    print("Cycle: {} to {}".format(min(cycle), max(cycle)))
     print("Retrieved {} points from SlideRule".format(len(heights)))
     return df
 
@@ -79,12 +82,12 @@ def algoexec(asset):
 # Parse Responses from Dataset
 #
 def recoverdata(rsps):
-    datatype = rsps[0]["DATATYPE"]
+    datatype = rsps[0]["datatype"]
     data = ()
     size = 0
     for d in rsps:
-        data = data + d["DATA"]
-        size = size + d["SIZE"]
+        data = data + d["data"]
+        size = size + d["size"]
     return sliderule.get_values(data, datatype, size)
 
 #
@@ -161,14 +164,25 @@ if __name__ == '__main__':
     # Read ATL06 Expected Results
     exp = expread(asset)
 
-    # Plot Dataframe
-    p = figure(title="Actual vs. Expected", plot_height=500, plot_width=800)
-    for data, name, color in zip([act, exp], ["sliderule", "atl06"], Spectral11[:2]):
-#        p.line(list(data.index), data["height"], line_width=3, color=color, alpha=0.8, legend_label=name)
-        p.line(data["distance"], data["height"], line_width=3, color=color, alpha=0.8, legend_label=name)
-    p.legend.location = "top_left"
-    p.legend.click_policy="hide"
-    show(p)
+    # Create Plot
+    fig = plt.figure(num=None, figsize=(12, 6))
 
+    # Plot Ground Tracks
+    plt.subplot(121)
+    plt.title("Ground Tracks")
+    m = Basemap(projection='merc',llcrnrlat=-85,urcrnrlat=85,llcrnrlon=-180,urcrnrlon=180,resolution='c')
+    m.plot(act["latitude"].values,act["longitude"].values,latlon=True,linewidth=1.5,color='r')
+    m.drawcoastlines()
+    m.fillcontinents(color='tan',lake_color='lightblue')
+    m.drawparallels(np.arange(-90.,91.,30.),labels=[True,True,False,False],dashes=[2,2])
+    m.drawmeridians(np.arange(-180.,181.,60.),labels=[False,False,False,True],dashes=[2,2])
+    m.drawmapboundary(fill_color='lightblue')
 
+    # Plot Elevations
+    plt.subplot(122)
+    plt.title("Along Track Elevations")
+    plt.plot(act["distance"].values, act["height"].values, linewidth=1.0, color='b')
+    plt.plot(exp["distance"].values, exp["height"].values, linewidth=1.0, color='g')
 
+    # Show Plot
+    plt.show()

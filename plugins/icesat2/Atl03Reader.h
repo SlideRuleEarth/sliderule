@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __atl03_device__
-#define __atl03_device__
+#ifndef __atl03_reader__
+#define __atl03_reader__
 
 /******************************************************************************
  * INCLUDES
@@ -29,13 +29,14 @@
 #include "List.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "DeviceObject.h"
+#include "MsgQ.h"
+#include "OsApi.h"
 
 /******************************************************************************
- * HDF5 ATL06 HANDLER
+ * ATL03 READER
  ******************************************************************************/
 
-class Atl03Device: public DeviceObject
+class Atl03Reader: public LuaObject
 {
     public:
 
@@ -51,9 +52,14 @@ class Atl03Device: public DeviceObject
 
         /* Extent Record */
         typedef struct {
-            uint8_t         pair_reference_track; // 1, 2, or 3
-            uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK]; // the id of the first ATL03 segment in range
-            double          segment_size[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
+            uint8_t         reference_pair_track; // 1, 2, or 3
+            uint8_t         spacecraft_orientation; // sc_orient_t
+            uint16_t        reference_ground_track_start;
+            uint16_t        reference_ground_track_end;
+            uint16_t        cycle_start;
+            uint16_t        cycle_end;
+            uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK]; // the id of the first ATL03 segment in range; TODO: just need one per extent
+            double          segment_size[PAIR_TRACKS_PER_GROUND_TRACK]; // meters; TODO: just need one per extent
             double          background_rate[PAIR_TRACKS_PER_GROUND_TRACK]; // PE per second
             double          gps_time[PAIR_TRACKS_PER_GROUND_TRACK]; // seconds
             double          latitude[PAIR_TRACKS_PER_GROUND_TRACK];
@@ -67,8 +73,9 @@ class Atl03Device: public DeviceObject
         typedef struct {
             uint32_t        segments_read[PAIR_TRACKS_PER_GROUND_TRACK];
             uint32_t        extents_filtered[PAIR_TRACKS_PER_GROUND_TRACK];
-            uint32_t        extents_added;
             uint32_t        extents_sent;
+            uint32_t        extents_dropped;
+            uint32_t        extents_retried;
         } stats_t;
 
         /*--------------------------------------------------------------------
@@ -81,6 +88,11 @@ class Atl03Device: public DeviceObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
+        static const char* OBJECT_TYPE;
+
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -89,6 +101,16 @@ class Atl03Device: public DeviceObject
         static void init        (void);
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            Atl03Reader*    reader;
+            const char*     url;
+            int             track;
+        } info_t;
 
         /*--------------------------------------------------------------------
          * Constants
@@ -101,31 +123,24 @@ class Atl03Device: public DeviceObject
          * Data
          *--------------------------------------------------------------------*/
 
+        bool                    active;
+        Thread*                 readerPid[NUM_TRACKS];
+        Publisher*              outQ;
         atl06_parms_t           parms;
         stats_t                 stats;
-        List<RecordObject*>     extentList;
-        int                     listIndex;
-        bool                    connected;
-        char*                   config;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Device         (lua_State* L, const char* ur, atl06_parms_t _parms);
-                            ~Atl03Device        (void);
+                            Atl03Reader         (lua_State* L, const char* url, const char* outq_name, atl06_parms_t _parms, int track=ALL_TRACKS);
+                            ~Atl03Reader        (void);
 
-        bool                bufferData          (const char* url);
+        bool                readData            (const char* url, int track);
 
-        virtual bool        isConnected         (int num_open=0);   // is the file open
-        virtual void        closeConnection     (void);             // close the file
-        virtual int         writeBuffer         (const void* buf, int len);
-        virtual int         readBuffer          (void* buf, int len);
-        virtual int         getUniqueId         (void);             // returns file descriptor
-        virtual const char* getConfig           (void);             // returns filename with attribute list
-
+        static void*        readerThread        (void* parm);
         static int          luaParms            (lua_State* L);
         static int          luaStats            (lua_State* L);
 };
 
-#endif  /* __atl03_device__ */
+#endif  /* __atl03_reader__ */
