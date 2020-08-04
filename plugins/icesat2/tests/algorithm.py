@@ -7,11 +7,8 @@ import pandas as pd
 import numpy as np
 import math
 
-from bokeh.io import show
-from bokeh.palettes import Spectral11
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource
-from bokeh.tile_providers import Vendors, get_provider
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
 
 import sliderule
 
@@ -34,16 +31,6 @@ def geodist(lat1, lon1, lat2, lon2):
 
     return dist
 
-#
-# Mercator coordinates from lat and lon
-#
-def geomerc(lat, lon):
-    r_major = 6378137.000
-    x = r_major * math.radians(lon)
-    scale = x/lon
-    y = 180.0/math.pi * math.log(math.tan(math.pi/4.0 +
-        lat * (math.pi/180.0)/2.0)) * scale
-    return (x, y)
 #
 # SlideRule Processing Request
 #
@@ -77,24 +64,17 @@ def algoexec(asset):
     cycle = [rsps[r]["elevation"][i]["cycle"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
     beam = [rsps[r]["elevation"][i]["beam"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
 
-    # Print Meta Information
-    print("Reference Ground Tracks: {} to {}".format(min(rgt), max(rgt)))
-    print("Cycle: {} to {}".format(min(cycle), max(cycle)))
-    print("Beam: {} to {}".format(min(beam), max(beam)))
-
     # Calculate Distances
     lat_origin = latitudes[0]
     lon_origin = longitudes[0]
     distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
 
-    # Calculate Mercator Coordinates
-    coord_x = [geomerc(latitudes[i], longitudes[i])[0] for i in range(len(heights))]
-    coord_y = [geomerc(latitudes[i], longitudes[i])[1] for i in range(len(heights))]
-
     # Build Dataframe of SlideRule Responses
-    df = pd.DataFrame(data=list(zip(heights, distances, coord_y, coord_x)), index=segments, columns=["height", "distance", "y", "x"])
+    df = pd.DataFrame(data=list(zip(heights, distances, latitudes, longitudes, beam)), index=segments, columns=["height", "distance", "latitude", "longitude", "beam"])
 
     # Return DataFrame
+    print("Reference Ground Tracks: {} to {}".format(min(rgt), max(rgt)))
+    print("Cycle: {} to {}".format(min(cycle), max(cycle)))
     print("Retrieved {} points from SlideRule".format(len(heights)))
     return df
 
@@ -184,25 +164,25 @@ if __name__ == '__main__':
     # Read ATL06 Expected Results
     exp = expread(asset)
 
-    # Plot ground tracks
-    tile_provider = get_provider(Vendors.CARTODBPOSITRON)
-    ymin = act["y"].min()
-    ymin = ymin - (abs(ymin) * 0.01)
-    xmin = act["x"].min()
-    xmin = xmin - (abs(xmin) * 0.01)
-    ymax = act["y"].max()
-    ymax = ymax + (abs(ymax) * 0.01)
-    xmax = act["x"].max()
-    xmax = xmax + (abs(xmax) * 0.01)
-    m = figure(x_range=(xmin, xmax), y_range=(ymin, ymax), x_axis_type="mercator", y_axis_type="mercator")
-    m.circle(act["x"], act["y"], color = 'red', alpha = 0.5, size = 10)
-    m.add_tile(tile_provider)
-    show(m)
+    # Create Plot
+    fig = plt.figure(num=None, figsize=(12, 6))
+
+    # Plot Ground Tracks
+    plt.subplot(121)
+    plt.title("Ground Tracks")
+    m = Basemap(projection='merc',llcrnrlat=-85,urcrnrlat=85,llcrnrlon=-180,urcrnrlon=180,resolution='c')
+    m.plot(act["latitude"].values,act["longitude"].values,latlon=True,linewidth=1.5,color='r')
+    m.drawcoastlines()
+    m.fillcontinents(color='tan',lake_color='lightblue')
+    m.drawparallels(np.arange(-90.,91.,30.),labels=[True,True,False,False],dashes=[2,2])
+    m.drawmeridians(np.arange(-180.,181.,60.),labels=[False,False,False,True],dashes=[2,2])
+    m.drawmapboundary(fill_color='lightblue')
 
     # Plot Elevations
-    p = figure(title="Actual vs. Expected", plot_height=500, plot_width=800)
-    for data, name, color in zip([act, exp], ["sliderule", "atl06"], Spectral11[:2]):
-        p.line(data["distance"], data["height"], line_width=3, color=color, alpha=0.8, legend_label=name)
-    p.legend.location = "top_left"
-    p.legend.click_policy="hide"
-    show(p)
+    plt.subplot(122)
+    plt.title("Along Track Elevations")
+    plt.plot(act["distance"].values, act["height"].values, linewidth=1.0, color='b')
+    plt.plot(exp["distance"].values, exp["height"].values, linewidth=1.0, color='g')
+
+    # Show Plot
+    plt.show()

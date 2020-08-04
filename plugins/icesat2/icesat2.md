@@ -11,56 +11,43 @@ Also, make sure the /usr/local/etc/sliderule.plugin.conf file includes an entry 
 
 ## II. Setting Up Python Environment
 
-The easiest (and recommended) way to interact with sliderule from a python script is to use the Anaconda distribution.  It includes everything needed to run the icesat2 plugin python scripts.  Alternatively, a local python environment can be setup using the steps below.
+In order to run the provided python test scripts, python needs to be installed on your system and a python environment needs to be setup and some third-party packages installed.
 
-### Installing and Configuring Python
+### Installing Python
 
 Install python packages (Ubuntu)
-````bash
+```bash
 $ sudo apt install python3
 $ sudo apt install python3-pip
 $ sudo apt install python3-venv
-````
-
-Create your virtual environment to manage the ***icesat2*** plugin's python package dependencies.
-````bash
-$ cd sliderule # assuming you've checked out the sliderule repository here
-$ python3 -m venv .venv # creates the vitual environment in the .venv directory
-````
-
-Activate your virtual environment and update and install the necessary packages.
-````bash
-$ source .venv/bin/activate
-$ pip install -U setuptools pip
-$ pip install requests
-$ pip install numpy
-$ pip install pandas
-$ pip install bokeh
-````
-
-## III. Quick Start for the ICESat-2 Plugin
-
-The first step is to run the sliderule server:
-```bash
-$ sliderule scripts/apps/server.lua
 ```
 
-Then use ***icesat2's*** python client for sliderule:
-````bash
-$ cd sliderule; source .venv/bin/activate # only needed if using a locally configured python environment as detailed above 
-$ python plugins/icesat2/apps/iceplot.py
-````
+### Configuring Python Using Conda
 
-To exit from the local python virtual environment, execute the following in the terminal with the activated environment.
-````bash
-$ deactivate
-````
+Using the Anaconda distribution, the following steps are needed to setup your environment:
+```bash
+$ conda create -n icesat2
+$ conda activate icesat2
+$ conda install requests
+$ conda install numpy
+$ conda install pandas
+$ conda install matplotlib
+$ conda install -c conda-forge basemap
+```
 
-## IV. Programmatic Access to ICESat-2 Plugin
+### Install SlideRule Python Client
 
-Any python script can access the APIs provided by the ICESat-2 plugin by importing and using the [sliderule.py](../../scripts/extensions/sliderule.py) module.
+Install the SlideRule Python Client from an activated environment:
+```bash
+$ cd scripts/python
+$ python setup.py install
+```
 
-The plugin supplies the following record types:
+## III. Programmatic Access to ICESat-2 Plugin
+
+Any python script can access the APIs provided by the ICESat-2 plugin by importing and using the [sliderule.py](../../scripts/python/sliderule/sliderule.py) module.
+
+This plugin supplies the following record types:
 * `atl03rec`: a variable along-track extent of ATL03 photon data
 * `atl03rec.photons`: individual ATL03 photons
 * `atl06rec`: ATL06 algorithm result record
@@ -69,12 +56,10 @@ The plugin supplies the following record types:
 The plugin supplies the following endpoints:
 * [atl06](endpoints/atl06.lua): process ATL03 photon data to produce gridded elevations
 
-## V. Notes
+## IV. Notes
 
-1. To use the MPI_ICESat2_ATL03.py script provided at https://github.com/tsutterley/read-ICESat-2/blob/master/scripts/MPI_ICESat2_ATL03.py, the following steps must be taken to setup an python environment (using the Anaconda distribution):
+1. To use the MPI_ICESat2_ATL03.py script provided at https://github.com/tsutterley/read-ICESat-2/blob/master/scripts/MPI_ICESat2_ATL03.py, the following steps must be taken to updated your python environment (using the Anaconda distribution):
     * export PYTHONPATH={path/to/read-ICESat-2}:$PYTHONPATH
-    * conda create -n icesat2
-    * conda activate icesat2
     * conda install -c conda-forge "h5py>=2.9=mpi*"
     * conda install scipy
     * conda install scikit-learn
