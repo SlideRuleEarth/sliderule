@@ -142,6 +142,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
     LocalLib::set(readerPid, 0, sizeof(readerPid));
 
     /* Read ATL03 Data */
+#if 0
     if(track == ALL_TRACKS)
     {
         /* Create Readers */
@@ -154,7 +155,9 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
             readerPid[t] = new Thread(readerThread, info);
         }
     }
-    else if(track >= 1 && track <= 3)
+    else 
+#endif    
+    if(track >= 1 && track <= 3)
     {
         /* Execute Reader */
         info_t* info = new info_t;
