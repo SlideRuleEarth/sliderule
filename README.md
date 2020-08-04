@@ -98,17 +98,21 @@ $ sudo apt install curl meld cppcheck valgrind kcachegrind clang clang-tools lco
 
 ### 2. Install a recent version of CMake (>= 3.13.0)
 
-SlideRule uses a relatively recent version of CMake in order to take advantage of some of the later improvements to the tool.  If using Ubuntu 20.04, then the system package is sufficient.  If using an older version of Ubuntu, or another distribution which has an older version of CMake, then it needs to be manually installed.
-
-Navigate to https://cmake.org/download/ and grab the latest stable binary installer for linux.  (As of this writing: cmake-3.17.2-Linux-x86_64.sh). 
-
-Install cmake into /opt with the commands below (assuming the install script is in Downloads):
+SlideRule uses a relatively recent version of CMake in order to take advantage of some of the later improvements to the tool.  If using Ubuntu 20.04, then the system package is sufficient.  
 ```bash
-$ cd /opt
-$ sudo sh cmake-3.17.2-Linux-x86_64.sh # accept license and default install location
-$ sudo ln -s cmake-3.17.2-Linux-x86_64 cmake
+$ sudo apt install cmake
 ```
-#### Update .bashrc
+
+If using an older version of Ubuntu, or another distribution which has an older version of CMake, then it needs to be manually installed. Navigate to https://cmake.org/download/ and grab the latest stable binary installer for linux and follow the instructions there; or alternatively, use the following commands to get and install cmake version 3.18.1. 
+```bash
+$ cd {Downloads}
+$ wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
+$ cd /opt
+$ sudo sh {Downloads}/cmake-3.18.1-Linux-x86_64.sh # accept license and default install location
+$ sudo ln -s cmake-3.18.1-Linux-x86_64 cmake
+```
+
+If you followed the instructions above to install a non-system cmake into /opt, then make sure to add it to the PATH environment variable.
 ```bash
 export PATH=$PATH:/opt/cmake/bin
 ```
@@ -144,13 +148,13 @@ $ make
 $ sudo make install
 ```
 
-### 6. Run SlideRule
+### 6. Running SlideRule as a stand-alone application
 
 SlideRule requires a lua script to be passed to it runs in order to establish which components are run. "Using" SlideRule means to develop the lua scripts needed to configure and insgantiate the needed SlideRule components. Two stock lua scripts are provided in the repository and can be used as a starting point for developing a project-specific lua script.
 
 A REST server running at port 9081 can be started via:
 ```bash
-$ sliderule scripts/apps/server.lua
+$ sliderule scripts/apps/server.lua <config.json>
 ```
 
 A self-test that dynamically checks which packages and plugins are present and runs their associated unit tests can be started via:
@@ -163,11 +167,12 @@ $ sliderule scripts/apps/test_runner.lua
 If you want to run SlideRule in a docker container, then the following steps can be taken:
 ```bash
 $ make docker-image
-$ docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/scripts/apps/server.lua
+$ docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/scripts/apps/server.lua {config.json}
 ```
 
 As an example, this runs the server application inside the Docker container.  The following steps can be taken to configure what is run:
 * Inside the `make docker-image` makefile target, different cmake options are specified and can be changed to enable and disable different options
+* The {config.json} file provided to the server.lua script can be used to change server settings
 * A script other than `/usr/local/scripts/apps/server.lua` can be passed to the SlideRule executable running inside the Docker container
 * Environment variables can be passed via `-e {parameter=value}` on the command line to docker
 

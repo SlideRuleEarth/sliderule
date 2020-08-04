@@ -40,7 +40,7 @@ def algoexec(asset):
     rqst = {
         "asset" : asset,
         "resource": "ATL03_20181019065445_03150111_003_01.h5",
-        "track": 1,
+        "track": 0,
         "stages": ["LSF"],
         "parms": {
             "cnf": 4,
