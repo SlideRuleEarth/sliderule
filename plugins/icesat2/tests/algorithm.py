@@ -181,8 +181,14 @@ if __name__ == '__main__':
     # Plot Elevations
     plt.subplot(122)
     plt.title("Along Track Elevations")
-    plt.plot(act["distance"].values, act["height"].values, linewidth=1.0, color='b')
-    plt.plot(exp["distance"].values, exp["height"].values, linewidth=1.0, color='g')
+    track1 = act[act["beam"].isin([1, 2])].sort_values(by=['distance'])
+#    track2 = act[act["beam"].isin([3, 4])].sort_values(by=['distance'])
+#    track3 = act[act["beam"].isin([5, 6])].sort_values(by=['distance'])
+    standard = exp.sort_values(by=['distance'])
+    plt.plot(track1["distance"].values, track1["height"].values, linewidth=1.0, color='b')
+#    plt.plot(track2["distance"].values, track2["height"].values, linewidth=1.0, color='b')
+#    plt.plot(track3["distance"].values, track3["height"].values, linewidth=1.0, color='b')
+    plt.plot(standard["distance"].values, standard["height"].values, linewidth=1.0, color='g')
 
     # Show Plot
     plt.show()
