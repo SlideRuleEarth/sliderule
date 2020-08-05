@@ -36,10 +36,6 @@
 const char* LuaObject::BASE_OBJECT_TYPE = "LuaObject";
 const char* LuaException::ERROR_TYPE = "LuaException";
 
-Ordering<LuaObject*> LuaObject::lockList;
-Mutex LuaObject::lockMut;
-okey_t LuaObject::currentLockKey = 0;
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -187,43 +183,28 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
 }
 
 /*----------------------------------------------------------------------------
- * releaseLuaObjects
- *----------------------------------------------------------------------------*/
-void LuaObject::releaseLuaObjects (void)
-{
-    LuaObject* lua_obj;
-    okey_t key = lockList.first(&lua_obj);
-    while(key != Ordering<LuaObject*>::INVALID_KEY)
-    {
-        if(lua_obj)
-        {
-            delete lua_obj;
-        }
-        else
-        {
-            mlog(CRITICAL, "Double delete of object detected, key = %ld\n", (unsigned long)key);
-        }
-
-        key = lockList.next(&lua_obj);
-    }
-    lockList.clear();
-}
-
-/*----------------------------------------------------------------------------
  * releaseLuaObject
  *----------------------------------------------------------------------------*/
 void LuaObject::releaseLuaObject (void)
 {
-    lockMut.lock();
+    if(isLocked)
     {
-        if(isLocked)
+        /* Get Lua Engine Object */
+        lua_pushstring(LuaState, LuaEngine::LUA_SELFKEY);
+        lua_gettable(LuaState, LUA_REGISTRYINDEX); /* retrieve value */
+        LuaEngine* li = (LuaEngine*)lua_touserdata(LuaState, -1);
+        if(li)
         {
-            mlog(INFO, "Unlocking object %s of type %s, key = %ld\n", getName(), getType(), (unsigned long)lockKey);
+            /* Release Object */
+            li->releaseObject(lockKey);
             isLocked = false;
-            lockList.remove(lockKey);
+            mlog(INFO, "Unlocking object %s of type %s, key = %ld\n", getName(), getType(), (unsigned long)lockKey);
+        }
+        else
+        {
+            mlog(CRITICAL, "Unable to retrieve lua engine needed to release object\n");
         }
     }
-    lockMut.unlock();
 }
 
 /******************************************************************************
@@ -243,14 +224,14 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 
     isLocked = false;
 
-    if(L)
+    if(LuaState)
     {
         /* Trace from Lua Engine */
-        lua_getglobal(L, LuaEngine::LUA_TRACEID);
-        engine_trace_id = lua_tonumber(L, -1);
+        lua_getglobal(LuaState, LuaEngine::LUA_TRACEID);
+        engine_trace_id = lua_tonumber(LuaState, -1);
 
         /* Associate Meta Table */
-        associateMetaTable(L, meta_name, meta_table);
+        associateMetaTable(LuaState, meta_name, meta_table);
         mlog(INFO, "Created object of type %s\n", getType());
     }
 
@@ -285,20 +266,16 @@ int LuaObject::luaDelete (lua_State* L)
                 if(lua_obj)
                 {
                     mlog(INFO, "Garbage collecting object %s of type %s\n", lua_obj->getName(), lua_obj->getType());
-                    lockMut.lock();
+                    if(!lua_obj->isLocked)
                     {
-                        if(!lua_obj->isLocked)
-                        {
-                            /* Delete Object */
-                            delete lua_obj;
-                            user_data->luaObj = NULL;
-                        }
-                        else
-                        {
-                            mlog(INFO, "Delaying delete on locked object %s\n", lua_obj->getName());
-                        }
+                        /* Delete Object */
+                        delete lua_obj;
+                        user_data->luaObj = NULL;
                     }
-                    lockMut.unlock();
+                    else
+                    {
+                        mlog(INFO, "Delaying delete on locked object %s\n", lua_obj->getName());
+                    }
                 }
                 else
                 {
@@ -417,25 +394,27 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
 {
     LuaObject* lua_obj = NULL;
 
+    /* Get Lua Engine Object */
+    lua_pushstring(L, LuaEngine::LUA_SELFKEY);
+    lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
+    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
+    if(!li) throw LuaException("Unable to retrieve lua engine");
+
+    /* Get User Data LuaObject */
     luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
     if(user_data)
     {
         if(StringLib::match(object_type, user_data->luaObj->ObjectType))
         {
-            lockMut.lock();
+            if(!user_data->luaObj->isLocked)
             {
-                if(!user_data->luaObj->isLocked)
-                {
-                    lua_obj = user_data->luaObj;
-                    lua_obj->isLocked = true;
-                    lua_obj->lockKey = currentLockKey++;
-                    lockList.add(lua_obj->lockKey, lua_obj);
-                    mlog(INFO, "Locking object %s of type %s, key = %ld\n", lua_obj->getName(), lua_obj->getType(), (unsigned long)lua_obj->lockKey);
-                }
+                /* Lock LuaObject */                
+                lua_obj = user_data->luaObj;
+                lua_obj->lockKey = li->lockObject(lua_obj);
+                lua_obj->isLocked = true;
+                mlog(INFO, "Locking object %s of type %s, key = %ld\n", lua_obj->getName(), lua_obj->getType(), (unsigned long)lua_obj->lockKey);
             }
-            lockMut.unlock();
-
-            if(lua_obj == NULL)
+            else
             {
                 throw LuaException("%s object %s is locked", object_type, user_data->luaObj->getName());
             }

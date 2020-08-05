@@ -29,6 +29,8 @@
 #include "TraceLib.h"
 #include "MsgQ.h"
 #include "List.h"
+#include "Ordering.h"
+#include "LuaObject.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -93,6 +95,8 @@ class LuaEngine
         void                setString       (const char* name, const char* val);
         void                setFunction     (const char* name, lua_CFunction val);
         const char*         getResult       (void);
+        okey_t              lockObject      (LuaObject* lua_obj);
+        void                releaseObject   (okey_t lock_key);
         bool                waitOn          (const char* signal_name, int timeout_ms);
         bool                signal          (const char* signal_name);
 
@@ -147,6 +151,9 @@ class LuaEngine
         bool                        engineActive;
         Thread*                     engineThread;
         Cond                        engineSignal;
+
+        Ordering<LuaObject*>        lockList;
+        okey_t                      currentLockKey;
 
         mode_t                      mode;
         uint32_t                    traceId;

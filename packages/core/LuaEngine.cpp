@@ -54,11 +54,12 @@ Mutex LuaEngine::pkgInitTableMutex;
 LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id, luaStepHook hook, bool paused)
 {
     /* Initialize Parameters */
-    engineName  = StringLib::duplicate(name);
-    mode        = PROTECTED_MODE;
-    traceId     = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\"}", name);
-    dInfo       = NULL;
-    L           = createState(hook);
+    engineName      = StringLib::duplicate(name);
+    mode            = PROTECTED_MODE;
+    traceId         = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\"}", name);
+    dInfo           = NULL;
+    currentLockKey  = 0;
+    L               = createState(hook);
 
     /* Create Lua Thread */
     if(lua_argc > 0) assert(lua_argv);
@@ -92,11 +93,12 @@ LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG
 LuaEngine::LuaEngine(const char* name, const char* script, const char* arg, uint32_t trace_id, luaStepHook hook, bool paused)
 {
     /* Initialize Parameters */
-    engineName  = StringLib::duplicate(name);
-    mode        = DIRECT_MODE;
-    traceId     = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\", \"script\":\"%s\"}", name, script);
-    pInfo       = NULL;
-    L           = createState(hook);
+    engineName      = StringLib::duplicate(name);
+    mode            = DIRECT_MODE;
+    traceId         = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\", \"script\":\"%s\"}", name, script);
+    pInfo           = NULL;
+    currentLockKey  = 0;
+    L               = createState(hook);
 
     /* Create Script Thread */
     dInfo = new directThread_t;
@@ -121,11 +123,29 @@ LuaEngine::~LuaEngine(void)
     engineActive = false;
     if(engineThread) delete engineThread;
 
+    /* Close Lua State */
     lua_close(L);
 
-    delete [] engineName;
+    /* Delete All Locked Lua Objects */
+    LuaObject* lua_obj;
+    okey_t key = lockList.first(&lua_obj);
+    while(key != Ordering<LuaObject*>::INVALID_KEY)
+    {
+        if(lua_obj)
+        {
+            delete lua_obj;
+        }
+        else
+        {
+            mlog(CRITICAL, "Double delete of object detected, key = %ld\n", (unsigned long)key);
+        }
 
-    stop_trace(traceId);
+        key = lockList.next(&lua_obj);
+    }
+    lockList.clear();
+
+    /* Free Engine Resources */
+    delete [] engineName;
 
     if(dInfo)
     {
@@ -143,6 +163,9 @@ LuaEngine::~LuaEngine(void)
         delete [] pInfo->argv;
         delete pInfo;
     }
+
+    /* Stop Trace */
+    stop_trace(traceId);
 }
 
 /*----------------------------------------------------------------------------
@@ -388,6 +411,27 @@ const char* LuaEngine::getResult (void)
     {
         return NULL;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * lockObject
+ *----------------------------------------------------------------------------*/
+okey_t LuaEngine::lockObject (LuaObject* lua_obj)
+{
+    okey_t lock_key = currentLockKey++;
+    bool status = lockList.add(lock_key, lua_obj);
+    if(!status) mlog(CRITICAL, "Failed to lock object %s of type %s\n", lua_obj->getName(), lua_obj->getType());
+    return lock_key;
+}
+
+/*----------------------------------------------------------------------------
+ * releaseObject
+ *----------------------------------------------------------------------------*/
+void LuaEngine::releaseObject (okey_t lock_key)
+{
+    bool status = lockList.remove(lock_key);
+    if(!status) mlog(CRITICAL, "Failed to release lock of object with key %llu\n", (long long unsigned)lock_key);
+
 }
 
 /*----------------------------------------------------------------------------

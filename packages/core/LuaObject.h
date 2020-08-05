@@ -77,6 +77,8 @@ class LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
+        virtual             ~LuaObject          (void);
+
         const char*         getType             (void);
         const char*         getName             (void);
 
@@ -87,7 +89,6 @@ class LuaObject
         static const char*  getLuaString        (lua_State* L, int parm, bool optional=false, const char* dfltval=NULL, bool* provided=NULL);
         static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
 
-        static void         releaseLuaObjects   (void); // pairs with getLuaObject(...)
         void                releaseLuaObject    (void); // pairs with getLuaObject(...)
 
     protected:
@@ -99,14 +100,13 @@ class LuaObject
         const char*         ObjectType;     /* c++ class type */
         const char*         ObjectName;     /* unique identifier of object */
         const char*         LuaMetaName;    /* metatable name in lua */
-        const lua_State*    LuaState;
+        lua_State*          LuaState;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                             LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]);
-        virtual             ~LuaObject          (void);
 
         static void         associateMetaTable  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
         static int          createLuaObject     (lua_State* L, LuaObject* lua_obj, bool alias=false);
@@ -134,12 +134,8 @@ class LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static Ordering<LuaObject*> lockList;
-        static Mutex                lockMut;
-        static okey_t               currentLockKey;
-
-        okey_t                      lockKey;
-        bool                        isLocked;
+        okey_t              lockKey;
+        bool                isLocked;
 };
 
 #endif  /* __lua_object__ */

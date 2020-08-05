@@ -200,8 +200,8 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
 
         /* Get Parameters */
-        DispatchObject* dispatch    = (DispatchObject*)getLuaObject(L, 2, DispatchObject::OBJECT_TYPE);
         int             num_parms   = getLuaNumParms(L);
+        DispatchObject* dispatch    = (DispatchObject*)getLuaObject(L, 2, DispatchObject::OBJECT_TYPE);
 
         /* Stop Worker Threads */
         lua_obj->stopThreads();
