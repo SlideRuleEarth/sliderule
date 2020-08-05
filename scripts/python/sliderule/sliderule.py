@@ -88,7 +88,7 @@ def __parse(stream):
                 rec_index += bytes_to_append
                 if(rec_index >= rec_size):
                     raw = b''.join(rec_rsps)
-                    recs.append(raw)
+                    recs.append(raw) ###### TODO: do the __decode here... and print/skip the progressrec messages when verbose/quiet option selected
                     rec_rsps.clear()
                     rec_size_index = 0
                     rec_size = 0
@@ -181,7 +181,7 @@ def __decode(rectype, rawdata):
                     rec[fieldname].append(__decode(ftype, rawdata[offset:]))
                     offset += subrecdef["@datasize"]
             else:
-                rec[fieldname] = __decode(ftype, rawdata[offset:])
+                rec[fieldname] = __decode(ftype, rawdata[offset:]) ##### TODO: only need to print progressrec messages here...
 
     # return record #
     return rec

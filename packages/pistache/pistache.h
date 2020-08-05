@@ -26,6 +26,7 @@
 
 #include "LuaEndpoint.h"
 #include "LuaClient.h"
+#include "ProgressMessager.h"
 #include "RouteHandler.h"
 
 

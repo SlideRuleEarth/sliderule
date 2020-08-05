@@ -42,6 +42,7 @@ int pistache_open (lua_State *L)
     static const struct luaL_Reg pistache_functions[] = {
         {"client",      LuaClient::luaCreate},
         {"endpoint",    LuaEndpoint::luaCreate},
+        {"messager",    ProgressMessager::luaCreate},
         {NULL,          NULL}
     };
 
@@ -64,6 +65,10 @@ int pistache_open (lua_State *L)
 extern "C" {
 void initpistache (void)
 {
+    /* Initialize Libraries */
+    ProgressMessager::init();
+
+    /* Install Pistache Package into Lua */
     LuaEngine::extend(LUA_PISTACHE_LIBNAME, pistache_open);
 
     /* Indicate Presence of Package */
