@@ -314,7 +314,7 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
         }
         else
         {
-            mlog(CRITICAL, "rrror: %s streaming data: %d\n", id_str, status);
+            mlog(CRITICAL, "%s error streaming data: %d\n", id_str, status);
             break;
         }
     }
@@ -382,7 +382,7 @@ int LuaEndpoint::luaRoute(lua_State* L)
         const char* url = getLuaString(L, 3);
 
         /* Get Route Handler */
-        RouteHandler* handler = (RouteHandler*)lockLuaObject(L, 4, RouteHandler::OBJECT_TYPE);
+        RouteHandler* handler = (RouteHandler*)getLuaObject(L, 4, RouteHandler::OBJECT_TYPE);
 
         /* Set Route */
         if(action == GET)

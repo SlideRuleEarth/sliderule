@@ -55,7 +55,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        CcsdsParserModule*  _parser     = (CcsdsParserModule*)lockLuaObject(L, 1, CcsdsParserModule::OBJECT_TYPE);
+        CcsdsParserModule*  _parser     = (CcsdsParserModule*)getLuaObject(L, 1, CcsdsParserModule::OBJECT_TYPE);
         const char*         type_str    = getLuaString(L, 2);
         const char*         inq_name    = getLuaString(L, 3);
         const char*         outq_name   = getLuaString(L, 4, true, NULL);

@@ -38,7 +38,7 @@ int DeviceReader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        DeviceObject*   _device = (DeviceObject*)lockLuaObject(L, 1, DeviceObject::OBJECT_TYPE);
+        DeviceObject*   _device = (DeviceObject*)getLuaObject(L, 1, DeviceObject::OBJECT_TYPE);
         const char*     q_name  = getLuaString(L, 2, true, NULL);
 
         /* Return DeviceReader Object */
@@ -86,7 +86,7 @@ DeviceReader::~DeviceReader(void)
     if(outq) delete outq;
 
     /* Unlock */
-    device->removeLock();
+    device->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

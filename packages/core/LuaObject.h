@@ -77,8 +77,6 @@ class LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         releaseLuaObjects   (void); // pairs with lockLuaObject(...)
-        void                removeLock          (void);
         const char*         getType             (void);
         const char*         getName             (void);
 
@@ -88,6 +86,9 @@ class LuaObject
         static bool         getLuaBoolean       (lua_State* L, int parm, bool optional=false, bool dfltval=false, bool* provided=NULL);
         static const char*  getLuaString        (lua_State* L, int parm, bool optional=false, const char* dfltval=NULL, bool* provided=NULL);
         static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
+
+        static void         releaseLuaObjects   (void); // pairs with getLuaObject(...)
+        void                releaseLuaObject    (void); // pairs with getLuaObject(...)
 
     protected:
 
@@ -109,19 +110,25 @@ class LuaObject
 
         static void         associateMetaTable  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
         static int          createLuaObject     (lua_State* L, LuaObject* lua_obj, bool alias=false);
-        static int          deleteLuaObject     (lua_State* L);
-        static int          associateLuaName    (lua_State* L);
-
-        static LuaObject*   lockLuaObject       (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
+        static LuaObject*   getLuaObject        (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        uint32_t                    traceId;
+        uint32_t            traceId;
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        /* Meta Table Functions */
+        static int          luaDelete           (lua_State* L);
+        static int          luaAssociate        (lua_State* L);
+        static int          luaLock             (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

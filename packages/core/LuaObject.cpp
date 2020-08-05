@@ -62,46 +62,6 @@ LuaException::LuaException(const char* _errmsg, ...):
 }
 
 /*----------------------------------------------------------------------------
- * releaseLuaObjects
- *----------------------------------------------------------------------------*/
-void LuaObject::releaseLuaObjects (void)
-{
-    LuaObject* lua_obj;
-    okey_t key = lockList.first(&lua_obj);
-    while(key != Ordering<LuaObject*>::INVALID_KEY)
-    {
-        if(lua_obj)
-        {
-            delete lua_obj;
-        }
-        else
-        {
-            mlog(CRITICAL, "Double delete of object detected, key = %ld\n", (unsigned long)key);
-        }
-
-        key = lockList.next(&lua_obj);
-    }
-    lockList.clear();
-}
-
-/*----------------------------------------------------------------------------
- * removeLock
- *----------------------------------------------------------------------------*/
-void LuaObject::removeLock (void)
-{
-    lockMut.lock();
-    {
-        if(isLocked)
-        {
-            mlog(INFO, "Unlocking object %s of type %s, key = %ld\n", getName(), getType(), (unsigned long)lockKey);
-            isLocked = false;
-            lockList.remove(lockKey);
-        }
-    }
-    lockMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
  * getType
  *----------------------------------------------------------------------------*/
 const char* LuaObject::getType (void)
@@ -226,6 +186,46 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
     return num_obj_to_return;
 }
 
+/*----------------------------------------------------------------------------
+ * releaseLuaObjects
+ *----------------------------------------------------------------------------*/
+void LuaObject::releaseLuaObjects (void)
+{
+    LuaObject* lua_obj;
+    okey_t key = lockList.first(&lua_obj);
+    while(key != Ordering<LuaObject*>::INVALID_KEY)
+    {
+        if(lua_obj)
+        {
+            delete lua_obj;
+        }
+        else
+        {
+            mlog(CRITICAL, "Double delete of object detected, key = %ld\n", (unsigned long)key);
+        }
+
+        key = lockList.next(&lua_obj);
+    }
+    lockList.clear();
+}
+
+/*----------------------------------------------------------------------------
+ * releaseLuaObject
+ *----------------------------------------------------------------------------*/
+void LuaObject::releaseLuaObject (void)
+{
+    lockMut.lock();
+    {
+        if(isLocked)
+        {
+            mlog(INFO, "Unlocking object %s of type %s, key = %ld\n", getName(), getType(), (unsigned long)lockKey);
+            isLocked = false;
+            lockList.remove(lockKey);
+        }
+    }
+    lockMut.unlock();
+}
+
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -270,50 +270,9 @@ LuaObject::~LuaObject (void)
 }
 
 /*----------------------------------------------------------------------------
- * associateMetaTable
+ * luaDelete
  *----------------------------------------------------------------------------*/
-void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[])
-{
-    if(luaL_newmetatable(L, meta_name))
-    {
-        /* Add Child Class Functions */
-        lua_pushvalue(L, -1);
-        lua_setfield(L, -2, "__index");
-        luaL_setfuncs(L, meta_table, 0);
-
-        /* Add Base Class Functions */
-        LuaEngine::setAttrFunc(L, "name", associateLuaName);
-        LuaEngine::setAttrFunc(L, "destroy", deleteLuaObject);
-        LuaEngine::setAttrFunc(L, "__gc", deleteLuaObject);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * createLuaObject
- *
- *  Note: if object is an alias, all calls into it from Lua must be thread safe
- *----------------------------------------------------------------------------*/
-int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)
-{
-    /* Create Lua User Data Object */
-    luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
-    if(!user_data)
-    {
-        throw LuaException("failed to allocate new user data");
-    }
-
-    /* Return User Data to Lua */
-    user_data->luaObj = lua_obj;
-    user_data->alias = alias;
-    luaL_getmetatable(L, lua_obj->LuaMetaName);
-    lua_setmetatable(L, -2);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * deleteLuaObject
- *----------------------------------------------------------------------------*/
-int LuaObject::deleteLuaObject (lua_State* L)
+int LuaObject::luaDelete (lua_State* L)
 {
     try
     {
@@ -364,9 +323,9 @@ int LuaObject::deleteLuaObject (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * associateLuaName
+ * luaAssociate
  *----------------------------------------------------------------------------*/
-int LuaObject::associateLuaName(lua_State* L)
+int LuaObject::luaAssociate(lua_State* L)
 {
     try
     {
@@ -389,9 +348,72 @@ int LuaObject::associateLuaName(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lockLuaObject
+ * luaLock
  *----------------------------------------------------------------------------*/
-LuaObject* LuaObject::lockLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
+int LuaObject::luaLock(lua_State* L)
+{
+    try
+    {
+        /* Get Self */
+        LuaObject* lua_obj = getLuaSelf(L, 1);
+
+        /* Lock Self */
+        getLuaObject(L, 1, lua_obj->ObjectType);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error locking object: %s\n", e.errmsg);
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * associateMetaTable
+ *----------------------------------------------------------------------------*/
+void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[])
+{
+    if(luaL_newmetatable(L, meta_name))
+    {
+        /* Add Child Class Functions */
+        lua_pushvalue(L, -1);
+        lua_setfield(L, -2, "__index");
+        luaL_setfuncs(L, meta_table, 0);
+
+        /* Add Base Class Functions */
+        LuaEngine::setAttrFunc(L, "name", luaAssociate);
+        LuaEngine::setAttrFunc(L, "lock", luaLock);
+        LuaEngine::setAttrFunc(L, "destroy", luaDelete);
+        LuaEngine::setAttrFunc(L, "__gc", luaDelete);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * createLuaObject
+ *
+ *  Note: if object is an alias, all calls into it from Lua must be thread safe
+ *----------------------------------------------------------------------------*/
+int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)
+{
+    /* Create Lua User Data Object */
+    luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
+    if(!user_data)
+    {
+        throw LuaException("failed to allocate new user data");
+    }
+
+    /* Return User Data to Lua */
+    user_data->luaObj = lua_obj;
+    user_data->alias = alias;
+    luaL_getmetatable(L, lua_obj->LuaMetaName);
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaObject
+ *----------------------------------------------------------------------------*/
+LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
 {
     LuaObject* lua_obj = NULL;
 

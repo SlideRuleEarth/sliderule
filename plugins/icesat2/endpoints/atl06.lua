@@ -34,6 +34,9 @@ local track = rqst["track"] or icesat2.ALL_TRACKS
 local stages = rqst["stages"]
 local parms = rqst["parms"]
 
+-- Response Monitor --
+local monitor = msg.subscribe(rspq)
+
 -- ATL06 Dispatch Algorithm --
 local atl06_algo = icesat2.atl06(rspq, parms)
 if stages then
@@ -44,15 +47,18 @@ if stages then
 end
 
 -- ATL06 Dispatcher --
-local atl06_disp = core.dispatcher(recq)
+atl06_disp = core.dispatcher(recq)
 atl06_disp:attach(atl06_algo, "atl03rec")
 
 -- ATL03 Reader --
 local resource_url = asset.buildurl(asset_name, resource)
-local atl03_reader = icesat2.atl03(resource_url, recq, parms, track)
+atl03_reader = icesat2.atl03(resource_url, recq, parms, track)
 
 -- Wait for Data to Start --
-sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
+local rsprec = monitor:recvrecord(10000)
+if not rsprec then
+    print("Failed to generate response record in 10 seconds")
+end
 
 -- Display Stats --
 print("ATL03", json.encode(atl03_reader:stats(true)))

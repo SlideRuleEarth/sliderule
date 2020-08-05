@@ -172,7 +172,7 @@ RecordDispatcher::~RecordDispatcher(void)
     {
         for(int d = 0; d < dispatch.size; d++)
         {
-            dispatch.list[d]->removeLock();
+            dispatch.list[d]->releaseLuaObject();
         }
         delete [] dispatch.list;
         key = dispatchTable.next(&dispatch);
@@ -200,7 +200,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
 
         /* Get Parameters */
-        DispatchObject* dispatch    = (DispatchObject*)lockLuaObject(L, 2, DispatchObject::OBJECT_TYPE);
+        DispatchObject* dispatch    = (DispatchObject*)getLuaObject(L, 2, DispatchObject::OBJECT_TYPE);
         int             num_parms   = getLuaNumParms(L);
 
         /* Stop Worker Threads */

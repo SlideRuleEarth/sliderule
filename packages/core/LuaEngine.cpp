@@ -392,6 +392,8 @@ const char* LuaEngine::getResult (void)
 
 /*----------------------------------------------------------------------------
  * waitOn
+ * 
+ * TODO: make this a full userdata so the semaphore is garbage collected
  *----------------------------------------------------------------------------*/
 bool LuaEngine::waitOn(const char* signal_name, int timeout_ms)
 {
@@ -425,6 +427,8 @@ bool LuaEngine::waitOn(const char* signal_name, int timeout_ms)
 
 /*----------------------------------------------------------------------------
  * signal
+ * 
+ * TODO: make this a full userdata so the semaphore is garbage collected
  *----------------------------------------------------------------------------*/
 bool LuaEngine::signal(const char* signal_name)
 {

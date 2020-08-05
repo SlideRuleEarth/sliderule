@@ -419,12 +419,12 @@ void* Atl03Reader::readerThread (void* parm)
         mlog(CRITICAL, "Unable to process resource %s: %s\n", url, e.what());
     }
 
-    /* Stop Trace */
-    stop_trace(trace_id);
-
     /* Clean Up Info */
     delete [] info->url;
     delete [] info;
+
+    /* Stop Trace */
+    stop_trace(trace_id);
 
     /* Return */
     return NULL;
