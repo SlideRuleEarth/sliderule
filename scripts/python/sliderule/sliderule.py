@@ -154,7 +154,7 @@ def __parse(stream):
     rec_index = 0
     rec_rsps = []
 
-    for line in stream.iter_content(0x10000):
+    for line in stream.iter_content(None):
 
         i = 0
         while i < len(line):
@@ -230,19 +230,7 @@ def engine (api, parm):
     rqst   = json.dumps(parm)
     url    = '%s/engine/%s' % (server_url, api)
     stream = requests.post(url, data=rqst, stream=True)
-
-    # Read and Parse Stream #
     rsps = __parse(stream)
-
-    # Build Response #
-#    rsps = []
-#    for rawrec in rsps_recs:
-#        rectype = ctypes.create_string_buffer(rawrec).value.decode('ascii')
-#        rawdata = rawrec[len(rectype) + 1:]
-#        rec     = __decode(rectype, rawdata)
-#        rsps.append(rec)
-
-    # Return Response #
     return rsps
 
 #

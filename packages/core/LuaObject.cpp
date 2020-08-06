@@ -193,6 +193,7 @@ void LuaObject::releaseLuaObject (void)
         lua_pushstring(LuaState, LuaEngine::LUA_SELFKEY);
         lua_gettable(LuaState, LUA_REGISTRYINDEX); /* retrieve value */
         LuaEngine* li = (LuaEngine*)lua_touserdata(LuaState, -1);
+        lua_pop(LuaState, 1);
         if(li)
         {
             /* Release Object */
@@ -399,6 +400,7 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
     LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
     if(!li) throw LuaException("Unable to retrieve lua engine");
+    lua_pop(L, 1);
 
     /* Get User Data LuaObject */
     luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);

@@ -39,7 +39,7 @@ end
 
 -- Configure and Run Server --
 if __pistache__ then
-    server = pistache.endpoint(port)
+    server = pistache.endpoint(port, 4)
     server:name("SlideRuleServer")
 else
     print("Must build pistache package to run server")

@@ -1,5 +1,6 @@
 local runner = require("test_executive")
-
+local console = require("console")
+console.logger:config(core.INFO)
 -- Cluster Socket Unit Test --
 
 local server = core.cluster(core.WRITER, core.QUEUE, "127.0.0.1", 34503, core.SERVER, "inq")

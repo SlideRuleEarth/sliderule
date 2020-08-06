@@ -124,7 +124,7 @@ LuaEndpoint::LuaEndpoint(lua_State* L,  Address addr, size_t num_threads):
     httpEndpoint(std::make_shared<Http::Endpoint>(addr))
 {
     /* Set Number of Threads */
-    auto opts = Http::Endpoint::options().threads(static_cast<int>(num_threads));
+    auto opts = Http::Endpoint::options().threads(static_cast<int>(numThreads));
     httpEndpoint->init(opts);
 
     /* Set Default Routes */

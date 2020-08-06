@@ -122,7 +122,7 @@ int ProgressMessager::luaPost (lua_State* L)
         uint8_t* rec_buf = NULL;
         int rec_bytes = lua_obj->record->serialize(&rec_buf, RecordObject::REFERENCE);
         int post_status = lua_obj->rspQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);
-        if(post_status != MsgQ::STATE_OKAY)
+        if(post_status <= 0)
         {
             throw LuaException("Failed to post progress message: %d", post_status);
         }
