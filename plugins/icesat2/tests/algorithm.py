@@ -144,19 +144,25 @@ def expread(asset):
 
 if __name__ == '__main__':
 
+    # Set URL #
     if len(sys.argv) > 1:
         sliderule.set_url(sys.argv[1])
 
+    # Set Asset #
     asset = "atl03-local"
     if len(sys.argv) > 2:
         asset = sys.argv[2]
 
+    # Set Verbosity #
+    sliderule.set_verbose(True)
+    
     # Populate Record Definitions
     sliderule.populate("atl03rec")
     sliderule.populate("atl03rec.photons")
     sliderule.populate("atl06rec")
     sliderule.populate("atl06rec.elevation")
     sliderule.populate("h5dataset")
+    sliderule.populate("progressrec")
 
     # Execute SlideRule Algorithm
     act = algoexec(asset)

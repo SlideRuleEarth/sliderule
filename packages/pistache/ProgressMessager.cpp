@@ -86,6 +86,9 @@ ProgressMessager::ProgressMessager (lua_State* L, const char* rspq_name):
 {
     assert(rspq_name);
     rspQ = new Publisher(rspq_name);
+    record = new RecordObject(rec_type);
+    progressMessage = (progress_message_t*)record->getRecordData();
+
 }
 
 /*----------------------------------------------------------------------------
@@ -94,6 +97,7 @@ ProgressMessager::ProgressMessager (lua_State* L, const char* rspq_name):
 ProgressMessager::~ProgressMessager (void)
 {
     delete rspQ;
+    delete record;
 }
 
 /*----------------------------------------------------------------------------
@@ -111,8 +115,20 @@ int ProgressMessager::luaPost (lua_State* L)
         /* Get Parameters */
         const char* message = getLuaString(L, 2);
 
+        /* Create Message */
+        StringLib::copy(lua_obj->progressMessage->message, message, MAX_MESSAGE_SIZE);
+
         /* Post Message */
-        status = lua_obj->rspQ->postString("%s", message) > 0;
+        uint8_t* rec_buf = NULL;
+        int rec_bytes = lua_obj->record->serialize(&rec_buf, RecordObject::REFERENCE);
+        int post_status = lua_obj->rspQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);
+        if(post_status != MsgQ::STATE_OKAY)
+        {
+            throw LuaException("Failed to post progress message: %d", post_status);
+        }
+        
+        /* Success */
+        status = true;
     }
     catch(const LuaException& e)
     {

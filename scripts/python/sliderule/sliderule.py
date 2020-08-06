@@ -15,6 +15,8 @@ import numpy
 
 server_url = 'http://127.0.0.1:9081'
 
+verbose = False
+
 recdef_tbl = {}
 
 datatypes = {
@@ -43,59 +45,6 @@ basictypes = {
 ###############################################################################
 # UTILITIES
 ###############################################################################
-
-#
-#  __parse
-#
-def __parse(stream):
-    """
-    stream: request response stream
-    """
-    recs = []
-
-    rec_size_size = 4
-    rec_size_index = 0
-    rec_size_rsps = []
-
-    rec_size = 0
-    rec_index = 0
-    rec_rsps = []
-
-    for line in stream.iter_content(0x10000):
-
-        i = 0
-        while i < len(line):
-
-            # Parse Record Size
-            if(rec_size_index < rec_size_size):
-                bytes_available = len(line)  - i
-                bytes_remaining = rec_size_size - rec_size_index
-                bytes_to_append = min(bytes_available, bytes_remaining)
-                rec_size_rsps.append(line[i:i+bytes_to_append])
-                rec_size_index += bytes_to_append
-                if(rec_size_index >= rec_size_size):
-                    raw = b''.join(rec_size_rsps)
-                    rec_size = struct.unpack('i', raw)[0]
-                    rec_size_rsps.clear()
-                i += bytes_to_append
-
-            # Parse Record
-            elif(rec_size > 0):
-                bytes_available = len(line) - i
-                bytes_remaining = rec_size - rec_index
-                bytes_to_append = min(bytes_available, bytes_remaining)
-                rec_rsps.append(line[i:i+bytes_to_append])
-                rec_index += bytes_to_append
-                if(rec_index >= rec_size):
-                    raw = b''.join(rec_rsps)
-                    recs.append(raw) ###### TODO: do the __decode here... and print/skip the progressrec messages when verbose/quiet option selected
-                    rec_rsps.clear()
-                    rec_size_index = 0
-                    rec_size = 0
-                    rec_index = 0
-                i += bytes_to_append
-
-    return recs
 
 #
 #  __decode
@@ -156,7 +105,9 @@ def __decode(rectype, rawdata):
             value = struct.unpack_from(fmt, rawdata, offset)
 
             # set field
-            if is_array:
+            if ftype == "STRING":
+                rec[fieldname] = ctypes.create_string_buffer(value[0]).value.decode('ascii')
+            elif is_array:
                 rec[fieldname] = value
             else:
                 rec[fieldname] = value[0]
@@ -181,10 +132,74 @@ def __decode(rectype, rawdata):
                     rec[fieldname].append(__decode(ftype, rawdata[offset:]))
                     offset += subrecdef["@datasize"]
             else:
-                rec[fieldname] = __decode(ftype, rawdata[offset:]) ##### TODO: only need to print progressrec messages here...
+                rec[fieldname] = __decode(ftype, rawdata[offset:])
 
     # return record #
     return rec
+
+#
+#  __parse
+#
+def __parse(stream):
+    """
+    stream: request response stream
+    """
+    recs = []
+
+    rec_size_size = 4
+    rec_size_index = 0
+    rec_size_rsps = []
+
+    rec_size = 0
+    rec_index = 0
+    rec_rsps = []
+
+    for line in stream.iter_content(0x10000):
+
+        i = 0
+        while i < len(line):
+
+            # Parse Record Size
+            if(rec_size_index < rec_size_size):
+                bytes_available = len(line)  - i
+                bytes_remaining = rec_size_size - rec_size_index
+                bytes_to_append = min(bytes_available, bytes_remaining)
+                rec_size_rsps.append(line[i:i+bytes_to_append])
+                rec_size_index += bytes_to_append
+                if(rec_size_index >= rec_size_size):
+                    raw = b''.join(rec_size_rsps)
+                    rec_size = struct.unpack('i', raw)[0]
+                    rec_size_rsps.clear()
+                i += bytes_to_append
+
+            # Parse Record
+            elif(rec_size > 0):
+                bytes_available = len(line) - i
+                bytes_remaining = rec_size - rec_index
+                bytes_to_append = min(bytes_available, bytes_remaining)
+                rec_rsps.append(line[i:i+bytes_to_append])
+                rec_index += bytes_to_append
+                if(rec_index >= rec_size):
+                    # Decode Record
+                    rawbits = b''.join(rec_rsps)
+                    rectype = ctypes.create_string_buffer(rawbits).value.decode('ascii')
+                    rawdata = rawbits[len(rectype) + 1:]
+                    rec     = __decode(rectype, rawdata)
+                    # Print Verbose Progress
+                    if rectype == "progressrec":
+                         if verbose:
+                             print(rec["message"])
+                    else:
+                        # Append Record
+                        recs.append(rec)
+                    # Reset Record Parsing
+                    rec_rsps.clear()
+                    rec_size_index = 0
+                    rec_size = 0
+                    rec_index = 0
+                i += bytes_to_append
+
+    return recs
 
 ###############################################################################
 # APIs
@@ -217,15 +232,15 @@ def engine (api, parm):
     stream = requests.post(url, data=rqst, stream=True)
 
     # Read and Parse Stream #
-    rsps_recs = __parse(stream)
+    rsps = __parse(stream)
 
     # Build Response #
-    rsps = []
-    for rawrec in rsps_recs:
-        rectype = ctypes.create_string_buffer(rawrec).value.decode('ascii')
-        rawdata = rawrec[len(rectype) + 1:]
-        rec     = __decode(rectype, rawdata)
-        rsps.append(rec)
+#    rsps = []
+#    for rawrec in rsps_recs:
+#        rectype = ctypes.create_string_buffer(rawrec).value.decode('ascii')
+#        rawdata = rawrec[len(rectype) + 1:]
+#        rec     = __decode(rectype, rawdata)
+#        rsps.append(rec)
 
     # Return Response #
     return rsps
@@ -243,6 +258,13 @@ def populate(rectype):
 def set_url(new_url):
     global server_url
     server_url = new_url
+
+#
+#  SET_VERBOSE
+#
+def set_verbose(enable):
+    global verbose
+    verbose = (enable == True)
 
 #
 #  GET_VALUES

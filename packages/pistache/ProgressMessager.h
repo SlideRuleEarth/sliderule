@@ -82,7 +82,9 @@ class ProgressMessager: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Publisher* rspQ;
+        Publisher*          rspQ;
+        RecordObject*       record;
+        progress_message_t* progressMessage;
 };
 
 #endif  /* __progress_messager__ */
