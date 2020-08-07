@@ -95,10 +95,31 @@ const char* RestServer::sanitize (const char* filename)
  *----------------------------------------------------------------------------*/
 const char* RestServer::getEndpoint (const char* url)
 {
-    const char* endpoint = StringLib::find(url, "/", false);
-    if(endpoint) endpoint++;
-    else         mlog(CRITICAL, "Failed to parse url: %s\n", url);
-    return endpoint;
+    const char* first_slash = StringLib::find(url, '/');
+    if(first_slash)
+    {
+        const char* second_slash = StringLib::find(first_slash+1, '/');
+        if(second_slash)
+        {
+            const char* first_space = StringLib::find(second_slash+1, ' ');
+            if(first_space)
+            {
+                int endpoint_len = first_space - second_slash; // this include null terminator
+                char* endpoint = new char[endpoint_len];
+                const char* src = second_slash + 1;
+                char* dst = endpoint;
+                while(src < first_space)
+                {
+                    *dst++ = *src++;
+                }
+                *dst = '\0';
+                return endpoint;
+            }
+        }
+    }
+    
+    mlog(CRITICAL, "Failed to parse url: %s\n", url);
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -147,7 +168,7 @@ RestServer::~RestServer(void)
  *----------------------------------------------------------------------------*/
 void RestServer::sourceHandler (struct mg_connection *nc, struct http_message *hm)
 {
-    RestServer* server = (RestServer*)nc->user_data;
+    RestServer* server = (RestServer*)nc->mgr->user_data;
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str, server->getName());
 
@@ -160,7 +181,7 @@ void RestServer::sourceHandler (struct mg_connection *nc, struct http_message *h
     uint32_t trace_id = start_trace_ext(parent_id, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name);
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s\n", id_str, hm->uri.p);
+    mlog(INFO, "request: %s at %s\n", id_str, script_name);
 
     /* Launch Engine */
     const char* script_pathname = sanitize(script_name);
@@ -199,7 +220,7 @@ void RestServer::sourceHandler (struct mg_connection *nc, struct http_message *h
  *----------------------------------------------------------------------------*/
 void RestServer::engineHandler (struct mg_connection *nc, struct http_message *hm)
 {
-    RestServer* server = (RestServer*)nc->user_data;
+    RestServer* server = (RestServer*)nc->mgr->user_data;
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str, server->getName());
 
@@ -212,7 +233,7 @@ void RestServer::engineHandler (struct mg_connection *nc, struct http_message *h
     uint32_t trace_id = start_trace_ext(parent_id, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name);
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s\n", id_str, hm->uri.p);
+    mlog(INFO, "request: %s at %s\n", id_str, script_name);
 
     /* Create Engine */
     const char* script_pathname = sanitize(script_name);
