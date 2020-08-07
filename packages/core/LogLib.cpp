@@ -264,7 +264,7 @@ void LogLib::logMsg(const char* file_name, unsigned int line_number, log_lvl_t l
         case WARNING:   lvlstr = (char*)"WARNING";  break;
         case ERROR:     lvlstr = (char*)"ERROR";    break;
         case CRITICAL:  lvlstr = (char*)"CRITICAL"; break;
-        case USER:      lvlstr = (char*)"USER";     break;
+        case USER:      lvlstr = NULL;              break;
         case RAW:       lvlstr = NULL;              break;
     }
 
