@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
     # Tests
 
-    test_echo()
+    # test_echo()
     test_time()
     test_h5()
     test_variable_length()
