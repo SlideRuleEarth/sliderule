@@ -40,7 +40,10 @@ end
 -- Configure and Run Server --
 if __pistache__ then
     server = pistache.endpoint(port, 4)
-    server:name("SlideRuleServer")
+    server:name("SlideRuleServerP")
+elseif __mongoose__ then
+    server = mongoose.server(tostring(port), 4)
+    server:name("SlideRuleServerM")
 else
-    print("Must build pistache package to run server")
+    print("Must build either pistache or mongoose package to run server")
 end

@@ -26,6 +26,10 @@
 #include "pistache.h"
 #endif
 
+#ifdef __mongoose__
+#include "mongoose.h"
+#endif
+
 #ifdef __legacy__
 #include "legacy.h"
 #endif
@@ -219,6 +223,10 @@ int main (int argc, char* argv[])
         initpistache();
     #endif
 
+    #ifdef __mongoose__
+        initmongoose();
+    #endif
+
     #ifdef __legacy__
         initlegacy();
     #endif
@@ -245,6 +253,10 @@ int main (int argc, char* argv[])
     /* Full Clean Up */
     #ifdef __legacy__
         deinitlegacy();
+    #endif
+
+    #ifdef __mongoose__
+        deinitmongoose();
     #endif
 
     #ifdef __pistache__
