@@ -38,12 +38,12 @@ if __aws__ then
 end
 
 -- Configure and Run Server --
-if __pistache__ then
-    server = pistache.endpoint(port, 4)
-    server:name("SlideRuleServerP")
-elseif __mongoose__ then
+if __mongoose__ then
     server = mongoose.server(tostring(port), 4)
-    server:name("SlideRuleServerM")
+    server:name("SlideRuleMongoose")
+elseif __pistache__ then
+    server = pistache.endpoint(port, 4)
+    server:name("SlideRulePistache")
 else
     print("Must build either pistache or mongoose package to run server")
 end
