@@ -26,6 +26,7 @@
 
 #include "MsgQ.h"
 #include "LuaObject.h"
+#include "RecordObject.h"
 #include "OsApi.h"
 #include "LogLib.h"
 
@@ -41,16 +42,30 @@ class Logger: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* recType;
+        static RecordObject::fieldDef_t recDef[];
+
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            int32_t level;
+            char    message[LogLib::MAX_LOG_ENTRY_SIZE];
+        } log_message_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void init        (void);
         static int  luaCreate   (lua_State* L);
         static int  logHandler  (const char* msg, int size, void* parm);
+        static int  recHandler  (const char* msg, int size, void* parm);
 
     private:
 
@@ -58,14 +73,16 @@ class Logger: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        okey_t      logid;
-        Publisher*  outq;
+        okey_t          logid;
+        Publisher*      outq;
+        RecordObject*   record;
+        log_message_t*  logmsg;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Logger      (lua_State* L, log_lvl_t _level, const char* outq_name, int qdepth=MsgQ::CFG_DEPTH_STANDARD);
+                    Logger      (lua_State* L, log_lvl_t _level, const char* outq_name, int qdepth, bool as_record);
                     ~Logger     (void);
 
         static int  luaConfig   (lua_State* L);

@@ -113,7 +113,7 @@ const char* RestServer::getEndpoint (const char* url)
                     *dst++ = *src++;
                 }
                 *dst = '\0';
-                return endpoint;
+                return endpoint;                
             }
         }
     }
@@ -210,6 +210,7 @@ void RestServer::sourceHandler (struct mg_connection *nc, struct http_message *h
     /* Clean Up */
     delete engine;
     delete [] script_pathname;
+    delete script_name;
 
     /* Stop Trace */
     stop_trace(trace_id);
@@ -284,6 +285,7 @@ void RestServer::engineHandler (struct mg_connection *nc, struct http_message *h
     /* Clean Up */
     delete engine;
     delete [] script_pathname;
+    delete script_name;
 
     /* Stop Trace */
     stop_trace(trace_id);

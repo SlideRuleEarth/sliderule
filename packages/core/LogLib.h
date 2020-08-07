@@ -43,7 +43,8 @@ typedef enum {
     WARNING = 2,
     ERROR = 3,
     CRITICAL = 4,
-    RAW = 5
+    USER = 5,
+    RAW = 6
 } log_lvl_t;
 
 #define mlog(lvl,...) LogLib::logMsg(__FILE__,__LINE__,lvl,__VA_ARGS__)

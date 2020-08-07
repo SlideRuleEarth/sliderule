@@ -33,7 +33,6 @@ RecordObject::fieldDef_t ProgressMessager::rec_def[] =
 {
     {"message", RecordObject::STRING, offsetof(progress_message_t, message),  MAX_MESSAGE_SIZE, NULL, NATIVE_FLAGS},
 };
-int ProgressMessager::rec_elem = sizeof(ProgressMessager::rec_def) / sizeof(RecordObject::fieldDef_t);
 
 const char* ProgressMessager::OBJECT_TYPE = "ProgressMessager";
 const char* ProgressMessager::LuaMetaName = "ProgressMessager";

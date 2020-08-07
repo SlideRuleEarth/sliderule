@@ -148,7 +148,7 @@ int LuaLibrarySys::lsys_wait (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_log
+ * lsys_log - .log(<level>, <message>)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_log (lua_State* L)
 {

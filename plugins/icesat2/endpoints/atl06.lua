@@ -26,7 +26,9 @@ local asset = require("asset")
 -- Internal Parameters --
 local str2stage = { LSF=icesat2.STAGE_LSF }
 local recq = "recq"
---local progress = pistache.messager(rspq)
+
+-- Create User Log --
+local userlog = core.logger(rspq, core.USER, true)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
@@ -38,7 +40,7 @@ local parms = rqst["parms"]
 local timeout = rqst["timeout"] or 100
 
 -- Post Initial Status Progress --
---progress:post(string.format("atl06 processing initiated on %s data...", asset_name))
+sys.log(core.USER, string.format("atl06 processing initiated on %s data...", asset_name))
 
 -- ATL06 Dispatch Algorithm --
 local atl06_algo = icesat2.atl06(rspq, parms)
@@ -66,7 +68,7 @@ atl03_reader:name("atl03_reader")
 -- Wait for Data to Start --
 local rsprec = monitor:recvrecord(timeout * 1000)
 if not rsprec then
---    progress:post(string.format("Failed to generate response record in %s seconds", timeout))
+    sys.log(core.USER, string.format("Failed to generate response record in %s seconds", timeout))
 end
 
 -- Display Stats --

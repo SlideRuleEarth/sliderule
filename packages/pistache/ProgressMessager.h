@@ -45,7 +45,6 @@ class ProgressMessager: public LuaObject
 
         static const char* rec_type;
         static RecordObject::fieldDef_t rec_def[];
-        static int rec_elem;
 
         static const char* OBJECT_TYPE;
 

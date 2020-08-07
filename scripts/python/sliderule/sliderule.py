@@ -186,7 +186,7 @@ def __parse(stream):
                     rawdata = rawbits[len(rectype) + 1:]
                     rec     = __decode(rectype, rawdata)
                     # Print Verbose Progress
-                    if rectype == "progressrec":
+                    if rectype == "logrec":
                          if verbose:
                              print(rec["message"])
                     else:

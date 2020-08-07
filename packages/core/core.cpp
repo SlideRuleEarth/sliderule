@@ -87,6 +87,7 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "WARNING",              WARNING);
     LuaEngine::setAttrInt   (L, "ERROR",                ERROR);
     LuaEngine::setAttrInt   (L, "CRITICAL",             CRITICAL);
+    LuaEngine::setAttrInt   (L, "USER",                 USER);
     LuaEngine::setAttrInt   (L, "RAW",                  RAW);
     LuaEngine::setAttrInt   (L, "STRING",               RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                 RecordObject::REAL);
@@ -130,6 +131,7 @@ void initcore (void)
     TimeLib::init();
     TraceLib::init();
     LogLib::init();
+    Logger::init();
     MsgQ::init();
 
     /* Attach OsApi Print Function */
