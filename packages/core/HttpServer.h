@@ -31,6 +31,7 @@
 #include "OsApi.h"
 #include "StringLib.h"
 #include "LuaObject.h"
+#include "EndpointObject.h"
 
 /******************************************************************************
  * HTTP SERVER CLASS
@@ -81,7 +82,10 @@ class HttpServer: public LuaObject
             int                         hdr_index;
             bool                        hdr_complete;
             long                        content_length;
+            EndpointObject::verb_t      verb;
             const char*                 id;
+            const char*                 url;
+            const char*                 body;
             Subscriber*                 rspq;
             Subscriber::msgRef_t        ref;
             int                         ref_data_left;
@@ -101,6 +105,8 @@ class HttpServer: public LuaObject
         Thread*                         listenerPid;
         Ordering<request_t*>            requests;
 
+        Dictionary<EndpointObject*>     routeTable;
+
         char*                           ipAddr;
         int                             port;
 
@@ -110,15 +116,19 @@ class HttpServer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void*    listenerThread      (void* parm);
-        static int      pollHandler         (int* flags, void* parm);
-        static int      activeHandler       (int fd, int flags, void* parm);
+        static void*        listenerThread      (void* parm);
 
-        int             onRead              (int fd);
-        int             onWrite             (int fd);
-        int             onAlive             (int fd);
-        int             onConnect           (int fd);
-        int             onDisconnect        (int fd);
+        static void         extract             (const char* url, const char** endpoint, const char** new_url);
+
+        static int          luaAttach           (lua_State L);
+
+        static int          pollHandler         (int* flags, void* parm);
+        static int          activeHandler       (int fd, int flags, void* parm);
+        int                 onRead              (int fd);
+        int                 onWrite             (int fd);
+        int                 onAlive             (int fd);
+        int                 onConnect           (int fd);
+        int                 onDisconnect        (int fd);
 };
 
 #endif  /* __http_server__ */

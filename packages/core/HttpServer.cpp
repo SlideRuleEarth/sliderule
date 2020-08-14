@@ -29,7 +29,7 @@
 #include "LogLib.h"
 #include "OsApi.h"
 #include "StringLib.h"
-#include "TimeLib.h"
+#include "EndpointObject.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -98,6 +98,14 @@ HttpServer::~HttpServer(void)
     delete listenerPid;
 
     if(ipAddr) delete [] ipAddr;
+
+    EndpointObject* endpoint;
+    const char* key = routeTable.first(&endpoint);
+    while(key != NULL)
+    {
+        endpoint->releaseLuaObject();
+        key = routeTable.next(&endpoint);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -128,7 +136,7 @@ int HttpServer::getPort (void)
 }
 
 /*----------------------------------------------------------------------------
- * requestThread
+ * listenerThread
  *----------------------------------------------------------------------------*/
 void* HttpServer::listenerThread(void* parm)
 {
@@ -138,6 +146,92 @@ void* HttpServer::listenerThread(void* parm)
     if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)\n", s->getIpAddr(), s->getPort(), status);
 
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * handlerThread
+ *----------------------------------------------------------------------------*/
+void* HttpServer::handlerThread(void* parm)
+{
+    HttpServer* s = (HttpServer*)parm;
+
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * extract
+ * 
+ *  Note: must delete returned strings
+ *----------------------------------------------------------------------------*/
+void HttpServer::extract (const char* url, const char** endpoint, const char** new_url)
+{
+    const char* src;
+    char* dst;
+
+    *endpoint = NULL;
+    *new_url = NULL;
+
+    const char* first_slash = StringLib::find(url, '/');
+    if(first_slash)
+    {
+        const char* second_slash = StringLib::find(first_slash+1, '/');
+        if(second_slash)
+        {
+            /* Get Endpoint */
+            int endpoint_len = second_slash - first_slash; // this includes null terminator
+            *endpoint = new char[endpoint_len];
+            src = first_slash + 1;
+            dst = *endpoint;
+            while(src < second_slash) *dst++ = *src++;
+            *dst = '\0';
+
+            /* Get New URL */
+            const char* first_space = StringLib::find(second_slash+1, ' ');
+            if(first_space)
+            {
+                int new_url_len = first_space - second_slash; // this includes null terminator
+                *new_url = new char[new_url_len];
+                src = second_slash + 1;
+                dst = *new_url;
+                while(src < first_space) *dst++ = *src++;
+                *dst = '\0';
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaAttach - :attach(<EndpointObject>)
+ *----------------------------------------------------------------------------*/
+int HttpServer::luaAttach (lua_State L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        HttpServer* lua_obj = (HttpServer*)getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        EndpointObject* endpoint = (EndpointObject*)getLuaObject(L, 2, EndpointObject::OBJECT_TYPE);
+        const char* url = getLuaString(L, 3);
+
+        /* Add Route to Table */
+        status = lua_obj->routeTable.add(url, endpoint, true);
+
+        /* Check Need to Unlock Unregistered Endpoint */
+        if(status != true)
+        {
+            endpoint->releaseLuaObject();
+        }
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error attaching handler: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------
@@ -223,9 +317,24 @@ int HttpServer::onRead(int fd)
                     request->hdr_complete = true;
                     request->hdr_index += 4; // moves hdr_index to start of body
 
-                    /* Parse Header */
+                    /* Parse Request */    
                     List<SafeString>* header_list = request->message.split('\r');
-                    for(int h = 0; h < header_list->length(); h++)
+
+                    /* Parse Request Line */
+                    try
+                    {
+                        List<SafeString>* request_line = (*header_list)[0].split(' ');
+                        request->verb = EndpointObject::str2verb((*request_line)[0]);
+                        request->url = (*request_line)[1].getString(true);
+                        delete request_line;
+                    }
+                    catch(const std::out_of_range& e)
+                    {
+                        mlog(CRITICAL, "Invalid request line: %s: %s\n", (*header_list)[0].getString(), e.what());
+                    }
+
+                    /* Parse Headers */
+                    for(int h = 1; h < header_list->length(); h++)
                     {
                         /* Create Key/Value Pairs */
                         List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
@@ -237,8 +346,12 @@ int HttpServer::onRead(int fd)
                         catch(const std::out_of_range& e)
                         {
                             mlog(CRITICAL, "Invalid header in http request: %s: %s\n", (*header_list)[h].getString(), e.what());
-                        }                    
+                        }
+                        delete keyvalue_list;                
                     }
+
+                    /* Clean Up Header List */
+                    delete header_list;
 
                     /* Get Content Length */
                     try
@@ -263,12 +376,32 @@ int HttpServer::onRead(int fd)
         {
             if(request->message.getLength() == request->content_length)
             {
-                // !!!!!! DISPATCH HANDLER
-                // pass in the parameter dictionary, and the rspq
-                // also need the VERB and the URL
+                /* Get Message Body */
+                const char* raw_message = request->message.getString();
+                request->body = &raw_message[request->hdr_index];
+
+                /* Get Endpoint and New URL */
+                const char* endpoint = NULL;
+                const char* new_url = NULL;
+                extract(request->url, &endpoint, &new_url);
+                if(endpoint && new_url)
+                {
+                    try
+                    {
+                        /* Get Attached Endpoint Object --> Handle Request */
+                        EndpointObject* endpoint_obj = routeTable[endpoint];
+                        endpoint_obj->handleRequest(request->id, new_url, request->verb, request->headers, request->body, endpoint_obj);
+                    }
+                    catch(const std::out_of_range& e)
+                    {
+                        mlog(CRITICAL, "No attached endpoint at %s: %s\n", endpoint, e.what());
+                        status = INVALID_RC; // will close socket
+                    }                    
+                }
+                if(endpoint) delete [] endpoint;
+                if(new_url) delete [] new_url;
             }
         }
-
     }
     else
     {
