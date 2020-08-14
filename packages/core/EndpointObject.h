@@ -26,6 +26,7 @@
 
 #include "OsApi.h"
 #include "StringLib.h"
+#include "Dictionary.h"
 #include "LuaObject.h"
 
 /******************************************************************************

@@ -118,9 +118,9 @@ class HttpServer: public LuaObject
 
         static void*        listenerThread      (void* parm);
 
-        static void         extract             (const char* url, const char** endpoint, const char** new_url);
+        static void         extract             (const char* url, char** endpoint, char** new_url);
 
-        static int          luaAttach           (lua_State L);
+        static int          luaAttach           (lua_State* L);
 
         static int          pollHandler         (int* flags, void* parm);
         static int          activeHandler       (int fd, int flags, void* parm);

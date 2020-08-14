@@ -25,17 +25,19 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceIO.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceReader.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/File.cpp
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Logger.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LogLib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibrarySys.cpp
@@ -75,6 +77,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.h
             ${CMAKE_CURRENT_LIST_DIR}/Dictionary.h
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.h
+            ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
             ${CMAKE_CURRENT_LIST_DIR}/File.h
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.h
@@ -83,6 +86,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/Logger.h
             ${CMAKE_CURRENT_LIST_DIR}/LogLib.h
             ${CMAKE_CURRENT_LIST_DIR}/lttng-core.h
+            ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibrarySys.h

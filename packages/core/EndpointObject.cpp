@@ -40,7 +40,7 @@ const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
  * Constructor
  *----------------------------------------------------------------------------*/
 EndpointObject::EndpointObject (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
-    LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
+    LuaObject(L, OBJECT_TYPE, meta_name, meta_table)
 {
 }
 
@@ -105,7 +105,7 @@ EndpointObject::code_t EndpointObject::str2code (const char* str)
  *----------------------------------------------------------------------------*/
 const char* EndpointObject::code2str (code_t code)
 {
-    switch(verb)
+    switch(code)
     {
         case OK:                        return "OK";
         case Bad_Request:               return "Bad Request";
@@ -113,8 +113,9 @@ const char* EndpointObject::code2str (code_t code)
         case Method_Not_Allowed:        return "Method Not Allowed";
         case Request_Timeout:           return "Request Timeout";
         case Method_Not_Implemented:    return "Method Not Implemented";
-        default:                        return "Bad Request";
+        default:                        break;
     }
+    return "Bad Request";
 }
 
 /*----------------------------------------------------------------------------
@@ -124,7 +125,7 @@ int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const 
 {
     char str_buf[MAX_HDR_SIZE];
 
-    StringLib::format(hdr_str, MAX_HDR_SIZE, "HTTP/1.1 %d %s\r\n", code, code2str(code), content_type);
+    StringLib::format(hdr_str, MAX_HDR_SIZE, "HTTP/1.1 %d %s\r\n", code, code2str(code));
 
     if(content_type)        StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Content-Type: %s\r\n",         content_type),      MAX_HDR_SIZE);
     if(content_length)      StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Content-Length: %d\r\n",       content_length),    MAX_HDR_SIZE);

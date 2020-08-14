@@ -24,12 +24,7 @@
 #include <atomic>
 
 #include "HttpServer.h"
-#include "Ordering.h"
-#include "List.h"
-#include "LogLib.h"
-#include "OsApi.h"
-#include "StringLib.h"
-#include "EndpointObject.h"
+#include "core.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -149,21 +144,11 @@ void* HttpServer::listenerThread(void* parm)
 }
 
 /*----------------------------------------------------------------------------
- * handlerThread
- *----------------------------------------------------------------------------*/
-void* HttpServer::handlerThread(void* parm)
-{
-    HttpServer* s = (HttpServer*)parm;
-
-    return NULL;
-}
-
-/*----------------------------------------------------------------------------
  * extract
  * 
  *  Note: must delete returned strings
  *----------------------------------------------------------------------------*/
-void HttpServer::extract (const char* url, const char** endpoint, const char** new_url)
+void HttpServer::extract (const char* url, char** endpoint, char** new_url)
 {
     const char* src;
     char* dst;
@@ -203,7 +188,7 @@ void HttpServer::extract (const char* url, const char** endpoint, const char** n
 /*----------------------------------------------------------------------------
  * luaAttach - :attach(<EndpointObject>)
  *----------------------------------------------------------------------------*/
-int HttpServer::luaAttach (lua_State L)
+int HttpServer::luaAttach (lua_State* L)
 {
     bool status = false;
 
@@ -324,7 +309,7 @@ int HttpServer::onRead(int fd)
                     try
                     {
                         List<SafeString>* request_line = (*header_list)[0].split(' ');
-                        request->verb = EndpointObject::str2verb((*request_line)[0]);
+                        request->verb = EndpointObject::str2verb((*request_line)[0].getString());
                         request->url = (*request_line)[1].getString(true);
                         delete request_line;
                     }
@@ -381,8 +366,8 @@ int HttpServer::onRead(int fd)
                 request->body = &raw_message[request->hdr_index];
 
                 /* Get Endpoint and New URL */
-                const char* endpoint = NULL;
-                const char* new_url = NULL;
+                char* endpoint = NULL;
+                char* new_url = NULL;
                 extract(request->url, &endpoint, &new_url);
                 if(endpoint && new_url)
                 {

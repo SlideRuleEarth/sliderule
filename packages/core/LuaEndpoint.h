@@ -26,7 +26,9 @@
 
 #include "EndpointObject.h"
 #include "StringLib.h"
-
+#include "Dictionary.h"
+#include "MsgQ.h"
+#include "LuaObject.h"
 
 /******************************************************************************
  * PISTACHE SERVER CLASS
@@ -56,7 +58,7 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate   (lua_State* L);
+        static int  luaCreate       (lua_State* L);
 
     protected:
 

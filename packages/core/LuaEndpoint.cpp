@@ -22,9 +22,7 @@
  ******************************************************************************/
 
 #include "LuaEndpoint.h"
-#include "StringLib.h"
-#include "MsgQ.h"
-#include "EndpointObject.h"
+#include "core.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -67,8 +65,8 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::LuaEndpoint(lua_State* L,  Address addr, size_t num_threads):
-    EndpointObject(L, LuaMetaName, LuaMetaTable),
+LuaEndpoint::LuaEndpoint(lua_State* L):
+    EndpointObject(L, LuaMetaName, LuaMetaTable)
 {
 }
 
@@ -89,11 +87,10 @@ LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url,
     LuaEndpoint* endpoint = (LuaEndpoint*)self;
 
     /* Get Request Script */
-    const char* script_name = extract(url);
-    const char* script_pathname = sanitize(script_name);
+    const char* script_pathname = sanitize(url);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(endpoint->traceId, "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"script\":\"%s\"}", id, verb2str(verb), script_name);
+    uint32_t trace_id = start_trace_ext(endpoint->traceId, "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", id, verb2str(verb), url);
 
     /* Log Request */
     mlog(INFO, "%s request: %s at %s\n", verb2str(verb), id, url);
@@ -111,9 +108,8 @@ LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url,
     }
 
     /* Clean Up */
-    delete rsqp;
+    delete rspq;
     delete script_pathname;
-    delete script_name;
 
     /* Stop Trace */
     stop_trace(trace_id);
@@ -126,9 +122,10 @@ LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url,
 /*----------------------------------------------------------------------------
  * returnResponse
  *----------------------------------------------------------------------------*/
-code_t LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
+EndpointObject::code_t LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
+    code_t status_code;
 
     /* Launch Engine */
     LuaEngine* engine = new LuaEngine(rspq->getName(), scriptpath, body, trace_id, NULL, true);
@@ -140,36 +137,44 @@ code_t LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Pu
         const char* result = engine->getResult();
         if(result)
         {
-            int result_length = strlen(result);
-            int header_length = buildheader(header, OK, "text/plain", result_length, NULL, ServerHeader.getString());
+            status_code = OK;
+            int result_length = StringLib::size(result);
+            int header_length = buildheader(header, status_code, "text/plain", result_length, NULL, ServerHeader.getString());
             rspq->postCopy(header, header_length);
             rspq->postCopy(result, result_length);
         }
         else
         {
-            int header_length = buildheader(header, Not_Found);
+            status_code = Not_Found;
+            int header_length = buildheader(header, status_code);
             rspq->postCopy(header, header_length);
         }
     }
     else
     {
-        int header_length = buildheader(header, Request_Timeout);
+        status_code = Request_Timeout;
+        int header_length = buildheader(header, status_code);
         rspq->postCopy(header, header_length);
     }
 
     /* Clean Up */
     delete engine;
+
+    /* Return Status Code */
+    return status_code;
 }
 
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-code_t LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
+EndpointObject::code_t LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
+    code_t status_code;
 
     /* Send Header */
-    int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", ServerHeader.getString());
+    status_code = OK;
+    int header_length = buildheader(header, status_code, "application/octet-stream", 0, "chunked", ServerHeader.getString());
     rspq->postCopy(header, header_length);
 
     /* Create Engine */
@@ -177,7 +182,6 @@ code_t LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Pu
 
     /* Supply and Setup Request Queue */
     engine->setString(RESPONSE_QUEUE, rspq->getName());
-    Subscriber rspq(id_str);
 
     /* Execute Engine
      *  The call to execute the script blocks on completion of the script. The lua state context 
@@ -186,6 +190,9 @@ code_t LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Pu
 
     /* Clean Up */
     delete engine;
+
+    /* Return Status Code */
+    return status_code;
 }
 
 /*----------------------------------------------------------------------------
