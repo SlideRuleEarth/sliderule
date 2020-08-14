@@ -23,21 +23,21 @@
 
 #include <cesanta/mongoose.h>
 
-#include "RestServer.h"
+#include "MongooseServer.h"
 #include "core.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* RestServer::LuaMetaName = "RestServer";
-const struct luaL_Reg RestServer::LuaMetaTable[] = {
+const char* MongooseServer::LuaMetaName = "MongooseServer";
+const struct luaL_Reg MongooseServer::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* RestServer::RESPONSE_QUEUE = "rspq";
+const char* MongooseServer::RESPONSE_QUEUE = "rspq";
 
-std::atomic<uint32_t> RestServer::requestId{0};
+std::atomic<uint32_t> MongooseServer::requestId{0};
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -46,7 +46,7 @@ std::atomic<uint32_t> RestServer::requestId{0};
 /*----------------------------------------------------------------------------
  * luaCreate - endpoint(<port>, [<number of threads>])
  *----------------------------------------------------------------------------*/
-int RestServer::luaCreate (lua_State* L)
+int MongooseServer::luaCreate (lua_State* L)
 {
     try
     {
@@ -55,7 +55,7 @@ int RestServer::luaCreate (lua_State* L)
         long num_threads = getLuaInteger(L, 2, true, 1);
 
         /* Create Lua Endpoint */
-        return createLuaObject(L, new RestServer(L, port_str, num_threads));
+        return createLuaObject(L, new MongooseServer(L, port_str, num_threads));
     }
     catch(const LuaException& e)
     {
@@ -67,7 +67,7 @@ int RestServer::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * str2verb
  *----------------------------------------------------------------------------*/
-RestServer::verb_t RestServer::str2verb (const char* str)
+MongooseServer::verb_t MongooseServer::str2verb (const char* str)
 {
          if(StringLib::match(str, "GET"))       return GET;
     else if(StringLib::match(str, "OPTIONS"))   return OPTIONS;
@@ -81,7 +81,7 @@ RestServer::verb_t RestServer::str2verb (const char* str)
  *
  *  Note: must delete returned string
  *----------------------------------------------------------------------------*/
-const char* RestServer::sanitize (const char* filename)
+const char* MongooseServer::sanitize (const char* filename)
 {
     SafeString delimeter("%c", PATH_DELIMETER);
     SafeString safe_filename("%s", filename);
@@ -93,7 +93,7 @@ const char* RestServer::sanitize (const char* filename)
 /*----------------------------------------------------------------------------
  * getEndpoint
  *----------------------------------------------------------------------------*/
-const char* RestServer::getEndpoint (const char* url)
+const char* MongooseServer::getEndpoint (const char* url)
 {
     const char* first_slash = StringLib::find(url, '/');
     if(first_slash)
@@ -125,7 +125,7 @@ const char* RestServer::getEndpoint (const char* url)
 /*----------------------------------------------------------------------------
  * getUniqueId
  *----------------------------------------------------------------------------*/
-long RestServer::getUniqueId (char id_str[REQUEST_ID_LEN], const char* name)
+long MongooseServer::getUniqueId (char id_str[REQUEST_ID_LEN], const char* name)
 {
     long id = requestId++;
     StringLib::format(id_str, REQUEST_ID_LEN, "%s.%ld", name, id);
@@ -139,7 +139,7 @@ long RestServer::getUniqueId (char id_str[REQUEST_ID_LEN], const char* name)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RestServer::RestServer(lua_State* L,  const char* _port, size_t num_threads):
+MongooseServer::MongooseServer(lua_State* L,  const char* _port, size_t num_threads):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     port = StringLib::duplicate(_port);
@@ -151,7 +151,7 @@ RestServer::RestServer(lua_State* L,  const char* _port, size_t num_threads):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-RestServer::~RestServer(void)
+MongooseServer::~MongooseServer(void)
 {
     mlog(CRITICAL, "Shutting down HTTP endpoints on port %s\n", port);
     active = false;
@@ -166,9 +166,9 @@ RestServer::~RestServer(void)
 /*----------------------------------------------------------------------------
  * sourceHandler
  *----------------------------------------------------------------------------*/
-void RestServer::sourceHandler (struct mg_connection *nc, struct http_message *hm)
+void MongooseServer::sourceHandler (struct mg_connection *nc, struct http_message *hm)
 {
-    RestServer* server = (RestServer*)nc->mgr->user_data;
+    MongooseServer* server = (MongooseServer*)nc->mgr->user_data;
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str, server->getName());
 
@@ -219,9 +219,9 @@ void RestServer::sourceHandler (struct mg_connection *nc, struct http_message *h
 /*----------------------------------------------------------------------------
  * engineHandler
  *----------------------------------------------------------------------------*/
-void RestServer::engineHandler (struct mg_connection *nc, struct http_message *hm)
+void MongooseServer::engineHandler (struct mg_connection *nc, struct http_message *hm)
 {
-    RestServer* server = (RestServer*)nc->mgr->user_data;
+    MongooseServer* server = (MongooseServer*)nc->mgr->user_data;
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str, server->getName());
 
@@ -294,7 +294,7 @@ void RestServer::engineHandler (struct mg_connection *nc, struct http_message *h
 /*----------------------------------------------------------------------------
  * serverHandler
  *----------------------------------------------------------------------------*/
-void RestServer::serverHandler (struct mg_connection *nc, int ev, void *ev_data)
+void MongooseServer::serverHandler (struct mg_connection *nc, int ev, void *ev_data)
 {
     struct http_message* hm = (struct http_message*)ev_data;
     switch (ev) 
@@ -319,9 +319,9 @@ void RestServer::serverHandler (struct mg_connection *nc, int ev, void *ev_data)
 /*----------------------------------------------------------------------------
  * serverThread
  *----------------------------------------------------------------------------*/
-void* RestServer::serverThread (void* parm)
+void* MongooseServer::serverThread (void* parm)
 {
-    RestServer* server = (RestServer*)parm;
+    MongooseServer* server = (MongooseServer*)parm;
 
     struct mg_mgr           mgr;
     struct mg_connection*   nc;

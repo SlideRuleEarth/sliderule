@@ -40,7 +40,7 @@
 int mongoose_open (lua_State *L)
 {
     static const struct luaL_Reg mongoose_functions[] = {
-        {"server",      RestServer::luaCreate},
+        {"server",      MongooseServer::luaCreate},
         {NULL,          NULL}
     };
 

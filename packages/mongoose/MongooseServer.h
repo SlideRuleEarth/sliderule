@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __rest_server__
-#define __rest_server__
+#ifndef __mongoose_server__
+#define __mongoose_server__
 
 /******************************************************************************
  * INCLUDES
@@ -32,10 +32,10 @@
 
 
 /******************************************************************************
- * REST SERVER CLASS
+ * MONGOOSE SERVER CLASS
  ******************************************************************************/
 
-class RestServer: public LuaObject
+class MongooseServer: public LuaObject
 {
     public:
 
@@ -78,8 +78,8 @@ class RestServer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    RestServer     (lua_State* L, const char* _port, size_t num_threads);
-        virtual     ~RestServer    (void);
+                    MongooseServer     (lua_State* L, const char* _port, size_t num_threads);
+        virtual     ~MongooseServer    (void);
 
     private:
 
@@ -105,4 +105,4 @@ class RestServer: public LuaObject
         static void*    serverThread        (void* parm);
 };
 
-#endif  /* __rest_server__ */
+#endif  /* __mongoose_server__ */

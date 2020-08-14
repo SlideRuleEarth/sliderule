@@ -12,7 +12,7 @@ if (MONGOOSE_LIB)
     target_sources(sliderule
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/mongoose.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/RestServer.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/MongooseServer.cpp
     )
 
     target_include_directories (sliderule
@@ -24,7 +24,7 @@ if (MONGOOSE_LIB)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/mongoose.h
-            ${CMAKE_CURRENT_LIST_DIR}/RestServer.h
+            ${CMAKE_CURRENT_LIST_DIR}/MongooseServer.h
         DESTINATION
             ${INCDIR}
     )
