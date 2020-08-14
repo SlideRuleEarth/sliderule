@@ -80,7 +80,7 @@ LuaEndpoint::~LuaEndpoint(void)
 /*----------------------------------------------------------------------------
  * handleRequest
  *----------------------------------------------------------------------------*/
-LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url, verb_t verb, Dictionary<SafeString>& headers, const char* body, EndpointObject* self)
+LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url, verb_t verb, Dictionary<const char*>& headers, const char* body, EndpointObject* self)
 {
     (void)headers;
 

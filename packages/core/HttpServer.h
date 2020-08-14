@@ -78,7 +78,7 @@ class HttpServer: public LuaObject
         typedef struct
         {
             SafeString                  message; // raw request
-            Dictionary<SafeString>      headers; // parsed request headers
+            Dictionary<const char*>*    headers; // parsed request headers
             int                         hdr_index;
             bool                        hdr_complete;
             long                        content_length;

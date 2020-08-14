@@ -23,15 +23,13 @@ console.logger:config(core.INFO)
 -- Unit Test --
 
 server = core.httpd(9081)
+endpoint = core.endpoint("/source")
+server:attach(endpoint)
 
 sys.wait(1)
 
 print('\n------------------\nTest01: Echo\n------------------')
-os.execute(string.format("curl -sS -d \"%s\" http://127.0.0.1:9081/echo -o %s", parm, tmpfile))
-f = io.open(tmpfile)
-result = f:read()
-f:close()
-runner.check(result == parm)
+os.execute(string.format("curl -sS -X GET -d \"%s\" http://127.0.0.1:9081/source/time", parm))
 
 --[[
 print('\n------------------\nTest02: Engine\n------------------')

@@ -33,6 +33,7 @@
 const char* HttpServer::OBJECT_TYPE = "HttpServer";
 const char* HttpServer::LuaMetaName = "HttpServer";
 const struct luaL_Reg HttpServer::LuaMetaTable[] = {
+    {"attach",      luaAttach},
     {NULL,          NULL}
 };
 
@@ -171,14 +172,14 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
             *dst = '\0';
 
             /* Get New URL */
-            const char* first_space = StringLib::find(second_slash+1, ' ');
-            if(first_space)
+            const char* terminator = StringLib::find(second_slash+1, '\0');
+            if(terminator)
             {
-                int new_url_len = first_space - second_slash; // this includes null terminator
+                int new_url_len = terminator - second_slash; // this includes null terminator
                 *new_url = new char[new_url_len];
                 src = second_slash + 1;
                 dst = *new_url;
-                while(src < first_space) *dst++ = *src++;
+                while(src < terminator) *dst++ = *src++;
                 *dst = '\0';
             }
         }
@@ -279,103 +280,102 @@ int HttpServer::onRead(int fd)
         msg_buf[bytes] = '\0';
         request->message += msg_buf;
 
-//printf("msg_buf:\n%s\n", msg_buf);
-//printf("\n\n");
-//printf("raw [%d]:\n", bytes);
-//for(int i = 0; i < bytes; i++) printf("%02X", msg_buf[i]);
-//printf("\n\n");
-
-        /* Attempt to Parse Header */
-        if(!request->hdr_complete)
+        /* Look Through Existing Header Received */
+        while(!request->hdr_complete && (request->hdr_index < (request->message.getLength() - 4)))
         {
-            /* Look Through Existing Header Received */
-            for(; request->hdr_index < (request->message.getLength() - 4); request->hdr_index++)
+            /* Look For \r\n\r\n Separation */ 
+            if( (request->message[request->hdr_index + 0] == '\r') && 
+                (request->message[request->hdr_index + 1] == '\n') &&
+                (request->message[request->hdr_index + 2] == '\r') &&
+                (request->message[request->hdr_index + 3] == '\n') )
             {
-                /* Look For \r\n\r\n Separation */ 
-                if( (request->message[request->hdr_index + 0] == '\r') && 
-                    (request->message[request->hdr_index + 1] == '\n') &&
-                    (request->message[request->hdr_index + 2] == '\r') &&
-                    (request->message[request->hdr_index + 3] == '\n') )
+                /* Parse Request */    
+                request->message.setChar('\0', request->hdr_index);
+                List<SafeString>* header_list = request->message.split('\r');
+                request->message.setChar('\r', request->hdr_index);
+                request->hdr_complete = true;
+                request->hdr_index += 4; // moves hdr_index to start of body
+
+                /* Parse Request Line */
+                try
                 {
-                    /* Null Terminate Header Portion of Message */
-                    request->message.setChar('\0', request->hdr_index);
-                    request->hdr_complete = true;
-                    request->hdr_index += 4; // moves hdr_index to start of body
-
-                    /* Parse Request */    
-                    List<SafeString>* header_list = request->message.split('\r');
-
-                    /* Parse Request Line */
-                    try
-                    {
-                        List<SafeString>* request_line = (*header_list)[0].split(' ');
-                        request->verb = EndpointObject::str2verb((*request_line)[0].getString());
-                        request->url = (*request_line)[1].getString(true);
-                        delete request_line;
-                    }
-                    catch(const std::out_of_range& e)
-                    {
-                        mlog(CRITICAL, "Invalid request line: %s: %s\n", (*header_list)[0].getString(), e.what());
-                    }
-
-                    /* Parse Headers */
-                    for(int h = 1; h < header_list->length(); h++)
-                    {
-                        /* Create Key/Value Pairs */
-                        List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
-                        try
-                        {
-                            const char* key = (*keyvalue_list)[0].getString();
-                            request->headers.add(key, (*keyvalue_list)[1], true);
-                        }
-                        catch(const std::out_of_range& e)
-                        {
-                            mlog(CRITICAL, "Invalid header in http request: %s: %s\n", (*header_list)[h].getString(), e.what());
-                        }
-                        delete keyvalue_list;                
-                    }
-
-                    /* Clean Up Header List */
-                    delete header_list;
-
-                    /* Get Content Length */
-                    try
-                    {
-                        if(!StringLib::str2long(request->headers["Content-Length"].getString(), &request->content_length))
-                        {
-                            mlog(CRITICAL, "Invalid Content-Length header: %s\n", request->headers["Content-Length"].getString());
-                            status = INVALID_RC; // will close socket
-                        }
-                    }
-                    catch(const std::out_of_range& e)
-                    {
-                        mlog(CRITICAL, "Http request must supply Content-Length header: %s\n", e.what());
-                        status = INVALID_RC; // will close socket
-                    }                    
+                    List<SafeString>* request_line = (*header_list)[0].split(' ');
+                    request->verb = EndpointObject::str2verb((*request_line)[0].getString());
+                    request->url = (*request_line)[1].getString(true);
+                    delete request_line;
                 }
+                catch(const std::out_of_range& e)
+                {
+                    mlog(CRITICAL, "Invalid request line: %s: %s\n", (*header_list)[0].getString(), e.what());
+                }
+
+                /* Parse Headers */
+                for(int h = 1; h < header_list->length(); h++)
+                {
+                    /* Create Key/Value Pairs */
+                    List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
+                    try
+                    {
+                        const char* key = (*keyvalue_list)[0].getString();
+                        const char* value = (*keyvalue_list)[1].getString(true);
+                        request->headers->add(key, value, true);
+                    }
+                    catch(const std::out_of_range& e)
+                    {
+                        mlog(CRITICAL, "Invalid header in http request: %s: %s\n", (*header_list)[h].getString(), e.what());
+                    }
+                    delete keyvalue_list;                
+                }
+
+                /* Clean Up Header List */
+                delete header_list;
+
+                /* Get Content Length */
+                try
+                {
+                    if(!StringLib::str2long(request->headers->get("Content-Length"), &request->content_length))
+                    {
+                        mlog(CRITICAL, "Invalid Content-Length header: %s\n", request->headers->get("Content-Length"));
+                        status = INVALID_RC; // will close socket
+                    }
+                }
+                catch(const std::out_of_range& e)
+                {
+                    mlog(CRITICAL, "Http request must supply Content-Length header: %s\n", e.what());
+                    status = INVALID_RC; // will close socket
+                }
+            }
+            else
+            {
+                /* Go to Next Character in Header */
+                request->hdr_index++;
             }
         }
 
         /* Check If Body Complete */
         if(request->content_length > 0)
         {
-            if(request->message.getLength() == request->content_length)
+            if((request->message.getLength() - request->hdr_index) >= request->content_length)
             {
                 /* Get Message Body */
                 const char* raw_message = request->message.getString();
                 request->body = &raw_message[request->hdr_index];
-
+printf("BODY: %s\n", request->body);
+printf("URL: %s\n", request->url);
                 /* Get Endpoint and New URL */
                 char* endpoint = NULL;
                 char* new_url = NULL;
                 extract(request->url, &endpoint, &new_url);
                 if(endpoint && new_url)
                 {
+
+printf("ENDPOINT: %s\n", endpoint);
+printf("ENDPOINT: %s\n", new_url);
                     try
                     {
                         /* Get Attached Endpoint Object --> Handle Request */
                         EndpointObject* endpoint_obj = routeTable[endpoint];
-                        endpoint_obj->handleRequest(request->id, new_url, request->verb, request->headers, request->body, endpoint_obj);
+                        endpoint_obj->handleRequest(request->id, new_url, request->verb, *(request->headers), request->body, endpoint_obj);
                     }
                     catch(const std::out_of_range& e)
                     {
@@ -507,6 +507,7 @@ int HttpServer::onConnect(int fd)
     {
         request->id = getUniqueId();
 
+        request->headers = new Dictionary<const char*>();
         request->rspq = new Subscriber(request->id);
 
         request->rsp_buffer_size = LocalLib::getIOMaxsize();

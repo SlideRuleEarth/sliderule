@@ -69,7 +69,7 @@ class LuaEndpoint: public EndpointObject
                     LuaEndpoint     (lua_State* L);
         virtual     ~LuaEndpoint    (void);
 
-        code_t      handleRequest   (const char* id, const char* url, verb_t verb, Dictionary<SafeString>& headers, const char* body, EndpointObject* self) override;
+        code_t      handleRequest   (const char* id, const char* url, verb_t verb, Dictionary<const char*>& headers, const char* body, EndpointObject* self) override;
 
         code_t      returnResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
         code_t      streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
