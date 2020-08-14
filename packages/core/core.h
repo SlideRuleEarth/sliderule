@@ -36,6 +36,7 @@
 #include "DeviceWriter.h"
 #include "Dictionary.h"
 #include "File.h"
+#include "HttpServer.h"
 #include "LimitDispatch.h"
 #include "List.h"
 #include "LimitRecord.h"

@@ -43,7 +43,7 @@ class StringLib
         {
             public:
 
-                static const long DEFAULT_STR_SIZE = 32;
+                static const long DEFAULT_STR_SIZE = 64;
 
                                 String      (long _maxlen=DEFAULT_STR_SIZE);
                                 String      (const char* _str, ...) VARG_CHECK(printf, 2, 3);

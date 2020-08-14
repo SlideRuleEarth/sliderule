@@ -31,6 +31,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/DeviceReader.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.cpp
             ${CMAKE_CURRENT_LIST_DIR}/File.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Logger.cpp
@@ -75,6 +76,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/Dictionary.h
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.h
             ${CMAKE_CURRENT_LIST_DIR}/File.h
+            ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.h
             ${CMAKE_CURRENT_LIST_DIR}/List.h

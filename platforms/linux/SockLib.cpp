@@ -227,19 +227,22 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
         return TIMEOUT_RC;
     }
 
-    /* Build Poll Structure */
-    struct pollfd polllist[1];
-    polllist[0].fd = fd;
-    polllist[0].events = POLLOUT | POLLHUP;
-    polllist[0].revents = 0;
+    if(timeout != IO_CHECK)
+    {
+        /* Build Poll Structure */
+        struct pollfd polllist[1];
+        polllist[0].fd = fd;
+        polllist[0].events = POLLOUT | POLLHUP;
+        polllist[0].revents = 0;
 
-    /* Poll */
-    do activity = poll(polllist, 1, timeout);
-    while(activity == -1 && (errno == EINTR || errno == EAGAIN));
+        /* Poll */
+        do activity = poll(polllist, 1, timeout);
+        while(activity == -1 && (errno == EINTR || errno == EAGAIN));
 
-    /* Set Activity */
-    if(activity > 0)    revents = polllist[0].revents;
-    else                revents = 0;
+        /* Set Activity */
+        if(activity > 0)    revents = polllist[0].revents;
+        else                revents = 0;
+    }
 
     /* Perform Send */
     if(revents & POLLHUP)
@@ -253,7 +256,7 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
         {
             c = SHUTDOWN_RC;
         }        
-        else if(c < 0)
+        else if(timeout != IO_CHECK && c < 0)
         {
             dlog("Failed (%d) to send data to ready socket [%0X]: %s\n", c, revents, strerror(errno));
             c = SOCK_ERR_RC;
@@ -272,19 +275,22 @@ int SockLib::sockrecv(int fd, void* buf, int size, int timeout)
     int c = TIMEOUT_RC;
     int revents = POLLIN;
 
-    /* Build Poll Structure */
-    struct pollfd polllist[1];
-    polllist[0].fd = fd;
-    polllist[0].events = POLLIN | POLLHUP;
-    polllist[0].revents = 0;
+    if(timeout != IO_CHECK)
+    {
+        /* Build Poll Structure */
+        struct pollfd polllist[1];
+        polllist[0].fd = fd;
+        polllist[0].events = POLLIN | POLLHUP;
+        polllist[0].revents = 0;
 
-    /* Poll */
-    int activity = 1;
-    do activity = poll(polllist, 1, timeout);
-    while(activity == -1 && (errno == EINTR || errno == EAGAIN));
+        /* Poll */
+        int activity = 1;
+        do activity = poll(polllist, 1, timeout);
+        while(activity == -1 && (errno == EINTR || errno == EAGAIN));
 
-    /* Set Activity */
-    revents = polllist[0].revents;
+        /* Set Activity */
+        revents = polllist[0].revents;
+    }
 
     /* Perform Receive */
     if(revents & POLLIN)
@@ -294,7 +300,7 @@ int SockLib::sockrecv(int fd, void* buf, int size, int timeout)
         {
             c = SHUTDOWN_RC;
         }
-        else if(c < 0)
+        else if(timeout != IO_CHECK && c < 0)
         {
             dlog("Failed (%d) to receive data from ready socket [%0X]: %s\n", c, revents, strerror(errno));
             c = SOCK_ERR_RC;
@@ -476,7 +482,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     
                     // if there was a disconnect, then the 'fd' list
                     // moved down and 'i' does not need to be incremented
-                    // but if it remained connected does 'i' increment
+                    // but if it remained connected then 'i' increments
                     i++;
                 }
             }
@@ -559,6 +565,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
     /* Disconnect Existing Connections */
     for(int i = 0; i < num_sockets; i++)
     {
+        on_act(polllist[i].fd, IO_DISCONNECT_FLAG, parm);
         sockclose(polllist[i].fd);
     }
     
