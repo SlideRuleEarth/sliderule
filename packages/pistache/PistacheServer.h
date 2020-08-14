@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __lua_endpoint__
-#define __lua_endpoint__
+#ifndef __pistache_server__
+#define __pistache_server__
 
 /******************************************************************************
  * INCLUDES
@@ -35,10 +35,10 @@
 using namespace Pistache;
 
 /******************************************************************************
- * LUA ENDPOINT CLASS
+ * PISTACHE SERVER CLASS
  ******************************************************************************/
 
-class LuaEndpoint: public LuaObject
+class PistacheServer: public LuaObject
 {
     public:
 
@@ -87,8 +87,8 @@ class LuaEndpoint: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    LuaEndpoint     (lua_State* L, Address addr, size_t num_threads);
-        virtual     ~LuaEndpoint    (void);
+                    PistacheServer     (lua_State* L, Address addr, size_t num_threads);
+        virtual     ~PistacheServer    (void);
 
     private:
 
@@ -118,4 +118,4 @@ class LuaEndpoint: public LuaObject
         static int      luaRoute            (lua_State* L);
 };
 
-#endif  /* __lua_endpoint__ */
+#endif  /* __pistache_server__ */

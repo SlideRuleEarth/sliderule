@@ -22,7 +22,7 @@ console.logger:config(core.INFO)
 
 -- Unit Test --
 
-server = pistache.endpoint(9081)
+server = pistache.server(9081)
 server:name("myengine")
 
 sys.wait(1)

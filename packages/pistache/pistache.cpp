@@ -40,8 +40,8 @@
 int pistache_open (lua_State *L)
 {
     static const struct luaL_Reg pistache_functions[] = {
-        {"client",      LuaClient::luaCreate},
-        {"endpoint",    LuaEndpoint::luaCreate},
+        {"client",      PistacheClient::luaCreate},
+        {"server",      PistacheServer::luaCreate},
         {"messager",    ProgressMessager::luaCreate},
         {NULL,          NULL}
     };
@@ -50,10 +50,10 @@ int pistache_open (lua_State *L)
     luaL_newlib(L, pistache_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrInt   (L, "GET",      LuaEndpoint::GET);
-    LuaEngine::setAttrInt   (L, "OPTIONS",  LuaEndpoint::OPTIONS);
-    LuaEngine::setAttrInt   (L, "POST",     LuaEndpoint::POST);
-    LuaEngine::setAttrInt   (L, "PUT",      LuaEndpoint::PUT);
+    LuaEngine::setAttrInt   (L, "GET",      PistacheServer::GET);
+    LuaEngine::setAttrInt   (L, "OPTIONS",  PistacheServer::OPTIONS);
+    LuaEngine::setAttrInt   (L, "POST",     PistacheServer::POST);
+    LuaEngine::setAttrInt   (L, "PUT",      PistacheServer::PUT);
 
     return 1;
 }

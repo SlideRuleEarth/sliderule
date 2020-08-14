@@ -21,7 +21,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaClient.h"
+#include "PistacheClient.h"
 #include "RouteHandler.h"
 #include "core.h"
 
@@ -31,8 +31,8 @@ using namespace Pistache;
  * STATIC DATA
  ******************************************************************************/
 
-const char* LuaClient::LuaMetaName = "LuaClient";
-const struct luaL_Reg LuaClient::LuaMetaTable[] = {
+const char* PistacheClient::LuaMetaName = "PistacheClient";
+const struct luaL_Reg PistacheClient::LuaMetaTable[] = {
     {"request",     luaRequest},
     {NULL,          NULL}
 };
@@ -50,7 +50,7 @@ const struct luaL_Reg LuaClient::LuaMetaTable[] = {
  *  If no output stream is provided, then the client will block on each request
  *  and return each response directly back to Lua.
  *----------------------------------------------------------------------------*/
-int LuaClient::luaCreate (lua_State* L)
+int PistacheClient::luaCreate (lua_State* L)
 {
     try
     {
@@ -59,7 +59,7 @@ int LuaClient::luaCreate (lua_State* L)
         long        num_threads = getLuaInteger(L, 2, true, 1);
 
         /* Create Lua Endpoint */
-        return createLuaObject(L, new LuaClient(L, outq_name, num_threads));
+        return createLuaObject(L, new PistacheClient(L, outq_name, num_threads));
     }
     catch(const LuaException& e)
     {
@@ -75,7 +75,7 @@ int LuaClient::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaClient::LuaClient(lua_State* L,  const char* outq_name, size_t num_threads):
+PistacheClient::PistacheClient(lua_State* L,  const char* outq_name, size_t num_threads):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     numThreads(num_threads)
 {
@@ -94,7 +94,7 @@ LuaClient::LuaClient(lua_State* L,  const char* outq_name, size_t num_threads):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-LuaClient::~LuaClient(void)
+PistacheClient::~PistacheClient(void)
 {
     if(outQ) delete outQ;
 
@@ -109,7 +109,7 @@ LuaClient::~LuaClient(void)
 /*----------------------------------------------------------------------------
  * luaRoute - :request(<action>, <url>, [<body>], [<timeout>])
  *----------------------------------------------------------------------------*/
-int LuaClient::luaRequest(lua_State* L)
+int PistacheClient::luaRequest(lua_State* L)
 {
     bool status = false;
     bool in_error = false;
@@ -118,22 +118,22 @@ int LuaClient::luaRequest(lua_State* L)
     try
     {
         /* Get Self */
-        LuaClient* lua_obj = (LuaClient*)getLuaSelf(L, 1);
+        PistacheClient* lua_obj = (PistacheClient*)getLuaSelf(L, 1);
 
         /* Get Action */
-        LuaEndpoint::verb_t action = LuaEndpoint::INVALID;
+        PistacheServer::verb_t action = PistacheServer::INVALID;
         if(lua_isnumber(L, 2))
         {
-            action = (LuaEndpoint::verb_t)getLuaInteger(L, 2);
+            action = (PistacheServer::verb_t)getLuaInteger(L, 2);
         }
         else
         {
             const char* action_str = getLuaString(L, 2);
-            action = LuaEndpoint::str2verb(action_str);
+            action = PistacheServer::str2verb(action_str);
         }
 
         /* Check Action */
-        if(action != LuaEndpoint::GET && action != LuaEndpoint::POST && action != LuaEndpoint::PUT)
+        if(action != PistacheServer::GET && action != PistacheServer::POST && action != PistacheServer::PUT)
         {
             throw LuaException("Invalid action: %d", action);
         }
@@ -144,7 +144,7 @@ int LuaClient::luaRequest(lua_State* L)
         /* Get Body */
         bool body_provided = false;
         const char* body = getLuaString(L, 4, true, NULL, &body_provided);
-        if(body_provided && action == LuaEndpoint::GET)
+        if(body_provided && action == PistacheServer::GET)
         {
             mlog(WARNING, "Body ignored for GET requests\n");
         }
@@ -158,12 +158,12 @@ int LuaClient::luaRequest(lua_State* L)
         }
 
         /* Make Request */
-        if(action == LuaEndpoint::GET)
+        if(action == PistacheServer::GET)
         {
             auto resp = lua_obj->client.get(url).send();
             status = true;
         }
-        else if(action == LuaEndpoint::POST)
+        else if(action == PistacheServer::POST)
         {
             SafeString lua_result;
             auto resp = lua_obj->client.post(url).body(body).send();
@@ -226,7 +226,7 @@ int LuaClient::luaRequest(lua_State* L)
                 lua_obj->requestSignal.unlock();
             }
         }
-        else if(action == LuaEndpoint::PUT)
+        else if(action == PistacheServer::PUT)
         {
             auto resp = lua_obj->client.put(url).body(body).send();
             status = true;

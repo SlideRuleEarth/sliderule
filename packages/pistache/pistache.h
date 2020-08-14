@@ -24,8 +24,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaEndpoint.h"
-#include "LuaClient.h"
+#include "PistacheServer.h"
+#include "PistacheClient.h"
 #include "ProgressMessager.h"
 #include "RouteHandler.h"
 

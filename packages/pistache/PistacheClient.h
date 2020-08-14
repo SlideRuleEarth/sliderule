@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __lua_client__
-#define __lua_client__
+#ifndef __pistache_client__
+#define __pistache_client__
 
 /******************************************************************************
  * INCLUDES
@@ -34,10 +34,10 @@
 using namespace Pistache;
 
 /******************************************************************************
- * LUA CLIENT CLASS
+ * PISTACHE CLIENT CLASS
  ******************************************************************************/
 
-class LuaClient: public LuaObject
+class PistacheClient: public LuaObject
 {
     public:
 
@@ -60,8 +60,8 @@ class LuaClient: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    LuaClient     (lua_State* L, const char* outq_name, size_t num_threads);
-        virtual     ~LuaClient    (void);
+                    PistacheClient     (lua_State* L, const char* outq_name, size_t num_threads);
+        virtual     ~PistacheClient    (void);
 
     private:
 
@@ -87,4 +87,4 @@ class LuaClient: public LuaObject
         static int  luaRequest  (lua_State* L);
 };
 
-#endif  /* __lua_client__ */
+#endif  /* __pistache_client__ */

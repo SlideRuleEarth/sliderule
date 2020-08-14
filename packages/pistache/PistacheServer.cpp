@@ -21,7 +21,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaEndpoint.h"
+#include "PistacheServer.h"
 #include "RouteHandler.h"
 #include "core.h"
 
@@ -32,15 +32,15 @@ using namespace Rest;
  * STATIC DATA
  ******************************************************************************/
 
-const char* LuaEndpoint::LuaMetaName = "LuaEndpoint";
-const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
+const char* PistacheServer::LuaMetaName = "PistacheServer";
+const struct luaL_Reg PistacheServer::LuaMetaTable[] = {
     {"route",       luaRoute},
     {NULL,          NULL}
 };
 
-StringLib::String LuaEndpoint::ServerHeader("sliderule/%s", BINID);
+StringLib::String PistacheServer::ServerHeader("sliderule/%s", BINID);
 
-const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
+const char* PistacheServer::RESPONSE_QUEUE = "rspq";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -49,7 +49,7 @@ const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
 /*----------------------------------------------------------------------------
  * luaCreate - endpoint(<port>, [<number of threads>])
  *----------------------------------------------------------------------------*/
-int LuaEndpoint::luaCreate (lua_State* L)
+int PistacheServer::luaCreate (lua_State* L)
 {
     try
     {
@@ -62,7 +62,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
         Address addr(Ipv4::any(), port);
 
         /* Create Lua Endpoint */
-        return createLuaObject(L, new LuaEndpoint(L, addr, num_threads));
+        return createLuaObject(L, new PistacheServer(L, addr, num_threads));
     }
     catch(const LuaException& e)
     {
@@ -74,7 +74,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * str2verb
  *----------------------------------------------------------------------------*/
-LuaEndpoint::verb_t LuaEndpoint::str2verb (const char* str)
+PistacheServer::verb_t PistacheServer::str2verb (const char* str)
 {
          if(StringLib::match(str, "GET"))       return GET;
     else if(StringLib::match(str, "OPTIONS"))   return OPTIONS;
@@ -88,7 +88,7 @@ LuaEndpoint::verb_t LuaEndpoint::str2verb (const char* str)
  *
  *  Note: must delete returned string
  *----------------------------------------------------------------------------*/
-const char* LuaEndpoint::sanitize (const char* filename)
+const char* PistacheServer::sanitize (const char* filename)
 {
     SafeString delimeter("%c", PATH_DELIMETER);
     SafeString safe_filename("%s", filename);
@@ -100,7 +100,7 @@ const char* LuaEndpoint::sanitize (const char* filename)
 /*----------------------------------------------------------------------------
  * getUniqueId
  *----------------------------------------------------------------------------*/
-long LuaEndpoint::getUniqueId (char id_str[REQUEST_ID_LEN])
+long PistacheServer::getUniqueId (char id_str[REQUEST_ID_LEN])
 {
     if(numThreads > 1) idMut.lock();
     long id = requestId++;
@@ -117,7 +117,7 @@ long LuaEndpoint::getUniqueId (char id_str[REQUEST_ID_LEN])
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::LuaEndpoint(lua_State* L,  Address addr, size_t num_threads):
+PistacheServer::PistacheServer(lua_State* L,  Address addr, size_t num_threads):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     requestId(0),
     numThreads(num_threads),
@@ -128,10 +128,10 @@ LuaEndpoint::LuaEndpoint(lua_State* L,  Address addr, size_t num_threads):
     httpEndpoint->init(opts);
 
     /* Set Default Routes */
-    Routes::Post(router, "/echo", Routes::bind(&LuaEndpoint::echoHandler, this));
-    Routes::Get(router, "/info", Routes::bind(&LuaEndpoint::infoHandler, this));
-    Routes::Post(router, "/source/:name", Routes::bind(&LuaEndpoint::sourceHandler, this));
-    Routes::Post(router, "/engine/:name", Routes::bind(&LuaEndpoint::engineHandler, this));
+    Routes::Post(router, "/echo", Routes::bind(&PistacheServer::echoHandler, this));
+    Routes::Get(router, "/info", Routes::bind(&PistacheServer::infoHandler, this));
+    Routes::Post(router, "/source/:name", Routes::bind(&PistacheServer::sourceHandler, this));
+    Routes::Post(router, "/engine/:name", Routes::bind(&PistacheServer::engineHandler, this));
 
     /* Create Server Thread */
     active = true;
@@ -141,7 +141,7 @@ LuaEndpoint::LuaEndpoint(lua_State* L,  Address addr, size_t num_threads):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::~LuaEndpoint(void)
+PistacheServer::~PistacheServer(void)
 {
     active = false;
     delete serverPid;
@@ -157,7 +157,7 @@ LuaEndpoint::~LuaEndpoint(void)
 /*----------------------------------------------------------------------------
  * echoHandler
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::echoHandler (const Rest::Request& request, Http::ResponseWriter response)
+void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWriter response)
 {
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str);
@@ -182,7 +182,7 @@ void LuaEndpoint::echoHandler (const Rest::Request& request, Http::ResponseWrite
 /*----------------------------------------------------------------------------
  * infoHandler
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::infoHandler (const Rest::Request& request, Http::ResponseWriter response)
+void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWriter response)
 {
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str);
@@ -210,7 +210,7 @@ void LuaEndpoint::infoHandler (const Rest::Request& request, Http::ResponseWrite
 /*----------------------------------------------------------------------------
  * sourceHandler
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::sourceHandler (const Rest::Request& request, Http::ResponseWriter response)
+void PistacheServer::sourceHandler (const Rest::Request& request, Http::ResponseWriter response)
 {
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str);
@@ -262,7 +262,7 @@ void LuaEndpoint::sourceHandler (const Rest::Request& request, Http::ResponseWri
 /*----------------------------------------------------------------------------
  * engineHandler
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWriter response)
+void PistacheServer::engineHandler (const Rest::Request& request, Http::ResponseWriter response)
 {
     char id_str[REQUEST_ID_LEN];
     getUniqueId(id_str);
@@ -331,9 +331,9 @@ void LuaEndpoint::engineHandler (const Rest::Request& request, Http::ResponseWri
 /*----------------------------------------------------------------------------
  * serverThread
  *----------------------------------------------------------------------------*/
-void* LuaEndpoint::serverThread (void* parm)
+void* PistacheServer::serverThread (void* parm)
 {
-    LuaEndpoint* server = (LuaEndpoint*)parm;
+    PistacheServer* server = (PistacheServer*)parm;
 
     try
     {
@@ -351,14 +351,14 @@ void* LuaEndpoint::serverThread (void* parm)
 /*----------------------------------------------------------------------------
  * luaRoute - :route(<action>, <url>, <route handler>)
  *----------------------------------------------------------------------------*/
-int LuaEndpoint::luaRoute(lua_State* L)
+int PistacheServer::luaRoute(lua_State* L)
 {
     bool status = false;
 
     try
     {
         /* Get Self */
-        LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
+        PistacheServer* lua_obj = (PistacheServer*)getLuaSelf(L, 1);
 
         /* Get Action */
         verb_t action = INVALID;

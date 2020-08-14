@@ -17,8 +17,8 @@ if (PISTACHE_LIB)
     target_sources(sliderule
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/pistache.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/LuaClient.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/PistacheServer.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/PistacheClient.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ProgressMessager.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RouteHandler.cpp
     )
@@ -32,8 +32,8 @@ if (PISTACHE_LIB)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/pistache.h
-            ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.h
-            ${CMAKE_CURRENT_LIST_DIR}/LuaClient.h
+            ${CMAKE_CURRENT_LIST_DIR}/PistacheServer.h
+            ${CMAKE_CURRENT_LIST_DIR}/PistacheClient.h
             ${CMAKE_CURRENT_LIST_DIR}/ProgressMessager.h
             ${CMAKE_CURRENT_LIST_DIR}/RouteHandler.h
         DESTINATION
