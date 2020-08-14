@@ -25,6 +25,7 @@
 
 #include "HttpServer.h"
 #include "Ordering.h"
+#include "List.h"
 #include "LogLib.h"
 #include "OsApi.h"
 #include "StringLib.h"
@@ -55,10 +56,10 @@ int HttpServer::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         int         port      = (int)getLuaInteger(L, 1);
-        const char* ip_addr   = getLuaString(L, 2);
+        const char* ip_addr   = getLuaString(L, 2, true, NULL);
 
         /* Get Server Parameter */
-        if(StringLib::match(ip_addr, "0.0.0.0") || StringLib::match(ip_addr, "*"))
+        if( ip_addr && (StringLib::match(ip_addr, "0.0.0.0") || StringLib::match(ip_addr, "*")) )
         {
             ip_addr = NULL;
         }
@@ -197,14 +198,82 @@ int HttpServer::onRead(int fd)
     if(bytes > 0)
     {
         msg_buf[bytes] = '\0';
-printf("msg_buf:\n%s\n", msg_buf);
         request->message += msg_buf;
+
+//printf("msg_buf:\n%s\n", msg_buf);
+//printf("\n\n");
+//printf("raw [%d]:\n", bytes);
+//for(int i = 0; i < bytes; i++) printf("%02X", msg_buf[i]);
+//printf("\n\n");
+
+        /* Attempt to Parse Header */
+        if(!request->hdr_complete)
+        {
+            /* Look Through Existing Header Received */
+            for(; request->hdr_index < (request->message.getLength() - 4); request->hdr_index++)
+            {
+                /* Look For \r\n\r\n Separation */ 
+                if( (request->message[request->hdr_index + 0] == '\r') && 
+                    (request->message[request->hdr_index + 1] == '\n') &&
+                    (request->message[request->hdr_index + 2] == '\r') &&
+                    (request->message[request->hdr_index + 3] == '\n') )
+                {
+                    /* Null Terminate Header Portion of Message */
+                    request->message.setChar('\0', request->hdr_index);
+                    request->hdr_complete = true;
+                    request->hdr_index += 4; // moves hdr_index to start of body
+
+                    /* Parse Header */
+                    List<SafeString>* header_list = request->message.split('\r');
+                    for(int h = 0; h < header_list->length(); h++)
+                    {
+                        /* Create Key/Value Pairs */
+                        List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
+                        try
+                        {
+                            const char* key = (*keyvalue_list)[0].getString();
+                            request->headers.add(key, (*keyvalue_list)[1], true);
+                        }
+                        catch(const std::out_of_range& e)
+                        {
+                            mlog(CRITICAL, "Invalid header in http request: %s: %s\n", (*header_list)[h].getString(), e.what());
+                        }                    
+                    }
+
+                    /* Get Content Length */
+                    try
+                    {
+                        if(!StringLib::str2long(request->headers["Content-Length"].getString(), &request->content_length))
+                        {
+                            mlog(CRITICAL, "Invalid Content-Length header: %s\n", request->headers["Content-Length"].getString());
+                            status = INVALID_RC; // will close socket
+                        }
+                    }
+                    catch(const std::out_of_range& e)
+                    {
+                        mlog(CRITICAL, "Http request must supply Content-Length header: %s\n", e.what());
+                        status = INVALID_RC; // will close socket
+                    }                    
+                }
+            }
+        }
+
+        /* Check If Body Complete */
+        if(request->content_length > 0)
+        {
+            if(request->message.getLength() == request->content_length)
+            {
+                // !!!!!! DISPATCH HANDLER
+                // pass in the parameter dictionary, and the rspq
+                // also need the VERB and the URL
+            }
+        }
+
     }
     else
     {
-        // Failed to receive data on socket that was marked for reading;
-        // therefore return failure which will close socket
-        status = INVALID_RC;
+        /* Failed to receive data on socket that was marked for reading */
+        status = INVALID_RC; // will close socket
     }
 
     return status;

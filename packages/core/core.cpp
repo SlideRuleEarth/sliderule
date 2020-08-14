@@ -67,7 +67,7 @@ int core_open (lua_State *L)
         {"udp",         UdpSocket::luaCreate},
         {"reader",      DeviceReader::luaCreate},
         {"writer",      DeviceWriter::luaCreate},
-        {"server",      HttpServer::luaCreate},
+        {"httpd",       HttpServer::luaCreate},
         {"dispatcher",  RecordDispatcher::luaCreate},
         {"capture",     CaptureDispatch::luaCreate},
         {"limit",       LimitDispatch::luaCreate},
