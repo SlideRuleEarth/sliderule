@@ -30,6 +30,7 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* EndpointObject::RESPONSE_END = "\r\n\r\n";
 const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
 
 /******************************************************************************

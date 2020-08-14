@@ -75,25 +75,33 @@ class HttpServer: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct
-        {
-            SafeString                  message; // raw request
+        typedef struct {
             Dictionary<const char*>*    headers; // parsed request headers
-            int                         hdr_index;
-            bool                        hdr_complete;
-            long                        content_length;
             EndpointObject::verb_t      verb;
-            const char*                 id;
             const char*                 url;
             const char*                 body;
+            int                         index;
+            bool                        header_complete;
+            long                        content_length;
+        } request_t;
+
+        typedef struct {
             Subscriber*                 rspq;
+            bool                        complete;
             Subscriber::msgRef_t        ref;
             int                         ref_data_left;
-            int                         rsp_buffer_left;
-            int                         rsp_buffer_index;
-            int                         rsp_buffer_size;
-            uint8_t*                    rsp_buffer; // allocated to IOMaxSize
-        } request_t;
+            int                         left;
+            int                         index;
+            int                         size;
+            uint8_t*                    buffer; // allocated to IOMaxSize
+        } response_t;
+
+        typedef struct {
+            const char*                 id;
+            SafeString                  message; // raw request
+            request_t                   request;
+            response_t                  response;
+        } connection_t;
 
         /*--------------------------------------------------------------------
          * Data
@@ -103,7 +111,7 @@ class HttpServer: public LuaObject
 
         bool                            active;
         Thread*                         listenerPid;
-        Ordering<request_t*>            requests;
+        Ordering<connection_t*>         connections;
 
         Dictionary<EndpointObject*>     routeTable;
 

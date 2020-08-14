@@ -42,7 +42,9 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int MAX_HDR_SIZE = MAX_STR_SIZE;
+        static const int RESPONSE_END_SIZE = 4;
 
+        static const char* RESPONSE_END;
         static const char* OBJECT_TYPE;
 
         /*--------------------------------------------------------------------

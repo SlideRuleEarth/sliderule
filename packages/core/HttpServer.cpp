@@ -120,7 +120,8 @@ const char* HttpServer::getUniqueId (void)
  *----------------------------------------------------------------------------*/
 const char* HttpServer::getIpAddr (void)
 {
-    return ipAddr;
+    if(ipAddr)  return ipAddr;
+    else        return "0.0.0.0";
 }
 
 /*----------------------------------------------------------------------------
@@ -166,7 +167,7 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
             /* Get Endpoint */
             int endpoint_len = second_slash - first_slash; // this includes null terminator
             *endpoint = new char[endpoint_len];
-            src = first_slash + 1;
+            src = first_slash ; // include the slash
             dst = *endpoint;
             while(src < second_slash) *dst++ = *src++;
             *dst = '\0';
@@ -177,7 +178,7 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
             {
                 int new_url_len = terminator - second_slash; // this includes null terminator
                 *new_url = new char[new_url_len];
-                src = second_slash + 1;
+                src = second_slash + 1; // do NOT include the slash
                 dst = *new_url;
                 while(src < terminator) *dst++ = *src++;
                 *dst = '\0';
@@ -266,42 +267,42 @@ int HttpServer::activeHandler(int fd, int flags, void* parm)
 /*----------------------------------------------------------------------------
  * onRead
  *
- *  Notes: performed for every request that is ready to have data read from it
+ *  Notes: performed for every connection that is ready to have data read from it
  *----------------------------------------------------------------------------*/
 int HttpServer::onRead(int fd)
 {
     int status = 0;
     char msg_buf[REQUEST_MSG_BUF_LEN];
-    request_t* request = requests[fd];
+    connection_t* connection = connections[fd];
 
     int bytes = SockLib::sockrecv(fd, msg_buf, REQUEST_MSG_BUF_LEN - 1, IO_CHECK);
     if(bytes > 0)
     {
         msg_buf[bytes] = '\0';
-        request->message += msg_buf;
+        connection->message += msg_buf;
 
         /* Look Through Existing Header Received */
-        while(!request->hdr_complete && (request->hdr_index < (request->message.getLength() - 4)))
+        while(!connection->request.header_complete && (connection->request.index < (connection->message.getLength() - 4)))
         {
             /* Look For \r\n\r\n Separation */ 
-            if( (request->message[request->hdr_index + 0] == '\r') && 
-                (request->message[request->hdr_index + 1] == '\n') &&
-                (request->message[request->hdr_index + 2] == '\r') &&
-                (request->message[request->hdr_index + 3] == '\n') )
+            if( (connection->message[connection->request.index + 0] == '\r') && 
+                (connection->message[connection->request.index + 1] == '\n') &&
+                (connection->message[connection->request.index + 2] == '\r') &&
+                (connection->message[connection->request.index + 3] == '\n') )
             {
                 /* Parse Request */    
-                request->message.setChar('\0', request->hdr_index);
-                List<SafeString>* header_list = request->message.split('\r');
-                request->message.setChar('\r', request->hdr_index);
-                request->hdr_complete = true;
-                request->hdr_index += 4; // moves hdr_index to start of body
+                connection->message.setChar('\0', connection->request.index);
+                List<SafeString>* header_list = connection->message.split('\r');
+                connection->message.setChar('\r', connection->request.index);
+                connection->request.header_complete = true;
+                connection->request.index += 4; // moves request.index to start of body
 
                 /* Parse Request Line */
                 try
                 {
                     List<SafeString>* request_line = (*header_list)[0].split(' ');
-                    request->verb = EndpointObject::str2verb((*request_line)[0].getString());
-                    request->url = (*request_line)[1].getString(true);
+                    connection->request.verb = EndpointObject::str2verb((*request_line)[0].getString());
+                    connection->request.url = (*request_line)[1].getString(true);
                     delete request_line;
                 }
                 catch(const std::out_of_range& e)
@@ -318,7 +319,7 @@ int HttpServer::onRead(int fd)
                     {
                         const char* key = (*keyvalue_list)[0].getString();
                         const char* value = (*keyvalue_list)[1].getString(true);
-                        request->headers->add(key, value, true);
+                        connection->request.headers->add(key, value, true);
                     }
                     catch(const std::out_of_range& e)
                     {
@@ -333,9 +334,9 @@ int HttpServer::onRead(int fd)
                 /* Get Content Length */
                 try
                 {
-                    if(!StringLib::str2long(request->headers->get("Content-Length"), &request->content_length))
+                    if(!StringLib::str2long(connection->request.headers->get("Content-Length"), &connection->request.content_length))
                     {
-                        mlog(CRITICAL, "Invalid Content-Length header: %s\n", request->headers->get("Content-Length"));
+                        mlog(CRITICAL, "Invalid Content-Length header: %s\n", connection->request.headers->get("Content-Length"));
                         status = INVALID_RC; // will close socket
                     }
                 }
@@ -348,34 +349,35 @@ int HttpServer::onRead(int fd)
             else
             {
                 /* Go to Next Character in Header */
-                request->hdr_index++;
+                connection->request.index++;
             }
         }
 
         /* Check If Body Complete */
-        if(request->content_length > 0)
+        if(connection->request.content_length > 0)
         {
-            if((request->message.getLength() - request->hdr_index) >= request->content_length)
+            if((connection->message.getLength() - connection->request.index) >= connection->request.content_length)
             {
                 /* Get Message Body */
-                const char* raw_message = request->message.getString();
-                request->body = &raw_message[request->hdr_index];
-printf("BODY: %s\n", request->body);
-printf("URL: %s\n", request->url);
+                const char* raw_message = connection->message.getString();
+                connection->request.body = &raw_message[connection->request.index];
+
                 /* Get Endpoint and New URL */
                 char* endpoint = NULL;
                 char* new_url = NULL;
-                extract(request->url, &endpoint, &new_url);
+                extract(connection->request.url, &endpoint, &new_url);
                 if(endpoint && new_url)
                 {
-
-printf("ENDPOINT: %s\n", endpoint);
-printf("ENDPOINT: %s\n", new_url);
                     try
                     {
                         /* Get Attached Endpoint Object --> Handle Request */
                         EndpointObject* endpoint_obj = routeTable[endpoint];
-                        endpoint_obj->handleRequest(request->id, new_url, request->verb, *(request->headers), request->body, endpoint_obj);
+                        endpoint_obj->handleRequest(connection->id, new_url, connection->request.verb, *(connection->request.headers), connection->request.body, endpoint_obj);
+
+
+
+//TODO... how to signal when this is done... maybe pass in pointer... maybe use a conditional...
+                        connection->response.complete = true;
                     }
                     catch(const std::out_of_range& e)
                     {
@@ -405,29 +407,35 @@ printf("ENDPOINT: %s\n", new_url);
 int HttpServer::onWrite(int fd)
 {
     int status = 0;
-    request_t* request = requests[fd];
+    connection_t* connection = connections[fd];
 
     /* Send Data */
-    if(request->rsp_buffer_left < request->rsp_buffer_index)
+    if(connection->response.left < connection->response.index)
     {
-        int bytes_left = request->rsp_buffer_index - request->rsp_buffer_left;
-        int bytes = SockLib::socksend(fd, &request->rsp_buffer[request->rsp_buffer_left], bytes_left, IO_CHECK);
+        int bytes_left = connection->response.index - connection->response.left;
+        int bytes = SockLib::socksend(fd, &connection->response.buffer[connection->response.left], bytes_left, IO_CHECK);
         if(bytes > 0)
         {
-            request->rsp_buffer_left += bytes;
+            connection->response.left += bytes;
         }
         else
         {
-            // Failed to send data on socket that was marked for writing;
-            // therefore return failure which will close socket
-            status = INVALID_RC;
+            /* Failed to send data on socket that was marked for writing */
+            status = INVALID_RC; // will close socket
         }
     }
 
-    /* Check if Done */
-    if(request->rsp_buffer_left == request->rsp_buffer_index)
+    /* Check if Done with Current Buffer */
+    if(connection->response.left == connection->response.index)
     {
-        request->rsp_buffer_left = 0;
+        connection->response.left = 0;
+        connection->response.index = 0;
+
+        /* Check if Done with Entire Response */
+        if(connection->response.complete)
+        {
+            status = INVALID_RC; // will close socket
+        }
     }
 
     return status;
@@ -436,45 +444,45 @@ int HttpServer::onWrite(int fd)
 /*----------------------------------------------------------------------------
  * onAlive
  *
- *  Notes: Performed for every existing request
+ *  Notes: Performed for every existing connection
  *----------------------------------------------------------------------------*/
 int HttpServer::onAlive(int fd)
 {
-    request_t* request = requests[fd];
+    connection_t* connection = connections[fd];
 
     /* While Room in Buffer */
-    while(request->rsp_buffer_index < request->rsp_buffer_size)
+    while(connection->response.index < connection->response.size)
     {
         /* Check If Payload Reference Has More Data */
-        if(request->ref_data_left > 0)
+        if(connection->response.ref_data_left > 0)
         {
             /* Populate Buffer */
-            int bytes_left = request->rsp_buffer_size - request->rsp_buffer_index;
-            int cpylen = MIN(request->ref_data_left, bytes_left);
-            int ref_index = request->ref.size - request->ref_data_left;
-            uint8_t* ref_buffer = (uint8_t*)request->ref.data;
-            LocalLib::copy(&request->rsp_buffer[request->rsp_buffer_index], &ref_buffer[ref_index], cpylen);
-            request->rsp_buffer_index += cpylen;
-            request->ref_data_left -= cpylen;
+            int bytes_left = connection->response.size - connection->response.index;
+            int cpylen = MIN(connection->response.ref_data_left, bytes_left);
+            int ref_index = connection->response.ref.size - connection->response.ref_data_left;
+            uint8_t* ref_buffer = (uint8_t*)connection->response.ref.data;
+            LocalLib::copy(&connection->response.buffer[connection->response.index], &ref_buffer[ref_index], cpylen);
+            connection->response.index += cpylen;
+            connection->response.ref_data_left -= cpylen;
         }
 
         /* Check Need for More Payloads */
-        if((request->ref_data_left == 0) && (request->rsp_buffer_index < request->rsp_buffer_size))
+        if((connection->response.ref_data_left == 0) && (connection->response.index < connection->response.size))
         {
-            int status = request->rspq->receiveRef(request->ref, IO_CHECK);
+            int status = connection->response.rspq->receiveRef(connection->response.ref, IO_CHECK);
             if(status > 0)
             {
                 /* Populate Rest of Buffer */
-                int bytes_left = request->rsp_buffer_size - request->rsp_buffer_index;
-                int cpylen = MIN(request->ref.size, bytes_left);
-                LocalLib::copy(&request->rsp_buffer[request->rsp_buffer_index], request->ref.data, cpylen);
-                request->rsp_buffer_index += cpylen;
+                int bytes_left = connection->response.size - connection->response.index;
+                int cpylen = MIN(connection->response.ref.size, bytes_left);
+                LocalLib::copy(&connection->response.buffer[connection->response.index], connection->response.ref.data, cpylen);
+                connection->response.index += cpylen;
 
                 /* Calculate Payload Left and Dereference if Payload Fully Buffered */
-                request->ref_data_left = request->ref.size - cpylen;
-                if(request->ref_data_left == 0)
+                connection->response.ref_data_left = connection->response.ref.size - cpylen;
+                if(connection->response.ref_data_left == 0)
                 {
-                    request->rspq->dereference(request->ref);
+                    connection->response.rspq->dereference(connection->response.ref);
                 }
 
                 /* Mark Ready to Write */
@@ -494,28 +502,32 @@ int HttpServer::onAlive(int fd)
 /*----------------------------------------------------------------------------
  * onConnect
  *
- *  Notes: performed on new requests when the request is made
+ *  Notes: performed on new connections when the connection is made
  *----------------------------------------------------------------------------*/
 int HttpServer::onConnect(int fd)
 {
     int status = 0;
 
-    request_t* request = new request_t;
-    LocalLib::set(request, 0, sizeof(request_t));
+    /* Create and Initialize New Request */
+    connection_t* connection = new connection_t;
+    connection->id = NULL;
+    LocalLib::set(&connection->request, 0, sizeof(request_t));
+    LocalLib::set(&connection->response, 0, sizeof(response_t));
 
-    if(requests.add(fd, request, true))
+    /* Register Connection */
+    if(connections.add(fd, connection, true))
     {
-        request->id = getUniqueId();
+        connection->id = getUniqueId();
 
-        request->headers = new Dictionary<const char*>();
-        request->rspq = new Subscriber(request->id);
+        connection->request.headers = new Dictionary<const char*>();
+        connection->response.rspq = new Subscriber(connection->id);
 
-        request->rsp_buffer_size = LocalLib::getIOMaxsize();
-        request->rsp_buffer = new uint8_t[request->rsp_buffer_size];
+        connection->response.size = LocalLib::getIOMaxsize();
+        connection->response.buffer = new uint8_t[connection->response.size];
     }
     else
     {
-        mlog(CRITICAL, "HTTP server at %s failed to register request due to duplicate entry\n", request->id);
+        mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry\n", connection->id);
         status = INVALID_RC;
     }
 
@@ -525,23 +537,26 @@ int HttpServer::onConnect(int fd)
 /*----------------------------------------------------------------------------
  * onDisconnect
  *
- *  Notes: performed on disconnected requests
+ *  Notes: performed on disconnected connections
  *----------------------------------------------------------------------------*/
 int HttpServer::onDisconnect(int fd)
 {
     int status = 0;
 
-    request_t* request = requests[fd];
-    if(requests.remove(fd))
+    connection_t* connection = connections[fd];
+    if(connections.remove(fd))
     {
-        delete request->id; 
-        delete request->rspq;
-        delete [] request->rsp_buffer;
-        delete request;
+        // TODO: need to delete headers
+
+
+        delete connection->id; 
+        delete connection->response.rspq;
+        delete [] connection->response.buffer;
+        delete connection;
     }
     else
     {
-        mlog(CRITICAL, "HTTP server at %s failed to release request\n", request->id);
+        mlog(CRITICAL, "HTTP server at %s failed to release connection\n", connection->id);
         status = -1;
     }
 

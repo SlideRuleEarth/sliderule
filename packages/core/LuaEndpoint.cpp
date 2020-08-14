@@ -93,7 +93,7 @@ LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url,
     uint32_t trace_id = start_trace_ext(endpoint->traceId, "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", id, verb2str(verb), url);
 
     /* Log Request */
-    mlog(INFO, "%s request: %s at %s\n", verb2str(verb), id, url);
+    mlog(INFO, "%s request at %s with %s\n", verb2str(verb), id, script_pathname);
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(id);
@@ -187,6 +187,10 @@ EndpointObject::code_t LuaEndpoint::streamResponse (const char* scriptpath, cons
      *  The call to execute the script blocks on completion of the script. The lua state context 
      *  is locked and cannot be accessed until the script completes */
     engine->executeEngine(IO_PEND);
+
+    /* End Response */
+    // HOW TO KNOW WHEN TO END...
+//    rspq->postCopy(RESPONSE_END, RESPONSE_END_SIZE);
 
     /* Clean Up */
     delete engine;
