@@ -373,11 +373,6 @@ int HttpServer::onRead(int fd)
                         /* Get Attached Endpoint Object --> Handle Request */
                         EndpointObject* endpoint_obj = routeTable[endpoint];
                         endpoint_obj->handleRequest(connection->id, new_url, connection->request.verb, *(connection->request.headers), connection->request.body, endpoint_obj);
-
-
-
-//TODO... how to signal when this is done... maybe pass in pointer... maybe use a conditional...
-                        connection->response.complete = true;
                     }
                     catch(const std::out_of_range& e)
                     {
@@ -410,13 +405,14 @@ int HttpServer::onWrite(int fd)
     connection_t* connection = connections[fd];
 
     /* Send Data */
-    if(connection->response.left < connection->response.index)
+    if(connection->response.index < connection->response.ref.size)
     {
-        int bytes_left = connection->response.index - connection->response.left;
-        int bytes = SockLib::socksend(fd, &connection->response.buffer[connection->response.left], bytes_left, IO_CHECK);
+        int bytes_left = connection->response.ref.size - connection->response.index;
+        uint8_t* buffer = (uint8_t*)connection->response.ref.data;
+        int bytes = SockLib::socksend(fd, &buffer[connection->response.index], bytes_left, IO_CHECK);
         if(bytes > 0)
         {
-            connection->response.left += bytes;
+            connection->response.index += bytes;
         }
         else
         {
@@ -425,11 +421,11 @@ int HttpServer::onWrite(int fd)
         }
     }
 
-    /* Check if Done with Current Buffer */
-    if(connection->response.left == connection->response.index)
+    /* Check if Done with Current Reference */
+    if(connection->response.index == connection->response.ref.size)
     {
-        connection->response.left = 0;
-        connection->response.index = 0;
+        connection->response.rspq->dereference(connection->response.ref);
+        connection->response.ref.size = 0;
 
         /* Check if Done with Entire Response */
         if(connection->response.complete)
@@ -450,49 +446,20 @@ int HttpServer::onAlive(int fd)
 {
     connection_t* connection = connections[fd];
 
-    /* While Room in Buffer */
-    while(connection->response.index < connection->response.size)
+    if(connection->response.ref.size == 0)
     {
-        /* Check If Payload Reference Has More Data */
-        if(connection->response.ref_data_left > 0)
+        connection->response.index = 0;
+        int status = connection->response.rspq->receiveRef(connection->response.ref, IO_CHECK);
+        if(status > 0)
         {
-            /* Populate Buffer */
-            int bytes_left = connection->response.size - connection->response.index;
-            int cpylen = MIN(connection->response.ref_data_left, bytes_left);
-            int ref_index = connection->response.ref.size - connection->response.ref_data_left;
-            uint8_t* ref_buffer = (uint8_t*)connection->response.ref.data;
-            LocalLib::copy(&connection->response.buffer[connection->response.index], &ref_buffer[ref_index], cpylen);
-            connection->response.index += cpylen;
-            connection->response.ref_data_left -= cpylen;
-        }
-
-        /* Check Need for More Payloads */
-        if((connection->response.ref_data_left == 0) && (connection->response.index < connection->response.size))
-        {
-            int status = connection->response.rspq->receiveRef(connection->response.ref, IO_CHECK);
-            if(status > 0)
+            /* Mark Response Complete */
+            if(connection->response.ref.size == 0)
             {
-                /* Populate Rest of Buffer */
-                int bytes_left = connection->response.size - connection->response.index;
-                int cpylen = MIN(connection->response.ref.size, bytes_left);
-                LocalLib::copy(&connection->response.buffer[connection->response.index], connection->response.ref.data, cpylen);
-                connection->response.index += cpylen;
-
-                /* Calculate Payload Left and Dereference if Payload Fully Buffered */
-                connection->response.ref_data_left = connection->response.ref.size - cpylen;
-                if(connection->response.ref_data_left == 0)
-                {
-                    connection->response.rspq->dereference(connection->response.ref);
-                }
-
-                /* Mark Ready to Write */
-                dataToWrite = true;
+                connection->response.complete = true;
             }
-            else
-            {        
-                /* No More Data to Write */        
-                break;
-            }
+
+            /* Mark Ready to Write */
+            dataToWrite = true;
         }
     }
 
@@ -517,13 +484,9 @@ int HttpServer::onConnect(int fd)
     /* Register Connection */
     if(connections.add(fd, connection, true))
     {
-        connection->id = getUniqueId();
-
+        connection->id = getUniqueId(); // id is allocated
         connection->request.headers = new Dictionary<const char*>();
         connection->response.rspq = new Subscriber(connection->id);
-
-        connection->response.size = LocalLib::getIOMaxsize();
-        connection->response.buffer = new uint8_t[connection->response.size];
     }
     else
     {
@@ -546,12 +509,22 @@ int HttpServer::onDisconnect(int fd)
     connection_t* connection = connections[fd];
     if(connections.remove(fd))
     {
-        // TODO: need to delete headers
+        /* Clear Out Headers */
+        const char* header;
+        const char* key = connection->request.headers->first(&header);
+        while(key != NULL)
+        {
+            /* Free Header Value */
+            delete [] header;
+            key = connection->request.headers->next(&header);
+        }
 
-
+        /* Free Rest of Allocated Connection Members */
         delete connection->id; 
+        delete connection->request.headers;
         delete connection->response.rspq;
-        delete [] connection->response.buffer;
+
+        /* Free Connection */
         delete connection;
     }
     else

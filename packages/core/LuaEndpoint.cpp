@@ -157,6 +157,9 @@ EndpointObject::code_t LuaEndpoint::returnResponse (const char* scriptpath, cons
         rspq->postCopy(header, header_length);
     }
 
+    /* End Response */
+    rspq->postCopy("", 0);
+    
     /* Clean Up */
     delete engine;
 

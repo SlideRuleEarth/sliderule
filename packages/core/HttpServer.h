@@ -89,11 +89,7 @@ class HttpServer: public LuaObject
             Subscriber*                 rspq;
             bool                        complete;
             Subscriber::msgRef_t        ref;
-            int                         ref_data_left;
-            int                         left;
             int                         index;
-            int                         size;
-            uint8_t*                    buffer; // allocated to IOMaxSize
         } response_t;
 
         typedef struct {

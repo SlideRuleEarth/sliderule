@@ -422,7 +422,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
             /* Poll On All Connections */
             int activity = 0;
-            do activity = poll(polllist, num_sockets, SYS_TIMEOUT * 4);
+            do activity = poll(polllist, num_sockets, SYS_TIMEOUT);
             while(activity == -1 && (errno == EINTR || errno == EAGAIN));
 
             /* Handle Existing Connections  */
@@ -563,7 +563,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
     }
     
     /* Disconnect Existing Connections */
-    for(int i = 0; i < num_sockets; i++)
+    for(int i = 1; i < num_sockets; i++)
     {
         on_act(polllist[i].fd, IO_DISCONNECT_FLAG, parm);
         sockclose(polllist[i].fd);
