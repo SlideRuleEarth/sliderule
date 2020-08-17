@@ -71,7 +71,7 @@ class EndpointObject: public LuaObject
 
         typedef struct {
             const char*                 id; // must be unique
-            const char*                 url;
+            char*                       url;
             verb_t                      verb;
             Dictionary<const char*>*    headers;
             const char*                 body;

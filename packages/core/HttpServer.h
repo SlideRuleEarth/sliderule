@@ -78,8 +78,8 @@ class HttpServer: public LuaObject
         typedef struct {
             int                         header_index;
             bool                        header_complete;
-            bool                        response_complete;
             Subscriber::msgRef_t        ref;
+            int                         ref_status;
             int                         ref_index;
             Subscriber*                 rspq;
         } state_t;

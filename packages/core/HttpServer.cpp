@@ -255,11 +255,11 @@ int HttpServer::activeHandler(int fd, int flags, void* parm)
 
     int rc = 0;
 
-    if((flags & IO_ALIVE_FLAG)      && (s->onAlive(fd)      < 0))   rc = -1;
-    if((flags & IO_READ_FLAG)       && (s->onRead(fd)       < 0))   rc = -1;
-    if((flags & IO_WRITE_FLAG)      && (s->onWrite(fd)      < 0))   rc = -1;
-    if((flags & IO_CONNECT_FLAG)    && (s->onConnect(fd)    < 0))   rc = -1;
-    if((flags & IO_DISCONNECT_FLAG) && (s->onDisconnect(fd) < 0))   rc = -1;
+    if((flags & IO_ALIVE_FLAG)      && (s->onAlive(fd)      < 0))   rc = INVALID_RC;
+    if((flags & IO_READ_FLAG)       && (s->onRead(fd)       < 0))   rc = INVALID_RC;
+    if((flags & IO_WRITE_FLAG)      && (s->onWrite(fd)      < 0))   rc = INVALID_RC;
+    if((flags & IO_CONNECT_FLAG)    && (s->onConnect(fd)    < 0))   rc = INVALID_RC;
+    if((flags & IO_DISCONNECT_FLAG) && (s->onDisconnect(fd) < 0))   rc = INVALID_RC;
 
     return rc;
 }
@@ -284,7 +284,7 @@ int HttpServer::onRead(int fd)
         /* Look Through Existing Header Received */
         while(!connection->state.header_complete && (connection->state.header_index < (connection->message.getLength() - 4)))
         {
-            /* Look For \r\n\r\n Separation */ 
+            /* If Header Complete (look for \r\n\r\n separator) */ 
             if( (connection->message[connection->state.header_index + 0] == '\r') && 
                 (connection->message[connection->state.header_index + 1] == '\n') &&
                 (connection->message[connection->state.header_index + 2] == '\r') &&
@@ -301,9 +301,36 @@ int HttpServer::onRead(int fd)
                 try
                 {
                     List<SafeString>* request_line = (*header_list)[0].split(' ');
-                    connection->request.verb = EndpointObject::str2verb((*request_line)[0].getString());
-                    connection->request.url = (*request_line)[1].getString(true);
+                    const char* verb_str = (*request_line)[0].getString();
+                    const char* url_str = (*request_line)[1].getString();
+
+                    /* Get Verb */
+                    connection->request.verb = EndpointObject::str2verb(verb_str);
+
+                    /* Get Endpoint and URL */
+                    char* endpoint = NULL;
+                    extract(url_str, &endpoint, &connection->request.url);
+                    if(endpoint && connection->request.url)
+                    {
+                        try
+                        {
+                            /* Get Attached Endpoint Object */
+                            connection->request.endpoint = routeTable[endpoint];
+                        }
+                        catch(const std::out_of_range& e)
+                        {
+                            mlog(CRITICAL, "No attached endpoint at %s: %s\n", endpoint, e.what());
+                            status = INVALID_RC; // will close socket
+                        }                    
+                    }
+                    else
+                    {
+                        mlog(CRITICAL, "Enable to extract endpoint and url: %s\n", url_str);
+                    }
+
+                    /* Clean Up Allocated Memory */
                     delete request_line;
+                    if(endpoint) delete [] endpoint;
                 }
                 catch(const std::out_of_range& e)
                 {
@@ -362,26 +389,16 @@ int HttpServer::onRead(int fd)
                 const char* raw_message = connection->message.getString();
                 connection->request.body = &raw_message[connection->state.header_index];
 
-                /* Get Endpoint and New URL */
-                char* endpoint = NULL;
-                char* new_url = NULL;
-                extract(connection->request.url, &endpoint, &new_url);
-                if(endpoint && new_url)
+                /* Handle Request */
+                if(connection->request.endpoint)
                 {
-                    try
-                    {
-                        /* Get Attached Endpoint Object --> Handle Request */
-                        connection->request.endpoint = routeTable[endpoint];
-                        connection->request.endpoint->handleRequest(&connection->request);
-                    }
-                    catch(const std::out_of_range& e)
-                    {
-                        mlog(CRITICAL, "No attached endpoint at %s: %s\n", endpoint, e.what());
-                        status = INVALID_RC; // will close socket
-                    }                    
+                    connection->request.endpoint->handleRequest(&connection->request);
                 }
-                if(endpoint) delete [] endpoint;
-                if(new_url) delete [] new_url;
+                else
+                {
+                    mlog(CRITICAL, "Unable to handle unattached request\n");
+                    status = INVALID_RC; // will close socket
+                }
             }
         }
     }
@@ -405,7 +422,8 @@ int HttpServer::onWrite(int fd)
     connection_t* connection = connections[fd];
 
     /* Send Data */
-    if(connection->state.ref_index < connection->state.ref.size)
+    if((connection->state.ref_status > 0) && 
+       (connection->state.ref_index < connection->state.ref.size))
     {
         int bytes_left = connection->state.ref.size - connection->state.ref_index;
         uint8_t* buffer = (uint8_t*)connection->state.ref.data;
@@ -422,16 +440,23 @@ int HttpServer::onWrite(int fd)
     }
 
     /* Check if Done with Current Reference */
-    if(connection->state.ref_index == connection->state.ref.size)
+    if((connection->state.ref_status > 0) && 
+       (connection->state.ref_index == connection->state.ref.size))
     {
         connection->state.rspq->dereference(connection->state.ref);
-        connection->state.ref.size = 0;
 
-        /* Check if Done with Entire Response */
-        if(connection->state.response_complete)
+        /* Check if Done with Entire Response 
+         *  a valid reference of size zero indicates that
+         *  the response is complete */
+        if(connection->state.ref.size == 0)
         {
             status = INVALID_RC; // will close socket
         }
+
+        /* Reset Reference State */
+        connection->state.ref_status = 0;
+        connection->state.ref_index = 0;
+        connection->state.ref.size = 0;
     }
 
     return status;
@@ -446,18 +471,11 @@ int HttpServer::onAlive(int fd)
 {
     connection_t* connection = connections[fd];
 
-    if(connection->state.ref.size == 0)
+    if(connection->state.ref_status <= 0)
     {
-        connection->state.ref_index = 0;
-        int status = connection->state.rspq->receiveRef(connection->state.ref, IO_CHECK);
-        if(status > 0)
+        connection->state.ref_status = connection->state.rspq->receiveRef(connection->state.ref, IO_CHECK);
+        if(connection->state.ref_status > 0)
         {
-            /* Mark Response Complete */
-            if(connection->state.ref.size == 0)
-            {
-                connection->state.response_complete = true;
-            }
-
             /* Mark Ready to Write */
             dataToWrite = true;
         }
@@ -518,8 +536,11 @@ int HttpServer::onDisconnect(int fd)
             key = connection->request.headers->next(&header);
         }
 
+        /* Free URL */
+        if(connection->request.url) delete [] connection->request.url;
+
         /* Free Rest of Allocated Connection Members */
-        delete connection->request.id; 
+        delete [] connection->request.id; 
         delete connection->request.headers;
         delete connection->state.rspq;
 
