@@ -23,9 +23,9 @@ console.logger:config(core.INFO)
 server = core.httpd(9081)
 endpoint = core.endpoint()
 server:attach(endpoint, "/source")
---[[
+
 print('\n------------------\nTest01: Stream\n------------------')
-os.execute(string.format("curl -sS -d '%s' http://127.0.0.1:9081/engine/example_engine_endpoint > %s", json_object, tmpfile))
+os.execute(string.format("curl -sS -X POST -d '%s' http://127.0.0.1:9081/source/example_engine_endpoint > %s", json_object, tmpfile))
 f = io.open(tmpfile)
 f:read(4)
 result1 = f:read()
@@ -37,7 +37,6 @@ f:close()
 runner.check(result1 == "FILE")
 runner.check(result2 == "P01_01.dat")
 runner.check(result3 == "CCSDS")
-]]
 
 print('\n------------------\nTest02: Return\n------------------')
 os.execute(string.format("curl -sS -X GET -d '%s' http://127.0.0.1:9081/source/example_source_endpoint > %s", json_object, tmpfile))

@@ -69,6 +69,11 @@ class EndpointObject: public LuaObject
             Method_Not_Implemented = 501
         } code_t;
 
+        typedef enum {
+            NORMAL = 0,
+            STREAMING = 1
+        } rsptype_t;    
+
         typedef struct {
             const char*                 id; // must be unique
             char*                       url;
@@ -77,6 +82,7 @@ class EndpointObject: public LuaObject
             const char*                 body;
             long                        body_length;
             EndpointObject*             endpoint;
+            rsptype_t                   response_type;
         } request_t;
 
         /*--------------------------------------------------------------------
@@ -92,7 +98,7 @@ class EndpointObject: public LuaObject
         static const char*  code2str            (code_t code);
         static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL, const char* server=NULL);
 
-        virtual void        handleRequest       (request_t* request) = 0;
+        virtual rsptype_t   handleRequest       (request_t* request) = 0;
 };
 
 #endif  /* __endpoint_object__ */

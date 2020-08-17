@@ -109,7 +109,7 @@ HttpServer::~HttpServer(void)
  *----------------------------------------------------------------------------*/
 const char* HttpServer::getUniqueId (void)
 {
-    char* id_str = new char [MAX_STR_SIZE];
+    char* id_str = new char [REQUEST_ID_LEN];
     long id = requestId++;
     StringLib::format(id_str, REQUEST_ID_LEN, "%s:%d:%ld", getIpAddr(), getPort(), id);
     return id_str;
@@ -280,6 +280,7 @@ int HttpServer::onRead(int fd)
     {
         msg_buf[bytes] = '\0';
         connection->message += msg_buf;
+        status = bytes;
 
         /* Look Through Existing Header Received */
         while(!connection->state.header_complete && (connection->state.header_index < (connection->message.getLength() - 4)))
@@ -392,7 +393,7 @@ int HttpServer::onRead(int fd)
                 /* Handle Request */
                 if(connection->request.endpoint)
                 {
-                    connection->request.endpoint->handleRequest(&connection->request);
+                    connection->request.response_type = connection->request.endpoint->handleRequest(&connection->request);
                 }
                 else
                 {
@@ -420,30 +421,104 @@ int HttpServer::onWrite(int fd)
 {
     int status = 0;
     connection_t* connection = connections[fd];
+    bool ref_complete = false;
 
-    /* Send Data */
-    if((connection->state.ref_status > 0) && 
-       (connection->state.ref_index < connection->state.ref.size))
-    {
-        int bytes_left = connection->state.ref.size - connection->state.ref_index;
-        uint8_t* buffer = (uint8_t*)connection->state.ref.data;
-        int bytes = SockLib::socksend(fd, &buffer[connection->state.ref_index], bytes_left, IO_CHECK);
-        if(bytes > 0)
+    uint8_t* buffer;
+    int bytes_left;
+
+    /* If Something to Send */
+    if(connection->state.ref_status > 0)
+    {        
+        if(connection->state.header_sent && connection->request.response_type == EndpointObject::STREAMING) /* Setup Streaming */
         {
-            connection->state.ref_index += bytes;
+            /* Allocate Streaming Buffer (if necessary) */
+            if(connection->state.ref.size + STREAM_OVERHEAD_SIZE > connection->state.stream_mem_size)
+            {
+                /* Delete Old Buffer */
+                if(connection->state.stream_buf) delete [] connection->state.stream_buf;
+
+                /* Allocate New Buffer */
+                connection->state.stream_mem_size = connection->state.ref.size + STREAM_OVERHEAD_SIZE;
+                connection->state.stream_buf = new uint8_t [connection->state.stream_mem_size];
+            }
+
+            /* Build Stream Buffer */
+            if(connection->state.stream_buf_size == 0)
+            {
+                /* Write Chunk Header - HTTP */
+                unsigned long chunk_size = connection->state.ref.size > 0 ? connection->state.ref.size + sizeof(uint32_t) : 0;
+                StringLib::format((char*)connection->state.stream_buf, STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
+                connection->state.stream_buf_size = StringLib::size((const char*)connection->state.stream_buf);
+
+                if(connection->state.ref.size > 0)
+                {
+                    /* Write Message Size */                
+                    #ifdef __BE__
+                    uint32_t rec_size = LocalLib::swapl(rec_size);
+                    #else
+                    uint32_t rec_size = connection->state.ref.size;
+                    #endif
+                    LocalLib::copy(&connection->state.stream_buf[connection->state.stream_buf_size], &rec_size, sizeof(uint32_t));
+                    connection->state.stream_buf_size += sizeof(uint32_t);
+
+                    /* Write Message Data */
+                    LocalLib::copy(&connection->state.stream_buf[connection->state.stream_buf_size], connection->state.ref.data, connection->state.ref.size);
+                    connection->state.stream_buf_size += connection->state.ref.size;
+                }
+
+                /* Write Chunk Trailer - HTTP */
+                StringLib::format((char*)&connection->state.stream_buf[connection->state.stream_buf_size], STREAM_OVERHEAD_SIZE, "\r\n");
+                connection->state.stream_buf_size += 2;
+            }
+
+            /* Setup Write State */
+            buffer = &connection->state.stream_buf[connection->state.stream_buf_index];
+            bytes_left = connection->state.stream_buf_size - connection->state.stream_buf_index;
+        }
+        else /* Setup Normal */
+        {
+            /* Setup Write State */
+            buffer = ((uint8_t*)connection->state.ref.data) + connection->state.ref_index;
+            bytes_left = connection->state.ref.size - connection->state.ref_index;
+        }
+
+        /* Write Data to Socket */
+        int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
+        if(bytes >= 0)
+        {
+            /* Update Status */
+            status += bytes;
+
+            /* Update Write State */
+            if(connection->state.header_sent && connection->request.response_type == EndpointObject::STREAMING)
+            {
+                /* Update Streaming Write State */
+                connection->state.stream_buf_index += bytes;
+                if(connection->state.stream_buf_index == connection->state.stream_buf_size)
+                {
+                    connection->state.stream_buf_index = 0; 
+                    connection->state.stream_buf_size = 0;
+                    ref_complete = true;
+                }
+            }
+            else
+            {
+                /* Update Normal Write State
+                 *  note that this code will be executed once for the 
+                 *  header of a streaming write as well */
+                connection->state.ref_index += bytes;
+                if(connection->state.ref_index == connection->state.ref.size)
+                {
+                    connection->state.header_sent = true;
+                    ref_complete = true;
+                }
+            }
         }
         else
         {
-            /* Failed to send data on socket that was marked for writing */
+            /* Failed to Write Ready Socket */
             status = INVALID_RC; // will close socket
         }
-    }
-
-    /* Check if Done with Current Reference */
-    if((connection->state.ref_status > 0) && 
-       (connection->state.ref_index == connection->state.ref.size))
-    {
-        connection->state.rspq->dereference(connection->state.ref);
 
         /* Check if Done with Entire Response 
          *  a valid reference of size zero indicates that
@@ -453,10 +528,14 @@ int HttpServer::onWrite(int fd)
             status = INVALID_RC; // will close socket
         }
 
-        /* Reset Reference State */
-        connection->state.ref_status = 0;
-        connection->state.ref_index = 0;
-        connection->state.ref.size = 0;
+        /* Reset State */
+        if(ref_complete)
+        {
+            connection->state.rspq->dereference(connection->state.ref);                
+            connection->state.ref_status = 0;
+            connection->state.ref_index = 0;
+            connection->state.ref.size = 0;
+        }
     }
 
     return status;
@@ -539,6 +618,9 @@ int HttpServer::onDisconnect(int fd)
         /* Free URL */
         if(connection->request.url) delete [] connection->request.url;
 
+        /* Free Stream Buffer */
+        if(connection->state.stream_buf) delete [] connection->state.stream_buf;
+
         /* Free Rest of Allocated Connection Members */
         delete [] connection->request.id; 
         delete connection->request.headers;
@@ -550,7 +632,7 @@ int HttpServer::onDisconnect(int fd)
     else
     {
         mlog(CRITICAL, "HTTP server at %s failed to release connection\n", connection->request.id);
-        status = -1;
+        status = INVALID_RC;
     }
 
     return status;

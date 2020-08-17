@@ -92,7 +92,7 @@ void* LuaEndpoint::requestThread (void* parm)
     uint32_t trace_id = start_trace_ext(lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
-    mlog(INFO, "%s request at %s with %s\n", verb2str(request->verb), request->id, script_pathname);
+    mlog(INFO, "%s request at %s to %s\n", verb2str(request->verb), request->id, script_pathname);
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
@@ -126,15 +126,23 @@ void* LuaEndpoint::requestThread (void* parm)
 /*----------------------------------------------------------------------------
  * handleRequest
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::handleRequest (request_t* request)
+EndpointObject::rsptype_t LuaEndpoint::handleRequest (request_t* request)
 {
     LuaEndpoint* lua_endpoint = (LuaEndpoint*)request->endpoint;
+
+    /* Start Thread */
     Thread* pid = new Thread(requestThread, request, false); // detached
+
+    /* Add PID to Table */
     lua_endpoint->pidMut.lock();
     {
         lua_endpoint->pidTable.add(request->id, pid);
     }
     lua_endpoint->pidMut.unlock();
+
+    /* Return Response Type */
+    if(request->verb == POST)   return STREAMING;
+    else                        return NORMAL;
 }
 
 /*----------------------------------------------------------------------------
@@ -201,8 +209,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publ
     engine->executeEngine(IO_PEND);
 
     /* End Response */
-    // HOW TO KNOW WHEN TO END...
-//    rspq->postCopy("", 0);
+    rspq->postCopy("", 0);
 
     /* Clean Up */
     delete engine;

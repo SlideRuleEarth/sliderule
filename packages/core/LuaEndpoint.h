@@ -72,7 +72,7 @@ class LuaEndpoint: public EndpointObject
 
         static void*        requestThread   (void* parm);
 
-        void                handleRequest   (request_t* request) override;
+        rsptype_t           handleRequest   (request_t* request) override;
 
         void                returnResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
         void                streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);

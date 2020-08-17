@@ -51,6 +51,7 @@ class HttpServer: public LuaObject
         static const int INITIAL_POLL_SIZE      = 16;
         static const int IP_ADDR_STR_SIZE       = 64;
         static const int MAX_NUM_CONNECTIONS    = 256;
+        static const int STREAM_OVERHEAD_SIZE   = 128; // chunk size, record size, and line breaks
 
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
@@ -78,10 +79,15 @@ class HttpServer: public LuaObject
         typedef struct {
             int                         header_index;
             bool                        header_complete;
+            bool                        header_sent;
             Subscriber::msgRef_t        ref;
             int                         ref_status;
             int                         ref_index;
             Subscriber*                 rspq;
+            uint8_t*                    stream_buf;
+            int                         stream_buf_index;
+            int                         stream_buf_size; 
+            int                         stream_mem_size;
         } state_t;
 
         typedef struct {
