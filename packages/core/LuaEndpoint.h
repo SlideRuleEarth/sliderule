@@ -25,6 +25,7 @@
  ******************************************************************************/
 
 #include "EndpointObject.h"
+#include "OsApi.h"
 #include "StringLib.h"
 #include "Dictionary.h"
 #include "MsgQ.h"
@@ -66,15 +67,24 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    LuaEndpoint     (lua_State* L);
-        virtual     ~LuaEndpoint    (void);
+                            LuaEndpoint     (lua_State* L);
+        virtual             ~LuaEndpoint    (void);
 
-        code_t      handleRequest   (const char* id, const char* url, verb_t verb, Dictionary<const char*>& headers, const char* body, EndpointObject* self) override;
+        static void*        requestThread   (void* parm);
 
-        code_t      returnResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
-        code_t      streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
+        void                handleRequest   (request_t* request) override;
 
-        static const char* sanitize (const char* filename);
+        void                returnResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
+        void                streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
+
+        static const char*  sanitize        (const char* filename);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        Mutex               pidMut;
+        Dictionary<Thread*> pidTable;
 };
 
 #endif  /* __lua_endpoint__ */

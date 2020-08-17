@@ -81,6 +81,7 @@ class LuaObject
 
         const char*         getType             (void);
         const char*         getName             (void);
+        uint32_t            getTraceId          (void);
 
         static int          getLuaNumParms      (lua_State* L);
         static long         getLuaInteger       (lua_State* L, int parm, bool optional=false, long dfltval=0, bool* provided=NULL);

@@ -76,27 +76,18 @@ class HttpServer: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            Dictionary<const char*>*    headers; // parsed request headers
-            EndpointObject::verb_t      verb;
-            const char*                 url;
-            const char*                 body;
-            int                         index;
+            int                         header_index;
             bool                        header_complete;
-            long                        content_length;
-        } request_t;
-
-        typedef struct {
-            Subscriber*                 rspq;
-            bool                        complete;
+            bool                        response_complete;
             Subscriber::msgRef_t        ref;
-            int                         index;
-        } response_t;
+            int                         ref_index;
+            Subscriber*                 rspq;
+        } state_t;
 
         typedef struct {
-            const char*                 id;
             SafeString                  message; // raw request
-            request_t                   request;
-            response_t                  response;
+            EndpointObject::request_t   request;
+            state_t                     state;
         } connection_t;
 
         /*--------------------------------------------------------------------

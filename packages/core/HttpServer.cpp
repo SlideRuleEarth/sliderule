@@ -282,20 +282,20 @@ int HttpServer::onRead(int fd)
         connection->message += msg_buf;
 
         /* Look Through Existing Header Received */
-        while(!connection->request.header_complete && (connection->request.index < (connection->message.getLength() - 4)))
+        while(!connection->state.header_complete && (connection->state.header_index < (connection->message.getLength() - 4)))
         {
             /* Look For \r\n\r\n Separation */ 
-            if( (connection->message[connection->request.index + 0] == '\r') && 
-                (connection->message[connection->request.index + 1] == '\n') &&
-                (connection->message[connection->request.index + 2] == '\r') &&
-                (connection->message[connection->request.index + 3] == '\n') )
+            if( (connection->message[connection->state.header_index + 0] == '\r') && 
+                (connection->message[connection->state.header_index + 1] == '\n') &&
+                (connection->message[connection->state.header_index + 2] == '\r') &&
+                (connection->message[connection->state.header_index + 3] == '\n') )
             {
                 /* Parse Request */    
-                connection->message.setChar('\0', connection->request.index);
+                connection->message.setChar('\0', connection->state.header_index);
                 List<SafeString>* header_list = connection->message.split('\r');
-                connection->message.setChar('\r', connection->request.index);
-                connection->request.header_complete = true;
-                connection->request.index += 4; // moves request.index to start of body
+                connection->message.setChar('\r', connection->state.header_index);
+                connection->state.header_complete = true;
+                connection->state.header_index += 4; // moves state.header_index to start of body
 
                 /* Parse Request Line */
                 try
@@ -334,7 +334,7 @@ int HttpServer::onRead(int fd)
                 /* Get Content Length */
                 try
                 {
-                    if(!StringLib::str2long(connection->request.headers->get("Content-Length"), &connection->request.content_length))
+                    if(!StringLib::str2long(connection->request.headers->get("Content-Length"), &connection->request.body_length))
                     {
                         mlog(CRITICAL, "Invalid Content-Length header: %s\n", connection->request.headers->get("Content-Length"));
                         status = INVALID_RC; // will close socket
@@ -349,18 +349,18 @@ int HttpServer::onRead(int fd)
             else
             {
                 /* Go to Next Character in Header */
-                connection->request.index++;
+                connection->state.header_index++;
             }
         }
 
         /* Check If Body Complete */
-        if(connection->request.content_length > 0)
+        if(connection->request.body_length > 0)
         {
-            if((connection->message.getLength() - connection->request.index) >= connection->request.content_length)
+            if((connection->message.getLength() - connection->state.header_index) >= connection->request.body_length)
             {
                 /* Get Message Body */
                 const char* raw_message = connection->message.getString();
-                connection->request.body = &raw_message[connection->request.index];
+                connection->request.body = &raw_message[connection->state.header_index];
 
                 /* Get Endpoint and New URL */
                 char* endpoint = NULL;
@@ -371,8 +371,8 @@ int HttpServer::onRead(int fd)
                     try
                     {
                         /* Get Attached Endpoint Object --> Handle Request */
-                        EndpointObject* endpoint_obj = routeTable[endpoint];
-                        endpoint_obj->handleRequest(connection->id, new_url, connection->request.verb, *(connection->request.headers), connection->request.body, endpoint_obj);
+                        connection->request.endpoint = routeTable[endpoint];
+                        connection->request.endpoint->handleRequest(&connection->request);
                     }
                     catch(const std::out_of_range& e)
                     {
@@ -405,14 +405,14 @@ int HttpServer::onWrite(int fd)
     connection_t* connection = connections[fd];
 
     /* Send Data */
-    if(connection->response.index < connection->response.ref.size)
+    if(connection->state.ref_index < connection->state.ref.size)
     {
-        int bytes_left = connection->response.ref.size - connection->response.index;
-        uint8_t* buffer = (uint8_t*)connection->response.ref.data;
-        int bytes = SockLib::socksend(fd, &buffer[connection->response.index], bytes_left, IO_CHECK);
+        int bytes_left = connection->state.ref.size - connection->state.ref_index;
+        uint8_t* buffer = (uint8_t*)connection->state.ref.data;
+        int bytes = SockLib::socksend(fd, &buffer[connection->state.ref_index], bytes_left, IO_CHECK);
         if(bytes > 0)
         {
-            connection->response.index += bytes;
+            connection->state.ref_index += bytes;
         }
         else
         {
@@ -422,13 +422,13 @@ int HttpServer::onWrite(int fd)
     }
 
     /* Check if Done with Current Reference */
-    if(connection->response.index == connection->response.ref.size)
+    if(connection->state.ref_index == connection->state.ref.size)
     {
-        connection->response.rspq->dereference(connection->response.ref);
-        connection->response.ref.size = 0;
+        connection->state.rspq->dereference(connection->state.ref);
+        connection->state.ref.size = 0;
 
         /* Check if Done with Entire Response */
-        if(connection->response.complete)
+        if(connection->state.response_complete)
         {
             status = INVALID_RC; // will close socket
         }
@@ -446,16 +446,16 @@ int HttpServer::onAlive(int fd)
 {
     connection_t* connection = connections[fd];
 
-    if(connection->response.ref.size == 0)
+    if(connection->state.ref.size == 0)
     {
-        connection->response.index = 0;
-        int status = connection->response.rspq->receiveRef(connection->response.ref, IO_CHECK);
+        connection->state.ref_index = 0;
+        int status = connection->state.rspq->receiveRef(connection->state.ref, IO_CHECK);
         if(status > 0)
         {
             /* Mark Response Complete */
-            if(connection->response.ref.size == 0)
+            if(connection->state.ref.size == 0)
             {
-                connection->response.complete = true;
+                connection->state.response_complete = true;
             }
 
             /* Mark Ready to Write */
@@ -477,20 +477,19 @@ int HttpServer::onConnect(int fd)
 
     /* Create and Initialize New Request */
     connection_t* connection = new connection_t;
-    connection->id = NULL;
-    LocalLib::set(&connection->request, 0, sizeof(request_t));
-    LocalLib::set(&connection->response, 0, sizeof(response_t));
+    LocalLib::set(&connection->request, 0, sizeof(EndpointObject::request_t));
+    LocalLib::set(&connection->state, 0, sizeof(state_t));
 
     /* Register Connection */
     if(connections.add(fd, connection, true))
     {
-        connection->id = getUniqueId(); // id is allocated
+        connection->request.id = getUniqueId(); // id is allocated
         connection->request.headers = new Dictionary<const char*>();
-        connection->response.rspq = new Subscriber(connection->id);
+        connection->state.rspq = new Subscriber(connection->request.id);
     }
     else
     {
-        mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry\n", connection->id);
+        mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry\n", connection->request.id);
         status = INVALID_RC;
     }
 
@@ -520,16 +519,16 @@ int HttpServer::onDisconnect(int fd)
         }
 
         /* Free Rest of Allocated Connection Members */
-        delete connection->id; 
+        delete connection->request.id; 
         delete connection->request.headers;
-        delete connection->response.rspq;
+        delete connection->state.rspq;
 
         /* Free Connection */
         delete connection;
     }
     else
     {
-        mlog(CRITICAL, "HTTP server at %s failed to release connection\n", connection->id);
+        mlog(CRITICAL, "HTTP server at %s failed to release connection\n", connection->request.id);
         status = -1;
     }
 

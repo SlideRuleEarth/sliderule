@@ -78,33 +78,31 @@ LuaEndpoint::~LuaEndpoint(void)
 }
 
 /*----------------------------------------------------------------------------
- * handleRequest
+ * requestThread
  *----------------------------------------------------------------------------*/
-LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url, verb_t verb, Dictionary<const char*>& headers, const char* body, EndpointObject* self)
+void* LuaEndpoint::requestThread (void* parm)
 {
-    (void)headers;
-
-    LuaEndpoint* endpoint = (LuaEndpoint*)self;
+    request_t* request = (request_t*)parm;
+    LuaEndpoint* lua_endpoint = (LuaEndpoint*)request->endpoint;
 
     /* Get Request Script */
-    const char* script_pathname = sanitize(url);
+    const char* script_pathname = sanitize(request->url);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(endpoint->traceId, "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", id, verb2str(verb), url);
+    uint32_t trace_id = start_trace_ext(lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
-    mlog(INFO, "%s request at %s with %s\n", verb2str(verb), id, script_pathname);
+    mlog(INFO, "%s request at %s with %s\n", verb2str(request->verb), request->id, script_pathname);
 
     /* Create Publisher */
-    Publisher* rspq = new Publisher(id);
+    Publisher* rspq = new Publisher(request->id);
 
     /* Dispatch Handle Request */
-    code_t status;
-    switch(verb)
+    switch(request->verb)
     {
-        case GET:   status = endpoint->returnResponse(script_pathname, body, rspq, trace_id); break;
-        case POST:  status = endpoint->streamResponse(script_pathname, body, rspq, trace_id); break;
-        default:    status = Not_Found; break;
+        case GET:   lua_endpoint->returnResponse(script_pathname, request->body, rspq, trace_id); break;
+        case POST:  lua_endpoint->streamResponse(script_pathname, request->body, rspq, trace_id); break;
+        default:    break;
     }
 
     /* Clean Up */
@@ -114,18 +112,37 @@ LuaEndpoint::code_t LuaEndpoint::handleRequest (const char* id ,const char* url,
     /* Stop Trace */
     stop_trace(trace_id);
 
-    /* Return Status Code */
-    return status;
+    /* Remove from Pid Table */
+    lua_endpoint->pidMut.lock();
+    {
+        lua_endpoint->pidTable.remove(request->id);
+    }
+    lua_endpoint->pidMut.unlock();
+
+    /* Return */
+    return NULL;
 }
 
+/*----------------------------------------------------------------------------
+ * handleRequest
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::handleRequest (request_t* request)
+{
+    LuaEndpoint* lua_endpoint = (LuaEndpoint*)request->endpoint;
+    Thread* pid = new Thread(requestThread, request, false); // detached
+    lua_endpoint->pidMut.lock();
+    {
+        lua_endpoint->pidTable.add(request->id, pid);
+    }
+    lua_endpoint->pidMut.unlock();
+}
 
 /*----------------------------------------------------------------------------
  * returnResponse
  *----------------------------------------------------------------------------*/
-EndpointObject::code_t LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
+void LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
-    code_t status_code;
 
     /* Launch Engine */
     LuaEngine* engine = new LuaEngine(rspq->getName(), scriptpath, body, trace_id, NULL, true);
@@ -137,47 +154,39 @@ EndpointObject::code_t LuaEndpoint::returnResponse (const char* scriptpath, cons
         const char* result = engine->getResult();
         if(result)
         {
-            status_code = OK;
             int result_length = StringLib::size(result);
-            int header_length = buildheader(header, status_code, "text/plain", result_length, NULL, ServerHeader.getString());
+            int header_length = buildheader(header, OK, "text/plain", result_length, NULL, ServerHeader.getString());
             rspq->postCopy(header, header_length);
             rspq->postCopy(result, result_length);
         }
         else
         {
-            status_code = Not_Found;
-            int header_length = buildheader(header, status_code);
+            int header_length = buildheader(header, Not_Found);
             rspq->postCopy(header, header_length);
         }
     }
     else
     {
-        status_code = Request_Timeout;
-        int header_length = buildheader(header, status_code);
+        int header_length = buildheader(header, Request_Timeout);
         rspq->postCopy(header, header_length);
     }
 
     /* End Response */
     rspq->postCopy("", 0);
-    
+
     /* Clean Up */
     delete engine;
-
-    /* Return Status Code */
-    return status_code;
 }
 
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-EndpointObject::code_t LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
+void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
-    code_t status_code;
 
     /* Send Header */
-    status_code = OK;
-    int header_length = buildheader(header, status_code, "application/octet-stream", 0, "chunked", ServerHeader.getString());
+    int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", ServerHeader.getString());
     rspq->postCopy(header, header_length);
 
     /* Create Engine */
@@ -193,13 +202,10 @@ EndpointObject::code_t LuaEndpoint::streamResponse (const char* scriptpath, cons
 
     /* End Response */
     // HOW TO KNOW WHEN TO END...
-//    rspq->postCopy(RESPONSE_END, RESPONSE_END_SIZE);
+//    rspq->postCopy("", 0);
 
     /* Clean Up */
     delete engine;
-
-    /* Return Status Code */
-    return status_code;
 }
 
 /*----------------------------------------------------------------------------

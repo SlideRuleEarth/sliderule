@@ -42,9 +42,6 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int MAX_HDR_SIZE = MAX_STR_SIZE;
-        static const int RESPONSE_END_SIZE = 4;
-
-        static const char* RESPONSE_END;
         static const char* OBJECT_TYPE;
 
         /*--------------------------------------------------------------------
@@ -72,6 +69,16 @@ class EndpointObject: public LuaObject
             Method_Not_Implemented = 501
         } code_t;
 
+        typedef struct {
+            const char*                 id; // must be unique
+            const char*                 url;
+            verb_t                      verb;
+            Dictionary<const char*>*    headers;
+            const char*                 body;
+            long                        body_length;
+            EndpointObject*             endpoint;
+        } request_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -85,7 +92,7 @@ class EndpointObject: public LuaObject
         static const char*  code2str            (code_t code);
         static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL, const char* server=NULL);
 
-        virtual code_t      handleRequest       (const char* id, const char* url, verb_t verb, Dictionary<const char*>& headers, const char* body, EndpointObject* self) = 0;
+        virtual void        handleRequest       (request_t* request) = 0;
 };
 
 #endif  /* __endpoint_object__ */
