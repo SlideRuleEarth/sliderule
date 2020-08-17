@@ -255,9 +255,9 @@ int HttpServer::activeHandler(int fd, int flags, void* parm)
 
     int rc = 0;
 
-    if((flags & IO_ALIVE_FLAG)      && (s->onAlive(fd)      < 0))   rc = INVALID_RC;
     if((flags & IO_READ_FLAG)       && (s->onRead(fd)       < 0))   rc = INVALID_RC;
     if((flags & IO_WRITE_FLAG)      && (s->onWrite(fd)      < 0))   rc = INVALID_RC;
+    if((flags & IO_ALIVE_FLAG)      && (s->onAlive(fd)      < 0))   rc = INVALID_RC;
     if((flags & IO_CONNECT_FLAG)    && (s->onConnect(fd)    < 0))   rc = INVALID_RC;
     if((flags & IO_DISCONNECT_FLAG) && (s->onDisconnect(fd) < 0))   rc = INVALID_RC;
 
