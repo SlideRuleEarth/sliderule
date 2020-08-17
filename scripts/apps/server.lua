@@ -45,5 +45,8 @@ elseif __pistache__ then
     server = pistache.server(port, 4)
     server:name("SlideRulePistache")
 else
-    print("Must build either pistache or mongoose package to run server")
+    server = core.httpd(9081)
+    server:name("HttpServer")
+    endpoint = core.endpoint()
+    server:attach(endpoint, "/source")
 end

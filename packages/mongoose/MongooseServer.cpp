@@ -301,15 +301,17 @@ void MongooseServer::serverHandler (struct mg_connection *nc, int ev, void *ev_d
     {
         case MG_EV_HTTP_REQUEST:
         {
-            if(StringLib::find(hm->uri.p, "/engine/") == hm->uri.p)
+            if(StringLib::find(hm->uri.p, "/source/") == hm->uri.p)
             {
-                engineHandler(nc, hm);
+                if(StringLib::find(hm->method.p, "GET"))
+                {
+                    sourceHandler(nc, hm);
+                }
+                else if(StringLib::find(hm->method.p, "POST"))
+                {
+                    engineHandler(nc, hm);
+                }
             }
-            else if(StringLib::find(hm->uri.p, "/source/") == hm->uri.p)
-            {
-                sourceHandler(nc, hm);
-            }
-
             break;
         }
         default: break;

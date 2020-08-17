@@ -168,7 +168,7 @@ def __parse(stream):
                 rec_size_index += bytes_to_append
                 if(rec_size_index >= rec_size_size):
                     raw = b''.join(rec_size_rsps)
-                    rec_size = struct.unpack('i', raw)[0]
+                    rec_size = struct.unpack('<i', raw)[0]
                     rec_size_rsps.clear()
                 i += bytes_to_append
 
@@ -220,7 +220,7 @@ def echo (parm):
 def source (api, parm):
     rqst = json.dumps(parm)
     url  = '%s/source/%s' % (server_url, api)
-    rsps = requests.post(url, data=rqst).json()
+    rsps = requests.get(url, data=rqst).json()
     return rsps
 
 #
@@ -228,7 +228,7 @@ def source (api, parm):
 #
 def engine (api, parm):
     rqst   = json.dumps(parm)
-    url    = '%s/engine/%s' % (server_url, api)
+    url    = '%s/source/%s' % (server_url, api)
     stream = requests.post(url, data=rqst, stream=True)
     rsps = __parse(stream)
     return rsps

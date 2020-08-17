@@ -130,8 +130,8 @@ PistacheServer::PistacheServer(lua_State* L,  Address addr, size_t num_threads):
     /* Set Default Routes */
     Routes::Post(router, "/echo", Routes::bind(&PistacheServer::echoHandler, this));
     Routes::Get(router, "/info", Routes::bind(&PistacheServer::infoHandler, this));
-    Routes::Post(router, "/source/:name", Routes::bind(&PistacheServer::sourceHandler, this));
-    Routes::Post(router, "/engine/:name", Routes::bind(&PistacheServer::engineHandler, this));
+    Routes::Get(router, "/source/:name", Routes::bind(&PistacheServer::sourceHandler, this));
+    Routes::Post(router, "/source/:name", Routes::bind(&PistacheServer::engineHandler, this));
 
     /* Create Server Thread */
     active = true;
