@@ -3,6 +3,15 @@ CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverri
 STAGEDIR = stage
 RUNDIR = /usr/local/etc/sliderule
 
+FULLCFG  = -DENABLE_LTTNG_TRACING=ON
+FULLCFG += -DUSE_LEGACY_PACKAGE=ON
+FULLCFG += -DUSE_H5_PACKAGE=ON
+FULLCFG += -DUSE_AWS_PACKAGE=ON
+FULLCFG += -DUSE_PISTACHE_PACKAGE=ON
+FULLCFG += -DUSE_MONGOOSE_PACKAGE=ON
+FULLCFG += -DUSE_ICESAT2_PLUGIN=ON
+FULLCFG += -DUSE_SIGVIEW_PLUGIN=ON
+
 all: default-build
 
 default-build:
@@ -18,9 +27,9 @@ release-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON ..
 
-offline-config:
+debug-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) ..
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) ..
 
 docker-config:
 	mkdir -p build
@@ -34,15 +43,16 @@ docker-image: distclean docker-config default-build install
 	cp -R scripts/tests $(STAGEDIR)/scripts/tests
 	# build image #
 	cd $(STAGEDIR); docker build -t sliderule-linux:latest .
+	# docker run -it --rm --name=sliderule1 -v /data:/data sliderule-linux /usr/local/scripts/apps/test_runner.lua
 
 scan:
 	mkdir -p build
-	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) ..
+	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) ..
 	cd build; scan-build -o scan-results make
 
 asan:
 	mkdir -p build
-	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON ..
+	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON ..
 	cd build; make
 
 install:

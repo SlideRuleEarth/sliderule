@@ -34,7 +34,6 @@ result = f:read()
 f:close()
 runner.check(result == parm)
 
-
 print('\n------------------\nTest02: Engine\n------------------')
 os.execute(string.format("curl -sS -X POST -d '%s' http://127.0.0.1:9081/source/example_engine_endpoint > %s", json_object, tmpfile))
 f = io.open(tmpfile)
@@ -50,7 +49,7 @@ runner.check(result2 == "P01_01.dat")
 runner.check(result3 == "CCSDS")
 
 print('\n------------------\nTest03: Source\n------------------')
-os.execute(string.format("curl -sS -x GET -d '%s' http://127.0.0.1:9081/source/example_source_endpoint > %s", json_object, tmpfile))
+os.execute(string.format("curl -sS -X GET -d '%s' http://127.0.0.1:9081/source/example_source_endpoint > %s", json_object, tmpfile))
 f = io.open(tmpfile)
 result = f:read()
 f:close()
