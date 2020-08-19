@@ -97,8 +97,6 @@ class LuaEngine
         const char*         getResult       (void);
         okey_t              lockObject      (LuaObject* lua_obj);
         void                releaseObject   (okey_t lock_key);
-        bool                waitOn          (const char* signal_name, int timeout_ms);
-        bool                signal          (const char* signal_name);
 
     private:
 

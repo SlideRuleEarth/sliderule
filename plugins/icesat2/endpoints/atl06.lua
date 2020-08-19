@@ -37,7 +37,7 @@ local resource = rqst["resource"]
 local track = rqst["track"] or icesat2.ALL_TRACKS
 local stages = rqst["stages"]
 local parms = rqst["parms"]
-local timeout = rqst["timeout"] or 100
+local timeout = rqst["timeout"] or core.PEND
 
 -- Post Initial Status Progress --
 sys.log(core.USER, string.format("atl06 processing initiated on %s data...", asset_name))
@@ -58,19 +58,13 @@ atl06_disp:name("atl06_disp")
 atl06_disp:attach(atl06_algo, "atl03rec")
 atl06_disp:run()
 
--- Response Monitor --
-local monitor = msg.subscribe(rspq)
-
 -- ATL03 Reader --
 local resource_url = asset.buildurl(asset_name, resource)
 atl03_reader = icesat2.atl03(resource_url, recq, parms, track)
 atl03_reader:name("atl03_reader")
 
--- Wait for Data to Start --
-local rsprec = monitor:recvrecord(timeout * 1000)
-if not rsprec then
-    sys.log(core.USER, string.format("Failed to generate response record in %s seconds", timeout))
-end
+-- Wait Until Completion --
+atl06_disp:waiton(timeout)
 
 -- Display Stats --
 print("ATL03", json.encode(atl03_reader:stats(true)))

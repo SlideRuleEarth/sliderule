@@ -67,8 +67,6 @@ class LuaLibraryCmd
         static int      lcmd_script         (lua_State* L);
         static int      lcmd_log            (lua_State* L);
         static int      lcmd_type           (lua_State* L);
-        static int      lcmd_waiton         (lua_State* L);
-        static int      lcmd_signal         (lua_State* L);        
         static int      lcmd_stopuntil      (lua_State* L);        
 };
 

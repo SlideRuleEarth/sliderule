@@ -164,5 +164,6 @@ void* DeviceWriter::writerThread (void* parm)
 
     /* Clean Up */
     dw->device->closeConnection();
+    dw->signalComplete();
     return NULL;
 }

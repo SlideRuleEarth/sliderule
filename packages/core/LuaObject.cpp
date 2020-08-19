@@ -232,6 +232,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     uint32_t engine_trace_id = ORIGIN;
 
     isLocked = false;
+    objComplete = false;
 
     if(LuaState)
     {
@@ -355,6 +356,57 @@ int LuaObject::luaLock(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaWaitOn - :waiton([<timeout is milliseconds>])
+ *----------------------------------------------------------------------------*/
+int LuaObject::luaWaitOn(lua_State* L)
+{
+    bool status = false;
+    
+    try
+    {
+        /* Get Self */
+        LuaObject* lua_obj = getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        int timeout = getLuaInteger(L, 2, true, IO_PEND);
+
+        /* Wait On Signal */
+        lua_obj->objSignal.lock();
+        {
+            if(!lua_obj->objComplete)
+            {
+                lua_obj->objSignal.wait(SIGNAL_COMPLETE, timeout);
+            }
+            status = lua_obj->objComplete;
+        }
+        lua_obj->objSignal.unlock();
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error locking object: %s\n", e.errmsg);
+    }
+
+    /* Return Completion Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * associateMetaTable
+ *----------------------------------------------------------------------------*/
+void LuaObject::signalComplete (void)
+{
+    objSignal.lock();
+    {
+        if(!objComplete)
+        {
+            objSignal.signal(SIGNAL_COMPLETE);
+        }
+        objComplete = true;
+    }
+    objSignal.unlock();
+}
+
+/*----------------------------------------------------------------------------
  * associateMetaTable
  *----------------------------------------------------------------------------*/
 void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[])
@@ -369,6 +421,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         /* Add Base Class Functions */
         LuaEngine::setAttrFunc(L, "name", luaAssociate);
         LuaEngine::setAttrFunc(L, "lock", luaLock);
+        LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDelete);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);
     }

@@ -459,6 +459,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         dispatcher->threadsComplete++;
         if(dispatcher->threadsComplete == dispatcher->numThreads)
         {
+            /* Process Termination for each Dispatch */
             dispatch_t dispatch;
             const char* key = dispatcher->dispatchTable.first(&dispatch);
             while(key != NULL)
@@ -472,6 +473,9 @@ void* RecordDispatcher::dispatcherThread(void* parm)
                 }
                 key = dispatcher->dispatchTable.next(&dispatch);
             }
+
+            /* Signal Completion */
+            dispatcher->signalComplete();
         }
     }
     dispatcher->threadMut.unlock();

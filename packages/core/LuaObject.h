@@ -63,6 +63,7 @@ class LuaObject
          *--------------------------------------------------------------------*/
 
         static const char* BASE_OBJECT_TYPE;
+        static const int SIGNAL_COMPLETE = 0;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -109,10 +110,12 @@ class LuaObject
 
                             LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]);
 
+        void                signalComplete      (void);
         static void         associateMetaTable  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
         static int          createLuaObject     (lua_State* L, LuaObject* lua_obj, bool alias=false);
         static LuaObject*   getLuaObject        (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
+        
 
         /*--------------------------------------------------------------------
          * Data
@@ -130,6 +133,7 @@ class LuaObject
         static int          luaDelete           (lua_State* L);
         static int          luaAssociate        (lua_State* L);
         static int          luaLock             (lua_State* L);
+        static int          luaWaitOn           (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -137,6 +141,8 @@ class LuaObject
 
         okey_t              lockKey;
         bool                isLocked;
+        Cond                objSignal;
+        bool                objComplete;
 };
 
 #endif  /* __lua_object__ */

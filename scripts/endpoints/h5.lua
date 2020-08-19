@@ -31,6 +31,6 @@ local id = parm["id"] or 0
 f = h5.dataset(core.READER, asset.buildurl(asset_name, resource), dataset, id, false, datatype)
 r = core.reader(f, rspq)
 
-sys.wait(1) -- ensures rspq contains data before returning (TODO: optimize out)
+r:waiton() -- waits until reader completes
 
 return

@@ -43,8 +43,6 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"log",         LuaLibrarySys::lsys_log},
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"type",        LuaLibrarySys::lsys_type},
-    {"waiton",      LuaLibrarySys::lsys_waiton},
-    {"signal",      LuaLibrarySys::lsys_signal},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"lsdev",       DeviceObject::luaList},
     {NULL,          NULL}
@@ -245,66 +243,6 @@ int LuaLibrarySys::lsys_type (lua_State* L)
 
     /* Return Status to Lua */
     lua_pushstring(L, obj_type); /* push object type */
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_waiton
- *
- *   Note that this returns true/false even though there is a timeout.  The reason is
- *   that there is no error other than a timeout, so timeout and false are synonymous
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_waiton (lua_State* L)
-{
-    bool status = false;
-
-    /* Get String to Post */
-    const char* signal_name = lua_tostring(L, 1);  /* get argument 1 */
-    const int timeout_ms = (int)lua_tonumber(L, 2); /* get argument 2 */
-
-    /* Get Lua Engine Object */
-    lua_pushstring(L, LuaEngine::LUA_SELFKEY);
-    lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
-    if(li)
-    {
-        status = li->waitOn(signal_name, timeout_ms);
-    }
-    else
-    {
-        mlog(ERROR, "Unable to locate lua engine object\n");
-    }
-
-    /* Return Status to Lua */
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_signal
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_signal (lua_State* L)
-{
-    bool status = false;
-
-    /* Get String to Post */
-    const char* signal_name = lua_tostring(L, 1);  /* get argument 1 */
-
-    /* Get Lua Engine Object */
-    lua_pushstring(L, LuaEngine::LUA_SELFKEY);
-    lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
-    if(li)
-    {
-        status = li->signal(signal_name);
-    }
-    else
-    {
-        mlog(ERROR, "Unable to locate lua engine object\n");
-    }
-
-    /* Return Status to Lua */
-    lua_pushboolean(L, status);
     return 1;
 }
 

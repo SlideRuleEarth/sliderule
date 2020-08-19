@@ -111,6 +111,8 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FIFO",                 File::FIFO);
     LuaEngine::setAttrInt   (L, "FLUSHED",              File::FLUSHED);
     LuaEngine::setAttrInt   (L, "CACHED",               File::CACHED);
+    LuaEngine::setAttrInt   (L, "PEND",                 IO_PEND);
+    LuaEngine::setAttrInt   (L, "CHECK",                IO_CHECK);
 
     return 1;
 }

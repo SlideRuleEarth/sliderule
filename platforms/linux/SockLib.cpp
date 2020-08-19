@@ -422,7 +422,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
             /* Poll On All Connections */
             int activity = 0;
-            do activity = poll(polllist, num_sockets, SYS_TIMEOUT);
+            do activity = poll(polllist, num_sockets, 100); // 10Hz
             while(activity == -1 && (errno == EINTR || errno == EAGAIN));
 
             /* Handle Existing Connections  */

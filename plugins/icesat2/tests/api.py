@@ -12,17 +12,6 @@ h5file = "ATL03_20181014040628_02370109_002_01.h5"
 ###############################################################################
 
 #
-#  TEST ECHO
-#
-def test_echo ():
-    d = sliderule.echo('{ "hello" : "world" }')
-    d = json.loads(d) # not sure why this is needed when sliderule.echo should return table
-    if d["hello"] == "world":
-        print("Passed echo test")
-    else:
-        print("Failed echo test")
-
-#
 #  TEST TIME
 #
 def test_time ():
@@ -135,7 +124,6 @@ if __name__ == '__main__':
 
     # Tests
 
-    # test_echo()
     test_time()
     test_h5()
     test_variable_length()

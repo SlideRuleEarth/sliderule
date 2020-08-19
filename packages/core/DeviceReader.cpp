@@ -146,5 +146,6 @@ void* DeviceReader::readerThread (void* parm)
     /* Clean Up */
     delete [] buf;
     dr->device->closeConnection();
+    dr->signalComplete();
     return NULL;
 }
