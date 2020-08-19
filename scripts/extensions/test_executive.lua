@@ -107,9 +107,9 @@ local function script (script_str, parms)
     local testname = script_str:match("([^/]+)$")
     local numparms = 0
     set_context(testname)
-    print("\n--------------------------------------------")
+    print("\n############################################")
     print("Running Test Script: " .. testname)
-    print("--------------------------------------------\n")
+    print("##############################################\n")
     if parms then
         for k,v in pairs(parms) do
             arg[k] = v
@@ -185,7 +185,7 @@ local function report ()
             set_context(testname)
             total_asserts = total_asserts + results[context]["asserts"]
             total_errors = total_errors + results[context]["errors"]
-            print("\n---------------------------------")
+            print("\n*********************************")
             for i = 0, (results[context]["errors"]-1) do
                 print("FAIL: " .. results[context]["messages"][i])
             end

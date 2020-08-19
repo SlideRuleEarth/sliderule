@@ -32,6 +32,7 @@ Dictionary<RecordDispatcher::calcFunc_t> RecordDispatcher::keyCalcFunctions;
 
 const char* RecordDispatcher::LuaMetaName = "RecordDispatcher";
 const struct luaL_Reg RecordDispatcher::LuaMetaTable[] = {
+    {"run",         luaRun},
     {"attach",      luaAttachDispatch},
     {"clear",       luaClearError},
     {"drain",       luaDrain},
