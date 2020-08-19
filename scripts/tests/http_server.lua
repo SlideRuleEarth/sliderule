@@ -47,6 +47,7 @@ runner.check(result == "{ \"result\": \"Hello World\" }")
 
 -- Clean Up --
 
+server:destroy()
 os.remove(tmpfile)
 
 -- Report Results --
