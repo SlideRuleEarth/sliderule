@@ -168,7 +168,10 @@ void* CcsdsMsgProcessor::processorThread(void* parm)
         }
         else if(status > 0)
         {
-            success = processor->processMsg((unsigned char*)ref.data, ref.size);
+            if(ref.size > 0)
+            {
+                success = processor->processMsg((unsigned char*)ref.data, ref.size);
+            }
             processor->inQ->dereference(ref);
         }
 

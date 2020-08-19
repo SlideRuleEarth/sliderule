@@ -456,27 +456,36 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
         recclass = (const char*)lua_tostring(L, 3);
     }
 
+    bool terminator = false;
+
     Subscriber::msgRef_t ref;
     int status = msg_data->sub->receiveRef(ref, timeoutms);
     if(status > 0)
     {
         /* Create record */
         RecordObject* record = NULL;
-        try
+        if(ref.size > 0)
         {
-            if(recclass)
+            try
             {
-                recClass_t rec_class = typeTable[recclass];
-                record = rec_class.associate((unsigned char*)ref.data, ref.size);
+                if(recclass)
+                {
+                    recClass_t rec_class = typeTable[recclass];
+                    record = rec_class.associate((unsigned char*)ref.data, ref.size);
+                }
+                else
+                {
+                    record = new RecordObject((unsigned char*)ref.data, ref.size);
+                }
             }
-            else
+            catch (const InvalidRecordException& e)
             {
-                record = new RecordObject((unsigned char*)ref.data, ref.size);
+                mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
             }
         }
-        catch (const InvalidRecordException& e)
+        else
         {
-            mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
+            terminator = true;
         }
 
         /* Free Reference */
@@ -490,21 +499,22 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
             rec_data->rec = record;
             luaL_getmetatable(L, LUA_RECMETANAME);
             lua_setmetatable(L, -2); // associates the record meta table with the record user data
-            return 1;
         }
         else
         {
             mlog(WARNING, "Unable to create record object: %s\n", recclass);
+            lua_pushnil(L); // for record
         }
     }
     else if(status != MsgQ::STATE_TIMEOUT)
     {
         mlog(CRITICAL, "Failed (%d) to receive record on message queue %s", status, msg_data->sub->getName());
+        lua_pushnil(L); // for record
     }
 
     /* Failed to receive record */
-    lua_pushnil(L);
-    return 1;
+    lua_pushboolean(L, terminator);
+    return 2;
 }
 
 /*----------------------------------------------------------------------------

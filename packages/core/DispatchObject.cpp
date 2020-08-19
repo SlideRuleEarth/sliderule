@@ -54,3 +54,11 @@ bool DispatchObject::processTimeout (void)
 {
     return true;
 }
+
+/*----------------------------------------------------------------------------
+ * processTermination
+ *----------------------------------------------------------------------------*/
+bool DispatchObject::processTermination (void)
+{
+    return true;
+}

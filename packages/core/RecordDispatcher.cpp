@@ -146,6 +146,7 @@ RecordDispatcher::RecordDispatcher(lua_State* L, const char* inputq_name, keyMod
     keyField        = StringLib::duplicate(key_field);
     keyFunc         = key_func;
     numThreads      = num_threads;
+    threadsComplete = 0;
     recError        = false;
 
     /* Create Subscriber */
@@ -161,9 +162,15 @@ RecordDispatcher::RecordDispatcher(lua_State* L, const char* inputq_name, keyMod
  *----------------------------------------------------------------------------*/
 RecordDispatcher::~RecordDispatcher(void)
 {
-    stopThreads();
+    dispatcherActive = false;
+    for(int i = 0; i < numThreads; i++)
+    {
+        if (threadPool[i]) delete threadPool[i];
+    }
     delete [] threadPool;
+    
     delete inQ;
+    
     if (keyField) delete [] keyField;
 
     dispatch_t dispatch;
@@ -188,6 +195,37 @@ RecordObject* RecordDispatcher::createRecord (unsigned char* buffer, int size)
 }
 
 /*----------------------------------------------------------------------------
+ * luaRun - :run()
+ *----------------------------------------------------------------------------*/
+int RecordDispatcher::luaRun(lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
+
+        /* Start Threads */
+        lua_obj->dispatcherActive = true;
+        for(int i = 0; i < lua_obj->numThreads; i++)
+        {
+            lua_obj->threadPool[i] = new Thread(dispatcherThread, lua_obj);
+        }
+        
+        /* Set Success */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error starting dispatcher: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
  * luaAttachDispatch - :attach(<dispatch object>, [<record type name 1>, ..., <record type name N]>)
  *----------------------------------------------------------------------------*/
 int RecordDispatcher::luaAttachDispatch(lua_State* L)
@@ -203,8 +241,11 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         int             num_parms   = getLuaNumParms(L);
         DispatchObject* dispatch    = (DispatchObject*)getLuaObject(L, 2, DispatchObject::OBJECT_TYPE);
 
-        /* Stop Worker Threads */
-        lua_obj->stopThreads();
+        /* Check if Active */
+        if(lua_obj->dispatcherActive)
+        {
+            throw LuaException("Cannot attach to a running dispatcher");
+        }
 
         /* Attach Dispatches */
         for(int p = 3; p <= num_parms; p++)
@@ -226,7 +267,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     {
                         if(old_dispatch.list[d] == dispatch)
                         {
-                            throw LuaException("dispatch already attached to %s", rec_type_str);
+                            throw LuaException("Dispatch already attached to %s", rec_type_str);
                         }
                     }
 
@@ -262,9 +303,6 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
 
         /* Add Dispatch to List */
         lua_obj->dispatchList.add(dispatch);
-
-        /* Start Worker Threads */
-        lua_obj->startThreads();
 
         /* Set Success */
         status = true;
@@ -337,31 +375,11 @@ int RecordDispatcher::luaDrain (lua_State* L)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * startThreads
- *----------------------------------------------------------------------------*/
-void RecordDispatcher::startThreads (void)
-{
-    dispatcherActive = true;
-    for(int i = 0; i < numThreads; i++) threadPool[i] = new Thread(dispatcherThread, this);
-}
-
-/*----------------------------------------------------------------------------
- * stopThreads
- *----------------------------------------------------------------------------*/
-void RecordDispatcher::stopThreads(void)
-{
-    dispatcherActive = false;
-    for(int i = 0; i < numThreads; i++) if (threadPool[i]) delete threadPool[i];
-}
-
-/*----------------------------------------------------------------------------
  * dispatcherThread
  *----------------------------------------------------------------------------*/
 void* RecordDispatcher::dispatcherThread(void* parm)
 {
     RecordDispatcher* dispatcher = (RecordDispatcher*)parm;
-
-    bool self_delete = false;
 
     /* Loop Forever */
     while(dispatcher->dispatcherActive)
@@ -375,32 +393,42 @@ void* RecordDispatcher::dispatcherThread(void* parm)
             int len = ref.size;
 
             /* Dispatch Record */
-            try
+            if(len > 0)
             {
-                RecordObject* record = dispatcher->createRecord(msg, len);
-                dispatcher->dispatchRecord(record);
-                delete record;
-            }
-            catch (const InvalidRecordException& e)
-            {
-                if(!dispatcher->recError)
+                try
                 {
-                    int num_newlines = len / 16 + 3;
-                    char* msg_str = new char[len * 2 + num_newlines + 1];
-                    mlog(CRITICAL, "%s unable to create record from message: %s\n", dispatcher->ObjectType, e.what());
-                    int msg_index = 0;
-                    for(int i = 0; i < len; i++)
-                    {
-                        sprintf(&msg_str[msg_index], "%02X", msg[i]);
-                        msg_index += 2;
-                        if(i % 16 == 15) msg_str[msg_index++] = '\n';
-                    }
-                    msg_str[msg_index++] = '\n';
-                    msg_str[msg_index++] = '\0';
-                    mlog(INFO, "%s", msg_str);
-                    delete [] msg_str;
+                    /* Create & Dispatch Record */
+                    RecordObject* record = dispatcher->createRecord(msg, len);
+                    dispatcher->dispatchRecord(record);
+                    delete record;
                 }
-                dispatcher->recError = true;
+                catch (const InvalidRecordException& e)
+                {
+                    if(!dispatcher->recError)
+                    {
+                        int num_newlines = len / 16 + 3;
+                        char* msg_str = new char[len * 2 + num_newlines + 1];
+                        mlog(CRITICAL, "%s unable to create record from message: %s\n", dispatcher->ObjectType, e.what());
+                        int msg_index = 0;
+                        for(int i = 0; i < len; i++)
+                        {
+                            sprintf(&msg_str[msg_index], "%02X", msg[i]);
+                            msg_index += 2;
+                            if(i % 16 == 15) msg_str[msg_index++] = '\n';
+                        }
+                        msg_str[msg_index++] = '\n';
+                        msg_str[msg_index++] = '\0';
+                        mlog(INFO, "%s", msg_str);
+                        delete [] msg_str;
+                    }
+                    dispatcher->recError = true;
+                }
+            }
+            else
+            {
+                /* Terminating Message */
+                mlog(INFO, "Terminator received on %s, exiting dispatcher\n", dispatcher->inQ->getName());
+                dispatcher->dispatcherActive = false; // breaks out of loop
             }
 
             /* Dereference Message */
@@ -419,17 +447,33 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         else
         {
             /* Break Out on Failure */
-            mlog(CRITICAL, "Failed queue receive in %s with error %d\n", dispatcher->ObjectType, recv_status);
+            mlog(CRITICAL, "Failed queue receive on %s with error %d\n", dispatcher->inQ->getName(), recv_status);
             dispatcher->dispatcherActive = false; // breaks out of loop
-            self_delete = true;
         }
     }
 
-    /* Check Status */
-    if (self_delete)
+    /* Handle Termination */
+    dispatcher->threadMut.lock();
     {
-        mlog(CRITICAL, "Fatal error detected in %s, exiting processor\n", dispatcher->ObjectType);
+        dispatcher->threadsComplete++;
+        if(dispatcher->threadsComplete == dispatcher->numThreads)
+        {
+            dispatch_t dispatch;
+            const char* key = dispatcher->dispatchTable.first(&dispatch);
+            while(key != NULL)
+            {
+                for(int d = 0; d < dispatch.size; d++)
+                {
+                    if(!dispatch.list[d]->processTermination())
+                    {
+                        mlog(ERROR, "Failed to process termination on %s for %s\n", key, dispatch.list[d]->getName());
+                    }
+                }
+                key = dispatcher->dispatchTable.next(&dispatch);
+            }
+        }
     }
+    dispatcher->threadMut.unlock();
 
     return NULL;
 }

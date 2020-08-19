@@ -56,6 +56,7 @@ end
 atl06_disp = core.dispatcher(recq)
 atl06_disp:name("atl06_disp")
 atl06_disp:attach(atl06_algo, "atl03rec")
+atl06_disp:run()
 
 -- Response Monitor --
 local monitor = msg.subscribe(rspq)

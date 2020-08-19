@@ -140,10 +140,12 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
 
     /* Initialize Readers */
     LocalLib::set(readerPid, 0, sizeof(readerPid));
+    numComplete = 0;
 
     /* Read ATL03 Data */
     if(track == ALL_TRACKS)
     {
+        threadCount = NUM_TRACKS;
         /* Create Readers */
         for(int t = 0; t < NUM_TRACKS; t++)
         {
@@ -157,6 +159,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
     else if(track >= 1 && track <= 3)
     {
         /* Execute Reader */
+        threadCount = 1;
         info_t* info = new info_t;
         info->reader = this;
         info->url = StringLib::duplicate(url);
@@ -419,9 +422,21 @@ void* Atl03Reader::readerThread (void* parm)
         mlog(CRITICAL, "Unable to process resource %s: %s\n", url, e.what());
     }
 
+    /* Count Completion */
+    reader->threadMut.lock();
+    {
+        reader->numComplete++;
+        if(reader->numComplete == reader->threadCount)
+        {
+            /* Indicate End of Data */
+            reader->outQ->postCopy("", 0);
+        }
+    }
+    reader->threadMut.unlock();
+
     /* Clean Up Info */
     delete [] info->url;
-    delete [] info;
+    delete [] info;    
 
     /* Stop Trace */
     stop_trace(trace_id);

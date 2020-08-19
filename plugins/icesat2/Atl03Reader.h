@@ -125,6 +125,9 @@ class Atl03Reader: public LuaObject
 
         bool                    active;
         Thread*                 readerPid[NUM_TRACKS];
+        Mutex                   threadMut;
+        int                     threadCount;
+        int                     numComplete;
         Publisher*              outQ;
         atl06_parms_t           parms;
         stats_t                 stats;

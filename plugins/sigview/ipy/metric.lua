@@ -160,6 +160,16 @@ local function createLimits (limittable)
 end
 
 --------------------------------------------------------------------------------------
+-- runDispatchers  -
+--------------------------------------------------------------------------------------
+local function runDispatchers ()
+
+    if baseDispatcher then baseDispatcher:run() end
+    if ccsdsDispatcher then ccsdsDispatcher:run() end
+    if reportDispatcher then reportDispatcher:run() end
+
+
+--------------------------------------------------------------------------------------
 -- Return Local Package
 --------------------------------------------------------------------------------------
 local package = {
@@ -168,7 +178,8 @@ local package = {
     metricq = metricq,
     threads = threads,
     createMetrics = createMetrics,
-    createLimits = createLimits
+    createLimits = createLimits,
+    runDispatchers = runDispatchers
 }
 
 return package

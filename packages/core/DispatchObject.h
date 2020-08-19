@@ -46,8 +46,9 @@ class DispatchObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual bool processRecord  (RecordObject* record, okey_t key) = 0;
-        virtual bool processTimeout (void);
+        virtual bool processRecord      (RecordObject* record, okey_t key) = 0;
+        virtual bool processTimeout     (void);
+        virtual bool processTermination (void);
 
     protected:
 

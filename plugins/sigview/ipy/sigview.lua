@@ -90,6 +90,9 @@ if rectable["limit"] then
     metric.createLimits(rectable["limit"])
 end
 
+-- Run Metrics --
+metric.runDispatchers()
+
 -- Establish Data Source --
 local source = clp(rectable["source"])
 if source == nil then

@@ -305,8 +305,15 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
         if(status == MsgQ::STATE_OKAY)
         {
             uint32_t size = ref.size;
-            stream.write((const char*)&size, sizeof(size));
-            stream.write((const char*)ref.data, ref.size);
+            if(size > 0)
+            {
+                stream.write((const char*)&size, sizeof(size));
+                stream.write((const char*)ref.data, ref.size);
+            }
+            else
+            {
+                stream.ends();
+            }
         }
         else if(status == MsgQ::STATE_TIMEOUT)
         {
@@ -318,7 +325,6 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
             break;
         }
     }
-    stream.ends();
 
     /* Clean Up */
     delete engine;

@@ -23,6 +23,7 @@ r = core.dispatcher("dispatcher_inputq")
 r:name("dispatcher")
 r:attach(idmetric, "test.rec")
 r:attach(countermetric, "test.rec")
+r:run()
 
 local inputq = msg.publish("dispatcher_inputq")
 local metricq = msg.subscribe("dispatcher_metricq")

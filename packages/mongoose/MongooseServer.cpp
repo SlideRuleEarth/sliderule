@@ -264,11 +264,18 @@ void MongooseServer::engineHandler (struct mg_connection *nc, struct http_messag
         Subscriber::msgRef_t ref;
         status = rspq.receiveRef(ref, SYS_TIMEOUT);
         if(status == MsgQ::STATE_OKAY)
-        {
+        {            
             uint32_t size = ref.size;
-            mg_send_http_chunk(nc, (const char*)&size, sizeof(size));
-            mg_send_http_chunk(nc, (const char*)ref.data, ref.size);
-            mg_mgr_poll(nc->mgr, 0);
+            if(size > 0)
+            {
+                mg_send_http_chunk(nc, (const char*)&size, sizeof(size));
+                mg_send_http_chunk(nc, (const char*)ref.data, ref.size);
+                mg_mgr_poll(nc->mgr, 0);
+            }
+            else
+            {
+                mg_send_http_chunk(nc, "", 0); /* send empty chunk, the end of response */
+            }
         }
         else if(status == MsgQ::STATE_TIMEOUT)
         {
@@ -280,7 +287,6 @@ void MongooseServer::engineHandler (struct mg_connection *nc, struct http_messag
             break;
         }
     }
-    mg_send_http_chunk(nc, "", 0); /* send empty chunk, the end of response */
 
     /* Clean Up */
     delete engine;

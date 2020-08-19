@@ -92,6 +92,7 @@ class RecordDispatcher: public LuaObject
         virtual                 ~RecordDispatcher   (void);
         virtual RecordObject*   createRecord        (unsigned char* buffer, int size);
 
+        static int              luaRun              (lua_State* L);
         static int              luaAttachDispatch   (lua_State* L);
         static int              luaClearError       (lua_State* L);
         static int              luaDrain            (lua_State* L);
@@ -114,6 +115,8 @@ class RecordDispatcher: public LuaObject
         bool                    dispatcherActive;
         Thread**                threadPool;
         int                     numThreads;
+        int                     threadsComplete;
+        Mutex                   threadMut;
         Subscriber*             inQ;
         List<DispatchObject*>   dispatchList;   // for processTimeout
         Dictionary<dispatch_t>  dispatchTable;  // for processRecord

@@ -155,6 +155,7 @@ class Atl06Dispatch: public DispatchObject
 
         bool            processRecord                   (RecordObject* record, okey_t key) override;
         bool            processTimeout                  (void) override;
+        bool            processTermination              (void) override;
 
         void            calculateBeam                   (sc_orient_t sc_orient, track_t track, result_t* result);
         void            postResult                      (elevation_t* elevation);

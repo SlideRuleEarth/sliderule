@@ -266,6 +266,16 @@ bool Atl06Dispatch::processTimeout (void)
 }
 
 /*----------------------------------------------------------------------------
+ * processTermination
+ * 
+ *  Note that RecordDispatcher will only call this once
+ *----------------------------------------------------------------------------*/
+bool Atl06Dispatch::processTermination (void)
+{
+    return outQ->postCopy("", 0) > 0;
+}
+
+/*----------------------------------------------------------------------------
  * calculateBeam
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::calculateBeam (sc_orient_t sc_orient, track_t track, result_t* result)

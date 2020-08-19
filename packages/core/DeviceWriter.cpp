@@ -107,35 +107,44 @@ void* DeviceWriter::writerThread (void* parm)
         /* Process Bytes */
         if(status > 0)
         {
-            /* Send Message */
-            int bytes_sent = 0;
-            while(bytes_sent <= 0 && dw->ioActive)
+            if(ref.size > 0)
             {
-                bytes_sent = dw->device->writeBuffer(ref.data, ref.size);
-                if(bytes_sent > 0)
+                /* Send Message */
+                int bytes_sent = 0;
+                while(bytes_sent <= 0 && dw->ioActive)
                 {
-                    dw->bytesProcessed += bytes_sent;
-                    dw->packetsProcessed += 1;
-                }
-                else if(bytes_sent != TIMEOUT_RC)
-                {
-                    dw->bytesDropped += ref.size;
-                    dw->packetsDropped += 1;
-                    mlog(ERROR, "Failed (%d) to write to device with error: %s\n", bytes_sent, LocalLib::err2str(errno));
+                    bytes_sent = dw->device->writeBuffer(ref.data, ref.size);
+                    if(bytes_sent > 0)
+                    {
+                        dw->bytesProcessed += bytes_sent;
+                        dw->packetsProcessed += 1;
+                    }
+                    else if(bytes_sent != TIMEOUT_RC)
+                    {
+                        dw->bytesDropped += ref.size;
+                        dw->packetsDropped += 1;
+                        mlog(ERROR, "Failed (%d) to write to device with error: %s\n", bytes_sent, LocalLib::err2str(errno));
 
-                    /* Handle Non-Timeout Errors */
-                    if(dw->dieOnDisconnect)
-                    {
-                        mlog(CRITICAL, "... closing connection and exiting writer!\n");
-                        dw->ioActive = false; // breaks out of loop
-                    }
-                    else
-                    {
-                        mlog(ERROR, "failed to write to device with error... sleeping and going on to next message!\n");
-                        LocalLib::sleep(1); // prevent spin
-                        break; // stop trying to send this message and go to the next one
+                        /* Handle Non-Timeout Errors */
+                        if(dw->dieOnDisconnect)
+                        {
+                            mlog(CRITICAL, "... closing connection and exiting writer!\n");
+                            dw->ioActive = false; // breaks out of loop
+                        }
+                        else
+                        {
+                            mlog(ERROR, "failed to write to device with error... sleeping and going on to next message!\n");
+                            LocalLib::sleep(1); // prevent spin
+                            break; // stop trying to send this message and go to the next one
+                        }
                     }
                 }
+            }
+            else
+            {
+                /* Received Terminating Message */
+                mlog(INFO, "Terminator received on %s, exiting device writer\n", dw->inq->getName());
+                dw->ioActive = false; // breaks out of loop
             }
 
             /* Dereference Message */

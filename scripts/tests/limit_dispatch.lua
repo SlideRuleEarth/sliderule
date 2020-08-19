@@ -19,6 +19,7 @@ r = core.dispatcher("limit_inputq")
 r:name("dispatcher")
 r:attach(idlimit, "test.rec")
 r:attach(counterlimit, "test.rec")
+r:run()
 
 local inputq = msg.publish("limit_inputq")
 local limitq = msg.subscribe("limit_limitq")
