@@ -48,5 +48,6 @@ else
     server = core.httpd(9081)
     server:name("HttpServer")
     endpoint = core.endpoint()
+    endpoint:name("LuaEndpoint")
     server:attach(endpoint, "/source")
 end

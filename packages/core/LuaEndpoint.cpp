@@ -132,6 +132,7 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (request_t* request)
 
     /* Start Thread */
     Thread* pid = new Thread(requestThread, request, false); // detached
+    delete pid; // once thread is kicked off and detached, it is safe to delete
 
     /* Add PID to Table */
     lua_endpoint->pidMut.lock();

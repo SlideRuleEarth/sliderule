@@ -431,7 +431,6 @@ void LuaEngine::releaseObject (okey_t lock_key)
 {
     bool status = lockList.remove(lock_key);
     if(!status) mlog(CRITICAL, "Failed to release lock of object with key %llu\n", (long long unsigned)lock_key);
-
 }
 
 /******************************************************************************

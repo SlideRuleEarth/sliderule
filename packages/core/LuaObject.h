@@ -141,6 +141,7 @@ class LuaObject
 
         okey_t              lockKey;
         bool                isLocked;
+        bool                pendingDelete;
         Cond                objSignal;
         bool                objComplete;
 };

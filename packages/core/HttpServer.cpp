@@ -79,10 +79,10 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port):
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
 
+    dataToWrite = false;
+
     active = true;
     listenerPid = new Thread(listenerThread, this);
-
-    dataToWrite = false;
 }
 
 /*----------------------------------------------------------------------------
@@ -482,42 +482,46 @@ int HttpServer::onWrite(int fd)
             bytes_left = connection->state.ref.size - connection->state.ref_index;
         }
 
-        /* Write Data to Socket */
-        int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
-        if(bytes >= 0)
+        /* If Anything Left to Send */
+        if(bytes_left > 0)
         {
-            /* Update Status */
-            status += bytes;
-
-            /* Update Write State */
-            if(connection->state.header_sent && connection->request.response_type == EndpointObject::STREAMING)
+            /* Write Data to Socket */
+            int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
+            if(bytes >= 0)
             {
-                /* Update Streaming Write State */
-                connection->state.stream_buf_index += bytes;
-                if(connection->state.stream_buf_index == connection->state.stream_buf_size)
+                /* Update Status */
+                status += bytes;
+
+                /* Update Write State */
+                if(connection->state.header_sent && connection->request.response_type == EndpointObject::STREAMING)
                 {
-                    connection->state.stream_buf_index = 0; 
-                    connection->state.stream_buf_size = 0;
-                    ref_complete = true;
+                    /* Update Streaming Write State */
+                    connection->state.stream_buf_index += bytes;
+                    if(connection->state.stream_buf_index == connection->state.stream_buf_size)
+                    {
+                        connection->state.stream_buf_index = 0; 
+                        connection->state.stream_buf_size = 0;
+                        ref_complete = true;
+                    }
+                }
+                else
+                {
+                    /* Update Normal Write State
+                    *  note that this code will be executed once for the 
+                    *  header of a streaming write as well */
+                    connection->state.ref_index += bytes;
+                    if(connection->state.ref_index == connection->state.ref.size)
+                    {
+                        connection->state.header_sent = true;
+                        ref_complete = true;
+                    }
                 }
             }
             else
             {
-                /* Update Normal Write State
-                 *  note that this code will be executed once for the 
-                 *  header of a streaming write as well */
-                connection->state.ref_index += bytes;
-                if(connection->state.ref_index == connection->state.ref.size)
-                {
-                    connection->state.header_sent = true;
-                    ref_complete = true;
-                }
+                /* Failed to Write Ready Socket */
+                status = INVALID_RC; // will close socket
             }
-        }
-        else
-        {
-            /* Failed to Write Ready Socket */
-            status = INVALID_RC; // will close socket
         }
 
         /* Check if Done with Entire Response 
@@ -525,6 +529,7 @@ int HttpServer::onWrite(int fd)
          *  the response is complete */
         if(connection->state.ref.size == 0)
         {
+            ref_complete = true; // logic is skipped above on terminating message
             status = INVALID_RC; // will close socket
         }
 

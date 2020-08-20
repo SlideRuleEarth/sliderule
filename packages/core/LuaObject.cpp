@@ -208,6 +208,21 @@ void LuaObject::releaseLuaObject (void)
             li->releaseObject(lockKey);
             isLocked = false;
             mlog(INFO, "Unlocking object %s of type %s, key = %ld\n", getName(), getType(), (unsigned long)lockKey);
+
+            /* Delete Self */
+            if(pendingDelete)
+            {
+                /* If an object has already been garabage collected, but the deletion was
+                 * delayed due to the object being locked, then when the lock is released
+                 * it needs to be deleted immediately. 
+                 * 
+                 * TODO: need to rework ownership of when object is deleted to remove the 
+                 * code below; the problem arises if the LuaObject was not created via the 
+                 * new operator; which currently is not possible since the constructor is 
+                 * protected, but could change in the future and it would not be clear that
+                 * this code is no longer valid. */
+                delete this;
+            }
         }
         else
         {
@@ -232,6 +247,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     uint32_t engine_trace_id = ORIGIN;
 
     isLocked = false;
+    pendingDelete = false;
     objComplete = false;
 
     if(LuaState)
@@ -285,6 +301,7 @@ int LuaObject::luaDelete (lua_State* L)
                     else
                     {
                         mlog(INFO, "Delaying delete on locked object %s\n", lua_obj->getName());
+                        lua_obj->pendingDelete = true;
                     }
                 }
                 else

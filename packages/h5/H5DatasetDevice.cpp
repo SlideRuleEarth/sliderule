@@ -140,6 +140,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
 H5DatasetDevice::~H5DatasetDevice (void)
 {
     closeConnection();
+    delete recObj;
     if(config) delete [] config;
     if(dataName) delete [] dataName;
     if(fileName) delete [] fileName;

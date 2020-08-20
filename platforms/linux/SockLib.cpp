@@ -562,6 +562,9 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         }
     }
     
+    /* Close Listening Socket */
+    sockclose(listen_socket);
+
     /* Disconnect Existing Connections */
     for(int i = 1; i < num_sockets; i++)
     {
