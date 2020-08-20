@@ -46,9 +46,11 @@ class DispatchObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual bool processRecord      (RecordObject* record, okey_t key) = 0;
-        virtual bool processTimeout     (void);
-        virtual bool processTermination (void);
+        virtual         ~DispatchObject     (void) = 0;
+
+        virtual bool    processRecord      (RecordObject* record, okey_t key) = 0;
+        virtual bool    processTimeout     (void);
+        virtual bool    processTermination (void);
 
     protected:
 
@@ -56,8 +58,7 @@ class DispatchObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                DispatchObject  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-        virtual ~DispatchObject (void) = 0;
+                        DispatchObject      (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
 };
 
 #endif  /* __dispatch_object__ */

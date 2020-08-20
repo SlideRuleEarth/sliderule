@@ -99,7 +99,8 @@ HttpServer::~HttpServer(void)
     const char* key = routeTable.first(&endpoint);
     while(key != NULL)
     {
-        endpoint->releaseLuaObject();
+        bool pending_delete = endpoint->releaseLuaObject();
+        if(pending_delete) delete endpoint;
         key = routeTable.next(&endpoint);
     }
 }
@@ -205,12 +206,6 @@ int HttpServer::luaAttach (lua_State* L)
 
         /* Add Route to Table */
         status = lua_obj->routeTable.add(url, endpoint, true);
-
-        /* Check Need to Unlock Unregistered Endpoint */
-        if(status != true)
-        {
-            endpoint->releaseLuaObject();
-        }
     }
     catch(const LuaException& e)
     {

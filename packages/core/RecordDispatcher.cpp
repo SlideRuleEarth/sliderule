@@ -180,7 +180,8 @@ RecordDispatcher::~RecordDispatcher(void)
     {
         for(int d = 0; d < dispatch.size; d++)
         {
-            dispatch.list[d]->releaseLuaObject();
+            bool pending_delete = dispatch.list[d]->releaseLuaObject();
+            if(pending_delete) delete dispatch.list[d];
         }
         delete [] dispatch.list;
         key = dispatchTable.next(&dispatch);
