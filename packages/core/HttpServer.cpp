@@ -165,7 +165,7 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
         if(second_slash)
         {
             /* Get Endpoint */
-            int endpoint_len = second_slash - first_slash; // this includes null terminator
+            int endpoint_len = second_slash - first_slash + 1; // this includes null terminator and slash
             *endpoint = new char[endpoint_len];
             src = first_slash ; // include the slash
             dst = *endpoint;

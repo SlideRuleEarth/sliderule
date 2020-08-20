@@ -107,7 +107,7 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Clean Up */
     delete rspq;
-    delete script_pathname;
+    delete [] script_pathname;
 
     /* Stop Trace */
     stop_trace(trace_id);

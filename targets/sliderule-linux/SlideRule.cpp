@@ -129,7 +129,7 @@ static void ldplugins(void)
         while(fgets(plugin_name, MAX_STR_SIZE, fp))
         {
             /* Trim white space */
-            for(int i = 0; i < MAX_STR_SIZE; i++)
+            for(int i = 0; i < MAX_STR_SIZE && plugin_name[i] != '\0'; i++)
             {
                 if(isspace(plugin_name[i]))
                 {

@@ -286,12 +286,12 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
         /* Get Dimensions of Data */
         int ndims = H5Sget_simple_extent_ndims(dataspace);
-        hsize_t* dims = new hsize_t[ndims];
+        hsize_t* dims = new hsize_t[ndims + 1];
         H5Sget_simple_extent_dims(dataspace, dims, NULL);
 
         /* Allocate Hyperspace Parameters */
-        hsize_t* start = new hsize_t[ndims];
-        hsize_t* count = new hsize_t[ndims];
+        hsize_t* start = new hsize_t[ndims + 1];
+        hsize_t* count = new hsize_t[ndims + 1];
 
         /* Readjust First Dimension */
         if(maxrows > 0) dims[0] = MIN(maxrows, dims[0]);
