@@ -32,7 +32,7 @@ $ conda install requests
 $ conda install numpy
 $ conda install pandas
 $ conda install matplotlib
-$ conda install -c conda-forge basemap
+$ conda install cartopy
 ```
 
 ### Install SlideRule Python Client
