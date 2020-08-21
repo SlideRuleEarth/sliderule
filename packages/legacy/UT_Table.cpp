@@ -208,9 +208,9 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     int key, data;
     int size = 16;
     Table<int,int> mytable(size);
-    int test_data[16] = {0,16,32,1,17,33,2,18,34,3,4,5,6,7,8,9};
-    int remove_order[16] ={0,16,32,17,33,1,34,18,2,3,4,5,6,7,8,9};
-    bool check_order[16] = {true, true, true, false, false, true, false, false, true, true, true, true, true, true, true, true};
+    int test_data[16]    = {0, 16, 32,  1, 17, 33,  2, 18, 34,  3,  4,  5,  6,  7,  8,  9};
+    int remove_order[16] = {0, 16, 32, 17, 33,  1, 34, 18,  2,  3,  4,  5,  6,  7,  8,  9};
+    int check_order[16]  = {0, 16, 32,  1,  1,  1,  2,  2,   2,  3,  4,  5,  6,  7,  8,  9};
 
     failures = 0;
 
@@ -224,11 +224,8 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     /* Transverse Set */
     for(int i = 0; i < size; i++)    
     {
-        if(check_order[i])
-        {
-            key = mytable.first(&data);
-            ut_assert(test_data[i] == key, "Failed to get next key %d\n", key);
-        }
+        key = mytable.first(&data);
+        ut_assert(check_order[i] == key, "Failed to get next key %d != %d, %d\n", check_order[i], key, i);
         ut_assert(mytable.remove(remove_order[i]), "Failed to remove key %d\n", remove_order[i]);
         ut_assert(mytable.length() == size - i - 1, "Failed to get size\n");
     }
@@ -292,7 +289,7 @@ int UT_Table::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
 
     /* Attempt to Add to Full Hash */
     key = 35;
-    ut_assert(mytable.add(key, key, true), "Failed to detect full table\n");
+    ut_assert(mytable.add(key, key, true) == false, "Failed to detect full table\n");
 
     /* Check Size */
     ut_assert(mytable.length() == size, "Failed to rget size of table\n");
@@ -348,7 +345,7 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
         ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table %d\n", key);
         ut_assert(mytable.add(key, key, true), "Failed to overwrite key %d\n", key);
 
-        ut_assert(mytable.add(key, key, false), "Failed to add key %d\n", key);
+        ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table %d\n", key);
 
         int new1_key = key + size;
         ut_assert(mytable.add(new1_key, new1_key, false) == false, "Failed to error on adding key to full table %d\n", new1_key);
@@ -371,9 +368,9 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     int key, data;
     int size = 16;
     Table<int,int> mytable(size);
-    int test_data[16] = {0,16,32,1,17,33,2,18,34,40,50,66,48,35,8,9};
-    int remove_order[16] ={0,16,32,17,33,1,34,18,2,3,4,5,6,7,8,9};
-    bool check_order[16] = {true, true, true, false, false, true, false, false, true, true, true, true, true, true, true, true};
+    int test_data[16]    =  {0,16,32, 1,17,33, 2,18,34,40,50,66,48,35, 8, 9};
+    int remove_order[16] =  {0,16,32,17,33, 1,34,18, 2,40,50,66,48,35, 8, 9};
+    int check_order[16]  =  {0,16,32, 1, 1, 1, 2, 2, 2,40,50,66,48,35, 8, 9};
 
     failures = 0;
 
@@ -387,11 +384,8 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     /* Transverse Set */
     for(int i = 0; i < size; i++)    
     {
-        if(check_order[i])
-        {
-            key = mytable.first(&data);
-            ut_assert(test_data[i] == key, "Failed to get next key %d\n", key);
-        }
+        key = mytable.first(&data);
+        ut_assert(check_order[i] == key, "Failed to get next key %d != %d\n", check_order[i], key);
         ut_assert(mytable.remove(remove_order[i]), "Failed to remove key %d\n", remove_order[i]);
         ut_assert(mytable.length() == size - i - 1, "Failed to get size\n");
     }
@@ -413,7 +407,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
 
     int key, data;
     int size = 64;
-    int check_order[64];
+    int data_order[64];
     int test_cycles = 65536;
     int key_range = 0xFFFFFFFF;
     int num_added = 0;
@@ -436,17 +430,19 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
             key = rand() % key_range;
             if(mytable.add(key, key, false))
             {
-                check_order[num_added++] = key;
+                data_order[num_added++] = key;
             }
         }
 
         /* Check Hash */
         for(int i = 0; i < num_added; i++)
         {
-            key = check_order[i];
+            key = data_order[i];
 
-            ut_assert(mytable.first(&data) && data == key, "Failed to get next key %d\n", key);
-            ut_assert(mytable.first(&data) && data == key, "Failed to get same key %d\n", key);
+            mytable.first(&data);
+            ut_assert(data == key, "Failed to get next key %d != %d\n", data, key);
+            mytable.first(&data);
+            ut_assert(data == key, "Failed to get same key %d != %d\n", data, key);
             ut_assert(mytable.remove(key), "Failed to remove key %d\n", key);
         }
 
