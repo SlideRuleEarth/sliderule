@@ -35,6 +35,7 @@ end
 if __legacy__ then
     runner.script(td .. "message_queue.lua")
     runner.script(td .. "dictionary.lua")
+    runner.script(td .. "table.lua")
     runner.script(td .. "timelib.lua")
     runner.script(td .. "ccsds_packetizer.lua")
     runner.script(td .. "cfs_interface.lua")
