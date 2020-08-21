@@ -218,7 +218,7 @@ void LogLib::logMsg(const char* file_name, unsigned int line_number, log_lvl_t l
         /* Check if any work needs to be done */
         log_t check_log;
         okey_t key = logList.first(&check_log);
-        while(key != logList.INVALID_KEY)
+        while(key != INVALID_KEY)
         {
             if(check_log.level <= lvl)
             {
@@ -290,7 +290,7 @@ void LogLib::logMsg(const char* file_name, unsigned int line_number, log_lvl_t l
         int size = StringLib::size(entry_log_msg, MAX_LOG_ENTRY_SIZE - 1) + 1;
         log_t cur_log;
         okey_t key = logList.first(&cur_log);
-        while(key != logList.INVALID_KEY)
+        while(key != INVALID_KEY)
         {
             if(cur_log.level <= lvl)
             {

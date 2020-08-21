@@ -98,7 +98,7 @@ char* DeviceObject::getDeviceList(void)
 
         DeviceObject* dev;
         okey_t key = deviceList.first(&dev);
-        while(key != Ordering<DeviceObject*>::INVALID_KEY)
+        while(key != INVALID_KEY)
         {
             StringLib::format(devstr, DEV_STR_SIZE, "%c %s\n", dev->isConnected(0) ? 'C' : 'D', dev->getConfig());
             StringLib::concat(liststr, devstr, liststrlen);

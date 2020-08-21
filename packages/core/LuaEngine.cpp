@@ -129,7 +129,7 @@ LuaEngine::~LuaEngine(void)
     /* Delete All Locked Lua Objects */
     LuaObject* lua_obj;
     okey_t key = lockList.first(&lua_obj);
-    while(key != Ordering<LuaObject*>::INVALID_KEY)
+    while(key != INVALID_KEY)
     {
         if(lua_obj)
         {

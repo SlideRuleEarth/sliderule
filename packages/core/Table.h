@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __ordering__
-#define __ordering__
+#ifndef __table__
+#define __table__
 
 /******************************************************************************
  * INCLUDES
@@ -26,10 +26,9 @@
 
 #include <assert.h>
 #include <stdexcept>
-#include "OsApi.h"
 
 /******************************************************************************
- * ORDERING TEMPLATE
+ * TABLE TEMPLATE
  ******************************************************************************/
 
 template <class T>
@@ -56,6 +55,7 @@ class Ordering
          *--------------------------------------------------------------------*/
         
         static const long INFINITE_LIST_SIZE = -1;
+        
         
         /*--------------------------------------------------------------------
          * Methods
@@ -660,4 +660,4 @@ void MgOrdering<T, is_array>::freeNode(typename Ordering<T>::sorted_node_t* node
     else            delete [] node->data;
 }
 
-#endif  /* __ordering__ */
+#endif  /* __table__ */

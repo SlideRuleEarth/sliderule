@@ -95,8 +95,8 @@ MetricDispatch::MetricDispatch(lua_State* L, const char* _data_field, const char
     playbackText    = false;
     playbackName    = false;
     keyOffset       = 0;
-    minKey          = Ordering<serialBuffer_t>::INVALID_KEY;
-    maxKey          = Ordering<serialBuffer_t>::INVALID_KEY;
+    minKey          = INVALID_KEY;
+    maxKey          = INVALID_KEY;
 
     /* Initialize Key Count/Offset/Min/Max */
     dataField           = StringLib::duplicate(_data_field);
@@ -158,11 +158,11 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key)
     if(enabled)
     {
         /* Check Key Filter */
-        if( ((minKey == Ordering<serialBuffer_t>::INVALID_KEY) || (key >= minKey)) &&   // above minimum key
-            ((maxKey == Ordering<serialBuffer_t>::INVALID_KEY) || (key <= maxKey)) )    // below maximum key
+        if( ((minKey == INVALID_KEY) || (key >= minKey)) &&   // above minimum key
+            ((maxKey == INVALID_KEY) || (key <= maxKey)) )    // below maximum key
         {
             /* Apply Offset */
-            if(keyOffset == Ordering<serialBuffer_t>::INVALID_KEY)
+            if(keyOffset == INVALID_KEY)
             {
                 keyOffset = key;
             }
@@ -350,7 +350,7 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
         /* Calculate Offset */
         if(StringLib::match(offset_str, "FIRST"))
         {
-            lua_obj->keyOffset = Ordering<serialBuffer_t>::INVALID_KEY;
+            lua_obj->keyOffset = INVALID_KEY;
             status = true;
         }
         else if(StringLib::find(offset_str, ':'))
@@ -393,7 +393,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         okey_t min_key;
         if(StringLib::match(min_str, "OPEN"))
         {
-            min_key = Ordering<serialBuffer_t>::INVALID_KEY;
+            min_key = INVALID_KEY;
         }
         else if(StringLib::find(min_str, ':'))
         {
@@ -410,7 +410,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         okey_t max_key;
         if(StringLib::match(max_str, "OPEN"))
         {
-            max_key = Ordering<serialBuffer_t>::INVALID_KEY;
+            max_key = INVALID_KEY;
         }
         else if(StringLib::find(max_str, ':'))
         {

@@ -93,14 +93,13 @@ class List
  * MANAGED LIST TEMPLATE
  ******************************************************************************/
 
-template <class T>
+template <class T, bool is_array=false>
 class MgList: public List<T>
 {
     public:
-        MgList (bool _is_array=false);
+        MgList (void);
         ~MgList (void);
     private:
-        bool isArray;
         void freeNode (typename List<T>::list_node_t* node, int index);
 };
 
@@ -401,17 +400,16 @@ void List<T>::freeNode(typename List<T>::list_node_t* node, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-MgList<T>::MgList(bool _is_array): List<T>()
+template <class T, bool is_array>
+MgList<T, is_array>::MgList(void): List<T>()
 {
-    isArray = _is_array;
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T>
-MgList<T>::~MgList(void)
+template <class T, bool is_array>
+MgList<T, is_array>::~MgList(void)
 {
     List<T>::clear();
 }
@@ -419,10 +417,10 @@ MgList<T>::~MgList(void)
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T>
-void MgList<T>::freeNode(typename List<T>::list_node_t* node, int index)
+template <class T, bool is_array>
+void MgList<T, is_array>::freeNode(typename List<T>::list_node_t* node, int index)
 {
-    if(!isArray)    delete node->data[index];
+    if(!is_array)   delete node->data[index];
     else            delete [] node->data[index];
 }
 

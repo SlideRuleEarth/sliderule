@@ -61,6 +61,9 @@
  * TYPEDEFS
  ******************************************************************************/
 
+/* Ordered Key */
+typedef unsigned long long okey_t; 
+
 /* File */
 typedef FILE* fileptr_t;
 
@@ -100,6 +103,9 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 
 /* Strings */
 #define MAX_STR_SIZE                1024
+
+/* Ordered Keys */
+#define INVALID_KEY                 0xFFFFFFFFFFFFFFFFLL
 
 /* Debug Logging */
 #define dlog(...)                   LocalLib::print(__FILE__,__LINE__,__VA_ARGS__)

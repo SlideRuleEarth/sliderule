@@ -288,7 +288,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
     RecordObject::defineRecord(MetricRecord::rec_type, NULL, sizeof(MetricRecord::metric_t), MetricRecord::rec_def, MetricRecord::rec_elem);
 
     /* Initialize Attributes */
-    lastIndex = MgOrdering<entry_t*>::INVALID_KEY;
+    lastIndex = INVALID_KEY;
     fixedHeader = false;
     writeHeader = false;
     reportError = true;
@@ -378,7 +378,7 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
     const char* value = StringLib::duplicate(entry->value);
 
     /* Flush Row on New Index */
-    if(dispatch->lastIndex != index && dispatch->lastIndex != MgOrdering<entry_t*>::INVALID_KEY)
+    if(dispatch->lastIndex != index && dispatch->lastIndex != INVALID_KEY)
     {
         dispatch->flushRow();
     }
@@ -512,7 +512,7 @@ int ReportDispatch::luaFlushRow(lua_State* L)
             lua_obj->reportError = true;
             if(flush_all && lua_obj->entries) lua_obj->entries->flush();
             lua_obj->flushRow();
-            lua_obj->lastIndex = MgOrdering<entry_t*>::INVALID_KEY;
+            lua_obj->lastIndex = INVALID_KEY;
         }
         lua_obj->reportMut.unlock();
 
