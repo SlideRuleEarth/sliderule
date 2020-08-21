@@ -847,7 +847,7 @@ void CcsdsEncapPacket::setSEQ(int value)
  *----------------------------------------------------------------------------*/
 int CcsdsEncapPacket::getLEN(void) const
 {
-    int pktlen;
+    int pktlen = 0;
 
     int lol = buffer[0] & 0x03;
     if(lol == 0)

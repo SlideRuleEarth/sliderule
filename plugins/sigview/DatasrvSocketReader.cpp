@@ -180,7 +180,13 @@ CommandableObject* DatasrvSocketReader::createObject(CommandProcessor* cmd_proc,
     }
 
     /* Create Datasrv Socket Reader */
-    return new DatasrvSocketReader(cmd_proc, name, ip_addr, port, outq, start, end, req_arch_str, apids, num_apids);
+    DatasrvSocketReader* reader = new DatasrvSocketReader(cmd_proc, name, ip_addr, port, outq, start, end, req_arch_str, apids, num_apids);
+
+    /* Free Apids */
+    if(apids) delete [] apids;
+
+    /* Return Datasrv Socket Reader */
+    return reader;
 }
 
 /*----------------------------------------------------------------------------

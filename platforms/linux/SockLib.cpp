@@ -388,6 +388,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
     if(listen_socket == INVALID_RC)
     {
         dlog("Unable to establish socket server on %s:%d, failed to create listen socket\n", ip_addr ? ip_addr : "0.0.0.0", port);
+        delete [] polllist;
         return INVALID_RC;
     }
     else
@@ -397,6 +398,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         {
             dlog("Failed to mark socket bound to %s:%d as a listen socket, %s\n", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
             close(listen_socket);
+            delete [] polllist;
             return INVALID_RC;
         }
 
@@ -575,6 +577,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
     /* Clean Up Allocated Memory */
     delete [] polllist;
     
+    /* Return Success */
     return 0;
 }
 
@@ -727,7 +730,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
     for(rp = result; rp != NULL; rp = rp->ai_next) 
     {
         /* Get address information */
-        status = getnameinfo(rp->ai_addr,rp->ai_addrlen, host, HOST_STR_LEN, serv, SERV_STR_LEN, NI_NUMERICHOST | NI_NUMERICSERV);
+        getnameinfo(rp->ai_addr,rp->ai_addrlen, host, HOST_STR_LEN, serv, SERV_STR_LEN, NI_NUMERICHOST | NI_NUMERICSERV);
         
         /* Create socket */
         sock = socket(rp->ai_family, rp->ai_socktype, 0);

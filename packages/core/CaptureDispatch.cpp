@@ -92,7 +92,6 @@ void CaptureDispatch::freeCaptureEntry (void* obj, void* parm)
     if(obj)
     {
         capture_t* entry = (capture_t*)obj;
-        if(entry->field_name) delete [] entry->field_name;
         delete entry;
     }
 }

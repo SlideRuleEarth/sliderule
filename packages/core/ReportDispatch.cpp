@@ -511,7 +511,7 @@ int ReportDispatch::luaFlushRow(lua_State* L)
         {
             lua_obj->reportError = true;
             if(flush_all && lua_obj->entries) lua_obj->entries->flush();
-            status = lua_obj->flushRow();
+            lua_obj->flushRow();
             lua_obj->lastIndex = MgOrdering<entry_t*>::INVALID_KEY;
         }
         lua_obj->reportMut.unlock();

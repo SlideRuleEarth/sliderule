@@ -248,7 +248,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
     {
         if(result[t].photons)
         {
-            delete result[t].photons;
+            delete [] result[t].photons;
         }
     }
 

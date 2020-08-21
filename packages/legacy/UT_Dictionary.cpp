@@ -208,27 +208,30 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 
         for(int i = 0; i < numwords; i++)
         {
-            bool found = false;
-            for(int j = 0; j < numwords; j++)
+            if(key_list && i < num_keys)
             {
-                if(true_list[j] != NULL)
+                bool found = false;
+                for(int j = 0; j < numwords; j++)
                 {
-                    if(StringLib::match(true_list[j], key_list[i]))
+                    if(true_list[j] != NULL)
                     {
-                        fprintf(testlog, "Found key: (%s)\n", key_list[i]);
-                        found = true;
-                        true_list[j] = NULL;
-                        break;
+                        if(StringLib::match(true_list[j], key_list[i]))
+                        {
+                            fprintf(testlog, "Found key: (%s)\n", key_list[i]);
+                            found = true;
+                            true_list[j] = NULL;
+                            break;
+                        }
                     }
                 }
-            }
-            if(!found)
-            {
-                mlog(RAW, "[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i]->getString());
-                failure = true;
-            }
+                if(!found)
+                {
+                    mlog(RAW, "[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i]->getString());
+                    failure = true;
+                }
 
-            delete [] key_list[i];
+                delete [] key_list[i];
+            }
         }
         if(key_list) delete [] key_list;
         delete [] true_list;

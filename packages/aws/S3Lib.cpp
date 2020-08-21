@@ -165,11 +165,11 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
             if(oldest_key != NULL)
             {
                 /* Delete File in Local File System */
-                cacheFiles.remove(index);
                 SafeString oldest_filename("%s", oldest_key);
                 oldest_filename.replace(PATH_DELIMETER_STR, "#");
                 SafeString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.getString());
                 remove(oldest_filepath.getString());
+                cacheFiles.remove(index);
             }
         }
 

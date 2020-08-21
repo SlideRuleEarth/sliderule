@@ -210,7 +210,7 @@ void MongooseServer::sourceHandler (struct mg_connection *nc, struct http_messag
     /* Clean Up */
     delete engine;
     delete [] script_pathname;
-    delete script_name;
+    delete [] script_name;
 
     /* Stop Trace */
     stop_trace(trace_id);
@@ -291,7 +291,7 @@ void MongooseServer::engineHandler (struct mg_connection *nc, struct http_messag
     /* Clean Up */
     delete engine;
     delete [] script_pathname;
-    delete script_name;
+    delete [] script_name;
 
     /* Stop Trace */
     stop_trace(trace_id);

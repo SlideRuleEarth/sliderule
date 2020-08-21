@@ -436,7 +436,7 @@ void* Atl03Reader::readerThread (void* parm)
 
     /* Clean Up Info */
     delete [] info->url;
-    delete [] info;    
+    delete info;    
 
     /* Stop Trace */
     stop_trace(trace_id);
