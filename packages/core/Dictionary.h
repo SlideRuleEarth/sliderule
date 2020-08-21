@@ -192,29 +192,44 @@ bool Dictionary<T>::add(const char* key, T& data, bool unique)
             unsigned int old_hash_size = hashSize;
             hash_node_t* old_hash_table = hashTable;
 
-            hashSize *= 2;  // double size of hash table
-            hashTable = new hash_node_t [hashSize];
-            for(unsigned int i = 0; i < hashSize; i++) hashTable[i].chain = EMPTY_ENTRY;
-
-            maxChain = 0;
-
-            for(unsigned int i = 0; i < old_hash_size; i++)
+            unsigned int new_hash_size = hashSize * 2;              // double size of hash table
+            if(new_hash_size > 0 && new_hash_size > hashSize)
             {
-                if(old_hash_table[i].chain != EMPTY_ENTRY)
+                hashSize = new_hash_size;
+                hashTable = new hash_node_t [hashSize];
+                for(unsigned int i = 0; i < hashSize; i++)
                 {
-                    addNode(old_hash_table[i].key,
-                            old_hash_table[i].data,
-                            old_hash_table[i].hash,
-                            true); // rehash doesn't reallocate key
+                    hashTable[i].chain = EMPTY_ENTRY;
                 }
-            }
 
-            delete [] old_hash_table;
+                maxChain = 0;
+
+                for(unsigned int i = 0; i < old_hash_size; i++)
+                {
+                    if(old_hash_table[i].chain != EMPTY_ENTRY)
+                    {
+                        addNode(old_hash_table[i].key,
+                                old_hash_table[i].data,
+                                old_hash_table[i].hash,
+                                true); // rehash doesn't reallocate key
+                    }
+                }
+
+                delete [] old_hash_table;
+            }
+            else
+            {
+                /* Unable to Make Hash Larger */
+                status = false;
+            }
         }
 
         /* Add Node */
-        addNode(key, data, hashKey(key));
-        numEntries++;
+        if(status == true)
+        {
+            addNode(key, data, hashKey(key));
+            numEntries++;
+        }
     }
     else if(!unique)
     {

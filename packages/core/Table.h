@@ -26,58 +26,51 @@
 
 #include <assert.h>
 #include <stdexcept>
+#include "OsApi.h"
+
+/******************************************************************************
+ * DEFINES 
+ ******************************************************************************/
+
+#define TABLE_HASH(k) k // identity function
 
 /******************************************************************************
  * TABLE TEMPLATE
  ******************************************************************************/
-
-template <class T, typename K=unsigned long long>
-class Ordering
+/*
+ * Table - time sorted hash of data type T and index type K
+ */
+template <class T, typename K=unsigned long>
+class Table
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Types
+         * CONSTANTS
          *--------------------------------------------------------------------*/
 
-        typedef enum {
-            EXACT_MATCH,
-            GREATER_THAN_OR_EQUAL,
-            LESS_THAN_OR_EQUAL,
-            GREATER_THAN,
-            LESS_THAN
-        } searchMode_t;
-        
-        typedef int (*postFunc_t) (void* data, int size, void* parm);
-        
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-        
-        static const long INFINITE_LIST_SIZE = -1;
+        static const int DEFAULT_TABLE_SIZE = 256;
 
-        
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Ordering    (typename Ordering<T>::postFunc_t post_func=NULL, void* post_parm=NULL, long max_list_size=INFINITE_LIST_SIZE);
-        virtual     ~Ordering   (void);
+                    Table       (K table_size=DEFAULT_TABLE_SIZE);
+        virtual     ~Table      (void);
 
-        bool        add         (okey_t key, T& data, bool unique=false);
-        T&          get         (okey_t key, searchMode_t smode=EXACT_MATCH);
-        bool        remove      (okey_t key, searchMode_t smode=EXACT_MATCH);
+        bool        add         (K key, T& data, bool overwrite=false, bool with_delete=true);
+        T&          get         (K key);
+        bool        remove      (K key);
         long        length      (void);
-        void        flush       (void);
         void        clear       (void);
     
-        okey_t      first       (T* data);
-        okey_t      next        (T* data);
-        okey_t      last        (T* data);
-        okey_t      prev        (T* data);
+        K           first       (T* data);
+        K           next        (T* data);
+        K           last        (T* data);
+        K           prev        (T* data);
 
-        Ordering&   operator=   (const Ordering& other);
-        T&          operator[]  (okey_t key);
+        Table&      operator=   (const Table& other);
+        T&          operator[]  (K key);
 
     protected:
 
@@ -85,47 +78,46 @@ class Ordering
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct sorted_block_t {
-            okey_t                  key;
-            T                       data;
-            struct sorted_block_t*  next;
-            struct sorted_block_t*  prev;
-        } sorted_node_t;
+        typedef struct {
+            bool    occupied;
+            T       data;
+            K       key;
+            K       next;   // next entry in chain
+            K       prev;   // previous entry in chain
+            K       after;  // next entry added to hash (time ordered)
+            K       before; // previous entry added to hash (time ordered)
+        } node_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        sorted_node_t*  firstNode;
-        sorted_node_t*  lastNode;
-        sorted_node_t*  curr;
-        long            len;
-        long            maxListSize;
-        postFunc_t      postFunc;
-        void*           postParm;
+        node_t*     table;
+        K           size;
+        K           num_entries;
+        K           oldest_entry;
+        K           newest_entry;
         
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-        
-        bool            setMaxListSize  (long _max_list_size);
-        bool            addNode         (okey_t key, T& data, bool unique);
-        void            postNode        (sorted_node_t* node);
-        virtual void    freeNode        (sorted_node_t* node);
+        bool            writeNode       (K index, K key, T& data);
+        bool            overwriteNode   (K index, K key, T& data, bool with_delete);
+        virtual void    freeNode        (K index);
 };
 
 /******************************************************************************
- * MANAGED ORDERING TEMPLATE
+ * MANAGED TABLE TEMPLATE
  ******************************************************************************/
 
-template <class T, bool is_array=false>
-class MgOrdering: public Ordering<T>
+template <class T, typename K=unsigned long, bool is_array=false>
+class MgTable: public Table<T,K>
 {
     public:
-        MgOrdering (typename Ordering<T>::postFunc_t post_func=NULL, void* post_parm=NULL, long max_list_size=Ordering<T>::INFINITE_LIST_SIZE);
-        ~MgOrdering (void);
+        MgTable (K table_size=Table<T,K>::DEFAULT_TABLE_SIZE);
+        ~MgTable (void);
     private:
-        void freeNode (typename Ordering<T>::sorted_node_t* node);
+        void freeNode (K index) override;
 };
 
 /******************************************************************************
@@ -135,90 +127,168 @@ class MgOrdering: public Ordering<T>
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-Ordering<T>::Ordering(postFunc_t post_func, void* post_parm, long max_list_size)
+template <class T, typename K>
+Table<T,K>::Table(K table_size)
 {
-    firstNode   = NULL;
-    lastNode    = NULL;
-    curr        = NULL;
-    len         = 0;
+    assert(table_size > 0);
 
-    postFunc    = post_func;
-    postParm    = post_parm;
+    /* Allocate Hash Structure */
+    size = table_size;
+    table = new node_t [size];
 
-    setMaxListSize(max_list_size);
+    /* Initialize Hash Table to Empty */
+    clear();
 }
 
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-template <class T>
-Ordering<T>::~Ordering(void)
+template <class T, typename K>
+Table<T,K>::~Table(void)
 {
-    clear();
+    /* Free Hash Structure */
+    delete [] table;
 }
 
 /*----------------------------------------------------------------------------
  * add
+ * 
+ *  Note - mid-function returns
  *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::add(okey_t key, T& data, bool unique)
+template <class T, typename K>
+bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
 {
-    return addNode(key, data, unique);
+    K curr_index = TABLE_HASH(key) % size;
+
+    /* Add Entry to Hash */
+    if(table[curr_index].occupied == false)
+    {
+        writeNode(curr_index, data);
+    }
+    else /* collision */
+    {
+        /* Check Current Slot for Duplicate */
+        if(table[curr_index].key == key)
+        {
+            if(overwrite)   return overwriteNode(curr_index, data, with_delete);
+            else            return false;
+        }
+
+        /* Transverse to End of Chain */
+        K end_index = curr_index;
+        K scan_index = table[curr_index].next;
+        while(scan_index != (K)INVALID_INDEX)
+        {
+            /* Check Slot for Duplicate */
+            if(table[scan_index].bundle.cid == bundle.cid)
+            {
+                if(overwrite)   return overwriteNode(scan_index, data, with_delete);
+                else            return false;
+            }
+
+            /* Go To Next Slot */
+            end_index = scan_index;
+            scan_index = table[scan_index].next;
+        }
+
+        /* Find First Open Hash Slot */
+        K open_index = (curr_index + 1) % size;
+        while( (table[open_index].occupied == true) &&
+               (open_index != curr_index) )
+        {
+            open_index = (open_index + 1) % size;
+        }
+
+        /* Check for Full Hash */
+        if(open_index == curr_index)
+        {
+            return false;
+        }
+
+        /* Insert Node */
+        if(rh_hash->table[curr_index].prev == (K)INVALID_INDEX) /* End of Chain Insertion (chain == 1) */
+        {
+            /* Add Entry to Open Slot at End of Chain */
+            writeNode(open_index, data);
+            table[end_index].next = open_index;
+            table[open_index].prev = end_index;
+        }
+        else /* Robin Hood Insertion (chain > 1) */
+        {
+            /* Copy Current Slot to Open Slot */
+            table[open_index] = table[curr_index];
+
+            /* Update Hash Links */
+            K next_index = table[curr_index].next;
+            K prev_index = table[curr_index].prev;
+            if(next_index != (K)INVALID_INDEX) table[next_index].prev = open_index;
+            if(prev_index != (K)INVALID_INDEX) table[prev_index].next = open_index;
+
+            /* Update Time Order (Move) */
+            K after_index  = table[curr_index].after;
+            K before_index = table[curr_index].before;
+            if(after_index != (K)INVALID_INDEX)   table[after_index].before = open_index;
+            if(before_index != (K)INVALID_INDEX)  table[before_index].after = open_index;
+
+            /* Update Oldest Entry */
+            if(oldest_entry == curr_index)
+            {
+                oldest_entry = open_index;
+                table[rh_hash->oldest_entry].before = (K)INVALID_INDEX;
+            }
+
+            /* Update Newest Entry */
+            if(newest_entry == curr_index)
+            {
+                newest_entry = open_index;
+                table[newest_entry].after = (K)INVALID_INDEX;
+            }
+
+            /* Add Entry to Current Slot */
+            writeNode(curr_index, data);
+        }
+    }
+
+    /* New Entry Added */
+    num_entries++;
+
+    /* Return Success */
+    return true;
 }
 
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T>
-T& Ordering<T>::get(okey_t key, searchMode_t smode)
+template <class T, typename K>
+T& Table<T,K>::get(K key)
 {
-    bool found = false;
+    K curr_index = TABLE_HASH(key) % size;
 
-    /* Reset Current if Necessary */
-    if(curr == NULL) curr = lastNode;
-
-    /* look for data */
-    if(curr != NULL)
+    /* Find Node to Return */
+    while(curr_index != (K)INVALID_INDEX)
     {
-        if (smode == EXACT_MATCH)
+        if(table[curr_index].occupied == false) /* end of chain */
         {
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            if (key == curr->key) found = true;
+            curr_index = (K)INVALID_INDEX;
         }
-        else if (smode == GREATER_THAN_OR_EQUAL) // i.e. you want the first node greater than or equal to the key
+        else if(table[curr_index].key == key) /* matched key */
         {
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            if (key <= curr->key) found = true;
+            break;
         }
-        else if (smode == LESS_THAN_OR_EQUAL) // i.e. you want the last node less than or equal to the key
+        else /* go to next */
         {
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            if (key >= curr->key) found = true;
-        }
-        else if (smode == GREATER_THAN) // i.e. you want the first node greater than the key
-        {
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            if (key < curr->key) found = true;
-        }
-        else if (smode == LESS_THAN) // i.e. you want the last node less than the key
-        {
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            if (key > curr->key) found = true;
-        }
-        else // invalid search mode
-        {
-            assert(false);
+            curr_index = table[curr_index].next;
         }
     }
 
-    if (found)  return curr->data;
-    else        throw std::out_of_range("key not found");
+    /* Check if Node Found */
+    if(curr_index == (K)INVALID_INDEX)
+    {
+        return table[curr_index].data;
+    }
+
+    /* Throw Exception When Not Found */
+    throw std::out_of_range("key not found");
 }
 
 /*----------------------------------------------------------------------------
@@ -226,244 +296,224 @@ T& Ordering<T>::get(okey_t key, searchMode_t smode)
  * 
  *  TODO factor out common search code into its own function
  *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::remove(okey_t key, searchMode_t smode)
+template <class T, typename K>
+bool Table<T,K>::remove(K key)
 {
-    bool found = false;
+    K curr_index = TABLE_HASH(key) % size;
 
-    /* Reset Current if Necessary */
-    if(curr == NULL) curr = lastNode;
-
-    /* look for data */
-    if (curr != NULL)
+    /* Find Node to Remove */
+    while(curr_index != (K)INVALID_INDEX)
     {
-        if (smode == EXACT_MATCH)
+        if(table[curr_index].occupied == false) /* end of chain */
         {
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            if (key == curr->key) found = true;
+            curr_index = (K)INVALID_INDEX;
         }
-        else if (smode == GREATER_THAN_OR_EQUAL) // i.e. you want the first node greater than or equal to the key
+        else if(table[curr_index].key == key) /* matched key */
         {
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            if (key < curr->key) found = true;
+            break;
         }
-        else if (smode == LESS_THAN_OR_EQUAL) // i.e. you want the first node less than the key
+        else /* go to next */
         {
-            while (key > curr->key && curr->next != NULL) curr = curr->next;
-            while (key < curr->key && curr->prev != NULL) curr = curr->prev;
-            if (key > curr->key) found = true;
-        }
-        else // invalid search mode
-        {
-            assert(false);
+            curr_index = table[curr_index].next;
         }
     }
 
-    if (found)
+    /* Check if Node Found */
+    if(curr_index == (K)INVALID_INDEX)
     {
-        /* delete data */
-        freeNode(curr);
-
-        /* delete node */
-        sorted_node_t* node = curr;
-
-        if (curr->prev != NULL)  curr->prev->next = curr->next;
-        else                     firstNode = curr->next; // reposition first node
-
-        if (curr->next != NULL)  curr->next->prev = curr->prev;
-        else                     lastNode = curr->prev; // reposition last node
-
-        if (curr->next != NULL)  curr = curr->next;
-        else                     curr = curr->prev;
-
-        delete node;
-        len--;
-
-        /* return success */
-        return true;
+        return bool;
     }
-    else
+
+    /* Remove Bundle */
+    freeNode(cur_index);
+
+    /* Update Time Order (Bridge) */
+    K after_index  = table[curr_index].after;
+    K before_index = table[curr_index].before;
+    if(after_index != (K)INVALID_INDEX)   table[after_index].before = before_index;
+    if(before_index != (K)INVALID_INDEX)  table[before_index].after = after_index;
+
+    /* Update Newest and Oldest Entry */
+    if(curr_index == newest_entry)  newest_entry = before_index;
+    if(curr_index == oldest_entry)  oldest_entry = after_index;
+
+    /* Remove End of Chain */
+    K end_index = curr_index;
+    K next_index = table[curr_index].next;
+    if(next_index != (K)INVALID_INDEX)
     {
-        return false;
+        /* Transverse to End of Chain */
+        end_index = next_index;
+        while(table[end_index].next != (K)INVALID_INDEX)
+        {
+            end_index = table[end_index].next;
+        }
+
+        /* Copy End of Chain into Removed Slot */
+        table[curr_index].bundle = table[end_index].bundle;
+        table[curr_index].before = table[end_index].before;
+        table[curr_index].after  = table[end_index].after;
+
+        /* Update Time Order (Move) */
+        after_index  = table[end_index].after;
+        before_index = table[end_index].before;
+        if(after_index != (K)INVALID_INDEX)     table[after_index].before = curr_index;
+        if(before_index != (K)INVALID_INDEX)    table[before_index].after = curr_index;
+
+        /* Update Newest and Oldest Entry */
+        if(end_index == newest_entry)  newest_entry = curr_index;
+        if(end_index == oldest_entry)  oldest_entry = curr_index;
     }
+
+    /* Remove End of Chain */
+    table[end_index].occupied = false;
+
+    /* Update Hash Order */
+    K prev_index = table[end_index].prev;
+    if(prev_index != (K)INVALID_INDEX) table[prev_index].next = (K)INVALID_INDEX;
+
+    /* Update Statistics */
+    num_entries--;
+
+    /* Return Success */
+    return true;
 }
 
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-template <class T>
-long Ordering<T>::length(void)
+template <class T, typename K>
+long Table<T,K>::length(void)
 {
-    return len;
+    return num_entries;
 }
 
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::clear(void)
+template <class T, typename K>
+void Table<T,K>::clear(void)
 {
-    /* Set Current Pointer */
-    curr = lastNode;
-
-    /* Check for Empty List */
-    if(curr == NULL)
+    /* Initialize Hash Table */
+    for(int i = 0; i < size; i++)
     {
-        firstNode = NULL;
-        return;
+        /* Free Data */
+        if(table[i].occupied == true)
+        {
+            freeNode(i);
+        }
+
+        /* Initialize Entry */
+        table[i].occupied = false;
+        table[i].key    = (K)INVALID_INDEX;
+        table[i].next   = (K)INVALID_INDEX;
+        table[i].prev   = (K)INVALID_INDEX;
+        table[i].before = (K)INVALID_INDEX;
+        table[i].after  = (K)INVALID_INDEX;
     }
 
-    /* Clear In Previous Direction */
-    sorted_node_t* next_node = curr->next;
-    while(curr != NULL)
-    {
-        sorted_node_t* node = curr;
-        curr = curr->prev;
-        freeNode(node);
-        delete node;
-        len--;
-    }
-
-    /* Clear In Next Direction */
-    curr = next_node;
-    while(curr != NULL)
-    {
-        sorted_node_t* node = curr;
-        curr = curr->next;
-        freeNode(node);
-        delete node;
-        len--;
-    }
-
-    /* Reset Parameters */
-    firstNode = NULL;
-    lastNode = NULL;
-    curr = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * flush
- *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::flush(void)
-{
-    /* Pop List */
-    while(firstNode != NULL)
-    {
-        /* Save off First and Move it to Next */
-        sorted_node_t* node = firstNode;
-        firstNode = firstNode->next;
-
-        /* Post Data */
-        postNode(node);
-
-        /* Delete Old Node */
-        delete node;
-        len--;
-    }
-
-    /* Reset Parameters */
-    firstNode = NULL;
-    lastNode = NULL;
-    curr = NULL;
+    /* Initialize Hash Attributes */
+    num_entries     = 0;
+    oldest_entry    = (K)INVALID_INDEX;
+    newest_entry    = (K)INVALID_INDEX;
+    current_entry   = (K)INVALID_INDEX;
 }
 
 /*----------------------------------------------------------------------------
  * first
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::first(T* data)
+template <class T, typename K>
+K Table<T,K>::first(T* data)
 {
-    curr = firstNode;
-
-    if (curr != NULL)
+    current_entry = oldest_entry;
+    if(current_entry != (K)INVALID_INDEX)
     {
-        if (data != NULL) *data = curr->data;
-        return curr->key;
+        assert(table[current_entry].occupied);
+        if(data != NULL) *data = table[current_entry].data;
+        return table[current_entry].key;
     }
 
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
  * next
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::next(T* data)
+template <class T, typename K>
+K Table<T,K>::next(T* data)
 {
-    if (curr != NULL)
+    if(current_entry != (K)INVALID_INDEX)
     {
-        curr = curr->next;
+        current_entry = table[current_entry].after;
+        if(current_entry != (K)INVALID_INDEX)
+        {
+            assert(table[current_entry].occupied);
+            if(data != NULL) *data = table[current_entry].data;
+            return table[current_entry].key;
+        }
     }
 
-    if (curr != NULL)
-    {
-        if (data != NULL) *data = curr->data;
-        return curr->key;
-    }
-
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
  * last
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::last(T* data)
+template <class T, typename K>
+K Table<T,K>::last(T* data)
 {
-    curr = lastNode;
-
-    if (curr != NULL)
+    current_entry = newest_entry;
+    if(current_entry != (K)INVALID_INDEX)
     {
-        if (data != NULL) *data = curr->data;
-        return curr->key;
+        assert(table[current_entry].occupied);
+        if(data != NULL) *data = table[current_entry].data;
+        return table[current_entry].key;
     }
 
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
  * prev
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::prev(T* data)
+template <class T, typename K>
+K Table<T,K>::prev(T* data)
 {
-    if (curr != NULL)
+    if(current_entry != (K)INVALID_INDEX)
     {
-        curr = curr->next;
+        current_entry = table[current_entry].before;
+        if(current_entry != (K)INVALID_INDEX)
+        {
+            assert(table[current_entry].occupied);
+            if(data != NULL) *data = table[current_entry].data;
+            return table[current_entry].key;
+        }
     }
 
-    if (curr != NULL)
-    {
-        if (data != NULL) *data = curr->data;
-        return curr->key;
-    }
-
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-template <class T>
-Ordering<T>& Ordering<T>::operator=(const Ordering& other)
+template <class T, typename K>
+Table<T,K>& Table<T,K>::operator=(const Table& other)
 {
-    /* clear existing list */
+    /* clear existing table */
     clear();
+    delete [] table;
 
     /* set parameters */
-    maxListSize = other.maxListSize;
+    size = other.size;
+    table = new node_t [size];
 
-    /* copy over post attributes */
-    postFunc = other.postFunc;
-    postParm = other.postParm;
+    /* initialize new table */
+    clear();
 
-    /* build new list */
+    /* build new table */
     T data;
-    okey_t key = first(&data);
-    while (key != INVALID_KEY)
+    K key = first(&data);
+    while(key != (K)INVALID_KEY)
     {
         add(key, data);
         key = next(&data);
@@ -476,154 +526,84 @@ Ordering<T>& Ordering<T>::operator=(const Ordering& other)
 /*----------------------------------------------------------------------------
  * operator[]
  *----------------------------------------------------------------------------*/
-template <class T>
-T& Ordering<T>::operator[](okey_t key)
+template <class T, typename K>
+T& Table<T,K>::operator[](K key)
 {
-    return get(key, EXACT_MATCH);
-}
-
-/*----------------------------------------------------------------------------
- * setMaxListSize
- *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::setMaxListSize(long _max_list_size)
-{
-    if(_max_list_size >= INFINITE_LIST_SIZE)
-    {
-        maxListSize = _max_list_size;
-        return true;
-    }
-
-    return false;
-}
-
-/*----------------------------------------------------------------------------
- * addNode
- * 
- *  take note of mid-function return point 
- *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::addNode(okey_t key, T& data, bool unique)
-{
-    /* Check for Valid Current Pointer */
-    if (curr == NULL && lastNode != NULL) curr = lastNode;
-
-    /* Find Insertion Point */
-    if (curr != NULL)
-    {
-        if (key <= curr->key)
-        {
-            while (key <= curr->key && curr->prev != NULL)
-            {
-                curr = curr->prev;
-            }
-        }
-        else // if(new_node->key > curr->key)
-        {
-            while (key > curr->key && curr->next != NULL)
-            {
-                curr = curr->next;
-            }
-        }
-    }
-
-    /* Check Uniqueness */
-    if(unique && curr && curr->key == key)
-    {
-        return false;
-    }
-
-    /* Allocate New Node */
-    sorted_node_t* new_node = new sorted_node_t;
-    len++;
-
-    /* Populate Node */
-    new_node->key = key;
-    new_node->data = data;
-    new_node->next = NULL;
-    new_node->prev = NULL;
-    
-    /* Add Node */
-    if (curr == NULL)
-    {
-        curr = new_node;
-        firstNode = new_node;
-        lastNode = new_node;
-    }
-    else if (new_node->key <= curr->key)
-    {
-        new_node->next = curr;
-        new_node->prev = curr->prev;
-
-        if (curr->prev != NULL) curr->prev->next = new_node;
-        else                    firstNode = new_node; // reposition first node
-
-        curr->prev = new_node;
-    }
-    else // if(new_node->key > curr->key)
-    {
-        new_node->prev = curr;
-        new_node->next = curr->next;
-
-        if (curr->next != NULL) curr->next->prev = new_node;
-        else                    lastNode = new_node; // reposition last node
-
-        curr->next = new_node;
-    }
-
-    /* Post or Remove First Node */
-    while ((maxListSize != INFINITE_LIST_SIZE) && (len > maxListSize))
-    {
-        /* Save off First and Move it to Next */
-        sorted_node_t* old_node = firstNode;
-        firstNode = firstNode->next;
-
-        /* Check Curr Pointer */
-        if (curr == old_node)
-        {
-            curr = firstNode;
-        }
-
-        /* Post/Free Data */
-        postNode(old_node);
-
-        /* Delete Old Node */
-        delete old_node;
-        len--;
-
-        /* Check for Exit */
-        if (firstNode != NULL)
-        {
-            firstNode->prev = NULL;
-        }
-        else // empty list
-        {
-            firstNode = NULL;
-            curr = NULL;
-            lastNode = NULL;
-            break;
-        }
-    }
-    
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * postNode
- *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::postNode(sorted_node_t* node)
-{
-    int status = 0;
-    if(postFunc) status = postFunc(&(node->data), sizeof(T), postParm);
-    if (status <= 0) freeNode(node);
+    return get(key);
 }
 
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::freeNode(sorted_node_t* node)
+template <class T, typename K>
+bool Table<T,K>::writeNode(K index, K key, T& data)
+{
+    table[index].occupied   = true;
+    table[index].data       = data;
+    table[index].key        = key;
+    table[index].next       = (K)INVALID_INDEX;
+    table[index].prev       = (K)INVALID_INDEX;
+    table[index].after      = (K)INVALID_INDEX;
+    table[index].before     = newest_entry;
+
+    /* Update Time Order */
+    if(oldest_entry == (K)INVALID_INDEX)
+    {
+        /* First Entry */
+        oldest_entry = index;
+        newest_entry = index;
+    }
+    else
+    {
+        /* Not First Entry */
+        table[newest_entry].after = index;
+        newest_entry = index;
+    }
+
+    /* Return Success */
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * freeNode
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+bool Table<T,K>::overwriteNode(K index, K key, T& data, bool with_delete)
+{
+    /* Set Data */
+    table[index].key = key;
+    table[index].data = data;
+
+    /* Bridge Over Entry */
+    bp_index_t before_index = table[index].before;
+    bp_index_t after_index = table[index].after;
+    if(before_index != (K)INVALID_INDEX) table[before_index].after = after_index;
+    if(after_index != (K)INVALID_INDEX) table[after_index].before = before_index;
+
+    /* Check if Overwriting Oldest/Newest */
+    if(index == oldest_entry) oldest_entry = after_index;
+    if(index == newest_entry) newest_entry = before_index;
+
+    /* Set Current Entry as Newest */
+    bp_index_t oldest_index = oldest_entry;
+    bp_index_t newest_index = newest_entry;
+    table[index].after = (K)INVALID_INDEX;
+    table[index].before = newest_index;
+    newest_entry = index;
+
+    /* Update Newest/Oldest */
+    if(newest_index != (K)INVALID_INDEX) table[newest_index].after = index;
+    if(oldest_index == (K)INVALID_INDEX) oldest_entry = index;
+
+    /* Return Success */
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * freeNode
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+void Table<T,K>::freeNode(K index)
 {
     (void)node;
 }
@@ -635,29 +615,30 @@ void Ordering<T>::freeNode(sorted_node_t* node)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-MgOrdering<T, is_array>::MgOrdering(typename Ordering<T>::postFunc_t post_func, void* post_parm, long max_list_size): 
-    Ordering<T>(post_func, post_parm, max_list_size)
+template <class T, typename K, bool is_array>
+MgTable<T,K,is_array>::MgTable(K table_size): 
+    Table<T,K>(table_size)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-MgOrdering<T, is_array>::~MgOrdering(void)
+template <class T, typename K, bool is_array>
+MgTable<T,K,is_array>::~MgTable(void)
 {
-    Ordering<T>::clear();
+    /* clearing table required to free nodes */
+    Table<T,K>::clear();
 }
 
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-void MgOrdering<T, is_array>::freeNode(typename Ordering<T>::sorted_node_t* node)
+template <class T, typename K, bool is_array>
+void MgTable<T,K,is_array>::freeNode(K index)
 {
-    if(!is_array)   delete node->data;
-    else            delete [] node->data;
+    if(!is_array)   delete table[index].data;
+    else            delete [] table[index].data;
 }
 
 #endif  /* __table__ */

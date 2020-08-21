@@ -386,7 +386,7 @@ K Ordering<T,K>::first(T* data)
         return curr->key;
     }
 
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
@@ -406,7 +406,7 @@ K Ordering<T,K>::next(T* data)
         return curr->key;
     }
 
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
@@ -423,7 +423,7 @@ K Ordering<T,K>::last(T* data)
         return curr->key;
     }
 
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
@@ -443,7 +443,7 @@ K Ordering<T,K>::prev(T* data)
         return curr->key;
     }
 
-    return INVALID_KEY;
+    return (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
@@ -465,7 +465,7 @@ Ordering<T,K>& Ordering<T,K>::operator=(const Ordering& other)
     /* build new list */
     T data;
     K key = first(&data);
-    while (key != INVALID_KEY)
+    while (key != (K)INVALID_KEY)
     {
         add(key, data);
         key = next(&data);
