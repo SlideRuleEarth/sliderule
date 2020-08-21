@@ -25,7 +25,7 @@
  ******************************************************************************/
 
 #include "MsgQ.h"
-#include "Ordering.h"
+#include "Table.h"
 #include "OsApi.h"
 #include "DeviceObject.h"
 #include "TcpSocket.h"
@@ -111,8 +111,8 @@ class ClusterSocket: public TcpSocket
 
         bool                            connecting;
         Thread*                         connector;
-        Ordering<read_connection_t*>    read_connections;
-        Ordering<write_connection_t*>   write_connections;
+        Table<read_connection_t*, int>  read_connections;
+        Table<write_connection_t*, int> write_connections;
 
         protocol_t                      protocol;
         bool                            is_server;

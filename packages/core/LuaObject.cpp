@@ -26,7 +26,6 @@
 #include "LogLib.h"
 #include "TraceLib.h"
 #include "StringLib.h"
-#include "Ordering.h"
 #include "OsApi.h"
 
 /******************************************************************************

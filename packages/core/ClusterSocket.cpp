@@ -80,7 +80,9 @@ int ClusterSocket::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 ClusterSocket::ClusterSocket(lua_State* L, const char* _ip_addr, int _port, role_t _role, protocol_t _protocol, bool _is_server, bool _is_blind, const char* passthruq):
-    TcpSocket(L, INVALID_RC, _ip_addr, _port, _role)
+    TcpSocket(L, INVALID_RC, _ip_addr, _port, _role),
+    read_connections(MAX_NUM_CONNECTIONS),
+    write_connections(MAX_NUM_CONNECTIONS)
 {
     protocol = _protocol;
     is_server = _is_server;
@@ -198,8 +200,8 @@ void* ClusterSocket::connectionThread(void* parm)
     ClusterSocket* s = (ClusterSocket*)parm;
 
     int status = 0;
-    if(s->is_server) SockLib::startserver (s->getIpAddr(), s->getPort(), IO_INFINITE_CONNECTIONS, pollHandler, activeHandler, (void*)s);
-    else             SockLib::startclient (s->getIpAddr(), s->getPort(), IO_INFINITE_CONNECTIONS, pollHandler, activeHandler, (void*)s);
+    if(s->is_server) SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, (void*)s);
+    else             SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, (void*)s);
 
     if(status < 0)   dlog("Failed to establish cluster %s socket on %s:%d (%d)\n", s->is_server ? "server" : "client", s->getIpAddr(), s->getPort(), status);
 
@@ -565,7 +567,7 @@ int ClusterSocket::onConnect(int fd)
         connection->payload_index = -MSG_HDR_SIZE;
 
         /* Add to Read Connections */
-        if(!read_connections.add(fd, connection, true))
+        if(!read_connections.add(fd, connection, false))
         {
             dlog("Cluster socket failed to register file descriptor for read connection due to duplicate entry\n");
             status = -1;
@@ -588,7 +590,7 @@ int ClusterSocket::onConnect(int fd)
         }
 
         /* Add to Write Connections */
-        if(!write_connections.add(fd, connection, true))
+        if(!write_connections.add(fd, connection, false))
         {
             dlog("Cluster socket failed to register file descriptor for read connection due to duplicate entry\n");
             if(role == WRITER && protocol == BUS) delete connection->subconnq;

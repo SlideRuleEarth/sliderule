@@ -24,7 +24,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "Ordering.h"
 #include "OsApi.h"
 
 #include <exception>

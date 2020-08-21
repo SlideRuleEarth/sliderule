@@ -26,7 +26,7 @@
 
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "Ordering.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * DISPATCH OBJECT (PURE VIRTUAL)

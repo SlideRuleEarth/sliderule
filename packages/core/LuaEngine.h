@@ -150,7 +150,7 @@ class LuaEngine
         Thread*                     engineThread;
         Cond                        engineSignal;
 
-        Ordering<LuaObject*>        lockList;
+        Ordering<LuaObject*,okey_t> lockList;
         okey_t                      currentLockKey;
 
         mode_t                      mode;

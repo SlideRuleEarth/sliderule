@@ -25,7 +25,6 @@
  ******************************************************************************/
 
 #include "MsgQ.h"
-#include "Ordering.h"
 #include "Dictionary.h"
 #include "DispatchObject.h"
 #include "OsApi.h"

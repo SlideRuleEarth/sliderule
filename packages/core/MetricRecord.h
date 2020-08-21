@@ -25,7 +25,6 @@
  ******************************************************************************/
 
 #include "RecordObject.h"
-#include "Ordering.h"   // for okey_t index which is intended to be compatible with an ordering
 #include "OsApi.h"
 
 /******************************************************************************
