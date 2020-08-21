@@ -8,7 +8,7 @@ import numpy as np
 import math
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
+import cartopy
 
 import sliderule
 
@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
     # Set Verbosity #
     sliderule.set_verbose(True)
-    
+
     # Populate Record Definitions
     sliderule.populate("logrec")
     sliderule.populate("atl03rec")
@@ -174,27 +174,27 @@ if __name__ == '__main__':
     fig = plt.figure(num=None, figsize=(12, 6))
 
     # Plot Ground Tracks
-    plt.subplot(121)
-    plt.title("Ground Tracks")
-    m = Basemap(projection='merc',llcrnrlat=-85,urcrnrlat=85,llcrnrlon=-180,urcrnrlon=180,resolution='c')
-    m.plot(act["latitude"].values,act["longitude"].values,latlon=True,linewidth=1.5,color='r')
-    m.drawcoastlines()
-    m.fillcontinents(color='tan',lake_color='lightblue')
-    m.drawparallels(np.arange(-90.,91.,30.),labels=[True,True,False,False],dashes=[2,2])
-    m.drawmeridians(np.arange(-180.,181.,60.),labels=[False,False,False,True],dashes=[2,2])
-    m.drawmapboundary(fill_color='lightblue')
+    ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
+    ax1.set_title("Ground Tracks")
+    ax1.plot(act["longitude"].values,act["latitude"].values,linewidth=1.5,
+        color='r',zorder=2, transform=cartopy.crs.PlateCarree())
+    # add coastlines with filled land and lakes
+    ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
+    ax1.add_feature(cartopy.feature.LAKES)
+    ax1.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
+    ax1.gridlines(xlocs=np.arange(-180.,181.,60.), ylocs=np.arange(-90.,91.,30.))
 
     # Plot Elevations
-    plt.subplot(122)
-    plt.title("Along Track Elevations")
+    ax2 = plt.subplot(122)
+    ax2.set_title("Along Track Elevations")
     track1 = act[act["beam"].isin([1, 2])].sort_values(by=['distance'])
 #    track2 = act[act["beam"].isin([3, 4])].sort_values(by=['distance'])
 #    track3 = act[act["beam"].isin([5, 6])].sort_values(by=['distance'])
     standard = exp.sort_values(by=['distance'])
-    plt.plot(track1["distance"].values, track1["height"].values, linewidth=1.0, color='b')
+    ax2.plot(track1["distance"].values, track1["height"].values, linewidth=1.0, color='b')
 #    plt.plot(track2["distance"].values, track2["height"].values, linewidth=1.0, color='b')
 #    plt.plot(track3["distance"].values, track3["height"].values, linewidth=1.0, color='b')
-    plt.plot(standard["distance"].values, standard["height"].values, linewidth=1.0, color='g')
+    ax2.plot(standard["distance"].values, standard["height"].values, linewidth=1.0, color='g')
 
     # Show Plot
     plt.show()
