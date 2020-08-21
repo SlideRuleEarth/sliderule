@@ -53,7 +53,7 @@ int S3Lib::cacheMaxSize = 0;
 okey_t S3Lib::cacheIndex = 0;
 Mutex S3Lib::cacheMut;
 Dictionary<okey_t> S3Lib::cacheLookUp;
-MgOrdering<const char*, true> S3Lib::cacheFiles;
+MgOrdering<const char*, okey_t, true> S3Lib::cacheFiles;
 
 /******************************************************************************
  * AWS S3 LIBRARY CLASS

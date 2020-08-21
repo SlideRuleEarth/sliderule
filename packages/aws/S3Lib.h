@@ -75,7 +75,7 @@ class S3Lib
         static Mutex cacheMut;
         static okey_t cacheIndex;
         static Dictionary<okey_t> cacheLookUp;
-        static MgOrdering<const char*, true> cacheFiles;
+        static MgOrdering<const char*, okey_t, true> cacheFiles;
 };
 
 #endif  /* __s3_lib__ */

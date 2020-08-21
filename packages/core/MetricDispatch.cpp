@@ -356,10 +356,10 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
         else if(StringLib::find(offset_str, ':'))
         {
             lua_obj->keyOffset = (okey_t)TimeLib::str2gpstime(offset_str);
-            mlog(CRITICAL, "Setting key offset to: %llu\n", lua_obj->keyOffset);
+            mlog(CRITICAL, "Setting key offset to: %lu\n", lua_obj->keyOffset);
             status = true;
         }
-        else if(!StringLib::str2ullong(offset_str, &lua_obj->keyOffset))
+        else if(!StringLib::str2ulong(offset_str, &lua_obj->keyOffset))
         {
             mlog(CRITICAL, "Unable to set key offset to: %s\n", offset_str);
         }
@@ -398,9 +398,9 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         else if(StringLib::find(min_str, ':'))
         {
             min_key = (okey_t)TimeLib::str2gpstime(min_str);
-            mlog(CRITICAL, "Setting minimum key to: %llu\n", min_key);
+            mlog(CRITICAL, "Setting minimum key to: %lu\n", min_key);
         }
-        else if(!StringLib::str2ullong(min_str, &min_key))
+        else if(!StringLib::str2ulong(min_str, &min_key))
         {
             mlog(CRITICAL, "Unable to set minimum key to: %s\n", min_str);
             status = false;
@@ -415,9 +415,9 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         else if(StringLib::find(max_str, ':'))
         {
             max_key = (okey_t)TimeLib::str2gpstime(max_str);
-            mlog(CRITICAL, "Setting maximum key to: %llu\n", max_key);
+            mlog(CRITICAL, "Setting maximum key to: %lu\n", max_key);
         }
-        else if(!StringLib::str2ullong(max_str, &max_key))
+        else if(!StringLib::str2ulong(max_str, &max_key))
         {
             mlog(CRITICAL, "Unable to set maximum key to: %s\n", max_str);
             status = false;

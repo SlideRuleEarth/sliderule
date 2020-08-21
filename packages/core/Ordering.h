@@ -31,8 +31,10 @@
 /******************************************************************************
  * ORDERING TEMPLATE
  ******************************************************************************/
-
-template <class T>
+/*
+ * Ordering - sorted linked list of data type T and index type K
+ */
+template <class T, typename K=unsigned long>
 class Ordering
 {
     public:
@@ -61,23 +63,23 @@ class Ordering
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Ordering    (typename Ordering<T>::postFunc_t post_func=NULL, void* post_parm=NULL, long max_list_size=INFINITE_LIST_SIZE);
+                    Ordering    (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=INFINITE_LIST_SIZE);
         virtual     ~Ordering   (void);
 
-        bool        add         (okey_t key, T& data, bool unique=false);
-        T&          get         (okey_t key, searchMode_t smode=EXACT_MATCH);
-        bool        remove      (okey_t key, searchMode_t smode=EXACT_MATCH);
+        bool        add         (K key, T& data, bool unique=false);
+        T&          get         (K key, searchMode_t smode=EXACT_MATCH);
+        bool        remove      (K key, searchMode_t smode=EXACT_MATCH);
         long        length      (void);
         void        flush       (void);
         void        clear       (void);
     
-        okey_t      first       (T* data);
-        okey_t      next        (T* data);
-        okey_t      last        (T* data);
-        okey_t      prev        (T* data);
+        K           first       (T* data);
+        K           next        (T* data);
+        K           last        (T* data);
+        K           prev        (T* data);
 
         Ordering&   operator=   (const Ordering& other);
-        T&          operator[]  (okey_t key);
+        T&          operator[]  (K key);
 
     protected:
 
@@ -86,7 +88,7 @@ class Ordering
          *--------------------------------------------------------------------*/
 
         typedef struct sorted_block_t {
-            okey_t                  key;
+            K                       key;
             T                       data;
             struct sorted_block_t*  next;
             struct sorted_block_t*  prev;
@@ -109,7 +111,7 @@ class Ordering
          *--------------------------------------------------------------------*/
         
         bool            setMaxListSize  (long _max_list_size);
-        bool            addNode         (okey_t key, T& data, bool unique);
+        bool            addNode         (K key, T& data, bool unique);
         void            postNode        (sorted_node_t* node);
         virtual void    freeNode        (sorted_node_t* node);
 };
@@ -118,14 +120,14 @@ class Ordering
  * MANAGED ORDERING TEMPLATE
  ******************************************************************************/
 
-template <class T, bool is_array=false>
-class MgOrdering: public Ordering<T>
+template <class T, typename K=unsigned long, bool is_array=false>
+class MgOrdering: public Ordering<T,K>
 {
     public:
-        MgOrdering (typename Ordering<T>::postFunc_t post_func=NULL, void* post_parm=NULL, long max_list_size=Ordering<T>::INFINITE_LIST_SIZE);
+        MgOrdering (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=Ordering<T,K>::INFINITE_LIST_SIZE);
         ~MgOrdering (void);
     private:
-        void freeNode (typename Ordering<T>::sorted_node_t* node);
+        void freeNode (typename Ordering<T,K>::sorted_node_t* node);
 };
 
 /******************************************************************************
@@ -135,8 +137,8 @@ class MgOrdering: public Ordering<T>
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-Ordering<T>::Ordering(postFunc_t post_func, void* post_parm, long max_list_size)
+template <class T, typename K>
+Ordering<T,K>::Ordering(postFunc_t post_func, void* post_parm, K max_list_size)
 {
     firstNode   = NULL;
     lastNode    = NULL;
@@ -152,8 +154,8 @@ Ordering<T>::Ordering(postFunc_t post_func, void* post_parm, long max_list_size)
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-template <class T>
-Ordering<T>::~Ordering(void)
+template <class T, typename K>
+Ordering<T,K>::~Ordering(void)
 {
     clear();
 }
@@ -161,8 +163,8 @@ Ordering<T>::~Ordering(void)
 /*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::add(okey_t key, T& data, bool unique)
+template <class T, typename K>
+bool Ordering<T,K>::add(K key, T& data, bool unique)
 {
     return addNode(key, data, unique);
 }
@@ -170,8 +172,8 @@ bool Ordering<T>::add(okey_t key, T& data, bool unique)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T>
-T& Ordering<T>::get(okey_t key, searchMode_t smode)
+template <class T, typename K>
+T& Ordering<T,K>::get(K key, searchMode_t smode)
 {
     bool found = false;
 
@@ -226,8 +228,8 @@ T& Ordering<T>::get(okey_t key, searchMode_t smode)
  * 
  *  TODO factor out common search code into its own function
  *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::remove(okey_t key, searchMode_t smode)
+template <class T, typename K>
+bool Ordering<T,K>::remove(K key, searchMode_t smode)
 {
     bool found = false;
 
@@ -293,8 +295,8 @@ bool Ordering<T>::remove(okey_t key, searchMode_t smode)
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-template <class T>
-long Ordering<T>::length(void)
+template <class T, typename K>
+long Ordering<T,K>::length(void)
 {
     return len;
 }
@@ -302,8 +304,8 @@ long Ordering<T>::length(void)
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::clear(void)
+template <class T, typename K>
+void Ordering<T,K>::clear(void)
 {
     /* Set Current Pointer */
     curr = lastNode;
@@ -346,8 +348,8 @@ void Ordering<T>::clear(void)
 /*----------------------------------------------------------------------------
  * flush
  *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::flush(void)
+template <class T, typename K>
+void Ordering<T,K>::flush(void)
 {
     /* Pop List */
     while(firstNode != NULL)
@@ -373,8 +375,8 @@ void Ordering<T>::flush(void)
 /*----------------------------------------------------------------------------
  * first
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::first(T* data)
+template <class T, typename K>
+K Ordering<T,K>::first(T* data)
 {
     curr = firstNode;
 
@@ -390,8 +392,8 @@ okey_t Ordering<T>::first(T* data)
 /*----------------------------------------------------------------------------
  * next
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::next(T* data)
+template <class T, typename K>
+K Ordering<T,K>::next(T* data)
 {
     if (curr != NULL)
     {
@@ -410,8 +412,8 @@ okey_t Ordering<T>::next(T* data)
 /*----------------------------------------------------------------------------
  * last
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::last(T* data)
+template <class T, typename K>
+K Ordering<T,K>::last(T* data)
 {
     curr = lastNode;
 
@@ -427,8 +429,8 @@ okey_t Ordering<T>::last(T* data)
 /*----------------------------------------------------------------------------
  * prev
  *----------------------------------------------------------------------------*/
-template <class T>
-okey_t Ordering<T>::prev(T* data)
+template <class T, typename K>
+K Ordering<T,K>::prev(T* data)
 {
     if (curr != NULL)
     {
@@ -447,8 +449,8 @@ okey_t Ordering<T>::prev(T* data)
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-template <class T>
-Ordering<T>& Ordering<T>::operator=(const Ordering& other)
+template <class T, typename K>
+Ordering<T,K>& Ordering<T,K>::operator=(const Ordering& other)
 {
     /* clear existing list */
     clear();
@@ -462,7 +464,7 @@ Ordering<T>& Ordering<T>::operator=(const Ordering& other)
 
     /* build new list */
     T data;
-    okey_t key = first(&data);
+    K key = first(&data);
     while (key != INVALID_KEY)
     {
         add(key, data);
@@ -476,8 +478,8 @@ Ordering<T>& Ordering<T>::operator=(const Ordering& other)
 /*----------------------------------------------------------------------------
  * operator[]
  *----------------------------------------------------------------------------*/
-template <class T>
-T& Ordering<T>::operator[](okey_t key)
+template <class T, typename K>
+T& Ordering<T,K>::operator[](K key)
 {
     return get(key, EXACT_MATCH);
 }
@@ -485,8 +487,8 @@ T& Ordering<T>::operator[](okey_t key)
 /*----------------------------------------------------------------------------
  * setMaxListSize
  *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::setMaxListSize(long _max_list_size)
+template <class T, typename K>
+bool Ordering<T,K>::setMaxListSize(long _max_list_size)
 {
     if(_max_list_size >= INFINITE_LIST_SIZE)
     {
@@ -502,8 +504,8 @@ bool Ordering<T>::setMaxListSize(long _max_list_size)
  * 
  *  take note of mid-function return point 
  *----------------------------------------------------------------------------*/
-template <class T>
-bool Ordering<T>::addNode(okey_t key, T& data, bool unique)
+template <class T, typename K>
+bool Ordering<T,K>::addNode(K key, T& data, bool unique)
 {
     /* Check for Valid Current Pointer */
     if (curr == NULL && lastNode != NULL) curr = lastNode;
@@ -611,8 +613,8 @@ bool Ordering<T>::addNode(okey_t key, T& data, bool unique)
 /*----------------------------------------------------------------------------
  * postNode
  *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::postNode(sorted_node_t* node)
+template <class T, typename K>
+void Ordering<T,K>::postNode(sorted_node_t* node)
 {
     int status = 0;
     if(postFunc) status = postFunc(&(node->data), sizeof(T), postParm);
@@ -622,8 +624,8 @@ void Ordering<T>::postNode(sorted_node_t* node)
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T>
-void Ordering<T>::freeNode(sorted_node_t* node)
+template <class T, typename K>
+void Ordering<T,K>::freeNode(sorted_node_t* node)
 {
     (void)node;
 }
@@ -635,26 +637,26 @@ void Ordering<T>::freeNode(sorted_node_t* node)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-MgOrdering<T, is_array>::MgOrdering(typename Ordering<T>::postFunc_t post_func, void* post_parm, long max_list_size): 
-    Ordering<T>(post_func, post_parm, max_list_size)
+template <class T, typename K, bool is_array>
+MgOrdering<T,K,is_array>::MgOrdering(typename Ordering<T,K>::postFunc_t post_func, void* post_parm, K max_list_size): 
+    Ordering<T,K>(post_func, post_parm, max_list_size)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-MgOrdering<T, is_array>::~MgOrdering(void)
+template <class T, typename K, bool is_array>
+MgOrdering<T,K,is_array>::~MgOrdering(void)
 {
-    Ordering<T>::clear();
+    Ordering<T,K>::clear();
 }
 
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-void MgOrdering<T, is_array>::freeNode(typename Ordering<T>::sorted_node_t* node)
+template <class T, typename K, bool is_array>
+void MgOrdering<T,K,is_array>::freeNode(typename Ordering<T,K>::sorted_node_t* node)
 {
     if(!is_array)   delete node->data;
     else            delete [] node->data;

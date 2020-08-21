@@ -31,7 +31,7 @@
  * TABLE TEMPLATE
  ******************************************************************************/
 
-template <class T>
+template <class T, typename K=unsigned long long>
 class Ordering
 {
     public:
@@ -55,7 +55,7 @@ class Ordering
          *--------------------------------------------------------------------*/
         
         static const long INFINITE_LIST_SIZE = -1;
-        
+
         
         /*--------------------------------------------------------------------
          * Methods

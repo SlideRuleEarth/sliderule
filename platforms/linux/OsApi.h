@@ -62,7 +62,7 @@
  ******************************************************************************/
 
 /* Ordered Key */
-typedef unsigned long long okey_t; 
+typedef unsigned long okey_t; 
 
 /* File */
 typedef FILE* fileptr_t;
