@@ -27,7 +27,7 @@
 #include <atomic>
 
 #include "MsgQ.h"
-#include "Ordering.h"
+#include "Table.h"
 #include "OsApi.h"
 #include "StringLib.h"
 #include "LuaObject.h"
@@ -104,7 +104,7 @@ class HttpServer: public LuaObject
 
         bool                            active;
         Thread*                         listenerPid;
-        Ordering<connection_t*>         connections;
+        Table<connection_t*, int>       connections;
 
         Dictionary<EndpointObject*>     routeTable;
 

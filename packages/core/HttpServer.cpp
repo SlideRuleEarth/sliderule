@@ -74,7 +74,8 @@ int HttpServer::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    connections(MAX_NUM_CONNECTIONS)
 {
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
@@ -140,8 +141,15 @@ void* HttpServer::listenerThread(void* parm)
 {
     HttpServer* s = (HttpServer*)parm;
 
-    int status = SockLib::startserver (s->getIpAddr(), s->getPort(), IO_INFINITE_CONNECTIONS, pollHandler, activeHandler, (void*)s);
-    if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)\n", s->getIpAddr(), s->getPort(), status);
+    try
+    {
+        int status = SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, (void*)s);
+        if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)\n", s->getIpAddr(), s->getPort(), status);
+    }
+    catch(const std::exception& e)
+    {
+        mlog(CRITICAL, "Caught fatal exception, aborting http server thread: %s\n", e.what());
+    }    
 
     return NULL;
 }
@@ -578,7 +586,7 @@ int HttpServer::onConnect(int fd)
     LocalLib::set(&connection->state, 0, sizeof(state_t));
 
     /* Register Connection */
-    if(connections.add(fd, connection, true))
+    if(connections.add(fd, connection, false))
     {
         connection->request.id = getUniqueId(); // id is allocated
         connection->request.headers = new Dictionary<const char*>();

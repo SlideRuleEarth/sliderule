@@ -283,7 +283,7 @@ T& Table<T,K>::get(K key)
     }
 
     /* Check if Node Found */
-    if(curr_index == (K)INVALID_KEY)
+    if(curr_index != (K)INVALID_KEY)
     {
         return table[curr_index].data;
     }
@@ -576,7 +576,7 @@ bool Table<T,K>::overwriteNode(K index, K key, T& data, bool with_delete)
     {
         freeNode(index);
     }
-    
+
     /* Set Data */
     table[index].key = key;
     table[index].data = data;
