@@ -59,6 +59,7 @@
 #include "RecordDispatcher.h"
 #include "ReportDispatch.h"
 #include "StringLib.h"
+#include "Table.h"
 #include "TcpSocket.h"
 #include "TimeLib.h"
 #include "TraceLib.h"

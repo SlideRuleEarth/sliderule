@@ -42,6 +42,7 @@
 #include "StatisticRecord.h"
 #include "UT_Dictionary.h"
 #include "UT_MsgQ.h"
+#include "UT_Table.h"
 #include "UT_TimeLib.h"
 
 /******************************************************************************

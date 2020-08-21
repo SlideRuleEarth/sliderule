@@ -241,6 +241,7 @@ void initlegacy (void)
     cmdProc->registerHandler("PUBLISHER_PROCESSOR",         CcsdsPublisherProcessorModule::createObject,    1,  "<output stream>", true);
     cmdProc->registerHandler("UT_MSGQ",                     UT_MsgQ::createObject,                          0,  "");
     cmdProc->registerHandler("UT_DICTIONARY",               UT_Dictionary::createObject,                    0,  "[<logfile>]");
+    cmdProc->registerHandler("UT_TABLE"  ,                  UT_Table::createObject,                         0,  "");
     cmdProc->registerHandler("UT_TIMELIB",                  UT_TimeLib::createObject,                       0,  "");
 
     /* Add Lua Extension */

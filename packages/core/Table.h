@@ -97,6 +97,7 @@ class Table
         K           num_entries;
         K           oldest_entry;
         K           newest_entry;
+        K           current_entry;
         
         /*--------------------------------------------------------------------
          * Methods
@@ -163,26 +164,26 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
     /* Add Entry to Hash */
     if(table[curr_index].occupied == false)
     {
-        writeNode(curr_index, data);
+        writeNode(curr_index, key, data);
     }
     else /* collision */
     {
         /* Check Current Slot for Duplicate */
         if(table[curr_index].key == key)
         {
-            if(overwrite)   return overwriteNode(curr_index, data, with_delete);
+            if(overwrite)   return overwriteNode(curr_index, key, data, with_delete);
             else            return false;
         }
 
         /* Transverse to End of Chain */
         K end_index = curr_index;
         K scan_index = table[curr_index].next;
-        while(scan_index != (K)INVALID_INDEX)
+        while(scan_index != (K)INVALID_KEY)
         {
             /* Check Slot for Duplicate */
-            if(table[scan_index].bundle.cid == bundle.cid)
+            if(table[scan_index].key == key)
             {
-                if(overwrite)   return overwriteNode(scan_index, data, with_delete);
+                if(overwrite)   return overwriteNode(scan_index, key, data, with_delete);
                 else            return false;
             }
 
@@ -206,10 +207,10 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
         }
 
         /* Insert Node */
-        if(rh_hash->table[curr_index].prev == (K)INVALID_INDEX) /* End of Chain Insertion (chain == 1) */
+        if(table[curr_index].prev == (K)INVALID_KEY) /* End of Chain Insertion (chain == 1) */
         {
             /* Add Entry to Open Slot at End of Chain */
-            writeNode(open_index, data);
+            writeNode(open_index, key, data);
             table[end_index].next = open_index;
             table[open_index].prev = end_index;
         }
@@ -221,31 +222,31 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
             /* Update Hash Links */
             K next_index = table[curr_index].next;
             K prev_index = table[curr_index].prev;
-            if(next_index != (K)INVALID_INDEX) table[next_index].prev = open_index;
-            if(prev_index != (K)INVALID_INDEX) table[prev_index].next = open_index;
+            if(next_index != (K)INVALID_KEY) table[next_index].prev = open_index;
+            if(prev_index != (K)INVALID_KEY) table[prev_index].next = open_index;
 
             /* Update Time Order (Move) */
             K after_index  = table[curr_index].after;
             K before_index = table[curr_index].before;
-            if(after_index != (K)INVALID_INDEX)   table[after_index].before = open_index;
-            if(before_index != (K)INVALID_INDEX)  table[before_index].after = open_index;
+            if(after_index != (K)INVALID_KEY)   table[after_index].before = open_index;
+            if(before_index != (K)INVALID_KEY)  table[before_index].after = open_index;
 
             /* Update Oldest Entry */
             if(oldest_entry == curr_index)
             {
                 oldest_entry = open_index;
-                table[rh_hash->oldest_entry].before = (K)INVALID_INDEX;
+                table[oldest_entry].before = (K)INVALID_KEY;
             }
 
             /* Update Newest Entry */
             if(newest_entry == curr_index)
             {
                 newest_entry = open_index;
-                table[newest_entry].after = (K)INVALID_INDEX;
+                table[newest_entry].after = (K)INVALID_KEY;
             }
 
             /* Add Entry to Current Slot */
-            writeNode(curr_index, data);
+            writeNode(curr_index, key, data);
         }
     }
 
@@ -265,11 +266,11 @@ T& Table<T,K>::get(K key)
     K curr_index = TABLE_HASH(key) % size;
 
     /* Find Node to Return */
-    while(curr_index != (K)INVALID_INDEX)
+    while(curr_index != (K)INVALID_KEY)
     {
         if(table[curr_index].occupied == false) /* end of chain */
         {
-            curr_index = (K)INVALID_INDEX;
+            curr_index = (K)INVALID_KEY;
         }
         else if(table[curr_index].key == key) /* matched key */
         {
@@ -282,7 +283,7 @@ T& Table<T,K>::get(K key)
     }
 
     /* Check if Node Found */
-    if(curr_index == (K)INVALID_INDEX)
+    if(curr_index == (K)INVALID_KEY)
     {
         return table[curr_index].data;
     }
@@ -293,8 +294,6 @@ T& Table<T,K>::get(K key)
 
 /*----------------------------------------------------------------------------
  * remove
- * 
- *  TODO factor out common search code into its own function
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
 bool Table<T,K>::remove(K key)
@@ -302,11 +301,11 @@ bool Table<T,K>::remove(K key)
     K curr_index = TABLE_HASH(key) % size;
 
     /* Find Node to Remove */
-    while(curr_index != (K)INVALID_INDEX)
+    while(curr_index != (K)INVALID_KEY)
     {
         if(table[curr_index].occupied == false) /* end of chain */
         {
-            curr_index = (K)INVALID_INDEX;
+            curr_index = (K)INVALID_KEY;
         }
         else if(table[curr_index].key == key) /* matched key */
         {
@@ -319,19 +318,19 @@ bool Table<T,K>::remove(K key)
     }
 
     /* Check if Node Found */
-    if(curr_index == (K)INVALID_INDEX)
+    if(curr_index == (K)INVALID_KEY)
     {
-        return bool;
+        return false;
     }
 
     /* Remove Bundle */
-    freeNode(cur_index);
+    freeNode(curr_index);
 
     /* Update Time Order (Bridge) */
     K after_index  = table[curr_index].after;
     K before_index = table[curr_index].before;
-    if(after_index != (K)INVALID_INDEX)   table[after_index].before = before_index;
-    if(before_index != (K)INVALID_INDEX)  table[before_index].after = after_index;
+    if(after_index != (K)INVALID_KEY)   table[after_index].before = before_index;
+    if(before_index != (K)INVALID_KEY)  table[before_index].after = after_index;
 
     /* Update Newest and Oldest Entry */
     if(curr_index == newest_entry)  newest_entry = before_index;
@@ -340,25 +339,27 @@ bool Table<T,K>::remove(K key)
     /* Remove End of Chain */
     K end_index = curr_index;
     K next_index = table[curr_index].next;
-    if(next_index != (K)INVALID_INDEX)
+    if(next_index != (K)INVALID_KEY)
     {
         /* Transverse to End of Chain */
         end_index = next_index;
-        while(table[end_index].next != (K)INVALID_INDEX)
+        while(table[end_index].next != (K)INVALID_KEY)
         {
             end_index = table[end_index].next;
         }
 
         /* Copy End of Chain into Removed Slot */
-        table[curr_index].bundle = table[end_index].bundle;
-        table[curr_index].before = table[end_index].before;
-        table[curr_index].after  = table[end_index].after;
+        table[curr_index].occupied  = true;
+        table[curr_index].key       = table[end_index].key;
+        table[curr_index].data      = table[end_index].data;
+        table[curr_index].before    = table[end_index].before;
+        table[curr_index].after     = table[end_index].after;
 
         /* Update Time Order (Move) */
         after_index  = table[end_index].after;
         before_index = table[end_index].before;
-        if(after_index != (K)INVALID_INDEX)     table[after_index].before = curr_index;
-        if(before_index != (K)INVALID_INDEX)    table[before_index].after = curr_index;
+        if(after_index != (K)INVALID_KEY)     table[after_index].before = curr_index;
+        if(before_index != (K)INVALID_KEY)    table[before_index].after = curr_index;
 
         /* Update Newest and Oldest Entry */
         if(end_index == newest_entry)  newest_entry = curr_index;
@@ -370,7 +371,7 @@ bool Table<T,K>::remove(K key)
 
     /* Update Hash Order */
     K prev_index = table[end_index].prev;
-    if(prev_index != (K)INVALID_INDEX) table[prev_index].next = (K)INVALID_INDEX;
+    if(prev_index != (K)INVALID_KEY) table[prev_index].next = (K)INVALID_KEY;
 
     /* Update Statistics */
     num_entries--;
@@ -405,18 +406,18 @@ void Table<T,K>::clear(void)
 
         /* Initialize Entry */
         table[i].occupied = false;
-        table[i].key    = (K)INVALID_INDEX;
-        table[i].next   = (K)INVALID_INDEX;
-        table[i].prev   = (K)INVALID_INDEX;
-        table[i].before = (K)INVALID_INDEX;
-        table[i].after  = (K)INVALID_INDEX;
+        table[i].key    = (K)INVALID_KEY;
+        table[i].next   = (K)INVALID_KEY;
+        table[i].prev   = (K)INVALID_KEY;
+        table[i].before = (K)INVALID_KEY;
+        table[i].after  = (K)INVALID_KEY;
     }
 
     /* Initialize Hash Attributes */
     num_entries     = 0;
-    oldest_entry    = (K)INVALID_INDEX;
-    newest_entry    = (K)INVALID_INDEX;
-    current_entry   = (K)INVALID_INDEX;
+    oldest_entry    = (K)INVALID_KEY;
+    newest_entry    = (K)INVALID_KEY;
+    current_entry   = (K)INVALID_KEY;
 }
 
 /*----------------------------------------------------------------------------
@@ -426,7 +427,7 @@ template <class T, typename K>
 K Table<T,K>::first(T* data)
 {
     current_entry = oldest_entry;
-    if(current_entry != (K)INVALID_INDEX)
+    if(current_entry != (K)INVALID_KEY)
     {
         assert(table[current_entry].occupied);
         if(data != NULL) *data = table[current_entry].data;
@@ -442,10 +443,10 @@ K Table<T,K>::first(T* data)
 template <class T, typename K>
 K Table<T,K>::next(T* data)
 {
-    if(current_entry != (K)INVALID_INDEX)
+    if(current_entry != (K)INVALID_KEY)
     {
         current_entry = table[current_entry].after;
-        if(current_entry != (K)INVALID_INDEX)
+        if(current_entry != (K)INVALID_KEY)
         {
             assert(table[current_entry].occupied);
             if(data != NULL) *data = table[current_entry].data;
@@ -463,7 +464,7 @@ template <class T, typename K>
 K Table<T,K>::last(T* data)
 {
     current_entry = newest_entry;
-    if(current_entry != (K)INVALID_INDEX)
+    if(current_entry != (K)INVALID_KEY)
     {
         assert(table[current_entry].occupied);
         if(data != NULL) *data = table[current_entry].data;
@@ -479,10 +480,10 @@ K Table<T,K>::last(T* data)
 template <class T, typename K>
 K Table<T,K>::prev(T* data)
 {
-    if(current_entry != (K)INVALID_INDEX)
+    if(current_entry != (K)INVALID_KEY)
     {
         current_entry = table[current_entry].before;
-        if(current_entry != (K)INVALID_INDEX)
+        if(current_entry != (K)INVALID_KEY)
         {
             assert(table[current_entry].occupied);
             if(data != NULL) *data = table[current_entry].data;
@@ -541,13 +542,13 @@ bool Table<T,K>::writeNode(K index, K key, T& data)
     table[index].occupied   = true;
     table[index].data       = data;
     table[index].key        = key;
-    table[index].next       = (K)INVALID_INDEX;
-    table[index].prev       = (K)INVALID_INDEX;
-    table[index].after      = (K)INVALID_INDEX;
+    table[index].next       = (K)INVALID_KEY;
+    table[index].prev       = (K)INVALID_KEY;
+    table[index].after      = (K)INVALID_KEY;
     table[index].before     = newest_entry;
 
     /* Update Time Order */
-    if(oldest_entry == (K)INVALID_INDEX)
+    if(oldest_entry == (K)INVALID_KEY)
     {
         /* First Entry */
         oldest_entry = index;
@@ -570,30 +571,36 @@ bool Table<T,K>::writeNode(K index, K key, T& data)
 template <class T, typename K>
 bool Table<T,K>::overwriteNode(K index, K key, T& data, bool with_delete)
 {
+    /* Delete Entry being Overritten (if requested) */
+    if(with_delete)
+    {
+        freeNode(index);
+    }
+    
     /* Set Data */
     table[index].key = key;
     table[index].data = data;
 
     /* Bridge Over Entry */
-    bp_index_t before_index = table[index].before;
-    bp_index_t after_index = table[index].after;
-    if(before_index != (K)INVALID_INDEX) table[before_index].after = after_index;
-    if(after_index != (K)INVALID_INDEX) table[after_index].before = before_index;
+    K before_index = table[index].before;
+    K after_index = table[index].after;
+    if(before_index != (K)INVALID_KEY) table[before_index].after = after_index;
+    if(after_index != (K)INVALID_KEY) table[after_index].before = before_index;
 
     /* Check if Overwriting Oldest/Newest */
     if(index == oldest_entry) oldest_entry = after_index;
     if(index == newest_entry) newest_entry = before_index;
 
     /* Set Current Entry as Newest */
-    bp_index_t oldest_index = oldest_entry;
-    bp_index_t newest_index = newest_entry;
-    table[index].after = (K)INVALID_INDEX;
+    K oldest_index = oldest_entry;
+    K newest_index = newest_entry;
+    table[index].after = (K)INVALID_KEY;
     table[index].before = newest_index;
     newest_entry = index;
 
     /* Update Newest/Oldest */
-    if(newest_index != (K)INVALID_INDEX) table[newest_index].after = index;
-    if(oldest_index == (K)INVALID_INDEX) oldest_entry = index;
+    if(newest_index != (K)INVALID_KEY) table[newest_index].after = index;
+    if(oldest_index == (K)INVALID_KEY) oldest_entry = index;
 
     /* Return Success */
     return true;
@@ -605,7 +612,7 @@ bool Table<T,K>::overwriteNode(K index, K key, T& data, bool with_delete)
 template <class T, typename K>
 void Table<T,K>::freeNode(K index)
 {
-    (void)node;
+    (void)index;
 }
 
 /******************************************************************************
@@ -637,8 +644,8 @@ MgTable<T,K,is_array>::~MgTable(void)
 template <class T, typename K, bool is_array>
 void MgTable<T,K,is_array>::freeNode(K index)
 {
-    if(!is_array)   delete table[index].data;
-    else            delete [] table[index].data;
+    if(!is_array)   delete Table<T,K>::table[index].data;
+    else            delete [] Table<T,K>::table[index].data;
 }
 
 #endif  /* __table__ */

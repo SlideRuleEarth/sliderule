@@ -102,6 +102,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.h
             ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/Table.h
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.h
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.h
             ${CMAKE_CURRENT_LIST_DIR}/TraceLib.h
