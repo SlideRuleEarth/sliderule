@@ -111,7 +111,7 @@ class ReportDispatch: public DispatchObject
 
                 static const int            MAX_INDEX_STR_SIZE = 256;
                 format_t                    format;
-                MgDictionary<const char*>   values; // indexed by data point names
+                MgDictionary<const char*, true> values; // indexed by data point names
                 okey_t                      index;
                 bool                        headerInProgress;
                 indexDisplay_t              indexDisplay;

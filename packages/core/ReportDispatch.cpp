@@ -169,7 +169,7 @@ const char* ReportDispatch::display2str(indexDisplay_t _display)
 ReportDispatch::ReportFile::ReportFile(lua_State* L, const char* _filename, format_t _format):
     File(L, _filename, File::TEXT, File::WRITER, File::FLUSHED),
     format(_format),
-    values(Dictionary<char*>::DEFAULT_HASH_TABLE_SIZE, Dictionary<char*>::DEFAULT_HASH_TABLE_LOAD, true)
+    values(Dictionary<char*>::DEFAULT_HASH_TABLE_SIZE, Dictionary<char*>::DEFAULT_HASH_TABLE_LOAD)
 {
     headerInProgress = false;
     indexDisplay = INT_DISPLAY;
@@ -294,7 +294,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
     reportError = true;
 
     /* Initialize Entry Ordering */
-    if(buffer > 0)  entries = new MgOrdering<entry_t*>(ReportDispatch::postEntry, this, buffer, false);
+    if(buffer > 0)  entries = new MgOrdering<entry_t*>(ReportDispatch::postEntry, this, buffer);
     else            entries = NULL;
 
     /* Populate Fixed Header If Provided */

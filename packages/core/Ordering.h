@@ -124,15 +124,14 @@ class Ordering
  * MANAGED ORDERING TEMPLATE
  ******************************************************************************/
 
-template <class T>
+template <class T, bool is_array=false>
 class MgOrdering: public Ordering<T>
 {
     public:
-        MgOrdering (typename Ordering<T>::postFunc_t post_func=NULL, void* post_parm=NULL, long max_list_size=Ordering<T>::INFINITE_LIST_SIZE, bool is_array=false);
+        MgOrdering (typename Ordering<T>::postFunc_t post_func=NULL, void* post_parm=NULL, long max_list_size=Ordering<T>::INFINITE_LIST_SIZE);
         ~MgOrdering (void);
     private:
         void freeNode (typename Ordering<T>::sorted_node_t* node);
-        bool isArray;            
 };
 
 /******************************************************************************
@@ -642,17 +641,17 @@ void Ordering<T>::freeNode(sorted_node_t* node)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-MgOrdering<T>::MgOrdering(typename Ordering<T>::postFunc_t post_func, void* post_parm, long max_list_size, bool is_array): Ordering<T>(post_func, post_parm, max_list_size)
+template <class T, bool is_array>
+MgOrdering<T, is_array>::MgOrdering(typename Ordering<T>::postFunc_t post_func, void* post_parm, long max_list_size): 
+    Ordering<T>(post_func, post_parm, max_list_size)
 {
-    isArray = is_array;
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T>
-MgOrdering<T>::~MgOrdering(void)
+template <class T, bool is_array>
+MgOrdering<T, is_array>::~MgOrdering(void)
 {
     Ordering<T>::clear();
 }
@@ -660,10 +659,10 @@ MgOrdering<T>::~MgOrdering(void)
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T>
-void MgOrdering<T>::freeNode(typename Ordering<T>::sorted_node_t* node)
+template <class T, bool is_array>
+void MgOrdering<T, is_array>::freeNode(typename Ordering<T>::sorted_node_t* node)
 {
-    if(!isArray)    delete node->data;
+    if(!is_array)   delete node->data;
     else            delete [] node->data;
 }
 

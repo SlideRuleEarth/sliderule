@@ -112,14 +112,13 @@ class Dictionary
  * MANAGED DICTIONARY TEMPLATE
  ******************************************************************************/
 
-template <class T>
+template <class T, bool is_array=false>
 class MgDictionary: public Dictionary<T>
 {
     public:
-        MgDictionary (int hash_size=Dictionary<T>::DEFAULT_HASH_TABLE_SIZE, double hash_load=Dictionary<T>::DEFAULT_HASH_TABLE_LOAD, bool _is_array=false);
+        MgDictionary (int hash_size=Dictionary<T>::DEFAULT_HASH_TABLE_SIZE, double hash_load=Dictionary<T>::DEFAULT_HASH_TABLE_LOAD);
         ~MgDictionary (void);
     private:
-        bool isArray;            
         void freeNode (unsigned int hash_index);
 };
 
@@ -703,17 +702,16 @@ void Dictionary<T>::freeNode(unsigned int hash_index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-MgDictionary<T>::MgDictionary(int hash_size, double hash_load, bool _is_array): Dictionary<T>(hash_size, hash_load)
+template <class T, bool is_array>
+MgDictionary<T, is_array>::MgDictionary(int hash_size, double hash_load): Dictionary<T>(hash_size, hash_load)
 {
-    isArray = _is_array;
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T>
-MgDictionary<T>::~MgDictionary(void)
+template <class T, bool is_array>
+MgDictionary<T, is_array>::~MgDictionary(void)
 {
     /* This call is needed here because the data in the hash table
      * must be cleared in the context of the freeNode method below
@@ -726,11 +724,11 @@ MgDictionary<T>::~MgDictionary(void)
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T>
-void MgDictionary<T>::freeNode(unsigned int hash_index)
+template <class T, bool is_array>
+void MgDictionary<T, is_array>::freeNode(unsigned int hash_index)
 {   
-    if(!isArray) delete Dictionary<T>::hashTable[hash_index].data;
-    else         delete [] Dictionary<T>::hashTable[hash_index].data;
+    if(!is_array)   delete Dictionary<T>::hashTable[hash_index].data;
+    else            delete [] Dictionary<T>::hashTable[hash_index].data;
 }
 
 #endif  /* __dictionary__ */
