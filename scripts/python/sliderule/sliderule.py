@@ -58,6 +58,10 @@ def __decode(rectype, rawdata):
     # initialize record
     rec = { "@rectype": rectype }
 
+    # attempt to populate record definition #
+    if rectype not in recdef_tbl:
+        populate(rectype)
+
     # get record definition
     if rectype in recdef_tbl:
         recdef = recdef_tbl[rectype]
