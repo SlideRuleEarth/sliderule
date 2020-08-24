@@ -247,7 +247,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 
         /* Associate Meta Table */
         associateMetaTable(LuaState, meta_name, meta_table);
-        mlog(INFO, "Created object of type %s\n", getType());
+        mlog(INFO, "Created object of type %s/%s\n", getType(), LuaMetaName);
     }
 
     /* Start Trace */
@@ -367,7 +367,7 @@ int LuaObject::luaLock(lua_State* L)
 int LuaObject::luaWaitOn(lua_State* L)
 {
     bool status = false;
-    
+
     try
     {
         /* Get Self */
@@ -477,7 +477,7 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
         {
             if(!user_data->luaObj->isLocked)
             {
-                /* Lock LuaObject */                
+                /* Lock LuaObject */
                 lua_obj = user_data->luaObj;
                 lua_obj->lockKey = li->lockObject(lua_obj);
                 lua_obj->isLocked = true;

@@ -154,6 +154,7 @@ RecordDispatcher::RecordDispatcher(lua_State* L, const char* inputq_name, keyMod
     inQ = new Subscriber(inputq_name);
 
     /* Create Thread Pool */
+    dispatcherActive = false;
     threadPool = new Thread* [numThreads];
     for(int i = 0; i < numThreads; i++) threadPool[i] = NULL;
 }
@@ -169,9 +170,9 @@ RecordDispatcher::~RecordDispatcher(void)
         if (threadPool[i]) delete threadPool[i];
     }
     delete [] threadPool;
-    
+
     delete inQ;
-    
+
     if (keyField) delete [] keyField;
 
     dispatch_t dispatch;
@@ -214,7 +215,7 @@ int RecordDispatcher::luaRun(lua_State* L)
         {
             lua_obj->threadPool[i] = new Thread(dispatcherThread, lua_obj);
         }
-        
+
         /* Set Success */
         status = true;
     }
@@ -246,7 +247,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         /* Check if Active */
         if(lua_obj->dispatcherActive)
         {
-            throw LuaException("Cannot attach to a running dispatcher");
+            throw LuaException("Cannot attach %s to a running dispatcher", dispatch->getName());
         }
 
         /* Attach Dispatches */

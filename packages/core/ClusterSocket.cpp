@@ -237,7 +237,7 @@ int ClusterSocket::pollHandler(int* flags, void* parm)
     /* Check Spinning */
     if(s->spin_block)
     {
-        mlog(WARNING, "Executing spin block for cluster socket %s:%d\n", s->getIpAddr(), s->getPort());
+        mlog(WARNING, "Executing spin block for cluster socket<%d> %s:%d\n", s->role, s->getIpAddr(), s->getPort());
         LocalLib::sleep(1);
     }
     else

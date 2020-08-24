@@ -9,17 +9,17 @@ runner.command("DEFINE test.rec id 8")
 runner.command("ADD_FIELD test.rec id INT32 0 1 NATIVE")
 runner.command("ADD_FIELD test.rec counter INT32 4 1 NATIVE")
 
-idmetric = core.metric("id", "dispatcher_metricq")
+local idmetric = core.metric("id", "dispatcher_metricq")
 idmetric:pbtext(true)
 idmetric:pbname(true)
 idmetric:name("idmetric")
 
-countermetric = core.metric("counter", "dispatcher_metricq")
+local countermetric = core.metric("counter", "dispatcher_metricq")
 countermetric:pbtext(true)
 countermetric:pbname(true)
 countermetric:name("countermetric")
 
-r = core.dispatcher("dispatcher_inputq")
+local r = core.dispatcher("dispatcher_inputq")
 r:name("dispatcher")
 r:attach(idmetric, "test.rec")
 r:attach(countermetric, "test.rec")
@@ -43,6 +43,7 @@ end
 sys.lsmsgq()
 
 -- Receive Metrics --
+
 actual_totals = {}
 actual_totals["test.rec.id"]=0
 actual_totals["test.rec.counter"]=0
@@ -60,6 +61,12 @@ end
 
 runner.check(expected_totals["id"] == actual_totals["test.rec.id"])
 runner.check(expected_totals["counter"] == actual_totals["test.rec.counter"])
+
+-- Clean Up --
+
+r:destroy()
+idmetric:destroy()
+countermetric:destroy()
 
 -- Report Results --
 

@@ -5,22 +5,13 @@ The ICESat-2 plugin provides science data processing algorithms for derived ATL0
 
 ## I. Building
 
-This plugin requires the `aws`, `h5` and `pistache` packages to be enabled.
+This plugin requires the `h5` and `aws` packages to be enabled.  See [README.md](../../README.md) for instructions on building and installing sliderule. The minimal set of cmake options required are: `-DUSE_ICESAT2_PLUGIN=ON -DUSE_H5_PACKAGE=ON -DUSE_AWS_PACKAGE=ON`.
 
-Also, make sure the /usr/local/etc/sliderule.plugin.conf file includes an entry for `icesat2`.
+Once installed, make sure the /usr/local/etc/sliderule/plugin.conf file includes an entry for `icesat2`.
 
 ## II. Setting Up Python Environment
 
-In order to run the provided python test scripts, python needs to be installed on your system and a python environment needs to be setup and some third-party packages installed.
-
-### Installing Python
-
-Install python packages (Ubuntu)
-```bash
-$ sudo apt install python3
-$ sudo apt install python3-pip
-$ sudo apt install python3-venv
-```
+In order to run the provided python test scripts, python needs to be installed on your system and a python environment needs to be setup and some third-party packages installed.  The installation instructions below assume the use of the Anaconda Python distribution.
 
 ### Configuring Python Using Conda
 

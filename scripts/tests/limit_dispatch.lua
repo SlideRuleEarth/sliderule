@@ -9,13 +9,13 @@ runner.command("DEFINE test.rec id 8")
 runner.command("ADD_FIELD test.rec id INT32 0 1 NATIVE")
 runner.command("ADD_FIELD test.rec counter INT32 4 1 NATIVE")
 
-idlimit = core.limit("id", nil, 50, 150, nil, "limit_limitq")
+local idlimit = core.limit("id", nil, 50, 150, nil, "limit_limitq")
 idlimit:name("idlimit")
 
-counterlimit = core.limit("counter", 50, 11, 10000, nil, "limit_limitq")
+local counterlimit = core.limit("counter", 50, 11, 10000, nil, "limit_limitq")
 counterlimit:name("counterlimit")
 
-r = core.dispatcher("limit_inputq")
+local r = core.dispatcher("limit_inputq")
 r:name("dispatcher")
 r:attach(idlimit, "test.rec")
 r:attach(counterlimit, "test.rec")
@@ -66,6 +66,12 @@ end
 -- Compare Results --
 
 runner.check(valsum == 100110, string.format('Failed to correctly report all limit violation values %d', valsum))
+
+-- Clean Up --
+
+r:destroy()
+idlimit:destroy()
+counterlimit:destroy()
 
 -- Report Results --
 

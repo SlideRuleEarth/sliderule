@@ -81,6 +81,7 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port):
     port = _port;
 
     dataToWrite = false;
+    dataWritten = false;
 
     active = true;
     listenerPid = new Thread(listenerThread, this);
@@ -149,14 +150,14 @@ void* HttpServer::listenerThread(void* parm)
     catch(const std::exception& e)
     {
         mlog(CRITICAL, "Caught fatal exception, aborting http server thread: %s\n", e.what());
-    }    
+    }
 
     return NULL;
 }
 
 /*----------------------------------------------------------------------------
  * extract
- * 
+ *
  *  Note: must delete returned strings
  *----------------------------------------------------------------------------*/
 void HttpServer::extract (const char* url, char** endpoint, char** new_url)
@@ -288,13 +289,13 @@ int HttpServer::onRead(int fd)
         /* Look Through Existing Header Received */
         while(!connection->state.header_complete && (connection->state.header_index < (connection->message.getLength() - 4)))
         {
-            /* If Header Complete (look for \r\n\r\n separator) */ 
-            if( (connection->message[connection->state.header_index + 0] == '\r') && 
+            /* If Header Complete (look for \r\n\r\n separator) */
+            if( (connection->message[connection->state.header_index + 0] == '\r') &&
                 (connection->message[connection->state.header_index + 1] == '\n') &&
                 (connection->message[connection->state.header_index + 2] == '\r') &&
                 (connection->message[connection->state.header_index + 3] == '\n') )
             {
-                /* Parse Request */    
+                /* Parse Request */
                 connection->message.setChar('\0', connection->state.header_index);
                 List<SafeString>* header_list = connection->message.split('\r');
                 connection->message.setChar('\r', connection->state.header_index);
@@ -325,7 +326,7 @@ int HttpServer::onRead(int fd)
                         {
                             mlog(CRITICAL, "No attached endpoint at %s: %s\n", endpoint, e.what());
                             status = INVALID_RC; // will close socket
-                        }                    
+                        }
                     }
                     else
                     {
@@ -356,7 +357,7 @@ int HttpServer::onRead(int fd)
                     {
                         mlog(CRITICAL, "Invalid header in http request: %s: %s\n", (*header_list)[h].getString(), e.what());
                     }
-                    delete keyvalue_list;                
+                    delete keyvalue_list;
                 }
 
                 /* Clean Up Header List */
@@ -431,7 +432,7 @@ int HttpServer::onWrite(int fd)
 
     /* If Something to Send */
     if(connection->state.ref_status > 0)
-    {        
+    {
         if(connection->state.header_sent && connection->request.response_type == EndpointObject::STREAMING) /* Setup Streaming */
         {
             /* Allocate Streaming Buffer (if necessary) */
@@ -455,7 +456,7 @@ int HttpServer::onWrite(int fd)
 
                 if(connection->state.ref.size > 0)
                 {
-                    /* Write Message Size */                
+                    /* Write Message Size */
                     #ifdef __BE__
                     uint32_t rec_size = LocalLib::swapl(rec_size);
                     #else
@@ -488,6 +489,9 @@ int HttpServer::onWrite(int fd)
         /* If Anything Left to Send */
         if(bytes_left > 0)
         {
+            /* Set Data To Write */
+            dataToWrite = true;
+
             /* Write Data to Socket */
             int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
             if(bytes >= 0)
@@ -502,7 +506,7 @@ int HttpServer::onWrite(int fd)
                     connection->state.stream_buf_index += bytes;
                     if(connection->state.stream_buf_index == connection->state.stream_buf_size)
                     {
-                        connection->state.stream_buf_index = 0; 
+                        connection->state.stream_buf_index = 0;
                         connection->state.stream_buf_size = 0;
                         ref_complete = true;
                     }
@@ -510,7 +514,7 @@ int HttpServer::onWrite(int fd)
                 else
                 {
                     /* Update Normal Write State
-                    *  note that this code will be executed once for the 
+                    *  note that this code will be executed once for the
                     *  header of a streaming write as well */
                     connection->state.ref_index += bytes;
                     if(connection->state.ref_index == connection->state.ref.size)
@@ -527,7 +531,7 @@ int HttpServer::onWrite(int fd)
             }
         }
 
-        /* Check if Done with Entire Response 
+        /* Check if Done with Entire Response
          *  a valid reference of size zero indicates that
          *  the response is complete */
         if(connection->state.ref.size == 0)
@@ -539,7 +543,7 @@ int HttpServer::onWrite(int fd)
         /* Reset State */
         if(ref_complete)
         {
-            connection->state.rspq->dereference(connection->state.ref);                
+            connection->state.rspq->dereference(connection->state.ref);
             connection->state.ref_status = 0;
             connection->state.ref_index = 0;
             connection->state.ref.size = 0;
@@ -630,7 +634,7 @@ int HttpServer::onDisconnect(int fd)
         if(connection->state.stream_buf) delete [] connection->state.stream_buf;
 
         /* Free Rest of Allocated Connection Members */
-        delete [] connection->request.id; 
+        delete [] connection->request.id;
         delete connection->request.headers;
         delete connection->state.rspq;
 

@@ -86,7 +86,7 @@ class HttpServer: public LuaObject
             Subscriber*                 rspq;
             uint8_t*                    stream_buf;
             int                         stream_buf_index;
-            int                         stream_buf_size; 
+            int                         stream_buf_size;
             int                         stream_mem_size;
         } state_t;
 
@@ -112,6 +112,7 @@ class HttpServer: public LuaObject
         int                             port;
 
         bool                            dataToWrite;
+        bool                            dataWritten;
 
         /*--------------------------------------------------------------------
          * Methods
