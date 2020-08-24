@@ -80,8 +80,6 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port):
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
 
-    dataToWrite = false;
-
     active = true;
     listenerPid = new Thread(listenerThread, this);
 }
@@ -143,7 +141,7 @@ void* HttpServer::listenerThread(void* parm)
 
     try
     {
-        int status = SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, (void*)s);
+        int status = SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
         if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)\n", s->getIpAddr(), s->getPort(), status);
     }
     catch(const std::exception& e)
@@ -227,22 +225,25 @@ int HttpServer::luaAttach (lua_State* L)
 /*----------------------------------------------------------------------------
  * pollHandler
  *
- *  Notes: provides the flags back to the poll function
+ *  Notes: provides the events back to the poll function
  *----------------------------------------------------------------------------*/
-int HttpServer::pollHandler(int* flags, void* parm)
+int HttpServer::pollHandler(int fd, short* events, void* parm)
 {
     HttpServer* s = (HttpServer*)parm;
 
-    /* Check Alive */
-    if(!s->active) return -1;
+    /* Get Connection */
+    connection_t* connection = s->connections[fd];
 
     /* Set Polling Flags */
-    int pollflags = IO_READ_FLAG;
-    if(s->dataToWrite) pollflags |= IO_WRITE_FLAG;
-    s->dataToWrite = false;
-
-    /* Return Polling Flags */
-    *flags = pollflags;
+    *events |= IO_READ_FLAG;
+    if(connection->state.ref_status > 0)
+    {
+        *events |= IO_WRITE_FLAG;
+    }
+    else
+    {
+        *events &= ~IO_WRITE_FLAG;
+    }
 
     return 0;
 }
@@ -488,9 +489,6 @@ int HttpServer::onWrite(int fd)
         /* If Anything Left to Send */
         if(bytes_left > 0)
         {
-            /* Set Data To Write */
-            dataToWrite = true;
-
             /* Write Data to Socket */
             int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
             if(bytes >= 0)
@@ -564,11 +562,6 @@ int HttpServer::onAlive(int fd)
     if(connection->state.ref_status <= 0)
     {
         connection->state.ref_status = connection->state.rspq->receiveRef(connection->state.ref, IO_CHECK);
-        if(connection->state.ref_status > 0)
-        {
-            /* Mark Ready to Write */
-            dataToWrite = true;
-        }
     }
 
     return 0;

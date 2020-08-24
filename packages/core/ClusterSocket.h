@@ -129,7 +129,7 @@ class ClusterSocket: public TcpSocket
          *--------------------------------------------------------------------*/
 
         static void*    connectionThread    (void* parm);
-        static int      pollHandler         (int* flags, void* parm);
+        static int      pollHandler         (int fd, short* events, void* parm);
         static int      activeHandler       (int fd, int flags, void* parm);
 
         int             onRead              (int fd);

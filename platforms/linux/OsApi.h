@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <poll.h>
 #include <assert.h>
 
 /******************************************************************************
@@ -62,7 +63,7 @@
  ******************************************************************************/
 
 /* Ordered Key */
-typedef unsigned long okey_t; 
+typedef unsigned long okey_t;
 
 /* File */
 typedef FILE* fileptr_t;
@@ -93,11 +94,11 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #define IO_DEFAULT_TIMEOUT          (1000) // ms
 #define IO_DEFAULT_MAXSIZE          (0x10000) // bytes
 #define IO_INFINITE_CONNECTIONS     (-1)
-#define IO_ALIVE_FLAG               (0x01)
-#define IO_READ_FLAG                (0x02)
-#define IO_WRITE_FLAG               (0x04)
-#define IO_CONNECT_FLAG             (0x08)
-#define IO_DISCONNECT_FLAG          (0x10)
+#define IO_READ_FLAG                (POLLIN)
+#define IO_WRITE_FLAG               (POLLOUT)
+#define IO_ALIVE_FLAG               (0x100)
+#define IO_CONNECT_FLAG             (0x200)
+#define IO_DISCONNECT_FLAG          (0x400)
 #define SYS_TIMEOUT                 (LocalLib::getIOTimeout()) // ms
 #define SYS_MAXSIZE                 (LocalLib::getIOMaxsize()) // bytes
 

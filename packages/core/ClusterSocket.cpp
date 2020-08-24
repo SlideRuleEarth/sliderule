@@ -200,8 +200,8 @@ void* ClusterSocket::connectionThread(void* parm)
     ClusterSocket* s = (ClusterSocket*)parm;
 
     int status = 0;
-    if(s->is_server) SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, (void*)s);
-    else             SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, (void*)s);
+    if(s->is_server) SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
+    else             SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
 
     if(status < 0)   dlog("Failed to establish cluster %s socket on %s:%d (%d)\n", s->is_server ? "server" : "client", s->getIpAddr(), s->getPort(), status);
 
@@ -213,21 +213,17 @@ void* ClusterSocket::connectionThread(void* parm)
  *
  *  Notes: provides the flags back to the poll function
  *----------------------------------------------------------------------------*/
-int ClusterSocket::pollHandler(int* flags, void* parm)
+int ClusterSocket::pollHandler(int fd, short* events, void* parm)
 {
+    (void)fd;
+
     ClusterSocket* s = (ClusterSocket*)parm;
 
-    /* Check Alive */
-    if(!s->connecting)
-    {
-        return -1;
-    }
-
     /* Set Polling Flags */
-    int pollflags = IO_READ_FLAG;
+    *events = IO_READ_FLAG;
     if(s->role == WRITER)
     {
-        pollflags |= IO_WRITE_FLAG;
+        *events |= IO_WRITE_FLAG;
         if(s->pubsockq->getCount() > 0)
         {
             s->spin_block = false;
@@ -244,9 +240,6 @@ int ClusterSocket::pollHandler(int* flags, void* parm)
     {
         s->spin_block = true;
     }
-
-    /* Return Polling Flags */
-    *flags = pollflags;
 
     return 0;
 }
