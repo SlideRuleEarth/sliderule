@@ -188,7 +188,7 @@ def __parse(stream):
                     # Print Verbose Progress
                     if rectype == "logrec":
                          if verbose:
-                             print(rec["message"]),
+                             sys.stdout.write(rec["message"])
                     else:
                         # Append Record
                         recs.append(rec)

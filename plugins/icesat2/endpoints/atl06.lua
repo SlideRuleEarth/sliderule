@@ -8,7 +8,7 @@
 --                  "track":        <track number: 1, 2, 3>
 --                  "stages":       [<algorith stage 1>, ...]
 --                  "parms":        {<table of parameters>}
---                  "timeout":      <seconds to wait for first response>
+--                  "timeout":      <milliseconds to wait for first response>
 --              }
 --
 --              rspq - output queue to stream results
@@ -40,7 +40,7 @@ local parms = rqst["parms"]
 local timeout = rqst["timeout"] or core.PEND
 
 -- Post Initial Status Progress --
-sys.log(core.USER, string.format("atl06 processing initiated on %s data...", asset_name))
+sys.log(core.USER, string.format("atl06 processing initiated on %s data...\n", asset_name))
 
 -- ATL06 Dispatch Algorithm --
 local atl06_algo = icesat2.atl06(rspq, parms)
@@ -64,19 +64,22 @@ atl03_reader = icesat2.atl03(resource_url, recq, parms, track)
 atl03_reader:name("atl03_reader")
 
 -- Wait Until Completion --
-local duration = timeout
-local interval = 10
-while atl06_disp:waiton(interval) do
+local duration = 0
+local interval = 10000 -- 10 seconds
+while not atl06_disp:waiton(interval) do
     duration = duration + interval
+    -- Check for Timeout --
+    if timeout > 0 and duration == timeout then
+        sys.log(core.USER, string.format("request timed-out after %d seconds\n", duration / 1000))
+        return
+    end
     -- Get Stats --
-    local atl03_stats = json.encode(atl03_reader:stats(false))
-    local atl06_stats = json.encode(atl06_algo:stats(false))
+    local atl03_stats = atl03_reader:stats(false)
+    local atl06_stats = atl06_algo:stats(false)
     -- Dispay Progress --
-    print(string.format("(duration %d seconds)", duration))
+    sys.log(core.USER, string.format("processed %d out of %d segments (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.sent, duration / 1000))
 end
 
--- Display Stats --
-print("ATL03", json.encode(atl03_reader:stats(true)))
-print("ATL06", json.encode(atl06_algo:stats(true)))
-
+-- Processing Complete
+sys.log(core.USER, "...processing complete\n")
 return
