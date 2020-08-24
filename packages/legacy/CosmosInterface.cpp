@@ -170,7 +170,7 @@ void* CosmosInterface::listenerThread (void* parm)
 
     listener_t* l = (listener_t*)parm;
 
-    int status = SockLib::startserver(l->ip_addr, l->port, l->ci->maxConnections, pollHandler, l->handler, (void*)l->ci);
+    int status = SockLib::startserver(l->ip_addr, l->port, l->ci->maxConnections, pollHandler, l->handler, &l->ci->interfaceActive, (void*)l->ci);
 
     if(status < 0)
     {
@@ -186,16 +186,11 @@ void* CosmosInterface::listenerThread (void* parm)
  *
  *   Notes: provides the flags back to the poll function
  *----------------------------------------------------------------------------*/
-int CosmosInterface::pollHandler(int* flags, void* parm)
+int CosmosInterface::pollHandler(int fd, short* events, void* parm)
 {
-    (void)flags;
-
-    CosmosInterface* ci = (CosmosInterface*)parm;
-
-    if(!ci->interfaceActive)
-    {
-        return -1;
-    }
+    (void)fd;
+    (void)events;
+    (void)parm;
 
     return 0;
 }

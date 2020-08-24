@@ -51,7 +51,7 @@ class CosmosInterface: public CommandableObject
         static const int    HEADER_SIZE = SYNC_SIZE + LENGTH_SIZE;
         static const int    MAX_PACKET_SIZE = 0x10006;
         static const int    DEFAULT_MAX_CONNECTIONS = 5;
-        
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -73,7 +73,7 @@ class CosmosInterface: public CommandableObject
             int                 port;
             active_handler_t    handler;
         } listener_t;
-        
+
         struct tlm_t
         {
             CosmosInterface*    ci;
@@ -86,7 +86,7 @@ class CosmosInterface: public CommandableObject
                 sub = NULL;
                 sock = NULL;
                 pid = NULL; }
-            
+
             ~tlm_t(void)
             {   if(sub) delete sub;
                 if(sock) delete sock;
@@ -105,20 +105,20 @@ class CosmosInterface: public CommandableObject
                 pub = NULL;
                 sock = NULL;
                 pid = NULL; }
-            
+
             ~cmd_t(void)
             {   if(pub) delete pub;
                 if(sock) delete sock;
                 if(pid) delete pid; }
         };
-        
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         bool                    interfaceActive;
         int                     maxConnections;
-        
+
         // telemetry connections
         Thread*                 tlmListenerPid;
         listener_t              tlmListener;
@@ -131,8 +131,8 @@ class CosmosInterface: public CommandableObject
         listener_t              cmdListener;
         MgOrdering<cmd_t*>      cmdConnections;
         Mutex                   cmdConnMut;
-        const char*             cmdQName;    
-        
+        const char*             cmdQName;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -141,7 +141,7 @@ class CosmosInterface: public CommandableObject
                         ~CosmosInterface        (void);
 
         static void*    listenerThread          (void* parm);
-        static int      pollHandler             (int* flags, void* parm);
+        static int      pollHandler             (int fd, short* events, void* parm);
         static int      tlmActiveHandler        (int fd, int flags, void* parm);
         static int      cmdActiveHandler        (int fd, int flags, void* parm);
         static void*    telemetryThread         (void* parm);

@@ -64,7 +64,16 @@ atl03_reader = icesat2.atl03(resource_url, recq, parms, track)
 atl03_reader:name("atl03_reader")
 
 -- Wait Until Completion --
-atl06_disp:waiton(timeout)
+local duration = timeout
+local interval = 10
+while atl06_disp:waiton(interval) do
+    duration = duration + interval
+    -- Get Stats --
+    local atl03_stats = json.encode(atl03_reader:stats(false))
+    local atl06_stats = json.encode(atl06_algo:stats(false))
+    -- Dispay Progress --
+    print(string.format("(duration %d seconds)", duration))
+end
 
 -- Display Stats --
 print("ATL03", json.encode(atl03_reader:stats(true)))
