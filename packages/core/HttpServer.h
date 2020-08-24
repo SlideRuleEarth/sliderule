@@ -112,7 +112,6 @@ class HttpServer: public LuaObject
         int                             port;
 
         bool                            dataToWrite;
-        bool                            dataWritten;
 
         /*--------------------------------------------------------------------
          * Methods

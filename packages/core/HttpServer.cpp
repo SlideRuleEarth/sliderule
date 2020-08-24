@@ -81,7 +81,6 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port):
     port = _port;
 
     dataToWrite = false;
-    dataWritten = false;
 
     active = true;
     listenerPid = new Thread(listenerThread, this);
