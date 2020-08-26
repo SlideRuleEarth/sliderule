@@ -267,12 +267,21 @@ bool Atl06Dispatch::processTimeout (void)
 
 /*----------------------------------------------------------------------------
  * processTermination
- * 
+ *
  *  Note that RecordDispatcher will only call this once
  *----------------------------------------------------------------------------*/
 bool Atl06Dispatch::processTermination (void)
 {
-    return outQ->postCopy("", 0) > 0;
+    int status = outQ->postCopy("", 0);
+    if(status > 0)
+    {
+        return true;
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to post terminator to %s: %s\n", outQ->getName(), status);
+        return false;
+    }
 }
 
 /*----------------------------------------------------------------------------

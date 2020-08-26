@@ -117,10 +117,10 @@ if __name__ == '__main__':
 
     # Populate record definitions
 
-    sliderule.populate("logrec")
-    sliderule.populate("atl03rec")
-    sliderule.populate("atl03rec.photons")
-    sliderule.populate("h5dataset")
+#    sliderule.populate("logrec")
+#    sliderule.populate("atl03rec")
+#    sliderule.populate("atl03rec.photons")
+#    sliderule.populate("h5dataset")
 
     # Tests
 

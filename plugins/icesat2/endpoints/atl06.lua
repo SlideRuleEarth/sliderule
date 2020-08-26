@@ -25,7 +25,7 @@ local asset = require("asset")
 
 -- Internal Parameters --
 local str2stage = { LSF=icesat2.STAGE_LSF }
-local recq = "recq"
+local recq = rspq .. "-atl03"
 
 -- Create User Log --
 local userlog = core.logger(rspq, core.USER, true)
