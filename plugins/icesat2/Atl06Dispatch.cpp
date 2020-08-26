@@ -273,7 +273,7 @@ bool Atl06Dispatch::processTimeout (void)
 bool Atl06Dispatch::processTermination (void)
 {
     int status = outQ->postCopy("", 0);
-    if(status > 0)
+    if(status >= 0)
     {
         return true;
     }

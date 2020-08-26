@@ -117,26 +117,33 @@ def __decode(rectype, rawdata):
                 rec[fieldname] = value[0]
 
         # decode user type
-        elif ftype in recdef_tbl:
+        else:
 
-            subrec = {}
-            subrecdef = recdef_tbl[ftype]
+            # attempt to populate record definition #
+            if ftype not in recdef_tbl:
+                populate(ftype)
 
-            # check if array
-            is_array = not (elems == 1)
+            # decode record
+            if ftype in recdef_tbl:
 
-            # get number of elements
-            if elems <= 0:
-                elems = int((len(rawdata) - offset) / subrecdef["@datasize"])
+                subrec = {}
+                subrecdef = recdef_tbl[ftype]
 
-            # return parsed data
-            if is_array:
-                rec[fieldname] = []
-                for e in range(elems):
-                    rec[fieldname].append(__decode(ftype, rawdata[offset:]))
-                    offset += subrecdef["@datasize"]
-            else:
-                rec[fieldname] = __decode(ftype, rawdata[offset:])
+                # check if array
+                is_array = not (elems == 1)
+
+                # get number of elements
+                if elems <= 0:
+                    elems = int((len(rawdata) - offset) / subrecdef["@datasize"])
+
+                # return parsed data
+                if is_array:
+                    rec[fieldname] = []
+                    for e in range(elems):
+                        rec[fieldname].append(__decode(ftype, rawdata[offset:]))
+                        offset += subrecdef["@datasize"]
+                else:
+                    rec[fieldname] = __decode(ftype, rawdata[offset:])
 
     # return record #
     return rec

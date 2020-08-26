@@ -135,12 +135,10 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
     /* Clear Statistics */
     LocalLib::set(&stats, 0, sizeof(stats));
 
-    /* Set Active */
-    active = true;
-
     /* Initialize Readers */
-    LocalLib::set(readerPid, 0, sizeof(readerPid));
+    active = true;
     numComplete = 0;
+    LocalLib::set(readerPid, 0, sizeof(readerPid));
 
     /* Read ATL03 Data */
     if(track == ALL_TRACKS)
@@ -436,7 +434,7 @@ void* Atl03Reader::readerThread (void* parm)
 
     /* Clean Up Info */
     delete [] info->url;
-    delete info;    
+    delete info;
 
     /* Stop Trace */
     stop_trace(trace_id);
