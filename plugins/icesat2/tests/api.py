@@ -115,6 +115,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         asset = sys.argv[2]
 
+    # Populate record definitions
+
+    sliderule.populate("logrec")
+    sliderule.populate("atl03rec")
+    sliderule.populate("atl03rec.photons")
+    sliderule.populate("h5dataset")
+
     # Tests
 
     test_time()

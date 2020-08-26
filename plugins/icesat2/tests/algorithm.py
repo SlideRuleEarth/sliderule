@@ -156,6 +156,14 @@ if __name__ == '__main__':
     # Set Verbosity #
     sliderule.set_verbose(True)
 
+    # Populate Record Definitions
+    sliderule.populate("logrec")
+    sliderule.populate("atl03rec")
+    sliderule.populate("atl03rec.photons")
+    sliderule.populate("atl06rec")
+    sliderule.populate("atl06rec.elevation")
+    sliderule.populate("h5dataset")
+
     # Execute SlideRule Algorithm
     act = algoexec(asset)
 

@@ -158,7 +158,7 @@ add_subdirectory (scripts)
 
 # Installation #
 
-install(TARGETS sliderule DESTINATION ${EXECDIR})
+install (TARGETS sliderule DESTINATION ${EXECDIR})
 install (FILES targets/sliderule-linux/plugins.conf DESTINATION ${CONFDIR})
 
 install (
