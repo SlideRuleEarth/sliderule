@@ -279,7 +279,7 @@ bool Atl06Dispatch::processTermination (void)
     }
     else
     {
-        mlog(CRITICAL, "Failed to post terminator to %s: %s\n", outQ->getName(), status);
+        mlog(CRITICAL, "Failed to post terminator to %s: %d\n", outQ->getName(), status);
         return false;
     }
 }
