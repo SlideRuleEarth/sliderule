@@ -1,6 +1,5 @@
 ROOT = $(shell pwd)
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
-STAGEDIR = stage
 RUNDIR = /usr/local/etc/sliderule
 
 FULLCFG  = -DENABLE_LTTNG_TRACING=ON
@@ -27,23 +26,29 @@ release-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON ..
 
-debug-config:
+development-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) ..
 
 docker-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) ..
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/stage -DRUNTIMEDIR=$(RUNDIR) ..
 
-docker-image: distclean docker-config default-build install
-	cp targets/sliderule-docker/Dockerfile $(STAGEDIR)
+docker-application-image: distclean docker-config default-build install
+	cp targets/sliderule-docker/dockerfile.app stage/Dockerfile
 	# copy over scripts #
-	mkdir $(STAGEDIR)/scripts
-	cp -R scripts/apps $(STAGEDIR)/scripts/apps
-	cp -R scripts/tests $(STAGEDIR)/scripts/tests
+	mkdir stage/scripts
+	cp -R scripts/apps stage/scripts/apps
+	cp -R scripts/tests stage/scripts/tests
 	# build image #
-	cd $(STAGEDIR); docker build -t sliderule-linux:latest .
-	# docker run -it --rm --name=sliderule1 -v /data:/data sliderule-linux /usr/local/scripts/apps/test_runner.lua
+	cd stage; docker build -t sliderule-application:latest .
+	# docker run -it --rm --name=sliderule-app -v /data:/data sliderule-linux /usr/local/scripts/apps/test_runner.lua
+
+docker-development-image:
+	mkdir -p stage
+	cp targets/sliderule-docker/dockerfile.dev stage/Dockerfile
+	cd stage; docker build -t sliderule-development:latest .
+	# docker run -it --rm --name=sliderule-dev -v $(ROOT):/code sliderule-development
 
 scan:
 	mkdir -p build
@@ -70,7 +75,7 @@ clean:
 
 distclean:
 	- rm -Rf build
-	- rm -Rf $(STAGEDIR)
+	- rm -Rf stage
 
 testcase=
 testmem:

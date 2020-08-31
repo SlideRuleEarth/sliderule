@@ -17,7 +17,7 @@ Build and install the library:
 ```bash
 mkdir aws_sdk_build
 cd aws_sdk_build
-cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
 make
 sudo make install
 ```
