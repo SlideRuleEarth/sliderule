@@ -1,6 +1,6 @@
 # sliderule
 
-A C++/Lua framework for on-demand data processing.
+A C++/Lua framework for on-demand science data processing.
 
 
 ## I. Prerequisites
@@ -12,13 +12,8 @@ A C++/Lua framework for on-demand data processing.
 
 2. CMake (3.13.0 or greater)
 
-3. Lttng (optional, enable with ENABLE_LTTNG_TRACING, see [core.md](packages/core/core.md) for installation instructions)
+3. For dependencies associated with a specific package, see the package readme at `packages/{package}/{package}.md` for additional installation instructions.
 
-4. HDF5 (optional, enable with USE_H5_PACKAGE, see [h5.md](packages/h5/h5.md) for installation instructions)
-
-5. Pistache (optional, enable USE_PISTACHE_PACKAGE, see [pistache.md](packages/pistache/pistache.md) for installation instructions)
-
-6. AWS SDK (optional, enable USE_AWS_PACKAGE, see [aws.md](packages/aws/aws.md) for installation instructions)
 
 ## II. Building with CMake
 
@@ -52,7 +47,7 @@ Options include:
    -DENABLE_H5_REST_VOL=[ON|OFF]       configure H5 package to use REST VOL plugin
                                        default: OFF
 
-   -DENABLE_LTTNG_TRACING=[ON|OFF]     configure use of LTTng tracking
+   -DENABLE_LTTNG_TRACING=[ON|OFF]     configure use of LTTng tracking (see packages/core/core.md for installation instructions)
                                        default: OFF
 
    -DUSE_CCSDS_PACKAGE=[ON|OFF]        CCSDS command and telemetry packet support
@@ -162,22 +157,38 @@ A self-test that dynamically checks which packages and plugins are present and r
 $ sliderule scripts/apps/test_runner.lua
 ```
 
-### 7. Running SlideRule in a Docker container
+## IV. Building and Running with Docker
 
-If you want to run SlideRule in a docker container, then the following steps can be taken:
+Assuming you have docker installed and configured in your system, the following steps can be taken to build and run a Docker container that executes the SlideRule application.
+
+### 1. Build the development Docker image
+
+The first step is to build a docker container that has all of the build dependencies needed to build SlideRule and all its packages.
 ```bash
-$ make docker-image
-$ docker run -it --rm --name=sliderule1 -v /data:/data -p 9081:9081 sliderule-linux /usr/local/scripts/apps/server.lua {config.json}
+$ make docker-development-image
 ```
 
-As an example, this runs the server application inside the Docker container.  The following steps can be taken to configure what is run:
-* Inside the `make docker-image` makefile target, different cmake options are specified and can be changed to enable and disable different options
-* The {config.json} file provided to the server.lua script can be used to change server settings
+### 2. Run the development Docker container
+
+Run the development docker container and from there build the SlideRule application.  Note that the command provided below assumes that you want to be able to use this container to build a SlideRule container (i.e. Docker in Docker) and therefore maps into the host docker.sock to the running container.
+```bash
+$ docker run -it --rm --name=sliderule-dev -v /var/run/docker.sock:/var/run/docker.sock -v {abs. path to sliderule}:/sliderule sliderule-development
+```
+
+### 7. Run SlideRule application in a Docker container
+
+The command below runs the server application inside the Docker container and can be configured in the following ways:
 * A script other than `/usr/local/scripts/apps/server.lua` can be passed to the SlideRule executable running inside the Docker container
+* The {config.json} file provided to the server.lua script can be used to change server settings
 * Environment variables can be passed via `-e {parameter=value}` on the command line to docker
+* Different local files and directories can be mapped in via `-v {source abs. path}:{destination abs. path}` on the command line to docker
+
+```bash
+$ docker run -it --rm --name=sliderule-app -v /data:/data -p 9081:9081 sliderule-application /usr/local/scripts/apps/server.lua {config.json}
+```
 
 
-## IV. Directory Structure
+## V. Directory Structure
 
 This section details the directory structure of the SlideRule repository to help you navigate where different functionality resides.
 
