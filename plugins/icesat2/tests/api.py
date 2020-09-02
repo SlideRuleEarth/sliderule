@@ -6,6 +6,7 @@ import sliderule
 
 asset = "atl03-local"
 h5file = "ATL03_20181014040628_02370109_002_01.h5"
+#h5file = "ATL03_20181019065445_03150111_003_01.h5"
 
 ###############################################################################
 # TESTS
@@ -62,7 +63,7 @@ def test_h5 ():
     if(epoch_offset == 1198800018.0):
         print("Passed h5 test")
     else:
-        print("Failed h5 test")
+        print("Failed h5 test: ", v)
 
 #
 #  TEST VARIABLE LENGTH
@@ -82,7 +83,7 @@ def test_variable_length ():
     if v[0] == 75 and v[1] == 82 and v[2] == 61:
         print("Passed variable length test")
     else:
-        print("Failed variable length test")
+        print("Failed variable length test: ", v)
 
 #
 #  TEST DEFINITION
