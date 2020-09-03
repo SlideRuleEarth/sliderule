@@ -26,6 +26,7 @@
 
 #include "OsApi.h"
 #include "Dictionary.h"
+#include "List.h"
 #include "LuaObject.h"
 
 /******************************************************************************
@@ -48,6 +49,43 @@ class AssetIndex: public LuaObject
 
         static int          luaCreate   (lua_State* L);
 
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int RESOURCE_NAME_MAX_LENGTH   = 200;
+        static const int START                      = 0;
+        static const int STOP                       = 1;
+
+        /*--------------------------------------------------------------------
+         * TimeSpan Subclass
+         *--------------------------------------------------------------------*/
+
+        class TimeSpan
+        {
+            public:
+                typedef struct {
+                    List<int>           ril;   // resource index list
+                    double              t[2];
+                } node_t;
+        };
+
+        /*--------------------------------------------------------------------
+         * SpatialSpan Subclass
+         *--------------------------------------------------------------------*/
+
+        class SpatialSpan
+        {
+            public:
+                typedef struct {
+                    List<int>           ril;    // resource index list
+                    double              lat[2]; // start, stop
+                    double              lon[2]; // start, stop
+                } node_t;
+        };
+
     private:
 
         /*--------------------------------------------------------------------
@@ -56,6 +94,17 @@ class AssetIndex: public LuaObject
 
         static const char*              LuaMetaName;
         static const struct luaL_Reg    LuaMetaTable[];
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            const char*                 name[RESOURCE_NAME_MAX_LENGTH];
+            double                      t[2];   // start, stop
+            double                      lat[2]; // start, stop
+            double                      lon[2]; // start, stop
+        } resource_t;
 
         /*--------------------------------------------------------------------
          * Data
@@ -70,18 +119,18 @@ class AssetIndex: public LuaObject
         const char*                     indexFile;
         bool                            registered;
 
+        List<resource_t>                resources;
+        TimeSpan::node_t*               timeIndex;
+        SpatialSpan::node_t*            spatialIndex;
 
-// TODO: timeseries index t1, t2
-// TODO: geospatial index lat1,lon1,lat2,lon2
-// TODO: fieldhash index (for all other fields in index file)
 
-// parse index file and build all of the above indexes if the data is present in the index file (note that t1, t2, lat1, ... are all keywords)
+// parse index file and build all of the above indexes if the data is present in the index file (note that t0, t1, lat0, ... are all keywords)
 
 // provide lua functions:
-//  range([list of time ranges]) --> list of objects
-//  polygon([list of lat,lon polygons]) --> list of objects
-//  select([list of field value expressions]) --> list of objects
+// range([list of time ranges]) --> list of objects
+// polygon([list of lat,lon polygons]) --> list of objects
 
+// select([list of field value expressions]) --> list of objects
 // note that the expression should include NOT, AND, OR, ==, <, >, <=, >=
 
         /*--------------------------------------------------------------------

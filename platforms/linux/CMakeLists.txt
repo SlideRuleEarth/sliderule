@@ -6,6 +6,12 @@ message (STATUS "Using linux platform")
 
 target_compile_definitions (sliderule PUBLIC _LINUX_)
 
+# Additional Build Information #
+
+execute_process (COMMAND git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
+string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
+target_compile_definitions (sliderule PUBLIC BUILDINFO="${BUILDINFO}")
+
 # Compile Options #
 
 target_compile_options (sliderule PUBLIC -pthread) # posix threads used in linux build

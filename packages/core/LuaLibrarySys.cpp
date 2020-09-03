@@ -89,10 +89,12 @@ int LuaLibrarySys::lsys_help (lua_State* L)
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
     mlog(RAW, "SlideRule Version: %s\n\n", BINID);
+    mlog(RAW, "Build Information: %s\n\n", BUILDINFO);
 
     /* Return Version String to Lua */
     lua_pushstring(L, BINID);
-    return 1;
+    lua_pushstring(L, BUILDINFO);
+    return 2;
 }
 
 /*----------------------------------------------------------------------------
