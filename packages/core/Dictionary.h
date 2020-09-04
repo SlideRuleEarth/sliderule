@@ -526,21 +526,24 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
     hashTable = new hash_node_t [hashSize];
     for(unsigned int i = 0; i < hashSize; i++)
     {
-        /* copy key */
-        const char* key = other.hashTable[i].key;
-        int len = 0;
-        while( (len < (MAX_KEY_SIZE - 1)) && (key[len] != '\0') ) len++;
-        char* tmp_key = new char[len + 1];
-        for(int j = 0; j < len; j++) tmp_key[j] = key[j];
-        tmp_key[len] = '\0';
-        hashTable[i].key = tmp_key;
+        if(other.hashTable[i].chain != EMPTY_ENTRY)
+        {
+            /* copy fields */
+            hashTable[i].data = other.hashTable[i].data;
+            hashTable[i].chain = other.hashTable[i].chain;
+            hashTable[i].hash = other.hashTable[i].hash;
+            hashTable[i].next = other.hashTable[i].next;
+            hashTable[i].prev = other.hashTable[i].prev;
 
-        /* copy other fields */
-        hashTable[i].data = other.hashTable[i].data;
-        hashTable[i].chain = other.hashTable[i].chain;
-        hashTable[i].hash = other.hashTable[i].hash;
-        hashTable[i].next = other.hashTable[i].next;
-        hashTable[i].prev = other.hashTable[i].prev;
+            /* copy key */
+            const char* key = other.hashTable[i].key;
+            int len = 0;
+            while( (len < (MAX_KEY_SIZE - 1)) && (key[len] != '\0') ) len++;
+            char* tmp_key = new char[len + 1];
+            for(int j = 0; j < len; j++) tmp_key[j] = key[j];
+            tmp_key[len] = '\0';
+            hashTable[i].key = tmp_key;
+        }
     }
     currIndex = 0;
     numEntries = other.numEntries;

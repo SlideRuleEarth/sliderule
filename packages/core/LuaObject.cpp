@@ -326,18 +326,25 @@ int LuaObject::luaAssociate(lua_State* L)
         LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Get Name */
-        const char* name = getLuaString(L, 2);
+        const char* name = getLuaString(L, 2, true, NULL);
 
         /* Associate Name */
-        if(lua_obj->ObjectName) delete [] lua_obj->ObjectName;
-        lua_obj->ObjectName = StringLib::duplicate(name);
+        if(name)
+        {
+            if(lua_obj->ObjectName) delete [] lua_obj->ObjectName;
+            lua_obj->ObjectName = StringLib::duplicate(name);
+        }
+
+        /* Return Name */
+        lua_pushstring(L, lua_obj->ObjectName);
     }
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error associating object: %s\n", e.errmsg);
+        lua_pushnil(L);
     }
 
-    return 0;
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

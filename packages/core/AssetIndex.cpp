@@ -100,6 +100,9 @@ int AssetIndex::luaCreate (lua_State* L)
 AssetIndex::AssetIndex (lua_State* L, const char* _name, const char* _format, const char* _url):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
+    /* Configure LuaObject Name */
+    ObjectName  = StringLib::duplicate(_name);
+
     /* Initialize Members */
     name        = StringLib::duplicate(_name);
     format      = StringLib::duplicate(_format);
@@ -200,18 +203,31 @@ int AssetIndex::luaLoad (lua_State* L)
         lua_pushnil(L);  // first key
         while (lua_next(L, 3) != 0)
         {
-            const char* key = luaL_checkstring(L, -2);
-            double value = luaL_checknumber(L, -1);
+            double value = 0.0;
+            bool provided = false;
 
-                 if(StringLib::match("t0",   key)) resource.t[0]   = value;
-            else if(StringLib::match("t1",   key)) resource.t[1]   = value;
-            else if(StringLib::match("lat0", key)) resource.lat[0] = value;
-            else if(StringLib::match("lat1", key)) resource.lat[1] = value;
-            else if(StringLib::match("lon0", key)) resource.lon[0] = value;
-            else if(StringLib::match("lon1", key)) resource.lon[1] = value;
-            else
+            const char* key = getLuaString(L, -2);
+            const char* str = getLuaString(L, -1, true, NULL, &provided);
+
+            if(!provided) value = getLuaFloat(L, -1);
+            else provided = StringLib::str2double(str, &value);
+
+            if(provided)
             {
-                resource.attr.add(key, value);
+                     if(StringLib::match("t0",   key)) resource.t[0]   = value;
+                else if(StringLib::match("t1",   key)) resource.t[1]   = value;
+                else if(StringLib::match("lat0", key)) resource.lat[0] = value;
+                else if(StringLib::match("lat1", key)) resource.lat[1] = value;
+                else if(StringLib::match("lon0", key)) resource.lon[0] = value;
+                else if(StringLib::match("lon1", key)) resource.lon[1] = value;
+                else
+                {
+                    resource.attr.add(key, value);
+                }
+            }
+            else if(!StringLib::match(key, "resource"))
+            {
+                mlog(CRITICAL, "Unable to populate attribute %s for resource %s\n", key, resource_name);
             }
 
             lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration
