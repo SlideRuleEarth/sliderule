@@ -95,10 +95,69 @@ int AssetIndex::luaCreate (lua_State* L)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * TimeSpan::Constructor
+ *----------------------------------------------------------------------------*/
+AssetIndex::TimeSpan::TimeSpan (AssetIndex* _asset)
+{
+    asset = _asset;
+    root = NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::Destructor
+ *----------------------------------------------------------------------------*/
+AssetIndex::TimeSpan::~TimeSpan (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::add
+ *----------------------------------------------------------------------------*/
+bool AssetIndex::TimeSpan::add (int ri)
+{
+    if(root == NULL) // empty tree
+    {
+        root = new node_t;
+        root->t[0] = asset->resources[ri].t[0];
+        root->t[1] = asset->resources[ri].t[1];
+        root->ril.add(ri);
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * SpatialRegion::Constructor
+ *----------------------------------------------------------------------------*/
+AssetIndex::SpatialRegion::SpatialRegion (AssetIndex* _asset)
+{
+    asset = _asset;
+    root = NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * SpatialRegion::Destructor
+ *----------------------------------------------------------------------------*/
+AssetIndex::SpatialRegion::~SpatialRegion (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * SpatialRegion::add
+ *----------------------------------------------------------------------------*/
+bool AssetIndex::SpatialRegion::add (int ri)
+{
+    (void)ri;
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 AssetIndex::AssetIndex (lua_State* L, const char* _name, const char* _format, const char* _url):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    timeIndex(this),
+    spatialIndex(this)
 {
     /* Configure LuaObject Name */
     ObjectName  = StringLib::duplicate(_name);
@@ -225,9 +284,9 @@ int AssetIndex::luaLoad (lua_State* L)
                     resource.attr.add(key, value);
                 }
             }
-            else if(!StringLib::match(key, "resource"))
+            else
             {
-                mlog(CRITICAL, "Unable to populate attribute %s for resource %s\n", key, resource_name);
+                mlog(DEBUG, "Unable to populate attribute %s for resource %s\n", key, resource_name);
             }
 
             lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration

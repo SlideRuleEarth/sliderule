@@ -64,24 +64,44 @@ class AssetIndex: public LuaObject
         class TimeSpan
         {
             public:
+
                 typedef struct {
                     List<int>           ril;   // resource index list
                     double              t[2];
                 } node_t;
+            
+                        TimeSpan        (AssetIndex* _asset);
+                        ~TimeSpan       (void);
+                bool    add             (int ri); // resource index
+                
+            private:
+
+                AssetIndex*             asset;
+                node_t*                 root;
         };
 
         /*--------------------------------------------------------------------
-         * SpatialSpan Subclass
+         * SpatialRegion Subclass
          *--------------------------------------------------------------------*/
 
-        class SpatialSpan
+        class SpatialRegion
         {
             public:
+
                 typedef struct {
                     List<int>           ril;    // resource index list
                     double              lat[2]; // southern, northern
                     double              lon[2]; // western, eastern
                 } node_t;
+
+                        SpatialRegion   (AssetIndex* _asset);
+                        ~SpatialRegion  (void);
+                bool    add             (int ri); // resource index
+                
+            private:
+
+                AssetIndex*             asset;
+                node_t*                 root;
         };
 
     private:
@@ -111,15 +131,15 @@ class AssetIndex: public LuaObject
 
         static Dictionary<AssetIndex*>  assets;
         static Mutex                    assetsMut;
+        bool                            registered;
 
         const char*                     name;
         const char*                     format;
         const char*                     url;
-        bool                            registered;
 
         List<resource_t>                resources;
-        TimeSpan::node_t*               timeIndex;
-        SpatialSpan::node_t*            spatialIndex;
+        TimeSpan                        timeIndex;
+        SpatialRegion                   spatialIndex;
 
 
 // parse index file and build all of the above indexes if the data is present in the index file (note that t0, t1, lat0, ... are all keywords)
