@@ -28,7 +28,7 @@ local cache_size = cfgtbl["cache_size"]
 console.logger:config(loglvl)
 
 -- Configure Assets --
-assets = asset.load(asset_directory)
+assets = asset.loaddir(asset_directory)
 
 -- Configure S3 Cache --
 if __aws__ then

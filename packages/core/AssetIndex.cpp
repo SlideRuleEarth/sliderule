@@ -38,6 +38,7 @@ const char* AssetIndex::OBJECT_TYPE = "AssetIndex";
 const char* AssetIndex::LuaMetaName = "AssetIndex";
 const struct luaL_Reg AssetIndex::LuaMetaTable[] = {
     {"info",        luaInfo},
+    {"load",        luaLoad},
     {NULL,          NULL}
 };
 
@@ -47,7 +48,7 @@ const struct luaL_Reg AssetIndex::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, [<format>, <url>, <index_file>])
+ * luaCreate - create(<name>, [<format>, <url>])
  *----------------------------------------------------------------------------*/
 int AssetIndex::luaCreate (lua_State* L)
 {
@@ -76,8 +77,7 @@ int AssetIndex::luaCreate (lua_State* L)
         {
             const char* format      = getLuaString(L, 2);
             const char* url         = getLuaString(L, 3);
-            const char* index_file  = getLuaString(L, 4);
-            asset = new AssetIndex(L, name, format, url, index_file);
+            asset = new AssetIndex(L, name, format, url);
         }        
 
         /* Return AssetIndex Object */
@@ -97,14 +97,13 @@ int AssetIndex::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-AssetIndex::AssetIndex (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index_file):
+AssetIndex::AssetIndex (lua_State* L, const char* _name, const char* _format, const char* _url):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     /* Initialize Members */
     name        = StringLib::duplicate(_name);
     format      = StringLib::duplicate(_format);
     url         = StringLib::duplicate(_url);
-    indexFile   = StringLib::duplicate(_index_file);
 
     /* Register AssetIndex */
     assetsMut.lock();
@@ -143,7 +142,6 @@ AssetIndex::~AssetIndex (void)
     delete [] name;
     delete [] format;
     delete [] url;
-    delete [] indexFile;
 }
 
 
@@ -174,4 +172,31 @@ int AssetIndex::luaInfo (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status, 4);
+}
+
+/*----------------------------------------------------------------------------
+ * luaLoad - :load(resource, attributes) --> boolean status
+ *----------------------------------------------------------------------------*/
+int AssetIndex::luaLoad (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        AssetIndex* lua_obj = (AssetIndex*)getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        const char* resource = getLuaString(L, 2);
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error loading resource: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }

@@ -6,7 +6,7 @@ local td = runner.rootdir(arg[0]) .. "../tests"
 -- Setup --
 
 console.logger:config(core.INFO)
-assets = asset.load(td.."/asset_directory.csv")
+assets = asset.loaddir(td.."/asset_directory.csv")
 
 expected = {
     dataset1={format="json", url="/data/1"},

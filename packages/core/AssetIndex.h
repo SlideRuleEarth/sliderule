@@ -55,9 +55,7 @@ class AssetIndex: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int RESOURCE_NAME_MAX_LENGTH   = 200;
-        static const int START                      = 0;
-        static const int STOP                       = 1;
+        static const int RESOURCE_NAME_MAX_LENGTH = 150;
 
         /*--------------------------------------------------------------------
          * TimeSpan Subclass
@@ -81,8 +79,8 @@ class AssetIndex: public LuaObject
             public:
                 typedef struct {
                     List<int>           ril;    // resource index list
-                    double              lat[2]; // start, stop
-                    double              lon[2]; // start, stop
+                    double              lat[2]; // southern, northern
+                    double              lon[2]; // western, eastern
                 } node_t;
         };
 
@@ -102,8 +100,9 @@ class AssetIndex: public LuaObject
         typedef struct {
             const char*                 name[RESOURCE_NAME_MAX_LENGTH];
             double                      t[2];   // start, stop
-            double                      lat[2]; // start, stop
-            double                      lon[2]; // start, stop
+            double                      lat[2]; // southern, northern
+            double                      lon[2]; // western, eastern
+            Dictionary<double>          attr;   // attributes
         } resource_t;
 
         /*--------------------------------------------------------------------
@@ -116,7 +115,6 @@ class AssetIndex: public LuaObject
         const char*                     name;
         const char*                     format;
         const char*                     url;
-        const char*                     indexFile;
         bool                            registered;
 
         List<resource_t>                resources;
@@ -137,10 +135,11 @@ class AssetIndex: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        AssetIndex      (lua_State* L, const char* name, const char* format, const char* url, const char* index_file);
+                        AssetIndex      (lua_State* L, const char* name, const char* format, const char* url);
         virtual         ~AssetIndex     (void);
 
         static int      luaInfo         (lua_State* L);
+        static int      luaLoad         (lua_State* L);
 };
 
 #endif  /* __asset_index__ */
