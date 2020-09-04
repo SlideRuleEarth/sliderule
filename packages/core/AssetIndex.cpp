@@ -186,8 +186,39 @@ int AssetIndex::luaLoad (lua_State* L)
         /* Get Self */
         AssetIndex* lua_obj = (AssetIndex*)getLuaSelf(L, 1);
 
-        /* Get Parameters */
-        const char* resource = getLuaString(L, 2);
+        /* Get Resource */
+        const char* resource_name = getLuaString(L, 2);
+
+        /* Create Resource */
+        resource_t resource;
+        StringLib::copy(&resource.name[0], resource_name, RESOURCE_NAME_MAX_LENGTH);
+        LocalLib::set(resource.t, 0, sizeof(resource.t));
+        LocalLib::set(resource.lat, 0, sizeof(resource.lat));
+        LocalLib::set(resource.lon, 0, sizeof(resource.lon));
+
+        /* Populate Attributes from Table */
+        lua_pushnil(L);  // first key
+        while (lua_next(L, 3) != 0)
+        {
+            const char* key = luaL_checkstring(L, -2);
+            double value = luaL_checknumber(L, -1);
+
+                 if(StringLib::match("t0",   key)) resource.t[0]   = value;
+            else if(StringLib::match("t1",   key)) resource.t[1]   = value;
+            else if(StringLib::match("lat0", key)) resource.lat[0] = value;
+            else if(StringLib::match("lat1", key)) resource.lat[1] = value;
+            else if(StringLib::match("lon0", key)) resource.lon[0] = value;
+            else if(StringLib::match("lon1", key)) resource.lon[1] = value;
+            else
+            {
+                resource.attr.add(key, value);
+            }
+
+            lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration
+        }
+
+        /* Register Resource */
+        lua_obj->resources.add(resource);
 
         /* Set Status */
         status = true;

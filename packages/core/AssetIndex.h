@@ -98,7 +98,7 @@ class AssetIndex: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            const char*                 name[RESOURCE_NAME_MAX_LENGTH];
+            char                        name[RESOURCE_NAME_MAX_LENGTH];
             double                      t[2];   // start, stop
             double                      lat[2]; // southern, northern
             double                      lon[2]; // western, eastern

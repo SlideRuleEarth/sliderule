@@ -70,6 +70,7 @@ class Dictionary
         const char* prev            (T* data);
         const char* last            (T* data);
 
+        Dictionary& operator=       (const Dictionary& other);
         T&          operator[]      (const char* key);
 
     protected:
@@ -507,6 +508,46 @@ const char* Dictionary<T>::last (T* data)
     }
 
     return key;
+}
+
+/*----------------------------------------------------------------------------
+ * operator=
+ *----------------------------------------------------------------------------*/
+template <class T>
+Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
+{
+    /* Clear Existing Dictionary */
+    clear();
+    delete [] hashTable;
+
+    /* Copy Other Dictionary */
+    hashSize = other.hashSize;
+    hashLoad = other.hashLoad;
+    hashTable = new hash_node_t [hashSize];
+    for(unsigned int i = 0; i < hashSize; i++)
+    {
+        /* copy key */
+        const char* key = other.hashTable[i].key;
+        int len = 0;
+        while( (len < (MAX_KEY_SIZE - 1)) && (key[len] != '\0') ) len++;
+        char* tmp_key = new char[len + 1];
+        for(int j = 0; j < len; j++) tmp_key[j] = key[j];
+        tmp_key[len] = '\0';
+        hashTable[i].key = tmp_key;
+
+        /* copy other fields */
+        hashTable[i].data = other.hashTable[i].data;
+        hashTable[i].chain = other.hashTable[i].chain;
+        hashTable[i].hash = other.hashTable[i].hash;
+        hashTable[i].next = other.hashTable[i].next;
+        hashTable[i].prev = other.hashTable[i].prev;
+    }
+    currIndex = 0;
+    numEntries = other.numEntries;
+    maxChain = other.maxChain;
+
+    /* return */
+    return *this;
 }
 
 /*----------------------------------------------------------------------------

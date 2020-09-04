@@ -110,16 +110,16 @@ end
 --------------------------------------------------------------------------------------
 local function loadresource(asset, resource, attributes, quiet)
 
-    if  not asset or
-        not attributes["t0"] or
-        not attributes["t1"] or
-        not attributes["lat0"] or
-        not attributes["lon0"] or
-        not attributes["lat1"] or
-        not attributes["lon1"] 
-    then
+    if not asset then
         return false
     end
+
+    if not attributes["t0"]     then attributes["t0"]   = 0.0 end
+    if not attributes["t1"]     then attributes["t1"]   = 0.0 end
+    if not attributes["lat0"]   then attributes["lat0"] = 0.0 end
+    if not attributes["lon0"]   then attributes["lon0"] = 0.0 end
+    if not attributes["lat1"]   then attributes["lat1"] = 0.0 end
+    if not attributes["lon1"]   then attributes["lon1"] = 0.0 end
 
     if not quiet then
         print(string.format("Loading resource %s in asset %s: time <%f, %f>, spatial <%f, %f, %f, %f>",
@@ -148,7 +148,7 @@ local function buildurl(name, resource)
     else
         return string.format('file://%s', resource)
     end
-    
+
 end
 
 --------------------------------------------------------------------------------------
