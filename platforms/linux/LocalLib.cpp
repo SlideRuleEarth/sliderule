@@ -248,9 +248,15 @@ int LocalLib::nproc (void)
 /*----------------------------------------------------------------------------
  * setIOMaxsize
  *----------------------------------------------------------------------------*/
-void LocalLib::setIOMaxsize(int maxsize)
+bool LocalLib::setIOMaxsize(int maxsize)
 {
-    io_maxsize = maxsize;
+    if(maxsize > 0)
+    {
+        io_maxsize = maxsize;
+        return true;
+    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------

@@ -109,7 +109,7 @@ local function script (script_str, parms)
     set_context(testname)
     print("\n############################################")
     print("Running Test Script: " .. testname)
-    print("##############################################\n")
+    print("############################################\n")
     if parms then
         for k,v in pairs(parms) do
             arg[k] = v

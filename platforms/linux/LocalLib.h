@@ -59,7 +59,7 @@ class LocalLib
         static float        swapf               (float val);
         static double       swaplf              (double val);
         static int          nproc               (void);
-        static void         setIOMaxsize        (int maxsize);
+        static bool         setIOMaxsize        (int maxsize);
         static int          getIOMaxsize        (void);
         static void         setIOTimeout        (int timeout);
         static int          getIOTimeout        (void);

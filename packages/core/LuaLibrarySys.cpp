@@ -35,7 +35,6 @@
 
 const char* LuaLibrarySys::LUA_SYSLIBNAME = "sys";
 const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
-    {"help",        LuaLibrarySys::lsys_help},
     {"version",     LuaLibrarySys::lsys_version},
     {"quit",        LuaLibrarySys::lsys_quit},
     {"abort",       LuaLibrarySys::lsys_abort},
@@ -44,6 +43,8 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
+    {"setiosz",     LuaLibrarySys::lsys_setiosize},
+    {"getiosz",     LuaLibrarySys::lsys_getiosize},
     {"lsdev",       DeviceObject::luaList},
     {NULL,          NULL}
 };
@@ -65,21 +66,6 @@ void LuaLibrarySys::lsys_init (void)
 int LuaLibrarySys::luaopen_syslib (lua_State *L)
 {
     luaL_newlib(L, sysLibs);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_help
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_help (lua_State* L)
-{
-    bool status = true;
-
-    /* Display Help*/
-    mlog(RAW, "HELP\n");
-
-    /* Return Status to Lua */
-    lua_pushboolean(L, status);
     return 1;
 }
 
@@ -272,3 +258,37 @@ int LuaLibrarySys::lsys_setstddepth (lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
+
+/*----------------------------------------------------------------------------
+ * lsys_setiosize
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setiosize (lua_State* L)
+{
+    bool status = false;
+
+    if(!lua_isnumber(L, 1))
+    {
+        mlog(CRITICAL, "I/O maximum size must be a number\n");
+    }
+    else
+    {
+        /* Set I/O Size */
+        int size = lua_tonumber(L, 1);
+        status = LocalLib::setIOMaxsize(size);
+    }
+
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_getiosize
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_getiosize (lua_State* L)
+{
+    lua_pushnumber(L, LocalLib::getIOMaxsize());
+    return 1;
+}
+
+

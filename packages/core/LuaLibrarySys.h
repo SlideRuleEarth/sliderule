@@ -59,7 +59,6 @@ class LuaLibrarySys
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      lsys_help           (lua_State* L);
         static int      lsys_version        (lua_State* L);
         static int      lsys_quit           (lua_State* L);
         static int      lsys_abort          (lua_State* L);
@@ -68,6 +67,8 @@ class LuaLibrarySys
         static int      lsys_lsmsgq         (lua_State* L);
         static int      lsys_type           (lua_State* L);
         static int      lsys_setstddepth    (lua_State* L);
+        static int      lsys_setiosize      (lua_State* L);
+        static int      lsys_getiosize      (lua_State* L);
 };
 
 #endif  /* __lua_library_sys__ */
