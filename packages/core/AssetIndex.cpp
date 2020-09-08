@@ -23,6 +23,8 @@
 
 #include "AssetIndex.h"
 #include "Dictionary.h"
+#include "List.h"
+#include "Ordering.h"
 #include "LogLib.h"
 #include "OsApi.h"
 #include "StringLib.h"
@@ -115,15 +117,43 @@ AssetIndex::TimeSpan::~TimeSpan (void)
  *----------------------------------------------------------------------------*/
 bool AssetIndex::TimeSpan::add (int ri)
 {
-    if(root == NULL) // empty tree
+    resource_t& resource = asset->resources[ri];
+
+    /* Empty Tree */
+    if(root == NULL)
     {
         root = new node_t;
-        root->t[0] = asset->resources[ri].t[0];
-        root->t[1] = asset->resources[ri].t[1];
         root->ril.add(ri);
+        root->treespan = resource.span;
+        root->nodespan = resource.span;
+        root->before = NULL;
+        root->after = NULL;
+        return true;
     }
 
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::query
+ *----------------------------------------------------------------------------*/
+Ordering<int>* AssetIndex::TimeSpan::query (double t0, double t1)
+{
+    (void)t0;
+    (void)t1;
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::traverse
+ *----------------------------------------------------------------------------*/
+void AssetIndex::TimeSpan::traverse (double t0, double t1, node_t* curr, Ordering<int>* list)
+{
+    /* Return Immediately on Null Path */
+    if(curr == NULL) return;
+
+    /* Check Current Node */
+//    if(curr->)
 }
 
 /*----------------------------------------------------------------------------
@@ -149,6 +179,18 @@ bool AssetIndex::SpatialRegion::add (int ri)
 {
     (void)ri;
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * SpatialRegion::query
+ *----------------------------------------------------------------------------*/
+List<int>* AssetIndex::SpatialRegion::query (double lat0, double lat1, double lon0, double lon1)
+{
+    (void)lat0;
+    (void)lat1;
+    (void)lon0;
+    (void)lon1;
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -254,9 +296,8 @@ int AssetIndex::luaLoad (lua_State* L)
         /* Create Resource */
         resource_t resource;
         StringLib::copy(&resource.name[0], resource_name, RESOURCE_NAME_MAX_LENGTH);
-        LocalLib::set(resource.t, 0, sizeof(resource.t));
-        LocalLib::set(resource.lat, 0, sizeof(resource.lat));
-        LocalLib::set(resource.lon, 0, sizeof(resource.lon));
+        LocalLib::set(&resource.span, 0, sizeof(resource.span));
+        LocalLib::set(&resource.region, 0, sizeof(resource.region));
 
         /* Populate Attributes from Table */
         lua_pushnil(L);  // first key
@@ -273,12 +314,12 @@ int AssetIndex::luaLoad (lua_State* L)
 
             if(provided)
             {
-                     if(StringLib::match("t0",   key)) resource.t[0]   = value;
-                else if(StringLib::match("t1",   key)) resource.t[1]   = value;
-                else if(StringLib::match("lat0", key)) resource.lat[0] = value;
-                else if(StringLib::match("lat1", key)) resource.lat[1] = value;
-                else if(StringLib::match("lon0", key)) resource.lon[0] = value;
-                else if(StringLib::match("lon1", key)) resource.lon[1] = value;
+                     if(StringLib::match("t0",   key)) resource.span.t0     = value;
+                else if(StringLib::match("t1",   key)) resource.span.t1     = value;
+                else if(StringLib::match("lat0", key)) resource.region.lat0 = value;
+                else if(StringLib::match("lat1", key)) resource.region.lat1 = value;
+                else if(StringLib::match("lon0", key)) resource.region.lon0 = value;
+                else if(StringLib::match("lon1", key)) resource.region.lon1 = value;
                 else
                 {
                     resource.attr.add(key, value);
