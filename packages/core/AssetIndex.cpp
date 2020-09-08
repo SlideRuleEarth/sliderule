@@ -102,7 +102,7 @@ int AssetIndex::luaCreate (lua_State* L)
 AssetIndex::TimeSpan::TimeSpan (AssetIndex* _asset)
 {
     asset = _asset;
-    root = NULL;
+    root = createnode();
 }
 
 /*----------------------------------------------------------------------------
@@ -110,6 +110,7 @@ AssetIndex::TimeSpan::TimeSpan (AssetIndex* _asset)
  *----------------------------------------------------------------------------*/
 AssetIndex::TimeSpan::~TimeSpan (void)
 {
+    // TODO: delete tree
 }
 
 /*----------------------------------------------------------------------------
@@ -117,43 +118,148 @@ AssetIndex::TimeSpan::~TimeSpan (void)
  *----------------------------------------------------------------------------*/
 bool AssetIndex::TimeSpan::add (int ri)
 {
-    resource_t& resource = asset->resources[ri];
+    /* Add to Root */
+    updatenode(ri, root);
+    
+    /* Rebalance */
+    balancetree(root);
 
-    /* Empty Tree */
-    if(root == NULL)
-    {
-        root = new node_t;
-        root->ril.add(ri);
-        root->treespan = resource.span;
-        root->nodespan = resource.span;
-        root->before = NULL;
-        root->after = NULL;
-        return true;
-    }
-
+    /* Return Success */
     return true;
 }
 
 /*----------------------------------------------------------------------------
  * TimeSpan::query
  *----------------------------------------------------------------------------*/
-Ordering<int>* AssetIndex::TimeSpan::query (double t0, double t1)
+Ordering<int>* AssetIndex::TimeSpan::query (span_t span)
 {
-    (void)t0;
-    (void)t1;
-    return NULL;
+    Ordering<int>* list = new Ordering<int>();
+    traverse(span, root, list);
+    return list;
 }
 
 /*----------------------------------------------------------------------------
  * TimeSpan::traverse
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::traverse (double t0, double t1, node_t* curr, Ordering<int>* list)
+void AssetIndex::TimeSpan::traverse (span_t span, node_t* curr, Ordering<int>* list)
 {
-    /* Return Immediately on Null Path */
+    /* Return on Null Path */
     if(curr == NULL) return;
 
-    /* Check Current Node */
-//    if(curr->)
+    /* Return if no Intersection with Tree */
+    if(!intersect(span, curr->treespan)) return;
+
+    /* Populate with Current Node */
+    populate(span, curr, list);
+
+    /* Goto Before Tree */
+    traverse(span, curr->before, list);
+
+    /* Goto Before Tree */
+    traverse(span, curr->after, list);
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::traverse
+ *----------------------------------------------------------------------------*/
+int AssetIndex::TimeSpan::populate (span_t span, node_t* curr, Ordering<int>* list)
+{
+    int num_added = 0;
+    if(intersect(span, curr->nodespan))
+    {
+        int ri;
+        int t1 = curr->ril.first(&ri);
+        while(t1 != (int)INVALID_KEY)
+        {
+            resource_t& resource = asset->resources[ri];
+            if(intersect(span, resource.span))
+            {
+                if(list->add(ri, t1, true))
+                {
+                    num_added++;
+                }
+            }
+            t1 = curr->ril.next(&ri);
+        }
+    }
+    return num_added;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::traverse
+ *----------------------------------------------------------------------------*/
+bool AssetIndex::TimeSpan::intersect (span_t span1, span_t span2)
+{
+    return ((span1.t0 >= span2.t0 && span1.t0 < span2.t1) ||
+            (span1.t1 >= span2.t0 && span1.t1 < span2.t1));
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::createnode
+ *----------------------------------------------------------------------------*/
+AssetIndex::TimeSpan::node_t* AssetIndex::TimeSpan::createnode (void)
+{
+    node_t* new_node = new node_t;
+    LocalLib::set(&new_node->treespan, 0, sizeof(new_node->treespan));
+    LocalLib::set(&new_node->nodespan, 0, sizeof(new_node->nodespan));
+    new_node->before = NULL;
+    new_node->after = NULL;
+    return new_node;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::updatenode
+ *----------------------------------------------------------------------------*/
+void AssetIndex::TimeSpan::updatenode (int ri, node_t* curr)
+{
+    resource_t& resource = asset->resources[ri];
+    span_t& span = resource.span;
+
+    curr->ril.add(span.t1, ri);
+    if(span.t0 < curr->treespan.t0) curr->treespan.t0 = span.t0;
+    if(span.t0 < curr->nodespan.t0) curr->nodespan.t0 = span.t0;
+    if(span.t1 > curr->treespan.t1) curr->treespan.t1 = span.t1;
+    if(span.t1 > curr->nodespan.t1) curr->nodespan.t1 = span.t1;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::updatenode
+ *----------------------------------------------------------------------------*/
+void AssetIndex::TimeSpan::balancetree (node_t* curr)
+{
+    int ri;
+
+    if(curr && curr->ril.length() > NODE_THRESHOLD)
+    {
+        /* Create children (if necessary) */
+        if(!curr->before) curr->before = createnode();
+        if(!curr->after) curr->after = createnode();
+
+        /* Go to first resource index in list */
+        curr->ril.first(&ri);
+
+        /* Push left in tree - up to middle stop time */
+        int middle_index = NODE_THRESHOLD / 2;
+        for(int i = 0; i < middle_index; i++)
+        {
+            updatenode(ri, curr->before);
+            curr->ril.next(&ri);
+        }
+
+        /* Push right in tree - from middle stop time */
+        for(int i = middle_index; i < NODE_THRESHOLD; i++)
+        {
+            updatenode(ri, curr->after);
+            curr->ril.next(&ri);
+        }
+
+        /* Clear current list */
+        curr->ril.clear();
+
+        /* Rebalance children */
+        balancetree(curr->before);
+        balancetree(curr->after);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -184,12 +290,9 @@ bool AssetIndex::SpatialRegion::add (int ri)
 /*----------------------------------------------------------------------------
  * SpatialRegion::query
  *----------------------------------------------------------------------------*/
-List<int>* AssetIndex::SpatialRegion::query (double lat0, double lat1, double lon0, double lon1)
+List<int>* AssetIndex::SpatialRegion::query (region_t region)
 {
-    (void)lat0;
-    (void)lat1;
-    (void)lon0;
-    (void)lon1;
+    (void)region;
     return NULL;
 }
 
@@ -322,7 +425,10 @@ int AssetIndex::luaLoad (lua_State* L)
                 else if(StringLib::match("lon1", key)) resource.region.lon1 = value;
                 else
                 {
-                    resource.attr.add(key, value);
+                    if(!resource.attr.add(key, value, true))
+                    {
+                        mlog(CRITICAL, "Failed to populate duplicate attribute %s for resource %s\n", key, resource_name);
+                    }
                 }
             }
             else

@@ -24,6 +24,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
 #include "OsApi.h"
 #include "Dictionary.h"
 #include "List.h"
@@ -57,6 +58,7 @@ class AssetIndex: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int RESOURCE_NAME_MAX_LENGTH = 150;
+        static const int NODE_THRESHOLD = 8;
 
         /*--------------------------------------------------------------------
          * TimeSpan Subclass
@@ -67,12 +69,12 @@ class AssetIndex: public LuaObject
             public:
 
                 typedef struct {
-                    double t0;
-                    double t1;
+                    double              t0; // start time
+                    double              t1; // stop time
                 } span_t;
 
                 typedef struct node {
-                    List<int>           ril;        // resource index list
+                    Ordering<int>       ril;        // resource index list (key = stop time, data = index)
                     span_t              treespan;   // minimum start, maximum stop - for entire tree rooted at this node
                     span_t              nodespan;   // minimum start, maximum stop - for resources contained in this node
                     struct node*        before;     // left tree
@@ -82,8 +84,13 @@ class AssetIndex: public LuaObject
                                 TimeSpan    (AssetIndex* _asset);
                                 ~TimeSpan   (void);
                 bool            add         (int ri); // resource index
-                Ordering<int>*  query       (double t0, double t1);
-                void            traverse    (double t0, double t1, node_t* curr, Ordering<int>* list);
+                Ordering<int>*  query       (span_t span);
+                void            traverse    (span_t span, node_t* curr, Ordering<int>* list);
+                int             populate    (span_t span, node_t* curr, Ordering<int>* list);
+                bool            intersect   (span_t span1, span_t span2);
+                node_t*         createnode  (void);
+                void            updatenode  (int ri, node_t* curr);
+                void            balancetree (node_t* curr);
                 
             private:
 
@@ -100,10 +107,10 @@ class AssetIndex: public LuaObject
             public:
 
                 typedef struct {
-                    double lat0;    // southern
-                    double lon0;    // western
-                    double lat1;    // northern
-                    double lon1;    // eastern
+                    double              lat0;    // southern
+                    double              lon0;    // western
+                    double              lat1;    // northern
+                    double              lon1;    // eastern
                 } region_t;
 
                 typedef struct node {
@@ -114,7 +121,7 @@ class AssetIndex: public LuaObject
                             SpatialRegion   (AssetIndex* _asset);
                             ~SpatialRegion  (void);
                 bool        add             (int ri); // resource index
-                List<int>*  query           (double lat0, double lat1, double lon0, double lon1);
+                List<int>*  query           (region_t region);
                 
             private:
 
