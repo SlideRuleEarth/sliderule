@@ -102,7 +102,7 @@ int AssetIndex::luaCreate (lua_State* L)
 AssetIndex::TimeSpan::TimeSpan (AssetIndex* _asset)
 {
     asset = _asset;
-    root = NULL;
+    tree = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -119,7 +119,7 @@ AssetIndex::TimeSpan::~TimeSpan (void)
 bool AssetIndex::TimeSpan::update (int ri)
 {
     int maxdepth = 0;
-    updatenode(ri, &root, &maxdepth);
+    updatenode(ri, &tree, NULL, &maxdepth);
     return true;
 }
 
@@ -129,7 +129,7 @@ bool AssetIndex::TimeSpan::update (int ri)
 Ordering<int>* AssetIndex::TimeSpan::query (span_t span)
 {
     Ordering<int>* list = new Ordering<int>();
-    querynode(span, root, list);
+    querynode(span, tree, list);
     return list;
 }
 
@@ -138,23 +138,24 @@ Ordering<int>* AssetIndex::TimeSpan::query (span_t span)
  *----------------------------------------------------------------------------*/
 void AssetIndex::TimeSpan::display (void)
 {
-    displaynode(root);
+    displaynode(tree);
 }
 
 /*----------------------------------------------------------------------------
  * TimeSpan::updatenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
+void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, node_t* root, int* maxdepth)
 {
     resource_t& resource = asset->resources[ri];
     span_t& span = resource.span;
+    int cri; // current resource index
 
     /* Create Node (if necessary */
     if(*node == NULL)
     {
         *node = new node_t;
+        (*node)->ril = new Ordering<int>;
         (*node)->treespan = span;
-        (*node)->nodespan = span;
         (*node)->before = NULL;
         (*node)->after = NULL;
         (*node)->depth = 0;
@@ -167,53 +168,48 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
     if(span.t0 < curr->treespan.t0) curr->treespan.t0 = span.t0;
     if(span.t1 > curr->treespan.t1) curr->treespan.t1 = span.t1;
 
-    /* Update Current Node */
-    if(curr->ril.length() < NODE_THRESHOLD)
+    /* Update Current Leaf Node */
+    if(curr->ril)
     {
         /* Add Index to Current Node */
-        curr->ril.add(span.t1, ri);
+        curr->ril->add(span.t1, ri);
 
-        /* Expand Span of Current Node */
-        if(span.t0 < curr->nodespan.t0) curr->nodespan.t0 = span.t0;
-        if(span.t1 > curr->nodespan.t1) curr->nodespan.t1 = span.t1;
-    }
-    else
-    {
-        if(curr->before && span.t1 < curr->before->treespan.t1)
-        {   
-            /* Update Left Tree */
-            updatenode(ri, &curr->before, maxdepth);
-        }
-        else if(curr->after)
-        {   
-            /* Update Right Tree */
-            updatenode(ri, &curr->after, maxdepth);
-        }
-        else /* Split Current Node */
+        /* Split Current Leaf Node */
+        if(curr->ril->length() >= NODE_THRESHOLD)
         {
-            /* Go to first resource index in list */        
-            int cri; // current resource index
-            curr->ril.first(&cri);
+            curr->ril->first(&cri);
 
             /* Push left in tree - up to middle stop time */
             int middle_index = NODE_THRESHOLD / 2;
             for(int i = 0; i < middle_index; i++)
             {
-                updatenode(cri, &curr->before, maxdepth);
-                curr->ril.next(&cri);
+                updatenode(cri, &curr->before, curr, maxdepth);
+                curr->ril->next(&cri);
             }
 
             /* Push right in tree - from middle stop time */
-            for(int i = middle_index; i < NODE_THRESHOLD; i++)
+            for(int i = middle_index; i <= NODE_THRESHOLD; i++)
             {
-                updatenode(cri, &curr->after, maxdepth);
-                curr->ril.next(&cri);
+                updatenode(cri, &curr->after, curr, maxdepth);
+                curr->ril->next(&cri);
             }
 
-            /* Add Index to Current Node */
-            curr->ril.clear();
-            curr->nodespan = span;
-            curr->ril.add(span.t1, ri);
+            /* Make Current Node a Branch */
+            delete curr->ril;
+            curr->ril = NULL;
+        }
+    }
+    else /* Traverse Branch Node */
+    {
+        if(span.t1 < curr->before->treespan.t1)
+        {   
+            /* Update Left Tree */
+            updatenode(ri, &curr->before, curr, maxdepth);
+        }
+        else
+        {   
+            /* Update Right Tree */
+            updatenode(ri, &curr->after, curr, maxdepth);
         }
 
         /* Update Max Depth */
@@ -227,17 +223,47 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
     }
 
     /* Rebalance Tree */
-    if(root->before && root->after)
+    if(curr->before && curr->after)
     {
-        /* Rotate Right */
-        if(root->before->depth + 1 < root->after->depth)
-        {
+        node_t* middle = NULL;
 
+        /* Rotate Right */
+        if(curr->before->depth + 1 < curr->after->depth)
+        {
+            /* Find Middle Leaf */
+            middle = curr->after->before;
+            while(middle->before != NULL) middle = middle->before;
         }
         /* Rotate Left */
-        else if(root->after->depth + 1 < root->before->depth)
+        else if(curr->after->depth + 1 < curr->before->depth)
         {
+            /* Find Middle Leaf */
+            middle = curr->before->after;
+            while(middle->after != NULL) middle = middle->after;
+        }
 
+        if(middle)
+        {
+            /* Link Branches into Middle */
+            middle->before = curr->before;
+            middle->after = curr->after;
+
+            /* Link Middle into Root */
+            if(root->before == curr) root->before = middle;
+            else root->after = middle;
+
+            /* Add Middle Indexes Back */
+            Ordering<int>* middle_ril = middle->ril;
+            middle->ril = NULL; // make middle node a branch
+            int t1 = middle_ril->first(&cri);
+            while(t1 != (int)INVALID_KEY)
+            {
+                updatenode(cri, &middle, curr, maxdepth);
+                t1 = middle_ril->next(&cri);
+            }
+
+            /* Delete Middle RIL */
+            delete middle_ril;
         }
     }
 }
@@ -253,11 +279,12 @@ void AssetIndex::TimeSpan::querynode (span_t span, node_t* curr, Ordering<int>* 
     /* Return if no Intersection with Tree */
     if(!intersect(span, curr->treespan)) return;
 
-    /* Populate with Current Node */
-    if(intersect(span, curr->nodespan))
+    /* If Leaf Node */
+    if(curr->ril)
     {
+        /* Populate with Current Node */
         int ri;
-        int t1 = curr->ril.first(&ri);
+        int t1 = curr->ril->first(&ri);
         while(t1 != (int)INVALID_KEY)
         {
             resource_t& resource = asset->resources[ri];
@@ -265,15 +292,17 @@ void AssetIndex::TimeSpan::querynode (span_t span, node_t* curr, Ordering<int>* 
             {
                 list->add(ri, t1, true);
             }
-            t1 = curr->ril.next(&ri);
+            t1 = curr->ril->next(&ri);
         }
     }
+    else /* Branch Node */
+    {
+        /* Goto Before Tree */
+        querynode(span, curr->before, list);
 
-    /* Goto Before Tree */
-    querynode(span, curr->before, list);
-
-    /* Goto Before Tree */
-    querynode(span, curr->after, list);
+        /* Goto Before Tree */
+        querynode(span, curr->after, list);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -288,17 +317,22 @@ void AssetIndex::TimeSpan::displaynode (node_t* curr)
 
     /* Display */
     mlog(RAW, "\n<%d>[%.3lf, %.3lf]: ", curr->depth, curr->treespan.t0, curr->treespan.t1);
-    int t1 = curr->ril.first(&ri);
-    while(t1 != (int)INVALID_KEY)
+    if(curr->ril)
     {
-        mlog(RAW, "%s ", asset->resources[ri].name);
-        t1 = curr->ril.next(&ri);
+        int t1 = curr->ril->first(&ri);
+        while(t1 != (int)INVALID_KEY)
+        {
+            mlog(RAW, "%s ", asset->resources[ri].name);
+            t1 = curr->ril->next(&ri);
+        }
     }
-    mlog(RAW, "\n");
-    mlog(RAW, "B");
-    if(curr->before) mlog(RAW, "(%.3lf, %.3lf)", curr->before->treespan.t0, curr->before->treespan.t1);
-    mlog(RAW, ", A");
-    if(curr->after) mlog(RAW, "(%.3lf, %.3lf)", curr->after->treespan.t0, curr->after->treespan.t1);
+    else
+    {
+        mlog(RAW, "B");
+        if(curr->before) mlog(RAW, "(%.3lf, %.3lf)", curr->before->treespan.t0, curr->before->treespan.t1);
+        mlog(RAW, ", A");
+        if(curr->after) mlog(RAW, "(%.3lf, %.3lf)", curr->after->treespan.t0, curr->after->treespan.t1);
+    }
     mlog(RAW, "\n");
     
     /* Recurse */
@@ -321,7 +355,7 @@ bool AssetIndex::TimeSpan::intersect (span_t span1, span_t span2)
 AssetIndex::SpatialRegion::SpatialRegion (AssetIndex* _asset)
 {
     asset = _asset;
-    root = NULL;
+    tree = NULL;
 }
 
 /*----------------------------------------------------------------------------
