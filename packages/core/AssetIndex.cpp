@@ -280,7 +280,7 @@ void AssetIndex::TimeSpan::display (node_t* curr)
     int t1 = curr->ril.first(&ri);
     while(t1 != (int)INVALID_KEY)
     {
-        mlog(RAW, "%d ", ri);
+        mlog(RAW, "%s ", asset->resources[ri].name);
         t1 = curr->ril.next(&ri);
     }
     mlog(RAW, "\n");
