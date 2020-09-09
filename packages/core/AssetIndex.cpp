@@ -114,15 +114,13 @@ AssetIndex::TimeSpan::~TimeSpan (void)
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::add
+ * TimeSpan::update
  *----------------------------------------------------------------------------*/
-bool AssetIndex::TimeSpan::add (int ri)
+bool AssetIndex::TimeSpan::update (int ri)
 {
     /* Add to Root */
-    updatenode(ri, &root);
-    
-    /* Rebalance */
-//    balancetree(root);
+    bool split = false;
+    updatenode(ri, &root, &split);
 
     /* Return Success */
     return true;
@@ -134,22 +132,22 @@ bool AssetIndex::TimeSpan::add (int ri)
 Ordering<int>* AssetIndex::TimeSpan::query (span_t span)
 {
     Ordering<int>* list = new Ordering<int>();
-    traverse(span, root, list);
+    querynode(span, root, list);
     return list;
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::display - public
+ * TimeSpan::display
  *----------------------------------------------------------------------------*/
 void AssetIndex::TimeSpan::display (void)
 {
-    display(root);
+    displaynode(root);
 }
 
 /*----------------------------------------------------------------------------
  * TimeSpan::updatenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::updatenode (int ri, node_t** node)
+void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, bool* split)
 {
     resource_t& resource = asset->resources[ri];
     span_t& span = resource.span;
@@ -162,6 +160,7 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node)
         (*node)->nodespan = span;
         (*node)->before = NULL;
         (*node)->after = NULL;
+        (*node)->depth = 0;
     }
 
     /* Pointer to Current Node */
@@ -184,32 +183,31 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node)
     else if(curr->before && span.t1 < curr->before->treespan.t1)
     {   
         /* Update Left Tree */
-        updatenode(ri, &curr->before);
+        updatenode(ri, &curr->before, split);
     }
     else if(curr->after)
     {   
         /* Update Right Tree */
-        updatenode(ri, &curr->after);
+        updatenode(ri, &curr->after, split);
     }
     else /* Split Current Node */
     {
-        int cri; // current resource index
-
         /* Go to first resource index in list */        
+        int cri; // current resource index
         curr->ril.first(&cri);
 
         /* Push left in tree - up to middle stop time */
         int middle_index = NODE_THRESHOLD / 2;
         for(int i = 0; i < middle_index; i++)
         {
-            updatenode(cri, &curr->before);
+            updatenode(cri, &curr->before, split);
             curr->ril.next(&cri);
         }
 
         /* Push right in tree - from middle stop time */
         for(int i = middle_index; i < NODE_THRESHOLD; i++)
         {
-            updatenode(cri, &curr->after);
+            updatenode(cri, &curr->after, split);
             curr->ril.next(&cri);
         }
 
@@ -217,50 +215,19 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node)
         curr->ril.clear();
         curr->nodespan = span;
         curr->ril.add(span.t1, ri);
+
+        /* Mark Split */
+        *split = true;
     }
+
+    /* Update Depth */
+    if(*split) curr->depth++;
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::balancetree
+ * TimeSpan::querynode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::balancetree (node_t* curr)
-{
-    int ri;
-
-    if(curr && curr->ril.length() > NODE_THRESHOLD)
-    {
-        /* Go to first resource index in list */
-        curr->ril.first(&ri);
-
-        /* Push left in tree - up to middle stop time */
-        int middle_index = NODE_THRESHOLD / 2;
-        for(int i = 0; i < middle_index; i++)
-        {
-            updatenode(ri, &curr->before);
-            curr->ril.next(&ri);
-        }
-
-        /* Push right in tree - from middle stop time */
-        for(int i = middle_index; i <= NODE_THRESHOLD; i++)
-        {
-            updatenode(ri, &curr->after);
-            curr->ril.next(&ri);
-        }
-
-        /* Clear current list */
-        curr->ril.clear();
-        LocalLib::set(&curr->nodespan, 0, sizeof(curr->nodespan)); //TODO - remove this... setting to zero
-
-        /* Rebalance children */
-        balancetree(curr->before);
-        balancetree(curr->after);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * TimeSpan::traverse
- *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::traverse (span_t span, node_t* curr, Ordering<int>* list)
+void AssetIndex::TimeSpan::querynode (span_t span, node_t* curr, Ordering<int>* list)
 {
     /* Return on Null Path */
     if(curr == NULL) return;
@@ -269,21 +236,6 @@ void AssetIndex::TimeSpan::traverse (span_t span, node_t* curr, Ordering<int>* l
     if(!intersect(span, curr->treespan)) return;
 
     /* Populate with Current Node */
-    populate(span, curr, list);
-
-    /* Goto Before Tree */
-    traverse(span, curr->before, list);
-
-    /* Goto Before Tree */
-    traverse(span, curr->after, list);
-}
-
-/*----------------------------------------------------------------------------
- * TimeSpan::traverse
- *----------------------------------------------------------------------------*/
-int AssetIndex::TimeSpan::populate (span_t span, node_t* curr, Ordering<int>* list)
-{
-    int num_added = 0;
     if(intersect(span, curr->nodespan))
     {
         int ri;
@@ -293,30 +245,23 @@ int AssetIndex::TimeSpan::populate (span_t span, node_t* curr, Ordering<int>* li
             resource_t& resource = asset->resources[ri];
             if(intersect(span, resource.span))
             {
-                if(list->add(ri, t1, true))
-                {
-                    num_added++;
-                }
+                list->add(ri, t1, true);
             }
             t1 = curr->ril.next(&ri);
         }
     }
-    return num_added;
+
+    /* Goto Before Tree */
+    querynode(span, curr->before, list);
+
+    /* Goto Before Tree */
+    querynode(span, curr->after, list);
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::traverse
+ * TimeSpan::displaynode
  *----------------------------------------------------------------------------*/
-bool AssetIndex::TimeSpan::intersect (span_t span1, span_t span2)
-{
-    return ((span1.t0 >= span2.t0 && span1.t0 < span2.t1) ||
-            (span1.t1 >= span2.t0 && span1.t1 < span2.t1));
-}
-
-/*----------------------------------------------------------------------------
- * TimeSpan::display - private
- *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::display (node_t* curr)
+void AssetIndex::TimeSpan::displaynode (node_t* curr)
 {
     int ri;
 
@@ -324,7 +269,7 @@ void AssetIndex::TimeSpan::display (node_t* curr)
     if(curr == NULL) return;
 
     /* Display */
-    mlog(RAW, "\n[%.3lf, %.3lf]: ", curr->treespan.t0, curr->treespan.t1);
+    mlog(RAW, "\n<%d>[%.3lf, %.3lf]: ", curr->depth, curr->treespan.t0, curr->treespan.t1);
     int t1 = curr->ril.first(&ri);
     while(t1 != (int)INVALID_KEY)
     {
@@ -339,9 +284,19 @@ void AssetIndex::TimeSpan::display (node_t* curr)
     mlog(RAW, "\n");
     
     /* Recurse */
-    display(curr->before);
-    display(curr->after);
+    displaynode(curr->before);
+    displaynode(curr->after);
 }
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::intersect
+ *----------------------------------------------------------------------------*/
+bool AssetIndex::TimeSpan::intersect (span_t span1, span_t span2)
+{
+    return ((span1.t0 >= span2.t0 && span1.t0 < span2.t1) ||
+            (span1.t1 >= span2.t0 && span1.t1 < span2.t1));
+}
+
 /*----------------------------------------------------------------------------
  * SpatialRegion::Constructor
  *----------------------------------------------------------------------------*/
@@ -521,7 +476,7 @@ int AssetIndex::luaLoad (lua_State* L)
 
         /* Register Resource */
         int ri = lua_obj->resources.add(resource);
-        lua_obj->timeIndex.add(ri);
+        lua_obj->timeIndex.update(ri);
         lua_obj->timeIndex.display();
 
         /* Set Status */

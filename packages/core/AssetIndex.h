@@ -79,22 +79,21 @@ class AssetIndex: public LuaObject
                     span_t              nodespan;   // minimum start, maximum stop - for resources contained in this node
                     struct tsnode*      before;     // left tree
                     struct tsnode*      after;      // right tree
+                    int                 depth;      // depth of tree at this node
                 } node_t;
             
                                         TimeSpan    (AssetIndex* _asset);
                                         ~TimeSpan   (void);
-                bool                    add         (int ri); // resource index
+                bool                    update      (int ri); // NOT thread safe
                 Ordering<int>*          query       (span_t span);
                 void                    display     (void);
          
             private:
 
-                void                    updatenode  (int ri, node_t** node);
-                void                    balancetree (node_t* curr);
-                void                    traverse    (span_t span, node_t* curr, Ordering<int>* list);
-                int                     populate    (span_t span, node_t* curr, Ordering<int>* list);
+                void                    updatenode  (int ri, node_t** node, bool* split);
+                void                    querynode   (span_t span, node_t* curr, Ordering<int>* list);
+                void                    displaynode (node_t* curr);
                 bool                    intersect   (span_t span1, span_t span2);
-                void                    display     (node_t* curr);
 
                 AssetIndex*             asset;
                 node_t*                 root;
