@@ -118,11 +118,8 @@ AssetIndex::TimeSpan::~TimeSpan (void)
  *----------------------------------------------------------------------------*/
 bool AssetIndex::TimeSpan::update (int ri)
 {
-    /* Add to Root */
-    bool split = false;
-    updatenode(ri, &root, &split);
-
-    /* Return Success */
+    int maxdepth = 0;
+    updatenode(ri, &root, &maxdepth);
     return true;
 }
 
@@ -147,7 +144,7 @@ void AssetIndex::TimeSpan::display (void)
 /*----------------------------------------------------------------------------
  * TimeSpan::updatenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, bool* split)
+void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
 {
     resource_t& resource = asset->resources[ri];
     span_t& span = resource.span;
@@ -180,48 +177,69 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, bool* split)
         if(span.t0 < curr->nodespan.t0) curr->nodespan.t0 = span.t0;
         if(span.t1 > curr->nodespan.t1) curr->nodespan.t1 = span.t1;
     }
-    else if(curr->before && span.t1 < curr->before->treespan.t1)
-    {   
-        /* Update Left Tree */
-        updatenode(ri, &curr->before, split);
-    }
-    else if(curr->after)
-    {   
-        /* Update Right Tree */
-        updatenode(ri, &curr->after, split);
-    }
-    else /* Split Current Node */
+    else
     {
-        /* Go to first resource index in list */        
-        int cri; // current resource index
-        curr->ril.first(&cri);
-
-        /* Push left in tree - up to middle stop time */
-        int middle_index = NODE_THRESHOLD / 2;
-        for(int i = 0; i < middle_index; i++)
+        if(curr->before && span.t1 < curr->before->treespan.t1)
+        {   
+            /* Update Left Tree */
+            updatenode(ri, &curr->before, maxdepth);
+        }
+        else if(curr->after)
+        {   
+            /* Update Right Tree */
+            updatenode(ri, &curr->after, maxdepth);
+        }
+        else /* Split Current Node */
         {
-            updatenode(cri, &curr->before, split);
-            curr->ril.next(&cri);
+            /* Go to first resource index in list */        
+            int cri; // current resource index
+            curr->ril.first(&cri);
+
+            /* Push left in tree - up to middle stop time */
+            int middle_index = NODE_THRESHOLD / 2;
+            for(int i = 0; i < middle_index; i++)
+            {
+                updatenode(cri, &curr->before, maxdepth);
+                curr->ril.next(&cri);
+            }
+
+            /* Push right in tree - from middle stop time */
+            for(int i = middle_index; i < NODE_THRESHOLD; i++)
+            {
+                updatenode(cri, &curr->after, maxdepth);
+                curr->ril.next(&cri);
+            }
+
+            /* Add Index to Current Node */
+            curr->ril.clear();
+            curr->nodespan = span;
+            curr->ril.add(span.t1, ri);
         }
 
-        /* Push right in tree - from middle stop time */
-        for(int i = middle_index; i < NODE_THRESHOLD; i++)
-        {
-            updatenode(cri, &curr->after, split);
-            curr->ril.next(&cri);
-        }
-
-        /* Add Index to Current Node */
-        curr->ril.clear();
-        curr->nodespan = span;
-        curr->ril.add(span.t1, ri);
-
-        /* Mark Split */
-        *split = true;
+        /* Update Max Depth */
+        (*maxdepth)++;
     }
 
-    /* Update Depth */
-    if(*split) curr->depth++;
+    /* Update Current Depth */
+    if(curr->depth < *maxdepth)
+    {
+        curr->depth = *maxdepth;
+    }
+
+    /* Rebalance Tree */
+    if(root->before && root->after)
+    {
+        /* Rotate Right */
+        if(root->before->depth + 1 < root->after->depth)
+        {
+
+        }
+        /* Rotate Left */
+        else if(root->after->depth + 1 < root->before->depth)
+        {
+
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
