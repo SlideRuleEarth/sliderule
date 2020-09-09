@@ -81,18 +81,20 @@ class AssetIndex: public LuaObject
                     struct node*        after;      // right tree
                 } node_t;
             
-                                TimeSpan    (AssetIndex* _asset);
-                                ~TimeSpan   (void);
-                bool            add         (int ri); // resource index
-                Ordering<int>*  query       (span_t span);
-                void            traverse    (span_t span, node_t* curr, Ordering<int>* list);
-                int             populate    (span_t span, node_t* curr, Ordering<int>* list);
-                bool            intersect   (span_t span1, span_t span2);
-                node_t*         createnode  (void);
-                void            updatenode  (int ri, node_t* curr);
-                void            balancetree (node_t* curr);
-                
+                                        TimeSpan    (AssetIndex* _asset);
+                                        ~TimeSpan   (void);
+                bool                    add         (int ri); // resource index
+                Ordering<int>*          query       (span_t span);
+                void                    display     (void);
+         
             private:
+
+                void                    updatenode  (int ri, node_t** curr);
+                void                    balancetree (node_t* curr);
+                void                    traverse    (span_t span, node_t* curr, Ordering<int>* list);
+                int                     populate    (span_t span, node_t* curr, Ordering<int>* list);
+                bool                    intersect   (span_t span1, span_t span2);
+                void                    display     (node_t* curr);
 
                 AssetIndex*             asset;
                 node_t*                 root;
@@ -118,10 +120,10 @@ class AssetIndex: public LuaObject
                     region_t            region;
                 } node_t;
 
-                            SpatialRegion   (AssetIndex* _asset);
-                            ~SpatialRegion  (void);
-                bool        add             (int ri); // resource index
-                List<int>*  query           (region_t region);
+                                        SpatialRegion   (AssetIndex* _asset);
+                                        ~SpatialRegion  (void);
+                bool                    add             (int ri); // resource index
+                List<int>*              query           (region_t region);
                 
             private:
 
