@@ -122,7 +122,7 @@ bool AssetIndex::TimeSpan::add (int ri)
     updatenode(ri, &root);
     
     /* Rebalance */
-    balancetree(root);
+//    balancetree(root);
 
     /* Return Success */
     return true;
@@ -149,27 +149,75 @@ void AssetIndex::TimeSpan::display (void)
 /*----------------------------------------------------------------------------
  * TimeSpan::updatenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::updatenode (int ri, node_t** curr)
+void AssetIndex::TimeSpan::updatenode (int ri, node_t** node)
 {
     resource_t& resource = asset->resources[ri];
     span_t& span = resource.span;
 
     /* Create Node (if necessary */
-    if(*curr == NULL)
+    if(*node == NULL)
     {
-        *curr = new node_t;
-        (*curr)->treespan = span;
-        (*curr)->nodespan = span;
-        (*curr)->before = NULL;
-        (*curr)->after = NULL;
+        *node = new node_t;
+        (*node)->treespan = span;
+        (*node)->nodespan = span;
+        (*node)->before = NULL;
+        (*node)->after = NULL;
     }
 
-    /* Update Node */
-    (*curr)->ril.add(span.t1, ri);
-    if(span.t0 < (*curr)->treespan.t0) (*curr)->treespan.t0 = span.t0;
-    if(span.t0 < (*curr)->nodespan.t0) (*curr)->nodespan.t0 = span.t0;
-    if(span.t1 > (*curr)->treespan.t1) (*curr)->treespan.t1 = span.t1;
-    if(span.t1 > (*curr)->nodespan.t1) (*curr)->nodespan.t1 = span.t1;
+    /* Pointer to Current Node */
+    node_t* curr = *node;
+
+    /* Update Tree Span */
+    if(span.t0 < curr->treespan.t0) curr->treespan.t0 = span.t0;
+    if(span.t1 > curr->treespan.t1) curr->treespan.t1 = span.t1;
+
+    /* Update Current Node */
+    if(curr->ril.length() < NODE_THRESHOLD)
+    {
+        /* Add Index to Current Node */
+        curr->ril.add(span.t1, ri);
+
+        /* Expand Span of Current Node */
+        if(span.t0 < curr->nodespan.t0) curr->nodespan.t0 = span.t0;
+        if(span.t1 > curr->nodespan.t1) curr->nodespan.t1 = span.t1;
+    }
+    else if(curr->before && span.t1 < curr->before->treespan.t1)
+    {   
+        /* Update Left Tree */
+        updatenode(ri, &curr->before);
+    }
+    else if(curr->after)
+    {   
+        /* Update Right Tree */
+        updatenode(ri, &curr->after);
+    }
+    else /* Split Current Node */
+    {
+        int cri; // current resource index
+
+        /* Go to first resource index in list */        
+        curr->ril.first(&cri);
+
+        /* Push left in tree - up to middle stop time */
+        int middle_index = NODE_THRESHOLD / 2;
+        for(int i = 0; i < middle_index; i++)
+        {
+            updatenode(cri, &curr->before);
+            curr->ril.next(&cri);
+        }
+
+        /* Push right in tree - from middle stop time */
+        for(int i = middle_index; i < NODE_THRESHOLD; i++)
+        {
+            updatenode(cri, &curr->after);
+            curr->ril.next(&cri);
+        }
+
+        /* Add Index to Current Node */
+        curr->ril.clear();
+        curr->nodespan = span;
+        curr->ril.add(span.t1, ri);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -193,7 +241,7 @@ void AssetIndex::TimeSpan::balancetree (node_t* curr)
         }
 
         /* Push right in tree - from middle stop time */
-        for(int i = middle_index; i < NODE_THRESHOLD; i++)
+        for(int i = middle_index; i <= NODE_THRESHOLD; i++)
         {
             updatenode(ri, &curr->after);
             curr->ril.next(&ri);
@@ -201,7 +249,7 @@ void AssetIndex::TimeSpan::balancetree (node_t* curr)
 
         /* Clear current list */
         curr->ril.clear();
-        LocalLib::set(&curr->nodespan, 0, sizeof(curr->nodespan));
+        LocalLib::set(&curr->nodespan, 0, sizeof(curr->nodespan)); //TODO - remove this... setting to zero
 
         /* Rebalance children */
         balancetree(curr->before);

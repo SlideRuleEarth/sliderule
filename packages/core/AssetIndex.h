@@ -73,12 +73,12 @@ class AssetIndex: public LuaObject
                     double              t1; // stop time
                 } span_t;
 
-                typedef struct node {
+                typedef struct tsnode {
                     Ordering<int>       ril;        // resource index list (key = stop time, data = index)
                     span_t              treespan;   // minimum start, maximum stop - for entire tree rooted at this node
                     span_t              nodespan;   // minimum start, maximum stop - for resources contained in this node
-                    struct node*        before;     // left tree
-                    struct node*        after;      // right tree
+                    struct tsnode*      before;     // left tree
+                    struct tsnode*      after;      // right tree
                 } node_t;
             
                                         TimeSpan    (AssetIndex* _asset);
@@ -89,7 +89,7 @@ class AssetIndex: public LuaObject
          
             private:
 
-                void                    updatenode  (int ri, node_t** curr);
+                void                    updatenode  (int ri, node_t** node);
                 void                    balancetree (node_t* curr);
                 void                    traverse    (span_t span, node_t* curr, Ordering<int>* list);
                 int                     populate    (span_t span, node_t* curr, Ordering<int>* list);
