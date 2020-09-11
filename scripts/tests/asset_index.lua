@@ -30,11 +30,22 @@ runner.compare(name, "dataset1")
 runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])
 
-
 print('\n------------------\nTest03: Display Time Tree for Dataset1\n------------------')
-a1:display()
-sys.wait(1)
+--a1:display()
+--sys.wait(1)
 
+print('\n------------------\nTest04: Query Dataset1\n------------------')
+local rl = a1:query({t0=5.0, t1=17.0})
+local e1 = { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} 
+for _, e in pairs(e1) do
+    found = false
+    for _, v in pairs(rl) do
+        if tostring(e) == v then
+            found = true
+        end
+    end
+    runner.check(found, string.format('Failed to return resource %d', e))
+end
 
 -- Clean Up --
 

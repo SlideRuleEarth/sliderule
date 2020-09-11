@@ -41,6 +41,7 @@ const char* AssetIndex::LuaMetaName = "AssetIndex";
 const struct luaL_Reg AssetIndex::LuaMetaTable[] = {
     {"info",        luaInfo},
     {"load",        luaLoad},
+    {"query",       luaQuery},
     {"display",     luaDisplay},
     {NULL,          NULL}
 };
@@ -386,8 +387,10 @@ void AssetIndex::TimeSpan::displaynode (node_t* curr)
  *----------------------------------------------------------------------------*/
 bool AssetIndex::TimeSpan::intersect (span_t span1, span_t span2)
 {
-    return ((span1.t0 >= span2.t0 && span1.t0 < span2.t1) ||
-            (span1.t1 >= span2.t0 && span1.t1 < span2.t1));
+    return ((span1.t0 >= span2.t0 && span1.t0 <= span2.t1) ||
+            (span1.t1 >= span2.t0 && span1.t1 <= span2.t1) || 
+            (span2.t0 >= span1.t0 && span2.t0 <= span1.t1) ||
+            (span2.t1 >= span1.t0 && span2.t1 <= span1.t1));
 }
 
 /*----------------------------------------------------------------------------
@@ -580,6 +583,91 @@ int AssetIndex::luaLoad (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaQuery - :query(<attribute table>)
+ *----------------------------------------------------------------------------*/
+int AssetIndex::luaQuery (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        AssetIndex* lua_obj = (AssetIndex*)getLuaSelf(L, 1);
+
+        /* Create Query Attributes */
+        TimeSpan::span_t            span;   // start, stop
+        SpatialRegion::region_t     region; // southern, western, northern, eastern
+        Dictionary<double>          attr;   // attributes
+
+        /* Populate Attributes from Table */
+        lua_pushnil(L);  // first key
+        while (lua_next(L, 2) != 0)
+        {
+            double value = 0.0;
+            bool provided = false;
+
+            const char* key = getLuaString(L, -2);
+            const char* str = getLuaString(L, -1, true, NULL, &provided);
+
+            if(!provided) value = getLuaFloat(L, -1);
+            else provided = StringLib::str2double(str, &value);
+
+            if(provided)
+            {
+                     if(StringLib::match("t0",   key)) span.t0     = value;
+                else if(StringLib::match("t1",   key)) span.t1     = value;
+                else if(StringLib::match("lat0", key)) region.lat0 = value;
+                else if(StringLib::match("lat1", key)) region.lat1 = value;
+                else if(StringLib::match("lon0", key)) region.lon0 = value;
+                else if(StringLib::match("lon1", key)) region.lon1 = value;
+                else
+                {
+                    if(!attr.add(key, value, true))
+                    {
+                        mlog(CRITICAL, "Failed to populate duplicate attribute %s for query\n", key);
+                    }
+                }
+            }
+            else
+            {
+                mlog(DEBUG, "Unable to populate attribute %s for query\n", key);
+            }
+
+            lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration
+        }
+
+        /* Query Resources */
+        Ordering<int>* ril = lua_obj->timeIndex.query(span);
+        (void)region; // TODO: perform spatial query
+        (void)attr; // TODO: perform field-value query
+
+        /* Return Resources */
+        lua_newtable(L);
+        int r = 1;
+        int ri, t1 = ril->first(&ri);
+        while(t1 != (int)INVALID_KEY)
+        {
+            lua_pushstring(L, lua_obj->resources[ri].name);
+            lua_rawseti(L, -2, r++);
+            t1 = ril->next(&ri);
+        }
+
+        /* Free Resource Index List */
+        delete ril;
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 2);
 }
 
 /*----------------------------------------------------------------------------
