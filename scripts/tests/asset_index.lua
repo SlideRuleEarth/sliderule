@@ -33,6 +33,7 @@ runner.compare(url, expected["dataset1"]["url"])
 
 print('\n------------------\nTest03: Display Time Tree for Dataset1\n------------------')
 a1:display()
+sys.wait(1)
 
 
 -- Clean Up --

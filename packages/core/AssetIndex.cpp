@@ -177,7 +177,7 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
         curr->ril->add(span.t1, ri);
 
         /* Split Current Leaf Node */
-        if(curr->ril->length() >= NODE_THRESHOLD)
+        if(curr->ril->length() == NODE_THRESHOLD)
         {
             curr->ril->first(&cri);
 
@@ -190,7 +190,7 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
             }
 
             /* Push right in tree - from middle stop time */
-            for(int i = middle_index; i <= NODE_THRESHOLD; i++)
+            for(int i = middle_index; i < NODE_THRESHOLD; i++)
             {
                 updatenode(cri, &curr->after, maxdepth);
                 curr->ril->next(&cri);
