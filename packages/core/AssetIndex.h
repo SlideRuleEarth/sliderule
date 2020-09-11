@@ -74,7 +74,7 @@ class AssetIndex: public LuaObject
                 } span_t;
 
                 typedef struct tsnode {
-                    Ordering<int>*      ril;        // resource index list (key = stop time, data = index)
+                    Ordering<int>*      ril;        // resource index list (key = stop time, data = index), NULL if branch
                     span_t              treespan;   // minimum start, maximum stop - for entire tree rooted at this node
                     struct tsnode*      before;     // left tree
                     struct tsnode*      after;      // right tree
@@ -90,7 +90,7 @@ class AssetIndex: public LuaObject
             private:
 
                 void                    updatenode  (int ri, node_t** node, int* maxdepth);
-                void                    balancenode (node_t* curr, node_t* root);
+                void                    balancenode (node_t** root);
                 void                    querynode   (span_t span, node_t* curr, Ordering<int>* list);
                 void                    displaynode (node_t* curr);
                 bool                    intersect   (span_t span1, span_t span2);

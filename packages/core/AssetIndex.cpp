@@ -121,7 +121,7 @@ bool AssetIndex::TimeSpan::update (int ri)
 {
     int maxdepth = 0;
     updatenode(ri, &tree, &maxdepth);
-    balancenode(tree, NULL);
+    balancenode(&tree);
     return true;
 }
 
@@ -229,9 +229,9 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
 /*----------------------------------------------------------------------------
  * TimeSpan::balancenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::balancenode (node_t* curr, node_t* root)
+void AssetIndex::TimeSpan::balancenode (node_t** root)
 {
-    node_t* rotated_node = NULL;
+    node_t* curr = *root;
 
     /* Return on Leaf */
     if(!curr->before || !curr->after) return;
@@ -246,16 +246,29 @@ void AssetIndex::TimeSpan::balancenode (node_t* curr, node_t* root)
         */
     if(curr->before->depth + 1 < curr->after->depth)
     {
-        balancenode(curr->after, curr);
+        /* Recurse on Subtree */
+        balancenode(&curr->after);
 
+        /* Build Pointers */
+        node_t* A = curr->before;
         node_t* B = curr;
         node_t* C = curr->after->before;
         node_t* D = curr->after;
 
+        /* Rotate */
         B->after = C;
         D->before = B;
 
-        rotated_node = D;
+        /* Link In */
+        *root = D;
+
+        /* Update Span */
+        D->treespan = B->treespan;
+        B->treespan.t0 = MIN(A->treespan.t0, C->treespan.t0);
+        B->treespan.t1 = MAX(A->treespan.t1, C->treespan.t1);
+
+        /* Update Depth */
+        B->depth = MAX(A->depth, C->depth) + 1;
     }
     /* Rotate Left:
         *
@@ -267,35 +280,29 @@ void AssetIndex::TimeSpan::balancenode (node_t* curr, node_t* root)
         */
     else if(curr->after->depth + 1 < curr->before->depth)
     {
-        balancenode(curr->before, curr);
+        /* Recurse on Subtree */
+        balancenode(&curr->before);
 
+        /* Build Pointers */
         node_t* B = curr->before;
         node_t* C = curr->before->after;
         node_t* D = curr;
+        node_t* E = curr->after;
 
+        /* Rotate */
         B->after = D;
         D->before = C;
 
-        rotated_node = B;
-    }
+        /* Link In */
+        *root = B;
 
-    /* Update Rotated Node */
-    if(rotated_node)
-    {
-        if(root)
-        {
-            /* Link In Rotated Tree */
-            if(root->before == curr) root->before = rotated_node;
-            else root->after = rotated_node;
-        }
-        else
-        {
-            /* Set New Tree Root */
-            tree = rotated_node;
-        }
+        /* Update Span */
+        B->treespan = D->treespan;
+        D->treespan.t0 = MIN(C->treespan.t0, E->treespan.t0);
+        D->treespan.t1 = MAX(C->treespan.t1, E->treespan.t1);
 
         /* Update Depth */
-        curr->depth = MAX(curr->before->depth, curr->after->depth) + 1;
+        D->depth = MAX(C->depth, E->depth) + 1;
     }
 }
 
