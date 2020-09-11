@@ -185,6 +185,7 @@ class AssetIndex: public LuaObject
 
         static int      luaInfo         (lua_State* L);
         static int      luaLoad         (lua_State* L);
+        static int      luaDisplay      (lua_State* L);
 };
 
 #endif  /* __asset_index__ */

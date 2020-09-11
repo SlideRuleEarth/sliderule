@@ -41,6 +41,7 @@ const char* AssetIndex::LuaMetaName = "AssetIndex";
 const struct luaL_Reg AssetIndex::LuaMetaTable[] = {
     {"info",        luaInfo},
     {"load",        luaLoad},
+    {"display",     luaDisplay},
     {NULL,          NULL}
 };
 
@@ -468,7 +469,6 @@ AssetIndex::~AssetIndex (void)
     delete [] url;
 }
 
-
 /*----------------------------------------------------------------------------
  * luaInfo - :info() --> name, format, url
  *----------------------------------------------------------------------------*/
@@ -559,7 +559,6 @@ int AssetIndex::luaLoad (lua_State* L)
         /* Register Resource */
         int ri = lua_obj->resources.add(resource);
         lua_obj->timeIndex.update(ri);
-        lua_obj->timeIndex.display();
 
         /* Set Status */
         status = true;
@@ -567,6 +566,44 @@ int AssetIndex::luaLoad (lua_State* L)
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error loading resource: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaDisplay - :display(<timetree>, <spacetree>)
+ *----------------------------------------------------------------------------*/
+int AssetIndex::luaDisplay (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        AssetIndex* lua_obj     = (AssetIndex*)getLuaSelf(L, 1);
+        bool display_timetree   = getLuaBoolean(L, 2, true, true);
+        bool display_spacetree  = getLuaBoolean(L, 3, true, false);
+
+        /* Display Time Tree */
+        if(display_timetree)
+        {
+            lua_obj->timeIndex.display();
+        }
+
+        /* Display Space Tree */
+        if(display_spacetree)
+        {
+            // TODO
+        }
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
     }
 
     /* Return Status */
