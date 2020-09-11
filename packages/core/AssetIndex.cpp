@@ -199,8 +199,9 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, node_t* root, int*
             curr->ril = NULL;
         }
     }
-    else /* Traverse Branch Node */
+    else 
     {
+        /* Traverse Branch Node */
         if(span.t1 < curr->before->treespan.t1)
         {   
             /* Update Left Tree */
@@ -225,45 +226,45 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, node_t* root, int*
     /* Rebalance Tree */
     if(curr->before && curr->after)
     {
-        node_t* middle = NULL;
+        bool rotated = false;
+        node_t* B = curr;
+        node_t* C = curr->after->before;
+        node_t* D = curr->after;
 
-        /* Rotate Right */
+        /* Rotate Left:
+         *
+         *        B                 D
+         *      /   \             /   \
+         *     A     D    ==>    B     E
+         *          / \         / \
+         *         C   E       A   C
+         */
         if(curr->before->depth + 1 < curr->after->depth)
         {
-            /* Find Middle Leaf */
-            middle = curr->after->before;
-            while(middle->before != NULL) middle = middle->before;
+            B->after = C;
+            D->before = B;
+            rotated = true;
         }
-        /* Rotate Left */
+        /* Rotate Left:
+         *
+         *        B                 D
+         *      /   \             /   \
+         *     A     D    <==    B     E
+         *          / \         / \
+         *         C   E       A   C
+         */
         else if(curr->after->depth + 1 < curr->before->depth)
         {
-            /* Find Middle Leaf */
-            middle = curr->before->after;
-            while(middle->after != NULL) middle = middle->after;
+            B->after = D;
+            D->before = C;
+            rotated = true;
         }
 
-        if(middle)
+        /* Link In Rotated Tree */
+        if(rotated)
         {
-            /* Link Branches into Middle */
-            middle->before = curr->before;
-            middle->after = curr->after;
-
-            /* Link Middle into Root */
-            if(root->before == curr) root->before = middle;
-            else root->after = middle;
-
-            /* Add Middle Indexes Back */
-            Ordering<int>* middle_ril = middle->ril;
-            middle->ril = NULL; // make middle node a branch
-            int t1 = middle_ril->first(&cri);
-            while(t1 != (int)INVALID_KEY)
-            {
-                updatenode(cri, &middle, curr, maxdepth);
-                t1 = middle_ril->next(&cri);
-            }
-
-            /* Delete Middle RIL */
-            delete middle_ril;
+            if(root->before == B) root->before = D;
+            else root->after = D;
         }
     }
 }
