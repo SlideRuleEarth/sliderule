@@ -157,7 +157,7 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
     {
         *node = new node_t;
         (*node)->ril = new Ordering<int>;
-        (*node)->treespan = span;
+        (*node)->span = span;
         (*node)->before = NULL;
         (*node)->after = NULL;
         (*node)->depth = 0;
@@ -167,8 +167,8 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
     node_t* curr = *node;
 
     /* Update Tree Span */
-    if(span.t0 < curr->treespan.t0) curr->treespan.t0 = span.t0;
-    if(span.t1 > curr->treespan.t1) curr->treespan.t1 = span.t1;
+    if(span.t0 < curr->span.t0) curr->span.t0 = span.t0;
+    if(span.t1 > curr->span.t1) curr->span.t1 = span.t1;
 
     /* Update Current Leaf Node */
     if(curr->ril)
@@ -204,7 +204,7 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
     else 
     {
         /* Traverse Branch Node */
-        if(span.t1 < curr->before->treespan.t1)
+        if(span.t1 < curr->before->span.t1)
         {   
             /* Update Left Tree */
             updatenode(ri, &curr->before, maxdepth);
@@ -236,16 +236,18 @@ void AssetIndex::TimeSpan::balancenode (node_t** root)
     /* Return on Leaf */
     if(!curr->before || !curr->after) return;
 
-    /* Rotate Left:
-        *
-        *        B                 D
-        *      /   \             /   \
-        *     A     D    ==>    B     E
-        *          / \         / \
-        *         C   E       A   C
-        */
+    /* Check if Tree Out of Balance */
     if(curr->before->depth + 1 < curr->after->depth)
     {
+        /* Rotate Left:
+         *
+         *        B                 D
+         *      /   \             /   \
+         *     A     D    ==>    B     E
+         *          / \         / \
+         *         C   E       A   C
+         */
+
         /* Recurse on Subtree */
         balancenode(&curr->after);
 
@@ -263,23 +265,24 @@ void AssetIndex::TimeSpan::balancenode (node_t** root)
         *root = D;
 
         /* Update Span */
-        D->treespan = B->treespan;
-        B->treespan.t0 = MIN(A->treespan.t0, C->treespan.t0);
-        B->treespan.t1 = MAX(A->treespan.t1, C->treespan.t1);
+        D->span = B->span;
+        B->span.t0 = MIN(A->span.t0, C->span.t0);
+        B->span.t1 = MAX(A->span.t1, C->span.t1);
 
         /* Update Depth */
         B->depth = MAX(A->depth, C->depth) + 1;
     }
-    /* Rotate Left:
-        *
-        *        B                 D
-        *      /   \             /   \
-        *     A     D    <==    B     E
-        *          / \         / \
-        *         C   E       A   C
-        */
     else if(curr->after->depth + 1 < curr->before->depth)
     {
+        /* Rotate Right:
+         *
+         *        D                 B
+         *      /   \             /   \
+         *     B     E    ==>    A     D
+         *    / \                     / \
+         *   A   C                   C   E
+         */
+
         /* Recurse on Subtree */
         balancenode(&curr->before);
 
@@ -297,9 +300,9 @@ void AssetIndex::TimeSpan::balancenode (node_t** root)
         *root = B;
 
         /* Update Span */
-        B->treespan = D->treespan;
-        D->treespan.t0 = MIN(C->treespan.t0, E->treespan.t0);
-        D->treespan.t1 = MAX(C->treespan.t1, E->treespan.t1);
+        B->span = D->span;
+        D->span.t0 = MIN(C->span.t0, E->span.t0);
+        D->span.t1 = MAX(C->span.t1, E->span.t1);
 
         /* Update Depth */
         D->depth = MAX(C->depth, E->depth) + 1;
@@ -315,7 +318,7 @@ void AssetIndex::TimeSpan::querynode (span_t span, node_t* curr, Ordering<int>* 
     if(curr == NULL) return;
 
     /* Return if no Intersection with Tree */
-    if(!intersect(span, curr->treespan)) return;
+    if(!intersect(span, curr->span)) return;
 
     /* If Leaf Node */
     if(curr->ril)
@@ -354,7 +357,7 @@ void AssetIndex::TimeSpan::displaynode (node_t* curr)
     if(curr == NULL) return;
 
     /* Display */
-    mlog(RAW, "\n<%d>[%.3lf, %.3lf]: ", curr->depth, curr->treespan.t0, curr->treespan.t1);
+    mlog(RAW, "\n<%d>[%.3lf, %.3lf]: ", curr->depth, curr->span.t0, curr->span.t1);
     if(curr->ril)
     {
         int t1 = curr->ril->first(&ri);
@@ -367,9 +370,9 @@ void AssetIndex::TimeSpan::displaynode (node_t* curr)
     else
     {
         mlog(RAW, "B");
-        if(curr->before) mlog(RAW, "(%.3lf, %.3lf)", curr->before->treespan.t0, curr->before->treespan.t1);
+        if(curr->before) mlog(RAW, "(%.3lf, %.3lf)", curr->before->span.t0, curr->before->span.t1);
         mlog(RAW, ", A");
-        if(curr->after) mlog(RAW, "(%.3lf, %.3lf)", curr->after->treespan.t0, curr->after->treespan.t1);
+        if(curr->after) mlog(RAW, "(%.3lf, %.3lf)", curr->after->span.t0, curr->after->span.t1);
     }
     mlog(RAW, "\n");
     

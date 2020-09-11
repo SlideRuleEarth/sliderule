@@ -75,7 +75,7 @@ class AssetIndex: public LuaObject
 
                 typedef struct tsnode {
                     Ordering<int>*      ril;        // resource index list (key = stop time, data = index), NULL if branch
-                    span_t              treespan;   // minimum start, maximum stop - for entire tree rooted at this node
+                    span_t              span;       // minimum start, maximum stop - for entire tree rooted at this node
                     struct tsnode*      before;     // left tree
                     struct tsnode*      after;      // right tree
                     int                 depth;      // depth of tree at this node
