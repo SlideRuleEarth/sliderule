@@ -119,7 +119,8 @@ AssetIndex::TimeSpan::~TimeSpan (void)
 bool AssetIndex::TimeSpan::update (int ri)
 {
     int maxdepth = 0;
-    updatenode(ri, &tree, NULL, &maxdepth);
+    updatenode(ri, &tree, &maxdepth);
+    balancenode(tree, NULL);
     return true;
 }
 
@@ -144,7 +145,7 @@ void AssetIndex::TimeSpan::display (void)
 /*----------------------------------------------------------------------------
  * TimeSpan::updatenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, node_t* root, int* maxdepth)
+void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
 {
     resource_t& resource = asset->resources[ri];
     span_t& span = resource.span;
@@ -183,14 +184,14 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, node_t* root, int*
             int middle_index = NODE_THRESHOLD / 2;
             for(int i = 0; i < middle_index; i++)
             {
-                updatenode(cri, &curr->before, curr, maxdepth);
+                updatenode(cri, &curr->before, maxdepth);
                 curr->ril->next(&cri);
             }
 
             /* Push right in tree - from middle stop time */
             for(int i = middle_index; i <= NODE_THRESHOLD; i++)
             {
-                updatenode(cri, &curr->after, curr, maxdepth);
+                updatenode(cri, &curr->after, maxdepth);
                 curr->ril->next(&cri);
             }
 
@@ -205,12 +206,12 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, node_t* root, int*
         if(span.t1 < curr->before->treespan.t1)
         {   
             /* Update Left Tree */
-            updatenode(ri, &curr->before, curr, maxdepth);
+            updatenode(ri, &curr->before, maxdepth);
         }
         else
         {   
             /* Update Right Tree */
-            updatenode(ri, &curr->after, curr, maxdepth);
+            updatenode(ri, &curr->after, maxdepth);
         }
 
         /* Update Max Depth */
@@ -222,50 +223,78 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, node_t* root, int*
     {
         curr->depth = *maxdepth;
     }
+}
 
-    /* Rebalance Tree */
-    if(curr->before && curr->after)
+/*----------------------------------------------------------------------------
+ * TimeSpan::balancenode
+ *----------------------------------------------------------------------------*/
+void AssetIndex::TimeSpan::balancenode (node_t* curr, node_t* root)
+{
+    node_t* rotated_node = NULL;
+
+    /* Return on Leaf */
+    if(!curr->before || !curr->after) return;
+
+    /* Rotate Left:
+        *
+        *        B                 D
+        *      /   \             /   \
+        *     A     D    ==>    B     E
+        *          / \         / \
+        *         C   E       A   C
+        */
+    if(curr->before->depth + 1 < curr->after->depth)
     {
-        bool rotated = false;
+        balancenode(curr->after, curr);
+
         node_t* B = curr;
         node_t* C = curr->after->before;
         node_t* D = curr->after;
 
-        /* Rotate Left:
-         *
-         *        B                 D
-         *      /   \             /   \
-         *     A     D    ==>    B     E
-         *          / \         / \
-         *         C   E       A   C
-         */
-        if(curr->before->depth + 1 < curr->after->depth)
+        B->after = C;
+        D->before = B;
+
+        rotated_node = D;
+    }
+    /* Rotate Left:
+        *
+        *        B                 D
+        *      /   \             /   \
+        *     A     D    <==    B     E
+        *          / \         / \
+        *         C   E       A   C
+        */
+    else if(curr->after->depth + 1 < curr->before->depth)
+    {
+        balancenode(curr->before, curr);
+
+        node_t* B = curr->before;
+        node_t* C = curr->before->after;
+        node_t* D = curr;
+
+        B->after = D;
+        D->before = C;
+
+        rotated_node = B;
+    }
+
+    /* Update Rotated Node */
+    if(rotated_node)
+    {
+        if(root)
         {
-            B->after = C;
-            D->before = B;
-            rotated = true;
+            /* Link In Rotated Tree */
+            if(root->before == curr) root->before = rotated_node;
+            else root->after = rotated_node;
         }
-        /* Rotate Left:
-         *
-         *        B                 D
-         *      /   \             /   \
-         *     A     D    <==    B     E
-         *          / \         / \
-         *         C   E       A   C
-         */
-        else if(curr->after->depth + 1 < curr->before->depth)
+        else
         {
-            B->after = D;
-            D->before = C;
-            rotated = true;
+            /* Set New Tree Root */
+            tree = rotated_node;
         }
 
-        /* Link In Rotated Tree */
-        if(rotated)
-        {
-            if(root->before == B) root->before = D;
-            else root->after = D;
-        }
+        /* Update Depth */
+        curr->depth = MAX(curr->before->depth, curr->after->depth) + 1;
     }
 }
 
