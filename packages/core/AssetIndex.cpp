@@ -332,7 +332,7 @@ void AssetIndex::TimeSpan::querynode (span_t span, node_t* curr, Ordering<int>* 
             resource_t& resource = asset->resources[ri];
             if(intersect(span, resource.span))
             {
-                list->add(ri, t1, true);
+                list->add(t1, ri, true);
             }
             t1 = curr->ril->next(&ri);
         }

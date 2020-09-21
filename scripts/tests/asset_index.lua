@@ -31,8 +31,8 @@ runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])
 
 print('\n------------------\nTest03: Display Time Tree for Dataset1\n------------------')
---a1:display()
---sys.wait(1)
+a1:display()
+sys.wait(1)
 
 print('\n------------------\nTest04: Query Dataset1\n------------------')
 local rl = a1:query({t0=5.0, t1=17.0})
