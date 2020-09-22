@@ -129,10 +129,10 @@ bool AssetIndex::TimeSpan::update (int ri)
 /*----------------------------------------------------------------------------
  * TimeSpan::query
  *----------------------------------------------------------------------------*/
-Ordering<int>* AssetIndex::TimeSpan::query (span_t span)
+Ordering<int>* AssetIndex::TimeSpan::query (span_t span, Dictionary<double>* attr)
 {
     Ordering<int>* list = new Ordering<int>();
-    querynode(span, tree, list);
+    querynode(span, attr, tree, list);
     return list;
 }
 
@@ -313,7 +313,7 @@ void AssetIndex::TimeSpan::balancenode (node_t** root)
 /*----------------------------------------------------------------------------
  * TimeSpan::querynode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::querynode (span_t span, node_t* curr, Ordering<int>* list)
+void AssetIndex::TimeSpan::querynode (span_t span, Dictionary<double>* attr, node_t* curr, Ordering<int>* list)
 {
     /* Return on Null Path */
     if(curr == NULL) return;
@@ -325,25 +325,48 @@ void AssetIndex::TimeSpan::querynode (span_t span, node_t* curr, Ordering<int>* 
     if(curr->ril)
     {
         /* Populate with Current Node */
-        int ri;
-        int t1 = curr->ril->first(&ri);
-        while(t1 != (int)INVALID_KEY)
+        for(int ri, t1 = curr->ril->first(&ri); t1 != (int)INVALID_KEY; t1 = curr->ril->next(&ri))
         {
             resource_t& resource = asset->resources[ri];
             if(intersect(span, resource.span))
             {
-                list->add(t1, ri, true);
+                /* Check Field/Value Filter */
+                bool add_item = true;
+                if(attr)
+                {
+                    double value;
+                    for(const char* field = attr->first(&value); field; field = attr->next(&value))
+                    {
+                        try
+                        {
+                            if(resource.attr[field] != value)
+                            {
+                                add_item = false;
+                                break;
+                            }
+                        }
+                        catch(const std::exception& e)
+                        {
+                            ; // do nothing
+                        }
+                    }
+                }
+
+                /* Add Item */
+                if(add_item)
+                {
+                    list->add(t1, ri, true);
+                }
             }
-            t1 = curr->ril->next(&ri);
         }
     }
     else /* Branch Node */
     {
         /* Goto Before Tree */
-        querynode(span, curr->before, list);
+        querynode(span, attr, curr->before, list);
 
         /* Goto Before Tree */
-        querynode(span, curr->after, list);
+        querynode(span, attr, curr->after, list);
     }
 }
 
@@ -639,10 +662,13 @@ int AssetIndex::luaQuery (lua_State* L)
             lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration
         }
 
+        /* Check For Attributes */
+        Dictionary<double>* attr_ptr = NULL;        
+        if(attr.length() > 0) attr_ptr = &attr;
+
         /* Query Resources */
-        Ordering<int>* ril = lua_obj->timeIndex.query(span);
+        Ordering<int>* ril = lua_obj->timeIndex.query(span, attr_ptr);
         (void)region; // TODO: perform spatial query
-        (void)attr; // TODO: perform field-value query
 
         /* Return Resources */
         lua_newtable(L);

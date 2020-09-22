@@ -84,14 +84,14 @@ class AssetIndex: public LuaObject
                                         TimeSpan    (AssetIndex* _asset);
                                         ~TimeSpan   (void);
                 bool                    update      (int ri); // NOT thread safe
-                Ordering<int>*          query       (span_t span);
+                Ordering<int>*          query       (span_t span, Dictionary<double>* attr);
                 void                    display     (void);
          
             private:
 
                 void                    updatenode  (int ri, node_t** node, int* maxdepth);
                 void                    balancenode (node_t** root);
-                void                    querynode   (span_t span, node_t* curr, Ordering<int>* list);
+                void                    querynode   (span_t span, Dictionary<double>* attr, node_t* curr, Ordering<int>* list);
                 void                    displaynode (node_t* curr);
                 bool                    intersect   (span_t span1, span_t span2);
 
