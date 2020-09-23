@@ -61,10 +61,49 @@ class AssetIndex: public LuaObject
         static const int NODE_THRESHOLD = 8;
 
         /*--------------------------------------------------------------------
+         * Span Pure Virtual Subclass
+         *--------------------------------------------------------------------*/
+
+        class Span
+        {
+            virtual double  getkey      (void) = 0;
+            virtual bool    intersect   (const Span& other) = 0;
+            virtual bool    isleft      (const Span& other) = 0;
+            virtual bool    isright     (const Span& other) = 0;
+            virtual void    update      (const Span& other) = 0;
+            virtual void    combine     (const Span& other1, const Span& other2) = 0;
+            virtual Span&   operator=   (const Span& other) = 0;
+            virtual void    display     (void) = 0;
+        };
+
+        /*--------------------------------------------------------------------
          * TimeSpan Subclass
          *--------------------------------------------------------------------*/
 
-        class TimeSpan
+        class TimeSpan: public Span
+        {
+            public:
+                        TimeSpan    (double _t0 = 0.0, double _t1 = 0.0);
+                        ~TimeSpan   (void);
+                double  getkey      (void) override;
+                bool    intersect   (const Span& other) override;
+                bool    isleft      (const Span& other) override;
+                bool    isright     (const Span& other) override;
+                void    update      (const Span& other) override;
+                void    update      (const Span& other1, const Span& other2) override;
+                Span&   operator=   (const Span& other) override;
+                void    display     (void) override;
+
+            private:
+                double  t0; // start time
+                double  t1; // stop time
+        };
+
+        /*--------------------------------------------------------------------
+         * SpanTree Subclass
+         *--------------------------------------------------------------------*/
+
+        class SpanTree
         {
             public:
 
@@ -76,13 +115,13 @@ class AssetIndex: public LuaObject
                 typedef struct tsnode {
                     Ordering<int>*      ril;        // resource index list (key = stop time, data = index), NULL if branch
                     span_t              span;       // minimum start, maximum stop - for entire tree rooted at this node
-                    struct tsnode*      before;     // left tree
-                    struct tsnode*      after;      // right tree
+                    struct tsnode*      left;       // left subtree
+                    struct tsnode*      right;      // right subtree
                     int                 depth;      // depth of tree at this node
                 } node_t;
             
-                                        TimeSpan    (AssetIndex* _asset);
-                                        ~TimeSpan   (void);
+                                        SpanTree    (AssetIndex* _asset);
+                                        ~SpanTree   (void);
                 bool                    update      (int ri); // NOT thread safe
                 Ordering<int>*          query       (span_t span, Dictionary<double>* attr);
                 void                    display     (void);
@@ -145,7 +184,7 @@ class AssetIndex: public LuaObject
 
         typedef struct {
             char                        name[RESOURCE_NAME_MAX_LENGTH];
-            TimeSpan::span_t            span;   // start, stop
+            SpanTree::span_t            span;   // start, stop
             SpatialRegion::region_t     region; // southern, western, northern, eastern
             Dictionary<double>          attr;   // attributes
         } resource_t;
@@ -163,7 +202,7 @@ class AssetIndex: public LuaObject
         const char*                     url;
 
         List<resource_t>                resources;
-        TimeSpan                        timeIndex;
+        SpanTree                        timeIndex;
         SpatialRegion                   spatialIndex;
 
 

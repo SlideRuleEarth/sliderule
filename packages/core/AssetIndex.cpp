@@ -101,24 +101,111 @@ int AssetIndex::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * TimeSpan::Constructor
  *----------------------------------------------------------------------------*/
-AssetIndex::TimeSpan::TimeSpan (AssetIndex* _asset)
+AssetIndex::TimeSpan::TimeSpan (doube _t0, double _t1)
+{
+    t0 = _t0;
+    t1 = _t1;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::Destructor
+ *----------------------------------------------------------------------------*/
+AssetIndex::TimeSpan::~TimeSpan (void) { }
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::getkey
+ *----------------------------------------------------------------------------*/
+double AssetIndex::TimeSpan::getkey (void) 
+{ 
+    return t1;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::intersect
+ *----------------------------------------------------------------------------*/
+bool AssetIndex::TimeSpan::intersect (const Span& other) 
+{ 
+    return ((t0 >= other.t0 && t0 <= other.t1) ||
+            (t1 >= other.t0 && t1 <= other.t1) || 
+            (other.t0 >= t0 && other.t0 <= t1) ||
+            (other.t1 >= t0 && other.t1 <= t1));
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::isleft
+ *----------------------------------------------------------------------------*/
+bool AssetIndex::TimeSpan::isleft (const Span& other)
+{
+    return (t1 <= other.t1); // TODO: revist <= instead of <
+}
+
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::isright
+ *----------------------------------------------------------------------------*/
+bool AssetIndex::TimeSpan::isright (const Span& other)
+{
+    return (t1 >= other.t1);
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::update
+ *----------------------------------------------------------------------------*/
+void AssetIndex::TimeSpan::update (const Span& other)
+{
+    if(other.t0 < t0) t0 = other.t0;
+    if(other.t1 > t1) t1 = other.t1;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::combine
+ *----------------------------------------------------------------------------*/
+void AssetIndex::TimeSpan::combine (const Span& other1, const Span& other2)
+{
+    t0 = MIN(other1.t0, other2.t0);
+    t1 = MAX(other1.t1, other2.t1);
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::operator=
+ *----------------------------------------------------------------------------*/
+Span& AssetIndex::TimeSpan::operator= (const Span& other)
+{
+    t0 = other.t0;
+    t1 = other.t1;
+    return *this;
+}
+
+/*----------------------------------------------------------------------------
+ * TimeSpan::display
+ *----------------------------------------------------------------------------*/
+void AssetIndex::TimeSpan::display (void)
+{
+    mlog(RAW, "[%.3lf, %.3lf]", t0, t1);
+}
+
+
+/*----------------------------------------------------------------------------
+ * SpanTree::Constructor
+ *----------------------------------------------------------------------------*/
+AssetIndex::SpanTree::SpanTree (AssetIndex* _asset)
 {
     asset = _asset;
     tree = NULL;
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::Destructor
+ * SpanTree::Destructor
  *----------------------------------------------------------------------------*/
-AssetIndex::TimeSpan::~TimeSpan (void)
+AssetIndex::SpanTree::~SpanTree (void)
 {
     // TODO: delete tree
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::update
+ * SpanTree::update
  *----------------------------------------------------------------------------*/
-bool AssetIndex::TimeSpan::update (int ri)
+bool AssetIndex::SpanTree::update (int ri)
 {
     int maxdepth = 0;
     updatenode(ri, &tree, &maxdepth);
@@ -127,9 +214,9 @@ bool AssetIndex::TimeSpan::update (int ri)
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::query
+ * SpanTree::query
  *----------------------------------------------------------------------------*/
-Ordering<int>* AssetIndex::TimeSpan::query (span_t span, Dictionary<double>* attr)
+Ordering<int>* AssetIndex::SpanTree::query (span_t span, Dictionary<double>* attr)
 {
     Ordering<int>* list = new Ordering<int>();
     querynode(span, attr, tree, list);
@@ -137,17 +224,17 @@ Ordering<int>* AssetIndex::TimeSpan::query (span_t span, Dictionary<double>* att
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::display
+ * SpanTree::display
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::display (void)
+void AssetIndex::SpanTree::display (void)
 {
     displaynode(tree);
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::updatenode
+ * SpanTree::updatenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
+void AssetIndex::SpanTree::updatenode (int ri, node_t** node, int* maxdepth)
 {
     resource_t& resource = asset->resources[ri];
     span_t& span = resource.span;
@@ -159,8 +246,8 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
         *node = new node_t;
         (*node)->ril = new Ordering<int>;
         (*node)->span = span;
-        (*node)->before = NULL;
-        (*node)->after = NULL;
+        (*node)->left = NULL;
+        (*node)->right = NULL;
         (*node)->depth = 0;
     }
 
@@ -168,8 +255,7 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
     node_t* curr = *node;
 
     /* Update Tree Span */
-    if(span.t0 < curr->span.t0) curr->span.t0 = span.t0;
-    if(span.t1 > curr->span.t1) curr->span.t1 = span.t1;
+    curr->span.update(span);
 
     /* Update Current Leaf Node */
     if(curr->ril)
@@ -186,14 +272,14 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
             int middle_index = NODE_THRESHOLD / 2;
             for(int i = 0; i < middle_index; i++)
             {
-                updatenode(cri, &curr->before, maxdepth);
+                updatenode(cri, &curr->left, maxdepth);
                 curr->ril->next(&cri);
             }
 
             /* Push right in tree - from middle stop time */
             for(int i = middle_index; i < NODE_THRESHOLD; i++)
             {
-                updatenode(cri, &curr->after, maxdepth);
+                updatenode(cri, &curr->right, maxdepth);
                 curr->ril->next(&cri);
             }
 
@@ -205,15 +291,15 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
     else 
     {
         /* Traverse Branch Node */
-        if(span.t1 < curr->before->span.t1)
+        if(span.isLeft(curr->left->span))
         {   
             /* Update Left Tree */
-            updatenode(ri, &curr->before, maxdepth);
+            updatenode(ri, &curr->left, maxdepth);
         }
         else
         {   
             /* Update Right Tree */
-            updatenode(ri, &curr->after, maxdepth);
+            updatenode(ri, &curr->right, maxdepth);
         }
 
         /* Update Max Depth */
@@ -228,17 +314,17 @@ void AssetIndex::TimeSpan::updatenode (int ri, node_t** node, int* maxdepth)
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::balancenode
+ * SpanTree::balancenode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::balancenode (node_t** root)
+void AssetIndex::SpanTree::balancenode (node_t** root)
 {
     node_t* curr = *root;
 
     /* Return on Leaf */
-    if(!curr->before || !curr->after) return;
+    if(!curr->left || !curr->right) return;
 
     /* Check if Tree Out of Balance */
-    if(curr->before->depth + 1 < curr->after->depth)
+    if(curr->left->depth + 1 < curr->right->depth)
     {
         /* Rotate Left:
          *
@@ -250,30 +336,29 @@ void AssetIndex::TimeSpan::balancenode (node_t** root)
          */
 
         /* Recurse on Subtree */
-        balancenode(&curr->after);
+        balancenode(&curr->right);
 
         /* Build Pointers */
-        node_t* A = curr->before;
+        node_t* A = curr->left;
         node_t* B = curr;
-        node_t* C = curr->after->before;
-        node_t* D = curr->after;
+        node_t* C = curr->right->left;
+        node_t* D = curr->right;
 
         /* Rotate */
-        B->after = C;
-        D->before = B;
+        B->right = C;
+        D->left = B;
 
         /* Link In */
         *root = D;
 
         /* Update Span */
         D->span = B->span;
-        B->span.t0 = MIN(A->span.t0, C->span.t0);
-        B->span.t1 = MAX(A->span.t1, C->span.t1);
+        B->span.combine(A->span, C->span);
 
         /* Update Depth */
         B->depth = MAX(A->depth, C->depth) + 1;
     }
-    else if(curr->after->depth + 1 < curr->before->depth)
+    else if(curr->right->depth + 1 < curr->left->depth)
     {
         /* Rotate Right:
          *
@@ -285,25 +370,24 @@ void AssetIndex::TimeSpan::balancenode (node_t** root)
          */
 
         /* Recurse on Subtree */
-        balancenode(&curr->before);
+        balancenode(&curr->left);
 
         /* Build Pointers */
-        node_t* B = curr->before;
-        node_t* C = curr->before->after;
+        node_t* B = curr->left;
+        node_t* C = curr->left->right;
         node_t* D = curr;
-        node_t* E = curr->after;
+        node_t* E = curr->right;
 
         /* Rotate */
-        B->after = D;
-        D->before = C;
+        B->right = D;
+        D->left = C;
 
         /* Link In */
         *root = B;
 
         /* Update Span */
         B->span = D->span;
-        D->span.t0 = MIN(C->span.t0, E->span.t0);
-        D->span.t1 = MAX(C->span.t1, E->span.t1);
+        D->span.combine(C->span, E->span);
 
         /* Update Depth */
         D->depth = MAX(C->depth, E->depth) + 1;
@@ -311,15 +395,15 @@ void AssetIndex::TimeSpan::balancenode (node_t** root)
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::querynode
+ * SpanTree::querynode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::querynode (span_t span, Dictionary<double>* attr, node_t* curr, Ordering<int>* list)
+void AssetIndex::SpanTree::querynode (span_t span, Dictionary<double>* attr, node_t* curr, Ordering<int>* list)
 {
     /* Return on Null Path */
     if(curr == NULL) return;
 
     /* Return if no Intersection with Tree */
-    if(!intersect(span, curr->span)) return;
+    if(!span.intersect(curr->span)) return;
 
     /* If Leaf Node */
     if(curr->ril)
@@ -328,7 +412,7 @@ void AssetIndex::TimeSpan::querynode (span_t span, Dictionary<double>* attr, nod
         for(int ri, t1 = curr->ril->first(&ri); t1 != (int)INVALID_KEY; t1 = curr->ril->next(&ri))
         {
             resource_t& resource = asset->resources[ri];
-            if(intersect(span, resource.span))
+            if(span.intersect(resource.span))
             {
                 /* Check Field/Value Filter */
                 bool add_item = true;
@@ -363,17 +447,17 @@ void AssetIndex::TimeSpan::querynode (span_t span, Dictionary<double>* attr, nod
     else /* Branch Node */
     {
         /* Goto Before Tree */
-        querynode(span, attr, curr->before, list);
+        querynode(span, attr, curr->left, list);
 
         /* Goto Before Tree */
-        querynode(span, attr, curr->after, list);
+        querynode(span, attr, curr->right, list);
     }
 }
 
 /*----------------------------------------------------------------------------
- * TimeSpan::displaynode
+ * SpanTree::displaynode
  *----------------------------------------------------------------------------*/
-void AssetIndex::TimeSpan::displaynode (node_t* curr)
+void AssetIndex::SpanTree::displaynode (node_t* curr)
 {
     int ri;
 
@@ -381,7 +465,8 @@ void AssetIndex::TimeSpan::displaynode (node_t* curr)
     if(curr == NULL) return;
 
     /* Display */
-    mlog(RAW, "\n<%d>[%.3lf, %.3lf]: ", curr->depth, curr->span.t0, curr->span.t1);
+    curr->span.display();
+    mlog(RAW, " <%d>\n", curr->depth);
     if(curr->ril)
     {
         int t1 = curr->ril->first(&ri);
@@ -393,61 +478,16 @@ void AssetIndex::TimeSpan::displaynode (node_t* curr)
     }
     else
     {
-        mlog(RAW, "B");
-        if(curr->before) mlog(RAW, "(%.3lf, %.3lf)", curr->before->span.t0, curr->before->span.t1);
-        mlog(RAW, ", A");
-        if(curr->after) mlog(RAW, "(%.3lf, %.3lf)", curr->after->span.t0, curr->after->span.t1);
+        mlog(RAW, "L");
+        if(curr->left) curr->left->span.display();
+        mlog(RAW, ", R");
+        if(curr->right) curr->right->span.display();
     }
-    mlog(RAW, "\n");
+    mlog(RAW, "\n\n");
     
     /* Recurse */
-    displaynode(curr->before);
-    displaynode(curr->after);
-}
-
-/*----------------------------------------------------------------------------
- * TimeSpan::intersect
- *----------------------------------------------------------------------------*/
-bool AssetIndex::TimeSpan::intersect (span_t span1, span_t span2)
-{
-    return ((span1.t0 >= span2.t0 && span1.t0 <= span2.t1) ||
-            (span1.t1 >= span2.t0 && span1.t1 <= span2.t1) || 
-            (span2.t0 >= span1.t0 && span2.t0 <= span1.t1) ||
-            (span2.t1 >= span1.t0 && span2.t1 <= span1.t1));
-}
-
-/*----------------------------------------------------------------------------
- * SpatialRegion::Constructor
- *----------------------------------------------------------------------------*/
-AssetIndex::SpatialRegion::SpatialRegion (AssetIndex* _asset)
-{
-    asset = _asset;
-    tree = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * SpatialRegion::Destructor
- *----------------------------------------------------------------------------*/
-AssetIndex::SpatialRegion::~SpatialRegion (void)
-{
-}
-
-/*----------------------------------------------------------------------------
- * SpatialRegion::add
- *----------------------------------------------------------------------------*/
-bool AssetIndex::SpatialRegion::add (int ri)
-{
-    (void)ri;
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * SpatialRegion::query
- *----------------------------------------------------------------------------*/
-List<int>* AssetIndex::SpatialRegion::query (region_t region)
-{
-    (void)region;
-    return NULL;
+    displaynode(curr->left);
+    displaynode(curr->right);
 }
 
 /*----------------------------------------------------------------------------
@@ -621,7 +661,7 @@ int AssetIndex::luaQuery (lua_State* L)
         AssetIndex* lua_obj = (AssetIndex*)getLuaSelf(L, 1);
 
         /* Create Query Attributes */
-        TimeSpan::span_t            span;   // start, stop
+        SpanTree::span_t            span;   // start, stop
         SpatialRegion::region_t     region; // southern, western, northern, eastern
         Dictionary<double>          attr;   // attributes
 
