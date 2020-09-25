@@ -84,14 +84,6 @@ TimeIndex::~TimeIndex(void)
 }
 
 /*----------------------------------------------------------------------------
- * getkey
- *----------------------------------------------------------------------------*/
-double TimeIndex::getkey (const timespan_t& span) 
-{ 
-    return span.t1;
-}
-
-/*----------------------------------------------------------------------------
  * display
  *----------------------------------------------------------------------------*/
 void TimeIndex::display (const timespan_t& span)
@@ -100,11 +92,24 @@ void TimeIndex::display (const timespan_t& span)
 }
 
 /*----------------------------------------------------------------------------
+ * split
+ *----------------------------------------------------------------------------*/
+timespan_t TimeIndex::split (const timespan_t& span)
+{
+    timespan_t t;
+    t.t0 = span.t0;
+    t.t1 = (span.t1 + span.t0) / 2.0;
+    mlog(RAW, "PREV : "); display(span); mlog(RAW, "  |  ");    
+    mlog(RAW, "SPLIT: "); display(t); mlog(RAW, "\n");
+    return t;
+}
+
+/*----------------------------------------------------------------------------
  * isleft
  *----------------------------------------------------------------------------*/
 bool TimeIndex::isleft (const timespan_t& span1, const timespan_t& span2)
 {
-    return (span1.t1 <= span2.t1); // TODO: revist <= instead of <
+    return (span1.t1 <= span2.t1);
 }
 
 

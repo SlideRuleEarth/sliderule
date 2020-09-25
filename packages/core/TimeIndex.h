@@ -47,8 +47,8 @@ class TimeIndex: public AssetIndex<timespan_t>
 
         static int      luaCreate       (lua_State* L);
 
-        double          getkey          (const timespan_t& span) override;
         void            display         (const timespan_t& span) override;
+        timespan_t      split           (const timespan_t& span) override;
         bool            isleft          (const timespan_t& span1, const timespan_t& span2) override;
         bool            isright         (const timespan_t& span1, const timespan_t& span2) override;
         bool            intersect       (const timespan_t& span1, const timespan_t& span2) override;

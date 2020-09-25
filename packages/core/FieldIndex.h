@@ -47,8 +47,8 @@ class FieldIndex: public AssetIndex<fieldspan_t>
 
         static int      luaCreate       (lua_State* L);
 
-        double          getkey          (const fieldspan_t& span) override;
         void            display         (const fieldspan_t& span) override;
+        fieldspan_t     split           (const fieldspan_t& span) override;
         bool            isleft          (const fieldspan_t& span1, const fieldspan_t& span2) override;
         bool            isright         (const fieldspan_t& span1, const fieldspan_t& span2) override;
         bool            intersect       (const fieldspan_t& span1, const fieldspan_t& span2) override;

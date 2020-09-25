@@ -53,11 +53,13 @@ local e4 = { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}
 check_query(r4, e4)
 
 print('\n------------------\nTest05: Query Dataset1 with Field Index\n------------------')
-local a5 = core.asset("dataset1") -- alias
-local f5 = core.fieldindex(a5, "foot")
-local r5 = f5:query({foot=15})
-local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
-check_query(r5, e5)
+--local a5 = core.asset("dataset1") -- alias
+--local f5 = core.fieldindex(a5, "foot")
+--f5:display()
+--sys.wait(1)
+--local r5 = f5:query({foot=15})
+--local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
+--check_query(r5, e5)
 
 -- Clean Up --
 
