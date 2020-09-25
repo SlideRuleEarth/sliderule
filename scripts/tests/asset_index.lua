@@ -43,11 +43,11 @@ runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])
 
 print('\n------------------\nTest03: Display Time Tree for Dataset1\n------------------')
-a1:display()
+local i1 = core.timeindex(a1)
+i1:display()
 sys.wait(1)
 
 print('\n------------------\nTest04: Query Dataset1\n------------------')
-local i1 = core.timeindex(a1)
 local r1 = i1:query({t0=5.0, t1=17.0})
 local e1 = { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} 
 check_query(r1, e1)

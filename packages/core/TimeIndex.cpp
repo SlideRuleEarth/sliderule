@@ -64,7 +64,7 @@ TimeIndex::TimeIndex(lua_State* L, Asset*_asset, int _threshold):
         {
             timespan_t span;
             span.t0 = asset[i].attributes["t0"];
-            span.t0 = asset[i].attributes["t0"];
+            span.t1 = asset[i].attributes["t1"];
             spans.add(span); // build local list of spans that mirror resource index list
             add(i); // build tree of indexes
         }
