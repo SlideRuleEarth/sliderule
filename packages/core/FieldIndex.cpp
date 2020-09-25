@@ -129,7 +129,10 @@ bool FieldIndex::isright (const fieldspan_t& span1, const fieldspan_t& span2)
  *----------------------------------------------------------------------------*/
 bool FieldIndex::intersect (const fieldspan_t& span1, const fieldspan_t& span2) 
 { 
-    return (span1.maxval >= span2.maxval);
+    return ((span1.minval >= span2.minval && span1.minval <= span2.maxval) ||
+            (span1.maxval >= span2.minval && span1.maxval <= span2.maxval) || 
+            (span2.minval >= span1.minval && span2.minval <= span1.maxval) ||
+            (span2.maxval >= span1.minval && span2.maxval <= span1.maxval));
 }
 
 /*----------------------------------------------------------------------------

@@ -246,8 +246,6 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
                 T& resource_span = spans[resource_index];
                 if(isleft(resource_span, ss))   lcnt++;
                 else                            rcnt++;
-                mlog(RAW, "CURR : "); display(resource_span); mlog(RAW, "  |  ");    
-                mlog(RAW, "LEFT=%d, RIGHT=%d\n", lcnt, rcnt);
             }
 
             /* Split Node Around Split Span */
