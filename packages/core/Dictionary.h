@@ -526,6 +526,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
     hashTable = new hash_node_t [hashSize];
     for(unsigned int i = 0; i < hashSize; i++)
     {
+        hashTable[i].chain = EMPTY_ENTRY;
         if(other.hashTable[i].chain != EMPTY_ENTRY)
         {
             /* copy fields */

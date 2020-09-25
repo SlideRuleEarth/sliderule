@@ -116,6 +116,7 @@ class AssetIndex: public LuaObject
         void            updatenode      (int i, node_t** node, int* maxdepth);
         void            balancenode     (node_t** root);
         void            querynode       (const T& span, node_t* curr, List<int>* list);
+        void            deletenode      (node_t* node);
         void            displaynode     (node_t* curr);
 
         static int      luaQuery        (lua_State* L);
@@ -164,7 +165,7 @@ AssetIndex<T>::~AssetIndex (void)
     bool pending_delete = asset.releaseLuaObject();
     if(pending_delete) delete &asset; // TODO: far from ideal... freeing memory from a reference
 
-    // TODO: delete tree
+    deletenode(tree);
 }
 
 /*----------------------------------------------------------------------------
@@ -405,6 +406,28 @@ void AssetIndex<T>::querynode (const T& span, node_t* curr, List<int>* list)
         /* Goto Before Tree */
         querynode(span, curr->right, list);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * displaynode
+ *----------------------------------------------------------------------------*/
+template <class T>
+void AssetIndex<T>::deletenode (node_t* node)
+{
+    /* Stop */
+    if(node == NULL) return;
+
+    /* Save Off Branches */
+    node_t* left = node->left;
+    node_t* right = node->right;
+    
+    /* Delete Node */
+    if(node->ril) delete node->ril;
+    delete node;
+
+    /* Recurse */
+    deletenode(left);
+    deletenode(right);
 }
 
 /*----------------------------------------------------------------------------

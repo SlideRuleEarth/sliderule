@@ -44,6 +44,7 @@ runner.compare(url, expected["dataset1"]["url"])
 
 sys.log(core.RAW, '\n------------------\nTest03: Display Time Tree for Dataset1\n------------------\n')
 local i3 = core.timeindex(a2)
+i3:name("timeindex")
 i3:display()
 
 sys.log(core.RAW, '\n------------------\nTest04: Query Dataset1\n------------------\n')
@@ -53,12 +54,22 @@ check_query(r4, e4)
 
 sys.log(core.RAW, '\n------------------\nTest05: Query Dataset1 with Field Index\n------------------\n')
 local f5 = core.fieldindex(a2, "foot")
+f5:name("fieldindex")
 f5:display()
 local r5 = f5:query({foot=15})
 local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
 check_query(r5, e5)
 
+sys.log(core.RAW, '\n------------------\nTest06: Query Dataset1 with Sptial Index\n------------------\n')
+local f6 = core.spatialindex(a2)
+f6:name("spatialindex")
+--f6:display()
+--local r5 = f6:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
+--local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
+--check_query(r5, e5)
+
 -- Clean Up --
+a2:destroy()
 
 -- Report Results --
 

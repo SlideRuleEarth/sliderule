@@ -198,7 +198,7 @@ bool LuaObject::releaseLuaObject (void)
 
     /* Decrement Lock Count */
     lockCount--;
-
+//printf("%s:%s NEW LOCK COUNT: %ld\n", getType(), getName(), lockCount);
     /* Only on Last Release */
     if(lockCount == 0)
     {
@@ -292,7 +292,7 @@ int LuaObject::luaDelete (lua_State* L)
                 if(lua_obj)
                 {
                     mlog(INFO, "Garbage collecting object %s of type %s\n", lua_obj->getName(), lua_obj->getType());
-                    if(lua_obj->lockCount <= 0)
+                    if(lua_obj->lockCount == 0)
                     {
                         /* Delete Object */
                         delete lua_obj;

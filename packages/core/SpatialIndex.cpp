@@ -24,7 +24,7 @@
 #include "OsApi.h"
 #include "AssetIndex.h"
 #include "Asset.h"
-#include "FieldIndex.h"
+#include "SpatialIndex.h"
 #include "StringLib.h"
 
 /******************************************************************************
@@ -32,19 +32,18 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset directory>, <fieldname>, [<threshold>])
+ * luaCreate - create(<asset directory>, [<threshold>])
  *----------------------------------------------------------------------------*/
-int FieldIndex::luaCreate (lua_State* L)
+int SpatialIndex::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Asset Directory */
         Asset*      _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
-        const char* _fieldname  = getLuaString(L, 2);
-        int         _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
+        int         _threshold  = getLuaInteger(L, 2, true, DEFAULT_THRESHOLD);
 
         /* Return AssetIndex Object */
-        return createLuaObject(L, new FieldIndex(L, _asset, _fieldname, _threshold));
+        return createLuaObject(L, new SpatialIndex(L, _asset, _threshold));
     }
     catch(const LuaException& e)
     {
@@ -56,19 +55,18 @@ int FieldIndex::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-FieldIndex::FieldIndex(lua_State* L, Asset* _asset, const char* _fieldname, int _threshold):
-    AssetIndex<fieldspan_t>(L, *_asset, _threshold)
+SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, int _threshold):
+    AssetIndex<spatialspan_t>(L, *_asset, _threshold)
 {
-    assert(_fieldname);
-
-    fieldname = StringLib::duplicate(_fieldname);
     for(int i = 0; i < asset.size(); i++)
     {
         try 
         {
-            fieldspan_t span;
-            span.maxval = asset[i].attributes[fieldname];
-            span.minval = span.maxval;
+            spatialspan_t span;
+            span.lat0 = asset[i].attributes["lat0"];
+            span.lon0 = asset[i].attributes["lon0"];
+            span.lat1 = asset[i].attributes["lat1"];
+            span.lon1 = asset[i].attributes["lon1"];
             spans.add(span); // build local list of spans that mirror resource index list
             add(i); // build tree of indexes
         }
@@ -83,75 +81,77 @@ FieldIndex::FieldIndex(lua_State* L, Asset* _asset, const char* _fieldname, int 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-FieldIndex::~FieldIndex(void)
+SpatialIndex::~SpatialIndex(void)
 {
-    delete [] fieldname;
 }
 
 /*----------------------------------------------------------------------------
  * display
  *----------------------------------------------------------------------------*/
-void FieldIndex::display (const fieldspan_t& span)
+void SpatialIndex::display (const spatialspan_t& span)
 {
-    mlog(RAW, "[%.3lf, %.3lf]", span.minval, span.maxval);
+    mlog(RAW, "[%.3lf, %.3lf, %.3lf, %.3lf]", span.lat0, span.lon0, span.lat1, span.lon1);
 }
 
 /*----------------------------------------------------------------------------
  * split
  *----------------------------------------------------------------------------*/
-fieldspan_t FieldIndex::split (const fieldspan_t& span)
+spatialspan_t SpatialIndex::split (const spatialspan_t& span)
 {
-    fieldspan_t f;
-    f.minval = span.minval;
-    f.maxval = (span.maxval + span.minval) / 2.0;
+    spatialspan_t f;
+    f = span;
     return f;
 }
 
 /*----------------------------------------------------------------------------
  * isleft
  *----------------------------------------------------------------------------*/
-bool FieldIndex::isleft (const fieldspan_t& span1, const fieldspan_t& span2)
+bool SpatialIndex::isleft (const spatialspan_t& span1, const spatialspan_t& span2)
 {
-    return (span1.maxval <= span2.maxval);
+    // TODO: need to know the depth at this node... this is so there can be 
+    // subsequent toggling between splitting along latitudes, and longitudes
+    return (span1.lon1 <= span2.lon1);
 }
 
 
 /*----------------------------------------------------------------------------
  * isright
  *----------------------------------------------------------------------------*/
-bool FieldIndex::isright (const fieldspan_t& span1, const fieldspan_t& span2)
+bool SpatialIndex::isright (const spatialspan_t& span1, const spatialspan_t& span2)
 {
-    return (span1.maxval >= span2.maxval);
+    return (span1.lon1 >= span2.lon1);
 }
 
 /*----------------------------------------------------------------------------
  * intersect
  *----------------------------------------------------------------------------*/
-bool FieldIndex::intersect (const fieldspan_t& span1, const fieldspan_t& span2) 
+bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& span2) 
 { 
-    return ((span1.minval >= span2.minval && span1.minval <= span2.maxval) ||
-            (span1.maxval >= span2.minval && span1.maxval <= span2.maxval) || 
-            (span2.minval >= span1.minval && span2.minval <= span1.maxval) ||
-            (span2.maxval >= span1.minval && span2.maxval <= span1.maxval));
+    // TODO: need intersection code for spatial region
+    (void)span1;
+    (void)span2;
+    return false;
 }
 
 /*----------------------------------------------------------------------------
  * combine
  *----------------------------------------------------------------------------*/
-fieldspan_t FieldIndex::combine (const fieldspan_t& span1, const fieldspan_t& span2)
+spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialspan_t& span2)
 {
-    fieldspan_t span;
-    span.minval = MIN(span1.minval, span2.minval);
-    span.maxval = MAX(span1.maxval, span2.maxval);
+    spatialspan_t span;
+    span.lat0 = MIN(span1.lat0, span2.lat0);
+    span.lon0 = MIN(span1.lon0, span2.lon0);
+    span.lat1 = MAX(span1.lat1, span2.lat1);
+    span.lon1 = MIN(span1.lon1, span2.lon1);
     return span;
 }
 
 /*----------------------------------------------------------------------------
  * luatable2span
  *----------------------------------------------------------------------------*/
-fieldspan_t FieldIndex::luatable2span (lua_State* L, int parm)
+spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
 {
-    fieldspan_t span = {0.0, 0.0};
+    spatialspan_t span = {0.0, 0.0, 0.0, 0.0};
 
     /* Populate Attributes from Table */
     lua_pushnil(L);  // first key
@@ -168,11 +168,10 @@ fieldspan_t FieldIndex::luatable2span (lua_State* L, int parm)
 
         if(provided)
         {
-            if(StringLib::match(fieldname, key))
-            {
-                span.maxval = value;
-                span.minval = value;
-            }
+                 if(StringLib::match("lat0", key))   span.lat0 = value;
+            else if(StringLib::match("lon0", key))   span.lon0 = value;
+            else if(StringLib::match("lat1", key))   span.lat1 = value;
+            else if(StringLib::match("lon1", key))   span.lon1 = value;
         }
 
         lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration

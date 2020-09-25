@@ -60,6 +60,7 @@
 #include "RecordObject.h"
 #include "RecordDispatcher.h"
 #include "ReportDispatch.h"
+#include "SpatialIndex.h"
 #include "StringLib.h"
 #include "Table.h"
 #include "TcpSocket.h"
