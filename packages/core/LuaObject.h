@@ -153,6 +153,7 @@ class LuaObject
          *--------------------------------------------------------------------*/
 
         okey_t              lockKey;
+        long                lockCount;
         bool                isLocked;
         bool                pendingDelete;
         Cond                objSignal;

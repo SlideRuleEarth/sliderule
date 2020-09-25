@@ -24,7 +24,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
 #include "OsApi.h"
 #include "Dictionary.h"
 #include "List.h"

@@ -31,6 +31,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/FieldIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/File.cpp
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.cpp
@@ -80,6 +81,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/Dictionary.h
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.h
             ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
+            ${CMAKE_CURRENT_LIST_DIR}/FieldIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/File.h
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.h

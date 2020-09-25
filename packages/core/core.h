@@ -37,6 +37,7 @@
 #include "DeviceWriter.h"
 #include "Dictionary.h"
 #include "EndpointObject.h"
+#include "FieldIndex.h"
 #include "File.h"
 #include "HttpServer.h"
 #include "LimitDispatch.h"

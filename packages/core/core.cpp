@@ -77,6 +77,7 @@ int core_open (lua_State *L)
         {"report",      ReportDispatch::luaCreate},
         {"asset",       Asset::luaCreate},
         {"timeindex",   TimeIndex::luaCreate},
+        {"fieldindex",  FieldIndex::luaCreate},
         {NULL,          NULL}
     };
 

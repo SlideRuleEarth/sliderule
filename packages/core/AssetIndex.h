@@ -24,7 +24,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
 #include "OsApi.h"
 #include "Asset.h"
 #include "LogLib.h"
@@ -164,7 +163,7 @@ template <class T>
 AssetIndex<T>::~AssetIndex (void)
 {
     bool pending_delete = asset.releaseLuaObject();
-    if(pending_delete) delete &asset;
+    if(pending_delete) delete &asset; // TODO: far from ideal... freeing memory from a reference
 
     // TODO: delete tree
 }

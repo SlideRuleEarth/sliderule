@@ -194,7 +194,13 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
  *----------------------------------------------------------------------------*/
 bool LuaObject::releaseLuaObject (void)
 {
-    if(isLocked)
+    bool is_delete_pending = false;
+
+    /* Decrement Lock Count */
+    lockCount--;
+
+    /* Only on Last Release */
+    if(lockCount == 0)
     {
         /* Get Lua Engine Object */
         lua_pushstring(LuaState, LuaEngine::LUA_SELFKEY);
@@ -205,19 +211,24 @@ bool LuaObject::releaseLuaObject (void)
         {
             /* Release Object */
             li->releaseObject(lockKey);
-            isLocked = false;
             mlog(INFO, "Unlocking object %s of type %s, key = %ld\n", getName(), getType(), (unsigned long)lockKey);
         }
         else
         {
             mlog(CRITICAL, "Unable to retrieve lua engine needed to release object\n");
         }
+
+        /* If an object has already been garabage collected, but the deletion was
+        * delayed due to the object being locked, then when the lock is released
+        * it needs to be deleted immediately. */
+        is_delete_pending = pendingDelete;
+    }
+    else if(lockCount < 0)
+    {
+        mlog(CRITICAL, "Unmatched object release %s of type %s detected\n", getName(), getType());
     }
 
-    /* If an object has already been garabage collected, but the deletion was
-     * delayed due to the object being locked, then when the lock is released
-     * it needs to be deleted immediately. */
-    return pendingDelete;
+    return is_delete_pending;
 }
 
 /******************************************************************************
@@ -235,7 +246,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 {
     uint32_t engine_trace_id = ORIGIN;
 
-    isLocked = false;
+    lockCount = 0;
     pendingDelete = false;
     objComplete = false;
 
@@ -281,7 +292,7 @@ int LuaObject::luaDelete (lua_State* L)
                 if(lua_obj)
                 {
                     mlog(INFO, "Garbage collecting object %s of type %s\n", lua_obj->getName(), lua_obj->getType());
-                    if(!lua_obj->isLocked)
+                    if(lua_obj->lockCount <= 0)
                     {
                         /* Delete Object */
                         delete lua_obj;
@@ -482,17 +493,14 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
     {
         if(StringLib::match(object_type, user_data->luaObj->ObjectType))
         {
-            if(!user_data->luaObj->isLocked)
+            lua_obj = user_data->luaObj;
+            user_data->luaObj->lockCount++;
+
+            /* Lock Object - Only for First Lock */
+            if(user_data->luaObj->lockCount == 1)
             {
-                /* Lock LuaObject */
-                lua_obj = user_data->luaObj;
                 lua_obj->lockKey = li->lockObject(lua_obj);
-                lua_obj->isLocked = true;
                 mlog(INFO, "Locking object %s of type %s, key = %ld\n", lua_obj->getName(), lua_obj->getType(), (unsigned long)lua_obj->lockKey);
-            }
-            else
-            {
-                throw LuaException("%s object %s is locked", object_type, user_data->luaObj->getName());
             }
         }
         else
