@@ -3,7 +3,7 @@ csv = require("csv")
 --------------------------------------------------------------------------------------
 -- loadresource
 --
---  Populates a resource in an AssetIndex
+--  Populates a resource in an Asset
 --
 --  name: name of asset
 --
@@ -83,7 +83,7 @@ end
 --------------------------------------------------------------------------------------
 -- loaddir
 --
---  Creates AssetIndex's for each asset listed in the asset directory file.
+--  Creates Asset for each asset listed in the asset directory file.
 --
 --  file: name of .csv file with the following header row
 --      asset,      format,     url,        index

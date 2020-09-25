@@ -86,7 +86,8 @@ DeviceWriter::~DeviceWriter(void)
     if(inq) delete inq;
 
     /* Unlock */
-    device->releaseLuaObject();
+    bool pending_delete = device->releaseLuaObject();
+    if(pending_delete) delete device;
 }
 
 /*----------------------------------------------------------------------------

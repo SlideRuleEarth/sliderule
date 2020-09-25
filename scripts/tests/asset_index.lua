@@ -47,14 +47,15 @@ a1:display()
 sys.wait(1)
 
 print('\n------------------\nTest04: Query Dataset1\n------------------')
-local r1 = a1:query({t0=5.0, t1=17.0})
+local i1 = core.timeindex(a1)
+local r1 = i1:query({t0=5.0, t1=17.0})
 local e1 = { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} 
 check_query(r1, e1)
 
-print('\n------------------\nTest05: Query Dataset1 with Filter\n------------------')
-local r2 = a1:query({t0=5.0, t1=17.0, foot=15})
-local e2 = { 7, 10, 13, 14, 17} 
-check_query(r2, e2)
+--print('\n------------------\nTest05: Query Dataset1 with Filter\n------------------')
+--local r2 = a1:query({t0=5.0, t1=17.0, foot=15})
+--local e2 = { 7, 10, 13, 14, 17} 
+--check_query(r2, e2)
 
 -- Clean Up --
 

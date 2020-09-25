@@ -22,7 +22,7 @@ if (LUA_FOUND AND READLINE_LIB)
     target_sources (sliderule
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/core.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/Asset.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceIO.cpp
@@ -53,6 +53,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/TimeIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TraceLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Uart.cpp
@@ -68,6 +69,7 @@ if (LUA_FOUND AND READLINE_LIB)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/core.h
+            ${CMAKE_CURRENT_LIST_DIR}/Asset.h
             ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.h
@@ -104,6 +106,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.h
             ${CMAKE_CURRENT_LIST_DIR}/Table.h
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.h
+            ${CMAKE_CURRENT_LIST_DIR}/TimeIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.h
             ${CMAKE_CURRENT_LIST_DIR}/TraceLib.h
             ${CMAKE_CURRENT_LIST_DIR}/Uart.h
