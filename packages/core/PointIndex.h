@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __time_index__
-#define __time_index__
+#ifndef __field_index__
+#define __field_index__
 
 /******************************************************************************
  * INCLUDES
@@ -30,30 +30,34 @@
 #include "LuaObject.h"
 
 /******************************************************************************
- * TIME INDEX CLASS
+ * POINT INDEX CLASS
  ******************************************************************************/
 
 typedef struct {
-    double t0;  // start
-    double t1;  // stop            
-} timespan_t;
+    double minval;
+    double maxval;
+} pointspan_t;
 
-class TimeIndex: public AssetIndex<timespan_t>
+class PointIndex: public AssetIndex<pointspan_t>
 {
     public:
 
-                        TimeIndex       (lua_State* L, Asset* _asset, int _threshold);
-                        ~TimeIndex      (void);
+                        PointIndex      (lua_State* L, Asset* _asset,  const char* _fieldname, int _threshold);
+                        ~PointIndex     (void);
 
         static int      luaCreate       (lua_State* L);
 
-        void            display         (const timespan_t& span) override;
-        timespan_t      split           (const timespan_t& span) override;
-        bool            isleft          (const timespan_t& span1, const timespan_t& span2) override;
-        bool            isright         (const timespan_t& span1, const timespan_t& span2) override;
-        bool            intersect       (const timespan_t& span1, const timespan_t& span2) override;
-        timespan_t      combine         (const timespan_t& span1, const timespan_t& span2) override;
-        timespan_t      luatable2span   (lua_State* L, int parm) override;
+        void            display         (const pointspan_t& span) override;
+        pointspan_t     split           (const pointspan_t& span) override;
+        bool            isleft          (const pointspan_t& span1, const pointspan_t& span2) override;
+        bool            isright         (const pointspan_t& span1, const pointspan_t& span2) override;
+        bool            intersect       (const pointspan_t& span1, const pointspan_t& span2) override;
+        pointspan_t     combine         (const pointspan_t& span1, const pointspan_t& span2) override;
+        pointspan_t     luatable2span   (lua_State* L, int parm) override;
+
+    private:
+
+        const char*     fieldname;
 };
 
-#endif  /* __time_index__ */
+#endif  /* __field_index__ */

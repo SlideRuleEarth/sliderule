@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __field_index__
-#define __field_index__
+#ifndef __interval_index__
+#define __interval_index__
 
 /******************************************************************************
  * INCLUDES
@@ -34,28 +34,31 @@
  ******************************************************************************/
 
 typedef struct {
-    double minval;
-    double maxval;
-} fieldspan_t;
+    double t0;  // start
+    double t1;  // stop            
+} intervalspan_t;
 
-class FieldIndex: public AssetIndex<fieldspan_t>
+class IntervalIndex: public AssetIndex<intervalspan_t>
 {
     public:
 
-                        FieldIndex      (lua_State* L, Asset* _asset,  const char* _fieldname, int _threshold);
-                        ~FieldIndex     (void);
+                        IntervalIndex   (lua_State* L, Asset* _asset, const char* _fieldname0, const char* _fieldname1, int _threshold);
+                        ~IntervalIndex  (void);
 
         static int      luaCreate       (lua_State* L);
 
-        void            display         (const fieldspan_t& span) override;
-        fieldspan_t     split           (const fieldspan_t& span) override;
-        bool            isleft          (const fieldspan_t& span1, const fieldspan_t& span2) override;
-        bool            isright         (const fieldspan_t& span1, const fieldspan_t& span2) override;
-        bool            intersect       (const fieldspan_t& span1, const fieldspan_t& span2) override;
-        fieldspan_t     combine         (const fieldspan_t& span1, const fieldspan_t& span2) override;
-        fieldspan_t     luatable2span   (lua_State* L, int parm) override;
+        void            display         (const intervalspan_t& span) override;
+        intervalspan_t  split           (const intervalspan_t& span) override;
+        bool            isleft          (const intervalspan_t& span1, const intervalspan_t& span2) override;
+        bool            isright         (const intervalspan_t& span1, const intervalspan_t& span2) override;
+        bool            intersect       (const intervalspan_t& span1, const intervalspan_t& span2) override;
+        intervalspan_t  combine         (const intervalspan_t& span1, const intervalspan_t& span2) override;
+        intervalspan_t  luatable2span   (lua_State* L, int parm) override;
+    
+    private:
 
-        const char*     fieldname;
+        const char*     fieldname0;
+        const char*     fieldname1;
 };
 
-#endif  /* __field_index__ */
+#endif  /* __interval_index__ */

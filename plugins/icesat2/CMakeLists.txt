@@ -14,6 +14,7 @@ target_sources(icesat2Lib
         ${CMAKE_CURRENT_LIST_DIR}/icesat2.cpp
         ${CMAKE_CURRENT_LIST_DIR}/lua_parms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Atl03Reader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UT_Atl06Dispatch.cpp
 )
@@ -29,6 +30,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/icesat2.h
         ${CMAKE_CURRENT_LIST_DIR}/lua_parms.h
         ${CMAKE_CURRENT_LIST_DIR}/Atl03Reader.h
+        ${CMAKE_CURRENT_LIST_DIR}/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/UT_Atl06Dispatch.h

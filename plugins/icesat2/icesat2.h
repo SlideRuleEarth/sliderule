@@ -26,6 +26,7 @@
 
 #include "lua_parms.h"
 #include "Atl03Reader.h"
+#include "Atl03Indexer.h"
 #include "Atl06Dispatch.h"
 #include "GTArray.h"
 #include "UT_Atl06Dispatch.h"

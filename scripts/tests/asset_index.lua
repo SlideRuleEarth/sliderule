@@ -43,8 +43,8 @@ runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])
 
 sys.log(core.RAW, '\n------------------\nTest03: Display Time Tree for Dataset1\n------------------\n')
-local i3 = core.timeindex(a2)
-i3:name("timeindex")
+local i3 = core.intervalindex(a2, "t0", "t1")
+i3:name("intervalindex")
 i3:display()
 
 sys.log(core.RAW, '\n------------------\nTest04: Query Dataset1\n------------------\n')
@@ -53,8 +53,8 @@ local e4 = { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}
 check_query(r4, e4)
 
 sys.log(core.RAW, '\n------------------\nTest05: Query Dataset1 with Field Index\n------------------\n')
-local f5 = core.fieldindex(a2, "foot")
-f5:name("fieldindex")
+local f5 = core.pointindex(a2, "foot")
+f5:name("pointindex")
 f5:display()
 local r5 = f5:query({foot=15})
 local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 

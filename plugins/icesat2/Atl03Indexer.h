@@ -17,82 +17,90 @@
  * under the License.
  */
 
-#ifndef __asset__
-#define __asset__
+#ifndef __atl03_indexer__
+#define __atl03_indexer__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "Dictionary.h"
-#include "List.h"
 #include "LuaObject.h"
+#include "RecordObject.h"
+#include "MsgQ.h"
+#include "Asset.h"
+#include "OsApi.h"
 
 /******************************************************************************
- * ASSET INDEX CLASS
+ * ATL03 READER
  ******************************************************************************/
 
-class Asset: public LuaObject
+class Atl03Indexer: public LuaObject
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int   RESOURCE_NAME_LENGTH = 150;
-        static const char* OBJECT_TYPE;
 
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            char                            name[RESOURCE_NAME_LENGTH];
-            Dictionary<double>              attributes;
-        } resource_t;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        virtual     ~Asset      (void);
-        static int  luaCreate   (lua_State* L);
-        resource_t& operator[]  (int i);
-        int         size        (void);
-
-    private:
+            char    name[Asset::RESOURCE_NAME_LENGTH];
+            double  t0;
+            double  t1;
+            double  lat0;
+            double  lon0;
+            double  lat1;
+            double  lon1;
+            int     cycle;
+            int     rgt;
+        } index_t;
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char*                  LuaMetaName;
-        static const struct luaL_Reg        LuaMetaTable[];
+        static const int DEFAULT_NUM_THREADS = 4;
+        static const int MAX_NUM_THREADS = 40;
 
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
+        static const char* recType;
+        static const RecordObject::fieldDef_t recDef[];
 
-        static Dictionary<Asset*>           assets;
-        static Mutex                        assetsMut;
-        bool                                registered;
+        static const char* OBJECT_TYPE;
 
-        const char*                         name;
-        const char*                         format;
-        const char*                         url;
-
-        List<resource_t>                    resources;
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Asset       (lua_State* L, const char* name, const char* format, const char* url);
+        static int  luaCreate   (lua_State* L);
+        static void init        (void);
 
-        static int      luaInfo     (lua_State* L);
-        static int      luaLoad     (lua_State* L);
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        bool                    active;
+        Thread**                indexerPid;
+        Mutex                   threadMut;
+        int                     threadCount;
+        int                     numComplete;
+        Publisher*              outQ;
+        index_t                 indexRec;
+        List<const char*>*      resources;
+        int                     resourceEntry;
+        Mutex                   resourceMut;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                            Atl03Indexer        (lua_State* L, List<const char*>* _resources, const char* outq_name, int num_threads);
+                            ~Atl03Indexer       (void);
+
+        static void*        indexerThread       (void* parm);
 };
 
-#endif  /* __asset_ */
+#endif  /* __atl03_indexer__ */

@@ -24,7 +24,7 @@
 #include "OsApi.h"
 #include "AssetIndex.h"
 #include "Asset.h"
-#include "FieldIndex.h"
+#include "IntervalIndex.h"
 #include "StringLib.h"
 
 /******************************************************************************
@@ -32,19 +32,20 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset directory>, <fieldname>, [<threshold>])
+ * luaCreate - create(<asset>, <field1>, <field2>, [<threshold>])
  *----------------------------------------------------------------------------*/
-int FieldIndex::luaCreate (lua_State* L)
+int IntervalIndex::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Asset Directory */
         Asset*      _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
-        const char* _fieldname  = getLuaString(L, 2);
-        int         _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
+        const char* _fieldname0 = getLuaString(L, 2);
+        const char* _fieldname1 = getLuaString(L, 3);
+        int         _threshold  = getLuaInteger(L, 4, true, DEFAULT_THRESHOLD);
 
         /* Return AssetIndex Object */
-        return createLuaObject(L, new FieldIndex(L, _asset, _fieldname, _threshold));
+        return createLuaObject(L, new IntervalIndex(L, _asset, _fieldname0, _fieldname1, _threshold));
     }
     catch(const LuaException& e)
     {
@@ -56,19 +57,22 @@ int FieldIndex::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-FieldIndex::FieldIndex(lua_State* L, Asset* _asset, const char* _fieldname, int _threshold):
-    AssetIndex<fieldspan_t>(L, *_asset, _threshold)
+IntervalIndex::IntervalIndex(lua_State* L, Asset*_asset, const char* _fieldname0, const char* _fieldname1, int _threshold):
+    AssetIndex<intervalspan_t>(L, *_asset, _threshold)
 {
-    assert(_fieldname);
+    assert(_fieldname0);
+    assert(_fieldname1);
 
-    fieldname = StringLib::duplicate(_fieldname);
+    fieldname0 = StringLib::duplicate(_fieldname0);
+    fieldname1 = StringLib::duplicate(_fieldname1);
+
     for(int i = 0; i < asset.size(); i++)
     {
         try 
         {
-            fieldspan_t span;
-            span.maxval = asset[i].attributes[fieldname];
-            span.minval = span.maxval;
+            intervalspan_t span;
+            span.t0 = asset[i].attributes[fieldname0];
+            span.t1 = asset[i].attributes[fieldname0];
             spans.add(span); // build local list of spans that mirror resource index list
             add(i); // build tree of indexes
         }
@@ -83,79 +87,82 @@ FieldIndex::FieldIndex(lua_State* L, Asset* _asset, const char* _fieldname, int 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-FieldIndex::~FieldIndex(void)
+IntervalIndex::~IntervalIndex(void)
 {
-    delete [] fieldname;
+    delete [] fieldname0;
+    delete [] fieldname1;
 }
 
 /*----------------------------------------------------------------------------
  * display
  *----------------------------------------------------------------------------*/
-void FieldIndex::display (const fieldspan_t& span)
+void IntervalIndex::display (const intervalspan_t& span)
 {
-    mlog(RAW, "[%.3lf, %.3lf]", span.minval, span.maxval);
+    mlog(RAW, "[%.3lf, %.3lf]", span.t0, span.t1);
 }
 
 /*----------------------------------------------------------------------------
  * split
  *----------------------------------------------------------------------------*/
-fieldspan_t FieldIndex::split (const fieldspan_t& span)
+intervalspan_t IntervalIndex::split (const intervalspan_t& span)
 {
-    fieldspan_t f;
-    f.minval = span.minval;
-    f.maxval = (span.maxval + span.minval) / 2.0;
-    return f;
+    intervalspan_t t;
+    t.t0 = span.t0;
+    t.t1 = (span.t1 + span.t0) / 2.0;
+    mlog(RAW, "PREV : "); display(span); mlog(RAW, "  |  ");    
+    mlog(RAW, "SPLIT: "); display(t); mlog(RAW, "\n");
+    return t;
 }
 
 /*----------------------------------------------------------------------------
  * isleft
  *----------------------------------------------------------------------------*/
-bool FieldIndex::isleft (const fieldspan_t& span1, const fieldspan_t& span2)
+bool IntervalIndex::isleft (const intervalspan_t& span1, const intervalspan_t& span2)
 {
-    return (span1.maxval <= span2.maxval);
+    return (span1.t1 <= span2.t1);
 }
 
 
 /*----------------------------------------------------------------------------
  * isright
  *----------------------------------------------------------------------------*/
-bool FieldIndex::isright (const fieldspan_t& span1, const fieldspan_t& span2)
+bool IntervalIndex::isright (const intervalspan_t& span1, const intervalspan_t& span2)
 {
-    return (span1.maxval >= span2.maxval);
+    return (span1.t1 >= span2.t1);
 }
 
 /*----------------------------------------------------------------------------
  * intersect
  *----------------------------------------------------------------------------*/
-bool FieldIndex::intersect (const fieldspan_t& span1, const fieldspan_t& span2) 
+bool IntervalIndex::intersect (const intervalspan_t& span1, const intervalspan_t& span2) 
 { 
-    return ((span1.minval >= span2.minval && span1.minval <= span2.maxval) ||
-            (span1.maxval >= span2.minval && span1.maxval <= span2.maxval) || 
-            (span2.minval >= span1.minval && span2.minval <= span1.maxval) ||
-            (span2.maxval >= span1.minval && span2.maxval <= span1.maxval));
+    return ((span1.t0 >= span2.t0 && span1.t0 <= span2.t1) ||
+            (span1.t1 >= span2.t0 && span1.t1 <= span2.t1) || 
+            (span2.t0 >= span1.t0 && span2.t0 <= span1.t1) ||
+            (span2.t1 >= span1.t0 && span2.t1 <= span1.t1));
 }
 
 /*----------------------------------------------------------------------------
  * combine
  *----------------------------------------------------------------------------*/
-fieldspan_t FieldIndex::combine (const fieldspan_t& span1, const fieldspan_t& span2)
+intervalspan_t IntervalIndex::combine (const intervalspan_t& span1, const intervalspan_t& span2)
 {
-    fieldspan_t span;
-    span.minval = MIN(span1.minval, span2.minval);
-    span.maxval = MAX(span1.maxval, span2.maxval);
+    intervalspan_t span;
+    span.t0 = MIN(span1.t0, span2.t0);
+    span.t1 = MAX(span1.t1, span2.t1);
     return span;
 }
 
 /*----------------------------------------------------------------------------
  * luatable2span
  *----------------------------------------------------------------------------*/
-fieldspan_t FieldIndex::luatable2span (lua_State* L, int parm)
+intervalspan_t IntervalIndex::luatable2span (lua_State* L, int parm)
 {
-    fieldspan_t span = {0.0, 0.0};
+    intervalspan_t span = {0.0, 0.0};
 
     /* Populate Attributes from Table */
     lua_pushnil(L);  // first key
-    while(lua_next(L, parm) != 0)
+    while (lua_next(L, parm) != 0)
     {
         double value = 0.0;
         bool provided = false;
@@ -168,11 +175,8 @@ fieldspan_t FieldIndex::luatable2span (lua_State* L, int parm)
 
         if(provided)
         {
-            if(StringLib::match(fieldname, key))
-            {
-                span.maxval = value;
-                span.minval = value;
-            }
+                 if(StringLib::match(fieldname0,   key)) span.t0 = value;
+            else if(StringLib::match(fieldname1,   key)) span.t1 = value;
         }
 
         lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration

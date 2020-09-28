@@ -81,40 +81,46 @@ hid_t rest_vol_fapl = H5P_DEFAULT;
  *----------------------------------------------------------------------------*/
 H5Lib::driver_t url2driver (const char* url, const char** resource, hid_t* fapl)
 {
-    const char* rptr = StringLib::find(url, "//");
-    if(rptr)
-    {
-        *resource = rptr + 2;
+    H5Lib::driver_t driver = H5Lib::UNKNOWN;
+    H5Lib::parseUrl(url, resource, &driver);
 
-        if(StringLib::find(url, "file://"))
+    switch(driver)
+    {
+        case H5Lib::FILE:
         {
             *fapl = H5P_DEFAULT;
-            return H5Lib::FILE;
+            break;
         }
-        else if(StringLib::find(url, "s3://"))
+        case H5Lib::S3:
         {
-            const char* key_ptr = StringLib::find(*resource, PATH_DELIMETER);
-            SafeString bucket("%s", *resource);
-            bucket.setChar('\0', bucket.findChar(PATH_DELIMETER));
-            if(key_ptr)
-            {
-                #ifdef __aws__
+            driver = H5Lib::UNKNOWN; // reset it back to unknown, conditioned on below
+            #ifdef __aws__
+                const char* key_ptr = StringLib::find(*resource, PATH_DELIMETER);
+                if(key_ptr)
+                {
+                    SafeString bucket("%s", *resource);
+                    bucket.setChar('\0', bucket.findChar(PATH_DELIMETER));
                     if(S3Lib::get(bucket.getString(), key_ptr + 1, resource))
                     {
                         *fapl = H5P_DEFAULT;
                         return H5Lib::S3;
                     }
-                #endif
-            }
+                }
+            #endif
+            break;
         }
-        else if(StringLib::find(url, "hsds://"))    
+        case H5Lib::HSDS:
         {
             *fapl = rest_vol_fapl;
-            return H5Lib::HSDS;
+            break;
+        }
+        case H5Lib::UNKNOWN:
+        {
+            break;
         }
     }
 
-    return H5Lib::UNKNOWN;
+    return driver;
 }
 
 /*----------------------------------------------------------------------------
@@ -207,6 +213,46 @@ void H5Lib::deinit (void)
         H5Pclose(rest_vol_fapl);
         H5rest_term();
     #endif
+}
+
+/*----------------------------------------------------------------------------
+ * parseUrl
+ *----------------------------------------------------------------------------*/
+void H5Lib::parseUrl (const char* url, const char** resource, driver_t* driver)
+{
+    /* Sanity Check Input */
+    if(!url) return;
+
+    /* Set Resource */
+    if(resource) 
+    {
+        const char* rptr = StringLib::find(url, "//");
+        if(rptr)
+        {
+            *resource = rptr + 2;
+        }
+    }
+
+    /* Set Driver */
+    if(driver)
+    {
+        if(StringLib::find(url, "file://"))
+        {
+            *driver = FILE;
+        }
+        else if(StringLib::find(url, "s3://"))
+        {
+            *driver = S3;
+        }
+        else if(StringLib::find(url, "hsds://"))    
+        {
+            *driver = HSDS;
+        }
+        else
+        {
+            *driver = UNKNOWN;
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------

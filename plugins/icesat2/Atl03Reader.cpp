@@ -89,7 +89,7 @@ int Atl03Reader::luaCreate (lua_State* L)
         atl06_parms_t parms = lua_parms_process(L, 3);
         int track = getLuaInteger(L, 4, true, ALL_TRACKS);
 
-        /* Return Dispatch Object */
+        /* Return Reader Object */
         return createLuaObject(L, new Atl03Reader(L, url, outq_name, parms, track));
     }
     catch(const LuaException& e)
@@ -144,6 +144,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
     if(track == ALL_TRACKS)
     {
         threadCount = NUM_TRACKS;
+        
         /* Create Readers */
         for(int t = 0; t < NUM_TRACKS; t++)
         {

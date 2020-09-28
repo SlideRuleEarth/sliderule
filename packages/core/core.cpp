@@ -59,27 +59,27 @@ void os_print (const char* file_name, unsigned int line_number, const char* mess
 int core_open (lua_State *L)
 {
     static const struct luaL_Reg core_functions[] = {
-        {"logger",      Logger::luaCreate},
-        {"cluster",     ClusterSocket::luaCreate},
-        {"file",        File::luaCreate},
-        {"tcp",         TcpSocket::luaCreate},
-        {"uart",        Uart::luaCreate},
-        {"udp",         UdpSocket::luaCreate},
-        {"reader",      DeviceReader::luaCreate},
-        {"writer",      DeviceWriter::luaCreate},
-        {"httpd",       HttpServer::luaCreate},
-        {"endpoint",    LuaEndpoint::luaCreate},
-        {"dispatcher",  RecordDispatcher::luaCreate},
-        {"capture",     CaptureDispatch::luaCreate},
-        {"limit",       LimitDispatch::luaCreate},
-        {"metric",      MetricDispatch::luaCreate},
-        {"publish",     PublisherDispatch::luaCreate},
-        {"report",      ReportDispatch::luaCreate},
-        {"asset",       Asset::luaCreate},
-        {"timeindex",   TimeIndex::luaCreate},
-        {"spatialindex",SpatialIndex::luaCreate},
-        {"fieldindex",  FieldIndex::luaCreate},
-        {NULL,          NULL}
+        {"logger",          Logger::luaCreate},
+        {"cluster",         ClusterSocket::luaCreate},
+        {"file",            File::luaCreate},
+        {"tcp",             TcpSocket::luaCreate},
+        {"uart",            Uart::luaCreate},
+        {"udp",             UdpSocket::luaCreate},
+        {"reader",          DeviceReader::luaCreate},
+        {"writer",          DeviceWriter::luaCreate},
+        {"httpd",           HttpServer::luaCreate},
+        {"endpoint",        LuaEndpoint::luaCreate},
+        {"dispatcher",      RecordDispatcher::luaCreate},
+        {"capture",         CaptureDispatch::luaCreate},
+        {"limit",           LimitDispatch::luaCreate},
+        {"metric",          MetricDispatch::luaCreate},
+        {"publish",         PublisherDispatch::luaCreate},
+        {"report",          ReportDispatch::luaCreate},
+        {"asset",           Asset::luaCreate},
+        {"pointindex",      PointIndex::luaCreate},
+        {"intervalindex",   IntervalIndex::luaCreate},
+        {"spatialindex",    SpatialIndex::luaCreate},
+        {NULL,              NULL}
     };
 
     /* Set Library */

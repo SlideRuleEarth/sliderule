@@ -31,7 +31,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/FieldIndex.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/File.cpp
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.cpp
@@ -55,7 +55,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/TimeIndex.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/IntervalIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TraceLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Uart.cpp
@@ -82,7 +82,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/Dictionary.h
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.h
             ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
-            ${CMAKE_CURRENT_LIST_DIR}/FieldIndex.h
+            ${CMAKE_CURRENT_LIST_DIR}/PointIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/File.h
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.h
@@ -110,7 +110,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.h
             ${CMAKE_CURRENT_LIST_DIR}/Table.h
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.h
-            ${CMAKE_CURRENT_LIST_DIR}/TimeIndex.h
+            ${CMAKE_CURRENT_LIST_DIR}/IntervalIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.h
             ${CMAKE_CURRENT_LIST_DIR}/TraceLib.h
             ${CMAKE_CURRENT_LIST_DIR}/Uart.h

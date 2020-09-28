@@ -206,7 +206,7 @@ int Asset::luaLoad (lua_State* L)
 
         /* Create Resource */
         resource_t resource;
-        StringLib::copy(&resource.name[0], resource_name, RESOURCE_NAME_MAX_LENGTH);
+        StringLib::copy(&resource.name[0], resource_name, RESOURCE_NAME_LENGTH);
 
         /* Populate Attributes from Table */
         lua_pushnil(L);  // first key
