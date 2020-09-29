@@ -220,10 +220,6 @@ void* Atl03Indexer::indexerThread (void* parm)
             /* Index Resource */
             if(resource_name)
             {
-                /* Get Resource Name */
-                const char* resource = NULL;
-                H5Lib::parseUrl(url, &resource, NULL);
-
                 /* Read Data from HDF5 File */
                 H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
                 H5Array<double>     start_delta_time    (url, "/ancillary_data/start_delta_time");
@@ -240,7 +236,7 @@ void* Atl03Indexer::indexerThread (void* parm)
                 index_t* index = (index_t*)record->getRecordData();
 
                 /* Copy In Fields */
-                StringLib::copy(index->name, resource, Asset::RESOURCE_NAME_LENGTH);
+                StringLib::copy(index->name, resource_name, Asset::RESOURCE_NAME_LENGTH);
                 index->t0       = sdp_gps_epoch[0] + start_delta_time[0];
                 index->t1       = sdp_gps_epoch[0] + end_delta_time[0];
                 index->lat0     = gt3r_lat[0];
