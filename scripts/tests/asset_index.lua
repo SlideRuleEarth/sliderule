@@ -29,7 +29,7 @@ end
 
 sys.log(core.RAW, '\n------------------\nTest01: Print Info\n------------------\n')
 for _,v in pairs(assets) do
-    name, format, url, status = v:info()
+    name, format, url, index_filename, status = v:info()
     runner.compare(format, expected[name]["format"])
     runner.compare(url, expected[name]["url"])
     runner.check(status)
@@ -37,7 +37,7 @@ end
 
 sys.log(core.RAW, '\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
 a2 = core.asset("dataset1")
-name, format, url, status = a2:info()
+name, format, url, index_filename, status = a2:info()
 runner.compare(name, "dataset1")
 runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])

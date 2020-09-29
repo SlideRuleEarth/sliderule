@@ -5,7 +5,8 @@ csv = require("csv")
 
 -- Setup --
 
-local td = runner.rootdir(arg[0]) .. "../tests"
+local info = debug.getinfo(1,'S');
+local td = info.source:sub(2, string.find(info.source, "/[^/]*$"))
 
 console.logger:config(core.INFO)
 

@@ -48,6 +48,7 @@ end
 if __icesat2__ then
     runner.script(rd .. "../../plugins/icesat2/tests/atl06_elements.lua")
     runner.script(rd .. "../../plugins/icesat2/tests/atl06_unittest.lua")
+    runner.script(rd .. "../../plugins/icesat2/tests/atl03_indexer.lua")
 end
 
 -- Report Results --
