@@ -75,6 +75,7 @@ int core_open (lua_State *L)
         {"metric",          MetricDispatch::luaCreate},
         {"publish",         PublisherDispatch::luaCreate},
         {"report",          ReportDispatch::luaCreate},
+        {"csv",             CsvDispatch::luaCreate},
         {"asset",           Asset::luaCreate},
         {"pointindex",      PointIndex::luaCreate},
         {"intervalindex",   IntervalIndex::luaCreate},

@@ -138,9 +138,9 @@ class RecordObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_INITIALIZERS = 64;
-        static const int MAX_VAL_STR_SIZE = 64;
-        static const int MAX_FIELDS = 256;
+        static const int    MAX_INITIALIZERS = 64;
+        static const int    MAX_VAL_STR_SIZE = 64;
+        static const int    MAX_FIELDS = 256;
 
         static const char   IMMEDIATE_FIELD_SYMBOL = '$';
         static const char   ARCHITECTURE_TYPE_SYMBOL = '@';
@@ -149,7 +149,7 @@ class RecordObject
         static const char*  DEFAULT_LONG_FORMAT;
         static const double FLOAT_MAX_VALUE; // maximum 32bit value as a float
 
-        static const int FIELD_TYPE_BYTES[NUM_FIELD_TYPES];
+        static const int    FIELD_TYPE_BYTES[NUM_FIELD_TYPES];
 
         /*--------------------------------------------------------------------
          * Field (subclass)

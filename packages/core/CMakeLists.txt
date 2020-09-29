@@ -25,6 +25,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/Asset.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/CsvDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceIO.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DeviceReader.cpp
@@ -75,6 +76,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.h
+            ${CMAKE_CURRENT_LIST_DIR}/CsvDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/DeviceIO.h
             ${CMAKE_CURRENT_LIST_DIR}/DeviceObject.h
             ${CMAKE_CURRENT_LIST_DIR}/DeviceReader.h

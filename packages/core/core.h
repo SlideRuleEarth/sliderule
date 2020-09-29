@@ -30,6 +30,7 @@
 #include "AssetIndex.h"
 #include "CaptureDispatch.h"
 #include "ClusterSocket.h"
+#include "CsvDispatch.h"
 #include "DispatchObject.h"
 #include "DeviceIO.h"
 #include "DeviceObject.h"

@@ -49,7 +49,7 @@ const struct luaL_Reg ReportDispatch::LuaMetaTable[] = {
 /*----------------------------------------------------------------------------
  * luaCreate
  *
- *   <CSV|JSON> <filename(s)> [<field names> ...]
+ *   <CSV|JSON> <filename(s)> [<buffer size>] [<field name table>]
  *
  *  where <filename(s)> is name of the file to be written or a list of regular
  *  expressions of filenames to be read from.  If being written, the filename is
@@ -90,14 +90,11 @@ int ReportDispatch::luaCreate (lua_State* L)
         int num_columns = lua_rawlen(L,4);
         if(lua_istable(L, 4) && num_columns > 0)
         {
-            if(num_columns > 0)
+            columns = new const char* [num_columns];
+            for(int i = 0; i < num_columns; i++)
             {
-                columns = new const char* [num_columns];
-                for(int i = 0; i < num_columns; i++)
-                {
-                    lua_rawgeti(L, 4, i+1);
-                    columns[i] = getLuaString(L, -1);
-                }
+                lua_rawgeti(L, 4, i+1);
+                columns[i] = getLuaString(L, -1);
             }
         }
 
