@@ -1,10 +1,13 @@
 local runner = require("test_executive")
 console = require("console")
-json = require("json")
+asset = require("asset")
 
 -- Setup --
 
+local td = runner.rootdir(arg[0]) .. "../tests"
+
 console.logger:config(core.INFO)
+
 assets = asset.loaddir(td.."/asset_directory.csv")
 
 

@@ -83,6 +83,7 @@ void initicesat2 (void)
 {
     /* Initialize Modules */
     Atl03Reader::init();
+    Atl03Indexer::init();
     Atl06Dispatch::init();
 
     /* Extend Lua */
