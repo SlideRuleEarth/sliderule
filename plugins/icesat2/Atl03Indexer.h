@@ -92,12 +92,13 @@ class Atl03Indexer: public LuaObject
         List<const char*>*      resources;
         int                     resourceEntry;
         Mutex                   resourceMut;
+        Asset*                  asset;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Indexer        (lua_State* L, List<const char*>* _resources, const char* outq_name, int num_threads);
+                            Atl03Indexer        (lua_State* L, Asset* _asset, List<const char*>* _resources, const char* outq_name, int num_threads);
                             ~Atl03Indexer       (void);
 
         static void*        indexerThread       (void* parm);

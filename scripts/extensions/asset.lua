@@ -118,7 +118,7 @@ local function loaddir(file, quiet)
         if(not quiet) then
             print(string.format("Building %s (%s) index at %s", k, v["format"], v["url"]))
         end
-        assets[k] = core.asset(k, v["format"], v["url"])
+        assets[k] = core.asset(k, v["format"], v["url"], v["index"])
     end
 
     -- load index file for each asset in directory

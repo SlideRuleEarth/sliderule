@@ -1,0 +1,5 @@
+asset,          format,     url,                        index
+atl03-local,    file,       /data/ATLAS,                atl03-local.index
+atl03-cloud,    hsds,       /data/ATLAS,                atl03-cloud.index
+atl03-s3,       s3,         slideruledemo/atl03samples, atl03-s3.index
+

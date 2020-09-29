@@ -51,20 +51,21 @@ const struct luaL_Reg Atl03Indexer::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<resource table>, <outq_name>, [<num threads>])
+ * luaCreate - create(<asset>, <resource table>, <outq_name>, [<num threads>])
  *----------------------------------------------------------------------------*/
 int Atl03Indexer::luaCreate (lua_State* L)
 {
     try
     {
         /* Get URL */
-        int         tblindex    = 1;
-        const char* outq_name   = getLuaString(L, 2);
-        int         num_threads = getLuaInteger(L, 3, true, DEFAULT_NUM_THREADS);
+        Asset*      _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        int         tblindex    = 2;
+        const char* outq_name   = getLuaString(L, 3);
+        int         num_threads = getLuaInteger(L, 4, true, DEFAULT_NUM_THREADS);
 
         /* Build Resource Table */
         List<const char*>* _resources = new List<const char*>();
-        if(lua_type(L, tblindex) != LUA_TTABLE)
+        if(lua_type(L, tblindex) == LUA_TTABLE)
         {
             int size = lua_rawlen(L, tblindex);
             for(int e = 0; e < size; e++)
@@ -75,9 +76,13 @@ int Atl03Indexer::luaCreate (lua_State* L)
                 lua_pop(L, 1);
             }
         }
+        else
+        {
+            throw LuaException("parm #1 must be a table of resource names");
+        }
 
         /* Return Indexer Object */
-        return createLuaObject(L, new Atl03Indexer(L, _resources, outq_name, num_threads));
+        return createLuaObject(L, new Atl03Indexer(L, _asset, _resources, outq_name, num_threads));
     }
     catch(const LuaException& e)
     {
@@ -104,7 +109,7 @@ void Atl03Indexer::init (void)
  *  Note:   object takes ownership of _resources list as well as pointers to urls 
  *          (const char*) inside the list; responsible for freeing both
  *----------------------------------------------------------------------------*/
-Atl03Indexer::Atl03Indexer (lua_State* L, List<const char*>* _resources, const char* outq_name, int num_threads):
+Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<const char*>* _resources, const char* outq_name, int num_threads):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
@@ -116,6 +121,9 @@ Atl03Indexer::Atl03Indexer (lua_State* L, List<const char*>* _resources, const c
         mlog(CRITICAL, "Invalid number of threads supplied: %d. Setting to default: %d.\n", num_threads, DEFAULT_NUM_THREADS);
         num_threads = DEFAULT_NUM_THREADS;
     }
+
+    /* Save Off Asset */
+    asset = _asset;
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -163,6 +171,10 @@ Atl03Indexer::~Atl03Indexer (void)
         delete [] resources->get(i);
     }
     delete resources;
+
+    /* Release Asset */
+    bool pending_delete = asset->releaseLuaObject();
+    if(pending_delete) delete asset; // TODO: far from ideal... freeing memory from a reference
 }
 
 /*----------------------------------------------------------------------------
@@ -178,18 +190,25 @@ void* Atl03Indexer::indexerThread (void* parm)
     uint32_t trace_id = start_trace_ext(indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
     TraceLib::stashId (trace_id); // set thread specific trace id for H5Lib
 
+    /* Build Prefix */
+    char prefix[MAX_STR_SIZE];
+    StringLib::format(prefix, MAX_STR_SIZE, "%s://%s/", indexer->asset->getFormat(), indexer->asset->getUrl());
+
     try
     {
         while(!complete)
         {
-            /* Get Next Resource in List */
-            const char* url = NULL;
+            char url[MAX_STR_SIZE];
+
+            /* Get Next Resource in List */            
+            const char* resource_name = NULL;
             indexer->resourceMut.lock();
             {
                 if(indexer->resourceEntry < indexer->resources->length())
                 {
-                    url = indexer->resources->get(indexer->resourceEntry);
-                    indexer->resourceEntry++;                    
+                    resource_name = indexer->resources->get(indexer->resourceEntry);
+                    StringLib::format(url, MAX_STR_SIZE, "%s%s", prefix, resource_name);
+                    indexer->resourceEntry++;
                 }
                 else
                 {
@@ -199,7 +218,7 @@ void* Atl03Indexer::indexerThread (void* parm)
             indexer->resourceMut.unlock();
 
             /* Index Resource */
-            if(url)
+            if(resource_name)
             {
                 /* Get Resource Name */
                 const char* resource = NULL;
@@ -240,8 +259,8 @@ void* Atl03Indexer::indexerThread (void* parm)
                     mlog(DEBUG, "Atl03 indexer failed to post to stream %s: %d\n", indexer->outQ->getName(), post_status);
                 }
 
-                /* Free URL */
-                delete [] url;
+                /* Free Resource Name */
+                delete [] resource_name;
             }
         }
     }

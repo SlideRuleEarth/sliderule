@@ -69,6 +69,7 @@ Asset::~Asset (void)
     delete [] name;
     delete [] format;
     delete [] url;
+    delete [] index;
 }
 
 /*----------------------------------------------------------------------------
@@ -81,15 +82,15 @@ int Asset::luaCreate (lua_State* L)
         bool alias = false;
 
         /* Get Required Parameters */
-        const char* name = getLuaString(L, 1);
+        const char* _name = getLuaString(L, 1);
 
         /* Determine if Asset Exists */
         Asset* asset = NULL;
         assetsMut.lock();
         {
-            if(assets.find(name))
+            if(assets.find(_name))
             {
-                asset = assets.get(name);
+                asset = assets.get(_name);
                 associateMetaTable(L, LuaMetaName, LuaMetaTable);
                 alias = true;
             }
@@ -99,9 +100,10 @@ int Asset::luaCreate (lua_State* L)
         /* Check if Asset Needs to be Created */
         if(asset == NULL)
         {
-            const char* format      = getLuaString(L, 2);
-            const char* url         = getLuaString(L, 3);
-            asset = new Asset(L, name, format, url);
+            const char* _format = getLuaString(L, 2);
+            const char* _url    = getLuaString(L, 3);
+            const char* _index  = getLuaString(L, 4);
+            asset = new Asset(L, _name, _format, _url, _index);
         }        
 
         /* Return Asset Object */
@@ -129,19 +131,53 @@ int Asset::size(void)
 {
     return resources.length();
 }
+
+/*----------------------------------------------------------------------------
+ * getName
+ *----------------------------------------------------------------------------*/
+const char* Asset::getName (void)
+{
+    return name;
+}
+
+/*----------------------------------------------------------------------------
+ * getFormat
+ *----------------------------------------------------------------------------*/
+const char* Asset::getFormat (void)
+{
+    return format;
+}
+
+/*----------------------------------------------------------------------------
+ * getUrl
+ *----------------------------------------------------------------------------*/
+const char* Asset::getUrl (void)
+{
+    return url;
+}
+
+/*----------------------------------------------------------------------------
+ * getIndex
+ *----------------------------------------------------------------------------*/
+const char* Asset::getIndex (void)
+{
+    return index;
+}
+
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* _url):
+Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     /* Configure LuaObject Name */
     ObjectName  = StringLib::duplicate(_name);
 
     /* Initialize Members */
-    name        = StringLib::duplicate(_name);
-    format      = StringLib::duplicate(_format);
-    url         = StringLib::duplicate(_url);
+    name    = StringLib::duplicate(_name);
+    format  = StringLib::duplicate(_format);
+    url     = StringLib::duplicate(_url);
+    index   = StringLib::duplicate(_index);
 
     /* Register Asset */
     assetsMut.lock();
@@ -161,7 +197,7 @@ Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* 
 }
 
 /*----------------------------------------------------------------------------
- * luaInfo - :info() --> name, format, url
+ * luaInfo - :info() --> name, format, url, index
  *----------------------------------------------------------------------------*/
 int Asset::luaInfo (lua_State* L)
 {
@@ -176,6 +212,7 @@ int Asset::luaInfo (lua_State* L)
         lua_pushlstring(L, lua_obj->name,   StringLib::size(lua_obj->name));
         lua_pushlstring(L, lua_obj->format, StringLib::size(lua_obj->format));
         lua_pushlstring(L, lua_obj->url,    StringLib::size(lua_obj->url));
+        lua_pushlstring(L, lua_obj->index,  StringLib::size(lua_obj->index));
 
         /* Set Status */
         status = true;
@@ -186,7 +223,7 @@ int Asset::luaInfo (lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, 4);
+    return returnLuaStatus(L, status, 5);
 }
 
 /*----------------------------------------------------------------------------

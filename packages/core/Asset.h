@@ -61,6 +61,10 @@ class Asset: public LuaObject
         static int  luaCreate   (lua_State* L);
         resource_t& operator[]  (int i);
         int         size        (void);
+        const char* getName     (void);
+        const char* getFormat   (void);
+        const char* getUrl      (void);
+        const char* getIndex    (void);
 
     private:
 
@@ -82,6 +86,7 @@ class Asset: public LuaObject
         const char*                         name;
         const char*                         format;
         const char*                         url;
+        const char*                         index;
 
         List<resource_t>                    resources;
 
@@ -89,7 +94,7 @@ class Asset: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Asset       (lua_State* L, const char* name, const char* format, const char* url);
+                        Asset       (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index);
 
         static int      luaInfo     (lua_State* L);
         static int      luaLoad     (lua_State* L);
