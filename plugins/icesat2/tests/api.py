@@ -79,7 +79,7 @@ def test_variable_length ():
     d = sliderule.engine("h5", rqst)
     v = sliderule.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
 
-    if v[0] == 75 and v[1] == 82 and v[2] == 61:
+    if v[0] == 245 and v[1] == 263 and v[2] == 273:
         print("Passed variable length test")
     else:
         print("Failed variable length test: ", v)
