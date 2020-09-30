@@ -74,7 +74,7 @@ class StringLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static char*    duplicate       (const char* str);
+        static char*    duplicate       (const char* str, int size=MAX_STR_SIZE);
         static char*    concat          (const char* str1, const char* str2, const char* str3=NULL);
         static void     concat          (char* str1, const char* str2, int size);
         static char*    format          (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);

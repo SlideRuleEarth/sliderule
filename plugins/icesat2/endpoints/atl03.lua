@@ -20,15 +20,12 @@
 local json = require("json")
 local asset = require("asset")
 
--- Internal Parameters --
-local indexq = rspq .. "-index"
-
 -- Create User Log --
 local userlog = core.logger(rspq, core.USER, true)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local asset_name = rqst["asset"] or "atl03-cloud"
+local asset_name = rqst["asset"] or "atl03-local"
 local resources = rqst["resources"]
 local timeout = rqst["timeout"] or core.PEND
 
@@ -36,9 +33,9 @@ local timeout = rqst["timeout"] or core.PEND
 sys.log(core.USER, string.format("atl03 indexing initiated on %s data...\n", asset_name))
 
 -- Index Asset --  
-local atl03 = core.asset("atl03-local")
+local atl03 = core.asset(asset_name)
 local name, format, url, index_filename, status = atl03:info()
-local indexer = icesat2.atl03indexer(atl03, resources, indexq)
+local indexer = icesat2.atl03indexer(atl03, resources, rspq)
 
 -- Wait Until Completion --
 local duration = 0

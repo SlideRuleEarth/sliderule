@@ -104,7 +104,7 @@ LuaEngine::LuaEngine(const char* name, const char* script, const char* arg, uint
     dInfo = new directThread_t;
     dInfo->engine = this;
     dInfo->script = StringLib::duplicate(script);
-    dInfo->arg    = StringLib::duplicate(arg);
+    dInfo->arg    = StringLib::duplicate(arg, 0);
 
     /* Start Script Thread */
     engineActive = false;

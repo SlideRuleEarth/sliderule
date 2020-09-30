@@ -379,10 +379,12 @@ SafeString operator+(SafeString lhs, const SafeString& rhs)
 /*----------------------------------------------------------------------------
  * duplicate
  *----------------------------------------------------------------------------*/
-char* StringLib::duplicate(const char* str1)
+char* StringLib::duplicate(const char* str1, int size)
 {
+    int len;
     if(str1 == NULL) return NULL;
-    int len = (int)strnlen(str1, MAX_STR_SIZE - 1) + 1;
+    if(size > 0) len = (int)strnlen(str1, size - 1) + 1;
+    else len = (int)strlen(str1) + 1;
     if(len < 1) return NULL;
     char* dup = new char[len];
     StringLib::copy(dup, str1, len);
