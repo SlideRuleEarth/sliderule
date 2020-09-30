@@ -54,7 +54,6 @@ const struct luaL_Reg Asset::LuaMetaTable[] = {
  *----------------------------------------------------------------------------*/
 Asset::~Asset (void)
 {
-    assert(false);
     /* Remove Asset from Dictionary */
     if(registered)
     {

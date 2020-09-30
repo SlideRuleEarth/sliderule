@@ -42,6 +42,7 @@
 
 #include <exception>
 #include <stdexcept>
+#include <atomic>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -153,8 +154,7 @@ class LuaObject
 
         okey_t              lockKey;
         bool                isLocked;
-        long                referenceCount;
-        Mutex               referenceMut;
+        std::atomic<long>   referenceCount;
         Cond                objSignal;
         bool                objComplete;
 };
