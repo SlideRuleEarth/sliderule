@@ -1,5 +1,5 @@
 --
--- ENDPOINT:    /engine/atl06
+-- ENDPOINT:    /source/atl06
 --
 -- INPUT:       rqst
 --              {

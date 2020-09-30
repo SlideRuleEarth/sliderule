@@ -102,6 +102,8 @@ class Atl03Indexer: public LuaObject
                             ~Atl03Indexer       (void);
 
         static void*        indexerThread       (void* parm);
+
+        static int          luaStats            (lua_State* L);
 };
 
 #endif  /* __atl03_indexer__ */

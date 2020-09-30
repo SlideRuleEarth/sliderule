@@ -43,6 +43,7 @@ const RecordObject::fieldDef_t Atl03Indexer::recDef[] = {
 const char* Atl03Indexer::OBJECT_TYPE = "Atl03Indexer";
 const char* Atl03Indexer::LuaMetaName = "Atl03Indexer";
 const struct luaL_Reg Atl03Indexer::LuaMetaTable[] = {
+    {"stats",       luaStats},
     {NULL,          NULL}
 };
 
@@ -273,6 +274,7 @@ void* Atl03Indexer::indexerThread (void* parm)
         {
             /* Indicate End of Data */
             indexer->outQ->postCopy("", 0);
+            indexer->signalComplete();
         }
     }
     indexer->threadMut.unlock();
@@ -282,4 +284,36 @@ void* Atl03Indexer::indexerThread (void* parm)
 
     /* Return */
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * luaStats
+ *----------------------------------------------------------------------------*/
+int Atl03Indexer::luaStats (lua_State* L)
+{
+    bool status = false;
+    int num_obj_to_return = 1;
+
+    try
+    {
+        /* Get Self */
+        Atl03Indexer* lua_obj = (Atl03Indexer*)getLuaSelf(L, 1);
+
+        /* Create Statistics Table */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "processed",   lua_obj->resourceEntry);
+        LuaEngine::setAttrInt(L, "threads",     lua_obj->threadCount);
+        LuaEngine::setAttrInt(L, "completed",   lua_obj->numComplete);
+
+        /* Set Success */
+        status = true;
+        num_obj_to_return = 2;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_obj_to_return);
 }
