@@ -98,8 +98,7 @@ HttpServer::~HttpServer(void)
     const char* key = routeTable.first(&endpoint);
     while(key != NULL)
     {
-        bool pending_delete = endpoint->releaseLuaObject();
-        if(pending_delete) delete endpoint;
+        endpoint->releaseLuaObject();
         key = routeTable.next(&endpoint);
     }
 }

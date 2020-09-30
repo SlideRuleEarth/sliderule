@@ -84,7 +84,6 @@ class LuaObject
 
         typedef struct {
             LuaObject*  luaObj;
-            bool        alias;
         } luaUserData_t;
 
         /*--------------------------------------------------------------------
@@ -121,11 +120,11 @@ class LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]);
+                            LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[], bool permanent=false);
 
         void                signalComplete      (void);
         static void         associateMetaTable  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-        static int          createLuaObject     (lua_State* L, LuaObject* lua_obj, bool alias=false);
+        static int          createLuaObject     (lua_State* L, LuaObject* lua_obj);
         static LuaObject*   getLuaObject        (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
         
@@ -153,9 +152,9 @@ class LuaObject
          *--------------------------------------------------------------------*/
 
         okey_t              lockKey;
-        long                lockCount;
         bool                isLocked;
-        bool                pendingDelete;
+        long                referenceCount;
+        Mutex               referenceMut;
         Cond                objSignal;
         bool                objComplete;
 };

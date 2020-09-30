@@ -196,11 +196,9 @@ bool LuaObject::releaseLuaObject (void)
 {
     bool is_delete_pending = false;
 
-    /* Decrement Lock Count */
-    lockCount--;
-//printf("%s:%s NEW LOCK COUNT: %ld\n", getType(), getName(), lockCount);
-    /* Only on Last Release */
-    if(lockCount == 0)
+    /* Decrement Reference Count */
+    referenceCount--;
+    if(referenceCount == 0)
     {
         /* Get Lua Engine Object */
         lua_pushstring(LuaState, LuaEngine::LUA_SELFKEY);
@@ -209,21 +207,17 @@ bool LuaObject::releaseLuaObject (void)
         lua_pop(LuaState, 1);
         if(li)
         {
-            /* Release Object */
-            li->releaseObject(lockKey);
-            mlog(INFO, "Unlocking object %s of type %s, key = %ld\n", getName(), getType(), (unsigned long)lockKey);
+            /* Lock Object for Deletion */
+            lockKey = li->lockObject(this);
+            is_delete_pending = true;
+            mlog(INFO, "Pending delete for object %s/%s, key = %ld\n", getType(), getName(), (unsigned long)lockKey);
         }
         else
         {
             mlog(CRITICAL, "Unable to retrieve lua engine needed to release object\n");
         }
-
-        /* If an object has already been garabage collected, but the deletion was
-        * delayed due to the object being locked, then when the lock is released
-        * it needs to be deleted immediately. */
-        is_delete_pending = pendingDelete;
     }
-    else if(lockCount < 0)
+    else if(referenceCount < 0)
     {
         mlog(CRITICAL, "Unmatched object release %s of type %s detected\n", getName(), getType());
     }
@@ -238,7 +232,7 @@ bool LuaObject::releaseLuaObject (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]):
+LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[], bool permanent):
     ObjectType(object_type),
     ObjectName(NULL),
     LuaMetaName(meta_name),
@@ -246,8 +240,9 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 {
     uint32_t engine_trace_id = ORIGIN;
 
-    lockCount = 0;
-    pendingDelete = false;
+    if(!permanent)  referenceCount = 0;
+    else            referenceCount = 1;
+
     objComplete = false;
 
     if(LuaState)
@@ -286,31 +281,29 @@ int LuaObject::luaDelete (lua_State* L)
         luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
         if(user_data)
         {
-            if(!user_data->alias)
+            LuaObject* lua_obj = user_data->luaObj;
+            if(lua_obj)
             {
-                LuaObject* lua_obj = user_data->luaObj;
-                if(lua_obj)
+                mlog(INFO, "Garbage collecting object %s/%s\n", lua_obj->getType(), lua_obj->getName());
+
+                lua_obj->referenceCount--;
+                if(lua_obj->referenceCount == 0)
                 {
-                    mlog(INFO, "Garbage collecting object %s of type %s\n", lua_obj->getName(), lua_obj->getType());
-                    if(lua_obj->lockCount == 0)
-                    {
-                        /* Delete Object */
-                        delete lua_obj;
-                        user_data->luaObj = NULL;
-                    }
-                    else
-                    {
-                        mlog(INFO, "Delaying delete on locked object %s\n", lua_obj->getName());
-                        lua_obj->pendingDelete = true;
-                    }
+                    /* Delete Object */
+                    delete lua_obj;
+                    user_data->luaObj = NULL;
                 }
                 else
                 {
-                    /* This will occurr, for instance, when a device is closed
-                    * explicitly, and then also deleted when the lua variable
-                    * goes out of scope and is garbage collected */
-                    mlog(INFO, "Vacuous delete of lua object that has already been deleted\n");
+                    mlog(INFO, "Delaying delete on referenced object %s/%s\n", lua_obj->getType(), lua_obj->getName());
                 }
+            }
+            else
+            {
+                /* This will occurr, for instance, when a device is closed
+                 * explicitly, and then also deleted when the lua variable
+                 * goes out of scope and is garbage collected */
+                mlog(INFO, "Vacuous delete of lua object that has already been deleted\n");
             }
         }
         else
@@ -456,7 +449,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
  *
  *  Note: if object is an alias, all calls into it from Lua must be thread safe
  *----------------------------------------------------------------------------*/
-int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)
+int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 {
     /* Create Lua User Data Object */
     luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
@@ -465,9 +458,11 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)
         throw LuaException("failed to allocate new user data");
     }
 
+    /* Bump Reference Count */
+    lua_obj->referenceCount++;
+
     /* Return User Data to Lua */
     user_data->luaObj = lua_obj;
-    user_data->alias = alias;
     luaL_getmetatable(L, lua_obj->LuaMetaName);
     lua_setmetatable(L, -2);
     return 1;
@@ -479,29 +474,13 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj, bool alias)
 LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
 {
     LuaObject* lua_obj = NULL;
-
-    /* Get Lua Engine Object */
-    lua_pushstring(L, LuaEngine::LUA_SELFKEY);
-    lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
-    if(!li) throw LuaException("Unable to retrieve lua engine");
-    lua_pop(L, 1);
-
-    /* Get User Data LuaObject */
     luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
     if(user_data)
     {
         if(StringLib::match(object_type, user_data->luaObj->ObjectType))
         {
             lua_obj = user_data->luaObj;
-            user_data->luaObj->lockCount++;
-
-            /* Lock Object - Only for First Lock */
-            if(user_data->luaObj->lockCount == 1)
-            {
-                lua_obj->lockKey = li->lockObject(lua_obj);
-                mlog(INFO, "Locking object %s of type %s, key = %ld\n", lua_obj->getName(), lua_obj->getType(), (unsigned long)lua_obj->lockKey);
-            }
+            user_data->luaObj->referenceCount++;
         }
         else
         {

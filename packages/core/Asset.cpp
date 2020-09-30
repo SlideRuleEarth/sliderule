@@ -54,6 +54,7 @@ const struct luaL_Reg Asset::LuaMetaTable[] = {
  *----------------------------------------------------------------------------*/
 Asset::~Asset (void)
 {
+    assert(false);
     /* Remove Asset from Dictionary */
     if(registered)
     {
@@ -79,8 +80,6 @@ int Asset::luaCreate (lua_State* L)
 {
     try
     {
-        bool alias = false;
-
         /* Get Required Parameters */
         const char* _name = getLuaString(L, 1);
 
@@ -92,7 +91,6 @@ int Asset::luaCreate (lua_State* L)
             {
                 asset = assets.get(_name);
                 associateMetaTable(L, LuaMetaName, LuaMetaTable);
-                alias = true;
             }
         }
         assetsMut.unlock();
@@ -107,7 +105,7 @@ int Asset::luaCreate (lua_State* L)
         }        
 
         /* Return Asset Object */
-        return createLuaObject(L, asset, alias);
+        return createLuaObject(L, asset);
     }
     catch(const LuaException& e)
     {
@@ -168,7 +166,7 @@ const char* Asset::getIndex (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable, true)
 {
     /* Configure LuaObject Name */
     ObjectName  = StringLib::duplicate(_name);

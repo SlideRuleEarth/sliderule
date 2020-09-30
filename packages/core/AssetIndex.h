@@ -162,9 +162,7 @@ AssetIndex<T>::AssetIndex (lua_State* L, Asset& _asset, int _threshold):
 template <class T>
 AssetIndex<T>::~AssetIndex (void)
 {
-    bool pending_delete = asset.releaseLuaObject();
-    if(pending_delete) delete &asset; // TODO: far from ideal... freeing memory from a reference
-
+    asset.releaseLuaObject();
     deletenode(tree);
 }
 

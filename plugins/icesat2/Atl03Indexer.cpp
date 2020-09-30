@@ -174,8 +174,7 @@ Atl03Indexer::~Atl03Indexer (void)
     delete resources;
 
     /* Release Asset */
-    bool pending_delete = asset->releaseLuaObject();
-    if(pending_delete) delete asset; // TODO: far from ideal... freeing memory from a reference
+    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

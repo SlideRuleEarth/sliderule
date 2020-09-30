@@ -85,9 +85,8 @@ DeviceReader::~DeviceReader(void)
     /* Delete Output Queue */
     if(outq) delete outq;
 
-    /* Unlock */
-    bool pending_delete = device->releaseLuaObject();
-    if(pending_delete) delete device;
+    /* Release Device */
+    device->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
