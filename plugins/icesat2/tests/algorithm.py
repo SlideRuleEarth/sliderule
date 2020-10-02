@@ -169,7 +169,7 @@ if __name__ == '__main__':
     ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
     ax1.set_title("Ground Tracks")
     ax1.plot(act["longitude"].values,act["latitude"].values,linewidth=1.5,
-        color='r',zorder=2, transform=cartopy.crs.PlateCarree())
+        color='r',zorder=2, transform=cartopy.crs.Geodetic())
     # add coastlines with filled land and lakes
     ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
     ax1.add_feature(cartopy.feature.LAKES)
