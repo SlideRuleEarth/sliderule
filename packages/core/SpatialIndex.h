@@ -56,6 +56,23 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         bool            intersect       (const spatialspan_t& span1, const spatialspan_t& span2) override;
         spatialspan_t   combine         (const spatialspan_t& span1, const spatialspan_t& span2) override;
         spatialspan_t   luatable2span   (lua_State* L, int parm) override;
+    
+    private:
+
+        typedef enum {
+            NORTH_POLAR,
+            SOUTH_POLAR,
+            EAST_MERCATOR,
+            WEST_MERCATOR
+        } proj_t;
+
+        typedef struct {            
+            double  x;
+            double  y;
+        } coord_t;
+
+        proj_t          classify        (spatialspan_t span);
+        coord_t         project         (proj_t p, double lat, double lon);
 };
 
 #endif  /* __spatial_index__ */
