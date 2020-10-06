@@ -107,8 +107,9 @@ void IntervalIndex::display (const intervalspan_t& span)
 intervalspan_t IntervalIndex::split (const intervalspan_t& span)
 {
     intervalspan_t t;
-    t.t0 = span.t0;
-    t.t1 = (span.t1 + span.t0) / 2.0;
+    double sval = (span.t1 + span.t0) / 2.0;
+    t.t0 = sval;
+    t.t1 = sval;
     mlog(RAW, "PREV : "); display(span); mlog(RAW, "  |  ");    
     mlog(RAW, "SPLIT: "); display(t); mlog(RAW, "\n");
     return t;
@@ -128,7 +129,7 @@ bool IntervalIndex::isleft (const intervalspan_t& span1, const intervalspan_t& s
  *----------------------------------------------------------------------------*/
 bool IntervalIndex::isright (const intervalspan_t& span1, const intervalspan_t& span2)
 {
-    return (span1.t1 >= span2.t1);
+    return (span1.t1 > span2.t1);
 }
 
 /*----------------------------------------------------------------------------

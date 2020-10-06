@@ -21,7 +21,7 @@ local function check_query(act, exp)
                 found = true
             end
         end
-        runner.check(found, string.format('Failed to return resource %d', e))
+        runner.check(found, string.format('Failed to return resource %s', tostring(e)))
     end
 end
 
@@ -60,7 +60,20 @@ local r5 = f5:query({foot=15})
 local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
 check_query(r5, e5)
 
-sys.log(core.RAW, '\n------------------\nTest06: Query Dataset1 with Sptial Index\n------------------\n')
+sys.log(core.RAW, '\n------------------\nTest06: Query Overlapping Dataset\n------------------\n')
+a6 = core.asset("dataset2")
+name, format, url, index_filename, status = a6:info()
+runner.compare(name, "dataset2")
+runner.compare(format, expected["dataset2"]["format"])
+runner.compare(url, expected["dataset2"]["url"])
+local i6 = core.intervalindex(a6, "t0", "t1")
+i6:name("overlappingindex")
+i6:display()
+local r6 = i6:query({t0=6.0, t1=10.0})
+local e6 = {"B", "C", "D", "E", "F", "G", "H", "I", "J"} 
+check_query(r6, e6)
+
+sys.log(core.RAW, '\n------------------\nTest07: Query Dataset1 with Sptial Index\n------------------\n')
 local f6 = core.spatialindex(a2)
 f6:name("spatialindex")
 --f6:display()

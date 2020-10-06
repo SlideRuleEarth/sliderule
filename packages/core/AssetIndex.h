@@ -237,25 +237,26 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
             /* Get Split Span (ss) of Node */
             T ss = split(curr->span);
 
-            /* Check Split Produces Resources on Both Leaves */
+            /* Caclulate Split Resources on Both Leaves */
             int lcnt = 0, rcnt = 0;
             for(int j = 0; j < node_size; j++)
             {
                 int resource_index = curr->ril->get(j);
                 T& resource_span = spans[resource_index];
                 if(isleft(resource_span, ss))   lcnt++;
-                else                            rcnt++;
+                if(isright(resource_span, ss))  rcnt++;
             }
 
-            /* Split Node Around Split Span */
-            if(lcnt > 0 && rcnt > 0)
+            /* Check if Makes Sense to Split */
+            if(lcnt > 0 && rcnt > 0 && lcnt != node_size && rcnt != node_size)
             {
+                /* Split Node Around Split Span */
                 for(int j = 0; j < node_size; j++)
                 {
                     int resource_index = curr->ril->get(j);
                     T& resource_span = spans[resource_index];
                     if(isleft(resource_span, ss))   updatenode(resource_index, &curr->left, maxdepth);
-                    else                            updatenode(resource_index, &curr->right, maxdepth);
+                    if(isright(resource_span, ss))  updatenode(resource_index, &curr->right, maxdepth);
                 }
 
                 /* Make Current Node a Branch */
@@ -266,15 +267,15 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
     }
     else 
     {
-        /* Traverse Branch Node */
+        /* Update Left Tree */
         if(isleft(span, curr->left->span))
         {   
-            /* Update Left Tree */
             updatenode(i, &curr->left, maxdepth);
         }
-        else
+
+        /* Update Right Tree */
+        if(isright(span, curr->left->span))
         {   
-            /* Update Right Tree */
             updatenode(i, &curr->right, maxdepth);
         }
 
