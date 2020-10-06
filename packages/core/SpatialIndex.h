@@ -62,8 +62,6 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         typedef enum {
             NORTH_POLAR,
             SOUTH_POLAR,
-            EAST_MERCATOR,
-            WEST_MERCATOR
         } proj_t;
 
         typedef struct {            

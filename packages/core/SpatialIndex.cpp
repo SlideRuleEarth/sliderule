@@ -191,11 +191,8 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 SpatialIndex::proj_t SpatialIndex::classify (spatialspan_t span)
 {
-    if      ( span.lat0 >=  60.0 || span.lat1 >=  60.0)  return NORTH_POLAR;
-    else if ( span.lat0 <= -60.0 || span.lat1 <= -60.0)  return SOUTH_POLAR;
-    else if ((span.lon0 >=  90.0 && span.lon1 <= -90.0) ||
-             (span.lon0 <= -90.0 && span.lon1 >=  90.0)) return EAST_MERCATOR;
-    else                                                 return WEST_MERCATOR;
+    if(span.lat0 >= 0.0)    return NORTH_POLAR;
+    else                    return SOUTH_POLAR;
 }
 
 /*----------------------------------------------------------------------------
@@ -220,8 +217,7 @@ SpatialIndex::proj_t SpatialIndex::classify (spatialspan_t span)
  *           |                                                            |
  *           |                                                            |
  *           --------------------------------------------------------------
- * WEST     -180                           0     1    2    3            180
- * EAST      0    1    2    3             180                             0
+ *          -180                           0     1    2    3            180
  *----------------------------------------------------------------------------*/
 SpatialIndex::coord_t SpatialIndex::project (proj_t p, double lat, double lon)
 {
@@ -232,46 +228,25 @@ SpatialIndex::coord_t SpatialIndex::project (proj_t p, double lat, double lon)
     double yrad = lat * M_PI / 180.0;
     double yradp = (M_PI / 4.0) * (yrad / 2.0);
 
-    /* Calculate Projection */
-    if(p == NORTH_POLAR || p == SOUTH_POLAR)
+    /* Calculate r */
+    double r;
+    if(p == NORTH_POLAR)
     {
-        double r, o;
-
-        /* Calculate r */
-        if(p == NORTH_POLAR)
-        {
-            r = 2 * tan(yradp);
-        }
-        else /* if(p == SOUTH_POLAR) */
-        {
-            r = 2 * tan(-yradp);
-        }
-
-        /* Calculate o */
-        o = xrad;
-
-        /* Calculate X */
-        coord.x = r * cos(o);
-
-        /* Calculate Y */
-        coord.y = r * sin(o);
+        r = 2 * tan(yradp);
     }
-    else if(p == EAST_MERCATOR || p == WEST_MERCATOR)
+    else /* if(p == SOUTH_POLAR) */
     {
-        /* Calculate X */
-        if(p == EAST_MERCATOR)
-        {        
-            if(xrad >= 0)   coord.x = xrad - M_PI;
-            else            coord.x = xrad + M_PI;
-        }
-        else /* if(p == WEST_MERCATOR) */
-        {
-            coord.x = xrad;
-        }
-
-        /* Calculate Y */
-        coord.y = log(tan(yradp));
+        r = 2 * tan(-yradp);
     }
+
+    /* Calculate o */
+    double o = xrad;
+
+    /* Calculate X */
+    coord.x = r * cos(o);
+
+    /* Calculate Y */
+    coord.y = r * sin(o);
 
     /* Return Coordinates */
     return coord;
