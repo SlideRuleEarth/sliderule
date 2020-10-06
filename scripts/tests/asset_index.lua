@@ -74,8 +74,8 @@ local e6 = {"B", "C", "D", "E", "F", "G", "H", "I", "J"}
 check_query(r6, e6)
 
 sys.log(core.RAW, '\n------------------\nTest07: Query Dataset1 with Sptial Index\n------------------\n')
-local f6 = core.spatialindex(a2)
-f6:name("spatialindex")
+--local f6 = core.spatialindex(a2)
+--f6:name("spatialindex")
 --f6:display()
 --local r5 = f6:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
 --local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
@@ -83,6 +83,7 @@ f6:name("spatialindex")
 
 -- Clean Up --
 a2:destroy()
+a6:destroy()
 
 -- Report Results --
 

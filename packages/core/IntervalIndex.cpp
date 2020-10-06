@@ -72,7 +72,7 @@ IntervalIndex::IntervalIndex(lua_State* L, Asset*_asset, const char* _fieldname0
         {
             intervalspan_t span;
             span.t0 = asset[i].attributes[fieldname0];
-            span.t1 = asset[i].attributes[fieldname0];
+            span.t1 = asset[i].attributes[fieldname1];
             spans.add(span); // build local list of spans that mirror resource index list
             add(i); // build tree of indexes
         }
