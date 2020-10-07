@@ -160,7 +160,7 @@ if __name__ == '__main__':
     act = algoexec(asset)
 
     # Read ATL06 Expected Results
-    exp = expread(asset)
+    exp = expread("atl03-local")
 
     # Create Plot
     fig = plt.figure(num=None, figsize=(12, 6))
