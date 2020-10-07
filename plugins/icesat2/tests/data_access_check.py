@@ -13,12 +13,12 @@ def timedata (file, dataset):
     global timetable, timetotal
     print("Reading " + dataset + ": ", end = '')
     start = time.time()
-    data = file[dataset]
+    datatotal = sum(file[dataset])
     end = time.time()
     duration = end - start
     timetable[dataset] = duration
     timetotal += duration
-    print(str(duration))
+    print(duration, datatotal)
 
 def timetrackdata (file, dataset):
     timedata(file, "/gt1l" + dataset)
@@ -34,17 +34,17 @@ if __name__ == '__main__':
     filename = "ATL03_20181019065445_03150111_003_01.h5"
     test = "read"
 
-    # Override filepath
+    # Override test
     if len(sys.argv) > 1:
-        filepath = sys.argv[1]
+        test = sys.argv[1]
 
     # Override filename
     if len(sys.argv) > 2:
         filename = sys.argv[2]
 
-    # Override test
-    if len(sys.argv) > 3:
-        test = sys.argv[3]
+    # Override filepath
+    if len(sys.argv) > 2:
+        filepath = sys.argv[3]
 
     # Open file
     print("Opening file: " + filepath + filename)
