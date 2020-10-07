@@ -9,23 +9,24 @@ def printdata (file, dataset):
     data = file[dataset]
     print(data[0], data[1], data[2])
 
-def timedata (file, dataset)
+def timedata (file, dataset):
     global timetable, timetotal
+    print("Reading " + dataset + ": ", end = '')
     start = time.time()
     data = file[dataset]
     end = time.time()
     duration = end - start
     timetable[dataset] = duration
     timetotal += duration
-    print(dataset + ": " + str(duration))
+    print(str(duration))
 
-def timetrackdata (file, dataset)
-    timedata(file, "gt1l" + dataset)
-    timedata(file, "gt1r" + dataset)
-    timedata(file, "gt2l" + dataset)
-    timedata(file, "gt2r" + dataset)
-    timedata(file, "gt3l" + dataset)
-    timedata(file, "gt3r" + dataset)
+def timetrackdata (file, dataset):
+    timedata(file, "/gt1l" + dataset)
+    timedata(file, "/gt1r" + dataset)
+    timedata(file, "/gt2l" + dataset)
+    timedata(file, "/gt2r" + dataset)
+    timedata(file, "/gt3l" + dataset)
+    timedata(file, "/gt3r" + dataset)
 
 if __name__ == '__main__':
 
@@ -46,6 +47,7 @@ if __name__ == '__main__':
         test = sys.argv[3]
 
     # Open file
+    print("Opening file: " + filepath + filename)
     h5file = h5pyd.File(filepath + filename, "r")
 
     # Test: Read
@@ -58,17 +60,17 @@ if __name__ == '__main__':
         timedata(h5file, "/ancillary_data/end_rgt")
         timedata(h5file, "/ancillary_data/start_cycle")
         timedata(h5file, "/ancillary_data/end_cycle")
-        timetrackdata(h5file, "geolocation/delta_time")
-        timetrackdata(h5file, "geolocation/segment_ph_cnt")
-        timetrackdata(h5file, "geolocation/segment_id")
-        timetrackdata(h5file, "geolocation/segment_dist_x")
-        timetrackdata(h5file, "geolocation/reference_photon_lat")
-        timetrackdata(h5file, "geolocation/reference_photon_lon")
-        timetrackdata(h5file, "heights/dist_ph_along")
-        timetrackdata(h5file, "heights/h_ph")
-        timetrackdata(h5file, "heights/signal_conf_ph")
-        timetrackdata(h5file, "bckgrd_atlas/delta_time")
-        timetrackdata(h5file, "bckgrd_atlas/bckgrd_rate")
-        print("TOTAL: " + str(totaltime))
+        timetrackdata(h5file, "/geolocation/delta_time")
+        timetrackdata(h5file, "/geolocation/segment_ph_cnt")
+        timetrackdata(h5file, "/geolocation/segment_id")
+        timetrackdata(h5file, "/geolocation/segment_dist_x")
+        timetrackdata(h5file, "/geolocation/reference_photon_lat")
+        timetrackdata(h5file, "/geolocation/reference_photon_lon")
+        timetrackdata(h5file, "/heights/dist_ph_along")
+        timetrackdata(h5file, "/heights/h_ph")
+        timetrackdata(h5file, "/heights/signal_conf_ph")
+        timetrackdata(h5file, "/bckgrd_atlas/delta_time")
+        timetrackdata(h5file, "/bckgrd_atlas/bckgrd_rate")
+        print("TOTAL: " + str(timetotal))
 
 
