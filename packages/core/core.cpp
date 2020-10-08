@@ -115,6 +115,8 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FIFO",                 File::FIFO);
     LuaEngine::setAttrInt   (L, "FLUSHED",              File::FLUSHED);
     LuaEngine::setAttrInt   (L, "CACHED",               File::CACHED);
+    LuaEngine::setAttrInt   (L, "NORTH_POLAR",          SpatialIndex::NORTH_POLAR);    
+    LuaEngine::setAttrInt   (L, "SOUTH_POLAR",          SpatialIndex::SOUTH_POLAR);    
     LuaEngine::setAttrInt   (L, "PEND",                 IO_PEND);
     LuaEngine::setAttrInt   (L, "CHECK",                IO_CHECK);
 

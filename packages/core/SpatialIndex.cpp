@@ -42,10 +42,11 @@ int SpatialIndex::luaCreate (lua_State* L)
     {
         /* Get Asset Directory */
         Asset*      _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
-        int         _threshold  = getLuaInteger(L, 2, true, DEFAULT_THRESHOLD);
+        proj_t      _projection = (proj_t)getLuaInteger(L, 2);
+        int         _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
 
         /* Return AssetIndex Object */
-        return createLuaObject(L, new SpatialIndex(L, _asset, _threshold));
+        return createLuaObject(L, new SpatialIndex(L, _asset, _projection, _threshold));
     }
     catch(const LuaException& e)
     {
@@ -57,9 +58,11 @@ int SpatialIndex::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, int _threshold):
+SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, proj_t _projection, int _threshold):
     AssetIndex<spatialspan_t>(L, *_asset, _threshold)
 {
+    projection = _projection;
+
     for(int i = 0; i < asset.size(); i++)
     {
         try 
@@ -69,8 +72,12 @@ SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, int _threshold):
             span.lon0 = asset[i].attributes["lon0"];
             span.lat1 = asset[i].attributes["lat1"];
             span.lon1 = asset[i].attributes["lon1"];
-            spans.add(span); // build local list of spans that mirror resource index list
-            add(i); // build tree of indexes
+            if( (projection == NORTH_POLAR && span.lat0 >= 0.0) ||
+                (projection == SOUTH_POLAR && span.lat0 <  0.0) )
+            {
+                spans.add(span); // build local list of spans that mirror resource index list
+                add(i); // build tree of indexes
+            }
         }
         catch(std::out_of_range& e)
         {
@@ -92,6 +99,45 @@ SpatialIndex::~SpatialIndex(void)
  *----------------------------------------------------------------------------*/
 void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rspan)
 {
+    /* Project to Polar Coordinates */
+    coord_t coord = project(node->span);
+
+    /* Split Region */
+    coord_t lcoord, rcoord;
+    if(node->depth % 2 == 0) // even depth
+    {
+        /* Split Across X-Axis */
+        double split_val = (coord.x0 + coord.x1) / 2.0;
+        
+        lcoord.x0 = coord.x0;
+        lcoord.y0 = coord.y0;
+        lcoord.x1 = split_val;
+        lcoord.y1 = coord.y1;
+
+        rcoord.x0 = split_val;
+        rcoord.y0 = coord.y0;
+        rcoord.x1 = coord.x1;
+        rcoord.y1 = coord.y1;
+    }
+    else // odd depth
+    {
+        /* Split Across Y-Axis */
+        double split_val = (coord.y0 + coord.y1) / 2.0;
+        
+        lcoord.x0 = coord.x0;
+        lcoord.y0 = split_val;
+        lcoord.x1 = coord.x1;
+        lcoord.y1 = coord.y1;
+
+        rcoord.x0 = coord.x0;
+        rcoord.y0 = coord.y0;
+        rcoord.x1 = coord.x1;
+        rcoord.y1 = split_val;
+    }
+
+    /* Restore to Geographic Coordinates */
+    lspan = restore(lcoord);
+    rspan = restore(rcoord);
 }
 
 /*----------------------------------------------------------------------------
@@ -99,7 +145,33 @@ void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rsp
  *----------------------------------------------------------------------------*/
 bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
 {
-    return false;
+    assert(node->left);
+    assert(node->right);
+
+    /* Project to Polar Coordinates */
+    coord_t lcoord = project(node->left->span);
+    coord_t rcoord = project(node->right->span);
+    coord_t scoord = project(span);
+
+    /* Compare Against Split Value */
+    if(node->depth % 2 == 0) // even depth = X-Axis
+    {
+        double left_val = lcoord.x1;
+        double right_val = rcoord.x0;
+        double split_val = (left_val + right_val) / 2.0;
+
+        if(scoord.x0 <= split_val)  return true;
+        else                        return false;        
+    }
+    else // odd depth = Y-Axis
+    {
+        double left_val = lcoord.y1;
+        double right_val = rcoord.y0;
+        double split_val = (left_val + right_val) / 2.0;
+
+        if(scoord.y0 <= split_val)  return true;
+        else                        return false;        
+    }
 }
 
 
@@ -108,7 +180,33 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
  *----------------------------------------------------------------------------*/
 bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
 {
-    return false;
+    assert(node->left);
+    assert(node->right);
+
+    /* Project to Polar Coordinates */
+    coord_t lcoord = project(node->left->span);
+    coord_t rcoord = project(node->right->span);
+    coord_t scoord = project(span);
+
+    /* Compare Against Split Value */
+    if(node->depth % 2 == 0) // even depth = X-Axis
+    {
+        double left_val = lcoord.x1;
+        double right_val = rcoord.x0;
+        double split_val = (left_val + right_val) / 2.0;
+
+        if(scoord.x1 >= split_val)  return true;
+        else                        return false;        
+    }
+    else // odd depth = Y-Axis
+    {
+        double left_val = lcoord.y1;
+        double right_val = rcoord.y0;
+        double split_val = (left_val + right_val) / 2.0;
+
+        if(scoord.y1 >= split_val)  return true;
+        else                        return false;        
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -116,10 +214,24 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
  *----------------------------------------------------------------------------*/
 bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& span2) 
 { 
-    // TODO: need intersection code for spatial region
-    (void)span1;
-    (void)span2;
-    return false;
+    /* Project to Polar Coordinates */
+    coord_t coord1 = project(span1);
+    coord_t coord2 = project(span2);    
+
+    /* Check Intersection in X-Axis */
+    bool xi = ((coord1.x0 >= coord2.x0 && coord1.x0 <= coord2.x1) ||
+               (coord1.x1 >= coord2.x0 && coord1.x1 <= coord2.x1) || 
+               (coord2.x0 >= coord1.x0 && coord2.x0 <= coord1.x1) ||
+               (coord2.x1 >= coord1.x0 && coord2.x1 <= coord1.x1));
+
+    /* Check Intersection in Y-Axis */
+    bool yi = ((coord1.y0 >= coord2.y0 && coord1.y0 <= coord2.y1) ||
+               (coord1.y1 >= coord2.y0 && coord1.y1 <= coord2.y1) || 
+               (coord2.y0 >= coord1.y0 && coord2.y0 <= coord1.y1) ||
+               (coord2.y1 >= coord1.y0 && coord2.y1 <= coord1.y1));
+
+    /* Return Intersection */
+    return (xi && yi);
 }
 
 /*----------------------------------------------------------------------------
@@ -127,12 +239,20 @@ bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& s
  *----------------------------------------------------------------------------*/
 spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialspan_t& span2)
 {
-    spatialspan_t span;
-    span.lat0 = MIN(span1.lat0, span2.lat0);
-    span.lon0 = MIN(span1.lon0, span2.lon0);
-    span.lat1 = MAX(span1.lat1, span2.lat1);
-    span.lon1 = MIN(span1.lon1, span2.lon1);
-    return span;
+    /* Project to Polar Coordinates */
+    coord_t coord1 = project(span1);
+    coord_t coord2 = project(span2);    
+    
+    /* Combine Spans */
+    coord_t coord = {
+        .x0 = MIN(coord1.x0, coord2.x0),
+        .y0 = MIN(coord1.y0, coord2.y0),
+        .x1 = MAX(coord1.x1, coord2.x1),
+        .y1 = MIN(coord1.y1, coord2.y1)
+    };
+
+    /* Return Geogreaphic Coordinates */
+    return restore(coord);
 }
 
 /*----------------------------------------------------------------------------
@@ -182,68 +302,92 @@ void SpatialIndex::display (const spatialspan_t& span)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * classify
+ * project
  *----------------------------------------------------------------------------*/
-SpatialIndex::proj_t SpatialIndex::classify (spatialspan_t span)
+SpatialIndex::coord_t SpatialIndex::project (spatialspan_t span)
 {
-    if(span.lat0 >= 0.0)    return NORTH_POLAR;
-    else                    return SOUTH_POLAR;
+    coord_t coord;
+    geo2cart(span.lat0, span.lon0, coord.x0, coord.y0);
+    geo2cart(span.lat1, span.lon1, coord.x1, coord.y1);
+    
+    coord_t sorted_coord;
+    sorted_coord.x0 = MIN(coord.x0, coord.x1);
+    sorted_coord.y0 = MIN(coord.y0, coord.y1);
+    sorted_coord.x1 = MAX(coord.x0, coord.x1);
+    sorted_coord.y1 = MAX(coord.y0, coord.y1);
+
+    return sorted_coord;
 }
 
 /*----------------------------------------------------------------------------
- * project
- * 
- *           --------------------------------------------------------------
- *           |                                                            |
- *           |                                                            |
- *           |                          NORTHERN                          |
- *           |                                                            |
- *           |                                                            |
- * NORTH  60 ---------------------------------------------------------------
- *           |                             |                              |
- *           |                             |                              |
- *           |      WESTERN HEMISPHERE     |      EASTERN HEMISPHERE      |
- *           |                             |                              |
- *           |                             |                              |
- * SOUTH -60 ---------------------------------------------------------------
- *           |                                                            |
- *           |                                                            |
- *           |                          SOUTHERN                          |
- *           |                                                            |
- *           |                                                            |
- *           --------------------------------------------------------------
- *          -180                           0     1    2    3            180
+ * restore
  *----------------------------------------------------------------------------*/
-SpatialIndex::coord_t SpatialIndex::project (proj_t p, double lat, double lon)
+spatialspan_t SpatialIndex::restore (coord_t coord)
 {
-    coord_t coord = { 0.0, 0.0 };
+    spatialspan_t span;
+    cart2geo(span.lat0, span.lon0, coord.x0, coord.y0);
+    cart2geo(span.lat1, span.lon1, coord.x1, coord.y1);
+    return span;
+}
 
+/*----------------------------------------------------------------------------
+ * geo2cart
+ *----------------------------------------------------------------------------*/
+void SpatialIndex::geo2cart (const double lat, const double lon, double& x, double& y)
+{
     /* Convert to Radians */
-    double xrad = lon * M_PI / 180.0;
-    double yrad = lat * M_PI / 180.0;
-    double yradp = (M_PI / 4.0) * (yrad / 2.0);
+    double lonrad = lon * M_PI / 180.0;
+    double latrad = lat * M_PI / 180.0;
+    double latradp = (M_PI / 4.0) - (latrad / 2.0);
 
     /* Calculate r */
-    double r;
-    if(p == NORTH_POLAR)
+    double r = 0.0;
+    if(projection == NORTH_POLAR)
     {
-        r = 2 * tan(yradp);
+        r = 2 * tan(latradp);
     }
-    else /* if(p == SOUTH_POLAR) */
+    else if(projection == SOUTH_POLAR)
     {
-        r = 2 * tan(-yradp);
+        r = 2 * tan(-latradp);
     }
 
     /* Calculate o */
-    double o = xrad;
+    double o = lonrad;
 
     /* Calculate X */
-    coord.x = r * cos(o);
+    x = r * cos(o);
 
     /* Calculate Y */
-    coord.y = r * sin(o);
-
-    /* Return Coordinates */
-    return coord;
+    y = r * sin(o);
 }
 
+/*----------------------------------------------------------------------------
+ * cart2geo
+ *----------------------------------------------------------------------------*/
+void SpatialIndex::cart2geo (double& lat, double& lon, const double x, const double y)
+{
+    /* Calculate r */
+    double r = sqrt((x*x) + (y*y));
+
+    /* Calculate o */
+    double o = asin(y / r);
+
+    /* Calculate Latitude */
+    double latradp = atan(r / 2.0);
+    double latrad = 90.0;
+    if(projection == NORTH_POLAR)
+    {
+        latrad = (M_PI / 2.0) - (2.0 * latradp);
+    }
+    else if(projection == SOUTH_POLAR)
+    {
+        latrad = (M_PI / 2.0) - (2.0 * -latradp);
+    }
+    
+    /* Calculate Longitude */
+    double lonrad = o;
+
+    /* Convert to Degress */
+    lat = latrad * (180.0 / M_PI);
+    lon = lonrad * (180.0 / M_PI);
+}

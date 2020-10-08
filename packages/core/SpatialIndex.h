@@ -44,7 +44,12 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
 {
     public:
 
-                        SpatialIndex    (lua_State* L, Asset* _asset, int _threshold);
+        typedef enum {
+            NORTH_POLAR,
+            SOUTH_POLAR
+        } proj_t;
+
+                        SpatialIndex    (lua_State* L, Asset* _asset, proj_t _projection, int _threshold);
                         ~SpatialIndex   (void);
 
         static int      luaCreate       (lua_State* L);
@@ -59,18 +64,20 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
     
     private:
 
-        typedef enum {
-            NORTH_POLAR,
-            SOUTH_POLAR,
-        } proj_t;
-
         typedef struct {            
-            double  x;
-            double  y;
+            double  x0;
+            double  y0;
+            double  x1;
+            double  y1;
         } coord_t;
 
-        proj_t          classify        (spatialspan_t span);
-        coord_t         project         (proj_t p, double lat, double lon);
+        coord_t         project         (spatialspan_t span);
+        spatialspan_t   restore         (coord_t coord);
+
+        void            geo2cart        (const double lat, const double lon, double& x, double& y);
+        void            cart2geo        (double& lat, double& lon, const double x, const double y);
+
+        proj_t          projection;
 };
 
 #endif  /* __spatial_index__ */

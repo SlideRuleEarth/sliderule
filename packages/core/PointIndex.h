@@ -42,7 +42,7 @@ class PointIndex: public AssetIndex<pointspan_t>
 {
     public:
 
-                        PointIndex      (lua_State* L, Asset* _asset,  const char* _fieldname, int _threshold);
+                        PointIndex      (lua_State* L, Asset* _asset, const char* _fieldname, int _threshold);
                         ~PointIndex     (void);
 
         static int      luaCreate       (lua_State* L);

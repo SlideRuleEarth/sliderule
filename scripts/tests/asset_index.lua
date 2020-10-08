@@ -74,7 +74,7 @@ local e6 = {"B", "C", "D", "E", "F", "G", "H", "I", "J"}
 check_query(r6, e6)
 
 sys.log(core.RAW, '\n------------------\nTest07: Query Dataset1 with Sptial Index\n------------------\n')
---local f6 = core.spatialindex(a2)
+--local f6 = core.spatialindex(a2, core.SOUTH_POLAR)
 --f6:name("spatialindex")
 --f6:display()
 --local r5 = f6:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
