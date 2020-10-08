@@ -47,13 +47,13 @@ class PointIndex: public AssetIndex<pointspan_t>
 
         static int      luaCreate       (lua_State* L);
 
-        void            display         (const pointspan_t& span) override;
-        pointspan_t     split           (const pointspan_t& span) override;
-        bool            isleft          (const pointspan_t& span1, const pointspan_t& span2) override;
-        bool            isright         (const pointspan_t& span1, const pointspan_t& span2) override;
+        void            split           (node_t* node, pointspan_t& lspan, pointspan_t& rspan) override;
+        bool            isleft          (node_t* node, const pointspan_t& span) override;
+        bool            isright         (node_t* node, const pointspan_t& span) override;
         bool            intersect       (const pointspan_t& span1, const pointspan_t& span2) override;
         pointspan_t     combine         (const pointspan_t& span1, const pointspan_t& span2) override;
         pointspan_t     luatable2span   (lua_State* L, int parm) override;
+        void            display         (const pointspan_t& span) override;
 
     private:
 

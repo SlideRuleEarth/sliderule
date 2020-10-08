@@ -90,13 +90,13 @@ class AssetIndex: public LuaObject
         List<int>*      query           (const T& span);
         void            display         (void);
 
-        virtual void    display         (const T& span) = 0;
-        virtual T       split           (const T& span) = 0;
-        virtual bool    isleft          (const T& span1, const T& span2) = 0;
-        virtual bool    isright         (const T& span1, const T& span2) = 0;
+        virtual void    split           (node_t* node, T& lspan, T& rspan) = 0;
+        virtual bool    isleft          (node_t* node, const T& span) = 0;
+        virtual bool    isright         (node_t* node, const T& span) = 0;
         virtual bool    intersect       (const T& span1, const T& span2) = 0;
         virtual T       combine         (const T& span1, const T& span2) = 0;
         virtual T       luatable2span   (lua_State* L, int parm) = 0;
+        virtual void    display         (const T& span) = 0;
         
         /*--------------------------------------------------------------------
          * Data
@@ -175,6 +175,7 @@ bool AssetIndex<T>::add (int i)
     int maxdepth = 0;
     updatenode(i, &tree, &maxdepth);
     balancenode(&tree);
+    //TODO: Check for pruning! (combining two leaf nodes after balancing into one leaf node)
     return true;
 }
 
@@ -233,30 +234,31 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
         /* Split Current Leaf Node */
         int node_size = curr->ril->length();
         if(node_size >= threshold)
-        {        
-            /* Get Split Span (ss) of Node */
-            T ss = split(curr->span);
-
-            /* Caclulate Split Resources on Both Leaves */
+        {
+            /* Split Node */
+            T lspan, rspan;
+            split(curr, lspan, rspan);
+            
+            /* Preview Split Resources on Both Leaves */
             int lcnt = 0, rcnt = 0;
             for(int j = 0; j < node_size; j++)
             {
                 int resource_index = curr->ril->get(j);
                 T& resource_span = spans[resource_index];
-                if(isleft(resource_span, ss))   lcnt++;
-                if(isright(resource_span, ss))  rcnt++;
+                if(intersect(lspan, resource_span)) lcnt++;
+                if(intersect(rspan, resource_span)) rcnt++;
             }
 
             /* Check if Makes Sense to Split */
             if(lcnt > 0 && rcnt > 0 && lcnt != node_size && rcnt != node_size)
             {
-                /* Split Node Around Split Span */
+                /* Split Node */
                 for(int j = 0; j < node_size; j++)
                 {
                     int resource_index = curr->ril->get(j);
                     T& resource_span = spans[resource_index];
-                    if(isleft(resource_span, ss))   updatenode(resource_index, &curr->left, maxdepth);
-                    if(isright(resource_span, ss))  updatenode(resource_index, &curr->right, maxdepth);
+                    if(intersect(lspan, resource_span)) updatenode(resource_index, &curr->left, maxdepth);
+                    if(intersect(rspan, resource_span)) updatenode(resource_index, &curr->right, maxdepth);
                 }
 
                 /* Make Current Node a Branch */
@@ -267,17 +269,9 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
     }
     else 
     {
-        /* Update Left Tree */
-        if(isleft(span, curr->left->span))
-        {   
-            updatenode(i, &curr->left, maxdepth);
-        }
-
-        /* Update Right Tree */
-        if(isright(span, curr->left->span))
-        {   
-            updatenode(i, &curr->right, maxdepth);
-        }
+        /* Update Branches */
+        if(isleft(curr, span))  updatenode(i, &curr->left, maxdepth);
+        if(isright(curr, span)) updatenode(i, &curr->right, maxdepth);
 
         /* Update Max Depth */
         (*maxdepth)++;
@@ -329,7 +323,7 @@ void AssetIndex<T>::balancenode (node_t** root)
         /* Link In */
         *root = D;
 
-        /* Update T */
+        /* Update Spans */
         D->span = B->span;
         B->span = combine(A->span, C->span);
 
@@ -363,7 +357,7 @@ void AssetIndex<T>::balancenode (node_t** root)
         /* Link In */
         *root = B;
 
-        /* Update T */
+        /* Update Spans */
         B->span = D->span;
         D->span = combine(C->span, E->span);
 

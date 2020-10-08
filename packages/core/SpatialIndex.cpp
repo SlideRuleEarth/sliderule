@@ -88,40 +88,27 @@ SpatialIndex::~SpatialIndex(void)
 }
 
 /*----------------------------------------------------------------------------
- * display
- *----------------------------------------------------------------------------*/
-void SpatialIndex::display (const spatialspan_t& span)
-{
-    mlog(RAW, "[%.3lf, %.3lf, %.3lf, %.3lf]", span.lat0, span.lon0, span.lat1, span.lon1);
-}
-
-/*----------------------------------------------------------------------------
  * split
  *----------------------------------------------------------------------------*/
-spatialspan_t SpatialIndex::split (const spatialspan_t& span)
+void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rspan)
 {
-    spatialspan_t f;
-    f = span;
-    return f;
 }
 
 /*----------------------------------------------------------------------------
  * isleft
  *----------------------------------------------------------------------------*/
-bool SpatialIndex::isleft (const spatialspan_t& span1, const spatialspan_t& span2)
+bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
 {
-    // TODO: need to know the depth at this node... this is so there can be 
-    // subsequent toggling between splitting along latitudes, and longitudes
-    return (span1.lon1 <= span2.lon1);
+    return false;
 }
 
 
 /*----------------------------------------------------------------------------
  * isright
  *----------------------------------------------------------------------------*/
-bool SpatialIndex::isright (const spatialspan_t& span1, const spatialspan_t& span2)
+bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
 {
-    return (span1.lon1 >= span2.lon1);
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -180,6 +167,14 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
     }
 
     return span;
+}
+
+/*----------------------------------------------------------------------------
+ * display
+ *----------------------------------------------------------------------------*/
+void SpatialIndex::display (const spatialspan_t& span)
+{
+    mlog(RAW, "[%.3lf, %.3lf, %.3lf, %.3lf]", span.lat0, span.lon0, span.lat1, span.lon1);
 }
 
 /******************************************************************************

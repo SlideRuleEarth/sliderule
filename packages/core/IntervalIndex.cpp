@@ -94,42 +94,63 @@ IntervalIndex::~IntervalIndex(void)
 }
 
 /*----------------------------------------------------------------------------
- * display
+ * split - assume at least one resource in list
  *----------------------------------------------------------------------------*/
-void IntervalIndex::display (const intervalspan_t& span)
+void IntervalIndex::split (node_t* node, intervalspan_t& lspan, intervalspan_t& rspan)
 {
-    mlog(RAW, "[%.3lf, %.3lf]", span.t0, span.t1);
-}
+    /* Check Resource List */
+    assert(node->ril->length() >= 2);
 
-/*----------------------------------------------------------------------------
- * split
- *----------------------------------------------------------------------------*/
-intervalspan_t IntervalIndex::split (const intervalspan_t& span)
-{
-    intervalspan_t t;
-    double sval = (span.t1 + span.t0) / 2.0;
-    t.t0 = sval;
-    t.t1 = sval;
-    mlog(RAW, "PREV : "); display(span); mlog(RAW, "  |  ");    
-    mlog(RAW, "SPLIT: "); display(t); mlog(RAW, "\n");
-    return t;
+    /* Create List of Endpoints */
+    List<double> endpoints;
+    for(int i = 0; i < node->ril->length(); i++)
+    {
+        intervalspan_t span = spans[node->ril->get(i)];
+        endpoints.add(span.t0);
+        endpoints.add(span.t1);
+    }
+
+    /* Sort Endpoints */
+    endpoints.sort();
+
+    /* Calculate Split */
+    int midpoint = endpoints.length() / 2;
+    lspan.t0 = endpoints[0];
+    lspan.t1 = endpoints[midpoint - 1];
+    rspan.t0 = endpoints[midpoint];
+    rspan.t1 = endpoints[endpoints.length() - 1];
 }
 
 /*----------------------------------------------------------------------------
  * isleft
  *----------------------------------------------------------------------------*/
-bool IntervalIndex::isleft (const intervalspan_t& span1, const intervalspan_t& span2)
+bool IntervalIndex::isleft (node_t* node, const intervalspan_t& span)
 {
-    return (span1.t1 <= span2.t1);
-}
+    assert(node->left);
+    assert(node->right);
 
+    double left_val = node->left->span.t1;
+    double right_val = node->right->span.t0;
+    double split_val = (left_val + right_val) / 2.0;
+
+    if(span.t0 <= split_val)    return true;
+    else                        return false;
+}
 
 /*----------------------------------------------------------------------------
  * isright
  *----------------------------------------------------------------------------*/
-bool IntervalIndex::isright (const intervalspan_t& span1, const intervalspan_t& span2)
+bool IntervalIndex::isright (node_t* node, const intervalspan_t& span)
 {
-    return (span1.t1 > span2.t1);
+    assert(node->left);
+    assert(node->right);
+
+    double left_val = node->left->span.t1;
+    double right_val = node->right->span.t0;
+    double split_val = (left_val + right_val) / 2.0;
+
+    if(span.t1 >= split_val)    return true;
+    else                        return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -184,4 +205,12 @@ intervalspan_t IntervalIndex::luatable2span (lua_State* L, int parm)
     }
 
     return span;
+}
+
+/*----------------------------------------------------------------------------
+ * display
+ *----------------------------------------------------------------------------*/
+void IntervalIndex::display (const intervalspan_t& span)
+{
+    mlog(RAW, "[%.3lf, %.3lf]", span.t0, span.t1);
 }

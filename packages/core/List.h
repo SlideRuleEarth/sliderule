@@ -50,6 +50,7 @@ class List
         bool    set         (int index, T& data, bool with_delete=true);
         int     length      (void);
         void    clear       (void);
+        void    sort        (void);
 
         T&      operator[]  (int index);
 
@@ -85,8 +86,10 @@ class List
          * Methods
          *--------------------------------------------------------------------*/
 
-        list_node_t* newNode(void);
-        virtual void freeNode (typename List<T>::list_node_t* node, int index);
+        list_node_t*    newNode             (void);
+        virtual void    freeNode            (typename List<T>::list_node_t* node, int index);
+        void            quicksort           (T* array, int start, int end);
+        int             quicksortpartition  (T* array, int start, int end);
 };
 
 /******************************************************************************
@@ -362,8 +365,37 @@ void List<T>::clear(void)
     len = 0;
 }
 
+
 /*----------------------------------------------------------------------------
- * []]
+ * sort
+ *----------------------------------------------------------------------------*/
+template <class T>
+void List<T>::sort(void)
+{
+    /* Allocate Array */
+    T* array = new T[len];
+
+    /* Build Array */
+    for(int i = 0; i < len; i++)
+    {
+        array[i] = get(i);
+    }
+
+    /* Sort Array */
+    quicksort(array, 0, len - 1);
+
+    /* Write Array */
+    for(int i = 0; i < len; i++)
+    {
+        set(i, array[i], false);
+    }
+
+    /* Deallocate Array */
+    delete [] array;
+}
+
+/*----------------------------------------------------------------------------
+ * []
  *----------------------------------------------------------------------------*/
 template <class T>
 T& List<T>::operator[](int index)
@@ -391,6 +423,42 @@ void List<T>::freeNode(typename List<T>::list_node_t* node, int index)
 {
     (void)node;
     (void)index;
+}
+
+/*----------------------------------------------------------------------------
+ * quicksort
+ *----------------------------------------------------------------------------*/
+template <class T>
+void List<T>::quicksort(T* array, int start, int end)
+{
+    if(start < end)
+    {
+        int partition = quicksortpartition(array, start, end);
+        quicksort(array, start, partition);
+        quicksort(array, partition + 1, end);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * quicksortpartition
+ *----------------------------------------------------------------------------*/
+template <class T>
+int List<T>::quicksortpartition(T* array, int start, int end)
+{
+    double pivot = array[(start + end) / 2];
+
+    start--;
+    end++;
+    while(true)
+    {
+        while (array[++start] < pivot);
+        while (array[--end] > pivot);
+        if (start >= end) return end;
+
+        T tmp = array[start];
+        array[start] = array[end];
+        array[end] = tmp;
+    }
 }
 
 /******************************************************************************

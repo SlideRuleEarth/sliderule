@@ -49,13 +49,13 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
 
         static int      luaCreate       (lua_State* L);
 
-        void            display         (const spatialspan_t& span) override;
-        spatialspan_t   split           (const spatialspan_t& span) override;
-        bool            isleft          (const spatialspan_t& span1, const spatialspan_t& span2) override;
-        bool            isright         (const spatialspan_t& span1, const spatialspan_t& span2) override;
+        void            split           (node_t* node, spatialspan_t& lspan, spatialspan_t& rspan) override;
+        bool            isleft          (node_t* node, const spatialspan_t& span) override;
+        bool            isright         (node_t* node, const spatialspan_t& span) override;
         bool            intersect       (const spatialspan_t& span1, const spatialspan_t& span2) override;
         spatialspan_t   combine         (const spatialspan_t& span1, const spatialspan_t& span2) override;
         spatialspan_t   luatable2span   (lua_State* L, int parm) override;
+        void            display         (const spatialspan_t& span) override;
     
     private:
 

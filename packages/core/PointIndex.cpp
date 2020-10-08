@@ -89,39 +89,36 @@ PointIndex::~PointIndex(void)
 }
 
 /*----------------------------------------------------------------------------
- * display
- *----------------------------------------------------------------------------*/
-void PointIndex::display (const pointspan_t& span)
-{
-    mlog(RAW, "[%.3lf, %.3lf]", span.minval, span.maxval);
-}
-
-/*----------------------------------------------------------------------------
  * split
  *----------------------------------------------------------------------------*/
-pointspan_t PointIndex::split (const pointspan_t& span)
+void PointIndex::split (node_t* node, pointspan_t& lspan, pointspan_t& rspan)
 {
-    pointspan_t f;
-    f.minval = span.minval;
-    f.maxval = (span.maxval + span.minval) / 2.0;
-    return f;
+    double split_val = (node->span.maxval + node->span.minval) / 2.0;
+    lspan.minval = node->span.minval;
+    lspan.maxval = split_val;
+    rspan.minval = split_val;
+    rspan.maxval = node->span.maxval;
 }
 
 /*----------------------------------------------------------------------------
  * isleft
  *----------------------------------------------------------------------------*/
-bool PointIndex::isleft (const pointspan_t& span1, const pointspan_t& span2)
+bool PointIndex::isleft (node_t* node, const pointspan_t& span)
 {
-    return (span1.maxval <= span2.maxval);
+    assert(node->left);
+    double split_val = node->left->span.maxval;
+    return (span.minval <= split_val);
 }
 
 
 /*----------------------------------------------------------------------------
  * isright
  *----------------------------------------------------------------------------*/
-bool PointIndex::isright (const pointspan_t& span1, const pointspan_t& span2)
+bool PointIndex::isright (node_t* node, const pointspan_t& span)
 {
-    return (span1.maxval >= span2.maxval);
+    assert(node->right);
+    double split_val = node->right->span.minval;
+    return (span.maxval >= split_val);
 }
 
 /*----------------------------------------------------------------------------
@@ -179,4 +176,12 @@ pointspan_t PointIndex::luatable2span (lua_State* L, int parm)
     }
 
     return span;
+}
+
+/*----------------------------------------------------------------------------
+ * display
+ *----------------------------------------------------------------------------*/
+void PointIndex::display (const pointspan_t& span)
+{
+    mlog(RAW, "[%.3lf, %.3lf]", span.minval, span.maxval);
 }
