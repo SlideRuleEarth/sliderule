@@ -50,7 +50,7 @@ class Asset: public LuaObject
 
         typedef struct {
             char                            name[RESOURCE_NAME_LENGTH];
-            Dictionary<double>              attributes;
+            Dictionary<double>              attributes{16};
         } resource_t;
 
         /*--------------------------------------------------------------------

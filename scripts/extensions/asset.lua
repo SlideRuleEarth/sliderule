@@ -25,18 +25,18 @@ local function loadresource(asset, resource, attributes, quiet)
         return false
     end
 
-    if not attributes["t0"]     then attributes["t0"]   = 0.0 end
-    if not attributes["t1"]     then attributes["t1"]   = 0.0 end
-    if not attributes["lat0"]   then attributes["lat0"] = 0.0 end
-    if not attributes["lon0"]   then attributes["lon0"] = 0.0 end
-    if not attributes["lat1"]   then attributes["lat1"] = 0.0 end
-    if not attributes["lon1"]   then attributes["lon1"] = 0.0 end
-
-    if not quiet then
-        print(string.format("Loading resource %s in asset %s: time <%s, %s>, spatial <%s, %s, %s, %s>",
-            resource, asset:name(), attributes["t0"], attributes["t1"],
-            attributes["lat0"], attributes["lon0"], attributes["lat1"], attributes["lon1"]))
-    end
+--    if not attributes["t0"]     then attributes["t0"]   = 0.0 end
+--    if not attributes["t1"]     then attributes["t1"]   = 0.0 end
+--    if not attributes["lat0"]   then attributes["lat0"] = 0.0 end
+--    if not attributes["lon0"]   then attributes["lon0"] = 0.0 end
+--    if not attributes["lat1"]   then attributes["lat1"] = 0.0 end
+--    if not attributes["lon1"]   then attributes["lon1"] = 0.0 end
+--
+--    if not quiet then
+--        print(string.format("Loading resource %s in asset %s: time <%s, %s>, spatial <%s, %s, %s, %s>",
+--            resource, asset:name(), attributes["t0"], attributes["t1"],
+--            attributes["lat0"], attributes["lon0"], attributes["lat1"], attributes["lon1"]))
+--    end
 
     return asset:load(resource, attributes)
 
@@ -57,10 +57,13 @@ local function _loadindex(asset, file, quiet)
     -- try to open index file
     local raw_index = csv.open(file, {header=true})
     if not raw_index then
+        if not quiet then
+            print(string.format("Attempting to find index file %s", file))
+        end
         -- look for index local to calling script (if not provided)
         local info = debug.getinfo(3,'S');
-        local path_index = string.find(info.source, "/[^/]*$")
-        local root_path = info.source:sub(2,path_index)
+        local offset = string.find(info.source, "/[^/]*$")
+        local root_path = info.source:sub(2,offset)
         local new_file = root_path..file
         raw_index = csv.open(new_file, {header=true})
     end
@@ -96,9 +99,9 @@ local function loaddir(file, quiet)
 
     -- look for asset directory local to calling script (if not provided)
     if not file then
-        local info = debug.getinfo(1,'S');
-        local path_index = string.find(info.source, "/[^/]*$")
-        local root_path = info.source:sub(2,path_index)
+        local info = debug.getinfo(1,'S')
+        local offset = string.find(info.source, "/[^/]*$")
+        local root_path = info.source:sub(2,offset)
         file = root_path.."asset_directory.csv" -- by convention
     end
 
@@ -122,9 +125,18 @@ local function loaddir(file, quiet)
     end
 
     -- load index file for each asset in directory
+    local offset = string.find(file, "/[^/]*$")
+    local path_prefix = "./"
+    if offset then -- pull out relative path of asset directory file
+        path_prefix = file:sub(1, offset) 
+    end
     for k,v in pairs(directory) do
         if v["index"] then
-            _loadindex(assets[k], v["index"], quiet)
+            if v["index"]:sub(1,1) == "/" then -- absolute path
+                _loadindex(assets[k], v["index"], quiet)
+            else -- relative path
+                _loadindex(assets[k], path_prefix..v["index"], quiet)
+            end
         end
     end
 
