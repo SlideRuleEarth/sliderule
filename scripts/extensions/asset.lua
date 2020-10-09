@@ -78,7 +78,7 @@ local function _loadindex(asset, file, quiet)
 
     -- load resource for each entry in index
     for fields in raw_index:lines() do
-        loadresource(asset, fields["resource"], fields, quiet)
+        loadresource(asset, fields["name"], fields, quiet)
     end
 
 end
@@ -118,9 +118,6 @@ local function loaddir(file, quiet)
 
     -- create asset for each entry in directory
     for k,v in pairs(directory) do
-        if(not quiet) then
-            print(string.format("Building %s (%s) index at %s", k, v["format"], v["url"]))
-        end
         assets[k] = core.asset(k, v["format"], v["url"], v["index"])
     end
 
@@ -131,6 +128,9 @@ local function loaddir(file, quiet)
         path_prefix = file:sub(1, offset) 
     end
     for k,v in pairs(directory) do
+        if(not quiet) then
+            print(string.format("Building %s (%s) index at %s", k, v["format"], v["url"]))
+        end
         if v["index"] then
             if v["index"]:sub(1,1) == "/" then -- absolute path
                 _loadindex(assets[k], v["index"], quiet)
