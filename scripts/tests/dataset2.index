@@ -1,4 +1,4 @@
-resource,   t0,         t1,         lat0,   lat1,   lon0,   lon1,   field1,     field2
+name,       t0,         t1,         lat0,   lat1,   lon0,   lon1,   field1,     field2
 A,          1,          5,          83.2,   84.1,   45.0,   46.0,   234,        152
 B,          2,          6,          73.2,   77.1,   55.0,   56.1,   23.4,       16.3
 C,          3,          7,          83.2,   84.1,   -7.0,   6.0,    230,        159
