@@ -28,6 +28,7 @@
 #include "Asset.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -85,6 +86,12 @@ SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, proj_t _projection, int 
             break;
         }
     }
+
+    LuaEngine::setAttrFunc(L, "polar",      luaPolar);
+    LuaEngine::setAttrFunc(L, "sphere",     luaSphere);  
+    LuaEngine::setAttrFunc(L, "split",      luaSplit); 
+    LuaEngine::setAttrFunc(L, "intersect",  luaIntersect);
+    LuaEngine::setAttrFunc(L, "combine",    luaCombine);
 }
 
 /*----------------------------------------------------------------------------
@@ -390,4 +397,190 @@ void SpatialIndex::cart2geo (double& lat, double& lon, const double x, const dou
     /* Convert to Degress */
     lat = latrad * (180.0 / M_PI);
     lon = lonrad * (180.0 / M_PI);
+}
+
+/*----------------------------------------------------------------------------
+ * luaPolar
+ *----------------------------------------------------------------------------*/
+int SpatialIndex::luaPolar (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+
+        /* Get Spherical Coordinates */
+        double lat = getLuaFloat(L, 2);
+        double lon = getLuaFloat(L, 3);
+
+        /* Convert Coordinates */
+        double x, y;
+        lua_obj->geo2cart(lat, lon, x, y);
+        lua_pushnumber(L, x);
+        lua_pushnumber(L, y);
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 3);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSphere
+ *----------------------------------------------------------------------------*/
+int SpatialIndex::luaSphere (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+
+        /* Get Polar Coordinates */
+        double x = getLuaFloat(L, 2);
+        double y = getLuaFloat(L, 3);
+
+        /* Convert Coordinates */
+        double lat, lon;
+        lua_obj->cart2geo(lat, lon, x, y);
+        lua_pushnumber(L, lat);
+        lua_pushnumber(L, lon);
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSplit
+ *----------------------------------------------------------------------------*/
+int SpatialIndex::luaSplit (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+
+        /* Get Spatial Span */
+        spatialspan_t span = lua_obj->luatable2span(L, 2);
+        int depth = getLuaInteger(L, 3, true, 0);
+
+        /* Build Temporary Node (to split) */
+        node_t node;
+        node.span = span;
+        node.depth = depth;
+        node.left = NULL;
+        node.right = NULL;
+        node.ril = NULL;
+
+        /* Split Span */
+        spatialspan_t lspan, rspan;
+        lua_obj->split(&node, lspan, rspan);
+
+        /* Return Spans */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "lat0", lspan.lat0);
+        LuaEngine::setAttrInt(L, "lon0", lspan.lon0);
+        LuaEngine::setAttrInt(L, "lat1", lspan.lat1);
+        LuaEngine::setAttrInt(L, "lon1", lspan.lon1);
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "lat0", rspan.lat0);
+        LuaEngine::setAttrInt(L, "lon0", rspan.lon0);
+        LuaEngine::setAttrInt(L, "lat1", rspan.lat1);
+        LuaEngine::setAttrInt(L, "lon1", rspan.lon1);
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 3);
+}
+
+/*----------------------------------------------------------------------------
+ * luaIntersect
+ *----------------------------------------------------------------------------*/
+int SpatialIndex::luaIntersect (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+
+        /* Get Spatial Spans */
+        spatialspan_t span1 = lua_obj->luatable2span(L, 2);
+        spatialspan_t span2 = lua_obj->luatable2span(L, 3);
+
+        /* Set Status to Intersection */
+        status = lua_obj->intersect(span1, span2);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaCombine
+ *----------------------------------------------------------------------------*/
+int SpatialIndex::luaCombine (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+
+        /* Get Spatial Spans */
+        spatialspan_t span1 = lua_obj->luatable2span(L, 2);
+        spatialspan_t span2 = lua_obj->luatable2span(L, 3);
+
+        /* Combine Spans */
+        spatialspan_t span = lua_obj->combine(span1, span2);
+
+        /* Return Span */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "lat0", span.lat0);
+        LuaEngine::setAttrInt(L, "lon0", span.lon0);
+        LuaEngine::setAttrInt(L, "lat1", span.lat1);
+        LuaEngine::setAttrInt(L, "lon1", span.lon1);
+        
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }

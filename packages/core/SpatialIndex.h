@@ -77,6 +77,12 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         void            geo2cart        (const double lat, const double lon, double& x, double& y);
         void            cart2geo        (double& lat, double& lon, const double x, const double y);
 
+        static int      luaPolar        (lua_State* L);
+        static int      luaSphere       (lua_State* L);
+        static int      luaSplit        (lua_State* L);
+        static int      luaIntersect    (lua_State* L);
+        static int      luaCombine      (lua_State* L);
+
         proj_t          projection;
 };
 
