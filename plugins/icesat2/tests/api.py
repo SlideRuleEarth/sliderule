@@ -103,13 +103,16 @@ def test_definition ():
 #  TEST GEOSPATIAL
 #
 def test_geospatial ():
-    rqst = {
+
+    # Test 1 #
+
+    test1 = {
         "asset": asset,
-        "pole": "south",
+        "pole": "north",
         "lat": 40.0,
         "lon": 60.0,
-        "x": 2.3,
-        "y": 4.9,
+        "x": 0.466307658155,
+        "y": 0.80766855588292,
         "span": {
             "lat0": 20.0,
             "lon0": 100.0,
@@ -130,15 +133,91 @@ def test_geospatial ():
         },
     }
 
-    d = sliderule.source("geo", rqst)
+    d = sliderule.source("geo", test1)
 
-    print("intersect:", d["intersect"])
-    print("combine:", d["combine"])
-    print("split:", d["split"])
-    print("lat:", d["lat"])
-    print("lon:", d["lon"])
-    print("x:", d["x"])
-    print("y:", d["y"])
+    if(d["intersect"] == True):
+        print("Passed intersection test")
+    else:
+        print("Failed intersection test", d["intersect"])
+
+    if(d["combine"]["lat0"] == 30.0 and d["combine"]["lon0"] == 100.0 and\
+       d["combine"]["lat1"] == 45.0 and d["combine"]["lon0"] == 106.0):
+        print("Passed combination test")
+    else:
+        print("Failed combination test", d["combine"])
+
+    if(d["split"]["lspan"]["lat0"] == 30.0 and d["split"]["lspan"]["lon0"] == 100.0 and\
+       d["split"]["lspan"]["lat1"] == 45.0 and d["split"]["lspan"]["lon0"] == 106.0 and\
+       d["split"]["rspan"]["lat0"] == 30.0 and d["split"]["rspan"]["lon0"] == 100.0 and\
+       d["split"]["rspan"]["lat1"] == 45.0 and d["split"]["rspan"]["lon0"] == 106.0):
+        print("Passed split test")
+    else:
+        print("Failed split test", d["split"])
+
+    if(d["lat"] == 40.0 and d["lon"] == 60.0):
+        print("Passed sphere test")
+    else:
+        print("Failed sphere test", d["lat"], d["lon"])
+
+    if(d["x"] == 0.466307658155 and d["y"] == 0.80766855588292):
+        print("Passed polar test")
+    else:
+        print("Failed polar test", d["x"], d["y"])
+
+    # Test 2 # 
+
+    test2 = {
+        "asset": asset,
+        "pole": "north",
+        "lat": 30.0,
+        "lon": 100.0,
+        "x": -0.20051164424058,
+        "y": 1.1371580426033,
+    }
+
+    d = sliderule.source("geo", test2)
+
+    if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0):
+        print("Passed sphere2 test")
+    else:
+        print("Failed sphere2 test", d["lat"], d["lon"])
+
+    # Test 3 # 
+
+    test3 = {
+        "asset": asset,
+        "pole": "north",
+        "lat": 30.0,
+        "lon": 100.0,
+        "x": -0.20051164424058,
+        "y": -1.1371580426033,
+    }
+
+    d = sliderule.source("geo", test3)
+
+    if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0):
+        print("Passed sphere3 test")
+    else:
+        print("Failed sphere3 test", d["lat"], d["lon"])
+
+    # Test 4 # 
+
+    test4 = {
+        "asset": asset,
+        "pole": "north",
+        "lat": 30.0,
+        "lon": 100.0,
+        "x": 0.20051164424058,
+        "y": -1.1371580426033,
+    }
+
+    d = sliderule.source("geo", test4)
+
+    if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0):
+        print("Passed sphere4 test")
+    else:
+        print("Failed sphere4 test", d["lat"], d["lon"])
+
 
 ###############################################################################
 # MAIN

@@ -252,14 +252,15 @@ spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialsp
     
     /* Combine Spans */
     coord_t coord = {
-        .x0 = MIN(coord1.x0, coord2.x0),
-        .y0 = MIN(coord1.y0, coord2.y0),
-        .x1 = MAX(coord1.x1, coord2.x1),
-        .y1 = MIN(coord1.y1, coord2.y1)
+        .x0 = MIN(MIN(MIN(coord1.x0, coord2.x0), coord1.x1), coord2.x1),
+        .y0 = MIN(MIN(MIN(coord1.y0, coord2.y0), coord1.y1), coord2.y1),
+        .x1 = MAX(MAX(MAX(coord1.x0, coord2.x0), coord1.x1), coord2.x1),
+        .y1 = MAX(MAX(MAX(coord1.y0, coord2.y0), coord1.y1), coord2.y1)
     };
 
     /* Return Geogreaphic Coordinates */
-    return restore(coord);
+    spatialspan_t span = restore(coord);
+    return span;
 }
 
 /*----------------------------------------------------------------------------
@@ -316,14 +317,7 @@ SpatialIndex::coord_t SpatialIndex::project (spatialspan_t span)
     coord_t coord;
     geo2cart(span.lat0, span.lon0, coord.x0, coord.y0);
     geo2cart(span.lat1, span.lon1, coord.x1, coord.y1);
-    
-    coord_t sorted_coord;
-    sorted_coord.x0 = MIN(coord.x0, coord.x1);
-    sorted_coord.y0 = MIN(coord.y0, coord.y1);
-    sorted_coord.x1 = MAX(coord.x0, coord.x1);
-    sorted_coord.y1 = MAX(coord.y0, coord.y1);
-
-    return sorted_coord;
+    return coord;
 }
 
 /*----------------------------------------------------------------------------
@@ -377,7 +371,21 @@ void SpatialIndex::cart2geo (double& lat, double& lon, const double x, const dou
     double r = sqrt((x*x) + (y*y));
 
     /* Calculate o */
-    double o = asin(y / r);
+    double o = 0.0;
+    if(x != 0.0)
+    {
+        o = atan(y / x);
+
+        /* Adjust for Quadrants */
+        if(x < 0.0 && y >= 0.0) o += M_PI;
+        else if(x < 0.0 && y < 0.0) o -= M_PI;
+    }
+    else
+    {
+        /* PI/2 or -PI/2 */
+        o = asin(y / r);
+    }
+
 
     /* Calculate Latitude */
     double latradp = atan(r / 2.0);
@@ -491,15 +499,15 @@ int SpatialIndex::luaSplit (lua_State* L)
 
         /* Return Spans */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "lat0", lspan.lat0);
-        LuaEngine::setAttrInt(L, "lon0", lspan.lon0);
-        LuaEngine::setAttrInt(L, "lat1", lspan.lat1);
-        LuaEngine::setAttrInt(L, "lon1", lspan.lon1);
+        LuaEngine::setAttrNum(L, "lat0", lspan.lat0);
+        LuaEngine::setAttrNum(L, "lon0", lspan.lon0);
+        LuaEngine::setAttrNum(L, "lat1", lspan.lat1);
+        LuaEngine::setAttrNum(L, "lon1", lspan.lon1);
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "lat0", rspan.lat0);
-        LuaEngine::setAttrInt(L, "lon0", rspan.lon0);
-        LuaEngine::setAttrInt(L, "lat1", rspan.lat1);
-        LuaEngine::setAttrInt(L, "lon1", rspan.lon1);
+        LuaEngine::setAttrNum(L, "lat0", rspan.lat0);
+        LuaEngine::setAttrNum(L, "lon0", rspan.lon0);
+        LuaEngine::setAttrNum(L, "lat1", rspan.lat1);
+        LuaEngine::setAttrNum(L, "lon1", rspan.lon1);
 
         /* Return Spans */
         return 2;
@@ -562,10 +570,10 @@ int SpatialIndex::luaCombine (lua_State* L)
 
         /* Return Span */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "lat0", span.lat0);
-        LuaEngine::setAttrInt(L, "lon0", span.lon0);
-        LuaEngine::setAttrInt(L, "lat1", span.lat1);
-        LuaEngine::setAttrInt(L, "lon1", span.lon1);
+        LuaEngine::setAttrNum(L, "lat0", span.lat0);
+        LuaEngine::setAttrNum(L, "lon0", span.lon0);
+        LuaEngine::setAttrNum(L, "lat1", span.lat1);
+        LuaEngine::setAttrNum(L, "lon1", span.lon1);
         
         /* Return Span */
         return 1;

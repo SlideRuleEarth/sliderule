@@ -72,7 +72,7 @@ end
 
 -- Spherical Conversion --
 if x and y then
-    result["lat"], result["lon"] = index:sphere(x, y) 
+    result["lat"], result["lon"] = index:sphere(x, y)
 end
 
 -- Split --
