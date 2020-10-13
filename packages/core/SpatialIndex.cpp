@@ -106,45 +106,45 @@ SpatialIndex::~SpatialIndex(void)
  *----------------------------------------------------------------------------*/
 void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rspan)
 {
-    /* Project to Polar Coordinates */
-    coord_t coord = project(node->span);
+    /* Project to Polar polarinates */
+    polarspan_t polar = project(node->span);
 
     /* Split Region */
-    coord_t lcoord, rcoord;
+    polarspan_t lpolar, rpolar;
     if(node->depth % 2 == 0) // even depth
     {
-        /* Split Across X-Axis */
-        double split_val = (coord.x0 + coord.x1) / 2.0;
+        /* Split Across Radius */
+        double split_val = (polar.x0 + polar.x1) / 2.0;
         
-        lcoord.x0 = coord.x0;
-        lcoord.y0 = coord.y0;
-        lcoord.x1 = split_val;
-        lcoord.y1 = coord.y1;
+        lpolar.x0 = polar.x0;
+        lpolar.y0 = polar.y0;
+        lpolar.x1 = split_val;
+        lpolar.y1 = polar.y1;
 
-        rcoord.x0 = split_val;
-        rcoord.y0 = coord.y0;
-        rcoord.x1 = coord.x1;
-        rcoord.y1 = coord.y1;
+        rpolar.x0 = split_val;
+        rpolar.y0 = polar.y0;
+        rpolar.x1 = polar.x1;
+        rpolar.y1 = polar.y1;
     }
     else // odd depth
     {
-        /* Split Across Y-Axis */
-        double split_val = (coord.y0 + coord.y1) / 2.0;
+        /* Split Across Angle */
+        double split_val = (polar.y0 + polar.y1) / 2.0;
         
-        lcoord.x0 = coord.x0;
-        lcoord.y0 = split_val;
-        lcoord.x1 = coord.x1;
-        lcoord.y1 = coord.y1;
+        lpolar.x0 = polar.x0;
+        lpolar.y0 = split_val;
+        lpolar.x1 = polar.x1;
+        lpolar.y1 = polar.y1;
 
-        rcoord.x0 = coord.x0;
-        rcoord.y0 = coord.y0;
-        rcoord.x1 = coord.x1;
-        rcoord.y1 = split_val;
+        rpolar.x0 = polar.x0;
+        rpolar.y0 = polar.y0;
+        rpolar.x1 = polar.x1;
+        rpolar.y1 = split_val;
     }
 
-    /* Restore to Geographic Coordinates */
-    lspan = restore(lcoord);
-    rspan = restore(rcoord);
+    /* Restore to Geographic polarinates */
+    lspan = restore(lpolar);
+    rspan = restore(rpolar);
 }
 
 /*----------------------------------------------------------------------------
@@ -155,28 +155,28 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
     assert(node->left);
     assert(node->right);
 
-    /* Project to Polar Coordinates */
-    coord_t lcoord = project(node->left->span);
-    coord_t rcoord = project(node->right->span);
-    coord_t scoord = project(span);
+    /* Project to Polar polarinates */
+    polarspan_t lpolar = project(node->left->span);
+    polarspan_t rpolar = project(node->right->span);
+    polarspan_t spolar = project(span);
 
     /* Compare Against Split Value */
-    if(node->depth % 2 == 0) // even depth = X-Axis
+    if(node->depth % 2 == 0) // even depth = Radius
     {
-        double left_val = lcoord.x1;
-        double right_val = rcoord.x0;
+        double left_val = lpolar.x1;
+        double right_val = rpolar.x0;
         double split_val = (left_val + right_val) / 2.0;
 
-        if(scoord.x0 <= split_val)  return true;
+        if(spolar.x0 <= split_val)  return true;
         else                        return false;        
     }
-    else // odd depth = Y-Axis
+    else // odd depth = Angle
     {
-        double left_val = lcoord.y1;
-        double right_val = rcoord.y0;
+        double left_val = lpolar.y1;
+        double right_val = rpolar.y0;
         double split_val = (left_val + right_val) / 2.0;
 
-        if(scoord.y0 <= split_val)  return true;
+        if(spolar.y0 <= split_val)  return true;
         else                        return false;        
     }
 }
@@ -190,28 +190,28 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
     assert(node->left);
     assert(node->right);
 
-    /* Project to Polar Coordinates */
-    coord_t lcoord = project(node->left->span);
-    coord_t rcoord = project(node->right->span);
-    coord_t scoord = project(span);
+    /* Project to Polar polarinates */
+    polarspan_t lpolar = project(node->left->span);
+    polarspan_t rpolar = project(node->right->span);
+    polarspan_t spolar = project(span);
 
     /* Compare Against Split Value */
-    if(node->depth % 2 == 0) // even depth = X-Axis
+    if(node->depth % 2 == 0) // even depth = Radius
     {
-        double left_val = lcoord.x1;
-        double right_val = rcoord.x0;
+        double left_val = lpolar.x1;
+        double right_val = rpolar.x0;
         double split_val = (left_val + right_val) / 2.0;
 
-        if(scoord.x1 >= split_val)  return true;
+        if(spolar.x1 >= split_val)  return true;
         else                        return false;        
     }
-    else // odd depth = Y-Axis
+    else // odd depth = Angle
     {
-        double left_val = lcoord.y1;
-        double right_val = rcoord.y0;
+        double left_val = lpolar.y1;
+        double right_val = rpolar.y0;
         double split_val = (left_val + right_val) / 2.0;
 
-        if(scoord.y1 >= split_val)  return true;
+        if(spolar.y1 >= split_val)  return true;
         else                        return false;        
     }
 }
@@ -221,24 +221,24 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
  *----------------------------------------------------------------------------*/
 bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& span2) 
 { 
-    /* Project to Polar Coordinates */
-    coord_t coord1 = project(span1);
-    coord_t coord2 = project(span2);    
+    /* Project to Polar polarinates */
+    polarspan_t polar1 = project(span1);
+    polarspan_t polar2 = project(span2);    
 
-    /* Check Intersection in X-Axis */
-    bool xi = ((coord1.x0 >= coord2.x0 && coord1.x0 <= coord2.x1) ||
-               (coord1.x1 >= coord2.x0 && coord1.x1 <= coord2.x1) || 
-               (coord2.x0 >= coord1.x0 && coord2.x0 <= coord1.x1) ||
-               (coord2.x1 >= coord1.x0 && coord2.x1 <= coord1.x1));
+    /* Check Intersection in Radius */
+    bool ri = ((polar1.x0 >= polar2.x0 && polar1.x0 <= polar2.x1) ||
+               (polar1.x1 >= polar2.x0 && polar1.x1 <= polar2.x1) || 
+               (polar2.x0 >= polar1.x0 && polar2.x0 <= polar1.x1) ||
+               (polar2.x1 >= polar1.x0 && polar2.x1 <= polar1.x1));
 
-    /* Check Intersection in Y-Axis */
-    bool yi = ((coord1.y0 >= coord2.y0 && coord1.y0 <= coord2.y1) ||
-               (coord1.y1 >= coord2.y0 && coord1.y1 <= coord2.y1) || 
-               (coord2.y0 >= coord1.y0 && coord2.y0 <= coord1.y1) ||
-               (coord2.y1 >= coord1.y0 && coord2.y1 <= coord1.y1));
+    /* Check Intersection in Angle */
+    bool oi = ((polar1.y0 >= polar2.y0 && polar1.y0 <= polar2.y1) ||
+               (polar1.y1 >= polar2.y0 && polar1.y1 <= polar2.y1) || 
+               (polar2.y0 >= polar1.y0 && polar2.y0 <= polar1.y1) ||
+               (polar2.y1 >= polar1.y0 && polar2.y1 <= polar1.y1));
 
     /* Return Intersection */
-    return (xi && yi);
+    return (ri && oi);
 }
 
 /*----------------------------------------------------------------------------
@@ -246,20 +246,25 @@ bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& s
  *----------------------------------------------------------------------------*/
 spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialspan_t& span2)
 {
-    /* Project to Polar Coordinates */
-    coord_t coord1 = project(span1);
-    coord_t coord2 = project(span2);    
+    polarspan_t polar;
+
+    /* Project to Polar polarinates */
+    polarspan_t polar1 = project(span1);
+    polarspan_t polar2 = project(span2);    
     
     /* Combine Spans */
-    coord_t coord = {
-        .x0 = MIN(MIN(MIN(coord1.x0, coord2.x0), coord1.x1), coord2.x1),
-        .y0 = MIN(MIN(MIN(coord1.y0, coord2.y0), coord1.y1), coord2.y1),
-        .x1 = MAX(MAX(MAX(coord1.x0, coord2.x0), coord1.x1), coord2.x1),
-        .y1 = MAX(MAX(MAX(coord1.y0, coord2.y0), coord1.y1), coord2.y1)
-    };
+    polar.x0 = MIN(MIN(MIN(polar1.x0, polar2.x0), polar1.x1), polar2.x1);
+    polar.y0 = MIN(MIN(MIN(polar1.y0, polar2.y0), polar1.y1), polar2.y1);
+    polar.x1 = MAX(MAX(MAX(polar1.x0, polar2.x0), polar1.x1), polar2.x1);
+    polar.y1 = MAX(MAX(MAX(polar1.y0, polar2.y0), polar1.y1), polar2.y1);
 
-    /* Return Geogreaphic Coordinates */
-    spatialspan_t span = restore(coord);
+    /* Return Geogreaphic polarinates */
+    spatialspan_t span = restore(polar);
+
+
+printf("polar1: %lf,%lf x %lf,%lf ==> %lf,%lf x %lf,%lf\n", span1.lat0, span1.lon0, span1.lat1, span1.lon1, polar1.x0, polar1.y0, polar1.x1, polar1.y1);
+printf("polar2: %lf,%lf x %lf,%lf ==> %lf,%lf x %lf,%lf\n", span2.lat0, span2.lon0, span2.lat1, span2.lon1, polar2.x0, polar2.y0, polar2.x1, polar2.y1);
+printf("polar: %lf,%lf x %lf,%lf ==> %lf,%lf x %lf,%lf\n", span.lat0, span.lon0, span.lat1, span.lon1, polar.x0, polar.y0, polar.x1, polar.y1);
     return span;
 }
 
@@ -312,29 +317,29 @@ void SpatialIndex::display (const spatialspan_t& span)
 /*----------------------------------------------------------------------------
  * project
  *----------------------------------------------------------------------------*/
-SpatialIndex::coord_t SpatialIndex::project (spatialspan_t span)
+SpatialIndex::polarspan_t SpatialIndex::project (spatialspan_t span)
 {
-    coord_t coord;
-    geo2cart(span.lat0, span.lon0, coord.x0, coord.y0);
-    geo2cart(span.lat1, span.lon1, coord.x1, coord.y1);
-    return coord;
+    polarspan_t polar;
+    geo2polar(span.lat0, span.lon0, polar.x0, polar.y0);
+    geo2polar(span.lat1, span.lon1, polar.x1, polar.y1);
+    return polar;
 }
 
 /*----------------------------------------------------------------------------
  * restore
  *----------------------------------------------------------------------------*/
-spatialspan_t SpatialIndex::restore (coord_t coord)
+spatialspan_t SpatialIndex::restore (polarspan_t polar)
 {
     spatialspan_t span;
-    cart2geo(span.lat0, span.lon0, coord.x0, coord.y0);
-    cart2geo(span.lat1, span.lon1, coord.x1, coord.y1);
+    polar2geo(span.lat0, span.lon0, polar.x0, polar.y0);
+    polar2geo(span.lat1, span.lon1, polar.x1, polar.y1);
     return span;
 }
 
 /*----------------------------------------------------------------------------
- * geo2cart
+ * geo2polar
  *----------------------------------------------------------------------------*/
-void SpatialIndex::geo2cart (const double lat, const double lon, double& x, double& y)
+void SpatialIndex::geo2polar (const double lat, const double lon, double& x, double& y)
 {
     /* Convert to Radians */
     double lonrad = lon * M_PI / 180.0;
@@ -363,9 +368,9 @@ void SpatialIndex::geo2cart (const double lat, const double lon, double& x, doub
 }
 
 /*----------------------------------------------------------------------------
- * cart2geo
+ * polar2geo
  *----------------------------------------------------------------------------*/
-void SpatialIndex::cart2geo (double& lat, double& lon, const double x, const double y)
+void SpatialIndex::polar2geo (double& lat, double& lon, const double x, const double y)
 {
     /* Calculate r */
     double r = sqrt((x*x) + (y*y));
@@ -385,7 +390,6 @@ void SpatialIndex::cart2geo (double& lat, double& lon, const double x, const dou
         /* PI/2 or -PI/2 */
         o = asin(y / r);
     }
-
 
     /* Calculate Latitude */
     double latradp = atan(r / 2.0);
@@ -408,7 +412,7 @@ void SpatialIndex::cart2geo (double& lat, double& lon, const double x, const dou
 }
 
 /*----------------------------------------------------------------------------
- * luaPolar
+ * luaPolar: polar(<lat>, <lon>)
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaPolar (lua_State* L)
 {
@@ -422,8 +426,8 @@ int SpatialIndex::luaPolar (lua_State* L)
         double lon = getLuaFloat(L, 3);
 
         /* Convert Coordinates */
-        double x, y;
-        lua_obj->geo2cart(lat, lon, x, y);
+        double x, y;        
+        lua_obj->geo2polar(lat, lon, x, y);
         lua_pushnumber(L, x);
         lua_pushnumber(L, y);
 
@@ -440,7 +444,7 @@ int SpatialIndex::luaPolar (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaSphere
+ * luaSphere - sphere(<x>, <y>)
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaSphere (lua_State* L)
 {
@@ -455,7 +459,7 @@ int SpatialIndex::luaSphere (lua_State* L)
 
         /* Convert Coordinates */
         double lat, lon;
-        lua_obj->cart2geo(lat, lon, x, y);
+        lua_obj->polar2geo(lat, lon, x, y);
         lua_pushnumber(L, lat);
         lua_pushnumber(L, lon);
 

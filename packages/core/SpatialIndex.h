@@ -64,18 +64,18 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
     
     private:
 
-        typedef struct {            
+        typedef struct {
             double  x0;
             double  y0;
             double  x1;
             double  y1;
-        } coord_t;
+        } polarspan_t;    
 
-        coord_t         project         (spatialspan_t span);
-        spatialspan_t   restore         (coord_t coord);
+        polarspan_t     project         (spatialspan_t span);
+        spatialspan_t   restore         (polarspan_t polar);
 
-        void            geo2cart        (const double lat, const double lon, double& x, double& y);
-        void            cart2geo        (double& lat, double& lon, const double x, const double y);
+        void            geo2polar       (const double lat, const double lon, double& x, double& y);
+        void            polar2geo       (double& lat, double& lon, const double x, const double y);
 
         static int      luaPolar        (lua_State* L);
         static int      luaSphere       (lua_State* L);
