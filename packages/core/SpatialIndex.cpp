@@ -404,8 +404,6 @@ void SpatialIndex::cart2geo (double& lat, double& lon, const double x, const dou
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaPolar (lua_State* L)
 {
-    bool status = false;
-
     try
     {
         /* Get Self */
@@ -421,16 +419,16 @@ int SpatialIndex::luaPolar (lua_State* L)
         lua_pushnumber(L, x);
         lua_pushnumber(L, y);
 
-        /* Set Status */
-        status = true;
+        /* Return Coordinates */
+        return 2;
     }
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
     }
 
-    /* Return Status */
-    return returnLuaStatus(L, status, 3);
+    /* Return Failure */
+    return returnLuaStatus(L, false);
 }
 
 /*----------------------------------------------------------------------------
@@ -438,8 +436,6 @@ int SpatialIndex::luaPolar (lua_State* L)
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaSphere (lua_State* L)
 {
-    bool status = false;
-
     try
     {
         /* Get Self */
@@ -455,16 +451,16 @@ int SpatialIndex::luaSphere (lua_State* L)
         lua_pushnumber(L, lat);
         lua_pushnumber(L, lon);
 
-        /* Set Status */
-        status = true;
+        /* Return Coordinates */
+        return 2;
     }
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
     }
 
-    /* Return Status */
-    return returnLuaStatus(L, status);
+    /* Return Failure */
+    return returnLuaStatus(L, false);
 }
 
 /*----------------------------------------------------------------------------
@@ -472,8 +468,6 @@ int SpatialIndex::luaSphere (lua_State* L)
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaSplit (lua_State* L)
 {
-    bool status = false;
-
     try
     {
         /* Get Self */
@@ -507,16 +501,16 @@ int SpatialIndex::luaSplit (lua_State* L)
         LuaEngine::setAttrInt(L, "lat1", rspan.lat1);
         LuaEngine::setAttrInt(L, "lon1", rspan.lon1);
 
-        /* Set Status */
-        status = true;
+        /* Return Spans */
+        return 2;
     }
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
     }
 
-    /* Return Status */
-    return returnLuaStatus(L, status, 3);
+    /* Return Failure */
+    return returnLuaStatus(L, false);
 }
 
 /*----------------------------------------------------------------------------
@@ -524,8 +518,6 @@ int SpatialIndex::luaSplit (lua_State* L)
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaIntersect (lua_State* L)
 {
-    bool status = false;
-
     try
     {
         /* Get Self */
@@ -535,16 +527,20 @@ int SpatialIndex::luaIntersect (lua_State* L)
         spatialspan_t span1 = lua_obj->luatable2span(L, 2);
         spatialspan_t span2 = lua_obj->luatable2span(L, 3);
 
-        /* Set Status to Intersection */
-        status = lua_obj->intersect(span1, span2);
+        /* Get Intersection */
+        bool intersect = lua_obj->intersect(span1, span2);
+        lua_pushboolean(L, intersect);
+
+        /* Return Intersection */
+        return 1;
     }
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
     }
 
-    /* Return Status */
-    return returnLuaStatus(L, status);
+    /* Return Failure */
+    return returnLuaStatus(L, false);
 }
 
 /*----------------------------------------------------------------------------
@@ -552,8 +548,6 @@ int SpatialIndex::luaIntersect (lua_State* L)
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaCombine (lua_State* L)
 {
-    bool status = false;
-
     try
     {
         /* Get Self */
@@ -573,14 +567,14 @@ int SpatialIndex::luaCombine (lua_State* L)
         LuaEngine::setAttrInt(L, "lat1", span.lat1);
         LuaEngine::setAttrInt(L, "lon1", span.lon1);
         
-        /* Set Status */
-        status = true;
+        /* Return Span */
+        return 1;
     }
     catch(const LuaException& e)
     {
         mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
     }
 
-    /* Return Status */
-    return returnLuaStatus(L, status);
+    /* Return Failure */
+    return returnLuaStatus(L, false);
 }

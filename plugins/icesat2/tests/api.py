@@ -99,6 +99,47 @@ def test_definition ():
     else:
         print("Failed definition test", d["gps"]["offset"])
 
+#
+#  TEST GEOSPATIAL
+#
+def test_geospatial ():
+    rqst = {
+        "asset": asset,
+        "pole": "south",
+        "lat": 40.0,
+        "lon": 60.0,
+        "x": 2.3,
+        "y": 4.9,
+        "span": {
+            "lat0": 20.0,
+            "lon0": 100.0,
+            "lat1": 15.0,
+            "lon1": 105.0
+        },
+        "span1": {
+            "lat0": 30.0,
+            "lon0": 100.0,
+            "lat1": 35.0,
+            "lon1": 105.0
+        },
+        "span2": {
+            "lat0": 32.0,
+            "lon0": 101.0,
+            "lat1": 45.0,
+            "lon1": 106.0
+        },
+    }
+
+    d = sliderule.source("geo", rqst)
+
+    print("intersect:", d["intersect"])
+    print("combine:", d["combine"])
+    print("split:", d["split"])
+    print("lat:", d["lat"])
+    print("lon:", d["lon"])
+    print("x:", d["x"])
+    print("y:", d["y"])
+
 ###############################################################################
 # MAIN
 ###############################################################################
@@ -121,3 +162,4 @@ if __name__ == '__main__':
     test_h5()
     test_variable_length()
     test_definition()
+    test_geospatial()

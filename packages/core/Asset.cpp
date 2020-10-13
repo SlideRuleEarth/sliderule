@@ -73,7 +73,7 @@ Asset::~Asset (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, [<format>, <url>])
+ * luaCreate - create(<name>, [<format>, <url>, <index>])
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {
