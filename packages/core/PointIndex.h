@@ -42,10 +42,16 @@ class PointIndex: public AssetIndex<pointspan_t>
 {
     public:
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
                         PointIndex      (lua_State* L, Asset* _asset, const char* _fieldname, int _threshold);
                         ~PointIndex     (void);
 
         static int      luaCreate       (lua_State* L);
+        static int      luaQuery        (lua_State* L);
+        static int      luaDisplay      (lua_State* L);
 
         void            split           (node_t* node, pointspan_t& lspan, pointspan_t& rspan) override;
         bool            isleft          (node_t* node, const pointspan_t& span) override;
@@ -53,11 +59,22 @@ class PointIndex: public AssetIndex<pointspan_t>
         bool            intersect       (const pointspan_t& span1, const pointspan_t& span2) override;
         pointspan_t     combine         (const pointspan_t& span1, const pointspan_t& span2) override;
         pointspan_t     luatable2span   (lua_State* L, int parm) override;
-        void            display         (const pointspan_t& span) override;
+        void            displayspan     (const pointspan_t& span) override;
 
     private:
 
-        const char*     fieldname;
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char*              LuaMetaName;
+        static const struct luaL_Reg    LuaMetaTable[];
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        const char* fieldname;
 };
 
 #endif  /* __field_index__ */

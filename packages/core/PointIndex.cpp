@@ -28,6 +28,17 @@
 #include "StringLib.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* PointIndex::LuaMetaName = "PointIndex";
+const struct luaL_Reg PointIndex::LuaMetaTable[] = {
+    {"query",       luaQuery},
+    {"display",     luaDisplay},
+    {NULL,          NULL}
+};
+
+/******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
@@ -54,10 +65,79 @@ int PointIndex::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaQuery - :query(<attribute table>)
+ *----------------------------------------------------------------------------*/
+int PointIndex::luaQuery (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        PointIndex* lua_obj = (PointIndex*)getLuaSelf(L, 1);
+
+        /* Create Query Attributes */
+        pointspan_t span = lua_obj->luatable2span(L, 2);
+
+        /* Query Resources */
+        List<int>* ril = lua_obj->query(span);
+
+        /* Return Resources */
+        lua_newtable(L);
+        for(int r = 1, i = 0; i < ril->length(); i++, r++)
+        {
+            int resource_index = ril->get(i);
+            lua_pushstring(L, lua_obj->asset[resource_index].name);
+            lua_rawseti(L, -2, r);
+        }
+
+        /* Free Resource Index List */
+        delete ril;
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 2);
+}
+
+/*----------------------------------------------------------------------------
+ * luaDisplay - :display()
+ *----------------------------------------------------------------------------*/
+int PointIndex::luaDisplay (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        PointIndex* lua_obj = (PointIndex*)getLuaSelf(L, 1);
+
+        /* Display Tree */
+        lua_obj->display();
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 PointIndex::PointIndex(lua_State* L, Asset* _asset, const char* _fieldname, int _threshold):
-    AssetIndex<pointspan_t>(L, *_asset, _threshold)
+    AssetIndex<pointspan_t>(L, *_asset, LuaMetaName, LuaMetaTable, _threshold)
 {
     assert(_fieldname);
 
@@ -181,7 +261,7 @@ pointspan_t PointIndex::luatable2span (lua_State* L, int parm)
 /*----------------------------------------------------------------------------
  * display
  *----------------------------------------------------------------------------*/
-void PointIndex::display (const pointspan_t& span)
+void PointIndex::displayspan (const pointspan_t& span)
 {
     mlog(RAW, "[%.3lf, %.3lf]", span.minval, span.maxval);
 }

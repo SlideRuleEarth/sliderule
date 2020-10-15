@@ -10,7 +10,8 @@ assets = asset.loaddir(td.."/asset_directory.csv")
 
 expected = {
     dataset1={format="json", url="/data/1"},
-    dataset2={format="binary", url="/data/2"}
+    dataset2={format="binary", url="/data/2"},
+    dataset3={format="binary", url="/data/3"}
 }
 
 local function check_query(act, exp)
@@ -73,15 +74,39 @@ local r6 = i6:query({t0=6.0, t1=10.0})
 local e6 = {"B", "C", "D", "E", "F", "G", "H", "I", "J"} 
 check_query(r6, e6)
 
-sys.log(core.RAW, '\n------------------\nTest07: Query Dataset1 with Sptial Index\n------------------\n')
-local a7 = core.asset("dataset1")
+sys.log(core.RAW, '\n------------------\nTest07: Test Sptial Index\n------------------\n')
+local a7 = core.asset("dataset3")
 local i7 = core.spatialindex(a7, core.SOUTH_POLAR)
-i7:name("spatialindex")
-i7:display()
 
---local r5 = i7:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
---local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
---check_query(r5, e5)
+lat = -80.0
+lon = 45.0
+while lat < 80.0 do
+    x, y = i7:polar(lat, lon) 
+    nlat, nlon = i7:sphere(x, y)
+    runner.check(runner.cmpfloat(math.abs(x), math.abs(y), 0.0000001))
+    runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
+    runner.check(runner.cmpfloat(lon, nlon, 0.0000001))
+    lat = lat + 10.0
+end
+
+lat = -60.0
+lon = -170.0
+while lon < 170.0 do
+    x, y = i7:polar(lat, lon) 
+    nlat, nlon = i7:sphere(x, y)
+    runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
+    runner.check(runner.cmpfloat(lon, nlon, 0.0000001))
+    lon = lon + 10.0
+end
+
+sys.log(core.RAW, '\n------------------\nTest08: Query Dataset1 with Spatial Index\n------------------\n')
+local a8 = core.asset("dataset1")
+local i8 = core.spatialindex(a8, core.SOUTH_POLAR)
+i8:name("spatialindex")
+i8:display()
+local r5 = i8:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
+local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
+check_query(r5, e5)
 
 -- Clean Up --
 
@@ -89,4 +114,3 @@ i7:display()
 
 sys.wait(1)
 runner.report()
-

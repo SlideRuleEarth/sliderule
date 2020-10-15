@@ -44,10 +44,18 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
 {
     public:
 
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
         typedef enum {
             NORTH_POLAR,
             SOUTH_POLAR
         } proj_t;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
                         SpatialIndex    (lua_State* L, Asset* _asset, proj_t _projection, int _threshold);
                         ~SpatialIndex   (void);
@@ -60,22 +68,49 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         bool            intersect       (const spatialspan_t& span1, const spatialspan_t& span2) override;
         spatialspan_t   combine         (const spatialspan_t& span1, const spatialspan_t& span2) override;
         spatialspan_t   luatable2span   (lua_State* L, int parm) override;
-        void            display         (const spatialspan_t& span) override;
+        void            displayspan     (const spatialspan_t& span) override;
     
     private:
 
-        typedef struct {            
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
             double  x0;
             double  y0;
             double  x1;
             double  y1;
-        } coord_t;
+        } polarspan_t;    
 
-        coord_t         project         (spatialspan_t span);
-        spatialspan_t   restore         (coord_t coord);
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-        void            geo2cart        (const double lat, const double lon, double& x, double& y);
-        void            cart2geo        (double& lat, double& lon, const double x, const double y);
+        static const char*              LuaMetaName;
+        static const struct luaL_Reg    LuaMetaTable[];
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        polarspan_t     project         (spatialspan_t span);
+        spatialspan_t   restore         (polarspan_t polar);
+
+        void            geo2polar       (const double lat, const double lon, double& x, double& y);
+        void            polar2geo       (double& lat, double& lon, const double x, const double y);
+
+        static int      luaPolar        (lua_State* L);
+        static int      luaSphere       (lua_State* L);
+        static int      luaSplit        (lua_State* L);
+        static int      luaIntersect    (lua_State* L);
+        static int      luaCombine      (lua_State* L);
+        static int      luaQuery        (lua_State* L);
+        static int      luaDisplay      (lua_State* L);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
         proj_t          projection;
 };
