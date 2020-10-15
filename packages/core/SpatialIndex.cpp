@@ -163,18 +163,14 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
     /* Compare Against Split Value */
     if(node->depth % 2 == 0) // even depth = Radius
     {
-        double left_val = lpolar.x1;
-        double right_val = rpolar.x0;
-        double split_val = (left_val + right_val) / 2.0;
+        double split_val = (lpolar.x1 + rpolar.x0) / 2.0;
 
         if(spolar.x0 <= split_val)  return true;
         else                        return false;        
     }
     else // odd depth = Angle
     {
-        double left_val = lpolar.y1;
-        double right_val = rpolar.y0;
-        double split_val = (left_val + right_val) / 2.0;
+        double split_val = (lpolar.y1 + rpolar.y0) / 2.0;
 
         if(spolar.y0 <= split_val)  return true;
         else                        return false;        
@@ -198,18 +194,14 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
     /* Compare Against Split Value */
     if(node->depth % 2 == 0) // even depth = Radius
     {
-        double left_val = lpolar.x1;
-        double right_val = rpolar.x0;
-        double split_val = (left_val + right_val) / 2.0;
+        double split_val = (lpolar.x1 + rpolar.x0) / 2.0;
 
         if(spolar.x1 >= split_val)  return true;
         else                        return false;        
     }
     else // odd depth = Angle
     {
-        double left_val = lpolar.y1;
-        double right_val = rpolar.y0;
-        double split_val = (left_val + right_val) / 2.0;
+        double split_val = (lpolar.y1 + rpolar.y0) / 2.0;
 
         if(spolar.y1 >= split_val)  return true;
         else                        return false;        
@@ -304,7 +296,8 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 void SpatialIndex::display (const spatialspan_t& span)
 {
-    mlog(RAW, "[%.3lf, %.3lf, %.3lf, %.3lf]", span.lat0, span.lon0, span.lat1, span.lon1);
+    polarspan_t polar = project(span);
+    mlog(RAW, "[%d,%d x %d,%d]", (int)(polar.x0*100), (int)(polar.y0*100), (int)(polar.x1*100), (int)(polar.y1*100));
 }
 
 /******************************************************************************

@@ -117,6 +117,7 @@ class AssetIndex: public LuaObject
         void            balancenode     (node_t** root);
         void            querynode       (const T& span, node_t* curr, List<int>* list);
         void            deletenode      (node_t* node);
+        bool            prunenode       (node_t* node);
         void            displaynode     (node_t* curr);
 
         static int      luaQuery        (lua_State* L);
@@ -264,6 +265,9 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
                 /* Make Current Node a Branch */
                 delete curr->ril;
                 curr->ril = NULL;
+
+                /* Update Max Depth */
+                (*maxdepth)++;
             }
         }
     }
@@ -291,8 +295,7 @@ template <class T>
 void AssetIndex<T>::balancenode (node_t** root)
 {
     node_t* curr = *root;
-mlog(RAW, "\n\n----------------BALANCE TREE--------------\n");
-display();
+
     /* Return on Leaf */
     if(!curr->left || !curr->right) return;
 
@@ -324,17 +327,21 @@ display();
         /* Link In */
         *root = D;
 
-        assert(A);
-        assert(B);
-        assert(C);
-        assert(D);
+assert(A);
+assert(B);
+assert(C);
+assert(D);
 
         /* Update Spans */
         D->span = B->span;
         B->span = combine(A->span, C->span);
 
-        /* Update Depth */
-        B->depth = MAX(A->depth, C->depth) + 1;
+        /* Check For Pruning */
+        if(!prunenode(B))
+        {
+            /* Update Depth */
+            B->depth = MAX(A->depth, C->depth) + 1;
+        }
     }
     else if(curr->right->depth + 1 < curr->left->depth)
     {
@@ -363,17 +370,21 @@ display();
         /* Link In */
         *root = B;
 
-        assert(B);
-        assert(C);
-        assert(D);
-        assert(E);
+assert(B);
+assert(C);
+assert(D);
+assert(E);
 
         /* Update Spans */
         B->span = D->span;
         D->span = combine(C->span, E->span);
 
-        /* Update Depth */
-        D->depth = MAX(C->depth, E->depth) + 1;
+        /* Check For Pruning */
+        if(!prunenode(D))
+        {
+            /* Update Depth */
+            D->depth = MAX(C->depth, E->depth) + 1;
+        }
     }
 }
 
@@ -432,6 +443,75 @@ void AssetIndex<T>::deletenode (node_t* node)
     /* Recurse */
     deletenode(left);
     deletenode(right);
+}
+
+
+/*----------------------------------------------------------------------------
+ * displaynode
+ *----------------------------------------------------------------------------*/
+template <class T>
+bool AssetIndex<T>::prunenode (node_t* node)
+{
+    bool pruned = false;
+
+    node_t* left = node->left;
+    node_t* right = node->right;
+
+    /* Check For Pruning */
+    if(left->ril && right->ril)
+    {
+        /* Count Overlap */
+        int matches = 0;
+        for(int i = 0; i < left->ril->length(); i++)
+        {
+            int ri = left->ril->get(i);
+            for(int j = 0; j < right->ril->length(); j++)
+            {
+                int rj = right->ril->get(j);
+                if (ri == rj)
+                {
+                    matches++;
+                    break;
+                }
+            }
+        }
+
+        /* Check if Overlap Warrants Pruning */
+        if(matches == left->ril->length() || matches == right->ril->length())
+        {
+            /* Determine Which Leaf Contains All Indexes */
+            node_t* prune;
+            if(left->ril->length() >= right->ril->length())
+            {
+                prune = left;
+            }
+            else
+            {
+                prune = right;
+            }
+
+            /* Copy Indexes Into Branch Node */
+            node->ril = new List<int>;
+            for(int i = 0; i < prune->ril->length(); i++)
+            {
+                int ri = prune->ril->get(i);
+                node->ril->add(ri);
+            }
+
+            /* Make Branch Node a Leaf Node */
+            delete left->ril;
+            delete right->ril;
+            node->left = NULL;
+            node->right = NULL;
+            node->depth = 0;
+
+            /* Successfully Pruned */
+            pruned = true;
+        }
+    }
+
+    /* Return Pruned Status */
+    return pruned;
 }
 
 /*----------------------------------------------------------------------------
