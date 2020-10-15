@@ -30,6 +30,23 @@
 #include "StringLib.h"
 #include "LuaEngine.h"
 
+
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* SpatialIndex::LuaMetaName = "SpatialIndex";
+const struct luaL_Reg SpatialIndex::LuaMetaTable[] = {
+    {"query",       luaQuery},
+    {"display",     luaDisplay},
+    {"polar",       luaPolar},
+    {"sphere",      luaSphere},  
+    {"split",       luaSplit},
+    {"intersect",   luaIntersect},
+    {"combine",     luaCombine},
+    {NULL,          NULL}
+};
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -60,7 +77,7 @@ int SpatialIndex::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, proj_t _projection, int _threshold):
-    AssetIndex<spatialspan_t>(L, *_asset, _threshold)
+    AssetIndex<spatialspan_t>(L, *_asset, LuaMetaName, LuaMetaTable, _threshold)
 {
     projection = _projection;
 
@@ -86,12 +103,6 @@ SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, proj_t _projection, int 
             break;
         }
     }
-
-    LuaEngine::setAttrFunc(L, "polar",      luaPolar);
-    LuaEngine::setAttrFunc(L, "sphere",     luaSphere);  
-    LuaEngine::setAttrFunc(L, "split",      luaSplit); 
-    LuaEngine::setAttrFunc(L, "intersect",  luaIntersect);
-    LuaEngine::setAttrFunc(L, "combine",    luaCombine);
 }
 
 /*----------------------------------------------------------------------------
@@ -294,7 +305,7 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
 /*----------------------------------------------------------------------------
  * display
  *----------------------------------------------------------------------------*/
-void SpatialIndex::display (const spatialspan_t& span)
+void SpatialIndex::displayspan (const spatialspan_t& span)
 {
     polarspan_t polar = project(span);
     mlog(RAW, "[%d,%d x %d,%d]", (int)(polar.x0*100), (int)(polar.y0*100), (int)(polar.x1*100), (int)(polar.y1*100));
@@ -609,4 +620,74 @@ int SpatialIndex::luaCombine (lua_State* L)
 
     /* Return Failure */
     return returnLuaStatus(L, false);
+}
+
+
+/*----------------------------------------------------------------------------
+ * luaQuery - :query(<attribute table>)
+ *----------------------------------------------------------------------------*/
+int SpatialIndex::luaQuery (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+
+        /* Create Query Attributes */
+        spatialspan_t span = lua_obj->luatable2span(L, 2);
+
+        /* Query Resources */
+        List<int>* ril = lua_obj->query(span);
+
+        /* Return Resources */
+        lua_newtable(L);
+        for(int r = 1, i = 0; i < ril->length(); i++, r++)
+        {
+            int resource_index = ril->get(i);
+            lua_pushstring(L, lua_obj->asset[resource_index].name);
+            lua_rawseti(L, -2, r);
+        }
+
+        /* Free Resource Index List */
+        delete ril;
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 2);
+}
+
+/*----------------------------------------------------------------------------
+ * luaDisplay - :display()
+ *----------------------------------------------------------------------------*/
+int SpatialIndex::luaDisplay (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+
+        /* Display Tree */
+        lua_obj->display();
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }

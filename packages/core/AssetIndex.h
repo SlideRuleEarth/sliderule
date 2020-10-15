@@ -61,13 +61,6 @@ class AssetIndex: public LuaObject
     protected:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char*              LuaMetaName;
-        static const struct luaL_Reg    LuaMetaTable[];
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
@@ -83,7 +76,7 @@ class AssetIndex: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        AssetIndex      (lua_State* L, Asset& _asset, int _threshold=DEFAULT_THRESHOLD);
+                        AssetIndex      (lua_State* L, Asset& _asset, const char* meta_name, const struct luaL_Reg meta_table[], int _threshold=DEFAULT_THRESHOLD);
         virtual         ~AssetIndex     (void);
 
         bool            add             (int i); // NOT thread safe
@@ -96,7 +89,7 @@ class AssetIndex: public LuaObject
         virtual bool    intersect       (const T& span1, const T& span2) = 0;
         virtual T       combine         (const T& span1, const T& span2) = 0;
         virtual T       luatable2span   (lua_State* L, int parm) = 0;
-        virtual void    display         (const T& span) = 0;
+        virtual void    displayspan     (const T& span) = 0;
         
         /*--------------------------------------------------------------------
          * Data
@@ -104,8 +97,6 @@ class AssetIndex: public LuaObject
 
         Asset&          asset;
         List<T>         spans; // parallels asset resource list
-        int32_t         threshold;
-        node_t*         tree;
 
     private:
 
@@ -120,8 +111,12 @@ class AssetIndex: public LuaObject
         bool            prunenode       (node_t* node);
         void            displaynode     (node_t* curr);
 
-        static int      luaQuery        (lua_State* L);
-        static int      luaDisplay      (lua_State* L);
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        int32_t         threshold;
+        node_t*         tree;
 };
 
 /******************************************************************************
@@ -131,16 +126,6 @@ class AssetIndex: public LuaObject
 template <class T>
 const char* AssetIndex<T>::OBJECT_TYPE = "AssetIndex";
 
-template <class T>
-const char* AssetIndex<T>::LuaMetaName = "AssetIndex";
-
-template <class T>
-const struct luaL_Reg AssetIndex<T>::LuaMetaTable[] = {
-    {"query",       luaQuery},
-    {"display",     luaDisplay},
-    {NULL,          NULL}
-};
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -149,8 +134,8 @@ const struct luaL_Reg AssetIndex<T>::LuaMetaTable[] = {
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-AssetIndex<T>::AssetIndex (lua_State* L, Asset& _asset, int _threshold):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+AssetIndex<T>::AssetIndex (lua_State* L, Asset& _asset, const char* meta_name, const struct luaL_Reg meta_table[], int _threshold):
+    LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
     asset(_asset),
     threshold(_threshold)
 {
@@ -176,7 +161,6 @@ bool AssetIndex<T>::add (int i)
     int maxdepth = 0;
     updatenode(i, &tree, &maxdepth);
     balancenode(&tree);
-    //TODO: Check for pruning! (combining two leaf nodes after balancing into one leaf node)
     return true;
 }
 
@@ -327,11 +311,6 @@ void AssetIndex<T>::balancenode (node_t** root)
         /* Link In */
         *root = D;
 
-assert(A);
-assert(B);
-assert(C);
-assert(D);
-
         /* Update Spans */
         D->span = B->span;
         B->span = combine(A->span, C->span);
@@ -369,11 +348,6 @@ assert(D);
 
         /* Link In */
         *root = B;
-
-assert(B);
-assert(C);
-assert(D);
-assert(E);
 
         /* Update Spans */
         B->span = D->span;
@@ -524,7 +498,7 @@ void AssetIndex<T>::displaynode (node_t* curr)
     if(curr == NULL) return;
 
     /* Display */
-    display(curr->span);
+    displayspan(curr->span);
     mlog(RAW, " <%d>\n", curr->depth);
     if(curr->ril)
     {
@@ -537,86 +511,15 @@ void AssetIndex<T>::displaynode (node_t* curr)
     else
     {
         mlog(RAW, "L");
-        if(curr->left) display(curr->left->span);
+        if(curr->left) displayspan(curr->left->span);
         mlog(RAW, ", R");
-        if(curr->right) display(curr->right->span);
+        if(curr->right) displayspan(curr->right->span);
     }
     mlog(RAW, "\n\n");
     
     /* Recurse */
     displaynode(curr->left);
     displaynode(curr->right);
-}
-
-/*----------------------------------------------------------------------------
- * luaQuery - :query(<attribute table>)
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaQuery (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        AssetIndex* lua_obj = (AssetIndex*)getLuaSelf(L, 1);
-
-        /* Create Query Attributes */
-        T span = lua_obj->luatable2span(L, 2);
-
-        /* Query Resources */
-        List<int>* ril = lua_obj->query(span);
-
-        /* Return Resources */
-        lua_newtable(L);
-        for(int r = 1, i = 0; i < ril->length(); i++, r++)
-        {
-            int resource_index = ril->get(i);
-            lua_pushstring(L, lua_obj->asset[resource_index].name);
-            lua_rawseti(L, -2, r);
-        }
-
-        /* Free Resource Index List */
-        delete ril;
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, 2);
-}
-
-/*----------------------------------------------------------------------------
- * luaDisplay - :display(<timetree>, <spacetree>)
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaDisplay (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Parameters */
-        AssetIndex* lua_obj     = (AssetIndex*)getLuaSelf(L, 1);
-
-        /* Display Tree */
-        lua_obj->display();
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 #endif  /* __asset_index__ */

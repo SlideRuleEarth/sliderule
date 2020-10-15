@@ -99,14 +99,14 @@ while lon < 170.0 do
     lon = lon + 10.0
 end
 
-sys.log(core.RAW, '\n------------------\nTest08: Query Dataset1 with Sptial Index\n------------------\n')
+sys.log(core.RAW, '\n------------------\nTest08: Query Dataset1 with Spatial Index\n------------------\n')
 local a8 = core.asset("dataset1")
 local i8 = core.spatialindex(a8, core.SOUTH_POLAR)
 i8:name("spatialindex")
 i8:display()
---local r5 = i8:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
---local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
---check_query(r5, e5)
+local r5 = i8:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
+local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
+check_query(r5, e5)
 
 -- Clean Up --
 
@@ -114,4 +114,3 @@ i8:display()
 
 sys.wait(1)
 runner.report()
-

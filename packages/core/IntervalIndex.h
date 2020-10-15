@@ -42,10 +42,16 @@ class IntervalIndex: public AssetIndex<intervalspan_t>
 {
     public:
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
                         IntervalIndex   (lua_State* L, Asset* _asset, const char* _fieldname0, const char* _fieldname1, int _threshold);
                         ~IntervalIndex  (void);
 
         static int      luaCreate       (lua_State* L);
+        static int      luaQuery        (lua_State* L);
+        static int      luaDisplay      (lua_State* L);
 
         void            split           (node_t* node, intervalspan_t& lspan, intervalspan_t& rspan) override;
         bool            isleft          (node_t* node, const intervalspan_t& span) override;
@@ -53,12 +59,23 @@ class IntervalIndex: public AssetIndex<intervalspan_t>
         bool            intersect       (const intervalspan_t& span1, const intervalspan_t& span2) override;
         intervalspan_t  combine         (const intervalspan_t& span1, const intervalspan_t& span2) override;
         intervalspan_t  luatable2span   (lua_State* L, int parm) override;
-        void            display         (const intervalspan_t& span) override;
+        void            displayspan     (const intervalspan_t& span) override;
     
     private:
 
-        const char*     fieldname0;
-        const char*     fieldname1;
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char*              LuaMetaName;
+        static const struct luaL_Reg    LuaMetaTable[];
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        const char* fieldname0;
+        const char* fieldname1;
 };
 
 #endif  /* __interval_index__ */
