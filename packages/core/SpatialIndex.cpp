@@ -223,22 +223,22 @@ bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& s
 { 
     /* Project to Polar polarinates */
     polarspan_t polar1 = project(span1);
-    polarspan_t polar2 = project(span2);    
+    polarspan_t polar2 = project(span2);
 
     /* Check Intersection in Radius */
-    bool ri = ((polar1.x0 >= polar2.x0 && polar1.x0 <= polar2.x1) ||
+    bool xi = ((polar1.x0 >= polar2.x0 && polar1.x0 <= polar2.x1) ||
                (polar1.x1 >= polar2.x0 && polar1.x1 <= polar2.x1) || 
                (polar2.x0 >= polar1.x0 && polar2.x0 <= polar1.x1) ||
                (polar2.x1 >= polar1.x0 && polar2.x1 <= polar1.x1));
 
     /* Check Intersection in Angle */
-    bool oi = ((polar1.y0 >= polar2.y0 && polar1.y0 <= polar2.y1) ||
+    bool yi = ((polar1.y0 >= polar2.y0 && polar1.y0 <= polar2.y1) ||
                (polar1.y1 >= polar2.y0 && polar1.y1 <= polar2.y1) || 
                (polar2.y0 >= polar1.y0 && polar2.y0 <= polar1.y1) ||
                (polar2.y1 >= polar1.y0 && polar2.y1 <= polar1.y1));
 
     /* Return Intersection */
-    return (ri && oi);
+    return (xi && yi);
 }
 
 /*----------------------------------------------------------------------------
@@ -248,7 +248,7 @@ spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialsp
 {
     polarspan_t polar;
 
-    /* Project to Polar polarinates */
+    /* Project to Polar Coordinates */
     polarspan_t polar1 = project(span1);
     polarspan_t polar2 = project(span2);    
     
@@ -258,13 +258,10 @@ spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialsp
     polar.x1 = MAX(MAX(MAX(polar1.x0, polar2.x0), polar1.x1), polar2.x1);
     polar.y1 = MAX(MAX(MAX(polar1.y0, polar2.y0), polar1.y1), polar2.y1);
 
-    /* Return Geogreaphic polarinates */
+    /* Restore to Geographic Coordinates */
     spatialspan_t span = restore(polar);
 
-
-printf("polar1: %lf,%lf x %lf,%lf ==> %lf,%lf x %lf,%lf\n", span1.lat0, span1.lon0, span1.lat1, span1.lon1, polar1.x0, polar1.y0, polar1.x1, polar1.y1);
-printf("polar2: %lf,%lf x %lf,%lf ==> %lf,%lf x %lf,%lf\n", span2.lat0, span2.lon0, span2.lat1, span2.lon1, polar2.x0, polar2.y0, polar2.x1, polar2.y1);
-printf("polar: %lf,%lf x %lf,%lf ==> %lf,%lf x %lf,%lf\n", span.lat0, span.lon0, span.lat1, span.lon1, polar.x0, polar.y0, polar.x1, polar.y1);
+    /* Return Coordinates */
     return span;
 }
 
@@ -320,8 +317,20 @@ void SpatialIndex::display (const spatialspan_t& span)
 SpatialIndex::polarspan_t SpatialIndex::project (spatialspan_t span)
 {
     polarspan_t polar;
+    
     geo2polar(span.lat0, span.lon0, polar.x0, polar.y0);
     geo2polar(span.lat1, span.lon1, polar.x1, polar.y1);
+
+    double xmin = MIN(polar.x0, polar.x1);
+    double ymin = MIN(polar.y0, polar.y1);
+    double xmax = MAX(polar.x0, polar.x1);
+    double ymax = MAX(polar.y0, polar.y1);
+
+    polar.x0 = xmin;
+    polar.y0 = ymin;
+    polar.x1 = xmax;
+    polar.y1 = ymax;
+
     return polar;
 }
 
@@ -341,24 +350,33 @@ spatialspan_t SpatialIndex::restore (polarspan_t polar)
  *----------------------------------------------------------------------------*/
 void SpatialIndex::geo2polar (const double lat, const double lon, double& x, double& y)
 {
+    double r = 0.0, o = 0.0;
+
     /* Convert to Radians */
     double lonrad = lon * M_PI / 180.0;
     double latrad = lat * M_PI / 180.0;
-    double latradp = (M_PI / 4.0) - (latrad / 2.0);
 
     /* Calculate r */
-    double r = 0.0;
     if(projection == NORTH_POLAR)
     {
+        double latradp = (M_PI / 4.0) - (latrad / 2.0);
         r = 2 * tan(latradp);
     }
     else if(projection == SOUTH_POLAR)
     {
-        r = 2 * tan(-latradp);
+        double latradp = -(M_PI / 4.0) - (latrad / 2.0);
+        r = -2 * tan(latradp);
     }
 
     /* Calculate o */
-    double o = lonrad;
+    if(projection == NORTH_POLAR)
+    {
+        o = lonrad;        
+    }
+    else if(projection == SOUTH_POLAR)
+    {
+        o = -lonrad;
+    }
 
     /* Calculate X */
     x = r * cos(o);
@@ -372,6 +390,8 @@ void SpatialIndex::geo2polar (const double lat, const double lon, double& x, dou
  *----------------------------------------------------------------------------*/
 void SpatialIndex::polar2geo (double& lat, double& lon, const double x, const double y)
 {
+    double latrad = 90.0, lonrad = 0.0;
+
     /* Calculate r */
     double r = sqrt((x*x) + (y*y));
 
@@ -392,19 +412,26 @@ void SpatialIndex::polar2geo (double& lat, double& lon, const double x, const do
     }
 
     /* Calculate Latitude */
-    double latradp = atan(r / 2.0);
-    double latrad = 90.0;
     if(projection == NORTH_POLAR)
     {
+        double latradp = atan(r / 2.0);
         latrad = (M_PI / 2.0) - (2.0 * latradp);
     }
     else if(projection == SOUTH_POLAR)
     {
-        latrad = (M_PI / 2.0) - (2.0 * -latradp);
+        double latradp = atan(r / -2.0);
+        latrad = (-2.0 * latradp) - (M_PI / 2.0);
     }
     
     /* Calculate Longitude */
-    double lonrad = o;
+    if(projection == NORTH_POLAR)
+    {
+        lonrad = o;
+    }
+    else if(projection == SOUTH_POLAR)
+    {
+        lonrad = -o;
+    }
 
     /* Convert to Degress */
     lat = latrad * (180.0 / M_PI);

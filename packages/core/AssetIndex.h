@@ -291,7 +291,8 @@ template <class T>
 void AssetIndex<T>::balancenode (node_t** root)
 {
     node_t* curr = *root;
-
+mlog(RAW, "\n\n----------------BALANCE TREE--------------\n");
+display();
     /* Return on Leaf */
     if(!curr->left || !curr->right) return;
 
@@ -322,6 +323,11 @@ void AssetIndex<T>::balancenode (node_t** root)
 
         /* Link In */
         *root = D;
+
+        assert(A);
+        assert(B);
+        assert(C);
+        assert(D);
 
         /* Update Spans */
         D->span = B->span;
@@ -356,6 +362,11 @@ void AssetIndex<T>::balancenode (node_t** root)
 
         /* Link In */
         *root = B;
+
+        assert(B);
+        assert(C);
+        assert(D);
+        assert(E);
 
         /* Update Spans */
         B->span = D->span;

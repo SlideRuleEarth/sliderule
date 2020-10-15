@@ -140,16 +140,16 @@ def test_geospatial ():
     else:
         print("Failed intersection test", d["intersect"])
 
-    if(d["combine"]["lat0"] == 30.0 and d["combine"]["lon0"] == 100.0 and\
-       d["combine"]["lat1"] == 45.0 and d["combine"]["lon0"] == 106.0):
+    if(abs(d["combine"]["lat0"] - 44.4015) < 0.001 and abs(d["combine"]["lon0"] - 108.6949) < 0.001 and\
+       d["combine"]["lat1"] == 30.0 and d["combine"]["lon1"] == 100.0):
         print("Passed combination test")
     else:
         print("Failed combination test", d["combine"])
 
-    if(d["split"]["lspan"]["lat0"] == 30.0 and d["split"]["lspan"]["lon0"] == 100.0 and\
-       d["split"]["lspan"]["lat1"] == 45.0 and d["split"]["lspan"]["lon0"] == 106.0 and\
-       d["split"]["rspan"]["lat0"] == 30.0 and d["split"]["rspan"]["lon0"] == 100.0 and\
-       d["split"]["rspan"]["lat1"] == 45.0 and d["split"]["rspan"]["lon0"] == 106.0):
+    if(abs(d["split"]["lspan"]["lat0"] - 18.6736) < 0.001 and abs(d["split"]["lspan"]["lon0"] - 106.0666) < .001 and\
+       abs(d["split"]["lspan"]["lat1"] - 15.6558) < 0.001 and abs(d["split"]["lspan"]["lon1"] - 102.1886) < .001 and\
+       abs(d["split"]["rspan"]["lat0"] - 19.4099) < 0.001 and abs(d["split"]["rspan"]["lon0"] - 103.0705) < .001 and\
+       abs(d["split"]["rspan"]["lat1"] - 16.1804) < 0.001 and abs(d["split"]["rspan"]["lon1"] -  99.3163) < .001):
         print("Passed split test")
     else:
         print("Failed split test", d["split"])
