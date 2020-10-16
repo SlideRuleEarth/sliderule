@@ -1,10 +1,16 @@
+# conda env create -f environment.yml
 name: sliderule
 channels:
   - conda-forge
 dependencies:
-  - python>=3.6
-  - notebook
-  - numpy
-  - requests
-  - matplotlib
+  - python=3.8
+  - bokeh
   - cartopy
+  - ipykernel
+  - matplotlib
+  - numpy
+  - pandas
+  - requests
+  - pip
+  - pip:
+      - ./ # install sliderule from source
