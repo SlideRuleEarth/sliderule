@@ -71,19 +71,20 @@ PointIndex::PointIndex(lua_State* L, Asset* _asset, const char* _fieldname, int 
     assert(_fieldname);
 
     fieldname = StringLib::duplicate(_fieldname);
-    for(int i = 0; i < asset.size(); i++)
+
+    Asset& point_asset = *_asset;
+    for(int i = 0; i < point_asset.size(); i++)
     {
         try 
         {
             pointspan_t span;
-            span.maxval = asset[i].attributes[fieldname];
+            span.maxval = point_asset[i].attributes[fieldname];
             span.minval = span.maxval;
-            spans.add(span); // build local list of spans that mirror resource index list
-            add(i); // build tree of indexes
+            add(span); // build tree of indexes
         }
         catch(std::out_of_range& e)
         {
-            mlog(CRITICAL, "Failed to index asset %s: %s\n", asset.getName(), e.what());
+            mlog(CRITICAL, "Failed to index asset %s: %s\n", point_asset.getName(), e.what());
             break;
         }
     }

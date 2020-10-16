@@ -75,19 +75,19 @@ IntervalIndex::IntervalIndex(lua_State* L, Asset*_asset, const char* _fieldname0
     fieldname0 = StringLib::duplicate(_fieldname0);
     fieldname1 = StringLib::duplicate(_fieldname1);
 
-    for(int i = 0; i < asset.size(); i++)
+    Asset& interval_asset = *_asset;
+    for(int i = 0; i < interval_asset.size(); i++)
     {
         try 
         {
             intervalspan_t span;
-            span.t0 = asset[i].attributes[fieldname0];
-            span.t1 = asset[i].attributes[fieldname1];
-            spans.add(span); // build local list of spans that mirror resource index list
-            add(i); // build tree of indexes
+            span.t0 = interval_asset[i].attributes[fieldname0];
+            span.t1 = interval_asset[i].attributes[fieldname1];
+            add(span); // build tree of indexes
         }
         catch(std::out_of_range& e)
         {
-            mlog(CRITICAL, "Failed to index asset %s: %s\n", asset.getName(), e.what());
+            mlog(CRITICAL, "Failed to index asset %s: %s\n", interval_asset.getName(), e.what());
             break;
         }
     }
@@ -114,7 +114,7 @@ void IntervalIndex::split (node_t* node, intervalspan_t& lspan, intervalspan_t& 
     List<double> endpoints;
     for(int i = 0; i < node->ril->length(); i++)
     {
-        intervalspan_t span = spans[node->ril->get(i)];
+        intervalspan_t span = get(node->ril->get(i));
         endpoints.add(span.t0);
         endpoints.add(span.t1);
     }

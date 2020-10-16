@@ -44,7 +44,7 @@ class List
                 List        (void);
         virtual ~List       (void);
 
-        int     add         (T& data);
+        int     add         (const T& data);
         bool    remove      (int index);
         T&      get         (int index);
         bool    set         (int index, T& data, bool with_delete=true);
@@ -137,7 +137,7 @@ List<T>::~List(void)
  * add
  *----------------------------------------------------------------------------*/
 template <class T>
-int List<T>::add(T& data)
+int List<T>::add(const T& data)
 {
     /* Check if Current Node is Full */
     if(tail->offset >= BLOCK_SIZE)

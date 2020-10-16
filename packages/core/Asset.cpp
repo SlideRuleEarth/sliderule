@@ -50,29 +50,6 @@ const struct luaL_Reg Asset::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-Asset::~Asset (void)
-{
-    /* Remove Asset from Dictionary */
-    if(registered)
-    {
-        registered = false;
-        assetsMut.lock();
-        {
-            assets.remove(name);
-        }
-        assetsMut.unlock();
-    }
-
-    /* Delete Members */
-    delete [] name;
-    delete [] format;
-    delete [] url;
-    delete [] index;
-}
-
-/*----------------------------------------------------------------------------
  * luaCreate - create(<name>, [<format>, <url>, <index>])
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
@@ -111,6 +88,37 @@ int Asset::luaCreate (lua_State* L)
         mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
         return returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+Asset::~Asset (void)
+{
+    /* Remove Asset from Dictionary */
+    if(registered)
+    {
+        registered = false;
+        assetsMut.lock();
+        {
+            assets.remove(name);
+        }
+        assetsMut.unlock();
+    }
+
+    /* Delete Members */
+    delete [] name;
+    delete [] format;
+    delete [] url;
+    delete [] index;
+}
+
+/*----------------------------------------------------------------------------
+ * load
+ *----------------------------------------------------------------------------*/
+bool Asset::load (resource_t& resource)
+{
+    resources.add(resource);
 }
 
 /*----------------------------------------------------------------------------
@@ -271,7 +279,7 @@ int Asset::luaLoad (lua_State* L)
         }
 
         /* Register Resource */
-        lua_obj->resources.add(resource);
+        lua_obj->load(resource);
 
         /* Set Status */
         status = true;

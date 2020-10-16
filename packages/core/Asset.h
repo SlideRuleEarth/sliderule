@@ -57,9 +57,13 @@ class Asset: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual     ~Asset      (void);
         static int  luaCreate   (lua_State* L);
+
+        virtual     ~Asset      (void);
+
+        bool        load        (resource_t& resource);
         resource_t& operator[]  (int i);
+
         int         size        (void);
         const char* getName     (void);
         const char* getFormat   (void);

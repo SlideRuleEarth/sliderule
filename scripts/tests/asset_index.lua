@@ -55,10 +55,13 @@ check_query(r4, e4)
 
 sys.log(core.RAW, '\n------------------\nTest05: Query Dataset1 with Field Index\n------------------\n')
 local f5 = core.pointindex(a2, "foot")
+local new_resource = {name="46",t0=46,t1=46,lat0=-83.2,lat1=-80.1,lon0=45.0,lon1=46.0,hand=255.4,foot=15}
+a2:load(new_resource["name"], new_resource)
+f5:add(new_resource)
 f5:name("pointindex")
 f5:display()
 local r5 = f5:query({foot=15})
-local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45} 
+local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46} 
 check_query(r5, e5)
 
 sys.log(core.RAW, '\n------------------\nTest06: Query Overlapping Dataset\n------------------\n')

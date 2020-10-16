@@ -79,25 +79,25 @@ SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, proj_t _projection, int 
 {
     projection = _projection;
 
-    for(int i = 0; i < asset.size(); i++)
+    Asset& spatial_asset = *_asset;
+    for(int i = 0; i < spatial_asset.size(); i++)
     {
         try 
         {
-            spatialspan_t span;
-            span.lat0 = asset[i].attributes["lat0"];
-            span.lon0 = asset[i].attributes["lon0"];
-            span.lat1 = asset[i].attributes["lat1"];
-            span.lon1 = asset[i].attributes["lon1"];
+            spatialspan_t span;            
+            span.lat0 = spatial_asset[i].attributes["lat0"];
+            span.lon0 = spatial_asset[i].attributes["lon0"];
+            span.lat1 = spatial_asset[i].attributes["lat1"];
+            span.lon1 = spatial_asset[i].attributes["lon1"];
             if( (projection == NORTH_POLAR && span.lat0 >= 0.0) ||
                 (projection == SOUTH_POLAR && span.lat0 <  0.0) )
             {
-                spans.add(span); // build local list of spans that mirror resource index list
-                add(i); // build tree of indexes
+                add(span); // build tree of indexes
             }
         }
         catch(std::out_of_range& e)
         {
-            mlog(CRITICAL, "Failed to index asset %s: %s\n", asset.getName(), e.what());
+            mlog(CRITICAL, "Failed to index asset %s: %s\n", spatial_asset.getName(), e.what());
             break;
         }
     }
