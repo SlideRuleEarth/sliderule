@@ -80,7 +80,7 @@ class AssetIndex: public LuaObject
                             AssetIndex      (lua_State* L, Asset& _asset, const char* meta_name, const struct luaL_Reg meta_table[], int _threshold=DEFAULT_THRESHOLD);
         virtual             ~AssetIndex     (void);
 
-//        virtual void        build           (void);
+        virtual void        build           (void);
         virtual T           get             (int index);
         virtual bool        add             (const T& span); // NOT thread safe
         virtual List<int>*  query           (const T& span);
@@ -91,6 +91,7 @@ class AssetIndex: public LuaObject
         virtual bool        isright         (node_t* node, const T& span) = 0;
         virtual bool        intersect       (const T& span1, const T& span2) = 0;
         virtual T           combine         (const T& span1, const T& span2) = 0;
+        virtual T           attr2span       (Dictionary<double>* attr, bool* provided=NULL) = 0;
         virtual T           luatable2span   (lua_State* L, int parm) = 0;
         virtual void        displayspan     (const T& span) = 0;
         
@@ -100,7 +101,7 @@ class AssetIndex: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-//        void            buildtree       (int i, node_t** node, int* maxdepth);
+        void            buildtree       (node_t** root, int* maxdepth);
         void            updatenode      (int i, node_t** node, int* maxdepth);
         void            balancenode     (node_t** root);
         void            querynode       (const T& span, node_t* curr, List<int>* list);
@@ -160,6 +161,20 @@ AssetIndex<T>::~AssetIndex (void)
 }
 
 /*----------------------------------------------------------------------------
+ * build
+ *----------------------------------------------------------------------------*/
+template <class T>
+void AssetIndex<T>::build (void)
+{
+    for(int i = 0; i < asset.size(); i++)
+    {
+        bool provided = false;
+        T span = attr2span(&asset[i].attributes, &provided);            
+        if(provided) add(span); // build tree of indexes
+    }
+}
+
+/*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -199,6 +214,95 @@ template <class T>
 void AssetIndex<T>::display (void)
 {
     displaynode(tree);
+}
+
+/*----------------------------------------------------------------------------
+ * buildtree
+ *----------------------------------------------------------------------------*/
+template <class T>
+void AssetIndex<T>::buildtree (node_t** node, int* maxdepth)
+{
+    int i;
+    /* Get Span of Resource being Added */
+    T& span = spans[i];
+
+    /* Create Node (if necessary */
+    if(*node == NULL)
+    {
+        *node = new node_t;
+        (*node)->ril = new List<int>;
+        (*node)->span = span;
+        (*node)->left = NULL;
+        (*node)->right = NULL;
+        (*node)->depth = 0;
+    }
+
+    /* Pointer to Current Node */
+    node_t* curr = *node;
+
+    /* Update Tree Span */
+    curr->span = combine(curr->span, span);
+
+    /* Update Current Leaf Node */
+    if(curr->ril)
+    {
+        /* Add Index to Current Node */
+        curr->ril->add(i);
+
+        /* Split Current Leaf Node */
+        int node_size = curr->ril->length();
+        if(node_size >= threshold)
+        {
+            /* Split Node */
+            T lspan, rspan;
+            split(curr, lspan, rspan);
+            
+            /* Preview Split Resources on Both Leaves */
+            int lcnt = 0, rcnt = 0;
+            for(int j = 0; j < node_size; j++)
+            {
+                int resource_index = curr->ril->get(j);
+                T& resource_span = spans[resource_index];
+                if(intersect(lspan, resource_span)) lcnt++;
+                if(intersect(rspan, resource_span)) rcnt++;
+            }
+
+            /* Check if Makes Sense to Split */
+            if(lcnt > 0 && rcnt > 0 && lcnt != node_size && rcnt != node_size)
+            {
+                /* Split Node */
+                for(int j = 0; j < node_size; j++)
+                {
+                    int resource_index = curr->ril->get(j);
+                    T& resource_span = spans[resource_index];
+                    if(intersect(lspan, resource_span)) updatenode(resource_index, &curr->left, maxdepth);
+                    if(intersect(rspan, resource_span)) updatenode(resource_index, &curr->right, maxdepth);
+                }
+
+                /* Make Current Node a Branch */
+                delete curr->ril;
+                curr->ril = NULL;
+
+                /* Update Max Depth */
+                (*maxdepth)++;
+            }
+        }
+    }
+    else 
+    {
+        /* Update Branches */
+        if(isleft(curr, span))  updatenode(i, &curr->left, maxdepth);
+        if(isright(curr, span)) updatenode(i, &curr->right, maxdepth);
+
+        /* Update Max Depth */
+        (*maxdepth)++;
+    }
+
+    /* Update Current Depth */
+    if(curr->depth < *maxdepth)
+    {
+        curr->depth = *maxdepth;
+    }
 }
 
 /*----------------------------------------------------------------------------

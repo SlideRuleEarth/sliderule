@@ -56,6 +56,7 @@ class IntervalIndex: public AssetIndex<intervalspan_t>
         bool            isright         (node_t* node, const intervalspan_t& span) override;
         bool            intersect       (const intervalspan_t& span1, const intervalspan_t& span2) override;
         intervalspan_t  combine         (const intervalspan_t& span1, const intervalspan_t& span2) override;
+        intervalspan_t  attr2span       (Dictionary<double>* attr, bool* provided=NULL) override;
         intervalspan_t  luatable2span   (lua_State* L, int parm) override;
         void            displayspan     (const intervalspan_t& span) override;
     

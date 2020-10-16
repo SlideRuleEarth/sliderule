@@ -79,28 +79,7 @@ SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, proj_t _projection, int 
 {
     projection = _projection;
 
-    Asset& spatial_asset = *_asset;
-    for(int i = 0; i < spatial_asset.size(); i++)
-    {
-        try 
-        {
-            spatialspan_t span;            
-            span.lat0 = spatial_asset[i].attributes["lat0"];
-            span.lon0 = spatial_asset[i].attributes["lon0"];
-            span.lat1 = spatial_asset[i].attributes["lat1"];
-            span.lon1 = spatial_asset[i].attributes["lon1"];
-            if( (projection == NORTH_POLAR && span.lat0 >= 0.0) ||
-                (projection == SOUTH_POLAR && span.lat0 <  0.0) )
-            {
-                add(span); // build tree of indexes
-            }
-        }
-        catch(std::out_of_range& e)
-        {
-            mlog(CRITICAL, "Failed to index asset %s: %s\n", spatial_asset.getName(), e.what());
-            break;
-        }
-    }
+    build();
 }
 
 /*----------------------------------------------------------------------------
@@ -263,6 +242,39 @@ spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialsp
     spatialspan_t span = restore(polar);
 
     /* Return Coordinates */
+    return span;
+}
+
+/*----------------------------------------------------------------------------
+ * attr2span
+ *----------------------------------------------------------------------------*/
+spatialspan_t SpatialIndex::attr2span (Dictionary<double>* attr, bool* provided)
+{
+    spatialspan_t span;
+    bool status = false;
+    
+    try 
+    {
+        span.lat0 = (*attr)["lat0"];
+        span.lon0 = (*attr)["lon0"];
+        span.lat1 = (*attr)["lat1"];
+        span.lon1 = (*attr)["lon1"];
+        if( (projection == NORTH_POLAR && span.lat0 >= 0.0) ||
+            (projection == SOUTH_POLAR && span.lat0 <  0.0) )
+        {
+            status = true;
+        }
+    }
+    catch(std::out_of_range& e)
+    {
+        mlog(CRITICAL, "Failed to index asset %s\n", e.what());
+    }
+
+    if(provided)
+    {
+        *provided = status;
+    }
+
     return span;
 }
 

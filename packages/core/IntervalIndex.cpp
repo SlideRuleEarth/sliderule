@@ -75,22 +75,7 @@ IntervalIndex::IntervalIndex(lua_State* L, Asset*_asset, const char* _fieldname0
     fieldname0 = StringLib::duplicate(_fieldname0);
     fieldname1 = StringLib::duplicate(_fieldname1);
 
-    Asset& interval_asset = *_asset;
-    for(int i = 0; i < interval_asset.size(); i++)
-    {
-        try 
-        {
-            intervalspan_t span;
-            span.t0 = interval_asset[i].attributes[fieldname0];
-            span.t1 = interval_asset[i].attributes[fieldname1];
-            add(span); // build tree of indexes
-        }
-        catch(std::out_of_range& e)
-        {
-            mlog(CRITICAL, "Failed to index asset %s: %s\n", interval_asset.getName(), e.what());
-            break;
-        }
-    }
+    build();
 }
 
 /*----------------------------------------------------------------------------
@@ -181,6 +166,33 @@ intervalspan_t IntervalIndex::combine (const intervalspan_t& span1, const interv
     intervalspan_t span;
     span.t0 = MIN(span1.t0, span2.t0);
     span.t1 = MAX(span1.t1, span2.t1);
+    return span;
+}
+
+/*----------------------------------------------------------------------------
+ * attr2span
+ *----------------------------------------------------------------------------*/
+intervalspan_t IntervalIndex::attr2span (Dictionary<double>* attr, bool* provided)
+{
+    intervalspan_t span;
+    bool status = false;
+    
+    try 
+    {
+        span.t0 = (*attr)[fieldname0];
+        span.t1 = (*attr)[fieldname1];
+        status = true;
+    }
+    catch(std::out_of_range& e)
+    {
+        mlog(CRITICAL, "Failed to index asset: %s\n", e.what());
+    }
+
+    if(provided)
+    {
+        *provided = status;
+    }
+
     return span;
 }
 

@@ -67,6 +67,7 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         bool            isright         (node_t* node, const spatialspan_t& span) override;
         bool            intersect       (const spatialspan_t& span1, const spatialspan_t& span2) override;
         spatialspan_t   combine         (const spatialspan_t& span1, const spatialspan_t& span2) override;
+        spatialspan_t   attr2span       (Dictionary<double>* attr, bool* provided=NULL) override;
         spatialspan_t   luatable2span   (lua_State* L, int parm) override;
         void            displayspan     (const spatialspan_t& span) override;
     

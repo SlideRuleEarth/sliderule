@@ -72,22 +72,7 @@ PointIndex::PointIndex(lua_State* L, Asset* _asset, const char* _fieldname, int 
 
     fieldname = StringLib::duplicate(_fieldname);
 
-    Asset& point_asset = *_asset;
-    for(int i = 0; i < point_asset.size(); i++)
-    {
-        try 
-        {
-            pointspan_t span;
-            span.maxval = point_asset[i].attributes[fieldname];
-            span.minval = span.maxval;
-            add(span); // build tree of indexes
-        }
-        catch(std::out_of_range& e)
-        {
-            mlog(CRITICAL, "Failed to index asset %s: %s\n", point_asset.getName(), e.what());
-            break;
-        }
-    }
+    build();
 }
 
 /*----------------------------------------------------------------------------
@@ -150,6 +135,33 @@ pointspan_t PointIndex::combine (const pointspan_t& span1, const pointspan_t& sp
     pointspan_t span;
     span.minval = MIN(span1.minval, span2.minval);
     span.maxval = MAX(span1.maxval, span2.maxval);
+    return span;
+}
+
+/*----------------------------------------------------------------------------
+ * attr2span
+ *----------------------------------------------------------------------------*/
+pointspan_t PointIndex::attr2span (Dictionary<double>* attr, bool* provided)
+{
+    pointspan_t span;
+    bool status = false;
+    
+    try 
+    {
+        span.maxval = (*attr)[fieldname];
+        span.minval = span.maxval;
+        status = true;
+    }
+    catch(std::out_of_range& e)
+    {
+        mlog(CRITICAL, "Failed to index asset: %s\n", e.what());
+    }
+
+    if(provided)
+    {
+        *provided = status;
+    }
+
     return span;
 }
 

@@ -56,6 +56,7 @@ class PointIndex: public AssetIndex<pointspan_t>
         bool            isright         (node_t* node, const pointspan_t& span) override;
         bool            intersect       (const pointspan_t& span1, const pointspan_t& span2) override;
         pointspan_t     combine         (const pointspan_t& span1, const pointspan_t& span2) override;
+        pointspan_t     attr2span       (Dictionary<double>* attr, bool* provided=NULL) override;
         pointspan_t     luatable2span   (lua_State* L, int parm) override;
         void            displayspan     (const pointspan_t& span) override;
 
