@@ -105,8 +105,6 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         static int      luaSplit        (lua_State* L);
         static int      luaIntersect    (lua_State* L);
         static int      luaCombine      (lua_State* L);
-        static int      luaQuery        (lua_State* L);
-        static int      luaDisplay      (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

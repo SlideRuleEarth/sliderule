@@ -50,8 +50,6 @@ class PointIndex: public AssetIndex<pointspan_t>
                         ~PointIndex     (void);
 
         static int      luaCreate       (lua_State* L);
-        static int      luaQuery        (lua_State* L);
-        static int      luaDisplay      (lua_State* L);
 
         void            split           (node_t* node, pointspan_t& lspan, pointspan_t& rspan) override;
         bool            isleft          (node_t* node, const pointspan_t& span) override;

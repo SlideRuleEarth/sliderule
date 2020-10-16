@@ -50,8 +50,6 @@ class IntervalIndex: public AssetIndex<intervalspan_t>
                         ~IntervalIndex  (void);
 
         static int      luaCreate       (lua_State* L);
-        static int      luaQuery        (lua_State* L);
-        static int      luaDisplay      (lua_State* L);
 
         void            split           (node_t* node, intervalspan_t& lspan, intervalspan_t& rspan) override;
         bool            isleft          (node_t* node, const intervalspan_t& span) override;

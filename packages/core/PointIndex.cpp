@@ -33,8 +33,6 @@
 
 const char* PointIndex::LuaMetaName = "PointIndex";
 const struct luaL_Reg PointIndex::LuaMetaTable[] = {
-    {"query",       luaQuery},
-    {"display",     luaDisplay},
     {NULL,          NULL}
 };
 
@@ -62,75 +60,6 @@ int PointIndex::luaCreate (lua_State* L)
         mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
         return returnLuaStatus(L, false);
     }
-}
-
-/*----------------------------------------------------------------------------
- * luaQuery - :query(<attribute table>)
- *----------------------------------------------------------------------------*/
-int PointIndex::luaQuery (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        PointIndex* lua_obj = (PointIndex*)getLuaSelf(L, 1);
-
-        /* Create Query Attributes */
-        pointspan_t span = lua_obj->luatable2span(L, 2);
-
-        /* Query Resources */
-        List<int>* ril = lua_obj->query(span);
-
-        /* Return Resources */
-        lua_newtable(L);
-        for(int r = 1, i = 0; i < ril->length(); i++, r++)
-        {
-            int resource_index = ril->get(i);
-            lua_pushstring(L, lua_obj->asset[resource_index].name);
-            lua_rawseti(L, -2, r);
-        }
-
-        /* Free Resource Index List */
-        delete ril;
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, 2);
-}
-
-/*----------------------------------------------------------------------------
- * luaDisplay - :display()
- *----------------------------------------------------------------------------*/
-int PointIndex::luaDisplay (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Parameters */
-        PointIndex* lua_obj = (PointIndex*)getLuaSelf(L, 1);
-
-        /* Display Tree */
-        lua_obj->display();
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------
