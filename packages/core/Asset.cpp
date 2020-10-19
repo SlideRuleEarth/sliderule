@@ -116,9 +116,9 @@ Asset::~Asset (void)
 /*----------------------------------------------------------------------------
  * load
  *----------------------------------------------------------------------------*/
-bool Asset::load (resource_t& resource)
+int Asset::load (resource_t& resource)
 {
-    resources.add(resource);
+    return resources.add(resource);    
 }
 
 /*----------------------------------------------------------------------------

@@ -101,10 +101,11 @@ class AssetIndex: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        void            buildtree       (node_t** root, int* maxdepth);
+        void            buildtree       (node_t* root, int* maxdepth);
         void            updatenode      (int i, node_t** node, int* maxdepth);
         void            balancenode     (node_t** root);
         void            querynode       (const T& span, node_t* curr, List<int>* list);
+        node_t*         newnode         (const T& span);
         void            deletenode      (node_t* node);
         bool            prunenode       (node_t* node);
         void            displaynode     (node_t* curr);
@@ -166,12 +167,27 @@ AssetIndex<T>::~AssetIndex (void)
 template <class T>
 void AssetIndex<T>::build (void)
 {
+    /* Build Tree Node */
+    spans.clear();
     for(int i = 0; i < asset.size(); i++)
     {
         bool provided = false;
         T span = attr2span(&asset[i].attributes, &provided);            
-        if(provided) add(span); // build tree of indexes
+        int index = spans.add(span);
+
+        /* Create Tree Node */
+        if(tree == NULL) tree = newnode(span);
+
+        /* Update Tree Span */
+        tree->span = combine(tree->span, span);
+
+        /* Update Tree Resource List */
+        tree->ril->add(index);
     }
+
+    /* Build Tree Structure */
+    int maxdepth = 0;
+    buildtree(tree, &maxdepth);
 }
 
 /*----------------------------------------------------------------------------
@@ -184,13 +200,18 @@ T AssetIndex<T>::get (int index)
 }
 
 /*----------------------------------------------------------------------------
- * add
+ * add - MUST BE COORDINATED w/ ASSET
+ * 
+ *  Note:   the call to add the span to the spans list relies upon the
+ *          assumption that the index the span sits at within the list
+ *          matches the index the originating resource sits at within the
+ *          asset's resource list
  *----------------------------------------------------------------------------*/
 template <class T>
 bool AssetIndex<T>::add (const T& span)
 {
     int maxdepth = 0;
-    int index = spans.add(span); // build local list of spans that mirror resource index list
+    int index = spans.add(span);
     updatenode(index, &tree, &maxdepth);
     balancenode(&tree);
     return true;
@@ -220,88 +241,73 @@ void AssetIndex<T>::display (void)
  * buildtree
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::buildtree (node_t** node, int* maxdepth)
+void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
 {
-    int i;
-    /* Get Span of Resource being Added */
-    T& span = spans[i];
-
-    /* Create Node (if necessary */
-    if(*node == NULL)
+    /* Check Root */
+    if(!root || !root->ril) return;
+    
+    /* Split Current Leaf Node */
+    int root_size = root->ril->length();
+    if(root_size >= threshold)
     {
-        *node = new node_t;
-        (*node)->ril = new List<int>;
-        (*node)->span = span;
-        (*node)->left = NULL;
-        (*node)->right = NULL;
-        (*node)->depth = 0;
-    }
-
-    /* Pointer to Current Node */
-    node_t* curr = *node;
-
-    /* Update Tree Span */
-    curr->span = combine(curr->span, span);
-
-    /* Update Current Leaf Node */
-    if(curr->ril)
-    {
-        /* Add Index to Current Node */
-        curr->ril->add(i);
-
-        /* Split Current Leaf Node */
-        int node_size = curr->ril->length();
-        if(node_size >= threshold)
+        /* Split Node */
+        T lspan, rspan;
+        split(root, lspan, rspan);
+        node_t* lnode = newnode(lspan);
+        node_t* rnode = newnode(rspan);
+        
+        /* Split Resources on Both Leaves */
+        int lcnt = 0, rcnt = 0;
+        for(int j = 0; j < root_size; j++)
         {
-            /* Split Node */
-            T lspan, rspan;
-            split(curr, lspan, rspan);
+            int resource_index = root->ril->get(j);
+            T& resource_span = spans[resource_index];
             
-            /* Preview Split Resources on Both Leaves */
-            int lcnt = 0, rcnt = 0;
-            for(int j = 0; j < node_size; j++)
+            if(intersect(lspan, resource_span))
             {
-                int resource_index = curr->ril->get(j);
-                T& resource_span = spans[resource_index];
-                if(intersect(lspan, resource_span)) lcnt++;
-                if(intersect(rspan, resource_span)) rcnt++;
+                lcnt++;
+                lnode->span = combine(lnode->span, resource_span);
+                lnode->ril->add(resource_index);
             }
-
-            /* Check if Makes Sense to Split */
-            if(lcnt > 0 && rcnt > 0 && lcnt != node_size && rcnt != node_size)
+            
+            if(intersect(rspan, resource_span))
             {
-                /* Split Node */
-                for(int j = 0; j < node_size; j++)
-                {
-                    int resource_index = curr->ril->get(j);
-                    T& resource_span = spans[resource_index];
-                    if(intersect(lspan, resource_span)) updatenode(resource_index, &curr->left, maxdepth);
-                    if(intersect(rspan, resource_span)) updatenode(resource_index, &curr->right, maxdepth);
-                }
-
-                /* Make Current Node a Branch */
-                delete curr->ril;
-                curr->ril = NULL;
-
-                /* Update Max Depth */
-                (*maxdepth)++;
+                rcnt++;
+                rnode->span = combine(rnode->span, resource_span);
+                rnode->ril->add(resource_index);
             }
         }
-    }
-    else 
-    {
-        /* Update Branches */
-        if(isleft(curr, span))  updatenode(i, &curr->left, maxdepth);
-        if(isright(curr, span)) updatenode(i, &curr->right, maxdepth);
 
-        /* Update Max Depth */
-        (*maxdepth)++;
+        /* Check if Makes Sense to Split */
+        if(lcnt > 0 && rcnt > 0 && lcnt != root_size && rcnt != root_size)
+        {
+            /* Split Root */            
+            delete root->ril;
+            root->ril = NULL;
+            root->left = lnode;
+            root->right = rnode;
+
+            /* Recurse Into Each Leaf */
+            buildtree(root->left, maxdepth);
+            buildtree(root->right, maxdepth);
+
+            /* Update Max Depth */
+            (*maxdepth)++;
+        }
+        else
+        {
+            /* Clean Up (unused) Leaf Nodes */
+            delete lnode->ril;
+            delete lnode;
+            delete rnode->ril;
+            delete rnode;
+        }
     }
 
     /* Update Current Depth */
-    if(curr->depth < *maxdepth)
+    if(root->depth < *maxdepth)
     {
-        curr->depth = *maxdepth;
+        root->depth = *maxdepth;
     }
 }
 
@@ -315,15 +321,7 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
     T& span = spans[i];
 
     /* Create Node (if necessary */
-    if(*node == NULL)
-    {
-        *node = new node_t;
-        (*node)->ril = new List<int>;
-        (*node)->span = span;
-        (*node)->left = NULL;
-        (*node)->right = NULL;
-        (*node)->depth = 0;
-    }
+    if(*node == NULL) *node = newnode(span);
 
     /* Pointer to Current Node */
     node_t* curr = *node;
@@ -516,6 +514,21 @@ void AssetIndex<T>::querynode (const T& span, node_t* curr, List<int>* list)
         /* Goto Before Tree */
         querynode(span, curr->right, list);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * displaynode
+ *----------------------------------------------------------------------------*/
+template <class T>
+typename AssetIndex<T>::node_t* AssetIndex<T>::newnode (const T& span)
+{
+    node_t* node = new node_t;
+    node->ril = new List<int>;
+    node->span = span;
+    node->left = NULL;
+    node->right = NULL;
+    node->depth = 0;
+    return node;
 }
 
 /*----------------------------------------------------------------------------
