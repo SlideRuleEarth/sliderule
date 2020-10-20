@@ -140,9 +140,6 @@ class LuaEngine
         static List<pkgInitEntry_t>     pkgInitTable;
         static Mutex                    pkgInitTableMutex;
 
-        static Dictionary<LuaObject*>   globalObjects;
-        static Mutex                    globalMut;
-
         lua_State*                      L;      // lua state variable
         Mutex                           mutL;   // mutex to lua state
     

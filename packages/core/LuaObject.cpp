@@ -35,6 +35,9 @@
 const char* LuaObject::BASE_OBJECT_TYPE = "LuaObject";
 const char* LuaException::ERROR_TYPE = "LuaException";
 
+Dictionary<LuaObject*> LuaObject::globalObjects;
+Mutex LuaObject::globalMut;
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -88,6 +91,37 @@ uint32_t LuaObject::getTraceId (void)
 int LuaObject::getLuaNumParms (lua_State* L)
 {
     return lua_gettop(L);
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetByName
+ *----------------------------------------------------------------------------*/
+int LuaObject::luaGetByName(lua_State* L)
+{
+    try
+    {
+        /* Get Name */
+        const char* name = getLuaString(L, 1);
+
+        /* Get Self */
+        LuaObject* lua_obj = globalObjects.get(name);
+
+        /* Return  Lua Object */
+        associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
+        return createLuaObject(L, lua_obj);
+    }
+    catch(const std::out_of_range& e)
+    {
+        mlog(CRITICAL, "Name was not registered\n");
+        lua_pushnil(L);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error associating object: %s\n", e.errmsg);
+        lua_pushnil(L);
+    }
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -226,7 +260,7 @@ bool LuaObject::releaseLuaObject (void)
     {
         delete this;
     }
-    
+
     return is_delete_pending;
 }
 
@@ -241,6 +275,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     ObjectType(object_type),
     ObjectName(NULL),
     LuaMetaName(meta_name),
+    LuaMetaTable(meta_table),
     LuaState(L)
 {
     uint32_t engine_trace_id = ORIGIN;
@@ -325,9 +360,9 @@ int LuaObject::luaDelete (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaAssociate
+ * luaName
  *----------------------------------------------------------------------------*/
-int LuaObject::luaAssociate(lua_State* L)
+int LuaObject::luaName(lua_State* L)
 {
     try
     {
@@ -335,14 +370,29 @@ int LuaObject::luaAssociate(lua_State* L)
         LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Get Name */
-        const char* name = getLuaString(L, 2, true, NULL);
+        const char* name = getLuaString(L, 2);
+
+        /* Add Name to Global Objects */
+        globalMut.lock();
+        {
+            /* Remove Previous Name (if it exists) */
+            if(lua_obj->ObjectName)
+            {
+                globalObjects.remove(lua_obj->ObjectName);
+                delete [] lua_obj->ObjectName;
+            }
+
+            /* Register Name */
+            if(!globalObjects.add(name, lua_obj))
+            {
+                throw LuaException("Unable to register name: %s", name);
+            }
+        }
+        globalMut.unlock();
 
         /* Associate Name */
-        if(name)
-        {
-            if(lua_obj->ObjectName) delete [] lua_obj->ObjectName;
-            lua_obj->ObjectName = StringLib::duplicate(name);
-        }
+        lua_obj->ObjectName = StringLib::duplicate(name);
+        mlog(INFO, "Associating %s with object of type %s\n", lua_obj->getName(), lua_obj->getType());
 
         /* Return Name */
         lua_pushstring(L, lua_obj->ObjectName);
@@ -441,7 +491,8 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         luaL_setfuncs(L, meta_table, 0);
 
         /* Add Base Class Functions */
-        LuaEngine::setAttrFunc(L, "name", luaAssociate);
+        LuaEngine::setAttrFunc(L, "name", luaName);
+        LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
         LuaEngine::setAttrFunc(L, "lock", luaLock);
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDelete);

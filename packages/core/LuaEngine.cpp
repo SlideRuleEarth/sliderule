@@ -42,9 +42,6 @@ Mutex LuaEngine::libInitTableMutex;
 List<LuaEngine::pkgInitEntry_t> LuaEngine::pkgInitTable;
 Mutex LuaEngine::pkgInitTableMutex;
 
-Dictionary<LuaObject*> LuaEngine::globalObjects;
-Mutex LuaEngine::globalMut;
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/

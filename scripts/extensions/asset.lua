@@ -119,6 +119,7 @@ local function loaddir(file, quiet)
     -- create asset for each entry in directory
     for k,v in pairs(directory) do
         assets[k] = core.asset(k, v["format"], v["url"], v["index"])
+        assets[k]:name(k)
     end
 
     -- load index file for each asset in directory
@@ -149,7 +150,7 @@ end
 local function buildurl(name, resource)
 
     if name then
-        local index = core.asset(name)
+        local index = core.getbyname(name)
         if index then
             name, format, url = index:info()
             return string.format('%s://%s/%s', format, url, resource)

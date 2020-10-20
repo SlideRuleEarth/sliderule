@@ -33,7 +33,7 @@ local timeout = rqst["timeout"] or core.PEND
 sys.log(core.USER, string.format("atl03 indexing initiated on %s data...\n", asset_name))
 
 -- Index Asset --  
-local atl03 = core.asset(asset_name)
+local atl03 = core.getbyname(asset_name)
 local name, format, url, index_filename, status = atl03:info()
 local indexer = icesat2.atl03indexer(atl03, resources, rspq)
 

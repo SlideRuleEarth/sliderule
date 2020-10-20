@@ -47,7 +47,7 @@
 local json = require("json")
 local parm = json.decode(arg[1])
 
-local asset = core.asset(parm["asset"])
+local asset = core.getbyname(parm["asset"])
 local pole = parm["pole"]
 local lat = parm["lat"]
 local lon = parm["lon"]

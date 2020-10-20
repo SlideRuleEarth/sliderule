@@ -59,6 +59,7 @@ void os_print (const char* file_name, unsigned int line_number, const char* mess
 int core_open (lua_State *L)
 {
     static const struct luaL_Reg core_functions[] = {
+        {"getbyname",       LuaObject::luaGetByName},
         {"logger",          Logger::luaCreate},
         {"cluster",         ClusterSocket::luaCreate},
         {"file",            File::luaCreate},
