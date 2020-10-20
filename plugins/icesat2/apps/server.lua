@@ -29,12 +29,15 @@ console.logger:config(loglvl)
 
 -- Configure Assets --
 assets = asset.loaddir(asset_directory)
+timeindex = core.intervalindex(assets["atl03-cloud"], "t0", "t1")
+southindex = core.spatialindex(assets["atl03-cloud"], core.SOUTH_POLAR)
+northindex = core.spatialindex(assets["atl03-cloud"], core.NORTH_POLAR)
+cycleindex = core.pointindex(assets["atl03-cloud"], "cycle")
+rgtindex = core.pointindex(assets["atl03-cloud"], "rgt")
 
 -- Configure S3 Cache --
-if __aws__ then
-    if cache_root then
-        aws.s3cache(cache_root, cache_size)
-    end
+if cache_root then
+    aws.s3cache(cache_root, cache_size)
 end
 
 -- Configure and Run Server --

@@ -104,4 +104,4 @@ class Asset: public LuaObject
         static int      luaLoad     (lua_State* L);
 };
 
-#endif  /* __asset_ */
+#endif  /* __asset__ */

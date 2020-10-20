@@ -208,9 +208,8 @@ bool LuaObject::releaseLuaObject (void)
         if(li)
         {
             /* Lock Object for Deletion */
-            lockKey = li->lockObject(this);
             is_delete_pending = true;
-            mlog(INFO, "Pending delete for object %s/%s, key = %ld\n", getType(), getName(), (unsigned long)lockKey);
+            mlog(INFO, "Delete on release for object %s/%s\n", getType(), getName());
         }
         else
         {
@@ -222,6 +221,12 @@ bool LuaObject::releaseLuaObject (void)
         mlog(CRITICAL, "Unmatched object release %s of type %s detected\n", getName(), getType());
     }
 
+    /* Delete THIS Object */
+    if(is_delete_pending)
+    {
+        delete this;
+    }
+    
     return is_delete_pending;
 }
 
@@ -267,7 +272,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 LuaObject::~LuaObject (void)
 {
     stop_trace(traceId);
-    mlog(INFO, "Deleting %s of type %s\n", getName(), getType());
+    mlog(INFO, "Deleting %s/%s\n", getType(), getName());
     if(ObjectName) delete [] ObjectName;
 }
 
@@ -284,6 +289,7 @@ int LuaObject::luaDelete (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
+                user_data->luaObj = NULL;
                 mlog(INFO, "Garbage collecting object %s/%s\n", lua_obj->getType(), lua_obj->getName());
 
                 lua_obj->referenceCount--;
@@ -291,7 +297,6 @@ int LuaObject::luaDelete (lua_State* L)
                 {
                     /* Delete Object */
                     delete lua_obj;
-                    user_data->luaObj = NULL;
                 }
                 else
                 {
