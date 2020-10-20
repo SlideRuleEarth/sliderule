@@ -1,7 +1,7 @@
 ROOT = $(shell pwd)
 STAGEDIR = stage
 RUNDIR = /usr/local/etc/sliderule
-SLIDERULE = $(ROOT)/../../sliderule
+SLIDERULE = $(ROOT)/../..
 ICESAT2CFG = -DENABLE_H5_REST_VOL=ON -DUSE_AWS_PACKAGE=ON -DUSE_H5_PACKAGE=ON -DUSE_ICESAT2_PLUGIN=ON -DUSE_LEGACY_PACKAGE=OFF -DUSE_CCSDS_PACKAGE=OFF -DUSE_SIGVIEW_PLUGIN=OFF
 DOCKERTAG = icesat2sliderule/sliderule:master
 HSDS_IP?=$(shell (getent hosts hsds.sliderule.beta | awk '{ print $$1 ; exit }'))
@@ -27,14 +27,18 @@ docker-image: distclean production-config default-build
 	# copy over dockerfile #
 	cp $(SLIDERULE)/targets/sliderule-docker/dockerfile.app $(STAGEDIR)/Dockerfile
 	# copy over installation configuration #
-	cp config/plugins.conf $(STAGEDIR)/etc/sliderule
+	cp plugins.conf $(STAGEDIR)/etc/sliderule
+	cp icesat2-docker.json $(STAGEDIR)/etc/sliderule
 	# copy over scripts #
 	mkdir $(STAGEDIR)/scripts
 	cp -R $(SLIDERULE)/scripts/apps $(STAGEDIR)/scripts/apps
 	cp -R $(SLIDERULE)/scripts/tests $(STAGEDIR)/scripts/tests
-	# copy over tests #
+	# copy over plugin tests #
 	mkdir -p $(STAGEDIR)/plugins/icesat2/tests
 	cp $(SLIDERULE)/plugins/icesat2/tests/* $(STAGEDIR)/plugins/icesat2/tests
+	# copy over plugin apps #
+	mkdir -p $(STAGEDIR)/plugins/icesat2/apps
+	cp $(SLIDERULE)/plugins/icesat2/apps/* $(STAGEDIR)/plugins/icesat2/apps
 	# copy over library dependencies #
 	mkdir -p $(STAGEDIR)/lib
 	cp /usr/local/lib/libhdf5_vol_rest.so $(STAGEDIR)/lib
@@ -43,22 +47,15 @@ docker-image: distclean production-config default-build
 	cd $(STAGEDIR); docker build -t $(DOCKERTAG) .
 
 run-docker:
-	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 $(DOCKERTAG) /usr/local/scripts/apps/server.lua /data/config/icesat2-docker.json
+	# note: /data must be populated with a `config` directory containing the asset_directory.csv and any corresponding index files
+	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 $(DOCKERTAG) /usr/local/scripts/apps/server.lua $(RUNDIR)/icesat2-docker.json
 
 run-stand-alone:
-	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/scripts/apps/server.lua config/icesat2-stand-alone.json
+	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua icesat2-stand-alone.json
 
-run-docker-build:
-	docker run -it --rm --name=sliderule-dev -v /var/run/docker.sock:/var/run/docker.sock -v $(ROOT)/..:/devops -v $(SLIDERULE):/sliderule sliderule-development
-
-install: deploy
+install:
 	make -C build install
-	cp config/plugins.conf $(RUNDIR)
-
-deploy:
-	mkdir -p /data/config
-	cp config/asset_directory.csv /data/config
-	cp config/icesat2-docker.json /data/config
+	cp plugins.conf $(RUNDIR)
 
 clean:
 	make -C build clean
@@ -68,6 +65,3 @@ distclean:
 	- rm -Rf build
 	- rm -Rf $(STAGEDIR)
 	- rm -Rf .cache
-
-run-data-test:
-	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 $(DOCKERTAG) /usr/local/plugins/icesat2/tests/data_access_check.lua hsds:///data/ATLAS/ATL03_20181019065445_03150111_003_01.h5
