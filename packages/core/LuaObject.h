@@ -124,7 +124,7 @@ class LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[], bool permanent=false);
+                            LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]);
 
         void                signalComplete      (void);
         static void         associateMetaTable  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);

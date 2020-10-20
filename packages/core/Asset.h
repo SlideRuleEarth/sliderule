@@ -49,8 +49,8 @@ class Asset: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            char                            name[RESOURCE_NAME_LENGTH];
-            Dictionary<double>              attributes{16};
+            char                name[RESOURCE_NAME_LENGTH];
+            Dictionary<double>  attributes{16};
         } resource_t;
 
         /*--------------------------------------------------------------------
@@ -82,10 +82,6 @@ class Asset: public LuaObject
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        static Dictionary<Asset*>           assets;
-        static Mutex                        assetsMut;
-        bool                                registered;
 
         const char*                         name;
         const char*                         format;

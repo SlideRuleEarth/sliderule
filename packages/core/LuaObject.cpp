@@ -271,7 +271,7 @@ bool LuaObject::releaseLuaObject (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[], bool permanent):
+LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]):
     ObjectType(object_type),
     ObjectName(NULL),
     LuaMetaName(meta_name),
@@ -280,9 +280,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 {
     uint32_t engine_trace_id = ORIGIN;
 
-    if(!permanent)  referenceCount = 0;
-    else            referenceCount = 1;
-
+    referenceCount = 0;
     objComplete = false;
 
     if(LuaState)
@@ -327,7 +325,7 @@ int LuaObject::luaDelete (lua_State* L)
                 user_data->luaObj = NULL;
                 mlog(INFO, "Garbage collecting object %s/%s\n", lua_obj->getType(), lua_obj->getName());
 
-                lua_obj->referenceCount--;
+                int count = lua_obj->referenceCount--;
                 if(lua_obj->referenceCount == 0)
                 {
                     /* Delete Object */
@@ -335,7 +333,7 @@ int LuaObject::luaDelete (lua_State* L)
                 }
                 else
                 {
-                    mlog(INFO, "Delaying delete on referenced object %s/%s\n", lua_obj->getType(), lua_obj->getName());
+                    mlog(INFO, "Delaying delete on referenced<%d> object %s/%s\n", count, lua_obj->getType(), lua_obj->getName());
                 }
             }
             else
