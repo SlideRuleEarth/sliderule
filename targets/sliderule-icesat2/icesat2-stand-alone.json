@@ -1,0 +1,6 @@
+{
+    "loglvl": "INFO",
+    "port": 9081,
+    "asset_directory": "config/asset_directory.csv",
+    "cache_root": ".cache"
+}

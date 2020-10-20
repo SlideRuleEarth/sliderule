@@ -5,9 +5,29 @@ The ICESat-2 plugin provides science data processing algorithms for derived ATL0
 
 ## I. Building
 
-This plugin requires the `h5` and `aws` packages to be enabled.  See [README.md](../../README.md) for instructions on building and installing sliderule. The minimal set of cmake options required are: `-DUSE_ICESAT2_PLUGIN=ON -DUSE_H5_PACKAGE=ON -DUSE_AWS_PACKAGE=ON`.
+1. The base build environment must be setup as described in the SlideRule readme.  Follow the first three steps in the Quick Start section to install the necessary system packages, a recent version of cmake, and Docker.  See [SlideRule Readme: III. Quick Start](https://github.com/ICESat2-SlideRule/sliderule/blob/master/README.md#iii-quick-start).  
 
-Once installed, make sure the /usr/local/etc/sliderule/plugin.conf file includes an entry for `icesat2`.
+2. Optionally install __Lttng__. See [Core Package Overview](https://github.com/ICESat2-SlideRule/sliderule/blob/master/packages/core/core.md) for installation instructions.
+
+3. Install __HDF5__, including the REST-VOL connector. See [Install H5 Library](https://github.com/ICESat2-SlideRule/sliderule/blob/master/packages/h5/h5.md) for installation instructions.
+
+4. Install __AWS SDK__. See [Install AWS SDK Library](https://github.com/ICESat2-SlideRule/sliderule/blob/asset/packages/aws/aws.md) for installation instructions.
+
+5. Use the [Makefile](build/Makefile) to build the software.
+
+For a development version of SlideRule that is run locally:
+```bash
+$ make config
+$ make
+$ sudo make install
+$ make run-stand-alone
+```
+
+For a production version of SlideRule that is run in a docker container:
+```bash
+$ make docker-image
+$ make run-docker
+```
 
 ## II. Setting Up Python Environment
 
