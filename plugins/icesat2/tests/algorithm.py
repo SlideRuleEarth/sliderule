@@ -39,7 +39,7 @@ def algoexec(asset):
     # Build ATL06 Request
     rqst = {
         "asset" : asset,
-        "resource": "ATL03_20181019065445_03150111_003_01.h5",
+        "resource": "ATL03_20181019065445_03150111_003_01_BE.h5",
         "track": 0,
         "stages": ["LSF"],
         "parms": {
@@ -98,7 +98,7 @@ def expread(asset):
     # Baseline Request
     rqst = {
         "asset" : asset,
-        "resource": "ATL06_20181019065445_03150111_003_01.h5",
+        "resource": "ATL06_20181019065445_03150111_003_01_CONTI_GZIP.h5",
         "datatype": sliderule.datatypes["REAL"],
         "id": 0
     }
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     act = algoexec(asset)
 
     # Read ATL06 Expected Results
-    exp = expread("atl03-local")
+    exp = expread(asset)
 
     # Create Plot
     fig = plt.figure(num=None, figsize=(12, 6))
