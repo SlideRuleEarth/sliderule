@@ -1,4 +1,4 @@
-ROOT = $(shell pwd)
+ROOT = $(shell pwd)/../..
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 RUNDIR = /usr/local/etc/sliderule
 
@@ -20,19 +20,19 @@ config: default-config
 
 default-config:
 	mkdir -p build
-	cd build; cmake ..
+	cd build; cmake $(ROOT)
 
 release-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON ..
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON $(ROOT)
 
 development-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) ..
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) $(ROOT)
 
 docker-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/stage -DRUNTIMEDIR=$(RUNDIR) ..
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/stage -DRUNTIMEDIR=$(RUNDIR) $(ROOT)
 
 docker-application-image: distclean docker-config default-build install
 	cp targets/sliderule-docker/dockerfile.app stage/Dockerfile
@@ -52,12 +52,12 @@ docker-development-image:
 
 scan:
 	mkdir -p build
-	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) ..
+	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) $(ROOT)
 	cd build; scan-build -o scan-results make
 
 asan:
 	mkdir -p build
-	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON ..
+	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd build; make
 
 install:

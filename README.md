@@ -17,7 +17,7 @@ A C++/Lua framework for on-demand science data processing.
 
 ## II. Building with CMake
 
-From the base project directory:
+From the `targets/sliderule-linux` base project directory:
 1. `make config`
 2. `make`
 3. `sudo make install`
@@ -30,7 +30,7 @@ And perform the following installations:
 * `/usr/local/include/sliderule`: class header files for plugin development
 * `/usr/local/etc/sliderule`: plugins, configuration files, and scripts
 
-To change compile options exposed by cmake (e.g. disable plugin compilation):
+To take full control of the compile options exposed by cmake (e.g. disable plugin compilation), run the following commands in the root directory (or from anywhere as long as you point to the `CMakeLists.txt` file in the root directory):
 1.	`mkdir -p build`
 2.	`cd build; cmake <options> ..`
 3. `make`
