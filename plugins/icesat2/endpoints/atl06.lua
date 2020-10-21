@@ -39,6 +39,20 @@ local stages = rqst["stages"]
 local parms = rqst["parms"]
 local timeout = rqst["timeout"] or core.PEND
 
+--- right here (or maybe in another endpoint) create indexes if the request parameters indicate that it needs to
+--- then use the index to pull out the files that that match the index query
+--- then return the list of files
+
+
+--- also need to pass along the query parameters to the atl03 processing so that it can do subsetting
+
+
+
+
+
+
+
+
 -- Post Initial Status Progress --
 sys.log(core.USER, string.format("atl06 processing initiated on %s data...\n", asset_name))
 

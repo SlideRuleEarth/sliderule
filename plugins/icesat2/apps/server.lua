@@ -29,11 +29,21 @@ console.logger:config(loglvl)
 
 -- Configure Assets --
 assets = asset.loaddir(asset_directory)
+
 timeindex = core.intervalindex(assets["atl03-cloud"], "t0", "t1")
+timeindex:name("timeindex")
+
 southindex = core.spatialindex(assets["atl03-cloud"], core.SOUTH_POLAR)
+southindex:name("southindex")
+
 northindex = core.spatialindex(assets["atl03-cloud"], core.NORTH_POLAR)
+northindex:name("northindex")
+
 cycleindex = core.pointindex(assets["atl03-cloud"], "cycle")
+cycleindex:name("cycleindex")
+
 rgtindex = core.pointindex(assets["atl03-cloud"], "rgt")
+rgtindex:name("rgtindex")
 
 -- Configure S3 Cache --
 if cache_root then
