@@ -222,13 +222,33 @@ def test_geospatial ():
 #  TEST INDEX
 #
 def test_index ():
-    rqst = {
-        "rgtindex": {"rgt": 295}
+    test1 = {
+        "rgtindex": {"rgt": 295},
+        "timeindex": {"t0": 1239544000, "t1": 1255238200}
     }
 
-    d = sliderule.source("index", rqst)
+    d = sliderule.source("index", test1)
 
-    print(d)
+    if(len(d["resources"]) == 20):
+        print("Passed union index test")
+    else:
+        print("Failed union index test", len(d["resources"]), d)
+
+    test2 = {
+        "and": {
+            "rgtindex": {"rgt": 295},
+            "timeindex": {"t0": 1239544000, "t1": 1255238200}
+        }
+    }
+
+    d = sliderule.source("index", test2)
+
+    if( ("ATL03_20190417134754_02950302_003_01.h5" in d["resources"]) and 
+        ("ATL03_20191016050727_02950502_003_01.h5" in d["resources"]) and 
+        (len(d["resources"]) == 2)):
+        print("Passed intersection index test")
+    else:
+        print("Failed intersection index test", len(d["resources"]), d)
 
 
 ###############################################################################
