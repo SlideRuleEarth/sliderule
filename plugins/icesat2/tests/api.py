@@ -269,9 +269,9 @@ if __name__ == '__main__':
 
     # Tests
 
-#    test_time()
-#    test_h5()
-#    test_variable_length()
-#    test_definition()
-#    test_geospatial()
+    test_time()
+    test_h5()
+    test_variable_length()
+    test_definition()
+    test_geospatial()
     test_index()

@@ -46,7 +46,6 @@ local function build_resource_array(index_set, union)
             else
                 resource_set[resource] = 1
             end
-            print(k, resource, resource_set[resource])
         end
     end
 
@@ -59,7 +58,6 @@ local function build_resource_array(index_set, union)
         local num_indexes = 0
         for _ in pairs(index_set) do num_indexes = num_indexes + 1 end
         for k,v in pairs(resource_set) do
-            print(k, v)
             if v == num_indexes then         
                 table.insert(result["resources"], k)
             end
