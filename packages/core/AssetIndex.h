@@ -95,24 +95,24 @@ class AssetIndex: public LuaObject
         virtual T           luatable2span   (lua_State* L, int parm) = 0;
         virtual void        displayspan     (const T& span) = 0;
         
+        static int          luaAdd          (lua_State* L);
+        static int          luaQuery        (lua_State* L);
+        static int          luaDisplay      (lua_State* L);
+
     private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        void            buildtree       (node_t* root, int* maxdepth);
-        void            updatenode      (int i, node_t** node, int* maxdepth);
-        void            balancenode     (node_t** root);
-        void            querynode       (const T& span, node_t* curr, List<int>* list);
-        node_t*         newnode         (const T& span);
-        void            deletenode      (node_t* node);
-        bool            prunenode       (node_t* node);
-        void            displaynode     (node_t* curr);
-
-        static int      luaAdd          (lua_State* L);
-        static int      luaQuery        (lua_State* L);
-        static int      luaDisplay      (lua_State* L);
+        void                buildtree       (node_t* root, int* maxdepth);
+        void                updatenode      (int i, node_t** node, int* maxdepth);
+        void                balancenode     (node_t** root);
+        void                querynode       (const T& span, node_t* curr, List<int>* list);
+        node_t*             newnode         (const T& span);
+        void                deletenode      (node_t* node);
+        bool                prunenode       (node_t* node);
+        void                displaynode     (node_t* curr);
 
         /*--------------------------------------------------------------------
          * Data
@@ -145,10 +145,6 @@ AssetIndex<T>::AssetIndex (lua_State* L, Asset& _asset, const char* meta_name, c
     threshold(_threshold)
 {
     tree = NULL;
-
-    LuaEngine::setAttrFunc(L, "add", luaAdd);
-    LuaEngine::setAttrFunc(L, "query", luaQuery);
-    LuaEngine::setAttrFunc(L, "display", luaDisplay);
 }
 
 /*----------------------------------------------------------------------------
@@ -235,6 +231,105 @@ template <class T>
 void AssetIndex<T>::display (void)
 {
     displaynode(tree);
+}
+
+/*----------------------------------------------------------------------------
+ * luaAdd - :add(<attributes>)
+ *----------------------------------------------------------------------------*/
+template <class T>
+int AssetIndex<T>::luaAdd (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+
+        /* Create Resource Attributes */
+        T span = lua_obj->luatable2span(L, 2);
+
+        /* Add Resource */
+        status = lua_obj->add(span);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error adding: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 2);
+}
+
+/*----------------------------------------------------------------------------
+ * luaQuery - :query(<resource table>)
+ *----------------------------------------------------------------------------*/
+template <class T>
+int AssetIndex<T>::luaQuery (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+
+        /* Create Query Attributes */
+        T span = lua_obj->luatable2span(L, 2);
+
+        /* Query Resources */
+        List<int>* ril = lua_obj->query(span);
+
+        /* Return Resources */
+        lua_newtable(L);
+        for(int r = 1, i = 0; i < ril->length(); i++, r++)
+        {
+            int resource_index = ril->get(i);
+            lua_pushstring(L, lua_obj->asset[resource_index].name);
+            lua_rawseti(L, -2, r);
+        }
+
+        /* Free Resource Index List */
+        delete ril;
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 2);
+}
+
+/*----------------------------------------------------------------------------
+ * luaDisplay - :display()
+ *----------------------------------------------------------------------------*/
+template <class T>
+int AssetIndex<T>::luaDisplay (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+
+        /* Display Tree */
+        lua_obj->display();
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------
@@ -553,7 +648,6 @@ void AssetIndex<T>::deletenode (node_t* node)
     deletenode(right);
 }
 
-
 /*----------------------------------------------------------------------------
  * displaynode
  *----------------------------------------------------------------------------*/
@@ -654,105 +748,6 @@ void AssetIndex<T>::displaynode (node_t* curr)
     /* Recurse */
     displaynode(curr->left);
     displaynode(curr->right);
-}
-
-/*----------------------------------------------------------------------------
- * luaAdd - :add(<attributes>)
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaAdd (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
-
-        /* Create Resource Attributes */
-        T span = lua_obj->luatable2span(L, 2);
-
-        /* Add Resource */
-        status = lua_obj->add(span);
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error adding: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, 2);
-}
-
-/*----------------------------------------------------------------------------
- * luaQuery - :query(<resource table>)
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaQuery (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
-
-        /* Create Query Attributes */
-        T span = lua_obj->luatable2span(L, 2);
-
-        /* Query Resources */
-        List<int>* ril = lua_obj->query(span);
-
-        /* Return Resources */
-        lua_newtable(L);
-        for(int r = 1, i = 0; i < ril->length(); i++, r++)
-        {
-            int resource_index = ril->get(i);
-            lua_pushstring(L, lua_obj->asset[resource_index].name);
-            lua_rawseti(L, -2, r);
-        }
-
-        /* Free Resource Index List */
-        delete ril;
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, 2);
-}
-
-/*----------------------------------------------------------------------------
- * luaDisplay - :display()
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaDisplay (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Parameters */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
-
-        /* Display Tree */
-        lua_obj->display();
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 #endif  /* __asset_index__ */

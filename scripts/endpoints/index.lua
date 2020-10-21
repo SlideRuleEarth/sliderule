@@ -18,48 +18,21 @@
 local json = require("json")
 local parm = json.decode(arg[1])
 
-local asset = core.getbyname(parm["asset"])
-local pole = parm["pole"]
-local lat = parm["lat"]
-local lon = parm["lon"]
-local x = parm["x"]
-local y = parm["y"]
-local span = parm["span"]
-local span1 = parm["span1"]
-local span2 = parm["span2"]
-
-local result = {}
-local index = nil
-
--- Create Index --
-if pole == "north" then pole = core.NORTH_POLAR
-else pole = core.SOUTH_POLAR end
-index = core.spatialindex(asset, pole)
-
--- Polar Conversion --
-if lat and lon then
-    result["x"], result["y"] = index:polar(lat, lon) 
+-- build set of resources --
+local resource_set = {}
+for k,v in pairs(parm) do
+    local index = core.getbyname(k)
+    local resources = index:query(v)
+    for _,resource in pairs(resources) do
+        resource_set[resource] = true
+    end
 end
 
--- Spherical Conversion --
-if x and y then
-    result["lat"], result["lon"] = index:sphere(x, y)
+-- convert resource set into array --
+local result = {resources={}}
+for k,_ in pairs(resource_set) do
+    table.insert(result["resources"], k)
 end
 
--- Split --
-if span then
-    result["split"] = {}
-    result["split"]["lspan"], result["split"]["rspan"] = index:split(span)
-end
-
--- Intersect --
-if span1 and span2 then
-    result["intersect"] = index:intersect(span1, span2)
-end
-
--- Combine --
-if span1 and span2 then
-    result["combine"] = index:combine(span1, span2)
-end
-
+print(json.encode(result))
 return json.encode(result)

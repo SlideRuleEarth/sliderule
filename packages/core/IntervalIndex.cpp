@@ -33,6 +33,9 @@
 
 const char* IntervalIndex::LuaMetaName = "IntervalIndex";
 const struct luaL_Reg IntervalIndex::LuaMetaTable[] = {
+    {"add",         luaAdd},
+    {"query",       luaQuery},
+    {"display",     luaDisplay},
     {NULL,          NULL}
 };
 

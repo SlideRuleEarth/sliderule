@@ -37,6 +37,9 @@
 
 const char* SpatialIndex::LuaMetaName = "SpatialIndex";
 const struct luaL_Reg SpatialIndex::LuaMetaTable[] = {
+    {"add",         luaAdd},
+    {"query",       luaQuery},
+    {"display",     luaDisplay},
     {"polar",       luaPolar},
     {"sphere",      luaSphere},  
     {"split",       luaSplit},

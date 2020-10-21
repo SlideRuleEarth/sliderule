@@ -218,6 +218,18 @@ def test_geospatial ():
     else:
         print("Failed sphere4 test", d["lat"], d["lon"])
 
+#
+#  TEST INDEX
+#
+def test_index ():
+    rqst = {
+        "rgtindex": {"rgt": 295}
+    }
+
+    d = sliderule.source("index", rqst)
+
+    print(d)
+
 
 ###############################################################################
 # MAIN
@@ -237,8 +249,9 @@ if __name__ == '__main__':
 
     # Tests
 
-    test_time()
-    test_h5()
-    test_variable_length()
-    test_definition()
-    test_geospatial()
+#    test_time()
+#    test_h5()
+#    test_variable_length()
+#    test_definition()
+#    test_geospatial()
+    test_index()

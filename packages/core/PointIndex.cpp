@@ -33,6 +33,9 @@
 
 const char* PointIndex::LuaMetaName = "PointIndex";
 const struct luaL_Reg PointIndex::LuaMetaTable[] = {
+    {"add",         luaAdd},
+    {"query",       luaQuery},
+    {"display",     luaDisplay},
     {NULL,          NULL}
 };
 
