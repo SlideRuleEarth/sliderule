@@ -17,7 +17,7 @@ A C++/Lua framework for on-demand science data processing.
 
 ## II. Building with CMake
 
-From the `targets/sliderule-linux` base project directory:
+From the `targets/sliderule-linux` directory:
 1. `make config`
 2. `make`
 3. `sudo make install`
@@ -247,5 +247,5 @@ The following sliderule software components include code sourced from and/or
 based off of third party software that has been released as open source to the
 public under various open source agreements:
 * `packages/core/LuaEngine.cpp`: partial code sourced from https://www.lua.org/
-* `scripts/utils/json.lua`: code sourced from https://github.com/rxi/json.lua.git
-* `scripts.utils/csv.lua`: code sourced from https://github.com/geoffleyland/lua-csv
+* `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git
+* `scripts/extensions/csv.lua`: code sourced from https://github.com/geoffleyland/lua-csv
