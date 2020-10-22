@@ -41,7 +41,7 @@ const struct luaL_Reg SpatialIndex::LuaMetaTable[] = {
     {"add",         luaAdd},
     {"query",       luaQuery},
     {"display",     luaDisplay},
-    {"polar",       luaPolar},
+    {"project",     luaProject},
     {"sphere",      luaSphere},  
     {"split",       luaSplit},
     {"intersect",   luaIntersect},
@@ -99,44 +99,44 @@ SpatialIndex::~SpatialIndex(void)
 void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rspan)
 {
     /* Project to Polar polarinates */
-    polarspan_t polar = project(node->span);
+    projspan_t proj = project(node->span);
 
     /* Split Region */
-    polarspan_t lpolar, rpolar;
+    projspan_t lproj, rproj;
     if(node->depth % 2 == 0) // even depth
     {
         /* Split Across Radius */
-        double split_val = (polar.p0.x + polar.p1.x) / 2.0;
+        double split_val = (proj.p0.x + proj.p1.x) / 2.0;
         
-        lpolar.p0.x = polar.p0.x;
-        lpolar.p0.y = polar.p0.y;
-        lpolar.p1.x = split_val;
-        lpolar.p1.y = polar.p1.y;
+        lproj.p0.x = proj.p0.x;
+        lproj.p0.y = proj.p0.y;
+        lproj.p1.x = split_val;
+        lproj.p1.y = proj.p1.y;
 
-        rpolar.p0.x = split_val;
-        rpolar.p0.y = polar.p0.y;
-        rpolar.p1.x = polar.p1.x;
-        rpolar.p1.y = polar.p1.y;
+        rproj.p0.x = split_val;
+        rproj.p0.y = proj.p0.y;
+        rproj.p1.x = proj.p1.x;
+        rproj.p1.y = proj.p1.y;
     }
     else // odd depth
     {
         /* Split Across Angle */
-        double split_val = (polar.p0.y + polar.p1.y) / 2.0;
+        double split_val = (proj.p0.y + proj.p1.y) / 2.0;
         
-        lpolar.p0.x = polar.p0.x;
-        lpolar.p0.y = split_val;
-        lpolar.p1.x = polar.p1.x;
-        lpolar.p1.y = polar.p1.y;
+        lproj.p0.x = proj.p0.x;
+        lproj.p0.y = split_val;
+        lproj.p1.x = proj.p1.x;
+        lproj.p1.y = proj.p1.y;
 
-        rpolar.p0.x = polar.p0.x;
-        rpolar.p0.y = polar.p0.y;
-        rpolar.p1.x = polar.p1.x;
-        rpolar.p1.y = split_val;
+        rproj.p0.x = proj.p0.x;
+        rproj.p0.y = proj.p0.y;
+        rproj.p1.x = proj.p1.x;
+        rproj.p1.y = split_val;
     }
 
     /* Restore to Geographic polarinates */
-    lspan = restore(lpolar);
-    rspan = restore(rpolar);
+    lspan = restore(lproj);
+    rspan = restore(rproj);
 }
 
 /*----------------------------------------------------------------------------
@@ -148,23 +148,23 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
     assert(node->right);
 
     /* Project to Polar polarinates */
-    polarspan_t lpolar = project(node->left->span);
-    polarspan_t rpolar = project(node->right->span);
-    polarspan_t spolar = project(span);
+    projspan_t lproj = project(node->left->span);
+    projspan_t rproj = project(node->right->span);
+    projspan_t sproj = project(span);
 
     /* Compare Against Split Value */
     if(node->depth % 2 == 0) // even depth = Radius
     {
-        double split_val = (lpolar.p1.x + rpolar.p0.x) / 2.0;
+        double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
 
-        if(spolar.p0.x <= split_val)  return true;
+        if(sproj.p0.x <= split_val)  return true;
         else                        return false;        
     }
     else // odd depth = Angle
     {
-        double split_val = (lpolar.p1.y + rpolar.p0.y) / 2.0;
+        double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
-        if(spolar.p0.y <= split_val)  return true;
+        if(sproj.p0.y <= split_val)  return true;
         else                        return false;        
     }
 }
@@ -179,23 +179,23 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
     assert(node->right);
 
     /* Project to Polar polarinates */
-    polarspan_t lpolar = project(node->left->span);
-    polarspan_t rpolar = project(node->right->span);
-    polarspan_t spolar = project(span);
+    projspan_t lproj = project(node->left->span);
+    projspan_t rproj = project(node->right->span);
+    projspan_t sproj = project(span);
 
     /* Compare Against Split Value */
     if(node->depth % 2 == 0) // even depth = Radius
     {
-        double split_val = (lpolar.p1.x + rpolar.p0.x) / 2.0;
+        double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
 
-        if(spolar.p1.x >= split_val)  return true;
+        if(sproj.p1.x >= split_val)  return true;
         else                        return false;        
     }
     else // odd depth = Angle
     {
-        double split_val = (lpolar.p1.y + rpolar.p0.y) / 2.0;
+        double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
-        if(spolar.p1.y >= split_val)  return true;
+        if(sproj.p1.y >= split_val)  return true;
         else                        return false;        
     }
 }
@@ -206,8 +206,8 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
 bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& span2) 
 { 
     /* Project to Polar polarinates */
-    polarspan_t polar1 = project(span1);
-    polarspan_t polar2 = project(span2);
+    projspan_t polar1 = project(span1);
+    projspan_t polar2 = project(span2);
 
     /* Check Intersection in Radius */
     bool xi = ((polar1.p0.x >= polar2.p0.x && polar1.p0.x <= polar2.p1.x) ||
@@ -230,20 +230,20 @@ bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& s
  *----------------------------------------------------------------------------*/
 spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialspan_t& span2)
 {
-    polarspan_t polar;
+    projspan_t proj;
 
     /* Project to Polar Coordinates */
-    polarspan_t polar1 = project(span1);
-    polarspan_t polar2 = project(span2);    
+    projspan_t polar1 = project(span1);
+    projspan_t polar2 = project(span2);    
     
     /* Combine Spans */
-    polar.p0.x = MIN(MIN(MIN(polar1.p0.x, polar2.p0.x), polar1.p1.x), polar2.p1.x);
-    polar.p0.y = MIN(MIN(MIN(polar1.p0.y, polar2.p0.y), polar1.p1.y), polar2.p1.y);
-    polar.p1.x = MAX(MAX(MAX(polar1.p0.x, polar2.p0.x), polar1.p1.x), polar2.p1.x);
-    polar.p1.y = MAX(MAX(MAX(polar1.p0.y, polar2.p0.y), polar1.p1.y), polar2.p1.y);
+    proj.p0.x = MIN(MIN(MIN(polar1.p0.x, polar2.p0.x), polar1.p1.x), polar2.p1.x);
+    proj.p0.y = MIN(MIN(MIN(polar1.p0.y, polar2.p0.y), polar1.p1.y), polar2.p1.y);
+    proj.p1.x = MAX(MAX(MAX(polar1.p0.x, polar2.p0.x), polar1.p1.x), polar2.p1.x);
+    proj.p1.y = MAX(MAX(MAX(polar1.p0.y, polar2.p0.y), polar1.p1.y), polar2.p1.y);
 
     /* Restore to Geographic Coordinates */
-    spatialspan_t span = restore(polar);
+    spatialspan_t span = restore(proj);
 
     /* Return Coordinates */
     return span;
@@ -321,8 +321,8 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 void SpatialIndex::displayspan (const spatialspan_t& span)
 {
-    polarspan_t polar = project(span);
-    mlog(RAW, "[%d,%d x %d,%d]", (int)(polar.p0.x*100), (int)(polar.p0.y*100), (int)(polar.p1.x*100), (int)(polar.p1.y*100));
+    projspan_t proj = project(span);
+    mlog(RAW, "[%d,%d x %d,%d]", (int)(proj.p0.x*100), (int)(proj.p0.y*100), (int)(proj.p1.x*100), (int)(proj.p1.y*100));
 }
 
 /******************************************************************************
@@ -332,41 +332,41 @@ void SpatialIndex::displayspan (const spatialspan_t& span)
 /*----------------------------------------------------------------------------
  * project
  *----------------------------------------------------------------------------*/
-SpatialIndex::polarspan_t SpatialIndex::project (spatialspan_t span)
+SpatialIndex::projspan_t SpatialIndex::project (spatialspan_t span)
 {
-    polarspan_t polar;
+    projspan_t proj;
     
-    MathLib::geo2polar(span.c0, polar.p0, projection);
-    MathLib::geo2polar(span.c1, polar.p1, projection);
+    MathLib::coord2point(span.c0, proj.p0, projection);
+    MathLib::coord2point(span.c1, proj.p1, projection);
 
-    double xmin = MIN(polar.p0.x, polar.p1.x);
-    double ymin = MIN(polar.p0.y, polar.p1.y);
-    double xmax = MAX(polar.p0.x, polar.p1.x);
-    double ymax = MAX(polar.p0.y, polar.p1.y);
+    double xmin = MIN(proj.p0.x, proj.p1.x);
+    double ymin = MIN(proj.p0.y, proj.p1.y);
+    double xmax = MAX(proj.p0.x, proj.p1.x);
+    double ymax = MAX(proj.p0.y, proj.p1.y);
 
-    polar.p0.x = xmin;
-    polar.p0.y = ymin;
-    polar.p1.x = xmax;
-    polar.p1.y = ymax;
+    proj.p0.x = xmin;
+    proj.p0.y = ymin;
+    proj.p1.x = xmax;
+    proj.p1.y = ymax;
 
-    return polar;
+    return proj;
 }
 
 /*----------------------------------------------------------------------------
  * restore
  *----------------------------------------------------------------------------*/
-spatialspan_t SpatialIndex::restore (polarspan_t polar)
+spatialspan_t SpatialIndex::restore (projspan_t proj)
 {
     spatialspan_t span;
-    MathLib::polar2geo(span.c0, polar.p0, projection);
-    MathLib::polar2geo(span.c1, polar.p1, projection);
+    MathLib::point2coord(span.c0, proj.p0, projection);
+    MathLib::point2coord(span.c1, proj.p1, projection);
     return span;
 }
 
 /*----------------------------------------------------------------------------
- * luaPolar: polar(<lat>, <lon>)
+ * luaProject: project(<lat>, <lon>)
  *----------------------------------------------------------------------------*/
-int SpatialIndex::luaPolar (lua_State* L)
+int SpatialIndex::luaProject (lua_State* L)
 {
     try
     {
@@ -380,7 +380,7 @@ int SpatialIndex::luaPolar (lua_State* L)
 
         /* Convert Coordinates */
         MathLib::point_t p;       
-        MathLib::geo2polar(c, p, lua_obj->projection);
+        MathLib::coord2point(c, p, lua_obj->projection);
         lua_pushnumber(L, p.x);
         lua_pushnumber(L, p.y);
 
@@ -389,7 +389,7 @@ int SpatialIndex::luaPolar (lua_State* L)
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error projecting: %s\n", e.errmsg);
     }
 
     /* Return Failure */
@@ -413,7 +413,7 @@ int SpatialIndex::luaSphere (lua_State* L)
 
         /* Convert Coordinates */
         MathLib::coord_t c;
-        MathLib::polar2geo(c, p, lua_obj->projection);
+        MathLib::point2coord(c, p, lua_obj->projection);
         lua_pushnumber(L, c.lat);
         lua_pushnumber(L, c.lon);
 
@@ -422,7 +422,7 @@ int SpatialIndex::luaSphere (lua_State* L)
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error restoring: %s\n", e.errmsg);
     }
 
     /* Return Failure */
@@ -472,7 +472,7 @@ int SpatialIndex::luaSplit (lua_State* L)
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error splitting: %s\n", e.errmsg);
     }
 
     /* Return Failure */
@@ -502,7 +502,7 @@ int SpatialIndex::luaIntersect (lua_State* L)
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error intersecting: %s\n", e.errmsg);
     }
 
     /* Return Failure */
@@ -538,7 +538,7 @@ int SpatialIndex::luaCombine (lua_State* L)
     }
     catch(const LuaException& e)
     {
-        mlog(CRITICAL, "Error converting to polar: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error combining: %s\n", e.errmsg);
     }
 
     /* Return Failure */

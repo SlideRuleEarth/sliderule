@@ -84,7 +84,7 @@ local i7 = core.spatialindex(a7, core.SOUTH_POLAR)
 lat = -80.0
 lon = 45.0
 while lat < 80.0 do
-    x, y = i7:polar(lat, lon) 
+    x, y = i7:project(lat, lon) 
     nlat, nlon = i7:sphere(x, y)
     runner.check(runner.cmpfloat(math.abs(x), math.abs(y), 0.0000001))
     runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
@@ -95,7 +95,7 @@ end
 lat = -60.0
 lon = -170.0
 while lon < 170.0 do
-    x, y = i7:polar(lat, lon) 
+    x, y = i7:project(lat, lon) 
     nlat, nlon = i7:sphere(x, y)
     runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
     runner.check(runner.cmpfloat(lon, nlon, 0.0000001))

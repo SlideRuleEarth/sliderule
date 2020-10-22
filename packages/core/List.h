@@ -48,7 +48,7 @@ class List
         bool    remove      (int index);
         T&      get         (int index);
         bool    set         (int index, T& data, bool with_delete=true);
-        int     length      (void);
+        int     length      (void) const;
         void    clear       (void);
         void    sort        (void);
 
@@ -333,7 +333,7 @@ bool List<T>::set(int index, T& data, bool with_delete)
  * length
  *----------------------------------------------------------------------------*/
 template <class T>
-int List<T>::length(void)
+int List<T>::length(void) const
 {
     return len;
 }

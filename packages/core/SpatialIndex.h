@@ -70,7 +70,7 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         typedef struct {
             MathLib::point_t p0;
             MathLib::point_t p1;
-        } polarspan_t;    
+        } projspan_t;    
 
         /*--------------------------------------------------------------------
          * Constants
@@ -83,10 +83,10 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
          * Methods
          *--------------------------------------------------------------------*/
 
-        polarspan_t     project         (spatialspan_t span);
-        spatialspan_t   restore         (polarspan_t polar);
+        projspan_t      project         (spatialspan_t span);
+        spatialspan_t   restore         (projspan_t proj);
 
-        static int      luaPolar        (lua_State* L);
+        static int      luaProject        (lua_State* L);
         static int      luaSphere       (lua_State* L);
         static int      luaSplit        (lua_State* L);
         static int      luaIntersect    (lua_State* L);

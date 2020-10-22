@@ -78,9 +78,9 @@ double MathLib::FFT(double result[], int input[], unsigned long size)
 }
 
 /*----------------------------------------------------------------------------
- * geo2polar
+ * coord2point
  *----------------------------------------------------------------------------*/
-void MathLib::geo2polar (const coord_t c, point_t& p, proj_t projection)
+void MathLib::coord2point (const coord_t c, point_t& p, proj_t projection)
 {
     double r = 0.0, o = 0.0;
 
@@ -118,9 +118,9 @@ void MathLib::geo2polar (const coord_t c, point_t& p, proj_t projection)
 }
 
 /*----------------------------------------------------------------------------
- * polar2geo
+ * point2coord
  *----------------------------------------------------------------------------*/
-void MathLib::polar2geo (coord_t& c, const point_t p, proj_t projection)
+void MathLib::point2coord (coord_t& c, const point_t p, proj_t projection)
 {
     double latrad = 90.0, lonrad = 0.0;
 
@@ -168,6 +168,48 @@ void MathLib::polar2geo (coord_t& c, const point_t p, proj_t projection)
     /* Convert to Degress */
     c.lat = latrad * (180.0 / M_PI);
     c.lon = lonrad * (180.0 / M_PI);
+}
+
+/*----------------------------------------------------------------------------
+ * inpoly
+ *----------------------------------------------------------------------------*/
+bool MathLib::inpoly (List<point_t>& poly, point_t point)
+{
+    int num_points = poly.length();
+    int c = 0;
+    for (int i = 0, j = num_points - 1; i < num_points; j = i++) 
+    {
+        double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x;
+        if( ((poly[i].y > point.y) != (poly[j].y > point.y)) && (point.x < x_extent) ) c = !c;
+    }
+
+    /* Return Inclusion
+     *  if c == 0: number of intersections were even --> point is outside polygon
+     *  if c == 1: number of intersections were odd --> point is inside polygon
+     */
+    return c == 1;
+}
+
+/*----------------------------------------------------------------------------
+ * ingeopoly
+ *----------------------------------------------------------------------------*/
+bool MathLib::ingeopoly (List<coord_t>& poly, coord_t coord, proj_t projection)
+{
+    /* Project Polygon */
+    List<point_t> ppoly;
+    for(int i = 0; i < poly.length(); i++)
+    {
+        point_t polar_point;
+        coord2point(poly[i], polar_point, projection);
+        ppoly.add(polar_point);
+    }
+
+    /* Project Coordinate */
+    point_t pcoord;
+    coord2point(coord, pcoord, projection);
+
+    /* Return Inclusion Test */
+    return inpoly(ppoly, pcoord);
 }
 
 /******************************************************************************

@@ -66,9 +66,10 @@ class MathLib
          *--------------------------------------------------------------------*/
 
         static double   FFT         (double result[], int data[], unsigned long size);
-        static void     geo2polar   (const coord_t c, point_t& p, proj_t projection);
-        static void     polar2geo   (coord_t& c, const point_t p, proj_t projection);
-        static bool     ingeopoly   (const List<coord_t>& poly, point_t point);
+        static void     coord2point (const coord_t c, point_t& p, proj_t projection);
+        static void     point2coord (coord_t& c, const point_t p, proj_t projection);
+        static bool     inpoly      (List<point_t>& poly, point_t point);
+        static bool     ingeopoly   (List<coord_t>& poly, coord_t coord, proj_t projection);
 
     private:
 

@@ -169,17 +169,21 @@ void AssetIndex<T>::build (void)
     for(int i = 0; i < asset.size(); i++)
     {
         bool provided = false;
-        T span = attr2span(&asset[i].attributes, &provided);            
-        int index = spans.add(span);
+        T span = attr2span(&asset[i].attributes, &provided);
+        if(provided)
+        {
+            /* Add to Global Resource List */
+            int index = spans.add(span);
 
-        /* Create Tree Node */
-        if(tree == NULL) tree = newnode(span);
+            /* Create Tree Node */
+            if(tree == NULL) tree = newnode(span);
 
-        /* Update Tree Span */
-        tree->span = combine(tree->span, span);
+            /* Update Tree Span */
+            tree->span = combine(tree->span, span);
 
-        /* Update Tree Resource List */
-        tree->ril->add(index);
+            /* Update Tree Resource List */
+            tree->ril->add(index);
+        }
     }
 
     /* Build Tree Structure */

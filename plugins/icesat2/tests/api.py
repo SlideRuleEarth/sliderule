@@ -160,9 +160,9 @@ def test_geospatial ():
         print("Failed sphere test", d["lat"], d["lon"])
 
     if(d["x"] == 0.466307658155 and d["y"] == 0.80766855588292):
-        print("Passed polar test")
+        print("Passed projection test")
     else:
-        print("Failed polar test", d["x"], d["y"])
+        print("Failed projection test", d["x"], d["y"])
 
     # Test 2 # 
 
