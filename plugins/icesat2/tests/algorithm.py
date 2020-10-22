@@ -43,6 +43,7 @@ def algoexec(asset):
         "track": 0,
         "stages": ["LSF"],
         "parms": {
+            "poly": [{"lat": 10.0, "lon": 20.0}, {"lat": 11.0, "lon": 21.0}],
             "cnf": 4,
             "ats": 20.0,
             "cnt": 10,

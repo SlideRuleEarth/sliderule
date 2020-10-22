@@ -45,6 +45,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibrarySys.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryTime.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaObject.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/MathLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.cpp
@@ -99,6 +100,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibrarySys.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryTime.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaObject.h
+            ${CMAKE_CURRENT_LIST_DIR}/MathLib.h
             ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.h
             ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.h

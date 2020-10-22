@@ -111,7 +111,7 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        atl06_parms_t parms = lua_parms_process(L, 2);
+        atl06_parms_t parms = getLuaAtl06Parms(L, 2);
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));

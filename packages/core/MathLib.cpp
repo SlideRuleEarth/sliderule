@@ -30,63 +30,144 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#include "DSP.h"
-#include "legacy.h"
+#include "MathLib.h"
+#include "LocalLib.h"
 
 /******************************************************************************
- * LOCAL FUNCTIONS
+ * PUBLIC FUNCTIONS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Get Polar Magnitude
- *
- * ReX      real component of frequency domain
- * ImX      imaginary component of frequency domain
- *
- * return   magnitude of cosine component in polar form
+ * FFT
  *----------------------------------------------------------------------------*/
-double getPolarMagnitude(double ReX, double ImX)
+double MathLib::FFT(double result[], int input[], unsigned long size)
 {
-	return sqrt(pow(ReX,2) + pow(ImX,2));
+	static complex_t frequency_spectrum[MAXFREQSPEC];
+    double maxvalue = 0.0;
+
+    /* Zero out Frequency Spectrum - Since Size not power of two */
+    LocalLib::set(frequency_spectrum, 0, sizeof(frequency_spectrum));
+
+	/* Load Data into Complex Array */
+	for(unsigned long k = 0; k < size; k++)
+	{
+		frequency_spectrum[k].r = (double)input[k];
+//		frequency_spectrum[k].i = 0.0;
+	}
+
+	/* Perform FFT */
+	bitReverse(frequency_spectrum, size);
+	freqCorrelation(frequency_spectrum, size, 1);
+
+    /* Zero First Value - (Remove DC Component */
+    result[0] = 0.0;
+    result[size / 2] = 0.0;
+
+	/* Populate Polar Form */
+    for(unsigned long k = 1; k < size / 2; k++)
+    {
+        result[k] = getPolarMagnitude(frequency_spectrum[k].r, frequency_spectrum[k].i);
+        result[k + (size / 2)] = getPolarPhase(frequency_spectrum[k].r, frequency_spectrum[k].i);
+
+        if(result[k] > maxvalue) maxvalue = result[k];
+        if(result[k + (size / 2)] > maxvalue) maxvalue = result[k + (size / 2)];
+    }
+
+    /* Return Maximum Value */
+    return maxvalue;
 }
 
 /*----------------------------------------------------------------------------
- * Get Polar Phase
- *
- * ReX      real component of frequency domain
- * ImX      imaginary component of frequency domain
- *
- * return   phase of cosine component in polar form
+ * geo2polar
  *----------------------------------------------------------------------------*/
-double getPolarPhase(double ReX, double ImX)
+void MathLib::geo2polar (const coord_t c, point_t& p, proj_t projection)
 {
-	double offset;
+    double r = 0.0, o = 0.0;
 
-	/* Special Divide by Zero Case */
+    /* Convert to Radians */
+    double lonrad = c.lon * M_PI / 180.0;
+    double latrad = c.lat * M_PI / 180.0;
 
-	if(ReX == 0.0)
-	{
-		ReX = 1e-20;
-	}
+    /* Calculate r */
+    if(projection == NORTH_POLAR)
+    {
+        double latradp = (M_PI / 4.0) - (latrad / 2.0);
+        r = 2 * tan(latradp);
+    }
+    else if(projection == SOUTH_POLAR)
+    {
+        double latradp = -(M_PI / 4.0) - (latrad / 2.0);
+        r = -2 * tan(latradp);
+    }
 
-	/* Acrtan Range Correction */
+    /* Calculate o */
+    if(projection == NORTH_POLAR)
+    {
+        o = lonrad;        
+    }
+    else if(projection == SOUTH_POLAR)
+    {
+        o = -lonrad;
+    }
 
-	if(ReX < 0.0 && ImX < 0.0)
-	{
-		offset = -M_PI;
-	}
-	else if (ReX < 0.0 && ImX > 0.0)
-	{
-		offset = M_PI;
-	}
-	else
-	{
-		offset = 0.0;
-	}
+    /* Calculate X */
+    p.x = r * cos(o);
 
-	/* Phase Calculation */
+    /* Calculate Y */
+    p.y = r * sin(o);
+}
 
-	return atan(ImX/ReX) + offset;
+/*----------------------------------------------------------------------------
+ * polar2geo
+ *----------------------------------------------------------------------------*/
+void MathLib::polar2geo (coord_t& c, const point_t p, proj_t projection)
+{
+    double latrad = 90.0, lonrad = 0.0;
+
+    /* Calculate r */
+    double r = sqrt((p.x*p.x) + (p.y*p.y));
+
+    /* Calculate o */
+    double o = 0.0;
+    if(p.x != 0.0)
+    {
+        o = atan(p.y / p.x);
+
+        /* Adjust for Quadrants */
+        if(p.x < 0.0 && p.y >= 0.0) o += M_PI;
+        else if(p.x < 0.0 && p.y < 0.0) o -= M_PI;
+    }
+    else
+    {
+        /* PI/2 or -PI/2 */
+        o = asin(p.y / r);
+    }
+
+    /* Calculate Latitude */
+    if(projection == NORTH_POLAR)
+    {
+        double latradp = atan(r / 2.0);
+        latrad = (M_PI / 2.0) - (2.0 * latradp);
+    }
+    else if(projection == SOUTH_POLAR)
+    {
+        double latradp = atan(r / -2.0);
+        latrad = (-2.0 * latradp) - (M_PI / 2.0);
+    }
+    
+    /* Calculate Longitude */
+    if(projection == NORTH_POLAR)
+    {
+        lonrad = o;
+    }
+    else if(projection == SOUTH_POLAR)
+    {
+        lonrad = -o;
+    }
+
+    /* Convert to Degress */
+    c.lat = latrad * (180.0 / M_PI);
+    c.lon = lonrad * (180.0 / M_PI);
 }
 
 /******************************************************************************
@@ -98,7 +179,7 @@ double getPolarPhase(double ReX, double ImX)
  *
  *  swaps two complex samples
  *----------------------------------------------------------------------------*/
-void DSP::swapComplex(complex_t *a, complex_t *b)
+void MathLib::swapComplex(complex_t *a, complex_t *b)
 {
     complex_t tmp;
 
@@ -117,7 +198,7 @@ void DSP::swapComplex(complex_t *a, complex_t *b)
  *
  *  sorts data into bit reverse order
  *----------------------------------------------------------------------------*/
-void DSP::bitReverse(complex_t data[], unsigned long size)
+void MathLib::bitReverse(complex_t data[], unsigned long size)
 {
     unsigned long steps[LOG2DATASIZE], s;
     unsigned long i,j,k;
@@ -134,7 +215,7 @@ void DSP::bitReverse(complex_t data[], unsigned long size)
     for(i = 0; i < size; i++)
     {
         // Swap If Not Equal //
-        if(i < j)                           // only swap if less than so that you don't swap back
+        if(i < j) // only swap if less than so that you don't swap back
         {
             swapComplex(&data[i], &data[j]);
         }
@@ -142,7 +223,7 @@ void DSP::bitReverse(complex_t data[], unsigned long size)
         // Calculate Step Size //
         s = 0;
         k = i;
-        while(k % 2 != 0)                   // trying to find first zero in binary representation
+        while(k % 2 != 0) // trying to find first zero in binary representation
         {
             k >>= 1;
             s++;
@@ -161,7 +242,7 @@ void DSP::bitReverse(complex_t data[], unsigned long size)
  *
  * return   modifies the data array in place
  *----------------------------------------------------------------------------*/
-void DSP::freqCorrelation(complex_t data[], unsigned long size, int isign)
+void MathLib::freqCorrelation(complex_t data[], unsigned long size, int isign)
 {
     unsigned long   halfperiod; // half period of frequency
     unsigned long   offset;     // offset within halfperiod
@@ -206,47 +287,51 @@ void DSP::freqCorrelation(complex_t data[], unsigned long size, int isign)
     }
 }
 
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
 /*----------------------------------------------------------------------------
- * FFT
+ * Get Polar Magnitude
+ *
+ * ReX      real component of frequency domain
+ * ImX      imaginary component of frequency domain
+ *
+ * return   magnitude of cosine component in polar form
  *----------------------------------------------------------------------------*/
-double DSP::FFT(double result[], int input[], unsigned long size)
+double MathLib::getPolarMagnitude(double ReX, double ImX)
 {
-	static complex_t frequency_spectrum[MAXFREQSPEC];
-    double maxvalue = 0.0;
-
-    /* Zero out Frequency Spectrum - Since Size not power of two */
-    memset(frequency_spectrum, 0, sizeof(frequency_spectrum));
-
-	/* Load Data into Complex Array */
-	for(unsigned long k = 0; k < size; k++)
-	{
-		frequency_spectrum[k].r = (double)input[k];
-//		frequency_spectrum[k].i = 0.0;
-	}
-
-	/* Perform FFT */
-	bitReverse(frequency_spectrum, size);
-	freqCorrelation(frequency_spectrum, size, 1);
-
-    /* Zero First Value - (Remove DC Component */
-    result[0] = 0.0;
-    result[size / 2] = 0.0;
-
-	/* Populate Polar Form */
-    for(unsigned long k = 1; k < size / 2; k++)
-    {
-        result[k] = getPolarMagnitude(frequency_spectrum[k].r, frequency_spectrum[k].i);
-        result[k + (size / 2)] = getPolarPhase(frequency_spectrum[k].r, frequency_spectrum[k].i);
-
-        if(result[k] > maxvalue) maxvalue = result[k];
-        if(result[k + (size / 2)] > maxvalue) maxvalue = result[k + (size / 2)];
-    }
-
-    /* Return Maximum Value */
-    return maxvalue;
+	return sqrt(pow(ReX,2) + pow(ImX,2));
 }
 
+/*----------------------------------------------------------------------------
+ * Get Polar Phase
+ *
+ * ReX      real component of frequency domain
+ * ImX      imaginary component of frequency domain
+ *
+ * return   phase of cosine component in polar form
+ *----------------------------------------------------------------------------*/
+double MathLib::getPolarPhase(double ReX, double ImX)
+{
+	double offset;
+
+	/* Special Divide by Zero Case */
+	if(ReX == 0.0)
+	{
+		ReX = 1e-20;
+	}
+
+	/* Arctan Range Correction */
+	if(ReX < 0.0 && ImX < 0.0)
+	{
+		offset = -M_PI;
+	}
+	else if (ReX < 0.0 && ImX > 0.0)
+	{
+		offset = M_PI;
+	}
+	else
+	{
+		offset = 0.0;
+	}
+
+	/* Phase Calculation */
+	return atan(ImX/ReX) + offset;
+}

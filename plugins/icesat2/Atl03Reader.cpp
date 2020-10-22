@@ -86,7 +86,7 @@ int Atl03Reader::luaCreate (lua_State* L)
         /* Get URL */
         const char* url = getLuaString(L, 1);
         const char* outq_name = getLuaString(L, 2);
-        atl06_parms_t parms = lua_parms_process(L, 3);
+        atl06_parms_t parms = getLuaAtl06Parms(L, 3);
         int track = getLuaInteger(L, 4, true, ALL_TRACKS);
 
         /* Return Reader Object */

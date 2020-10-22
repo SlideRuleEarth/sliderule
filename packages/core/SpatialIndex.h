@@ -27,6 +27,7 @@
 #include "OsApi.h"
 #include "Asset.h"
 #include "AssetIndex.h"
+#include "MathLib.h"
 #include "LuaObject.h"
 
 /******************************************************************************
@@ -34,10 +35,8 @@
  ******************************************************************************/
 
 typedef struct {
-    double lat0;    // southern
-    double lon0;    // western
-    double lat1;    // northern
-    double lon1;    // eastern
+    MathLib::coord_t c0;
+    MathLib::coord_t c1;
 } spatialspan_t;
 
 class SpatialIndex: public AssetIndex<spatialspan_t>
@@ -45,19 +44,10 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
     public:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            NORTH_POLAR,
-            SOUTH_POLAR
-        } proj_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        SpatialIndex    (lua_State* L, Asset* _asset, proj_t _projection, int _threshold);
+                        SpatialIndex    (lua_State* L, Asset* _asset, MathLib::proj_t _projection, int _threshold);
                         ~SpatialIndex   (void);
 
         static int      luaCreate       (lua_State* L);
@@ -78,10 +68,8 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            double  x0;
-            double  y0;
-            double  x1;
-            double  y1;
+            MathLib::point_t p0;
+            MathLib::point_t p1;
         } polarspan_t;    
 
         /*--------------------------------------------------------------------
@@ -98,9 +86,6 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
         polarspan_t     project         (spatialspan_t span);
         spatialspan_t   restore         (polarspan_t polar);
 
-        void            geo2polar       (const double lat, const double lon, double& x, double& y);
-        void            polar2geo       (double& lat, double& lon, const double x, const double y);
-
         static int      luaPolar        (lua_State* L);
         static int      luaSphere       (lua_State* L);
         static int      luaSplit        (lua_State* L);
@@ -111,7 +96,7 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
          * Data
          *--------------------------------------------------------------------*/
 
-        proj_t          projection;
+        MathLib::proj_t projection;
 };
 
 #endif  /* __spatial_index__ */

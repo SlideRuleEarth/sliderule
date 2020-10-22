@@ -249,3 +249,4 @@ public under various open source agreements:
 * `packages/core/LuaEngine.cpp`: partial code sourced from https://www.lua.org/
 * `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git
 * `scripts/extensions/csv.lua`: code sourced from https://github.com/geoffleyland/lua-csv
+* `packages/core/MathLib.cpp`: point inclusion code based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
