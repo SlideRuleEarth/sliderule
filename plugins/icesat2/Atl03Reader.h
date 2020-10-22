@@ -139,8 +139,6 @@ class Atl03Reader: public LuaObject
                             Atl03Reader         (lua_State* L, const char* url, const char* outq_name, atl06_parms_t _parms, int track=ALL_TRACKS);
                             ~Atl03Reader        (void);
 
-        bool                readData            (const char* url, int track);
-
         static void*        readerThread        (void* parm);
         static int          luaParms            (lua_State* L);
         static int          luaStats            (lua_State* L);

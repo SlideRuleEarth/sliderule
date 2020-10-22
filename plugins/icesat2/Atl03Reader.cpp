@@ -199,6 +199,107 @@ void* Atl03Reader::readerThread (void* parm)
 
     try
     {
+        /* Read Spatial Extent */
+        GTArray<double>     segment_lat         (url, track, "geolocation/reference_photon_lat");
+        GTArray<double>     segment_lon         (url, track, "geolocation/reference_photon_lon");
+        GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
+
+        /* Determine Spatial Extent */
+        unsigned first_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        unsigned num_segments[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        unsigned first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        unsigned num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        if(reader->parms.polygon.length() > 0)
+        {
+
+            /* Determine Best Projection To Use */
+            MathLib::proj_t projection = MathLib::SOUTH_POLAR;
+            if(segment_lat.gt[PRT_LEFT][0] > 0.0) projection = MathLib::NORTH_POLAR;
+
+            /* Project Polygon */
+            List<MathLib::point_t> projected_poly;
+            for(int i = 0; i < reader->parms.polygon.length(); i++)
+            {
+                MathLib::point_t projected_point;
+                MathLib::coord2point(reader->parms.polygon[i], projected_point, projection);
+                projected_poly.add(projected_point);
+            }
+
+            /* Find First Segment In Polygon */
+            bool first_segment_found = false;
+            bool last_segment_found = false;
+            int segment = 0;
+            while(!first_segment_found || !last_segment_found)
+            {
+                /* Check Segment */
+                if(segment >= segment_lat.gt[PRT_LEFT].size) break;            
+                // Assume all segment related dataset lengths are the same
+                // which means the checks below are superfluous
+                //|| segment >= segment_lat.gt[PRT_RIGHT].size
+                //|| segment >= segment_lon.gt[PRT_LEFT].size
+                //|| segment >= segment_lon.gt[PRT_RIGHT].size )
+
+                /* Test If Either Pair Track Coordinate Is In Polygon */
+                bool inclusion = false;
+                for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+                {
+                    /* Project Segment Coordinate */
+                    MathLib::point_t segment_point; // output
+                    MathLib::coord_t segment_coord = {segment_lat.gt[t][segment], segment_lon.gt[t][segment]};
+                    MathLib::coord2point(segment_coord, segment_point, projection);
+
+                    /* Test Inclusion */
+                    if(MathLib::inpoly(projected_poly, segment_point))
+                    {
+                        inclusion = true;
+                    }
+                }
+
+                /* Check First Segment */
+                if(!first_segment_found)
+                {
+                    /* If Coordinate Is In Polygon */
+                    if(inclusion)
+                    {
+                        /* Set First Segment */
+                        first_segment_found = true;
+                        first_segment[PRT_LEFT] = segment;
+                        first_segment[PRT_RIGHT] = segment;
+
+                        /* Include Photons From First Segment */
+                        num_photons[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT][segment];
+                        num_photons[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT][segment];
+                    }
+                    else
+                    {
+                        /* Update Photon Index */
+                        first_photon[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT][segment];
+                        first_photon[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT][segment];
+                    }
+                }
+                else if(!last_segment_found)
+                {
+                    /* If Coordinate Is NOT In Polygon */
+                    if(!inclusion)
+                    {
+                        /* Set Last Segment */
+                        last_segment_found = true;
+                        num_segments[PRT_LEFT] = segment - first_segment[PRT_LEFT];
+                        num_segments[PRT_RIGHT] = segment - first_segment[PRT_LEFT];
+                    }
+                    else
+                    {
+                        /* Update Photon Index */
+                        num_photons[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT][segment];
+                        num_photons[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT][segment];
+                    }
+                }
+
+                /* Bump Segment */
+                segment++;
+            }
+        }
+
         /* Read Data from HDF5 File */
         H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
         H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient");
@@ -206,15 +307,12 @@ void* Atl03Reader::readerThread (void* parm)
         H5Array<int32_t>    end_rgt             (url, "/ancillary_data/end_rgt");
         H5Array<int32_t>    start_cycle         (url, "/ancillary_data/start_cycle");
         H5Array<int32_t>    end_cycle           (url, "/ancillary_data/end_cycle");
-        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time");
-        GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
-        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id");
-        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x");
-        GTArray<double>     segment_lat         (url, track, "geolocation/reference_photon_lat");
-        GTArray<double>     segment_lon         (url, track, "geolocation/reference_photon_lon");
-        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along");
-        GTArray<float>      h_ph                (url, track, "heights/h_ph");
-        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", reader->parms.surface_type);
+        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time", 0, first_segment, num_segments);
+        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id", 0, first_segment, num_segments);
+        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x", 0, first_segment, num_segments);
+        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along", 0, first_photon, num_photons);
+        GTArray<float>      h_ph                (url, track, "heights/h_ph", 0, first_photon, num_photons);
+        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", reader->parms.surface_type, first_photon, num_photons);
         GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time");
         GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate");
 
@@ -223,7 +321,7 @@ void* Atl03Reader::readerThread (void* parm)
         int32_t seg_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // segment index
         int32_t seg_ph[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // current photon index in segment
         int32_t start_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][0], segment_dist_x.gt[PRT_RIGHT][0] };
+        double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][first_segment[PRT_LEFT]], segment_dist_x.gt[PRT_RIGHT][first_segment[PRT_RIGHT]] };
         bool    track_complete[PAIR_TRACKS_PER_GROUND_TRACK] = { false, false };
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
@@ -315,7 +413,7 @@ void* Atl03Reader::readerThread (void* parm)
                 }
 
                 /* Check if Track Complete */
-                if(current_photon >= dist_ph_along.gt[t].size)
+                if((unsigned)current_photon >= num_photons[t])
                 {
                     track_complete[t] = true;
                 }

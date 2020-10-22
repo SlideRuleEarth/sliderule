@@ -41,7 +41,7 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, unsigned col=0, unsigned maxrows=0);
+                H5Array     (const char* url, const char* dataset, unsigned col=0, unsigned startrow=0, unsigned numrows=0);
         virtual ~H5Array    (void);
 
         T&      operator[]  (int index);
@@ -63,13 +63,13 @@ class H5Array
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const char* url, const char* dataset, unsigned col, unsigned maxrows)
+H5Array<T>::H5Array(const char* url, const char* dataset, unsigned col, unsigned startrow, unsigned numrows)
 {
     name = NULL;
     data = NULL;
     size = 0;
     
-    H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col, maxrows);
+    H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
 
     name = StringLib::duplicate(dataset);
     data = (T*)info.data;
