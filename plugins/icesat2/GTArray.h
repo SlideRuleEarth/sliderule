@@ -58,6 +58,7 @@ class GTArray
                     GTArray     (const char* url, int track, const char* gt_dataset, unsigned col=0, const unsigned* prt_startrow=DefaultStartRow, const unsigned* prt_numrows=DefaultNumRows);
         virtual     ~GTArray    (void);
 
+        bool        trim        (unsigned* prt_offset);
         H5Array<T>& operator[]  (int index);
 
         /*--------------------------------------------------------------------
@@ -98,9 +99,18 @@ GTArray<T>::~GTArray(void)
 {
 }
 
+/*----------------------------------------------------------------------------
+ * trim
+ *----------------------------------------------------------------------------*/
+template <class T>
+bool GTArray<T>::trim(unsigned* prt_offset)
+{
+    if(!prt_offset) return false;
+    else return (gt[PRT_LEFT].trim(prt_offset[PRT_LEFT]) && gt[PRT_RIGHT].trim(prt_offset[PRT_RIGHT]));
+}
 
 /*----------------------------------------------------------------------------
- * []]
+ * []
  *----------------------------------------------------------------------------*/
 template <class T>
 H5Array<T>& GTArray<T>::operator[](int index)

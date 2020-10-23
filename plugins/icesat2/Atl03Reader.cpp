@@ -308,6 +308,11 @@ void* Atl03Reader::readerThread (void* parm)
             }
         }
 
+        /* Trim Geospatial Extent Datasets Read from HDF5 File */
+        segment_lat.trim(first_segment);
+        segment_lon.trim(first_segment);
+        segment_ph_cnt.trim(first_segment);
+
         /* Read Data from HDF5 File */
         H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
         H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient");
@@ -533,7 +538,7 @@ void* Atl03Reader::readerThread (void* parm)
 
     /* Count Completion */
     reader->threadMut.lock();
-    {
+    {        
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {

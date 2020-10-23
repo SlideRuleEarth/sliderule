@@ -44,6 +44,7 @@ class H5Array
                 H5Array     (const char* url, const char* dataset, unsigned col=0, unsigned startrow=0, unsigned numrows=0);
         virtual ~H5Array    (void);
 
+        bool    trim        (unsigned offset);
         T&      operator[]  (int index);
 
         /*--------------------------------------------------------------------
@@ -53,6 +54,7 @@ class H5Array
         const char*     name;
         int32_t         size;
         T*              data;
+        T*              pointer;
 };
 
 /******************************************************************************
@@ -74,6 +76,7 @@ H5Array<T>::H5Array(const char* url, const char* dataset, unsigned col, unsigned
     name = StringLib::duplicate(dataset);
     data = (T*)info.data;
     size = info.elements;
+    pointer = data;
 }
 
 /*----------------------------------------------------------------------------
@@ -87,12 +90,29 @@ H5Array<T>::~H5Array(void)
 }
 
 /*----------------------------------------------------------------------------
- * []]
+ * trim
+ *----------------------------------------------------------------------------*/
+template <class T>
+bool H5Array<T>::trim(unsigned offset)
+{
+    if(offset < (unsigned)size)
+    {
+        pointer = data + offset;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * []
  *----------------------------------------------------------------------------*/
 template <class T>
 T& H5Array<T>::operator[](int index)
 {
-    return data[index];
+    return pointer[index];
 }
 
 #endif  /* __h5_array__ */
