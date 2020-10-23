@@ -239,7 +239,10 @@ void* Atl03Reader::readerThread (void* parm)
                 //|| segment >= segment_lon.gt[PRT_LEFT].size
                 //|| segment >= segment_lon.gt[PRT_RIGHT].size )
 
-                /* Test If Either Pair Track Coordinate Is In Polygon */
+                /* Test If Either Pair Track Coordinate Is In Polygon 
+                 *  TODO: currently the check is for either track
+                 *  but the extent is applied to both tracks; should
+                 *  update to make each extent per track */
                 bool inclusion = false;
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
@@ -298,6 +301,12 @@ void* Atl03Reader::readerThread (void* parm)
                 /* Bump Segment */
                 segment++;
             }
+        }
+
+        /* Check If Anything to Process */
+        if(num_segments[PRT_LEFT] <= 0 || num_segments[PRT_RIGHT] <= 0)
+        {
+            throw std::runtime_error("empty spatial region");
         }
 
         /* Read Data from HDF5 File */
