@@ -351,6 +351,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
         /* Create Memory Hyperspace to Write Selected Column */
         dims[1] = 1; // readjust dimensions to reflect single column being read
+        start[0] = 0; // readjust start to reflect writing from the beginning
         start[1] = 0; // readjust start to reflect writing to only a single column
         memspace = H5Screate_simple(ndims, dims, NULL);
         H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start, NULL, count, NULL);

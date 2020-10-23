@@ -211,7 +211,6 @@ void* Atl03Reader::readerThread (void* parm)
         unsigned num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
         if(reader->parms.polygon.length() > 0)
         {
-
             /* Determine Best Projection To Use */
             MathLib::proj_t projection = MathLib::SOUTH_POLAR;
             if(segment_lat.gt[PRT_LEFT][0] > 0.0) projection = MathLib::NORTH_POLAR;
@@ -301,12 +300,12 @@ void* Atl03Reader::readerThread (void* parm)
                 /* Bump Segment */
                 segment++;
             }
-        }
 
-        /* Check If Anything to Process */
-        if(num_segments[PRT_LEFT] <= 0 || num_segments[PRT_RIGHT] <= 0)
-        {
-            throw std::runtime_error("empty spatial region");
+            /* Check If Anything to Process */
+            if(num_segments[PRT_LEFT] <= 0 || num_segments[PRT_RIGHT] <= 0)
+            {
+                throw std::runtime_error("empty spatial region");
+            }
         }
 
         /* Read Data from HDF5 File */
@@ -333,6 +332,10 @@ void* Atl03Reader::readerThread (void* parm)
         double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][first_segment[PRT_LEFT]], segment_dist_x.gt[PRT_RIGHT][first_segment[PRT_RIGHT]] };
         bool    track_complete[PAIR_TRACKS_PER_GROUND_TRACK] = { false, false };
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
+
+        /* Set Number of Photons to Process (if not already set by subsetter) */    
+        if(num_photons[PRT_LEFT] == 0) num_photons[PRT_LEFT] = dist_ph_along.gt[PRT_LEFT].size;
+        if(num_photons[PRT_RIGHT] == 0) num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
 
         /* Increment Read Statistics */
         reader->stats.segments_read[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT].size; // TODO: not thread safe

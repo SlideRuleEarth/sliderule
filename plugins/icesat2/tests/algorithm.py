@@ -43,7 +43,10 @@ def algoexec(asset):
         "track": 0,
         "stages": ["LSF"],
         "parms": {
-            "poly": [{"lat": 10.0, "lon": 20.0}, {"lat": 11.0, "lon": 21.0}],
+            "poly": [{"lat": -80.0, "lon": -70.0}, 
+                     {"lat": -82.5, "lon": -70.0},
+                     {"lat": -82.5, "lon": -65.0},
+                     {"lat": -80.0, "lon": -65.0}],
             "cnf": 4,
             "ats": 20.0,
             "cnt": 10,
@@ -124,11 +127,11 @@ def expread(asset):
     rsps = sliderule.engine("h5", rqst)
     longitudes = recoverdata(rsps)
 
-    # Build Dataframe of SlideRule Responses
+    # Build Dataframe of SlideRule Responses    
     lat_origin = latitudes[0]
     lon_origin = longitudes[0]
     distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
-    df = pd.DataFrame(data=list(zip(heights, distances)), index=segments, columns=["height", "distance"])
+    df = pd.DataFrame(data=list(zip(heights, distances, latitudes, longitudes)), index=segments, columns=["height", "distance", "latitude", "longitude"])
 
     # Filter Dataframe
     df = df[df["height"] < 25000.0]
@@ -169,8 +172,10 @@ if __name__ == '__main__':
     # Plot Ground Tracks
     ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
     ax1.set_title("Ground Tracks")
+    ax1.plot(exp["longitude"].values,exp["latitude"].values,linewidth=1.5,
+        color='b',zorder=2, transform=cartopy.crs.Geodetic())
     ax1.plot(act["longitude"].values,act["latitude"].values,linewidth=1.5,
-        color='r',zorder=2, transform=cartopy.crs.Geodetic())
+        color='r',zorder=3, transform=cartopy.crs.Geodetic())
     # add coastlines with filled land and lakes
     ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
     ax1.add_feature(cartopy.feature.LAKES)
