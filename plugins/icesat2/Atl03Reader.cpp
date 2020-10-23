@@ -228,16 +228,13 @@ void* Atl03Reader::readerThread (void* parm)
             bool first_segment_found = false;
             bool last_segment_found = false;
             int segment = 0;
-            while(!first_segment_found || !last_segment_found)
-            {
-                /* Check Segment */
-                if(segment >= segment_lat.gt[PRT_LEFT].size) break;            
+            while(segment < segment_lat.gt[PRT_LEFT].size)
                 // Assume all segment related dataset lengths are the same
                 // which means the checks below are superfluous
                 //|| segment >= segment_lat.gt[PRT_RIGHT].size
                 //|| segment >= segment_lon.gt[PRT_LEFT].size
                 //|| segment >= segment_lon.gt[PRT_RIGHT].size )
-
+            {
                 /* Test If Either Pair Track Coordinate Is In Polygon 
                  *  TODO: currently the check is for either track
                  *  but the extent is applied to both tracks; should
@@ -286,8 +283,7 @@ void* Atl03Reader::readerThread (void* parm)
                     {
                         /* Set Last Segment */
                         last_segment_found = true;
-                        num_segments[PRT_LEFT] = segment - first_segment[PRT_LEFT];
-                        num_segments[PRT_RIGHT] = segment - first_segment[PRT_LEFT];
+                        break; // full extent found!
                     }
                     else
                     {
@@ -300,6 +296,10 @@ void* Atl03Reader::readerThread (void* parm)
                 /* Bump Segment */
                 segment++;
             }
+
+            /* Set Number of Segments */
+            num_segments[PRT_LEFT] = segment - first_segment[PRT_LEFT];
+            num_segments[PRT_RIGHT] = segment - first_segment[PRT_RIGHT];
 
             /* Check If Anything to Process */
             if(num_segments[PRT_LEFT] <= 0 || num_segments[PRT_RIGHT] <= 0)
@@ -329,7 +329,7 @@ void* Atl03Reader::readerThread (void* parm)
         int32_t seg_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // segment index
         int32_t seg_ph[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // current photon index in segment
         int32_t start_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][first_segment[PRT_LEFT]], segment_dist_x.gt[PRT_RIGHT][first_segment[PRT_RIGHT]] };
+        double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { segment_dist_x.gt[PRT_LEFT][0], segment_dist_x.gt[PRT_RIGHT][0] };
         bool    track_complete[PAIR_TRACKS_PER_GROUND_TRACK] = { false, false };
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
@@ -361,7 +361,7 @@ void* Atl03Reader::readerThread (void* parm)
                 extent_segment[t] = seg_in[t];
 
                 /* Traverse Photons Until Desired Along Track Distance Reached */
-                while( (!extent_complete || !step_complete) &&              // extent or step not complete
+                while( (!extent_complete || !step_complete) &&               // extent or step not complete
                         (current_segment < segment_dist_x.gt[t].size) &&     // there are more segments
                         (current_photon < dist_ph_along.gt[t].size) )        // there are more photons
                 {
@@ -393,7 +393,7 @@ void* Atl03Reader::readerThread (void* parm)
                     /* Check if Photon within Extent's Length */
                     if(along_track_distance < reader->parms.extent_length)
                     {
-                        /* Check  Photon Signal Confidence Level */
+                        /* Check Photon Signal Confidence Level */
                         if(signal_conf_ph.gt[t][current_photon] >= reader->parms.signal_confidence)
                         {
                             photon_t ph = {
