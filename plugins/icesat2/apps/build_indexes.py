@@ -4,7 +4,7 @@ import sys
 import json
 import sliderule
 
-asset = "atl03-local"
+atl03_asset = "atl03-local"
 index = "atl03.index"
 
 ###############################################################################
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # Override asset from command line
     if len(sys.argv) > asset_parm:
-        asset = sys.argv[asset_parm]
+        atl03_asset = sys.argv[asset_parm]
 
     # Override index from command line
     if len(sys.argv) > index_parm:
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     f.close()
 
     # Build Index
-    rqst = { "asset": asset, "resources": resources }
+    rqst = { "atl03-asset": atl03_asset, "resources": resources }
     rsps = sliderule.engine("atl03", rqst)
     print(len(rsps))
     print(rsps)

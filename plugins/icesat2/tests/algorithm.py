@@ -38,7 +38,7 @@ def algoexec(asset):
 
     # Build ATL06 Request
     rqst = {
-        "asset" : asset,
+        "atl03-asset" : asset,
         "resource": "ATL03_20181019065445_03150111_003_01_BE.h5",
         "track": 0,
         "stages": ["LSF"],
@@ -152,19 +152,24 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         sliderule.set_url(sys.argv[1])
 
-    # Set Asset #
-    asset = "atl03-local"
+    # Set ATL03 Asset #
+    atl03_asset = "atl03-local"
     if len(sys.argv) > 2:
-        asset = sys.argv[2]
+        atl03_asset = sys.argv[2]
+
+    # Set ATL06 Asset #
+    atl06_asset = "atl06-local"
+    if len(sys.argv) > 3:
+        atl06_asset = sys.argv[3]
 
     # Set Verbosity #
     sliderule.set_verbose(True)
 
     # Execute SlideRule Algorithm
-    act = algoexec(asset)
+    act = algoexec(atl03_asset)
 
     # Read ATL06 Expected Results
-    exp = expread(asset)
+    exp = expread(atl06_asset)
 
     # Create Plot
     fig = plt.figure(num=None, figsize=(12, 6))

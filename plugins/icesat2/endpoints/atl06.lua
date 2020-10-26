@@ -3,7 +3,7 @@
 --
 -- INPUT:       rqst
 --              {
---                  "asset":        "<name of asset to use, defaults to atl03-local>"
+--                  "atl03-asset":  "<name of asset to use, defaults to atl03-local>"
 --                  "resource":     "<url of hdf5 file or object>"
 --                  "track":        <track number: 1, 2, 3>
 --                  "stages":       [<algorith stage 1>, ...]
@@ -32,7 +32,7 @@ local userlog = core.logger(rspq, core.USER, true)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local asset_name = rqst["asset"] or "atl03-cloud"
+local atl03_asset = rqst["atl03-asset"] or "atl03-cloud"
 local resource = rqst["resource"]
 local track = rqst["track"] or icesat2.ALL_TRACKS
 local stages = rqst["stages"]
@@ -42,7 +42,7 @@ local timeout = rqst["timeout"] or core.PEND
 --- need to pass along the query parameters to the atl03 processing so that it can do subsetting
 
 -- Post Initial Status Progress --
-sys.log(core.USER, string.format("atl06 processing initiated on %s data...\n", asset_name))
+sys.log(core.USER, string.format("atl06 processing initiated on %s data...\n", atl03_asset))
 
 -- ATL06 Dispatch Algorithm --
 local atl06_algo = icesat2.atl06(rspq, parms)
@@ -61,7 +61,7 @@ atl06_disp:attach(atl06_algo, "atl03rec")
 atl06_disp:run()
 
 -- ATL03 Reader --
-local resource_url = asset.buildurl(asset_name, resource)
+local resource_url = asset.buildurl(atl03_asset, resource)
 atl03_reader = icesat2.atl03(resource_url, recq, parms, track)
 atl03_reader:name("atl03_reader")
 
