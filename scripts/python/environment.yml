@@ -6,5 +6,3 @@ dependencies:
   - notebook
   - numpy
   - requests
-  - matplotlib
-  - cartopy

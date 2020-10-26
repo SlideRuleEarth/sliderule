@@ -1,7 +1,7 @@
 """
-sliderule
+icesat2
 =========
 
 A C++/Lua framework for on-demand science data processing
 """
-from sliderule.sliderule import *
+from icesat2.icesat2 import *

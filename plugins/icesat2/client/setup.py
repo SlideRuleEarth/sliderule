@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 
 # get long_description from README.md
-with open("README.md", "r") as fh:
+with open("../icesat2.md", "r") as fh:
     long_description = fh.read()
 
 # get install requirements
@@ -10,10 +10,10 @@ with open('requirements.txt') as fh:
     install_requires = fh.read().splitlines()
 
 setup(
-    name='sliderule',
-    author='SlideRule Developers',
+    name='icesat2',
+    author='ICESat-2/SlideRule Developers',
     version='0.2.0',
-    description='A framework for on-demand ICESat-2 data processing.',
+    description='An ICESat-2 plugin for SlideRule.',
     long_description_content_type="text/markdown",
     url='https://github.com/ICESat2-SlideRule/sliderule/',
     license='Apache',

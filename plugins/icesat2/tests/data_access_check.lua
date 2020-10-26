@@ -17,8 +17,8 @@ runner.check(extent_rec, "Failed to read an extent record")
 
 if extent_rec then
     local extent_tbl = extent_rec:tabulate()
-    print(extent_tbl.seg_id[1], extent_tbl.seg_id[2])
-    print(extent_tbl.gps[1], extent_tbl.gps[2])
+    print(extent_tbl.segment_id[1], extent_tbl.segment_id[2])
+    print(extent_tbl.delta_time[1], extent_tbl.delta_time[2])
 end
 
 -- Clean Up --
