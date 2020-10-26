@@ -39,7 +39,7 @@ def algoexec(asset):
     # Build ATL06 Request
     rqst = {
         "atl03-asset" : asset,
-        "resource": "ATL03_20181019065445_03150111_003_01_BE.h5",
+        "resource": "ATL03_20181019065445_03150111_003_01.h5",
         "track": 0,
         "stages": ["LSF"],
         "parms": {
@@ -102,7 +102,7 @@ def expread(asset):
     # Baseline Request
     rqst = {
         "asset" : asset,
-        "resource": "ATL06_20181019065445_03150111_003_01_CONTI_GZIP.h5",
+        "resource": "ATL06_20181019065445_03150111_003_01.h5",
         "datatype": sliderule.datatypes["REAL"],
         "id": 0
     }
