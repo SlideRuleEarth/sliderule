@@ -4,6 +4,15 @@ import numpy
 import sliderule
 
 ###############################################################################
+# GLOBALS
+###############################################################################
+
+# output dictionary keys
+keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
+# output variable data types
+dtypes = ['i','u1','f','f','f','f','f','f','f','u2','u2']
+
+###############################################################################
 # UTILITIES
 ###############################################################################
 
@@ -29,11 +38,7 @@ def __flatten_atl06(rsps):
     """
     rsps: array of responses from engine call to atl06 endpoint
     """
-    # output dictionary keys
-    keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
-    # output variable data types
-    dtypes = ['i','u1','f','f','f','f','f','f','f','u2','u2']
-
+    global keys, dtypes
     # total length of flattened response
     flatten = numpy.sum([len(r['elevation']) for i,r in enumerate(rsps)]).astype(numpy.int)
     # python dictionary with flattened variables
@@ -51,6 +56,8 @@ def __flatten_atl06(rsps):
                 flattened[key][c] = numpy.array(v[key],dtype=dtype)
             # add to counter
             c += 1
+
+    return flattened
 
 ###############################################################################
 # APIs
