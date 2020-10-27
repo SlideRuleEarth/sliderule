@@ -3,6 +3,7 @@
 import sys
 import json
 import sliderule
+import icesat2
 
 asset = "atl03-local"
 h5file = "ATL03_20181019065445_03150111_003_01.h5"
@@ -250,6 +251,15 @@ def test_index ():
     else:
         print("Failed intersection index test", len(d["resources"]), d)
 
+#
+#  TEST CMR
+#
+def test_cmr ():
+#    grand_mesa = [-108.3435200747503, 38.89102961045247, -108.3605610678553, 39.25086131372244, -107.7818591266989, 39.26613714985466, -107.7677425431139, 38.90611184543033, -108.3435200747503, 38.89102961045247]
+    grand_mesa = [-108.4, 38.7, -108.4, 39.2, -107.6, 39.2, -107.6, 38.7, -108.4, 38.7]
+#    test = [-115.43690817112252,37.40830874614508,-109.5536674671591,37.5881866963966,-109.38728109855494,43.28255468374758,-115.29871608014862,43.05742232376389,-115.43690817112252,37.40830874614508]
+    resources = icesat2.cmr(grand_mesa)
+    print(resources)
 
 ###############################################################################
 # MAIN
@@ -258,20 +268,18 @@ def test_index ():
 if __name__ == '__main__':
 
     # Override server URL from command line
-
     if len(sys.argv) > 1:
         sliderule.set_url(sys.argv[1])
 
     # Override asset from command line
-
     if len(sys.argv) > 2:
         asset = sys.argv[2]
 
     # Tests
-
-    test_time()
-    test_h5()
-    test_variable_length()
-    test_definition()
-    test_geospatial()
-    test_index()
+#    test_time()
+#    test_h5()
+#    test_variable_length()
+#    test_definition()
+#    test_geospatial()
+#    test_index()
+    test_cmr()
