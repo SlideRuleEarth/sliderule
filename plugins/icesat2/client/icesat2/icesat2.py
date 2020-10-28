@@ -6,12 +6,15 @@ import ssl
 import urllib.request
 import datetime
 import numpy
+import logging
 import sliderule
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
 
+# logging
+logger = logging.getLogger(__name__)
 # output dictionary keys
 keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
 # output variable data types
@@ -42,8 +45,7 @@ CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
 def __build_version_query_params(version):
     desired_pad_length = 3
     if len(version) > desired_pad_length:
-        print('Version string too long: "{0}"'.format(version))
-        quit()
+        raise RuntimeError('Version string too long: "{0}"'.format(version))
 
     version = str(int(version))  # Strip off any leading zeros
     query_params = ''
@@ -53,14 +55,6 @@ def __build_version_query_params(version):
         query_params += '&version={0}'.format(padded_version)
         desired_pad_length -= 1
     return query_params
-
-def __build_cmr_query_url(short_name, version, time_start, time_end, polygon=None):
-    params = '&short_name={0}'.format(short_name)
-    params += __build_version_query_params(version)
-    params += '&temporal[]={0},{1}'.format(time_start, time_end)
-    if polygon:
-        params += '&polygon={0}'.format(polygon)
-    return CMR_FILE_URL + params
 
 def __cmr_filter_urls(search_results):
     """Select only the desired data files from CMR response."""
@@ -96,17 +90,24 @@ def __cmr_filter_urls(search_results):
         if filename in unique_filenames:
             # Exclude links with duplicate filenames (they would overwrite)
             continue
+        
         unique_filenames.add(filename)
 
-        urls.append(link['href'])
+        if ".h5" in link['href'][-3:]:
+            resource = link['href'].split("/")[-1]
+            urls.append(resource)
 
     return urls
 
-
 def __cmr_search(short_name, version, time_start, time_end, polygon=None):
     """Perform a scrolling CMR query for files matching input criteria."""
-    cmr_query_url = __build_cmr_query_url(short_name, version, time_start, time_end, polygon)
-    print('cmr request\t{0}\n'.format(cmr_query_url))
+    params = '&short_name={0}'.format(short_name)
+    params += __build_version_query_params(version)
+    params += '&temporal[]={0},{1}'.format(time_start, time_end)
+    if polygon:
+        params += '&polygon={0}'.format(polygon)
+    cmr_query_url = CMR_FILE_URL + params
+    logger.info('cmr request\t{0}\n'.format(cmr_query_url))
 
     cmr_scroll_id = None
     ctx = ssl.create_default_context()
@@ -134,23 +135,8 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
     return urls
 
 ###############################################################################
-# LOCAL UTILITIES
+# SLIDERULE UTILITIES
 ###############################################################################
-
-#
-# __recover_h5data
-#
-def __recover_h5data(rsps):
-    """
-    rsps: array of responses from engine call to h5 endpoint
-    """
-    datatype = rsps[0]["datatype"]
-    data = ()
-    size = 0
-    for d in rsps:
-        data = data + d["data"]
-        size = size + d["size"]
-    return sliderule.get_values(data, datatype, size)
 
 #
 #  __flatten_atl06
@@ -187,7 +173,7 @@ def __flatten_atl06(rsps):
 #
 #  INIT
 #
-def init (url, verbose):
+def init (url, verbose=False):
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
 
@@ -195,6 +181,19 @@ def init (url, verbose):
 #  COMMON METADATA REPOSITORY
 #
 def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name='ATL03'):
+    """
+    polygon: list of longitude,latitude in counter-clockwise order with first and last point matching;
+             three formats are supported:
+             1. string - e.g. '-115.43,37.40,-109.55,37.58,-109.38,43.28,-115.29,43.05,-115.43,37.40'
+             1. list - e.g. [-115.43,37.40,-109.55,37.58,-109.38,43.28,-115.29,43.05,-115.43,37.40]
+             1. dictionary - e.g. [ {"lon": -115.43, "lat": 37.40},
+                                    {"lon": -109.55, "lat": 37.58},
+                                    {"lon": -109.38, "lat": 43.28},
+                                    {"lon": -115.29, "lat": 43.05},
+                                    {"lon": -115.43, "lat": 37.40} ]
+    time_*: UTC time (i.e. "zulu" or "gmt");
+            expressed in the following format: <year>-<month>-<day>T<hour>:<minute>:<second>Z
+    """
     # set default start time to start of ICESat-2 mission
     if not time_start:
         time_start = '2018-10-13T00:00:00Z'
@@ -218,12 +217,23 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
         # remove all spaces as this will be embedded in a url
         polygon = polygon.replace(" ", "")
 
+
+
+    ###### TEST CODE #####
+    return ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', 'ATL03_20181114092019_07140106_003_01.h5', 'ATL03_20181115210428_07370102_003_01.h5', 'ATL03_20181213075606_11560106_003_01.h5', 'ATL03_20181214194017_11790102_003_01.h5', 'ATL03_20190111063212_02110206_003_01.h5', 'ATL03_20190112181620_02340202_003_01.h5', 'ATL03_20190116180755_02950202_003_01.h5', 'ATL03_20190209050825_06530206_003_01.h5', 'ATL03_20190213050003_07140206_003_01.h5', 'ATL03_20190214164413_07370202_003_01.h5', 'ATL03_20190314033606_11560206_003_01.h5', 'ATL03_20190315152016_11790202_003_01.h5', 'ATL03_20190412021205_02110306_003_01.h5', 'ATL03_20190417134754_02950302_003_01.h5', 'ATL03_20190511004804_06530306_003_01.h5', 'ATL03_20190515003943_07140306_003_01.h5', 'ATL03_20190516122353_07370302_003_01.h5', 'ATL03_20190612231542_11560306_003_01.h5', 'ATL03_20190614105952_11790302_003_01.h5', 'ATL03_20190711215129_02110406_003_01.h5', 'ATL03_20190717092724_02950402_003_01.h5', 'ATL03_20190809202745_06530406_003_01.h5', 'ATL03_20190813201925_07140406_003_01.h5', 'ATL03_20190911185531_11560406_003_01.h5', 'ATL03_20190913063941_11790402_003_01.h5', 'ATL03_20191010173137_02110506_003_01.h5', 'ATL03_20191012051547_02340502_003_01.h5', 'ATL03_20191016050727_02950502_003_01.h5', 'ATL03_20191108160740_06530506_003_01.h5', 'ATL03_20191112155921_07140506_003_01.h5', 'ATL03_20191114034331_07370502_003_01.h5', 'ATL03_20191211143520_11560506_003_01.h5', 'ATL03_20200109131121_02110606_003_01.h5', 'ATL03_20200111005531_02340602_003_01.h5', 'ATL03_20200115004711_02950602_003_01.h5', 'ATL03_20200207114722_06530606_003_01.h5', 'ATL03_20200211113903_07140606_003_01.h5', 'ATL03_20200212232313_07370602_003_01.h5', 'ATL03_20200312215919_11790602_003_01.h5', 'ATL03_20200409085108_02110706_003_01.h5', 'ATL03_20200410203519_02340702_003_01.h5', 'ATL03_20200414202700_02950702_003_01.h5', 'ATL03_20200508072713_06530706_003_01.h5', 'ATL03_20200512071854_07140706_003_01.h5', 'ATL03_20200513190303_07370702_003_01.h5', 'ATL03_20200610055453_11560706_003_01.h5', 'ATL03_20200611173903_11790702_003_01.h5', 'ATL03_20200709043054_02110806_003_01.h5', 'ATL03_20200710161504_02340802_003_01.h5', 'ATL03_20200714160647_02950802_003_01.h5']
+
+
+
+
     # call into NSIDC routines to make CMR request
     try:
         url_list = __cmr_search(short_name, version, time_start, time_end, polygon)
     except urllib.error.HTTPError as e:
         url_list = []
-        print(e)
+        logger.error("HTTP Request Error:", e)
+    except RuntimeError as e:
+        url_list = []
+        logger.error("Runtime Error:", e)
 
     return url_list
 
@@ -256,6 +266,31 @@ def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_nump
     return rsps
 
 #
+#  GET VALUES
+#
+def get_values(data, dtype, size):
+    """
+    data:   tuple of bytes
+    dtype:  element of datatypes
+    size:   bytes in data
+    """
+
+    datatype2nptype = {
+        sliderule.datatypes["TEXT"]:      numpy.byte,
+        sliderule.datatypes["REAL"]:      numpy.double,
+        sliderule.datatypes["INTEGER"]:   numpy.int32,
+        sliderule.datatypes["DYNAMIC"]:   numpy.byte
+    }
+
+    raw = bytes(data)
+    datatype = datatype2nptype[dtype]
+    datasize = int(size / numpy.dtype(datatype).itemsize)
+    slicesize = datasize * numpy.dtype(datatype).itemsize # truncates partial bytes
+    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
+
+    return values
+
+#
 #  H5
 #
 def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["REAL"]):
@@ -271,8 +306,13 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
     # Read H5 File
     rsps = sliderule.engine("h5", rqst)
 
-    # Record Data
-    rsps = __recover_h5data(rsps)
+    # Build Record Data
+    datatype = rsps[0]["datatype"]
+    data = ()
+    size = 0
+    for d in rsps:
+        data = data + d["data"]
+        size = size + d["size"]
 
-    # Return Responses
-    return rsps
+    # Return Response Values
+    return sliderule.get_values(data, datatype, size)

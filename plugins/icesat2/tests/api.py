@@ -2,11 +2,20 @@
 
 import sys
 import json
+import logging
 import sliderule
 import icesat2
 
-asset = "atl03-local"
+###############################################################################
+# GLOBAL CODE
+###############################################################################
+
+# set resource
 h5file = "ATL03_20181019065445_03150111_003_01.h5"
+
+# configure logging
+logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 ###############################################################################
 # TESTS
@@ -40,9 +49,9 @@ def test_time ():
     again = d["time"]
 
     if now == again:
-        print("Passed time test")
+        logging.info("Passed time test")
     else:
-        print("Failed time test")
+        logging.info("Failed time test")
 
 #
 #  TEST H5
@@ -57,13 +66,13 @@ def test_h5 ():
     }
 
     d = sliderule.engine("h5", rqst)
-    v = sliderule.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
+    v = icesat2.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
 
     epoch_offset = v[0]
     if(epoch_offset == 1198800018.0):
-        print("Passed h5 test")
+        logging.info("Passed h5 test")
     else:
-        print("Failed h5 test: ", v)
+        logging.info("Failed h5 test: ", v)
 
 #
 #  TEST VARIABLE LENGTH
@@ -78,12 +87,12 @@ def test_variable_length ():
     }
 
     d = sliderule.engine("h5", rqst)
-    v = sliderule.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
+    v = icesat2.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
 
     if v[0] == 245 and v[1] == 263 and v[2] == 273:
-        print("Passed variable length test")
+        logging.info("Passed variable length test")
     else:
-        print("Failed variable length test: ", v)
+        logging.info("Failed variable length test: ", v)
 
 #
 #  TEST DEFINITION
@@ -96,9 +105,9 @@ def test_definition ():
     d = sliderule.source("definition", rqst)
 
     if(d["delta_time"]["offset"] == 448):
-        print("Passed definition test")
+        logging.info("Passed definition test")
     else:
-        print("Failed definition test", d["delta_time"]["offset"])
+        logging.info("Failed definition test", d["delta_time"]["offset"])
 
 #
 #  TEST GEOSPATIAL
@@ -137,33 +146,33 @@ def test_geospatial ():
     d = sliderule.source("geo", test1)
 
     if(d["intersect"] == True):
-        print("Passed intersection test")
+        logging.info("Passed intersection test")
     else:
-        print("Failed intersection test", d["intersect"])
+        logging.info("Failed intersection test", d["intersect"])
 
     if(abs(d["combine"]["lat0"] - 44.4015) < 0.001 and abs(d["combine"]["lon0"] - 108.6949) < 0.001 and\
        d["combine"]["lat1"] == 30.0 and d["combine"]["lon1"] == 100.0):
-        print("Passed combination test")
+        logging.info("Passed combination test")
     else:
-        print("Failed combination test", d["combine"])
+        logging.info("Failed combination test", d["combine"])
 
     if(abs(d["split"]["lspan"]["lat0"] - 18.6736) < 0.001 and abs(d["split"]["lspan"]["lon0"] - 106.0666) < .001 and\
        abs(d["split"]["lspan"]["lat1"] - 15.6558) < 0.001 and abs(d["split"]["lspan"]["lon1"] - 102.1886) < .001 and\
        abs(d["split"]["rspan"]["lat0"] - 19.4099) < 0.001 and abs(d["split"]["rspan"]["lon0"] - 103.0705) < .001 and\
        abs(d["split"]["rspan"]["lat1"] - 16.1804) < 0.001 and abs(d["split"]["rspan"]["lon1"] -  99.3163) < .001):
-        print("Passed split test")
+        logging.info("Passed split test")
     else:
-        print("Failed split test", d["split"])
+        logging.info("Failed split test", d["split"])
 
     if(d["lat"] == 40.0 and d["lon"] == 60.0):
-        print("Passed sphere test")
+        logging.info("Passed sphere test")
     else:
-        print("Failed sphere test", d["lat"], d["lon"])
+        logging.info("Failed sphere test", d["lat"], d["lon"])
 
     if(d["x"] == 0.466307658155 and d["y"] == 0.80766855588292):
-        print("Passed projection test")
+        logging.info("Passed projection test")
     else:
-        print("Failed projection test", d["x"], d["y"])
+        logging.info("Failed projection test", d["x"], d["y"])
 
     # Test 2 # 
 
@@ -179,9 +188,9 @@ def test_geospatial ():
     d = sliderule.source("geo", test2)
 
     if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0):
-        print("Passed sphere2 test")
+        logging.info("Passed sphere2 test")
     else:
-        print("Failed sphere2 test", d["lat"], d["lon"])
+        logging.info("Failed sphere2 test", d["lat"], d["lon"])
 
     # Test 3 # 
 
@@ -197,9 +206,9 @@ def test_geospatial ():
     d = sliderule.source("geo", test3)
 
     if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0):
-        print("Passed sphere3 test")
+        logging.info("Passed sphere3 test")
     else:
-        print("Failed sphere3 test", d["lat"], d["lon"])
+        logging.info("Failed sphere3 test", d["lat"], d["lon"])
 
     # Test 4 # 
 
@@ -215,9 +224,9 @@ def test_geospatial ():
     d = sliderule.source("geo", test4)
 
     if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0):
-        print("Passed sphere4 test")
+        logging.info("Passed sphere4 test")
     else:
-        print("Failed sphere4 test", d["lat"], d["lon"])
+        logging.info("Failed sphere4 test", d["lat"], d["lon"])
 
 #
 #  TEST INDEX
@@ -231,9 +240,9 @@ def test_index ():
     d = sliderule.source("index", test1)
 
     if(len(d["resources"]) == 20):
-        print("Passed union index test")
+        logging.info("Passed union index test")
     else:
-        print("Failed union index test", len(d["resources"]), d)
+        logging.info("Failed union index test", len(d["resources"]), d)
 
     test2 = {
         "and": {
@@ -247,19 +256,21 @@ def test_index ():
     if( ("ATL03_20190417134754_02950302_003_01.h5" in d["resources"]) and 
         ("ATL03_20191016050727_02950502_003_01.h5" in d["resources"]) and 
         (len(d["resources"]) == 2)):
-        print("Passed intersection index test")
+        logging.info("Passed intersection index test")
     else:
-        print("Failed intersection index test", len(d["resources"]), d)
+        logging.info("Failed intersection index test", len(d["resources"]), d)
 
 #
 #  TEST CMR
 #
 def test_cmr ():
-#    grand_mesa = [-108.3435200747503, 38.89102961045247, -108.3605610678553, 39.25086131372244, -107.7818591266989, 39.26613714985466, -107.7677425431139, 38.90611184543033, -108.3435200747503, 38.89102961045247]
-    grand_mesa = [-108.4, 38.7, -108.4, 39.2, -107.6, 39.2, -107.6, 38.7, -108.4, 38.7]
-#    test = [-115.43690817112252,37.40830874614508,-109.5536674671591,37.5881866963966,-109.38728109855494,43.28255468374758,-115.29871608014862,43.05742232376389,-115.43690817112252,37.40830874614508]
+    grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+                   {"lon": -107.7677425431139, "lat": 38.90611184543033}, 
+                   {"lon": -107.7818591266989, "lat": 39.26613714985466},
+                   {"lon": -108.3605610678553, "lat": 39.25086131372244},
+                   {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
     resources = icesat2.cmr(grand_mesa)
-    print(resources)
+    logging.info(resources)
 
 ###############################################################################
 # MAIN
@@ -268,18 +279,23 @@ def test_cmr ():
 if __name__ == '__main__':
 
     # Override server URL from command line
+    url = "http://127.0.0.1:9081"
     if len(sys.argv) > 1:
-        sliderule.set_url(sys.argv[1])
+        url = sys.argv[1]
 
     # Override asset from command line
+    asset = "atl03-local"
     if len(sys.argv) > 2:
         asset = sys.argv[2]
 
+    # Initialize ICESat2/SlideRule Package
+    icesat2.init(url, True)
+
     # Tests
-#    test_time()
-#    test_h5()
-#    test_variable_length()
-#    test_definition()
-#    test_geospatial()
-#    test_index()
+    test_time()
+    test_h5()
+    test_variable_length()
+    test_definition()
+    test_geospatial()
+    test_index()
     test_cmr()
