@@ -7,6 +7,7 @@ import urllib.request
 import datetime
 import numpy
 import logging
+import concurrent.futures
 import sliderule
 
 ###############################################################################
@@ -107,7 +108,7 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
     if polygon:
         params += '&polygon={0}'.format(polygon)
     cmr_query_url = CMR_FILE_URL + params
-    logger.info('cmr request\t{0}\n'.format(cmr_query_url))
+    logger.debug('cmr request={0}\n'.format(cmr_query_url))
 
     cmr_scroll_id = None
     ctx = ssl.create_default_context()
@@ -217,14 +218,6 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
         # remove all spaces as this will be embedded in a url
         polygon = polygon.replace(" ", "")
 
-
-
-    ###### TEST CODE #####
-    return ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', 'ATL03_20181114092019_07140106_003_01.h5', 'ATL03_20181115210428_07370102_003_01.h5', 'ATL03_20181213075606_11560106_003_01.h5', 'ATL03_20181214194017_11790102_003_01.h5', 'ATL03_20190111063212_02110206_003_01.h5', 'ATL03_20190112181620_02340202_003_01.h5', 'ATL03_20190116180755_02950202_003_01.h5', 'ATL03_20190209050825_06530206_003_01.h5', 'ATL03_20190213050003_07140206_003_01.h5', 'ATL03_20190214164413_07370202_003_01.h5', 'ATL03_20190314033606_11560206_003_01.h5', 'ATL03_20190315152016_11790202_003_01.h5', 'ATL03_20190412021205_02110306_003_01.h5', 'ATL03_20190417134754_02950302_003_01.h5', 'ATL03_20190511004804_06530306_003_01.h5', 'ATL03_20190515003943_07140306_003_01.h5', 'ATL03_20190516122353_07370302_003_01.h5', 'ATL03_20190612231542_11560306_003_01.h5', 'ATL03_20190614105952_11790302_003_01.h5', 'ATL03_20190711215129_02110406_003_01.h5', 'ATL03_20190717092724_02950402_003_01.h5', 'ATL03_20190809202745_06530406_003_01.h5', 'ATL03_20190813201925_07140406_003_01.h5', 'ATL03_20190911185531_11560406_003_01.h5', 'ATL03_20190913063941_11790402_003_01.h5', 'ATL03_20191010173137_02110506_003_01.h5', 'ATL03_20191012051547_02340502_003_01.h5', 'ATL03_20191016050727_02950502_003_01.h5', 'ATL03_20191108160740_06530506_003_01.h5', 'ATL03_20191112155921_07140506_003_01.h5', 'ATL03_20191114034331_07370502_003_01.h5', 'ATL03_20191211143520_11560506_003_01.h5', 'ATL03_20200109131121_02110606_003_01.h5', 'ATL03_20200111005531_02340602_003_01.h5', 'ATL03_20200115004711_02950602_003_01.h5', 'ATL03_20200207114722_06530606_003_01.h5', 'ATL03_20200211113903_07140606_003_01.h5', 'ATL03_20200212232313_07370602_003_01.h5', 'ATL03_20200312215919_11790602_003_01.h5', 'ATL03_20200409085108_02110706_003_01.h5', 'ATL03_20200410203519_02340702_003_01.h5', 'ATL03_20200414202700_02950702_003_01.h5', 'ATL03_20200508072713_06530706_003_01.h5', 'ATL03_20200512071854_07140706_003_01.h5', 'ATL03_20200513190303_07370702_003_01.h5', 'ATL03_20200610055453_11560706_003_01.h5', 'ATL03_20200611173903_11790702_003_01.h5', 'ATL03_20200709043054_02110806_003_01.h5', 'ATL03_20200710161504_02340802_003_01.h5', 'ATL03_20200714160647_02950802_003_01.h5']
-
-
-
-
     # call into NSIDC routines to make CMR request
     try:
         url_list = __cmr_search(short_name, version, time_start, time_end, polygon)
@@ -240,7 +233,10 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
 #
 #  ATL06
 #
-def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=True):
+def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False):
+
+    logging.info("processing resource: %s", resource)
+
     # Build ATL06 Request
     rqst = {
         "atl03-asset" : asset,
@@ -264,6 +260,54 @@ def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_nump
 
     # Return Responses
     return rsps
+
+#
+#  PARALLEL ATL06
+#
+def atl06p(parm, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False, max_workers=4, block=True):
+    
+    # Check Parameters are Valid
+    if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
+        logging.error("Must supply some bounding parameters with request (poly, t0, t1)")
+        return
+
+    # Pull Out Polygon #
+    polygon = None
+    if "poly" in parm:
+        polygon = parm["poly"]
+
+    # Pull Out Time Period #
+    time_start = None
+    time_end = None
+    if "t0" in parm:
+        time_start = parm["t0"]
+    if "t1" in parm:
+        time_start = parm["t1"]
+
+    # Make CMR Request #
+    resources = cmr(polygon, time_start, time_end)
+
+    # Make Parallel Processing Requests
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(atl06, parm, resource, asset, stages, track, as_numpy) for resource in resources]
+
+    # Return Results
+    if block:
+        results = {}
+        for future in concurrent.futures.as_completed(futures):
+            if len(results) == 0:
+                results = future.result()
+            else:
+                result = future.result()
+                for element in result:
+                    if element not in results:
+                        logging.error("Unable to construct results with element: %s", element)
+                        continue
+                    results[element] += result[element]
+        return results
+    # Return Futures
+    else:
+        return futures
 
 #
 #  GET VALUES

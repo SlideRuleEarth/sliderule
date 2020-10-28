@@ -15,7 +15,13 @@ h5file = "ATL03_20181019065445_03150111_003_01.h5"
 
 # configure logging
 logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+# set polygon
+grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+                {"lon": -107.7677425431139, "lat": 38.90611184543033}, 
+                {"lon": -107.7818591266989, "lat": 39.26613714985466},
+                {"lon": -108.3605610678553, "lat": 39.25086131372244},
+                {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
 
 ###############################################################################
 # TESTS
@@ -51,7 +57,7 @@ def test_time ():
     if now == again:
         logging.info("Passed time test")
     else:
-        logging.info("Failed time test")
+        logging.error("Failed time test")
 
 #
 #  TEST H5
@@ -72,7 +78,7 @@ def test_h5 ():
     if(epoch_offset == 1198800018.0):
         logging.info("Passed h5 test")
     else:
-        logging.info("Failed h5 test: ", v)
+        logging.error("Failed h5 test: ", v)
 
 #
 #  TEST VARIABLE LENGTH
@@ -92,7 +98,7 @@ def test_variable_length ():
     if v[0] == 245 and v[1] == 263 and v[2] == 273:
         logging.info("Passed variable length test")
     else:
-        logging.info("Failed variable length test: ", v)
+        logging.error("Failed variable length test: ", v)
 
 #
 #  TEST DEFINITION
@@ -107,7 +113,7 @@ def test_definition ():
     if(d["delta_time"]["offset"] == 448):
         logging.info("Passed definition test")
     else:
-        logging.info("Failed definition test", d["delta_time"]["offset"])
+        logging.error("Failed definition test", d["delta_time"]["offset"])
 
 #
 #  TEST GEOSPATIAL
@@ -148,13 +154,13 @@ def test_geospatial ():
     if(d["intersect"] == True):
         logging.info("Passed intersection test")
     else:
-        logging.info("Failed intersection test", d["intersect"])
+        logging.error("Failed intersection test", d["intersect"])
 
     if(abs(d["combine"]["lat0"] - 44.4015) < 0.001 and abs(d["combine"]["lon0"] - 108.6949) < 0.001 and\
        d["combine"]["lat1"] == 30.0 and d["combine"]["lon1"] == 100.0):
         logging.info("Passed combination test")
     else:
-        logging.info("Failed combination test", d["combine"])
+        logging.error("Failed combination test", d["combine"])
 
     if(abs(d["split"]["lspan"]["lat0"] - 18.6736) < 0.001 and abs(d["split"]["lspan"]["lon0"] - 106.0666) < .001 and\
        abs(d["split"]["lspan"]["lat1"] - 15.6558) < 0.001 and abs(d["split"]["lspan"]["lon1"] - 102.1886) < .001 and\
@@ -162,17 +168,17 @@ def test_geospatial ():
        abs(d["split"]["rspan"]["lat1"] - 16.1804) < 0.001 and abs(d["split"]["rspan"]["lon1"] -  99.3163) < .001):
         logging.info("Passed split test")
     else:
-        logging.info("Failed split test", d["split"])
+        logging.error("Failed split test", d["split"])
 
     if(d["lat"] == 40.0 and d["lon"] == 60.0):
         logging.info("Passed sphere test")
     else:
-        logging.info("Failed sphere test", d["lat"], d["lon"])
+        logging.error("Failed sphere test", d["lat"], d["lon"])
 
     if(d["x"] == 0.466307658155 and d["y"] == 0.80766855588292):
         logging.info("Passed projection test")
     else:
-        logging.info("Failed projection test", d["x"], d["y"])
+        logging.error("Failed projection test", d["x"], d["y"])
 
     # Test 2 # 
 
@@ -190,7 +196,7 @@ def test_geospatial ():
     if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0):
         logging.info("Passed sphere2 test")
     else:
-        logging.info("Failed sphere2 test", d["lat"], d["lon"])
+        logging.error("Failed sphere2 test", d["lat"], d["lon"])
 
     # Test 3 # 
 
@@ -208,7 +214,7 @@ def test_geospatial ():
     if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0):
         logging.info("Passed sphere3 test")
     else:
-        logging.info("Failed sphere3 test", d["lat"], d["lon"])
+        logging.error("Failed sphere3 test", d["lat"], d["lon"])
 
     # Test 4 # 
 
@@ -226,7 +232,7 @@ def test_geospatial ():
     if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0):
         logging.info("Passed sphere4 test")
     else:
-        logging.info("Failed sphere4 test", d["lat"], d["lon"])
+        logging.error("Failed sphere4 test", d["lat"], d["lon"])
 
 #
 #  TEST INDEX
@@ -242,7 +248,7 @@ def test_index ():
     if(len(d["resources"]) == 20):
         logging.info("Passed union index test")
     else:
-        logging.info("Failed union index test", len(d["resources"]), d)
+        logging.error("Failed union index test", len(d["resources"]), d)
 
     test2 = {
         "and": {
@@ -258,19 +264,29 @@ def test_index ():
         (len(d["resources"]) == 2)):
         logging.info("Passed intersection index test")
     else:
-        logging.info("Failed intersection index test", len(d["resources"]), d)
+        logging.error("Failed intersection index test", len(d["resources"]), d)
 
 #
 #  TEST CMR
 #
 def test_cmr ():
-    grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
-                   {"lon": -107.7677425431139, "lat": 38.90611184543033}, 
-                   {"lon": -107.7818591266989, "lat": 39.26613714985466},
-                   {"lon": -108.3605610678553, "lat": 39.25086131372244},
-                   {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
     resources = icesat2.cmr(grand_mesa)
-    logging.info(resources)
+
+    if( ('ATL03_20181017222812_02950102_003_01.h5' in resources) and
+        ('ATL03_20181110092841_06530106_003_01.h5' in resources) ):
+        logging.info("Passed cmr test")
+    else:
+        logging.error("Failed cmr test", resources)
+
+#
+#  TEST PARALLEL ATL06
+#
+def test_atl06p ():
+
+    parms = {
+        "poly": grand_mesa
+    }
+    icesat2.atl06p(parms, "atl03-local")
 
 ###############################################################################
 # MAIN
@@ -292,10 +308,11 @@ if __name__ == '__main__':
     icesat2.init(url, True)
 
     # Tests
-    test_time()
-    test_h5()
-    test_variable_length()
-    test_definition()
-    test_geospatial()
-    test_index()
-    test_cmr()
+#    test_time()
+#    test_h5()
+#    test_variable_length()
+#    test_definition()
+#    test_geospatial()
+#    test_index()
+#    test_cmr()
+    test_atl06p()
