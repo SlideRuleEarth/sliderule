@@ -50,8 +50,16 @@ $ conda install cartopy
 
 Install the SlideRule Python Client from an activated environment:
 ```bash
-$ cd scripts/python
+$ cd {repo}/scripts/python
 $ python setup.py install
+$ cd {repo}/plugins/icesat2/client
+$ python setup.py install
+```
+
+Or, to install the necessary clients remotely (without checking out the repository):
+```bash
+$ python3 -m pip install --user -e git+ssh://git@github.com/ICESat2-SlideRule/sliderule.git#egg=sliderule\&subdirectory=scripts/python/
+$ python3 -m pip install --user -e git+ssh://git@github.com/ICESat2-SlideRule/sliderule.git#egg=sliderule-icesat2\&subdirectory=plugins/icesat2/client/
 ```
 
 ## III. Programmatic Access to ICESat-2 Plugin
@@ -66,6 +74,7 @@ This plugin supplies the following record types:
 
 The plugin supplies the following endpoints:
 * [atl06](endpoints/atl06.lua): process ATL03 photon data to produce gridded elevations
+* [atl03](endpoints/atl03.lua): process ATL03 resource and produce an index record (used with [build_indexes.py](utils/build_indexes.py))
 
 ## IV. Notes
 

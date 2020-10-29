@@ -16,13 +16,6 @@ h5file = "ATL03_20181019065445_03150111_003_01.h5"
 # configure logging
 logging.basicConfig(level=logging.INFO)
 
-# set polygon
-grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
-                {"lon": -107.7677425431139, "lat": 38.90611184543033}, 
-                {"lon": -107.7818591266989, "lat": 39.26613714985466},
-                {"lon": -108.3605610678553, "lat": 39.25086131372244},
-                {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
-
 ###############################################################################
 # TESTS
 ###############################################################################
@@ -266,28 +259,6 @@ def test_index ():
     else:
         logging.error("Failed intersection index test", len(d["resources"]), d)
 
-#
-#  TEST CMR
-#
-def test_cmr ():
-    resources = icesat2.cmr(grand_mesa)
-
-    if( ('ATL03_20181017222812_02950102_003_01.h5' in resources) and
-        ('ATL03_20181110092841_06530106_003_01.h5' in resources) ):
-        logging.info("Passed cmr test")
-    else:
-        logging.error("Failed cmr test", resources)
-
-#
-#  TEST PARALLEL ATL06
-#
-def test_atl06p ():
-
-    parms = {
-        "poly": grand_mesa
-    }
-    icesat2.atl06p(parms, "atl03-local")
-
 ###############################################################################
 # MAIN
 ###############################################################################
@@ -308,11 +279,9 @@ if __name__ == '__main__':
     icesat2.init(url, False)
 
     # Tests
-#    test_time()
-#    test_h5()
-#    test_variable_length()
-#    test_definition()
-#    test_geospatial()
-#    test_index()
-#    test_cmr()
-    test_atl06p()
+    test_time()
+    test_h5()
+    test_variable_length()
+    test_definition()
+    test_geospatial()
+    test_index()

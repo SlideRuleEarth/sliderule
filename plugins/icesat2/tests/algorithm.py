@@ -149,7 +149,7 @@ if __name__ == '__main__':
     # Set Resource #
     resource = "_20181019065445_03150111_003_01.h5"
     if len(sys.argv) > 4:
-        atl06_asset = sys.argv[4]
+        resource = sys.argv[4]
 
     # Initialize Icesat2 Package #
     icesat2.init(url, True)
