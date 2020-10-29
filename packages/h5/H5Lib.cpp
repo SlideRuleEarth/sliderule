@@ -340,7 +340,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         hsize_t* count = new hsize_t[ndims + 1];
 
         /* Readjust First Dimension */
-        if(numrows != ALL_ROWS) dims[0] = MIN(numrows, dims[0]);
+        if(numrows != ALL_ROWS) dims[0] = MIN(numrows, (long)dims[0]);
 
         /* Create File Hyperspace to Read Selected Column */
         start[0] = startrow;

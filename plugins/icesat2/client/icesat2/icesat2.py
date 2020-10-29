@@ -14,8 +14,6 @@ import sliderule
 # GLOBALS
 ###############################################################################
 
-# logging
-logger = logging.getLogger(__name__)
 # output dictionary keys
 keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
 # output variable data types
@@ -108,7 +106,7 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
     if polygon:
         params += '&polygon={0}'.format(polygon)
     cmr_query_url = CMR_FILE_URL + params
-    logger.debug('cmr request={0}\n'.format(cmr_query_url))
+    logging.debug('cmr request={0}\n'.format(cmr_query_url))
 
     cmr_scroll_id = None
     ctx = ssl.create_default_context()
@@ -223,10 +221,10 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
         url_list = __cmr_search(short_name, version, time_start, time_end, polygon)
     except urllib.error.HTTPError as e:
         url_list = []
-        logger.error("HTTP Request Error:", e)
+        logging.error("HTTP Request Error:", e)
     except RuntimeError as e:
         url_list = []
-        logger.error("Runtime Error:", e)
+        logging.error("Runtime Error:", e)
 
     return url_list
 
