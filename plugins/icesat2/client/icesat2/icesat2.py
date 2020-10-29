@@ -288,30 +288,40 @@ def atl06p(parm, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False, m
     # Make CMR Request #
     resources = cmr(polygon, time_start, time_end)
 
-    # Make Parallel Processing Requests
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(atl06, parm, resource, asset, stages, track, as_numpy) for resource in resources]
-
-    # Return Results
+    # For Blocking Calls
     if block:
+
+        # Make Parallel Processing Requests
         results = {}
-        result_cnt = 0
-        for future in concurrent.futures.as_completed(futures):
-            result_cnt += 1
-            logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
-            if len(results) == 0:
-                results = future.result()
-            else:
-                result = future.result()
-                for element in result:
-                    if element not in results:
-                        logger.error("Unable to construct results with element: %s", element)
-                        continue
-                    results[element] += result[element]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(atl06, parm, resource, asset, stages, track, as_numpy) for resource in resources]
+
+            # Wait for Results
+            result_cnt = 0
+            for future in concurrent.futures.as_completed(futures):
+                result_cnt += 1
+                logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
+                if len(results) == 0:
+                    results = future.result()
+                else:
+                    result = future.result()
+                    for element in result:
+                        if element not in results:
+                            logger.error("Unable to construct results with element: %s", element)
+                            continue
+                        results[element] += result[element]
+
+        # Return Results
         return results
-    # Return Futures
+    
+    # For Non-Blocking Calls
     else:
-        return futures
+
+        # Create Thread Pool
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+
+        # Return List of Futures for Parallel Processing Request
+        return [executor.submit(atl06, parm, resource, asset, stages, track, as_numpy) for resource in resources]
 
 #
 #  GET VALUES

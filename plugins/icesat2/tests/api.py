@@ -305,7 +305,7 @@ if __name__ == '__main__':
         asset = sys.argv[2]
 
     # Initialize ICESat2/SlideRule Package
-    icesat2.init(url, True)
+    icesat2.init(url, False)
 
     # Tests
 #    test_time()
