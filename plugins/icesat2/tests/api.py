@@ -286,8 +286,7 @@ def test_atl06p ():
     parms = {
         "poly": grand_mesa
     }
-#    icesat2.atl06p(parms, "atl03-local")
-    icesat2.atl06(parms, "ATL03_20181017222812_02950102_003_01.h5", "atl03-local")
+    icesat2.atl06p(parms, "atl03-local")
 
 ###############################################################################
 # MAIN

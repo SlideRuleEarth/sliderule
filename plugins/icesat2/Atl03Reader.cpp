@@ -304,11 +304,14 @@ void* Atl03Reader::readerThread (void* parm)
             }
 
             /* Set Number of Segments */
-            num_segments[PRT_LEFT] = segment - first_segment[PRT_LEFT];
-            num_segments[PRT_RIGHT] = segment - first_segment[PRT_RIGHT];
+            if(first_segment_found)
+            {
+                num_segments[PRT_LEFT] = segment - first_segment[PRT_LEFT];
+                num_segments[PRT_RIGHT] = segment - first_segment[PRT_RIGHT];
+            }
 
             /* Check If Anything to Process */
-            if(num_segments[PRT_LEFT] <= 0 || num_segments[PRT_RIGHT] <= 0)
+            if(num_photons[PRT_LEFT] <= 0 || num_photons[PRT_RIGHT] <= 0)
             {
                 throw std::runtime_error("empty spatial region");
             }
