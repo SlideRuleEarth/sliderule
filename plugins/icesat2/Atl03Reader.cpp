@@ -133,7 +133,13 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
     parms = _parms;
 
     /* Clear Statistics */
-    LocalLib::set(&stats, 0, sizeof(stats));
+    stats.segments_read[PRT_LEFT]       = 0;
+    stats.segments_read[PRT_RIGHT]      = 0;
+    stats.extents_filtered[PRT_LEFT]    = 0;
+    stats.extents_filtered[PRT_RIGHT]   = 0;
+    stats.extents_sent                  = 0;
+    stats.extents_dropped               = 0;
+    stats.extents_retried               = 0;
 
     /* Initialize Readers */
     active = true;
@@ -206,9 +212,9 @@ void* Atl03Reader::readerThread (void* parm)
 
         /* Determine Spatial Extent */
         long first_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        long num_segments[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        long num_segments[PAIR_TRACKS_PER_GROUND_TRACK] = { H5Lib::ALL_ROWS, H5Lib::ALL_ROWS };
         long first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        long num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        long num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { H5Lib::ALL_ROWS, H5Lib::ALL_ROWS };
         if(reader->parms.points_in_polygon > 0)
         {
             /* Determine Best Projection To Use */
@@ -339,12 +345,12 @@ void* Atl03Reader::readerThread (void* parm)
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
         /* Set Number of Photons to Process (if not already set by subsetter) */    
-        if(num_photons[PRT_LEFT] == 0) num_photons[PRT_LEFT] = dist_ph_along.gt[PRT_LEFT].size;
-        if(num_photons[PRT_RIGHT] == 0) num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
+        if(num_photons[PRT_LEFT] == H5Lib::ALL_ROWS) num_photons[PRT_LEFT] = dist_ph_along.gt[PRT_LEFT].size;
+        if(num_photons[PRT_RIGHT] == H5Lib::ALL_ROWS) num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
 
         /* Increment Read Statistics */
-        reader->stats.segments_read[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT].size; // TODO: not thread safe
-        reader->stats.segments_read[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT].size;  // TODO: not thread safe
+        reader->stats.segments_read[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT].size;
+        reader->stats.segments_read[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT].size;  
 
         /* Traverse All Photons In Dataset */
         while( reader->active && (!track_complete[PRT_LEFT] || !track_complete[PRT_RIGHT]) )
@@ -455,7 +461,7 @@ void* Atl03Reader::readerThread (void* parm)
                 /* Incrment Statistics if Invalid */
                 if(!extent_valid[t])
                 {
-                    reader->stats.extents_filtered[t]++; // TODO: not thread safe
+                    reader->stats.extents_filtered[t]++; 
                 }
             }
 
@@ -518,13 +524,13 @@ void* Atl03Reader::readerThread (void* parm)
                 int post_status = MsgQ::STATE_ERROR;
                 while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) <= 0)
                 {
-                    reader->stats.extents_retried++; // TODO: not thread safe
+                    reader->stats.extents_retried++; 
                     mlog(DEBUG, "Atl03 reader failed to post to stream %s: %d\n", reader->outQ->getName(), post_status);
                 }
 
                 /* Update Statistics */
-                if(post_status > 0) reader->stats.extents_sent++; // TODO: not thread safe
-                else                reader->stats.extents_dropped++;  // TODO: not thread safe
+                if(post_status > 0) reader->stats.extents_sent++; 
+                else                reader->stats.extents_dropped++;  
 
                 /* Clean Up Record */
                 delete record;

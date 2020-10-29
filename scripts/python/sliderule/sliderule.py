@@ -14,6 +14,8 @@ server_url = 'http://127.0.0.1:9081'
 
 verbose = False
 
+logger = logging.getLogger(__name__)
+
 recdef_tbl = {}
 
 datatypes = {
@@ -197,9 +199,9 @@ def __parse(stream):
                     if rectype == "logrec":
                          if verbose:
                             if rec["message"][-1] == '\n':
-                                 logging.critical(rec["message"][:-1])
+                                 logger.critical(rec["message"][:-1])
                             else:
-                                 logging.critical(rec["message"])
+                                 logger.critical(rec["message"])
                     else:
                         # Append Record
                         recs.append(rec)

@@ -14,6 +14,8 @@ import sliderule
 # GLOBALS
 ###############################################################################
 
+# create logger 
+logger = logging.getLogger(__name__)
 # output dictionary keys
 keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
 # output variable data types
@@ -106,7 +108,7 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
     if polygon:
         params += '&polygon={0}'.format(polygon)
     cmr_query_url = CMR_FILE_URL + params
-    logging.debug('cmr request={0}\n'.format(cmr_query_url))
+    logger.debug('cmr request={0}\n'.format(cmr_query_url))
 
     cmr_scroll_id = None
     ctx = ssl.create_default_context()
@@ -221,10 +223,10 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
         url_list = __cmr_search(short_name, version, time_start, time_end, polygon)
     except urllib.error.HTTPError as e:
         url_list = []
-        logging.error("HTTP Request Error:", e)
+        logger.error("HTTP Request Error:", e)
     except RuntimeError as e:
         url_list = []
-        logging.error("Runtime Error:", e)
+        logger.error("Runtime Error:", e)
 
     return url_list
 
@@ -254,7 +256,7 @@ def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_nump
             for element in rsps[0]["elevation"][0].keys():
                 flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
         else:
-            logging.warning("unable to process resource %s: no elements", resource)
+            logger.warning("unable to process resource %s: no elements", resource)
         rsps = flattened
 
     # Return Responses
@@ -267,7 +269,7 @@ def atl06p(parm, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False, m
     
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
-        logging.error("Must supply some bounding parameters with request (poly, t0, t1)")
+        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
         return
 
     # Pull Out Polygon #
@@ -293,14 +295,17 @@ def atl06p(parm, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False, m
     # Return Results
     if block:
         results = {}
+        result_cnt = 0
         for future in concurrent.futures.as_completed(futures):
+            result_cnt += 1
+            logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
             if len(results) == 0:
                 results = future.result()
             else:
                 result = future.result()
                 for element in result:
                     if element not in results:
-                        logging.error("Unable to construct results with element: %s", element)
+                        logger.error("Unable to construct results with element: %s", element)
                         continue
                     results[element] += result[element]
         return results

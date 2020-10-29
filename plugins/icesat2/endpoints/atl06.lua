@@ -80,7 +80,7 @@ while not atl06_disp:waiton(interval) do
     if atl06_stats.h5atl03 == 0 then
         userlog:sendlog(core.USER, string.format("... continuing to read %s (after %d seconds)\n", resource, duration / 1000))
     else
-        userlog:sendlog(core.USER, string.format("processed %d out of %d segments in %s (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.sent, resource, duration / 1000))
+        userlog:sendlog(core.USER, string.format("processed %d out of %d segments in %s (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.read_l + atl03_stats.read_r, resource, duration / 1000))
     end
 end
 
