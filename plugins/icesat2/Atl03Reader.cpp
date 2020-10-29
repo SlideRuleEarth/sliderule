@@ -120,7 +120,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, atl06_parms_t _parms, int track):
+Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, const atl06_parms_t& _parms, int track):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(url);
@@ -209,7 +209,7 @@ void* Atl03Reader::readerThread (void* parm)
         unsigned num_segments[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
         unsigned first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
         unsigned num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        if(reader->parms.polygon.length() > 0)
+        if(reader->parms.points_in_polygon > 0)
         {
             /* Determine Best Projection To Use */
             MathLib::proj_t projection = MathLib::SOUTH_POLAR;
@@ -217,7 +217,7 @@ void* Atl03Reader::readerThread (void* parm)
 
             /* Project Polygon */
             List<MathLib::point_t> projected_poly;
-            for(int i = 0; i < reader->parms.polygon.length(); i++)
+            for(int i = 0; i < reader->parms.points_in_polygon; i++)
             {
                 MathLib::point_t projected_point;
                 MathLib::coord2point(reader->parms.polygon[i], projected_point, projection);

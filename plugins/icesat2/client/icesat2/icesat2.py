@@ -359,4 +359,4 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
         size = size + d["size"]
 
     # Return Response Values
-    return sliderule.get_values(data, datatype, size)
+    return get_values(data, datatype, size)

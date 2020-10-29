@@ -46,7 +46,8 @@ const atl06_parms_t DefaultParms = {
     .surface_type               = ATL06_DEFAULT_SURFACE_TYPE,
     .signal_confidence          = ATL06_DEFAULT_SIGNAL_CONFIDENCE,
     .stages                     = { true },
-    .polygon                    = { },
+    .polygon                    = { { 0, 0 } },
+    .points_in_polygon          = 0,
     .max_iterations             = ATL06_DEFAULT_MAX_ITERATIONS,
     .along_track_spread         = ATL06_DEFAULT_ALONG_TRACK_SPREAD,
     .minimum_photon_count       = ATL06_DEFAULT_MIN_PHOTON_COUNT,
@@ -65,8 +66,16 @@ void get_lua_polygon (lua_State* L, int index, atl06_parms_t* parms, bool* provi
     /* Must be table of coordinates */
     if(lua_istable(L, index))
     {
-        /* Iterate through each coordinate */
+        /* Get Number of Points in Polygon */
         int num_points = lua_rawlen(L, index);
+        if(num_points > LUA_PARM_MAX_COORDS)
+        {
+            mlog(CRITICAL, "Points in polygon [%d] exceed maximum: %d\n", num_points, LUA_PARM_MAX_COORDS);
+            num_points = LUA_PARM_MAX_COORDS;
+        }
+        parms->points_in_polygon = num_points;
+
+        /* Iterate through each coordinate */
         for(int i = 0; i < num_points; i++)
         {
             /* Get coordinate table */
@@ -86,7 +95,7 @@ void get_lua_polygon (lua_State* L, int index, atl06_parms_t* parms, bool* provi
                 lua_pop(L, 1);
 
                 /* Add Coordinate */
-                parms->polygon.add(coord);
+                parms->polygon[i] = coord;
                 if(provided) *provided = true;
             }
             lua_pop(L, 1);
@@ -118,7 +127,7 @@ atl06_parms_t getLuaAtl06Parms (lua_State* L, int index)
 
         lua_getfield(L, index, LUA_PARM_POLYGON);
         get_lua_polygon(L, -1, &parms, &provided);
-        if(provided) mlog(CRITICAL, "Setting %s to %d points\n", LUA_PARM_POLYGON, (int)parms.polygon.length());
+        if(provided) mlog(CRITICAL, "Setting %s to %d points\n", LUA_PARM_POLYGON, (int)parms.points_in_polygon);
         lua_pop(L, 1);
 
         lua_getfield(L, index, LUA_PARM_MAX_ITERATIONS);
