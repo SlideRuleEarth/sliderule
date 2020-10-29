@@ -256,7 +256,7 @@ def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_nump
             for element in rsps[0]["elevation"][0].keys():
                 flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
         else:
-            logging.warning("unable to process resource %s: no elements")
+            logging.warning("unable to process resource %s: no elements", resource)
         rsps = flattened
 
     # Return Responses

@@ -313,7 +313,6 @@ void* Atl03Reader::readerThread (void* parm)
         segment_lon.trim(first_segment);
         segment_ph_cnt.trim(first_segment);
 
-printf("LEFT SUBSET %d: <%ld,%ld>, <%ld,%ld>\n", track, first_segment[0], num_segments[0], first_photon[0], num_photons[0]);
         /* Read Data from HDF5 File */
         H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
         H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient");
