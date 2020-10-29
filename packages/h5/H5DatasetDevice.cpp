@@ -120,7 +120,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     /* Read File */
     try
     {
-        H5Lib::info_t info = H5Lib::read(fileName, dataName, (RecordObject::valType_t)recData->datatype);
+        H5Lib::info_t info = H5Lib::read(fileName, dataName, (RecordObject::valType_t)recData->datatype, 0, 0, H5Lib::ALL_ROWS);
         dataBuffer = info.data;
         dataSize = info.datasize;
         connected = true;

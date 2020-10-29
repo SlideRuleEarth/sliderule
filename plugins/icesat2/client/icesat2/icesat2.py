@@ -235,8 +235,6 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
 #
 def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False):
 
-    logging.info("processing resource: %s", resource)
-
     # Build ATL06 Request
     rqst = {
         "atl03-asset" : asset,
@@ -254,8 +252,11 @@ def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_nump
         rsps = __flatten_atl06(rsps)
     else:
         flattened = {}
-        for element in rsps[0]["elevation"][0].keys():
-            flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+        if (len(rsps) > 0) and ("elevation" in rsps[0]) and (len(rsps[0]["elevation"]) > 0):
+            for element in rsps[0]["elevation"][0].keys():
+                flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+        else:
+            logging.warning("unable to process resource %s: no elements")
         rsps = flattened
 
     # Return Responses

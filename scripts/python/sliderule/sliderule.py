@@ -196,7 +196,10 @@ def __parse(stream):
                     # Print Verbose Progress
                     if rectype == "logrec":
                          if verbose:
-                             logging.critical(rec["message"])
+                            if rec["message"][-1] == '\n':
+                                 logging.critical(rec["message"][:-1])
+                            else:
+                                 logging.critical(rec["message"])
                     else:
                         # Append Record
                         recs.append(rec)

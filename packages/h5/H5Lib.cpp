@@ -258,7 +258,7 @@ void H5Lib::parseUrl (const char* url, const char** resource, driver_t* driver)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, unsigned col, unsigned startrow, unsigned numrows)
+H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows)
 {
     info_t info;
     bool status = false;
@@ -340,7 +340,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         hsize_t* count = new hsize_t[ndims + 1];
 
         /* Readjust First Dimension */
-        if(numrows > 0) dims[0] = MIN(numrows, dims[0]);
+        if(numrows != ALL_ROWS) dims[0] = MIN(numrows, dims[0]);
 
         /* Create File Hyperspace to Read Selected Column */
         start[0] = startrow;

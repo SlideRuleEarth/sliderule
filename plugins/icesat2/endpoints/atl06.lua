@@ -42,7 +42,7 @@ local timeout = rqst["timeout"] or core.PEND
 --- need to pass along the query parameters to the atl03 processing so that it can do subsetting
 
 -- Post Initial Status Progress --
-sys.log(core.USER, string.format("atl06 processing initiated on %s data...\n", atl03_asset))
+sys.log(core.USER, string.format("atl06 processing initiated on %s ...\n", resource))
 
 -- ATL06 Dispatch Algorithm --
 local atl06_algo = icesat2.atl06(rspq, parms)
@@ -72,16 +72,20 @@ while not atl06_disp:waiton(interval) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout > 0 and duration == timeout then
-        sys.log(core.USER, string.format("request timed-out after %d seconds\n", duration / 1000))
+        sys.log(core.USER, string.format("request for %s timed-out after %d seconds\n", resource, duration / 1000))
         return
     end
     -- Get Stats --
     local atl03_stats = atl03_reader:stats(false)
     local atl06_stats = atl06_algo:stats(false)
     -- Dispay Progress --
-    sys.log(core.USER, string.format("processed %d out of %d segments (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.sent, duration / 1000))
+    if atl06_stats.h5atl03 == 0 then
+        sys.log(core.USER, string.format("... continuing to read %s (after %d seconds)\n", resource, duration / 1000))
+    else
+        sys.log(core.USER, string.format("processed %d out of %d segments in %s (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.sent, resource, duration / 1000))
+    end
 end
 
 -- Processing Complete
-sys.log(core.USER, "...processing complete\n")
+sys.log(core.USER, string.format("processing of %s complete\n", resource))
 return

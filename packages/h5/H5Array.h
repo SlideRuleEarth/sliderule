@@ -41,20 +41,20 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, unsigned col=0, unsigned startrow=0, unsigned numrows=0);
+                H5Array     (const char* url, const char* dataset, long col=0, long startrow=0, long numrows=H5Lib::ALL_ROWS);
         virtual ~H5Array    (void);
 
-        bool    trim        (unsigned offset);
-        T&      operator[]  (int index);
+        bool    trim        (long offset);
+        T&      operator[]  (long index);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        const char*     name;
-        int32_t         size;
-        T*              data;
-        T*              pointer;
+        const char* name;
+        long        size;
+        T*          data;
+        T*          pointer;
 };
 
 /******************************************************************************
@@ -65,7 +65,7 @@ class H5Array
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const char* url, const char* dataset, unsigned col, unsigned startrow, unsigned numrows)
+H5Array<T>::H5Array(const char* url, const char* dataset, long col, long startrow, long numrows)
 {
     name = NULL;
     data = NULL;
@@ -93,9 +93,9 @@ H5Array<T>::~H5Array(void)
  * trim
  *----------------------------------------------------------------------------*/
 template <class T>
-bool H5Array<T>::trim(unsigned offset)
+bool H5Array<T>::trim(long offset)
 {
-    if(offset < (unsigned)size)
+    if((offset >= 0) && (offset < size))
     {
         pointer = data + offset;
         return true;
@@ -110,7 +110,7 @@ bool H5Array<T>::trim(unsigned offset)
  * []
  *----------------------------------------------------------------------------*/
 template <class T>
-T& H5Array<T>::operator[](int index)
+T& H5Array<T>::operator[](long index)
 {
     return pointer[index];
 }

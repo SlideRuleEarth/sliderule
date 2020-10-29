@@ -48,18 +48,18 @@ class GTArray
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const unsigned DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK];
-        static const unsigned DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK];
+        static const long DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK];
+        static const long DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    GTArray     (const char* url, int track, const char* gt_dataset, unsigned col=0, const unsigned* prt_startrow=DefaultStartRow, const unsigned* prt_numrows=DefaultNumRows);
+                    GTArray     (const char* url, int track, const char* gt_dataset, unsigned col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
         virtual     ~GTArray    (void);
 
-        bool        trim        (unsigned* prt_offset);
-        H5Array<T>& operator[]  (int index);
+        bool        trim        (long* prt_offset);
+        H5Array<T>& operator[]  (long index);
 
         /*--------------------------------------------------------------------
          * Data
@@ -72,10 +72,10 @@ class GTArray
  * STATIC DATA
  ******************************************************************************/
 template <class T>
-const unsigned GTArray<T>::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
+const long GTArray<T>::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
 
 template <class T>
-const unsigned GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
+const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Lib::ALL_ROWS, H5Lib::ALL_ROWS};
 
 /******************************************************************************
  * GTArray METHODS
@@ -85,7 +85,7 @@ const unsigned GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0}
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-GTArray<T>::GTArray(const char* url, int track, const char* gt_dataset, unsigned col, const unsigned* prt_startrow, const unsigned* prt_numrows):
+GTArray<T>::GTArray(const char* url, int track, const char* gt_dataset, unsigned col, const long* prt_startrow, const long* prt_numrows):
     gt{ H5Array<T>(url, SafeString("/gt%dl/%s", track, gt_dataset).getString(), col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
         H5Array<T>(url, SafeString("/gt%dr/%s", track, gt_dataset).getString(), col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
 {
@@ -103,7 +103,7 @@ GTArray<T>::~GTArray(void)
  * trim
  *----------------------------------------------------------------------------*/
 template <class T>
-bool GTArray<T>::trim(unsigned* prt_offset)
+bool GTArray<T>::trim(long* prt_offset)
 {
     if(!prt_offset) return false;
     else return (gt[PRT_LEFT].trim(prt_offset[PRT_LEFT]) && gt[PRT_RIGHT].trim(prt_offset[PRT_RIGHT]));
@@ -113,7 +113,7 @@ bool GTArray<T>::trim(unsigned* prt_offset)
  * []
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>& GTArray<T>::operator[](int index)
+H5Array<T>& GTArray<T>::operator[](long index)
 {
     return gt[index];
 }

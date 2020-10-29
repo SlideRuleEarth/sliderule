@@ -205,10 +205,10 @@ void* Atl03Reader::readerThread (void* parm)
         GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
 
         /* Determine Spatial Extent */
-        unsigned first_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        unsigned num_segments[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        unsigned first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        unsigned num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        long first_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        long num_segments[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        long first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
+        long num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
         if(reader->parms.points_in_polygon > 0)
         {
             /* Determine Best Projection To Use */
@@ -313,6 +313,7 @@ void* Atl03Reader::readerThread (void* parm)
         segment_lon.trim(first_segment);
         segment_ph_cnt.trim(first_segment);
 
+printf("LEFT SUBSET %d: <%ld,%ld>, <%ld,%ld>\n", track, first_segment[0], num_segments[0], first_photon[0], num_photons[0]);
         /* Read Data from HDF5 File */
         H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
         H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient");

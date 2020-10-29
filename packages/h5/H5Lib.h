@@ -37,6 +37,7 @@ struct H5Lib
      *--------------------------------------------------------------------*/
     
     static const int MAX_NDIMS = 8;
+    static const long ALL_ROWS = -1;
 
     /*--------------------------------------------------------------------
      * Types
@@ -64,7 +65,7 @@ struct H5Lib
     static void     deinit      (void);
 
     static void     parseUrl    (const char* url, const char** resource, driver_t* driver);
-    static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, unsigned col=0, unsigned startrow=0, unsigned numrows=0);
+    static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows);
     static bool     traverse    (const char* url, int max_depth, const char* start_group);
 };
 
