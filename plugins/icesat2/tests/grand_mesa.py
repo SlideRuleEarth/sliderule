@@ -4,6 +4,7 @@
 import sys
 import logging
 import pandas as pd
+import matplotlib.pyplot as plt
 import cartopy
 import icesat2
 
@@ -28,6 +29,7 @@ def algoexec(asset):
     }
 
     # Request ATL06 Data
+#    rsps = icesat2.atl06(parms, "ATL03_20200414202700_02950702_003_01.h5", asset)
     rsps = icesat2.atl06p(parms, asset)
 
     # Build Dataframe of SlideRule Responses
@@ -42,17 +44,17 @@ def algoexec(asset):
 #
 # Plot Results
 #
-def plotresults(rsps):
+def plotresults(df):
     # Create Plot
     fig = plt.figure(num=None, figsize=(12, 6))
 
     # Plot Ground Tracks
     ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
     ax1.set_title("Ground Tracks")
-    ax1.plot(rsps["longitude"].values, rsps["latitude"].values, linewidth=1.5, color='r', zorder=3, transform=cartopy.crs.Geodetic())
+    ax1.scatter(df["longitude"].values, df["latitude"].values, s=2.5, c=df["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
     ax1.add_feature(cartopy.feature.LAKES)
-    ax1.set_extent((-110,-106,37,41),crs=cartopy.crs.PlateCarree())
+    ax1.set_extent((-109,-107,38,40),crs=cartopy.crs.PlateCarree())
 
     # Show Plot
     plt.show()
@@ -80,7 +82,7 @@ if __name__ == '__main__':
     icesat2.init(url, False)
 
     # Execute SlideRule Algorithm
-    rsps = algoexec(atl03_asset)
+    df = algoexec(atl03_asset)
 
     # Plot Results
-    plotresults(rsps)
+    plotresults(df)
