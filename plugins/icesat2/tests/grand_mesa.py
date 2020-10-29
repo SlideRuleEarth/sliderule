@@ -29,7 +29,6 @@ def algoexec(asset):
     }
 
     # Request ATL06 Data
-#    rsps = icesat2.atl06(parms, "ATL03_20200414202700_02950702_003_01.h5", asset)
     rsps = icesat2.atl06p(parms, asset)
 
     # Build Dataframe of SlideRule Responses
