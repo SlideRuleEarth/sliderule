@@ -50,11 +50,17 @@ def plotresults(df):
 
     # Plot Ground Tracks
     ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
-    ax1.set_title("Ground Tracks")
+    ax1.set_title("Zoomed Ground Tracks")
     ax1.scatter(df["longitude"].values, df["latitude"].values, s=2.5, c=df["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
-    ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
-    ax1.add_feature(cartopy.feature.LAKES)
-    ax1.set_extent((-109,-107,38,40),crs=cartopy.crs.PlateCarree())
+    ax1.set_extent((-108.4,-107.7,38.8,39.3),crs=cartopy.crs.PlateCarree())
+
+    # Plot Global View
+    ax2 = plt.subplot(122,projection=cartopy.crs.PlateCarree())
+    ax2.set_title("Global Ground Tracks")
+    ax2.scatter(df["longitude"].values, df["latitude"].values, s=2.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax2.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
+    ax2.add_feature(cartopy.feature.LAKES)
+    ax2.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
 
     # Show Plot
     plt.show()
