@@ -20,6 +20,19 @@ logger = logging.getLogger(__name__)
 keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
 # output variable data types
 dtypes = ['i','u1','f','f','f','f','f','f','f','u2','u2']
+# parameters
+CNF_POSSIBLE_TEP = -2
+CNF_NOT_CONSIDERED = -1
+CNF_BACKGROUND = 0
+CNF_WITHIN_10M = 1
+CNF_SURFACE_LOW = 2
+CNF_SURFACE_MEDIUM = 3
+CNF_SURFACE_HIGH = 4
+SRT_LAND = 0
+SRT_OCEAN = 1
+SRT_SEA_ICE = 2
+SRT_LAND_ICE = 3
+SRT_INLAND_WATER = 4
 
 ###############################################################################
 # NSIDC UTILITIES

@@ -234,21 +234,8 @@ bool LuaObject::releaseLuaObject (void)
     referenceCount--;
     if(referenceCount == 0)
     {
-        /* Get Lua Engine Object */
-        lua_pushstring(LuaState, LuaEngine::LUA_SELFKEY);
-        lua_gettable(LuaState, LUA_REGISTRYINDEX); /* retrieve value */
-        LuaEngine* li = (LuaEngine*)lua_touserdata(LuaState, -1);
-        lua_pop(LuaState, 1);
-        if(li)
-        {
-            /* Lock Object for Deletion */
-            is_delete_pending = true;
-            mlog(INFO, "Delete on release for object %s/%s\n", getType(), getName());
-        }
-        else
-        {
-            mlog(CRITICAL, "Unable to retrieve lua engine needed to release object\n");
-        }
+        mlog(DEBUG, "Delete on release for object %s/%s\n", getType(), getName());
+        is_delete_pending = true;
     }
     else if(referenceCount < 0)
     {
@@ -291,7 +278,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 
         /* Associate Meta Table */
         associateMetaTable(LuaState, meta_name, meta_table);
-        mlog(INFO, "Created object of type %s/%s\n", getType(), LuaMetaName);
+        mlog(DEBUG, "Created object of type %s/%s\n", getType(), LuaMetaName);
     }
 
     /* Start Trace */
@@ -305,7 +292,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 LuaObject::~LuaObject (void)
 {
     stop_trace(traceId);
-    mlog(INFO, "Deleting %s/%s\n", getType(), getName());
+    mlog(DEBUG, "Deleting %s/%s\n", getType(), getName());
     if(ObjectName) delete [] ObjectName;
 }
 
@@ -323,7 +310,7 @@ int LuaObject::luaDelete (lua_State* L)
             if(lua_obj)
             {
                 user_data->luaObj = NULL;
-                mlog(INFO, "Garbage collecting object %s/%s\n", lua_obj->getType(), lua_obj->getName());
+                mlog(DEBUG, "Garbage collecting object %s/%s\n", lua_obj->getType(), lua_obj->getName());
 
                 int count = lua_obj->referenceCount--;
                 if(lua_obj->referenceCount == 0)
@@ -333,7 +320,7 @@ int LuaObject::luaDelete (lua_State* L)
                 }
                 else
                 {
-                    mlog(INFO, "Delaying delete on referenced<%d> object %s/%s\n", count, lua_obj->getType(), lua_obj->getName());
+                    mlog(DEBUG, "Delaying delete on referenced<%d> object %s/%s\n", count, lua_obj->getType(), lua_obj->getName());
                 }
             }
             else
@@ -341,7 +328,7 @@ int LuaObject::luaDelete (lua_State* L)
                 /* This will occurr, for instance, when a device is closed
                  * explicitly, and then also deleted when the lua variable
                  * goes out of scope and is garbage collected */
-                mlog(INFO, "Vacuous delete of lua object that has already been deleted\n");
+                mlog(DEBUG, "Vacuous delete of lua object that has already been deleted\n");
             }
         }
         else

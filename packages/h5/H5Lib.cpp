@@ -288,7 +288,6 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         }
 
         /* Open Resource */
-        mlog(INFO, "Opening resource: %s\n", url);
         file = H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
@@ -384,7 +383,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         }
 
         /* Read Dataset */
-        mlog(INFO, "Reading %d elements (%ld bytes) from %s\n", elements, datasize, datasetname);
+        mlog(INFO, "Reading %d elements (%ld bytes) from %s %s\n", elements, datasize, url, datasetname);
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
         {
             status = true;
