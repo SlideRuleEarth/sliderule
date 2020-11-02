@@ -232,23 +232,15 @@ void* Atl03Reader::readerThread (void* parm)
             }
 
             /* Find First Segment In Polygon */
-            bool first_segment_found = false;
-            bool last_segment_found = false;
-            int segment = 0;
-            while(segment < segment_lat.gt[PRT_LEFT].size)
-                // Assume all segment related dataset lengths are the same
-                // which means the checks below are superfluous
-                //|| segment >= segment_lat.gt[PRT_RIGHT].size
-                //|| segment >= segment_lon.gt[PRT_LEFT].size
-                //|| segment >= segment_lon.gt[PRT_RIGHT].size )
+            bool first_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
+            bool last_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
+            for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
             {
-                /* Test If Either Pair Track Coordinate Is In Polygon 
-                 *  TODO: currently the check is for either track
-                 *  but the extent is applied to both tracks; should
-                 *  update to make each extent per track */
-                bool inclusion = false;
-                for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+                int segment = 0;
+                while(segment < segment_ph_cnt.gt[t].size)           
                 {
+                    bool inclusion = false;
+    
                     /* Project Segment Coordinate */
                     MathLib::point_t segment_point; // output
                     MathLib::coord_t segment_coord = {segment_lat.gt[t][segment], segment_lon.gt[t][segment]};
@@ -259,60 +251,56 @@ void* Atl03Reader::readerThread (void* parm)
                     {
                         inclusion = true;
                     }
+    
+                    /* Check First Segment */
+                    if(!first_segment_found[t])
+                    {
+                        /* If Coordinate Is In Polygon */
+                        if(inclusion && segment_ph_cnt.gt[t][segment] != 0)
+                        {
+                            /* Set First Segment */
+                            first_segment_found[t] = true;
+                            first_segment[t] = segment;
+
+                            /* Include Photons From First Segment */
+                            num_photons[t] = segment_ph_cnt.gt[t][segment];
+                        }
+                        else
+                        {
+                            /* Update Photon Index */
+                            first_photon[t] += segment_ph_cnt.gt[t][segment];
+                        }
+                    }
+                    else if(!last_segment_found[t])
+                    {
+                        /* If Coordinate Is NOT In Polygon */
+                        if(!inclusion && segment_ph_cnt.gt[t][segment] != 0)
+                        {
+                            /* Set Last Segment */
+                            last_segment_found[t] = true;
+                            break; // full extent found!
+                        }
+                        else
+                        {
+                            /* Update Photon Index */
+                            num_photons[t] += segment_ph_cnt.gt[t][segment];
+                        }
+                    }
+
+                    /* Bump Segment */
+                    segment++;
                 }
 
-                /* Check First Segment */
-                if(!first_segment_found)
+                /* Set Number of Segments */
+                if(first_segment_found[t])
                 {
-                    /* If Coordinate Is In Polygon */
-                    if(inclusion)
-                    {
-                        /* Set First Segment */
-                        first_segment_found = true;
-                        first_segment[PRT_LEFT] = segment;
-                        first_segment[PRT_RIGHT] = segment;
-
-                        /* Include Photons From First Segment */
-                        num_photons[PRT_LEFT] = segment_ph_cnt.gt[PRT_LEFT][segment];
-                        num_photons[PRT_RIGHT] = segment_ph_cnt.gt[PRT_RIGHT][segment];
-                    }
-                    else
-                    {
-                        /* Update Photon Index */
-                        first_photon[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT][segment];
-                        first_photon[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT][segment];
-                    }
-                }
-                else if(!last_segment_found)
-                {
-                    /* If Coordinate Is NOT In Polygon */
-                    if(!inclusion)
-                    {
-                        /* Set Last Segment */
-                        last_segment_found = true;
-                        break; // full extent found!
-                    }
-                    else
-                    {
-                        /* Update Photon Index */
-                        num_photons[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT][segment];
-                        num_photons[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT][segment];
-                    }
+                    num_segments[t] = segment - first_segment[t];
                 }
 
-                /* Bump Segment */
-                segment++;
-            }
-
-            /* Set Number of Segments */
-            if(first_segment_found)
-            {
-                num_segments[PRT_LEFT] = segment - first_segment[PRT_LEFT];
-                num_segments[PRT_RIGHT] = segment - first_segment[PRT_RIGHT];
             }
 
             /* Check If Anything to Process */
-            if(num_photons[PRT_LEFT] <= 0 || num_photons[PRT_RIGHT] <= 0)
+            if(num_photons[PRT_LEFT] < 0 || num_photons[PRT_RIGHT] < 0)
             {
                 throw std::runtime_error("empty spatial region");
             }
