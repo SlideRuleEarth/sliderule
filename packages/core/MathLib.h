@@ -32,6 +32,7 @@ class MathLib
 
         static const int MAXFREQSPEC = 8192;
         static const int LOG2DATASIZE = 13;
+        static const double EARTHRADIUS;
 
         /*--------------------------------------------------------------------
          * Types
@@ -46,7 +47,8 @@ class MathLib
         /* Geospatial Projection */
         typedef enum {
             NORTH_POLAR,
-            SOUTH_POLAR
+            SOUTH_POLAR,
+            PLATE_CARREE
         } proj_t;
 
         /* Geospatial Coordinate */

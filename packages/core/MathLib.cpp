@@ -34,6 +34,12 @@
 #include "LocalLib.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const double MathLib::EARTHRADIUS = 6367.5;
+
+/******************************************************************************
  * PUBLIC FUNCTIONS
  ******************************************************************************/
 
@@ -82,39 +88,46 @@ double MathLib::FFT(double result[], int input[], unsigned long size)
  *----------------------------------------------------------------------------*/
 void MathLib::coord2point (const coord_t c, point_t& p, proj_t projection)
 {
-    double r = 0.0, o = 0.0;
-
     /* Convert to Radians */
     double lonrad = c.lon * M_PI / 180.0;
     double latrad = c.lat * M_PI / 180.0;
 
-    /* Calculate r */
-    if(projection == NORTH_POLAR)
+    if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
-        double latradp = (M_PI / 4.0) - (latrad / 2.0);
-        r = 2 * tan(latradp);
-    }
-    else if(projection == SOUTH_POLAR)
-    {
-        double latradp = -(M_PI / 4.0) - (latrad / 2.0);
-        r = -2 * tan(latradp);
-    }
+        double r = 0.0, o = 0.0;
 
-    /* Calculate o */
-    if(projection == NORTH_POLAR)
-    {
-        o = lonrad;        
-    }
-    else if(projection == SOUTH_POLAR)
-    {
-        o = -lonrad;
-    }
+        /* Calculate r */
+        if(projection == NORTH_POLAR)
+        {
+            double latradp = (M_PI / 4.0) - (latrad / 2.0);
+            r = 2 * tan(latradp);
+        }
+        else if(projection == SOUTH_POLAR)
+        {
+            double latradp = -(M_PI / 4.0) - (latrad / 2.0);
+            r = -2 * tan(latradp);
+        }
 
-    /* Calculate X */
-    p.x = r * cos(o);
+        /* Calculate o */
+        if(projection == NORTH_POLAR)
+        {
+            o = lonrad;        
+        }
+        else if(projection == SOUTH_POLAR)
+        {
+            o = -lonrad;
+        }
 
-    /* Calculate Y */
-    p.y = r * sin(o);
+        /* Calculate Point */
+        p.x = r * cos(o);
+        p.y = r * sin(o);
+    }
+    else if(projection == PLATE_CARREE)
+    {
+        /* Calculate Point */
+        p.x = EARTHRADIUS * lonrad;
+        p.y = EARTHRADIUS * latrad;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -124,45 +137,54 @@ void MathLib::point2coord (coord_t& c, const point_t p, proj_t projection)
 {
     double latrad = 90.0, lonrad = 0.0;
 
-    /* Calculate r */
-    double r = sqrt((p.x*p.x) + (p.y*p.y));
+    if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
+    {
+        /* Calculate r */
+        double r = sqrt((p.x*p.x) + (p.y*p.y));
 
-    /* Calculate o */
-    double o = 0.0;
-    if(p.x != 0.0)
-    {
-        o = atan(p.y / p.x);
+        /* Calculate o */
+        double o = 0.0;
+        if(p.x != 0.0)
+        {
+            o = atan(p.y / p.x);
 
-        /* Adjust for Quadrants */
-        if(p.x < 0.0 && p.y >= 0.0) o += M_PI;
-        else if(p.x < 0.0 && p.y < 0.0) o -= M_PI;
-    }
-    else
-    {
-        /* PI/2 or -PI/2 */
-        o = asin(p.y / r);
-    }
+            /* Adjust for Quadrants */
+            if(p.x < 0.0 && p.y >= 0.0) o += M_PI;
+            else if(p.x < 0.0 && p.y < 0.0) o -= M_PI;
+        }
+        else
+        {
+            /* PI/2 or -PI/2 */
+            o = asin(p.y / r);
+        }
 
-    /* Calculate Latitude */
-    if(projection == NORTH_POLAR)
-    {
-        double latradp = atan(r / 2.0);
-        latrad = (M_PI / 2.0) - (2.0 * latradp);
+        /* Calculate Latitude */
+        if(projection == NORTH_POLAR)
+        {
+            double latradp = atan(r / 2.0);
+            latrad = (M_PI / 2.0) - (2.0 * latradp);
+        }
+        else if(projection == SOUTH_POLAR)
+        {
+            double latradp = atan(r / -2.0);
+            latrad = (-2.0 * latradp) - (M_PI / 2.0);
+        }
+        
+        /* Calculate Longitude */
+        if(projection == NORTH_POLAR)
+        {
+            lonrad = o;
+        }
+        else if(projection == SOUTH_POLAR)
+        {
+            lonrad = -o;
+        }
     }
-    else if(projection == SOUTH_POLAR)
+    else if(projection == PLATE_CARREE)
     {
-        double latradp = atan(r / -2.0);
-        latrad = (-2.0 * latradp) - (M_PI / 2.0);
-    }
-    
-    /* Calculate Longitude */
-    if(projection == NORTH_POLAR)
-    {
-        lonrad = o;
-    }
-    else if(projection == SOUTH_POLAR)
-    {
-        lonrad = -o;
+        /* Calculate Coordinates */
+        lonrad = p.x / EARTHRADIUS;
+        latrad = p.y / EARTHRADIUS;
     }
 
     /* Convert to Degress */

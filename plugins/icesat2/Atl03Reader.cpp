@@ -218,8 +218,9 @@ void* Atl03Reader::readerThread (void* parm)
         if(reader->parms.points_in_polygon > 0)
         {
             /* Determine Best Projection To Use */
-            MathLib::proj_t projection = MathLib::SOUTH_POLAR;
-            if(segment_lat.gt[PRT_LEFT][0] > 0.0) projection = MathLib::NORTH_POLAR;
+            MathLib::proj_t projection = MathLib::PLATE_CARREE;
+            if(segment_lat.gt[PRT_LEFT][0] > 60.0) projection = MathLib::NORTH_POLAR;
+            else if(segment_lat.gt[PRT_LEFT][0] < -60.0) projection = MathLib::SOUTH_POLAR;
 
             /* Project Polygon */
             List<MathLib::point_t> projected_poly;
