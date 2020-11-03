@@ -81,7 +81,6 @@ if __name__ == '__main__':
     msg_it = bt2.TraceCollectionMessageIterator(path)
 
     # Dictionary of traces indexed by trace id, and list of origin traces
-    initial_time = 0.0 # time of first trace (used as an offset)
     names = {} # dictionary of unique trace names
     traces = {} # dictionary of unique traces
     origins = [] # list of highest level "root" traces
@@ -94,8 +93,6 @@ if __name__ == '__main__':
 
             # Populate traces dictionary
             try:
-                if initial_time == 0:
-                    initial_time = msg.default_clock_snapshot.ns_from_origin
                 trace_id = msg.event.payload_field['id']
                 if msg.event.name == "sliderule:start":
                     if trace_id not in traces.keys():                        
@@ -138,15 +135,16 @@ if __name__ == '__main__':
                 trace = child["start"]
                 name = child["name"]
                 perf_names[name] = names_list.index(name)
-                delta_time = (trace.default_clock_snapshot.ns_from_origin - initial_time) / 1e3 # convert to microseconds
-                events.append({"id": perf_names[name], "delta": delta_time, "edge": 0})
+                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin, "edge": 0})
                 # Stop trace
                 trace = child["stop"]
-                delta_time = (trace.default_clock_snapshot.ns_from_origin - initial_time) / 1e3 # convert to microseconds
-                events.append({"id": perf_names[name], "delta": delta_time, "edge": 1})
+                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin, "edge": 1})
         # Build and sort data frame
         df = pandas.DataFrame(events)
-        df.sort_values("delta")
+        df = df.sort_values("time")
+        # Build delta times
+        df["delta"] = df["time"].diff()
+        df["delta"][0] = 0.0
         # Write out data frame as sta events
         write_sta_events("pytrace.txt", df)
         write_sta_setup("pytrace.PerfIDSetup", perf_names)
