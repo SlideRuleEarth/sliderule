@@ -46,9 +46,10 @@ def write_sta_setup(filename, perf_names):
     f.write("Auto Set Bit For Exit=True\n")
     f.write("Bit To Set For Exit=14\n")
     f.write("Number of PerfIDs=%d\n" % (len(perf_names)))
+    index = 0
     for name in perf_names:
         perfid = int(perf_names[name])
-        f.write("[PerfID %d]\n" % (perfid))
+        f.write("[PerfID %d]\n" % (index))
         f.write("Name=%s\n" % (name))
         f.write("Entry ID=%08X\n" % perfid)
         f.write("Exit ID=%08X\n" % (int(perfid + (int(1) << 14))))
@@ -56,6 +57,7 @@ def write_sta_setup(filename, perf_names):
         f.write("Color=65280\n")
         f.write("Hide=False\n")
         f.write("DuplicateEdgeWarningsDisabled=False\n")
+        index += 1
     f.close()
 
 ###############################################################################
