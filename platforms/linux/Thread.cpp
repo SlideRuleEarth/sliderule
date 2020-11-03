@@ -28,6 +28,8 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 /*****************************************************************************
  * PUBLIC METHODS
@@ -55,4 +57,39 @@ Thread::~Thread()
         int ret = pthread_join(threadId, NULL);
         if(ret != 0) dlog("Failed to join thread (%d): %s\n", ret, strerror(ret));
     }
+}
+
+/*----------------------------------------------------------------------------
+ * getId
+ *----------------------------------------------------------------------------*/
+long Thread::getId(void)
+{
+    pid_t pid = gettid();
+    return (long)pid;
+}
+
+/*----------------------------------------------------------------------------
+ * createGlobal
+ *----------------------------------------------------------------------------*/
+Thread::key_t Thread::createGlobal (void)
+{
+    pthread_key_t key;
+    pthread_key_create(&key, NULL);
+    return (key_t)key;
+}
+
+/*----------------------------------------------------------------------------
+ * setGlobal
+ *----------------------------------------------------------------------------*/
+int Thread::setGlobal (key_t key, void* value)
+{
+    return pthread_setspecific((pthread_key_t)key, value); 
+}
+
+/*----------------------------------------------------------------------------
+ * getGlobal
+ *----------------------------------------------------------------------------*/
+void* Thread::getGlobal (key_t key)
+{
+    return pthread_getspecific((pthread_key_t)key);
 }

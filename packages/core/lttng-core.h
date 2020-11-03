@@ -11,12 +11,14 @@
 
 TRACEPOINT_EVENT(sliderule, start,
     TP_ARGS(
+        long, tid,
         uint32_t, id,
         uint32_t, parent,
         const char*, name,
         const char*, attributes
     ),
     TP_FIELDS(
+        ctf_integer(long, tid, tid)
         ctf_integer(int, id, id)
         ctf_integer(int, parent, parent)
         ctf_string(name, name)

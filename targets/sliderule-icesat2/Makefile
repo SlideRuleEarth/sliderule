@@ -53,6 +53,10 @@ run-docker:
 run-stand-alone:
 	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua icesat2-stand-alone.json
 
+run-instrumented:
+	LD_PRELOAD=/usr/local/lib/liblttng-ust-libc-wrapper.so:/usr/local/lib/liblttng-ust-pthread-wrapper.so HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua icesat2-stand-alone.json
+
+
 install:
 	make -C build install
 	cp plugins.conf $(RUNDIR)
