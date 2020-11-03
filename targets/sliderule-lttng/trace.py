@@ -135,16 +135,16 @@ if __name__ == '__main__':
                 trace = child["start"]
                 name = child["name"]
                 perf_names[name] = names_list.index(name)
-                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin, "edge": 0})
+                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin / 1000.0, "edge": 0})
                 # Stop trace
                 trace = child["stop"]
-                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin, "edge": 1})
+                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin / 1000.0, "edge": 1})
         # Build and sort data frame
         df = pandas.DataFrame(events)
         df = df.sort_values("time")
         # Build delta times
         df["delta"] = df["time"].diff()
-        df["delta"][0] = 0.0
+        df.at[0, "delta"] = 0.0
         # Write out data frame as sta events
         write_sta_events("pytrace.txt", df)
         write_sta_setup("pytrace.PerfIDSetup", perf_names)

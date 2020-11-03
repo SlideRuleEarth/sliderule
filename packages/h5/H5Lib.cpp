@@ -263,10 +263,6 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     info_t info;
     bool status = false;
 
-    /* Start Trace */
-    uint32_t parent_trace_id = TraceLib::grabId();
-    uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
-
     /* Start with Invalid Handles */
     const char* resource = NULL;
     hid_t fapl = H5P_DEFAULT;
@@ -382,8 +378,12 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             break;
         }
 
-        /* Read Dataset */
+        /* Start Trace */
         mlog(INFO, "Reading %d elements (%ld bytes) from %s %s\n", elements, datasize, url, datasetname);
+        uint32_t parent_trace_id = TraceLib::grabId();
+        uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+
+        /* Read Dataset */
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
         {
             status = true;
@@ -394,6 +394,9 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             delete [] data;
             break;
         }
+
+        /* Stop Trace */
+        stop_trace(trace_id);
 
         /* Set Info Return Structure */
         info.elements = elements;
@@ -409,9 +412,6 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     if(dataspace != H5S_ALL) H5Sclose(dataspace);
     if(memspace != H5S_ALL) H5Sclose(memspace);
     if(dataset > 0) H5Dclose(dataset);
-
-    /* Stop Trace */
-    stop_trace(trace_id);
 
     /* Return Info */
     if(status)  return info;
