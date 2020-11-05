@@ -28,7 +28,7 @@ docker-image: distclean production-config default-build
 	cp $(SLIDERULE)/targets/sliderule-docker/dockerfile.app $(STAGEDIR)/Dockerfile
 	# copy over installation configuration #
 	cp plugins.conf $(STAGEDIR)/etc/sliderule
-	cp icesat2-docker.json $(STAGEDIR)/etc/sliderule
+	cp config.json $(STAGEDIR)/etc/sliderule
 	# copy over scripts #
 	mkdir $(STAGEDIR)/scripts
 	cp -R $(SLIDERULE)/scripts/apps $(STAGEDIR)/scripts/apps
@@ -53,8 +53,8 @@ run-docker:
 	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 --entrypoint /usr/local/scripts/apps/docker-entrypoint.sh $(DOCKERTAG)
 
 run-stand-alone:
-	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/proxy.lua icesat2-stand-alone.json 35100 &
-	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua icesat2-stand-alone.json
+	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/proxy.lua config.json 35100 &
+	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
 
 install:
 	make -C build install

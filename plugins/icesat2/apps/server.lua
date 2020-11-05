@@ -20,6 +20,7 @@ end
 -- Pull Out Parameters --
 local loglvl = cfgtbl["loglvl"] or core.INFO
 local port = cfgtbl["server_port"] or 9081
+local proxies = cfgtbl["proxy_ports"]
 local asset_directory = cfgtbl["asset_directory"] or nil
 local cache_root = cfgtbl["cache_root"]
 local cache_size = cfgtbl["cache_size"]
@@ -48,6 +49,11 @@ rgtindex:name("rgtindex")
 -- Configure S3 Cache --
 if cache_root then
     aws.s3cache(cache_root, cache_size)
+end
+
+-- Configure H5 Proxies --
+for _,p in pairs(proxies) do
+    print(string.format("Connecting to proxy on port %d", p))
 end
 
 -- Configure and Run Server --

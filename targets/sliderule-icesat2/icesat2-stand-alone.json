@@ -1,7 +1,0 @@
-{
-    "loglvl": "INFO",
-    "server_port": 9081,
-    "proxy_ports": [35100, 35101, 35102, 35103],
-    "asset_directory": "/data/config/asset_directory.csv",
-    "cache_root": "/data/.cache"
-}
