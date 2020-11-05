@@ -1,3 +1,13 @@
+#
+#   Purpose: process trace outputs from lttng to produce human readable results
+#
+#   Example creation of Software Timing Analyzer files:
+#       /usr/bin/python3 trace.py --fmt sta --ids 22 23 24 25 /tmp/sliderule-session
+#
+#   Example simple console output:
+#       /usr/bin/python3 trace.py /tmp/sliderule-session
+#
+
 import bt2
 import sys
 import datetime
@@ -8,6 +18,7 @@ import pandas
 ###############################################################################
 
 TRACE_ORIGIN = 0
+COLOR_MAP = [8421631, 8454143, 8454016, 16777088, 16744703, 16777215]
 
 ###############################################################################
 # FUNCTIONS
@@ -38,27 +49,64 @@ def write_sta_events(filename, df):
         f.write("%08d %08X %.3f us\n" % (index, int(row["id"] + (int(row["edge"]) << 14)), row["delta"]))
     f.close()
 
-def write_sta_setup(filename, perf_names):
+def write_sta_setup(filename, perf_ids):
     f = open(filename, "w")
     f.write("[PerfID Table]\n")
     f.write("Version=1\n")
     f.write("Auto Hide=True\n")
     f.write("Auto Set Bit For Exit=True\n")
     f.write("Bit To Set For Exit=14\n")
-    f.write("Number of PerfIDs=%d\n" % (len(perf_names)))
+    f.write("Number of PerfIDs=%d\n" % (len(perf_ids)))
     index = 0
-    for name in perf_names:
-        perfid = int(perf_names[name])
+    for name in perf_ids:
+        perf_id = int(perf_ids[name]["id"])
+        depth = int(perf_ids[name]["depth"])
+        if(depth > len(COLOR_MAP)):
+            depth = len(COLOR_MAP)
         f.write("[PerfID %d]\n" % (index))
         f.write("Name=%s\n" % (name))
-        f.write("Entry ID=%08X\n" % perfid)
-        f.write("Exit ID=%08X\n" % (int(perfid + (int(1) << 14))))
+        f.write("Entry ID=%08X\n" % perf_id)
+        f.write("Exit ID=%08X\n" % (int(perf_id + (int(1) << 14))))
         f.write("Calc CPU=True\n")
-        f.write("Color=65280\n")
+        f.write("Color=%d\n" % (COLOR_MAP[depth - 1]))
         f.write("Hide=False\n")
         f.write("DuplicateEdgeWarningsDisabled=False\n")
         index += 1
     f.close()
+
+def build_event_list(trace, depth, max_depth, names, events, perf_ids):
+    # Get Perf ID
+    name = trace["name"]
+    perf_id = names.index(name)
+    perf_ids[name] = {"id": perf_id, "depth": depth}
+    # Append Events
+    events.append({"id": perf_id, "time": trace["start"].default_clock_snapshot.ns_from_origin / 1000.0, "edge": 0})
+    events.append({"id": perf_id, "time": trace["stop"].default_clock_snapshot.ns_from_origin / 1000.0, "edge": 1})
+    # Recurse on Children
+    if (depth < max_depth) or (max_depth == 0):
+        for child in trace["children"]:
+            build_event_list(child, depth + 1, max_depth, names, events, perf_ids)
+
+def console_output(origins):
+    # Output traces to console
+    for trace in origins:
+        display_trace(trace, 1)
+
+def sta_output(idlist, depth, names, traces):
+    # Build list of events and names
+    events = []
+    perf_ids = {}
+    for trace_id in idlist:
+        build_event_list(traces[trace_id], 1, depth, names, events, perf_ids)
+    # Build and sort data frame
+    df = pandas.DataFrame(events)
+    df = df.sort_values("time")
+    # Build delta times
+    df["delta"] = df["time"].diff()
+    df.at[0, "delta"] = 0.0
+    # Write out data frame as sta events
+    write_sta_events("pytrace.txt", df)
+    write_sta_setup("pytrace.PerfIDSetup", perf_ids)
 
 ###############################################################################
 # MAIN
@@ -66,16 +114,30 @@ def write_sta_setup(filename, perf_names):
 
 if __name__ == '__main__':
 
-    # Get the trace path from the first command-line argument.
-    path = sys.argv[1]
-
-    # Get output format option.
+    # Initial Configuration
     outfmt = "console"
+    depth = 1
     idlist = []
-    if len(sys.argv) > 2:
-        outfmt = sys.argv[2]
-        for i in range(len(sys.argv) - 3):
-            idlist.append(int(sys.argv[i + 3]))
+
+    # Command Line Parameters
+    num_parms = len(sys.argv) - 1
+    path = sys.argv[num_parms] # path to system trace
+    parm = 0
+    while parm < num_parms:
+        if sys.argv[parm] == "--fmt":
+            parm += 1
+            outfmt = sys.argv[parm]
+        elif sys.argv[parm] == "--depth":
+            parm += 1
+            depth = int(sys.argv[parm])
+        elif sys.argv[parm] == "--ids":
+            while (parm + 1) < num_parms:
+                if sys.argv[parm + 1].isnumeric():
+                    parm += 1
+                    idlist.append(int(sys.argv[parm]))
+                else:
+                    break
+        parm += 1
 
     # Create a trace collection message iterator with this path.
     msg_it = bt2.TraceCollectionMessageIterator(path)
@@ -118,33 +180,11 @@ if __name__ == '__main__':
             except Exception as inst:
                 print(inst)
 
-    # Select which operation to run
+    # Flatten names to get indexes
+    names = list(names)
+
+    # Run commanded operation
     if outfmt == "console":
-        # Output traces to console
-        for trace in origins:
-            display_trace(trace, 1)
+        console_output(origins)
     elif outfmt == "sta":
-        # Flatten names to get indexes
-        names_list = list(names)
-        perf_names = {}
-        # Build list of events and names
-        events = []
-        for trace_id in idlist:
-            for child in traces[trace_id]["children"]:
-                # Start trace
-                trace = child["start"]
-                name = child["name"]
-                perf_names[name] = names_list.index(name)
-                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin / 1000.0, "edge": 0})
-                # Stop trace
-                trace = child["stop"]
-                events.append({"id": perf_names[name], "time": trace.default_clock_snapshot.ns_from_origin / 1000.0, "edge": 1})
-        # Build and sort data frame
-        df = pandas.DataFrame(events)
-        df = df.sort_values("time")
-        # Build delta times
-        df["delta"] = df["time"].diff()
-        df.at[0, "delta"] = 0.0
-        # Write out data frame as sta events
-        write_sta_events("pytrace.txt", df)
-        write_sta_setup("pytrace.PerfIDSetup", perf_names)
+        sta_output(idlist, depth, names, traces)
