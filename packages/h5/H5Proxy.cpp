@@ -47,6 +47,8 @@ const RecordObject::fieldDef_t H5Proxy::recDef[] = {
     {"num",     RecordObject::INT64,    offsetof(request_t, numrows),       1,                  NULL, NATIVE_FLAGS}
 };
 
+const char* H5Proxy::REQUEST_QUEUE = "h5proxyq";
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -76,6 +78,84 @@ int H5Proxy::luaCreate (lua_State* L)
         mlog(CRITICAL, "Error creating H5Proxy: %s\n", e.errmsg);
         return returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * luaConnect - connect([<proxy port1>, <proxy port 2>, ...])
+ *----------------------------------------------------------------------------*/
+int H5Proxy::luaConnect(lua_State* L)
+{
+    bool status = true;
+
+    clientMut.lock();
+    {
+        try
+        {
+            /* Check Connections */
+            if(clients.length() > 0)
+            {
+                throw LuaExcetion("%d proxy connections active", clients.length())
+            }
+
+            /* Get List of Proxy Ports to Connect To */
+            List<client_info_t*> proxies;
+            int tblindex = 1;
+            if(lua_type(L, tblindex) == LUA_TTABLE)
+            {
+                int size = lua_rawlen(L, tblindex);
+                for(int e = 0; e < size; e++)
+                {
+                    lua_rawgeti(L, tblindex, e + 1);
+                    int port = getLuaInteger(L, -1));
+                    client_info_t* info = new client_info_t;
+                    info->port = port;
+                    proxies.add(info);
+                    lua_pop(L, 1);
+                }
+            }
+
+            /* Create Request Queue */
+            clientRequestQ = new Publisher(REQUEST_QUEUE);
+
+            /* Create Proxy Connection Threads */
+            clientActive = true;
+            for(int i = 0; i < proxies.length(); i++)
+            {
+                Thread* pid = new Thread(clientThread, proxies[i]);
+                clientThreadPool[i].add(pid);
+            }
+        }
+        catch(const LuaException& e)
+        {
+            mlog(CRITICAL, "Error connecting to proxies: %s\n", e.errmsg);
+            status = false;
+        }
+    }
+    clientMut.unlock();
+
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaDisconnect - disconnect()
+ *----------------------------------------------------------------------------*/
+int H5Proxy::luaDisconnect(lua_State* L)
+{
+    bool status = true;
+
+    clientMut.lock();
+    {
+        clientActive = false;
+        for(int i = 0; i < clientThreadPool.length(); i++)
+        {
+            delete clientThreadPool[i];            
+        }
+        clientThreadPool.clear();
+        delete clientRequestQ;
+    }
+    clientMut.unlock();
+
+    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------
@@ -111,6 +191,17 @@ H5Proxy::~H5Proxy(void)
     active = false;
     delete pid;
     if(ipAddr) delete [] ipAddr;
+}
+
+/*----------------------------------------------------------------------------
+ * clientThread
+ *----------------------------------------------------------------------------*/
+void* H5Proxy::clientThread(void* parm)
+{
+    client_info_t* info = (client_info_t*)parm;
+    TcpSocket* sock = new TcpSocket(L, "127.0.0.1", info->port, false, NULL, false);
+    Subscriber* sub = new Subscriber(REQUEST_QUEUE);
+
 }
 
 /*----------------------------------------------------------------------------

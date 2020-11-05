@@ -49,6 +49,8 @@ class H5Proxy: public LuaObject
         static const char* recType;
         static const RecordObject::fieldDef_t recDef[];
 
+        static const char* REQUEST_QUEUE;
+
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
@@ -56,6 +58,10 @@ class H5Proxy: public LuaObject
         typedef enum {
             READ = 0
         } operation_t;
+
+        typedef struct {
+            int port;
+        } client_info_t;
 
         typedef struct {
             uint32_t    id;
@@ -72,35 +78,39 @@ class H5Proxy: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate       (lua_State* L);
-        static void     init            (void);
+        static int              luaCreate       (lua_State* L);
+        static int              luaConnect      (lua_State* L);
+        static int              luaDisconnect   (lua_State* L);
+        static void             init            (void);
+        static H5Lib::info_t    read            (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows);
 
-                        H5Proxy         (lua_State* L, const char* _ip_addr, int _port);
-                        ~H5Proxy        (void);
+                                H5Proxy         (lua_State* L, const char* _ip_addr, int _port);
+                                ~H5Proxy        (void);
 
     private:
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            active;
-        Thread*         pid;
-        char*           ipAddr;
-        int             port;
+        /* Client Data */
+        static Mutex                clientMut;
+        static bool                 clientsActive;
+        static List<Thread*>        clientThreadPool;
+        static Publisher*           clientRequestQ;
 
+        /* Server Data */
+        bool                        active;
+        Thread*                     pid;
+        char*                       ipAddr;
+        int                         port;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void*    clientThread    (void* parm);
         static void*    requestThread   (void* parm);
-
 };
 
 #endif  /* __h5_proxy__ */
