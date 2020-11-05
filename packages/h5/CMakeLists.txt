@@ -33,6 +33,7 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5File.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5Lib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/H5Proxy.cpp
     )
 
     target_include_directories (sliderule
@@ -44,10 +45,11 @@ if (HDF5_LIB AND ZLIB_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/h5.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5Array.h
             ${CMAKE_CURRENT_LIST_DIR}/H5File.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Lib.h
-            ${CMAKE_CURRENT_LIST_DIR}/H5Array.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5Proxy.h
         DESTINATION
             ${INCDIR}
     )

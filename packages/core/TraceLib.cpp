@@ -65,13 +65,15 @@ void TraceLib::deinit (void)
  *----------------------------------------------------------------------------*/
 uint32_t TraceLib::startTrace(uint32_t parent, const char* name, const char* attributes)
 {
+    long tid = Thread::getId();
+
     #ifndef __lttng_tracing__
     (void)parent;
     (void)name;
     (void)attributes;
+    (void)tid;
     #endif
 
-    long tid = Thread::getId();
     uint32_t id = unique_id++;
 
     tracepoint(sliderule, start, tid, id, parent, name, attributes);

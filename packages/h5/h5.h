@@ -24,10 +24,11 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "H5Array.h"
 #include "H5File.h"
 #include "H5DatasetDevice.h"
 #include "H5Lib.h"
-#include "H5Array.h"
+#include "H5Proxy.h"
 
 /******************************************************************************
  * PROTOTYPES

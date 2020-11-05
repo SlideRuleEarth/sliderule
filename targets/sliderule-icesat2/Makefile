@@ -33,6 +33,8 @@ docker-image: distclean production-config default-build
 	mkdir $(STAGEDIR)/scripts
 	cp -R $(SLIDERULE)/scripts/apps $(STAGEDIR)/scripts/apps
 	cp -R $(SLIDERULE)/scripts/tests $(STAGEDIR)/scripts/tests
+	cp docker-entrypoint.sh $(STAGEDIR)/scripts/apps
+	chmod +x $(STAGEDIR)/scripts/apps/docker-entrypoint.sh
 	# copy over plugin tests #
 	mkdir -p $(STAGEDIR)/plugins/icesat2/tests
 	cp $(SLIDERULE)/plugins/icesat2/tests/* $(STAGEDIR)/plugins/icesat2/tests
@@ -48,14 +50,11 @@ docker-image: distclean production-config default-build
 
 run-docker:
 	# note: /data must be populated with a `config` directory containing the asset_directory.csv and any corresponding index files
-	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 $(DOCKERTAG) /usr/local/scripts/apps/server.lua $(RUNDIR)/icesat2-docker.json
+	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 --entrypoint /usr/local/scripts/apps/docker-entrypoint.sh $(DOCKERTAG)
 
 run-stand-alone:
+	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/proxy.lua icesat2-stand-alone.json 35100 &
 	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua icesat2-stand-alone.json
-
-run-instrumented:
-	LD_PRELOAD=/usr/local/lib/liblttng-ust-libc-wrapper.so:/usr/local/lib/liblttng-ust-pthread-wrapper.so HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua icesat2-stand-alone.json
-
 
 install:
 	make -C build install

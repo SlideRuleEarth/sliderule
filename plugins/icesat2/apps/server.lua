@@ -19,7 +19,7 @@ end
 
 -- Pull Out Parameters --
 local loglvl = cfgtbl["loglvl"] or core.INFO
-local port = cfgtbl["port"] or 9081
+local port = cfgtbl["server_port"] or 9081
 local asset_directory = cfgtbl["asset_directory"] or nil
 local cache_root = cfgtbl["cache_root"]
 local cache_size = cfgtbl["cache_size"]
