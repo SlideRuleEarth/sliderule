@@ -30,6 +30,7 @@ def display_trace(trace, depth):
         trace["stop"] = trace["start"]
     # Get values of trace
     trace_id        = trace["start"].event.payload_field['id']
+    thread_id       = trace["start"].event.payload_field['tid']
     start_time      = trace["start"].default_clock_snapshot.ns_from_origin
     stop_time       = trace["stop"].default_clock_snapshot.ns_from_origin
     sec_from_origin = start_time / 1e9
@@ -38,7 +39,7 @@ def display_trace(trace, depth):
     name            = trace["start"].event.payload_field['name']
     attributes      = trace["start"].event.payload_field['attributes']
     # Print trace
-    print('{} ({:12.6f} sec):{:{indent}}{:{width}} {} [{}]'.format(dt, sec_duration, "", str(name), attributes, trace_id, indent=depth, width=30-depth))
+    print('{} ({:12.6f} sec):{:{indent}}{:{width}} <{}> {} [{}]'.format(dt, sec_duration, "", str(name), thread_id, attributes, trace_id, indent=depth, width=30-depth))
     # Recurse on children
     for child in trace["children"]:
         display_trace(child, depth + 2)
