@@ -43,6 +43,8 @@ int h5_open (lua_State *L)
         {"file",        H5File::luaCreate},
         {"dataset",     H5DatasetDevice::luaCreate},
         {"proxy",       H5Proxy::luaCreate},
+        {"connect",     H5Proxy::luaConnect},
+        {"disconnect",  H5Proxy::luaDisconnect},
         {NULL,          NULL}
     };
 

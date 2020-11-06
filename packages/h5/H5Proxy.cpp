@@ -240,6 +240,8 @@ H5Proxy::pending_t* H5Proxy::read (const char* url, const char* datasetname, Rec
  *----------------------------------------------------------------------------*/
 bool H5Proxy::join(pending_t* pending, int timeout)
 {
+    assert(pending);
+
     clientSignal.lock();
     {
         if(clientActive && !pending->complete)
@@ -404,9 +406,10 @@ void* H5Proxy::clientThread(void* parm)
         sub->dereference(ref);
     }
 
-    /* Clean Up Subscriber and Socket */
+    /* Clean Up Allocations */
     delete sub;
     delete sock;
+    delete info;
 
     /* Exit Thread */
     return NULL;

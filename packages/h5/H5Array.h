@@ -27,6 +27,7 @@
 #include "StringLib.h"
 #include "LogLib.h"
 #include "H5Lib.h"
+#include "H5Proxy.h"
 
 /******************************************************************************
  * H5Array TEMPLATE
@@ -41,20 +42,22 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, long col=0, long startrow=0, long numrows=H5Lib::ALL_ROWS);
+                H5Array     (const char* url, const char* dataset, bool async=false, long col=0, long startrow=0, long numrows=H5Lib::ALL_ROWS);
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
         T&      operator[]  (long index);
+        bool    join        (int timeout);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        const char* name;
-        long        size;
-        T*          data;
-        T*          pointer;
+        const char*         name;
+        long                size;
+        T*                  data;
+        T*                  pointer;
+        H5Proxy::pending_t* pending;
 };
 
 /******************************************************************************
@@ -65,17 +68,24 @@ class H5Array
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const char* url, const char* dataset, long col, long startrow, long numrows)
+H5Array<T>::H5Array(const char* url, const char* dataset, bool async, long col, long startrow, long numrows)
 {
-    name = NULL;
-    data = NULL;
-    size = 0;
-    
-    H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
-
     name = StringLib::duplicate(dataset);
-    data = (T*)info.data;
-    size = info.elements;
+    
+    if(!async)
+    {
+        pending = NULL;
+        H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
+        data = (T*)info.data;
+        size = info.elements;
+    }
+    else /* async */
+    {
+        pending = H5Proxy::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
+        data = NULL;
+        size = 0;
+    }
+
     pointer = data;
 }
 
@@ -87,6 +97,12 @@ H5Array<T>::~H5Array(void)
 {
     if(name) delete [] name;
     if(data) delete [] data;
+    if(pending)
+    {
+        delete pending->request;
+        delete pending->response;
+        delete pending;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -113,6 +129,30 @@ template <class T>
 T& H5Array<T>::operator[](long index)
 {
     return pointer[index];
+}
+
+/*----------------------------------------------------------------------------
+ * []
+ *----------------------------------------------------------------------------*/
+template <class T>
+bool H5Array<T>::join(int timeout)
+{
+    /* Check if already joined */
+    if(data != NULL)
+    {
+        return true;
+    }
+
+    /* Join */
+    bool joined = join(pending, timeout);
+
+    /* Populate */
+    if(joined)
+    {
+        data = (T*)pending->response->data;
+        size = pending->response->elements;
+        pointer = data;
+    }
 }
 
 #endif  /* __h5_array__ */

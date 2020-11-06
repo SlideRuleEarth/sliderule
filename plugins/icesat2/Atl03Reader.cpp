@@ -318,12 +318,12 @@ void* Atl03Reader::readerThread (void* parm)
         H5Array<int32_t>    end_rgt             (url, "/ancillary_data/end_rgt");
         H5Array<int32_t>    start_cycle         (url, "/ancillary_data/start_cycle");
         H5Array<int32_t>    end_cycle           (url, "/ancillary_data/end_cycle");
-        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time", 0, first_segment, num_segments);
-        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id", 0, first_segment, num_segments);
-        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x", 0, first_segment, num_segments);
-        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along", 0, first_photon, num_photons);
-        GTArray<float>      h_ph                (url, track, "heights/h_ph", 0, first_photon, num_photons);
-        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", reader->parms.surface_type, first_photon, num_photons);
+        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time", false, 0, first_segment, num_segments);
+        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id", false, 0, first_segment, num_segments);
+        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x", false, 0, first_segment, num_segments);
+        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along", false, 0, first_photon, num_photons);
+        GTArray<float>      h_ph                (url, track, "heights/h_ph", false, 0, first_photon, num_photons);
+        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", false, reader->parms.surface_type, first_photon, num_photons);
         GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time");
         GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate");
 
