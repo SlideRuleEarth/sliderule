@@ -6,13 +6,20 @@ dependencies:
   - python=3.8
   - bokeh
   - cartopy
+  - shapely
   - ipykernel
+  - ipywidgets
   - matplotlib
   - numpy
   - scipy
   - pandas
   - requests
+  - pyproj
+  - h5py
+  - curl
+  - vim
   - pip
   - pip:
+      - h5pyd
       - ./ # install sliderule from source
       - ../../plugins/icesat2/clients/python/ # install icesat2 from source

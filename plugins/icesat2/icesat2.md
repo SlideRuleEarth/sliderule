@@ -33,33 +33,23 @@ $ make run-docker
 
 In order to run the provided python test scripts, python needs to be installed on your system and a python environment needs to be setup and some third-party packages installed.  The installation instructions below assume the use of the Anaconda Python distribution.
 
-### Configuring Python Using Conda
+### Create Python Environment
 
 Using the Anaconda distribution, the following steps are needed to setup your environment:
 ```bash
-$ conda create -n icesat2
-$ conda activate icesat2
-$ conda install requests
-$ conda install numpy
-$ conda install pandas
-$ conda install matplotlib
-$ conda install cartopy
+$ cd {repo}/clients/python
+$ conda env create -f environment.yml
+$ conda activate sliderule
 ```
 
-### Install SlideRule Python Client
+### Manually Install (or Update) SlideRule Python Client
 
-Install the SlideRule Python Client from an activated environment:
+If you have your own Python environment and want to manually install the sliderule client, then from an activated environment:
 ```bash
 $ cd {repo}/scripts/python
 $ python setup.py install
 $ cd {repo}/plugins/icesat2/client
 $ python setup.py install
-```
-
-Or, to install the necessary clients remotely (without checking out the repository):
-```bash
-$ python3 -m pip install --user -e git+ssh://git@github.com/ICESat2-SlideRule/sliderule.git#egg=sliderule\&subdirectory=scripts/python/
-$ python3 -m pip install --user -e git+ssh://git@github.com/ICESat2-SlideRule/sliderule.git#egg=sliderule-icesat2\&subdirectory=plugins/icesat2/client/
 ```
 
 ## III. Programmatic Access to ICESat-2 Plugin
@@ -78,7 +68,7 @@ The plugin supplies the following endpoints:
 
 ## IV. Notes
 
-1. To use the MPI_ICESat2_ATL03.py script provided at https://github.com/tsutterley/read-ICESat-2/blob/master/scripts/MPI_ICESat2_ATL03.py, the following steps must be taken to updated your python environment (using the Anaconda distribution):
+1. To use the MPI_ICESat2_ATL03.py script provided at https://github.com/tsutterley/read-ICESat-2/blob/master/scripts/MPI_ICESat2_ATL03.py, the following steps must be taken to update your python environment (using the Anaconda distribution):
     * export PYTHONPATH={path/to/read-ICESat-2}:$PYTHONPATH
     * conda install -c conda-forge "h5py>=2.9=mpi*"
     * conda install scipy
