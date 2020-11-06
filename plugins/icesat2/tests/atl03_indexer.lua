@@ -21,7 +21,7 @@ local filelist = { "ATL03_20181019065445_03150111_003_01.h5",
                    "ATL03_20200304065203_10470605_003_01.h5" }
 
 -- load asset 
-local atl03 = core.asset("atl03-local")
+local atl03 = core.getbyname("atl03-local")
 local name, format, url, index_filename, status = atl03:info()
 runner.check(status)
 

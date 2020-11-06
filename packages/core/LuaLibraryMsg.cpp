@@ -48,6 +48,7 @@ const struct luaL_Reg LuaLibraryMsg::msgLibsF [] = {
 const struct luaL_Reg LuaLibraryMsg::pubLibsM [] = {
     {"sendstring",    LuaLibraryMsg::lmsg_sendstring},
     {"sendrecord",    LuaLibraryMsg::lmsg_sendrecord},
+    {"sendlog",       LuaLibraryMsg::lmsg_sendlog},
     {"destroy",       LuaLibraryMsg::lmsg_deletepub},
     {"__gc",          LuaLibraryMsg::lmsg_deletepub},
     {NULL, NULL}
@@ -398,6 +399,60 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
     /* Clean Up and Return Status */
     if(allocated) delete record;
     lua_pushboolean(L, status > 0);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lmsg_sendlog - .sendlog(<lvl>, <msg>)
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
+{
+    /* Get Publisher */
+    msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+
+    /* Get Log Level */
+    log_lvl_t lvl = IGNORE;
+    if(lua_isinteger(L, 2))
+    {
+        lvl = (log_lvl_t)lua_tointeger(L, 2);
+    }
+    else if(lua_isstring(L, 2)) // check log level parameter
+    {
+        LogLib::str2lvl(lua_tostring(L, 2), &lvl);
+    }
+
+    /* Check Log Level */
+    if(lvl >= 0)
+    {
+        mlog(CRITICAL, "Invalid log level: %d\n", lvl);
+        return 0;        
+    }
+
+    /* Get Message */
+    size_t len = 0;    
+    const char* str = lua_tolstring(L, 3, &len);
+    if(len <= 0)
+    {
+        mlog(CRITICAL, "Invalid length of message: %ld\n", len);
+        return 0;
+    }
+
+    /* Construct Log Record */
+    RecordObject* record = new RecordObject(Logger::recType);
+    Logger::log_message_t* logmsg = (Logger::log_message_t*)record->getRecordData();
+    logmsg->level = lvl;
+    StringLib::copy(logmsg->message, str, len);
+
+    /* Post Record */
+    uint8_t* rec_buf = NULL;
+    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+    int bytes_sent = msg_data->pub->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);
+
+    /* Clean Up */
+    delete record;
+
+    /* Return Results */    
+    lua_pushboolean(L, bytes_sent > 0);
     return 1;
 }
 

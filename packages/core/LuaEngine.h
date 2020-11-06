@@ -95,8 +95,6 @@ class LuaEngine
         void                setString       (const char* name, const char* val);
         void                setFunction     (const char* name, lua_CFunction val);
         const char*         getResult       (void);
-        okey_t              lockObject      (LuaObject* lua_obj);
-        void                releaseObject   (okey_t lock_key);
 
     private:
 
@@ -136,27 +134,24 @@ class LuaEngine
          * Data
          *--------------------------------------------------------------------*/
 
-        static List<libInitEntry_t> libInitTable;
-        static Mutex                libInitTableMutex;
+        static List<libInitEntry_t>     libInitTable;
+        static Mutex                    libInitTableMutex;
 
-        static List<pkgInitEntry_t> pkgInitTable;
-        static Mutex                pkgInitTableMutex;
+        static List<pkgInitEntry_t>     pkgInitTable;
+        static Mutex                    pkgInitTableMutex;
 
-        lua_State*                  L;      // lua state variable
-        Mutex                       mutL;   // mutex to lua state
-
-        const char*                 engineName;
-        bool                        engineActive;
-        Thread*                     engineThread;
-        Cond                        engineSignal;
-
-        Ordering<LuaObject*,okey_t> lockList;
-        okey_t                      currentLockKey;
-
-        mode_t                      mode;
-        uint32_t                    traceId;
-        protectedThread_t*          pInfo;
-        directThread_t*             dInfo;
+        lua_State*                      L;      // lua state variable
+        Mutex                           mutL;   // mutex to lua state
+    
+        const char*                     engineName;
+        bool                            engineActive;
+        Thread*                         engineThread;
+        Cond                            engineSignal;
+    
+        mode_t                          mode;
+        uint32_t                        traceId;
+        protectedThread_t*              pInfo;
+        directThread_t*                 dInfo;
 
         /*--------------------------------------------------------------------
          * Methods

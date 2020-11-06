@@ -36,8 +36,8 @@
 --                  }
 --                  "lat": <latitude, -90 to 90> # x,y converted to spherical coordinates
 --                  "lon": <longitude, -180 to 180> # x,y converted to spherical coordinates
---                  "x": <x coordinate> # lat,lon converted to polar coordinates
---                  "y": <y coordinate> # lat,lon converted to polar coordinates
+--                  "x": <x coordinate> # lat,lon converted to projected coordinates
+--                  "y": <y coordinate> # lat,lon converted to projected coordinates
 --              }
 --
 -- NOTES:       1. Both the input and the output are json objects
@@ -47,7 +47,7 @@
 local json = require("json")
 local parm = json.decode(arg[1])
 
-local asset = core.asset(parm["asset"])
+local asset = core.getbyname(parm["asset"])
 local pole = parm["pole"]
 local lat = parm["lat"]
 local lon = parm["lon"]
@@ -67,7 +67,7 @@ index = core.spatialindex(asset, pole)
 
 -- Polar Conversion --
 if lat and lon then
-    result["x"], result["y"] = index:polar(lat, lon) 
+    result["x"], result["y"] = index:project(lat, lon) 
 end
 
 -- Spherical Conversion --

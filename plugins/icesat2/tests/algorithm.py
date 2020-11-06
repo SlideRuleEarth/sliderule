@@ -2,6 +2,7 @@
 # Imports
 #
 import sys
+import logging
 
 import pandas as pd
 import numpy as np
@@ -10,7 +11,7 @@ import math
 import matplotlib.pyplot as plt
 import cartopy
 
-import sliderule
+import icesat2
 
 #
 # Distance between two coordinates
@@ -34,143 +35,77 @@ def geodist(lat1, lon1, lat2, lon2):
 #
 # SlideRule Processing Request
 #
-def algoexec(asset):
+def algoexec(resource, asset):
 
     # Build ATL06 Request
-    rqst = {
-        "asset" : asset,
-        "resource": "ATL03_20181019065445_03150111_003_01_CONTI_GZIP.h5",
-        "track": 0,
-        "stages": ["LSF"],
-        "parms": {
-            "cnf": 4,
-            "ats": 20.0,
-            "cnt": 10,
-            "len": 40.0,
-            "res": 20.0,
-            "maxi": 1
-        }
+    parms = {
+#       "poly": [{"lat": -80.0, "lon": -70.0}, 
+#                {"lat": -82.5, "lon": -70.0},
+#                {"lat": -82.5, "lon": -65.0},
+#                {"lat": -80.0, "lon": -65.0}],
+        "cnf": 4,
+        "ats": 20.0,
+        "cnt": 10,
+        "len": 40.0,
+        "res": 20.0,
+        "maxi": 1
     }
 
-    # Execute ATL06 Algorithm
-    rsps = sliderule.engine("atl06", rqst)
-
-    # Process Response Data
-    segments = [rsps[r]["elevation"][i]["seg_id"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-    latitudes = [rsps[r]["elevation"][i]["lat"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-    longitudes = [rsps[r]["elevation"][i]["lon"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-    heights = [rsps[r]["elevation"][i]["height"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-    rgt = [rsps[r]["elevation"][i]["rgt"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-    cycle = [rsps[r]["elevation"][i]["cycle"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-    beam = [rsps[r]["elevation"][i]["beam"] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+    # Request ATL06 Data
+    rsps = icesat2.atl06(parms, resource, asset, as_numpy=False)
 
     # Calculate Distances
-    lat_origin = latitudes[0]
-    lon_origin = longitudes[0]
-    distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
+    lat_origin = rsps["lat"][0]
+    lon_origin = rsps["lon"][0]
+    distances = [geodist(lat_origin, lon_origin, rsps["lat"][i], rsps["lon"][i]) for i in range(len(rsps["h_mean"]))]
 
     # Build Dataframe of SlideRule Responses
-    df = pd.DataFrame(data=list(zip(heights, distances, latitudes, longitudes, beam)), index=segments, columns=["height", "distance", "latitude", "longitude", "beam"])
+    df = pd.DataFrame(data=list(zip(rsps["h_mean"], distances, rsps["lat"], rsps["lon"], rsps["spot"])), index=rsps["segment_id"], columns=["h_mean", "distance", "latitude", "longitude", "spot"])
 
     # Return DataFrame
-    print("Reference Ground Tracks: {} to {}".format(min(rgt), max(rgt)))
-    print("Cycle: {} to {}".format(min(cycle), max(cycle)))
-    print("Retrieved {} points from SlideRule".format(len(heights)))
+    print("Reference Ground Tracks: {} to {}".format(min(rsps["rgt"]), max(rsps["rgt"])))
+    print("Cycle: {} to {}".format(min(rsps["cycle"]), max(rsps["cycle"])))
+    print("Retrieved {} points from SlideRule".format(len(rsps["h_mean"])))
     return df
 
 #
-# Parse Responses from Dataset
+# ATL06 Read Request
 #
-def recoverdata(rsps):
-    datatype = rsps[0]["datatype"]
-    data = ()
-    size = 0
-    for d in rsps:
-        data = data + d["data"]
-        size = size + d["size"]
-    return sliderule.get_values(data, datatype, size)
+def expread(resource, asset):
 
-#
-# ATL06 (read-ICESat-2) Read Request
-#
-def expread(asset):
+    # Read ATL06 Data
+    segments    = icesat2.h5("/gt1r/land_ice_segments/segment_id",  resource, asset)
+    heights     = icesat2.h5("/gt1r/land_ice_segments/h_li",        resource, asset)
+    latitudes   = icesat2.h5("/gt1r/land_ice_segments/latitude",    resource, asset)
+    longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
 
-    # Baseline Request
-    rqst = {
-        "asset" : asset,
-        "resource": "ATL06_20181019065445_03150111_003_01.h5",
-        "datatype": sliderule.datatypes["REAL"],
-        "id": 0
-    }
-
-    # Read ATL06 (read-ICESat-2) Segments
-    rqst["dataset"] = "/gt1r/land_ice_segments/segment_id"
-    rsps = sliderule.engine("h5", rqst)
-    segments = recoverdata(rsps)
-
-    # Read ATL06 (read-ICESat-2) Heights
-    rqst["dataset"] = "/gt1r/land_ice_segments/h_li"
-    rsps = sliderule.engine("h5", rqst)
-    heights = recoverdata(rsps)
-
-    # Read ATL06 (read-ICESat-2) Latitudes
-    rqst["dataset"] = "/gt1r/land_ice_segments/latitude"
-    rsps = sliderule.engine("h5", rqst)
-    latitudes = recoverdata(rsps)
-
-    # Read ATL06 (read-ICESat-2) Longitudes
-    rqst["dataset"] = "/gt1r/land_ice_segments/longitude"
-    rsps = sliderule.engine("h5", rqst)
-    longitudes = recoverdata(rsps)
-
-    # Build Dataframe of SlideRule Responses
+    # Build Dataframe of SlideRule Responses    
     lat_origin = latitudes[0]
     lon_origin = longitudes[0]
     distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
-    df = pd.DataFrame(data=list(zip(heights, distances)), index=segments, columns=["height", "distance"])
+    df = pd.DataFrame(data=list(zip(heights, distances, latitudes, longitudes)), index=segments, columns=["h_mean", "distance", "latitude", "longitude"])
 
     # Filter Dataframe
-    df = df[df["height"] < 25000.0]
-    df = df[df["height"] > -25000.0]
+    df = df[df["h_mean"] < 25000.0]
+    df = df[df["h_mean"] > -25000.0]
     df = df[df["distance"] < 4000.0]
 
     # Return DataFrame
     print("Retrieved {} points from ATL06, returning {} points".format(len(heights), len(df.values)))
     return df
 
-###############################################################################
-# MAIN
-###############################################################################
 
-if __name__ == '__main__':
-
-    # Set URL #
-    if len(sys.argv) > 1:
-        sliderule.set_url(sys.argv[1])
-
-    # Set Asset #
-    asset = "atl03-local"
-    if len(sys.argv) > 2:
-        asset = sys.argv[2]
-
-    # Set Verbosity #
-    sliderule.set_verbose(True)
-
-    # Execute SlideRule Algorithm
-    act = algoexec(asset)
-
-    # Read ATL06 Expected Results
-    exp = expread("atl03-local")
-
+#
+# Plot Actual vs Expected
+#
+def plotresults(act, exp):
     # Create Plot
     fig = plt.figure(num=None, figsize=(12, 6))
 
     # Plot Ground Tracks
     ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
     ax1.set_title("Ground Tracks")
-    ax1.plot(act["longitude"].values,act["latitude"].values,linewidth=1.5,
-        color='r',zorder=2, transform=cartopy.crs.Geodetic())
-    # add coastlines with filled land and lakes
+    ax1.plot(act["longitude"].values, act["latitude"].values, linewidth=1.5, color='r', zorder=3, transform=cartopy.crs.Geodetic())
     ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
     ax1.add_feature(cartopy.feature.LAKES)
     ax1.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
@@ -179,14 +114,51 @@ if __name__ == '__main__':
     # Plot Elevations
     ax2 = plt.subplot(122)
     ax2.set_title("Along Track Elevations")
-    track1 = act[act["beam"].isin([1, 2])].sort_values(by=['distance'])
-#    track2 = act[act["beam"].isin([3, 4])].sort_values(by=['distance'])
-#    track3 = act[act["beam"].isin([5, 6])].sort_values(by=['distance'])
+    track1 = act[act["spot"].isin([1, 2])].sort_values(by=['distance'])
     standard = exp.sort_values(by=['distance'])
-    ax2.plot(track1["distance"].values, track1["height"].values, linewidth=1.0, color='b')
-#    plt.plot(track2["distance"].values, track2["height"].values, linewidth=1.0, color='b')
-#    plt.plot(track3["distance"].values, track3["height"].values, linewidth=1.0, color='b')
-    ax2.plot(standard["distance"].values, standard["height"].values, linewidth=1.0, color='g')
+    ax2.plot(track1["distance"].values, track1["h_mean"].values, linewidth=1.0, color='b')
+    ax2.plot(standard["distance"].values, standard["h_mean"].values, linewidth=1.0, color='g')
 
     # Show Plot
     plt.show()
+
+###############################################################################
+# MAIN
+###############################################################################
+
+if __name__ == '__main__':
+
+    # configure logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Set URL #
+    url = "http://127.0.0.1:9081"
+    if len(sys.argv) > 1:
+        url = sys.argv[1]
+
+    # Set ATL03 Asset #
+    atl03_asset = "atl03-local"
+    if len(sys.argv) > 2:
+        atl03_asset = sys.argv[2]
+
+    # Set ATL06 Asset #
+    atl06_asset = "atl06-local"
+    if len(sys.argv) > 3:
+        atl06_asset = sys.argv[3]
+
+    # Set Resource #
+    resource = "_20181019065445_03150111_003_01.h5"
+    if len(sys.argv) > 4:
+        resource = sys.argv[4]
+
+    # Initialize Icesat2 Package #
+    icesat2.init(url, True)
+
+    # Execute SlideRule Algorithm
+    act = algoexec("ATL03"+resource, atl03_asset)
+
+    # Read ATL06 Expected Results
+    exp = expread("ATL06"+resource, atl06_asset)
+
+    # Plot Actual vs. Expected
+    plotresults(act, exp)

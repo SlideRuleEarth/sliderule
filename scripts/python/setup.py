@@ -12,7 +12,7 @@ with open('requirements.txt') as fh:
 setup(
     name='sliderule',
     author='SlideRule Developers',
-    version='0.0.1',
+    version='0.2.0',
     description='A framework for on-demand ICESat-2 data processing.',
     long_description_content_type="text/markdown",
     url='https://github.com/ICESat2-SlideRule/sliderule/',

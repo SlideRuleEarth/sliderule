@@ -65,10 +65,6 @@ class LocalLib
         static int          getIOTimeout        (void);
         static int          performIOTimeout    (void);
 
-        static key_t        createGlobal        (void);
-        static int          setGlobal           (key_t key, void* value);
-        static void*        getGlobal           (key_t key);
-
     private:
         
         static print_func_t print_func;

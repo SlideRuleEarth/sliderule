@@ -93,6 +93,10 @@ void H5DatasetDevice::init (void)
 H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype):
     DeviceObject(L, _role)
 {
+    /* Start Trace */
+    uint32_t trace_id = start_trace_ext(traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", filename, dataset_name);
+    TraceLib::stashId (trace_id); // set thread specific trace id for H5Lib
+
     /* Set Record */
     recObj = new RecordObject(recType);
     recData = (h5dataset_t*)recObj->getRecordData();
@@ -120,7 +124,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     /* Read File */
     try
     {
-        H5Lib::info_t info = H5Lib::read(fileName, dataName, (RecordObject::valType_t)recData->datatype);
+        H5Lib::info_t info = H5Lib::read(fileName, dataName, (RecordObject::valType_t)recData->datatype, 0, 0, H5Lib::ALL_ROWS);
         dataBuffer = info.data;
         dataSize = info.datasize;
         connected = true;
@@ -132,6 +136,9 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
         dataSize = false;
         connected = false;
     }
+
+    /* Stop Trace */
+    stop_trace(trace_id);
 }
 
 /*----------------------------------------------------------------------------

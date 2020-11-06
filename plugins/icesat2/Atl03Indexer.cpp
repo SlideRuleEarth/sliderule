@@ -226,8 +226,8 @@ void* Atl03Indexer::indexerThread (void* parm)
                 H5Array<double>     end_delta_time      (url, "/ancillary_data/end_delta_time");
                 H5Array<int8_t>     cycle               (url, "/orbit_info/cycle_number");
                 H5Array<uint16_t>   rgt                 (url, "/orbit_info/rgt");
-                H5Array<double>     gt3r_lat            (url, "/gt3r/geolocation/reference_photon_lat", 0, 1);
-                H5Array<double>     gt3r_lon            (url, "/gt3r/geolocation/reference_photon_lon", 0, 1);
+                H5Array<double>     gt3r_lat            (url, "/gt3r/geolocation/reference_photon_lat", 0, 0, 1);
+                H5Array<double>     gt3r_lon            (url, "/gt3r/geolocation/reference_photon_lon", 0, 0, 1);
                 H5Array<double>     gt1l_lat            (url, "/gt1l/geolocation/reference_photon_lat");
                 H5Array<double>     gt1l_lon            (url, "/gt1l/geolocation/reference_photon_lon");
 

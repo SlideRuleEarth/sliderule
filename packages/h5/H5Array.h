@@ -41,18 +41,20 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, unsigned col=0, unsigned maxrows=0);
+                H5Array     (const char* url, const char* dataset, long col=0, long startrow=0, long numrows=H5Lib::ALL_ROWS);
         virtual ~H5Array    (void);
 
-        T&      operator[]  (int index);
+        bool    trim        (long offset);
+        T&      operator[]  (long index);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        const char*     name;
-        int32_t         size;
-        T*              data;
+        const char* name;
+        long        size;
+        T*          data;
+        T*          pointer;
 };
 
 /******************************************************************************
@@ -63,17 +65,18 @@ class H5Array
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const char* url, const char* dataset, unsigned col, unsigned maxrows)
+H5Array<T>::H5Array(const char* url, const char* dataset, long col, long startrow, long numrows)
 {
     name = NULL;
     data = NULL;
     size = 0;
     
-    H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col, maxrows);
+    H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
 
     name = StringLib::duplicate(dataset);
     data = (T*)info.data;
     size = info.elements;
+    pointer = data;
 }
 
 /*----------------------------------------------------------------------------
@@ -87,12 +90,29 @@ H5Array<T>::~H5Array(void)
 }
 
 /*----------------------------------------------------------------------------
- * []]
+ * trim
  *----------------------------------------------------------------------------*/
 template <class T>
-T& H5Array<T>::operator[](int index)
+bool H5Array<T>::trim(long offset)
 {
-    return data[index];
+    if((offset >= 0) && (offset < size))
+    {
+        pointer = data + offset;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * []
+ *----------------------------------------------------------------------------*/
+template <class T>
+T& H5Array<T>::operator[](long index)
+{
+    return pointer[index];
 }
 
 #endif  /* __h5_array__ */

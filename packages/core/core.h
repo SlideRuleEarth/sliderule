@@ -52,6 +52,7 @@
 #include "LuaLibrarySys.h"
 #include "LuaLibraryTime.h"
 #include "LuaObject.h"
+#include "MathLib.h"
 #include "MetricDispatch.h"
 #include "MetricRecord.h"
 #include "MsgProcessor.h"

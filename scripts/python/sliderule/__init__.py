@@ -2,6 +2,6 @@
 sliderule
 =========
 
-A C++/Lua framework for on-demand ICESat-2 data processing
+A C++/Lua framework for on-demand science data processing
 """
 from sliderule.sliderule import *

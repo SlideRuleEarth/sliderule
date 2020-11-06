@@ -29,6 +29,7 @@
 #include "LogLib.h"
 #include "Dictionary.h"
 #include "List.h"
+#include "Ordering.h"
 #include "LuaObject.h"
 #include "LuaEngine.h"
 
@@ -77,50 +78,51 @@ class AssetIndex: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            AssetIndex      (lua_State* L, Asset& _asset, const char* meta_name, const struct luaL_Reg meta_table[], int _threshold=DEFAULT_THRESHOLD);
-        virtual             ~AssetIndex     (void);
+                                AssetIndex      (lua_State* L, Asset& _asset, const char* meta_name, const struct luaL_Reg meta_table[], int _threshold=DEFAULT_THRESHOLD);
+        virtual                 ~AssetIndex     (void);
 
-        virtual void        build           (void);
-        virtual T           get             (int index);
-        virtual bool        add             (const T& span); // NOT thread safe
-        virtual List<int>*  query           (const T& span);
-        virtual void        display         (void);
+        virtual void            build           (void);
+        virtual T               get             (int index);
+        virtual bool            add             (const T& span); // NOT thread safe
+        virtual Ordering<int>*  query           (const T& span);
+        virtual void            display         (void);
 
-        virtual void        split           (node_t* node, T& lspan, T& rspan) = 0;
-        virtual bool        isleft          (node_t* node, const T& span) = 0;
-        virtual bool        isright         (node_t* node, const T& span) = 0;
-        virtual bool        intersect       (const T& span1, const T& span2) = 0;
-        virtual T           combine         (const T& span1, const T& span2) = 0;
-        virtual T           attr2span       (Dictionary<double>* attr, bool* provided=NULL) = 0;
-        virtual T           luatable2span   (lua_State* L, int parm) = 0;
-        virtual void        displayspan     (const T& span) = 0;
+        virtual void            split           (node_t* node, T& lspan, T& rspan) = 0;
+        virtual bool            isleft          (node_t* node, const T& span) = 0;
+        virtual bool            isright         (node_t* node, const T& span) = 0;
+        virtual bool            intersect       (const T& span1, const T& span2) = 0;
+        virtual T               combine         (const T& span1, const T& span2) = 0;
+        virtual T               attr2span       (Dictionary<double>* attr, bool* provided=NULL) = 0;
+        virtual T               luatable2span   (lua_State* L, int parm) = 0;
+        virtual void            displayspan     (const T& span) = 0;
         
+        static int              luaAdd          (lua_State* L);
+        static int              luaQuery        (lua_State* L);
+        static int              luaDisplay      (lua_State* L);
+
     private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        void            buildtree       (node_t** root, int* maxdepth);
-        void            updatenode      (int i, node_t** node, int* maxdepth);
-        void            balancenode     (node_t** root);
-        void            querynode       (const T& span, node_t* curr, List<int>* list);
-        void            deletenode      (node_t* node);
-        bool            prunenode       (node_t* node);
-        void            displaynode     (node_t* curr);
-
-        static int      luaAdd          (lua_State* L);
-        static int      luaQuery        (lua_State* L);
-        static int      luaDisplay      (lua_State* L);
+        void        buildtree       (node_t* root, int* maxdepth);
+        void        updatenode      (int i, node_t** node, int* maxdepth);
+        void        balancenode     (node_t** root);
+        void        querynode       (const T& span, node_t* curr, Ordering<int>* list);
+        node_t*     newnode         (const T& span);
+        void        deletenode      (node_t* node);
+        bool        prunenode       (node_t* node);
+        void        displaynode     (node_t* curr);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Asset&          asset;
-        List<T>         spans; // parallels asset resource list
-        int32_t         threshold;
-        node_t*         tree;
+        Asset&      asset;
+        List<T>     spans; // parallels asset resource list
+        int32_t     threshold;
+        node_t*     tree;
 };
 
 /******************************************************************************
@@ -144,10 +146,6 @@ AssetIndex<T>::AssetIndex (lua_State* L, Asset& _asset, const char* meta_name, c
     threshold(_threshold)
 {
     tree = NULL;
-
-    LuaEngine::setAttrFunc(L, "add", luaAdd);
-    LuaEngine::setAttrFunc(L, "query", luaQuery);
-    LuaEngine::setAttrFunc(L, "display", luaDisplay);
 }
 
 /*----------------------------------------------------------------------------
@@ -166,12 +164,31 @@ AssetIndex<T>::~AssetIndex (void)
 template <class T>
 void AssetIndex<T>::build (void)
 {
+    /* Build Tree Node */
+    spans.clear();
     for(int i = 0; i < asset.size(); i++)
     {
         bool provided = false;
-        T span = attr2span(&asset[i].attributes, &provided);            
-        if(provided) add(span); // build tree of indexes
+        T span = attr2span(&asset[i].attributes, &provided);
+        if(provided)
+        {
+            /* Add to Global Resource List */
+            int index = spans.add(span);
+
+            /* Create Tree Node */
+            if(tree == NULL) tree = newnode(span);
+
+            /* Update Tree Span */
+            tree->span = combine(tree->span, span);
+
+            /* Update Tree Resource List */
+            tree->ril->add(index);
+        }
     }
+
+    /* Build Tree Structure */
+    int maxdepth = 0;
+    buildtree(tree, &maxdepth);
 }
 
 /*----------------------------------------------------------------------------
@@ -184,13 +201,18 @@ T AssetIndex<T>::get (int index)
 }
 
 /*----------------------------------------------------------------------------
- * add
+ * add - MUST BE COORDINATED w/ ASSET
+ * 
+ *  Note:   the call to add the span to the spans list relies upon the
+ *          assumption that the index the span sits at within the list
+ *          matches the index the originating resource sits at within the
+ *          asset's resource list
  *----------------------------------------------------------------------------*/
 template <class T>
 bool AssetIndex<T>::add (const T& span)
 {
     int maxdepth = 0;
-    int index = spans.add(span); // build local list of spans that mirror resource index list
+    int index = spans.add(span);
     updatenode(index, &tree, &maxdepth);
     balancenode(&tree);
     return true;
@@ -200,9 +222,9 @@ bool AssetIndex<T>::add (const T& span)
  * query
  *----------------------------------------------------------------------------*/
 template <class T>
-List<int>* AssetIndex<T>::query (const T& span)
+Ordering<int>* AssetIndex<T>::query (const T& span)
 {
-    List<int>* list = new List<int>();
+    Ordering<int>* list = new Ordering<int>();
     querynode(span, tree, list);
     return list;
 }
@@ -217,91 +239,177 @@ void AssetIndex<T>::display (void)
 }
 
 /*----------------------------------------------------------------------------
+ * luaAdd - :add(<attributes>)
+ *----------------------------------------------------------------------------*/
+template <class T>
+int AssetIndex<T>::luaAdd (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+
+        /* Create Resource Attributes */
+        T span = lua_obj->luatable2span(L, 2);
+
+        /* Add Resource */
+        status = lua_obj->add(span);
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error adding: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 2);
+}
+
+/*----------------------------------------------------------------------------
+ * luaQuery - :query(<resource table>)
+ *----------------------------------------------------------------------------*/
+template <class T>
+int AssetIndex<T>::luaQuery (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+
+        /* Create Query Attributes */
+        T span = lua_obj->luatable2span(L, 2);
+
+        /* Query Resources */
+        Ordering<int>* ro = lua_obj->query(span);
+
+        /* Return Resources */
+        lua_newtable(L);
+        int r = 1;
+        unsigned long resource_index = ro->first(NULL);
+        while(resource_index != INVALID_KEY)
+        {
+            lua_pushstring(L, lua_obj->asset[resource_index].name);
+            lua_rawseti(L, -2, r++);
+            resource_index = ro->next(NULL);
+        }
+
+        /* Free Resource Index List */
+        delete ro;
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, 2);
+}
+
+/*----------------------------------------------------------------------------
+ * luaDisplay - :display()
+ *----------------------------------------------------------------------------*/
+template <class T>
+int AssetIndex<T>::luaDisplay (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+
+        /* Display Tree */
+        lua_obj->display();
+
+        /* Set Status */
+        status = true;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
  * buildtree
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::buildtree (node_t** node, int* maxdepth)
+void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
 {
-    int i;
-    /* Get Span of Resource being Added */
-    T& span = spans[i];
-
-    /* Create Node (if necessary */
-    if(*node == NULL)
+    /* Check Root */
+    if(!root || !root->ril) return;
+    
+    /* Split Current Leaf Node */
+    int root_size = root->ril->length();
+    if(root_size >= threshold)
     {
-        *node = new node_t;
-        (*node)->ril = new List<int>;
-        (*node)->span = span;
-        (*node)->left = NULL;
-        (*node)->right = NULL;
-        (*node)->depth = 0;
-    }
-
-    /* Pointer to Current Node */
-    node_t* curr = *node;
-
-    /* Update Tree Span */
-    curr->span = combine(curr->span, span);
-
-    /* Update Current Leaf Node */
-    if(curr->ril)
-    {
-        /* Add Index to Current Node */
-        curr->ril->add(i);
-
-        /* Split Current Leaf Node */
-        int node_size = curr->ril->length();
-        if(node_size >= threshold)
+        /* Split Node */
+        T lspan, rspan;
+        split(root, lspan, rspan);
+        node_t* lnode = newnode(lspan);
+        node_t* rnode = newnode(rspan);
+        
+        /* Split Resources on Both Leaves */
+        int lcnt = 0, rcnt = 0;
+        for(int j = 0; j < root_size; j++)
         {
-            /* Split Node */
-            T lspan, rspan;
-            split(curr, lspan, rspan);
+            int resource_index = root->ril->get(j);
+            T& resource_span = spans[resource_index];
             
-            /* Preview Split Resources on Both Leaves */
-            int lcnt = 0, rcnt = 0;
-            for(int j = 0; j < node_size; j++)
+            if(intersect(lspan, resource_span))
             {
-                int resource_index = curr->ril->get(j);
-                T& resource_span = spans[resource_index];
-                if(intersect(lspan, resource_span)) lcnt++;
-                if(intersect(rspan, resource_span)) rcnt++;
+                lcnt++;
+                lnode->span = combine(lnode->span, resource_span);
+                lnode->ril->add(resource_index);
             }
-
-            /* Check if Makes Sense to Split */
-            if(lcnt > 0 && rcnt > 0 && lcnt != node_size && rcnt != node_size)
+            
+            if(intersect(rspan, resource_span))
             {
-                /* Split Node */
-                for(int j = 0; j < node_size; j++)
-                {
-                    int resource_index = curr->ril->get(j);
-                    T& resource_span = spans[resource_index];
-                    if(intersect(lspan, resource_span)) updatenode(resource_index, &curr->left, maxdepth);
-                    if(intersect(rspan, resource_span)) updatenode(resource_index, &curr->right, maxdepth);
-                }
-
-                /* Make Current Node a Branch */
-                delete curr->ril;
-                curr->ril = NULL;
-
-                /* Update Max Depth */
-                (*maxdepth)++;
+                rcnt++;
+                rnode->span = combine(rnode->span, resource_span);
+                rnode->ril->add(resource_index);
             }
         }
-    }
-    else 
-    {
-        /* Update Branches */
-        if(isleft(curr, span))  updatenode(i, &curr->left, maxdepth);
-        if(isright(curr, span)) updatenode(i, &curr->right, maxdepth);
 
-        /* Update Max Depth */
-        (*maxdepth)++;
+        /* Check if Makes Sense to Split */
+        if(lcnt > 0 && rcnt > 0 && lcnt != root_size && rcnt != root_size)
+        {
+            /* Split Root */            
+            delete root->ril;
+            root->ril = NULL;
+            root->left = lnode;
+            root->right = rnode;
+
+            /* Recurse Into Each Leaf */
+            buildtree(root->left, maxdepth);
+            buildtree(root->right, maxdepth);
+
+            /* Update Max Depth */
+            (*maxdepth)++;
+        }
+        else
+        {
+            /* Clean Up (unused) Leaf Nodes */
+            delete lnode->ril;
+            delete lnode;
+            delete rnode->ril;
+            delete rnode;
+        }
     }
 
     /* Update Current Depth */
-    if(curr->depth < *maxdepth)
+    if(root->depth < *maxdepth)
     {
-        curr->depth = *maxdepth;
+        root->depth = *maxdepth;
     }
 }
 
@@ -315,15 +423,7 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
     T& span = spans[i];
 
     /* Create Node (if necessary */
-    if(*node == NULL)
-    {
-        *node = new node_t;
-        (*node)->ril = new List<int>;
-        (*node)->span = span;
-        (*node)->left = NULL;
-        (*node)->right = NULL;
-        (*node)->depth = 0;
-    }
+    if(*node == NULL) *node = newnode(span);
 
     /* Pointer to Current Node */
     node_t* curr = *node;
@@ -487,7 +587,7 @@ void AssetIndex<T>::balancenode (node_t** root)
  * querynode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::querynode (const T& span, node_t* curr, List<int>* list)
+void AssetIndex<T>::querynode (const T& span, node_t* curr, Ordering<int>* list)
 {
     /* Return on Null Path */
     if(curr == NULL) return;
@@ -504,7 +604,7 @@ void AssetIndex<T>::querynode (const T& span, node_t* curr, List<int>* list)
             int resource_index = curr->ril->get(i);
             if(intersect(span, spans[resource_index]))
             {
-                list->add(resource_index);
+                list->add(resource_index, resource_index, true);
             }
         }
     }
@@ -516,6 +616,21 @@ void AssetIndex<T>::querynode (const T& span, node_t* curr, List<int>* list)
         /* Goto Before Tree */
         querynode(span, curr->right, list);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * displaynode
+ *----------------------------------------------------------------------------*/
+template <class T>
+typename AssetIndex<T>::node_t* AssetIndex<T>::newnode (const T& span)
+{
+    node_t* node = new node_t;
+    node->ril = new List<int>;
+    node->span = span;
+    node->left = NULL;
+    node->right = NULL;
+    node->depth = 0;
+    return node;
 }
 
 /*----------------------------------------------------------------------------
@@ -539,7 +654,6 @@ void AssetIndex<T>::deletenode (node_t* node)
     deletenode(left);
     deletenode(right);
 }
-
 
 /*----------------------------------------------------------------------------
  * displaynode
@@ -641,105 +755,6 @@ void AssetIndex<T>::displaynode (node_t* curr)
     /* Recurse */
     displaynode(curr->left);
     displaynode(curr->right);
-}
-
-/*----------------------------------------------------------------------------
- * luaAdd - :add(<attributes>)
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaAdd (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
-
-        /* Create Resource Attributes */
-        T span = lua_obj->luatable2span(L, 2);
-
-        /* Add Resource */
-        status = lua_obj->add(span);
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error adding: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, 2);
-}
-
-/*----------------------------------------------------------------------------
- * luaQuery - :query(<resource table>)
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaQuery (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
-
-        /* Create Query Attributes */
-        T span = lua_obj->luatable2span(L, 2);
-
-        /* Query Resources */
-        List<int>* ril = lua_obj->query(span);
-
-        /* Return Resources */
-        lua_newtable(L);
-        for(int r = 1, i = 0; i < ril->length(); i++, r++)
-        {
-            int resource_index = ril->get(i);
-            lua_pushstring(L, lua_obj->asset[resource_index].name);
-            lua_rawseti(L, -2, r);
-        }
-
-        /* Free Resource Index List */
-        delete ril;
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, 2);
-}
-
-/*----------------------------------------------------------------------------
- * luaDisplay - :display()
- *----------------------------------------------------------------------------*/
-template <class T>
-int AssetIndex<T>::luaDisplay (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Parameters */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
-
-        /* Display Tree */
-        lua_obj->display();
-
-        /* Set Status */
-        status = true;
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 #endif  /* __asset_index__ */

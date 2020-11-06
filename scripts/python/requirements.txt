@@ -1,4 +1,1 @@
-numpy
 requests
-matplotlib
-cartopy

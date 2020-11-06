@@ -43,7 +43,7 @@ if __name__ == '__main__':
         filename = sys.argv[2]
 
     # Override filepath
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
         filepath = sys.argv[3]
 
     # Open file

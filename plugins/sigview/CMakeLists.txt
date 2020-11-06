@@ -32,7 +32,6 @@ target_sources(sigviewLib
         ${CMAKE_CURRENT_LIST_DIR}/ReportProcessorStatistic.cpp
         ${CMAKE_CURRENT_LIST_DIR}/HstvsSimulator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/BlinkProcessorModule.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/DSP.cpp
         ${CMAKE_CURRENT_LIST_DIR}/TxTimeProcessor.cpp
 )
 
@@ -66,7 +65,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/ReportProcessorStatistic.h
         ${CMAKE_CURRENT_LIST_DIR}/HstvsSimulator.h
         ${CMAKE_CURRENT_LIST_DIR}/BlinkProcessorModule.h
-        ${CMAKE_CURRENT_LIST_DIR}/DSP.h
         ${CMAKE_CURRENT_LIST_DIR}/TxTimeProcessor.h
     DESTINATION
         ${INCDIR}

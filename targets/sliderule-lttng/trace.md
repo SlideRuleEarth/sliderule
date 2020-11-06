@@ -30,6 +30,7 @@ __Note 1__: The system installation of python is used since the steps above inst
 
 __Note 2__: The trace must be killed before it can be analyzed.
 
+After running the `trace.py` as indicated above, subsequent runs can supply `sta <trace_id1> <trace_id2> ... <trace_idn>` where the trace ids listed are the ones interested in.  Running this command will produce a `pytrace.txt` trace file and a `pytrace.PerfIDSetup` file which can be injesting into the __Software Timing Analyzer__ tool.
 
 ## IV. Analyze a Trace with Trace-Compass
 

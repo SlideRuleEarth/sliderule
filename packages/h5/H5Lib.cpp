@@ -258,14 +258,10 @@ void H5Lib::parseUrl (const char* url, const char** resource, driver_t* driver)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, unsigned col, unsigned maxrows)
+H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows)
 {
     info_t info;
     bool status = false;
-
-    /* Start Trace */
-    uint32_t parent_trace_id = TraceLib::grabId();
-    uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Start with Invalid Handles */
     const char* resource = NULL;
@@ -288,7 +284,6 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         }
 
         /* Open Resource */
-        mlog(INFO, "Opening resource: %s\n", url);
         file = H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
@@ -340,10 +335,10 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         hsize_t* count = new hsize_t[ndims + 1];
 
         /* Readjust First Dimension */
-        if(maxrows > 0) dims[0] = MIN(maxrows, dims[0]);
+        if(numrows != ALL_ROWS) dims[0] = MIN(numrows, (long)dims[0]);
 
         /* Create File Hyperspace to Read Selected Column */
-        start[0] = 0;
+        start[0] = startrow;
         start[1] = col;
         count[0] = dims[0];
         count[1] = 1;
@@ -351,6 +346,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
         /* Create Memory Hyperspace to Write Selected Column */
         dims[1] = 1; // readjust dimensions to reflect single column being read
+        start[0] = 0; // readjust start to reflect writing from the beginning
         start[1] = 0; // readjust start to reflect writing to only a single column
         memspace = H5Screate_simple(ndims, dims, NULL);
         H5Sselect_hyperslab(memspace, H5S_SELECT_SET, start, NULL, count, NULL);
@@ -382,8 +378,12 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             break;
         }
 
+        /* Start Trace */
+        mlog(INFO, "Reading %d elements (%ld bytes) from %s %s\n", elements, datasize, url, datasetname);
+        uint32_t parent_trace_id = TraceLib::grabId();
+        uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+
         /* Read Dataset */
-        mlog(INFO, "Reading %d elements (%ld bytes) from %s\n", elements, datasize, datasetname);
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
         {
             status = true;
@@ -394,6 +394,9 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             delete [] data;
             break;
         }
+
+        /* Stop Trace */
+        stop_trace(trace_id);
 
         /* Set Info Return Structure */
         info.elements = elements;
@@ -409,9 +412,6 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     if(dataspace != H5S_ALL) H5Sclose(dataspace);
     if(memspace != H5S_ALL) H5Sclose(memspace);
     if(dataset > 0) H5Dclose(dataset);
-
-    /* Stop Trace */
-    stop_trace(trace_id);
 
     /* Return Info */
     if(status)  return info;

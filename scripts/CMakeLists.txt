@@ -6,6 +6,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_engine_endpoint.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_source_endpoint.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
     DESTINATION

@@ -34,10 +34,17 @@ class Thread
 {
     public:
 
+        typedef pthread_key_t key_t;
+
         typedef void* (*thread_func_t) (void* parm);
 
         Thread (thread_func_t function, void* parm, bool _join=true);
         ~Thread (void); // performs join
+
+        static long         getId               (void);
+        static key_t        createGlobal        (void);
+        static int          setGlobal           (key_t key, void* value);
+        static void*        getGlobal           (key_t key);
 
     private:
 

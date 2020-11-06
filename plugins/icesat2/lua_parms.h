@@ -25,6 +25,8 @@
  ******************************************************************************/
 
 #include <lua.h>
+#include "List.h"
+#include "MathLib.h"
 
 /******************************************************************************
  * DEFINES
@@ -32,6 +34,9 @@
 
 #define LUA_PARM_SURFACE_TYPE                   "srt"
 #define LUA_PARM_SIGNAL_CONFIDENCE              "cnf"
+#define LUA_PARM_POLYGON                        "poly"
+#define LUA_PARM_LATITUDE                       "lat"
+#define LUA_PARM_LONGITUDE                      "lon"
 #define LUA_PARM_ALONG_TRACK_SPREAD             "ats"
 #define LUA_PARM_MIN_PHOTON_COUNT               "cnt"
 #define LUA_PARM_EXTENT_LENGTH                  "len"
@@ -39,6 +44,8 @@
 #define LUA_PARM_MAX_ITERATIONS                 "maxi"
 #define LUA_PARM_MIN_WINDOW                     "H_min_win"
 #define LUA_PARM_MAX_ROBUST_DISPERSION          "sigma_r_max"
+
+#define LUA_PARM_MAX_COORDS                     16
 
 /******************************************************************************
  * TYPEDEFS
@@ -99,24 +106,24 @@ typedef enum {
 
 /* Extraction Parameters */
 typedef struct {
-    surface_type_t  surface_type;               // surface reference type (used to select signal confidence column)
-    signal_conf_t   signal_confidence;          // minimal allowed signal confidence
-    bool            stages[NUM_STAGES];         // algorithm iterations
-    int             max_iterations;             // least squares fit iterations
-    double          along_track_spread;         // meters
-    double          minimum_photon_count;       // PE
-    double          minimum_window;             // H_win minimum
-    double          maximum_robust_dispersion;  // sigma_r
-    double          extent_length;              // length of ATL06 extent (meters)
-    double          extent_step;                // resolution of the ATL06 extent (meters)
+    surface_type_t          surface_type;                   // surface reference type (used to select signal confidence column)
+    signal_conf_t           signal_confidence;              // minimal allowed signal confidence
+    bool                    stages[NUM_STAGES];             // algorithm iterations
+    MathLib::coord_t        polygon[LUA_PARM_MAX_COORDS];   // bounding region
+    int                     points_in_polygon;              // 
+    int                     max_iterations;                 // least squares fit iterations
+    double                  along_track_spread;             // meters
+    double                  minimum_photon_count;           // PE
+    double                  minimum_window;                 // H_win minimum
+    double                  maximum_robust_dispersion;      // sigma_r
+    double                  extent_length;                  // length of ATL06 extent (meters)
+    double                  extent_step;                    // resolution of the ATL06 extent (meters)
 } atl06_parms_t;
 
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
 
-atl06_parms_t lua_parms_process (lua_State* L, int index);
+atl06_parms_t getLuaAtl06Parms (lua_State* L, int index);
 
 #endif  /* __lua_parms__ */
-
-

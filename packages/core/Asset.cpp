@@ -33,9 +33,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-Dictionary<Asset*> Asset::assets;
-Mutex                       Asset::assetsMut;
-
 const char* Asset::OBJECT_TYPE = "Asset";
 const char* Asset::LuaMetaName = "Asset";
 const struct luaL_Reg Asset::LuaMetaTable[] = {
@@ -44,44 +41,25 @@ const struct luaL_Reg Asset::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, [<format>, <url>, <index>])
+ * luaCreate - create(<name>, <format>, <url>, <index>)
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {
     try
     {
-        /* Get Required Parameters */
+        /* Get Parameters */
         const char* _name = getLuaString(L, 1);
-
-        /* Determine if Asset Exists */
-        Asset* asset = NULL;
-        assetsMut.lock();
-        {
-            if(assets.find(_name))
-            {
-                asset = assets.get(_name);
-                associateMetaTable(L, LuaMetaName, LuaMetaTable);
-            }
-        }
-        assetsMut.unlock();
-
-        /* Check if Asset Needs to be Created */
-        if(asset == NULL)
-        {
-            const char* _format = getLuaString(L, 2);
-            const char* _url    = getLuaString(L, 3);
-            const char* _index  = getLuaString(L, 4);
-            asset = new Asset(L, _name, _format, _url, _index);
-        }        
+        const char* _format = getLuaString(L, 2);
+        const char* _url    = getLuaString(L, 3);
+        const char* _index  = getLuaString(L, 4);
 
         /* Return Asset Object */
-        return createLuaObject(L, asset);
+        return createLuaObject(L, new Asset(L, _name, _format, _url, _index));
     }
     catch(const LuaException& e)
     {
@@ -95,17 +73,6 @@ int Asset::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Asset::~Asset (void)
 {
-    /* Remove Asset from Dictionary */
-    if(registered)
-    {
-        registered = false;
-        assetsMut.lock();
-        {
-            assets.remove(name);
-        }
-        assetsMut.unlock();
-    }
-
     /* Delete Members */
     delete [] name;
     delete [] format;
@@ -116,9 +83,9 @@ Asset::~Asset (void)
 /*----------------------------------------------------------------------------
  * load
  *----------------------------------------------------------------------------*/
-bool Asset::load (resource_t& resource)
+int Asset::load (resource_t& resource)
 {
-    resources.add(resource);
+    return resources.add(resource);    
 }
 
 /*----------------------------------------------------------------------------
@@ -173,7 +140,7 @@ const char* Asset::getIndex (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable, true)
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     /* Configure LuaObject Name */
     ObjectName  = StringLib::duplicate(_name);
@@ -183,22 +150,6 @@ Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* 
     format  = StringLib::duplicate(_format);
     url     = StringLib::duplicate(_url);
     index   = StringLib::duplicate(_index);
-
-    /* Register Asset */
-    assetsMut.lock();
-    {
-        Asset* asset = this;
-        if(assets.add(name, asset, true))
-        {
-            registered = true;
-        }
-        else
-        {
-            registered = false;
-            mlog(CRITICAL, "Failed to register asset %s\n", name);
-        }
-    }
-    assetsMut.unlock();
 }
 
 /*----------------------------------------------------------------------------

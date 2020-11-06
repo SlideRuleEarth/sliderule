@@ -83,7 +83,7 @@ class TraceLib
          *--------------------------------------------------------------------*/
 
         static std::atomic<uint32_t> unique_id;
-        static LocalLib::key_t trace_key;
+        static Thread::key_t trace_key;
 };
 
 #endif  /* __tracelib__ */

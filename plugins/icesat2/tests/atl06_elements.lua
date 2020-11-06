@@ -28,19 +28,19 @@ runner.check(extentrec, "Failed to read an extent record")
 
 if extentrec then
     runner.check(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
-    runner.check(extentrec:getvalue("seg_id[0]") == 555764, extentrec:getvalue("seg_id[0]"))
-    runner.check(extentrec:getvalue("seg_id[1]") == 555764, extentrec:getvalue("seg_id[1]"))
-    runner.check(runner.cmpfloat(extentrec:getvalue("gps[0]"), 1267339942.127844, 0.0001), extentrec:getvalue("gps[0]"))
-    runner.check(runner.cmpfloat(extentrec:getvalue("gps[1]"), 1267339942.472445, 0.0001), extentrec:getvalue("gps[1]"))
+    runner.check(extentrec:getvalue("segment_id[0]") == 555764, extentrec:getvalue("segment_id[0]"))
+    runner.check(extentrec:getvalue("segment_id[1]") == 555764, extentrec:getvalue("segment_id[1]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("delta_time[0]"), 1267339942.127844, 0.0001), extentrec:getvalue("delta_time[0]"))
+    runner.check(runner.cmpfloat(extentrec:getvalue("delta_time[1]"), 1267339942.472445, 0.0001), extentrec:getvalue("delta_time[1]"))
     runner.check(extentrec:getvalue("count[0]") == 136, extentrec:getvalue("count[0]"))
     runner.check(extentrec:getvalue("count[1]") == 539, extentrec:getvalue("count[1]"))
 
     t2 = extentrec:tabulate()
 
-    runner.check(t2.seg_id[1] == extentrec:getvalue("seg_id[0]"))
-    runner.check(t2.seg_id[2] == extentrec:getvalue("seg_id[1]"))
-    runner.check(runner.cmpfloat(t2.gps[1], extentrec:getvalue("gps[0]"), 0.0001))
-    runner.check(runner.cmpfloat(t2.gps[2], extentrec:getvalue("gps[1]"), 0.0001))
+    runner.check(t2.segment_id[1] == extentrec:getvalue("segment_id[0]"))
+    runner.check(t2.segment_id[2] == extentrec:getvalue("segment_id[1]"))
+    runner.check(runner.cmpfloat(t2.delta_time[1], extentrec:getvalue("delta_time[0]"), 0.0001))
+    runner.check(runner.cmpfloat(t2.delta_time[2], extentrec:getvalue("delta_time[1]"), 0.0001))
 end
 
 print('\n------------------\nTest03: Atl03 Extent Definition\n------------------')

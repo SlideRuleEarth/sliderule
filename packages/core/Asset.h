@@ -49,8 +49,8 @@ class Asset: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            char                            name[RESOURCE_NAME_LENGTH];
-            Dictionary<double>              attributes{16};
+            char                name[RESOURCE_NAME_LENGTH];
+            Dictionary<double>  attributes{16};
         } resource_t;
 
         /*--------------------------------------------------------------------
@@ -61,7 +61,7 @@ class Asset: public LuaObject
 
         virtual     ~Asset      (void);
 
-        bool        load        (resource_t& resource);
+        int         load        (resource_t& resource);
         resource_t& operator[]  (int i);
 
         int         size        (void);
@@ -83,10 +83,6 @@ class Asset: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static Dictionary<Asset*>           assets;
-        static Mutex                        assetsMut;
-        bool                                registered;
-
         const char*                         name;
         const char*                         format;
         const char*                         url;
@@ -104,4 +100,4 @@ class Asset: public LuaObject
         static int      luaLoad     (lua_State* L);
 };
 
-#endif  /* __asset_ */
+#endif  /* __asset__ */

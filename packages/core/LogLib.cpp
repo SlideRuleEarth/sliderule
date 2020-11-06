@@ -187,10 +187,6 @@ bool LogLib::str2lvl(const char* str, log_lvl_t* lvl)
     {
         clvl = CRITICAL;
     }
-    else if( StringLib::match(str, "USER") || StringLib::match(str, "user") || StringLib::match(str, "User"))
-    {
-        clvl = USER;
-    }
     else
     {
         return false;
@@ -264,7 +260,6 @@ void LogLib::logMsg(const char* file_name, unsigned int line_number, log_lvl_t l
         case WARNING:   lvlstr = (char*)"WARNING";  break;
         case ERROR:     lvlstr = (char*)"ERROR";    break;
         case CRITICAL:  lvlstr = (char*)"CRITICAL"; break;
-        case USER:      lvlstr = NULL;              break;
         case RAW:       lvlstr = NULL;              break;
     }
 

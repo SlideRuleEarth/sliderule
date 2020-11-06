@@ -39,6 +39,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "Dictionary.h"
 
 #include <exception>
 #include <stdexcept>
@@ -97,6 +98,7 @@ class LuaObject
         const char*         getName             (void);
         uint32_t            getTraceId          (void);
 
+        static int          luaGetByName        (lua_State* L);
         static int          getLuaNumParms      (lua_State* L);
         static long         getLuaInteger       (lua_State* L, int parm, bool optional=false, long dfltval=0, bool* provided=NULL);
         static double       getLuaFloat         (lua_State* L, int parm, bool optional=false, double dfltval=0.0, bool* provided=NULL);
@@ -112,16 +114,17 @@ class LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        const char*         ObjectType;     /* c++ class type */
-        const char*         ObjectName;     /* unique identifier of object */
-        const char*         LuaMetaName;    /* metatable name in lua */
-        lua_State*          LuaState;
+        const char*             ObjectType;     /* c++ class type */
+        const char*             ObjectName;     /* unique identifier of object */
+        const char*             LuaMetaName;    /* metatable name in lua */
+        const struct luaL_Reg*  LuaMetaTable;   /* metatable in lua */  
+        lua_State*              LuaState;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[], bool permanent=false);
+                            LuaObject           (lua_State* L, const char* object_type, const char* meta_name, const struct luaL_Reg meta_table[]);
 
         void                signalComplete      (void);
         static void         associateMetaTable  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
@@ -144,7 +147,7 @@ class LuaObject
 
         /* Meta Table Functions */
         static int          luaDelete           (lua_State* L);
-        static int          luaAssociate        (lua_State* L);
+        static int          luaName             (lua_State* L);
         static int          luaLock             (lua_State* L);
         static int          luaWaitOn           (lua_State* L);
 
@@ -152,11 +155,12 @@ class LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        okey_t              lockKey;
-        bool                isLocked;
-        std::atomic<long>   referenceCount;
-        Cond                objSignal;
-        bool                objComplete;
+        static Dictionary<LuaObject*>   globalObjects;
+        static Mutex                    globalMut;
+
+        std::atomic<long>               referenceCount;
+        Cond                            objSignal;
+        bool                            objComplete;
 };
 
 #endif  /* __lua_object__ */

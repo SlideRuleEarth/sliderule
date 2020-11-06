@@ -80,11 +80,11 @@ class Atl06Dispatch: public DispatchObject
             uint32_t        segment_id;
             uint16_t        rgt;                    // reference ground track
             uint16_t        cycle;                  // cycle number
-            uint8_t         beam;                   // 1 through 6, or 0 if unknown
+            uint8_t         spot;                   // 1 through 6, or 0 if unknown
             double          gps_time;               // seconds from GPS epoch
             double          latitude;
             double          longitude;
-            double          height;                 // meters from ellipsoid
+            double          h_mean;                 // meters from ellipsoid
             double          along_track_slope;
             double          across_track_slope;
         } elevation_t;

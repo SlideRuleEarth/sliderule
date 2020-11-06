@@ -38,7 +38,7 @@
  ******************************************************************************/
 
 std::atomic<uint32_t> TraceLib::unique_id{1};
-LocalLib::key_t TraceLib::trace_key;
+Thread::key_t TraceLib::trace_key;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -49,8 +49,8 @@ LocalLib::key_t TraceLib::trace_key;
  *----------------------------------------------------------------------------*/
 void TraceLib::init (void)
 {
-    trace_key = LocalLib::createGlobal();
-    LocalLib::setGlobal(trace_key, (void*)ORIGIN);
+    trace_key = Thread::createGlobal();
+    Thread::setGlobal(trace_key, (void*)ORIGIN);
 }
 
 /*----------------------------------------------------------------------------
@@ -71,9 +71,10 @@ uint32_t TraceLib::startTrace(uint32_t parent, const char* name, const char* att
     (void)attributes;
     #endif
 
+    long tid = Thread::getId();
     uint32_t id = unique_id++;
 
-    tracepoint(sliderule, start, id, parent, name, attributes);
+    tracepoint(sliderule, start, tid, id, parent, name, attributes);
     return id;
 }
 
@@ -118,7 +119,7 @@ void TraceLib::stopTrace(uint32_t id)
  *----------------------------------------------------------------------------*/
 void TraceLib::stashId (uint32_t id)
 {
-    LocalLib::setGlobal(trace_key, (void*)(unsigned long long)id);
+    Thread::setGlobal(trace_key, (void*)(unsigned long long)id);
 }
 
 /*----------------------------------------------------------------------------
@@ -126,5 +127,5 @@ void TraceLib::stashId (uint32_t id)
  *----------------------------------------------------------------------------*/
 uint32_t TraceLib::grabId (void)
 {
-    return (uint32_t)(unsigned long long)LocalLib::getGlobal(trace_key);
+    return (uint32_t)(unsigned long long)Thread::getGlobal(trace_key);
 }

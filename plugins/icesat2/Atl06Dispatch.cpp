@@ -74,16 +74,16 @@ const double Atl06Dispatch::SIGMA_XMIT = 0.000000068; // seconds
 
 const char* Atl06Dispatch::elRecType = "atl06rec.elevation";
 const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
-    {"seg_id",      RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
+    {"segment_id",  RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
     {"rgt",         RecordObject::UINT16,   offsetof(elevation_t, rgt),                 1,  NULL, NATIVE_FLAGS},
     {"cycle",       RecordObject::UINT16,   offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS},
-    {"beam",        RecordObject::UINT8,    offsetof(elevation_t, beam),                1,  NULL, NATIVE_FLAGS},
-    {"gps",         RecordObject::DOUBLE,   offsetof(elevation_t, gps_time),            1,  NULL, NATIVE_FLAGS},
+    {"spot",        RecordObject::UINT8,    offsetof(elevation_t, spot),                1,  NULL, NATIVE_FLAGS},
+    {"delta_time",  RecordObject::DOUBLE,   offsetof(elevation_t, gps_time),            1,  NULL, NATIVE_FLAGS},
     {"lat",         RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
     {"lon",         RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
-    {"height",      RecordObject::DOUBLE,   offsetof(elevation_t, height),              1,  NULL, NATIVE_FLAGS},
-    {"alts",        RecordObject::DOUBLE,   offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
-    {"acts",        RecordObject::DOUBLE,   offsetof(elevation_t, across_track_slope),  1,  NULL, NATIVE_FLAGS}
+    {"h_mean",      RecordObject::DOUBLE,   offsetof(elevation_t, h_mean),              1,  NULL, NATIVE_FLAGS},
+    {"dh_fit_dx",   RecordObject::DOUBLE,   offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
+    {"dh_fit_dy",   RecordObject::DOUBLE,   offsetof(elevation_t, across_track_slope),  1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl06Dispatch::atRecType = "atl06rec";
@@ -111,7 +111,7 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        atl06_parms_t parms = lua_parms_process(L, 2);
+        atl06_parms_t parms = getLuaAtl06Parms(L, 2);
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
@@ -293,36 +293,36 @@ void Atl06Dispatch::calculateBeam (sc_orient_t sc_orient, track_t track, result_
     {
         if(track == RPT_1)
         {
-            result[PRT_LEFT].elevation.beam = SPOT_5;
-            result[PRT_RIGHT].elevation.beam = SPOT_6;
+            result[PRT_LEFT].elevation.spot = SPOT_5;
+            result[PRT_RIGHT].elevation.spot = SPOT_6;
         }
         else if(track == RPT_2)
         {
-            result[PRT_LEFT].elevation.beam = SPOT_3;
-            result[PRT_RIGHT].elevation.beam = SPOT_4;
+            result[PRT_LEFT].elevation.spot = SPOT_3;
+            result[PRT_RIGHT].elevation.spot = SPOT_4;
         }
         else if(track == RPT_3)
         {
-            result[PRT_LEFT].elevation.beam = SPOT_1;
-            result[PRT_RIGHT].elevation.beam = SPOT_2;
+            result[PRT_LEFT].elevation.spot = SPOT_1;
+            result[PRT_RIGHT].elevation.spot = SPOT_2;
         }
     }
     else if(sc_orient == SC_FORWARD)
     {
         if(track == RPT_1)
         {
-            result[PRT_LEFT].elevation.beam = SPOT_2;
-            result[PRT_RIGHT].elevation.beam = SPOT_1;
+            result[PRT_LEFT].elevation.spot = SPOT_2;
+            result[PRT_RIGHT].elevation.spot = SPOT_1;
         }
         else if(track == RPT_2)
         {
-            result[PRT_LEFT].elevation.beam = SPOT_4;
-            result[PRT_RIGHT].elevation.beam = SPOT_3;
+            result[PRT_LEFT].elevation.spot = SPOT_4;
+            result[PRT_RIGHT].elevation.spot = SPOT_3;
         }
         else if(track == RPT_3)
         {
-            result[PRT_LEFT].elevation.beam = SPOT_6;
-            result[PRT_RIGHT].elevation.beam = SPOT_5;
+            result[PRT_LEFT].elevation.spot = SPOT_6;
+            result[PRT_RIGHT].elevation.spot = SPOT_5;
         }
     }
 }
@@ -402,7 +402,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* 
 
             /* Calculate Least Squares Fit */
             lsf_t fit = lsf(result[t].photons, num_photons);
-            result[t].elevation.height = fit.intercept;
+            result[t].elevation.h_mean = fit.intercept;
             result[t].elevation.along_track_slope = fit.slope;
             result[t].provided = true;
 

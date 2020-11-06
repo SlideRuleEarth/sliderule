@@ -59,6 +59,7 @@ void os_print (const char* file_name, unsigned int line_number, const char* mess
 int core_open (lua_State *L)
 {
     static const struct luaL_Reg core_functions[] = {
+        {"getbyname",       LuaObject::luaGetByName},
         {"logger",          Logger::luaCreate},
         {"cluster",         ClusterSocket::luaCreate},
         {"file",            File::luaCreate},
@@ -93,7 +94,6 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "WARNING",              WARNING);
     LuaEngine::setAttrInt   (L, "ERROR",                ERROR);
     LuaEngine::setAttrInt   (L, "CRITICAL",             CRITICAL);
-    LuaEngine::setAttrInt   (L, "USER",                 USER);
     LuaEngine::setAttrInt   (L, "RAW",                  RAW);
     LuaEngine::setAttrInt   (L, "STRING",               RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                 RecordObject::REAL);
@@ -115,8 +115,8 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FIFO",                 File::FIFO);
     LuaEngine::setAttrInt   (L, "FLUSHED",              File::FLUSHED);
     LuaEngine::setAttrInt   (L, "CACHED",               File::CACHED);
-    LuaEngine::setAttrInt   (L, "NORTH_POLAR",          SpatialIndex::NORTH_POLAR);    
-    LuaEngine::setAttrInt   (L, "SOUTH_POLAR",          SpatialIndex::SOUTH_POLAR);    
+    LuaEngine::setAttrInt   (L, "NORTH_POLAR",          MathLib::NORTH_POLAR);    
+    LuaEngine::setAttrInt   (L, "SOUTH_POLAR",          MathLib::SOUTH_POLAR);    
     LuaEngine::setAttrInt   (L, "PEND",                 IO_PEND);
     LuaEngine::setAttrInt   (L, "CHECK",                IO_CHECK);
 
