@@ -26,6 +26,11 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "TcpSocket.h"
+#include "H5Lib.h"
+#include "MsgQ.h"
+#include "List.h"
+#include "Table.h"
 #include "RecordObject.h"
 
 /******************************************************************************
@@ -55,37 +60,52 @@ class H5Proxy: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
+        /* Request ID */
+        typedef uint32_t request_id_t;
+
+        /* Supported H5 Library Operations */
         typedef enum {
             READ = 0
         } operation_t;
 
+        /* Info for Client Thread */
         typedef struct {
-            int port;
+            lua_State*      L;
+            int             port;
         } client_info_t;
 
+        /* H5 Library Request Record */
         typedef struct {
-            uint32_t    id;
-            uint32_t    operation;
-            char        url[MAX_RQST_STR_SIZE];
-            char        datasetname[MAX_RQST_STR_SIZE];
-            uint32_t    valtype;
-            int64_t     col;
-            int64_t     startrow;
-            int64_t     numrows;
+            request_id_t    id;
+            uint32_t        operation;
+            char            url[MAX_RQST_STR_SIZE];
+            char            datasetname[MAX_RQST_STR_SIZE];
+            uint32_t        valtype;
+            int64_t         col;
+            int64_t         startrow;
+            int64_t         numrows;
         } request_t;
+
+        /* H4 Library Pending Operation Record */
+        typedef struct {
+            RecordObject*   request;
+            H5Lib::info_t*  response;
+            bool            complete;
+        } pending_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int              luaCreate       (lua_State* L);
-        static int              luaConnect      (lua_State* L);
-        static int              luaDisconnect   (lua_State* L);
-        static void             init            (void);
-        static H5Lib::info_t    read            (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows);
+        static int          luaCreate       (lua_State* L);
+        static int          luaConnect      (lua_State* L);
+        static int          luaDisconnect   (lua_State* L);
+        static void         init            (void);
+        static pending_t*   read            (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows);
+        static bool         join            (pending_t* pending, int timeout);
 
-                                H5Proxy         (lua_State* L, const char* _ip_addr, int _port);
-                                ~H5Proxy        (void);
+                            H5Proxy         (lua_State* L, const char* _ip_addr, int _port);
+                            ~H5Proxy        (void);
 
     private:
 
@@ -94,20 +114,24 @@ class H5Proxy: public LuaObject
          *--------------------------------------------------------------------*/
 
         /* Client Data */
-        static Mutex                clientMut;
-        static bool                 clientsActive;
-        static List<Thread*>        clientThreadPool;
-        static Publisher*           clientRequestQ;
+        static Cond                             clientSignal;
+        static bool                             clientActive;
+        static List<Thread*>                    clientThreadPool;
+        static Publisher*                       clientRequestQ;
+        static Table<pending_t*, request_id_t>  clientPending;
+        static request_id_t                     clientId;
 
         /* Server Data */
-        bool                        active;
-        Thread*                     pid;
-        char*                       ipAddr;
-        int                         port;
+        bool                                    active;
+        Thread*                                 pid;
+        char*                                   ipAddr;
+        int                                     port;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
+
+        static int      sockFixedRead   (TcpSocket* sock, unsigned char* buf, int size);
 
         static void*    clientThread    (void* parm);
         static void*    requestThread   (void* parm);

@@ -396,7 +396,7 @@ template <class T, typename K>
 void Table<T,K>::clear(void)
 {
     /* Initialize Hash Table */
-    for(int i = 0; i < size; i++)
+    for(K i = 0; i < size; i++)
     {
         /* Free Data */
         if(table[i].occupied == true)

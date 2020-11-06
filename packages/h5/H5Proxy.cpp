@@ -49,6 +49,13 @@ const RecordObject::fieldDef_t H5Proxy::recDef[] = {
 
 const char* H5Proxy::REQUEST_QUEUE = "h5proxyq";
 
+Cond H5Proxy::clientSignal;
+bool H5Proxy::clientActive = false;
+List<Thread*> H5Proxy::clientThreadPool;
+Publisher* H5Proxy::clientRequestQ = NULL;
+Table<H5Proxy::pending_t*, H5Proxy::request_id_t> H5Proxy::clientPending;
+uint32_t H5Proxy::clientId = 0;
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -87,14 +94,14 @@ int H5Proxy::luaConnect(lua_State* L)
 {
     bool status = true;
 
-    clientMut.lock();
+    clientSignal.lock();
     {
         try
         {
             /* Check Connections */
-            if(clients.length() > 0)
+            if(clientThreadPool.length() > 0)
             {
-                throw LuaExcetion("%d proxy connections active", clients.length())
+                throw LuaException("%d proxy connections active", clientThreadPool.length());
             }
 
             /* Get List of Proxy Ports to Connect To */
@@ -106,8 +113,9 @@ int H5Proxy::luaConnect(lua_State* L)
                 for(int e = 0; e < size; e++)
                 {
                     lua_rawgeti(L, tblindex, e + 1);
-                    int port = getLuaInteger(L, -1));
+                    int port = getLuaInteger(L, -1);
                     client_info_t* info = new client_info_t;
+                    info->L = L;
                     info->port = port;
                     proxies.add(info);
                     lua_pop(L, 1);
@@ -122,7 +130,7 @@ int H5Proxy::luaConnect(lua_State* L)
             for(int i = 0; i < proxies.length(); i++)
             {
                 Thread* pid = new Thread(clientThread, proxies[i]);
-                clientThreadPool[i].add(pid);
+                clientThreadPool.add(pid);
             }
         }
         catch(const LuaException& e)
@@ -131,7 +139,7 @@ int H5Proxy::luaConnect(lua_State* L)
             status = false;
         }
     }
-    clientMut.unlock();
+    clientSignal.unlock();
 
     return returnLuaStatus(L, status);
 }
@@ -143,7 +151,7 @@ int H5Proxy::luaDisconnect(lua_State* L)
 {
     bool status = true;
 
-    clientMut.lock();
+    clientSignal.lock();
     {
         clientActive = false;
         for(int i = 0; i < clientThreadPool.length(); i++)
@@ -152,8 +160,9 @@ int H5Proxy::luaDisconnect(lua_State* L)
         }
         clientThreadPool.clear();
         delete clientRequestQ;
+        clientRequestQ = NULL;
     }
-    clientMut.unlock();
+    clientSignal.unlock();
 
     return returnLuaStatus(L, status);
 }
@@ -168,6 +177,79 @@ void H5Proxy::init (void)
     {
         mlog(CRITICAL, "Failed to define %s: %d\n", recType, rc);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * read
+ * 
+ *  Note: caller is responsible for deallocating returned pending data
+ *----------------------------------------------------------------------------*/
+H5Proxy::pending_t* H5Proxy::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows)
+{
+    /* Allocate/Initialize Response Structure */
+    pending_t* pending = new pending_t;
+    pending->request = new RecordObject(recType);
+    pending->response = new H5Lib::info_t;
+    pending->complete = false;
+
+    /* Initialize Response/Request Structure (except for ID) */
+    request_t* request = (request_t*)pending->request->getRecordData();
+    StringLib::copy(request->url, url, MAX_RQST_STR_SIZE);
+    StringLib::copy(request->datasetname, datasetname, MAX_RQST_STR_SIZE);
+    request->valtype = valtype;
+    request->col = col;
+    request->startrow = startrow;
+    request->numrows = numrows;
+
+    /* Initialize Response/Response Structure */
+    LocalLib::set(pending->response, 0, sizeof(H5Lib::info_t));
+
+    /* Register and Post */
+    clientSignal.lock();
+    {
+        /* Get Unique ID */
+        request->id = clientId++;
+
+        /* Register Response */
+        clientPending.add(request->id, pending);
+
+        /* Post Request */
+        unsigned char* buffer; // reference to serial buffer
+        int size = pending->request->serialize(&buffer, RecordObject::REFERENCE);
+        int status = clientRequestQ->postRef(buffer, size, SYS_TIMEOUT);
+        if(status != MsgQ::STATE_OKAY)
+        {
+            mlog(ERROR, "Failed to post request %ud to h5 proxy\n", request->id);
+
+            /* Clean Up Allocations */
+            delete pending->response;
+            delete pending->request;
+            delete pending;
+            pending = NULL;
+        }
+    }
+    clientSignal.unlock();
+
+    /* Return Response */
+    return pending;
+}
+
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+bool H5Proxy::join(pending_t* pending, int timeout)
+{
+    clientSignal.lock();
+    {
+        if(clientActive && !pending->complete)
+        {
+            clientSignal.wait(0, timeout);
+        }
+    }
+    clientSignal.unlock();
+
+    return pending->complete;
 }
 
 /*----------------------------------------------------------------------------
@@ -194,14 +276,140 @@ H5Proxy::~H5Proxy(void)
 }
 
 /*----------------------------------------------------------------------------
+ * sockFixedRead
+ *----------------------------------------------------------------------------*/
+int H5Proxy::sockFixedRead (TcpSocket* sock, unsigned char* buf, int size)
+{
+    int bytes_to_read = size;    
+
+    while(clientActive && bytes_to_read > 0)
+    {
+        int offset = size - bytes_to_read;
+        int bytes_read = sock->readBuffer(&buf[offset], bytes_to_read);
+        if(bytes_read > 0)
+        {
+            bytes_to_read -= bytes_read;
+        }
+        else if(bytes_read != TIMEOUT_RC)
+        {
+            mlog(WARNING, "Failed to read response in proxy client... back to listening\n");
+            sock->closeConnection();
+            break;
+        }
+    }
+
+    return size - bytes_to_read;
+}
+
+/*----------------------------------------------------------------------------
  * clientThread
  *----------------------------------------------------------------------------*/
 void* H5Proxy::clientThread(void* parm)
 {
     client_info_t* info = (client_info_t*)parm;
-    TcpSocket* sock = new TcpSocket(L, "127.0.0.1", info->port, false, NULL, false);
+
+    /* Allocate Socket and Subscriber */
+    TcpSocket* sock = new TcpSocket(info->L, "127.0.0.1", info->port, false, NULL, false);
     Subscriber* sub = new Subscriber(REQUEST_QUEUE);
 
+    /* Initialize State Machine */
+    bool request_sent = true;
+    bool ref_dereferenced = true;
+    int status = 0;
+    Subscriber::msgRef_t ref;
+
+    /* Read Loop */
+    while(clientActive)
+    {
+        if(sock->isConnected())
+        {
+            /* Receive Request */
+            if(request_sent)
+            {
+                status = sub->receiveRef(ref, SYS_TIMEOUT);
+                request_sent = false;
+                ref_dereferenced = false;
+            }
+
+            /* Send Request */
+            if(status > 0)
+            {
+                int bytes_sent = sock->writeBuffer(ref.data, ref.size);
+                if(bytes_sent > 0)
+                {
+                    request_sent = true;
+
+                    /* Dereference Message */
+                    sub->dereference(ref);
+                    ref_dereferenced = true;
+
+                    /* Read Response */
+                    do
+                    {
+                        request_id_t request_id;
+
+                        /* Read Response ID */
+                        int request_id_size = sizeof(request_id_t);
+                        if(sockFixedRead(sock, (unsigned char*)&request_id, request_id_size) != request_id_size) break;
+
+                        /* Look Up Pending */
+                        pending_t* pending;
+                        clientSignal.lock();
+                        {
+                            pending = clientPending[request_id];
+                        }
+                        clientSignal.unlock();
+
+                        /* Read Info */
+                        int info_size = sizeof(H5Lib::info_t);
+                        if(sockFixedRead(sock, (unsigned char*)pending->response, info_size) != info_size) break;
+
+                        /* Allocate and Read Data */
+                        int data_size = pending->response->datasize;
+                        pending->response->data = new unsigned char [data_size];
+                        if(sockFixedRead(sock, (unsigned char*)pending->response->data, data_size) != data_size) break;
+
+                        /* Mark Complete */
+                        clientSignal.lock();
+                        {
+                            pending->complete = true;
+                            clientPending.remove(request_id);
+                            clientSignal.signal();
+                        }
+                        clientSignal.unlock();
+                    } while(false);
+                }
+                else if(bytes_sent == SHUTDOWN_RC)
+                {
+                    mlog(WARNING, "Shutting down proxy client for port %d... back to listening\n", info->port);
+                    sock->closeConnection();
+                }
+                else if(bytes_sent != TIMEOUT_RC)
+                {
+                    mlog(ERROR, "Failed (%d) to send request to proxy on port %d... back to listening\n", bytes_sent, info->port);
+                    sock->closeConnection();
+                }
+            }
+        }
+        else
+        {
+            mlog(WARNING, "Proxy client not connected to port %d... sleeping and retrying\n", info->port);
+            LocalLib::performIOTimeout();
+        }
+    }
+
+    /* Clean Up Reference*/
+    if(ref_dereferenced == false)
+    {
+        sub->dereference(ref);
+    }
+
+    /* Clean Up Subscriber and Socket */
+    delete sub;
+    delete sock;
+
+    /* Exit Thread */
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -224,7 +432,8 @@ void* H5Proxy::requestThread(void* parm)
     while(p->active)
     {
         /* Read Request */
-        int bytes_read = sock->readBuffer(buf, bytes_to_read);
+        int offset = recsize - bytes_to_read;
+        int bytes_read = sock->readBuffer(&buf[offset], bytes_to_read);
         if(bytes_read > 0)
         {
             /* Check Completeness */
@@ -246,18 +455,18 @@ void* H5Proxy::requestThread(void* parm)
                 do
                 {
                     /* Return Response ID */
-                    int id_bytes_sent = sock->writeBuffer(&request->id, sizeof(request->id));
+                    int id_bytes_sent = sock->writeBuffer(&request->id, sizeof(request_id_t));
                     if(id_bytes_sent != sizeof(request->id))
                     {
                         mlog(CRITICAL, "Failed to send ID in response: %d\n", id_bytes_sent);
                         break;
                     }
 
-                    /* Return Size of Response */
-                    int size_bytes_sent = sock->writeBuffer(&info.datasize, sizeof(info.datasize)); 
-                    if(size_bytes_sent != sizeof(info.datasize))
+                    /* Return Info */
+                    int info_bytes_sent = sock->writeBuffer(&info, sizeof(info)); 
+                    if(info_bytes_sent != sizeof(info))
                     {
-                        mlog(CRITICAL, "Failed to send size in response: %d\n", size_bytes_sent);
+                        mlog(CRITICAL, "Failed to send info in response: %d\n", info_bytes_sent);
                         break;
                     }
 
