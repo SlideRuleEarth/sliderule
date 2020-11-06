@@ -12,7 +12,7 @@ SlideRule can be accessed by any http client (e.g. curl) by making GET and POST 
 
 The SlideRule software repository provides a helper module (hereafter known as SlideRule's Python client) that makes it easier to interact with SlideRule from a Python script.
 
-The Python client requires the ___requests___ and ___numpy___ modules to be installed.
+The Python client requires the ___requests___ module to be installed.
 
 From the python environment you wish to install into, run the following:
 ```bash

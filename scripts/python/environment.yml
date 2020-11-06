@@ -9,8 +9,10 @@ dependencies:
   - ipykernel
   - matplotlib
   - numpy
+  - scipy
   - pandas
   - requests
   - pip
   - pip:
       - ./ # install sliderule from source
+      - ../../plugins/icesat2/client/ # install icesat2 from source

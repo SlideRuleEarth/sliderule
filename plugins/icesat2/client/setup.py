@@ -1,13 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-# get long_description from README.md
-with open("../icesat2.md", "r") as fh:
-    long_description = fh.read()
-
-# get install requirements
-with open('requirements.txt') as fh:
-    install_requires = fh.read().splitlines()
+install_requires = ['numpy', 'sliderule']
 
 setup(
     name='icesat2',
