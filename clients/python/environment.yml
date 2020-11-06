@@ -1,0 +1,25 @@
+# conda env create -f environment.yml
+name: sliderule
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - bokeh
+  - cartopy
+  - curl
+  - h5py
+  - ipykernel
+  - ipywidgets
+  - jupyterlab
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - pyproj
+  - scipy
+  - shapely
+  - requests
+  - vim
+  - pip:
+      - h5pyd
+      - -e ./
