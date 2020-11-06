@@ -15,4 +15,4 @@ dependencies:
   - pip
   - pip:
       - ./ # install sliderule from source
-      - ../../plugins/icesat2/client/ # install icesat2 from source
+      - ../../plugins/icesat2/clients/python/ # install icesat2 from source
