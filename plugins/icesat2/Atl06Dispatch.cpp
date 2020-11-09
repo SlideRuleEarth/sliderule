@@ -183,6 +183,7 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const atl06_p
 Atl06Dispatch::~Atl06Dispatch(void)
 {
     if(outQ) delete outQ;
+    if(recObj) delete recObj;
 }
 
 /*----------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import sys
 import json
 import logging
 import sliderule
-import icesat2
+from sliderule import icesat2
 
 ###############################################################################
 # GLOBAL CODE

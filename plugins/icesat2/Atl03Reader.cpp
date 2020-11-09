@@ -478,7 +478,7 @@ void* Atl03Reader::readerThread (void* parm)
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
                     /* Find Background */
-                    while(bckgrd_in[t] < bckgrd_rate.gt[t].size)
+                    while(bckgrd_in[t] < bckgrd_rate.gt[t].size - 1)
                     {
                         if(bckgrd_delta_time.gt[t][bckgrd_in[t]] >= segment_delta_time.gt[t][extent_segment[t]])
                         {
@@ -489,15 +489,6 @@ void* Atl03Reader::readerThread (void* parm)
                             bckgrd_in[t]++;
                         }
                     }
-
-                    /* Check Background Index */
-                    if(bckgrd_in[t] >= bckgrd_rate.gt[t].size)
-                    {
-                        mlog(CRITICAL, "Could not find background rate <%d, %d> for segment %d: %d; (%lf %lf)\n", 
-                            track, t, extent_segment[t], bckgrd_in[t], bckgrd_delta_time.gt[t][bckgrd_in[t]], segment_delta_time.gt[t][extent_segment[t]]);
-                        bckgrd_in[t] = bckgrd_rate.gt[t].size - 1;
-                    }
-
 
                     /* Populate Attributes */
                     extent->segment_id[t]       = segment_id.gt[t][extent_segment[t]];

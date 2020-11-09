@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 import cartopy
-import icesat2
+from sliderule import icesat2
 
 grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
                {"lon": -107.7677425431139, "lat": 38.90611184543033}, 

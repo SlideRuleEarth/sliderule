@@ -55,7 +55,8 @@ run-docker:
 
 run-stand-alone:
 #	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/proxy.lua config.json 35100 &
-	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
+#	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
+	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
 
 install:
 	make -C build install

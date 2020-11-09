@@ -11,7 +11,7 @@ import math
 import matplotlib.pyplot as plt
 import cartopy
 
-import icesat2
+from sliderule import icesat2
 
 #
 # Distance between two coordinates
@@ -39,10 +39,10 @@ def algoexec(resource, asset):
 
     # Build ATL06 Request
     parms = {
-       "poly": [{"lat": -80.0, "lon": -70.0}, 
-                {"lat": -82.5, "lon": -70.0},
-                {"lat": -82.5, "lon": -65.0},
-                {"lat": -80.0, "lon": -65.0}],
+#       "poly": [{"lat": -80.0, "lon": -70.0}, 
+#                {"lat": -82.5, "lon": -70.0},
+#                {"lat": -82.5, "lon": -65.0},
+#                {"lat": -80.0, "lon": -65.0}],
         "cnf": 4,
         "ats": 20.0,
         "cnt": 10,
