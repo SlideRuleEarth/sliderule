@@ -34,7 +34,7 @@ local input_format = parm["input"]
 local output_format = parm["output"]
 
 local result_time = time_value
-local result_format = "\"unknown\""
+local result_format = "\""..output_format.."\"" 
 
 if input_format == "NOW" or time_value == "NOW" then
     if output_format == "GPS" then

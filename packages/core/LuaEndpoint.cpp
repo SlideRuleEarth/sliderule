@@ -112,13 +112,6 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Stop Trace */
     stop_trace(trace_id);
 
-    /* Remove from Pid Table */
-    lua_endpoint->pidMut.lock();
-    {
-        lua_endpoint->pidTable.remove(request->id);
-    }
-    lua_endpoint->pidMut.unlock();
-
     /* Return */
     return NULL;
 }
@@ -128,18 +121,9 @@ void* LuaEndpoint::requestThread (void* parm)
  *----------------------------------------------------------------------------*/
 EndpointObject::rsptype_t LuaEndpoint::handleRequest (request_t* request)
 {
-    LuaEndpoint* lua_endpoint = (LuaEndpoint*)request->endpoint;
-
     /* Start Thread */
     Thread* pid = new Thread(requestThread, request, false); // detached
     delete pid; // once thread is kicked off and detached, it is safe to delete
-
-    /* Add PID to Table */
-    lua_endpoint->pidMut.lock();
-    {
-        lua_endpoint->pidTable.add(request->id, pid);
-    }
-    lua_endpoint->pidMut.unlock();
 
     /* Return Response Type */
     if(request->verb == POST)   return STREAMING;

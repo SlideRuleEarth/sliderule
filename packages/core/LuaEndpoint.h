@@ -59,7 +59,7 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate       (lua_State* L);
+        static int          luaCreate       (lua_State* L);
 
     protected:
 
@@ -78,13 +78,6 @@ class LuaEndpoint: public EndpointObject
         void                streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
 
         static const char*  sanitize        (const char* filename);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        Mutex               pidMut;
-        Dictionary<Thread*> pidTable;
 };
 
 #endif  /* __lua_endpoint__ */
