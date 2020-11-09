@@ -387,3 +387,17 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
 
     # Return Response Values
     return get_values(data, datatype, size)
+
+
+#
+#  LOG
+#
+def log (level, duration):
+    # Build Logging Request
+    rqst = {
+        "level" : level,
+        "duration": duration
+    }
+
+    # Initiate Connection for Logging
+    rsps = sliderule.engine("log", rqst)
