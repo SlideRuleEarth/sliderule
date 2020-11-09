@@ -63,7 +63,7 @@ class CcsdsRecord: public RecordObject
 
         /* Overloaded Methods */
         bool                    deserialize         (unsigned char* buffer, int size);
-        int                     serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE);
+        int                     serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
 
         /* Regular Methods */
         pktType_t               getPktType          (void);

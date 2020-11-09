@@ -76,8 +76,7 @@ int PistacheClient::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 PistacheClient::PistacheClient(lua_State* L,  const char* outq_name, size_t num_threads):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    numThreads(num_threads)
+    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     /* Create Output Queue */
     outQ = NULL;

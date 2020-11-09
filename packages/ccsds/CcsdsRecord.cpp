@@ -129,9 +129,10 @@ bool CcsdsRecord::deserialize (unsigned char* buffer, int size)
  *
  *  Notes: only returns the data portion (ccsds packet); type name is left alone
  *----------------------------------------------------------------------------*/
-int CcsdsRecord::serialize (unsigned char** buffer, serialMode_t mode)
+int CcsdsRecord::serialize (unsigned char** buffer, serialMode_t mode, int size)
 {
     assert(buffer);
+    (void)size; // size is a part of the CCSDS packet
 
     if (mode == ALLOCATE)
     {

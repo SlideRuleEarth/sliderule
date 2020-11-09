@@ -76,7 +76,6 @@ class PistacheClient: public LuaObject
          *--------------------------------------------------------------------*/
 
         Publisher*      outQ;
-        size_t          numThreads;
         Http::Client    client;
         Cond            requestSignal; // for blocking client requests
 

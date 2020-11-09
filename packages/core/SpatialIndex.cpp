@@ -287,7 +287,7 @@ spatialspan_t SpatialIndex::attr2span (Dictionary<double>* attr, bool* provided)
  *----------------------------------------------------------------------------*/
 spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
 {
-    spatialspan_t span = {0.0, 0.0, 0.0, 0.0};
+    spatialspan_t span = {{0.0, 0.0}, {0.0, 0.0}};
 
     /* Populate Attributes from Table */
     lua_pushnil(L);  // first key
