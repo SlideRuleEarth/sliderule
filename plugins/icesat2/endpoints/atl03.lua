@@ -30,7 +30,7 @@ local resources = rqst["resources"]
 local timeout = rqst["timeout"] or core.PEND
 
 -- Post Initial Status Progress --
-userlog:sendlog(core.USER, string.format("atl03 indexing initiated on %s data...\n", atl03_asset))
+userlog:sendlog(core.INFO, string.format("atl03 indexing initiated on %s data...\n", atl03_asset))
 
 -- Index Asset --  
 local atl03 = core.getbyname(atl03_asset)
@@ -44,15 +44,15 @@ while not indexer:waiton(interval) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout > 0 and duration == timeout then
-        userlog:sendlog(core.USER, string.format("request timed-out after %d seconds\n", duration / 1000))
+        userlog:sendlog(core.INFO, string.format("request timed-out after %d seconds\n", duration / 1000))
         return
     end
     -- Get Stats --
     local stats = indexer:stats()
     -- Dispay Progress --
-    userlog:sendlog(core.USER, string.format("processed %d entries from %d threads\n", stats.processed, stats.threads))
+    userlog:sendlog(core.INFO, string.format("processed %d entries from %d threads\n", stats.processed, stats.threads))
 end
 
 -- Processing Complete
-userlog:sendlog(core.USER, string.format("processing complete\n"))
+userlog:sendlog(core.INFO, string.format("processing complete\n"))
 return

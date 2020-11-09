@@ -422,7 +422,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     }
 
     /* Check Log Level */
-    if(lvl >= 0)
+    if(lvl < 0)
     {
         mlog(CRITICAL, "Invalid log level: %d\n", lvl);
         return 0;        

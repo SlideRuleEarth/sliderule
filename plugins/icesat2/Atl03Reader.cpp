@@ -490,6 +490,15 @@ void* Atl03Reader::readerThread (void* parm)
                         }
                     }
 
+                    /* Check Background Index */
+                    if(bckgrd_in[t] >= bckgrd_rate.gt[t].size)
+                    {
+                        mlog(CRITICAL, "Could not find background rate <%d, %d> for segment %d: %d; (%lf %lf)\n", 
+                            track, t, extent_segment[t], bckgrd_in[t], bckgrd_delta_time.gt[t][bckgrd_in[t]], segment_delta_time.gt[t][extent_segment[t]]);
+                        bckgrd_in[t] = bckgrd_rate.gt[t].size - 1;
+                    }
+
+
                     /* Populate Attributes */
                     extent->segment_id[t]       = segment_id.gt[t][extent_segment[t]];
                     extent->segment_size[t]     = reader->parms.extent_step;

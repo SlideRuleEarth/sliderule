@@ -40,7 +40,7 @@ local parms = rqst["parms"]
 local timeout = rqst["timeout"] or core.PEND
 
 -- Post Initial Status Progress --
-userlog:sendlog(core.USER, string.format("atl06 processing initiated on %s ...\n", resource))
+userlog:sendlog(core.INFO, string.format("atl06 processing initiated on %s ...\n", resource))
 
 -- ATL06 Dispatch Algorithm --
 local atl06_algo = icesat2.atl06(rspq, parms)
@@ -70,7 +70,7 @@ while not atl06_disp:waiton(interval) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout > 0 and duration == timeout then
-        userlog:sendlog(core.USER, string.format("request for %s timed-out after %d seconds\n", resource, duration / 1000))
+        userlog:sendlog(core.INFO, string.format("request for %s timed-out after %d seconds\n", resource, duration / 1000))
         return
     end
     -- Get Stats --
@@ -78,12 +78,12 @@ while not atl06_disp:waiton(interval) do
     local atl06_stats = atl06_algo:stats(false)
     -- Dispay Progress --
     if atl06_stats.h5atl03 == 0 then
-        userlog:sendlog(core.USER, string.format("... continuing to read %s (after %d seconds)\n", resource, duration / 1000))
+        userlog:sendlog(core.INFO, string.format("... continuing to read %s (after %d seconds)\n", resource, duration / 1000))
     else
-        userlog:sendlog(core.USER, string.format("processed %d out of %d segments in %s (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.read_l + atl03_stats.read_r, resource, duration / 1000))
+        userlog:sendlog(core.INFO, string.format("processed %d out of %d segments in %s (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.read_l + atl03_stats.read_r, resource, duration / 1000))
     end
 end
 
 -- Processing Complete
-userlog:sendlog(core.USER, string.format("processing of %s complete\n", resource))
+userlog:sendlog(core.INFO, string.format("processing of %s complete\n", resource))
 return
