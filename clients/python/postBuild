@@ -1,2 +1,0 @@
-jupyter labextension install --clean @jupyter-widgets/jupyterlab-manager \
-   @jupyterlab/latex jupyter-matplotlib
