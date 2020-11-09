@@ -85,6 +85,12 @@ void* LuaEndpoint::requestThread (void* parm)
     request_t* request = (request_t*)parm;
     LuaEndpoint* lua_endpoint = (LuaEndpoint*)request->endpoint;
 
+
+
+    void displayCount(void);
+    displayCount();
+
+
     /* Get Request Script */
     const char* script_pathname = sanitize(request->url);
 
@@ -92,7 +98,7 @@ void* LuaEndpoint::requestThread (void* parm)
     uint32_t trace_id = start_trace_ext(lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
-    mlog(INFO, "%s request at %s to %s\n", verb2str(request->verb), request->id, script_pathname);
+//    mlog(INFO, "%s request at %s to %s\n", verb2str(request->verb), request->id, script_pathname);
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
@@ -122,8 +128,7 @@ void* LuaEndpoint::requestThread (void* parm)
 EndpointObject::rsptype_t LuaEndpoint::handleRequest (request_t* request)
 {
     /* Start Thread */
-    Thread* pid = new Thread(requestThread, request, false); // detached
-    delete pid; // once thread is kicked off and detached, it is safe to delete
+    request->pid = new Thread(requestThread, request); // detached
 
     /* Return Response Type */
     if(request->verb == POST)   return STREAMING;

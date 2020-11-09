@@ -39,6 +39,7 @@
 #include <dlfcn.h>
 #include <signal.h>
 #include <string.h>
+#include <atomic>
 
 /******************************************************************************
  TYPEDEFS
@@ -52,6 +53,7 @@ typedef void (*init_f) (void);
 
 static bool app_immediate_abort = false;
 static bool app_signal_abort = false;
+static std::atomic<uint64_t> allocCount = {0};
 
 /******************************************************************************
  EXPORTED FUNCTIONS
@@ -64,6 +66,36 @@ void __stack_chk_fail(void)
 {
     assert(false);
 }
+
+/*
+ * Override of new and delete for debugging memory allocations
+ */ 
+#define OVERRIDE_ALLOCATOR
+#ifdef OVERRIDE_ALLOCATOR
+void* operator new(size_t size) 
+{ 
+    allocCount++;
+    return malloc(size); 
+} 
+  
+void operator delete(void* ptr)
+{ 
+    allocCount--;
+    free(ptr); 
+} 
+
+void operator delete(void* ptr, size_t size) 
+{ 
+    (void)size;
+    allocCount--;
+    free(ptr); 
+} 
+
+void displayCount(void)
+{
+    printf("ALLOCATED: %ld\n", (long)allocCount);
+}
+#endif
 
 /******************************************************************************
  LOCAL FUNCTIONS

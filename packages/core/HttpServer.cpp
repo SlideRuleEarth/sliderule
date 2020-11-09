@@ -628,6 +628,7 @@ int HttpServer::onDisconnect(int fd)
         delete [] connection->request.id;
         delete connection->request.headers;
         delete connection->state.rspq;
+        delete connection->request.pid;
 
         /* Free Connection */
         delete connection;

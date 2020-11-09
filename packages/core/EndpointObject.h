@@ -83,6 +83,7 @@ class EndpointObject: public LuaObject
             long                        body_length;
             EndpointObject*             endpoint;
             rsptype_t                   response_type;
+            Thread*                     pid;
         } request_t;
 
         /*--------------------------------------------------------------------
