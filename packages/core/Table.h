@@ -137,7 +137,13 @@ Table<T,K>::Table(K table_size)
     size = table_size;
     table = new node_t [size];
 
-    /* Initialize Hash Table to Empty */
+    /* Set All Entries to Empty */
+    for(K i = 0; i < size; i++)
+    {
+        table[i].occupied = false;
+    }
+
+    /* Initialize Hash Table */
     clear();
 }
 
