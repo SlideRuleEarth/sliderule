@@ -16,7 +16,7 @@ config: development-config
 development-config:
 	mkdir -p build
 #	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_LTTNG_TRACING=ON $(SLIDERULE)
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) $(SLIDERULE)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_CUSTOM_ALLOCATOR=ON $(SLIDERULE)
 
 production-config:
 	mkdir -p build

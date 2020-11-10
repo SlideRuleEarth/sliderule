@@ -293,7 +293,18 @@ LuaObject::~LuaObject (void)
 {
     stop_trace(traceId);
     mlog(DEBUG, "Deleting %s/%s\n", getType(), getName());
-    if(ObjectName) delete [] ObjectName;
+
+    /* Remove Name from Global Objects */
+    globalMut.lock();
+    {
+        /* Remove Previous Name (if it exists) */
+        if(ObjectName)
+        {
+            globalObjects.remove(ObjectName);
+            delete [] ObjectName;
+        }
+    }
+    globalMut.unlock();
 }
 
 /*----------------------------------------------------------------------------

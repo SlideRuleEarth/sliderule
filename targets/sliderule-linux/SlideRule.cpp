@@ -70,8 +70,7 @@ void __stack_chk_fail(void)
 /*
  * Override of new and delete for debugging memory allocations
  */ 
-#define OVERRIDE_ALLOCATOR
-#ifdef OVERRIDE_ALLOCATOR
+#ifdef CUSTOM_ALLOCATOR
 void* operator new(size_t size) 
 { 
     allocCount++;
@@ -275,8 +274,18 @@ int main (int argc, char* argv[])
     /* Create Lua Engine */
     LuaEngine* interpreter = new LuaEngine("sliderule", lua_argc, lua_argv, ORIGIN, lua_abort_hook);
 
-    /* Run Application */
-    while(checkactive()) LocalLib::sleep(1);
+    /* Run Application */   
+    while(checkactive())
+    {
+        #ifdef CUSTOM_ALLOCATOR
+            static int secmod = 0;
+            if(secmod++ % 10 == 0)
+            {
+                displayCount();
+            }
+        #endif
+        LocalLib::sleep(1);
+    }
 
     /* Free Interpreter */
     delete interpreter;

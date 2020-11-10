@@ -79,8 +79,7 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             else                            msgQ->depth = depth;
 
             // Allocate free block stack
-            msgQ->free_stack_size   = calcFreeStackSize(msgQ->depth);
-            msgQ->free_block_stack  = new char* [msgQ->free_stack_size];
+            msgQ->free_block_stack = new char* [MAX_FREE_STACK_SIZE];
 
             // Create subscriber arrays
             msgQ->subscriber_type = new subscriber_type_t [msgQ->max_subscribers];
@@ -285,20 +284,6 @@ bool MsgQ::setStdQDepth(int depth)
     {
         return false;
     }
-}
-
-/*----------------------------------------------------------------------------
- * calcFreeStackSize
- *----------------------------------------------------------------------------*/
-int MsgQ::calcFreeStackSize(int qdepth)
-{
-    int depth = qdepth == CFG_DEPTH_STANDARD ? StandardQueueDepth : qdepth;
-    int stack_size = MAX_FREE_STACK_SIZE;
-    if(depth != CFG_DEPTH_INFINITY)
-    {
-        stack_size = MIN(stack_size, depth >> 8);
-    }
-    return MAX(1, stack_size);
 }
 
 /******************************************************************************
@@ -845,7 +830,7 @@ bool Subscriber::reclaim_nodes(bool delete_data)
 
         /* deallocate memory block and free data */
         msgQ->free_block_stack[msgQ->free_blocks++] = (char*)node;
-        if(msgQ->free_blocks == msgQ->free_stack_size)
+        if(msgQ->free_blocks == MAX_FREE_STACK_SIZE)
         {
             for(int i = msgQ->free_blocks - 1; i >= 0; i--)
             {
