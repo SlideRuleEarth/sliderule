@@ -533,6 +533,7 @@ int HttpServer::onWrite(int fd)
         if(connection->state.ref.size == 0)
         {
             ref_complete = true; // logic is skipped above on terminating message
+            connection->state.response_complete = true; // prevent further messages received
             status = INVALID_RC; // will close socket
         }
 
@@ -558,7 +559,7 @@ int HttpServer::onAlive(int fd)
 {
     connection_t* connection = connections[fd];
 
-    if(connection->state.ref_status <= 0)
+    if(!connection->state.response_complete && connection->state.ref_status <= 0)
     {
         connection->state.ref_status = connection->state.rspq->receiveRef(connection->state.ref, IO_CHECK);
     }

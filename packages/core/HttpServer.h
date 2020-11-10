@@ -80,6 +80,7 @@ class HttpServer: public LuaObject
             int                         header_index;
             bool                        header_complete;
             bool                        header_sent;
+            bool                        response_complete;
             Subscriber::msgRef_t        ref;
             int                         ref_status;
             int                         ref_index;

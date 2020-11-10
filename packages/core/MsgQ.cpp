@@ -752,16 +752,20 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
                 ref.size = node_size;
                 ref._handle = (void*)node;
             }
-            else if(node_size <= size)
+            else 
             {
-                LocalLib::copy(ref.data, node->data, node_size);
+                if(node_size <= size)
+                {
+                    LocalLib::copy(ref.data, node->data, node_size);
+                }
+                else
+                {
+                    ref.state = STATE_SIZE_ERROR;
+                }
+
                 ref.size = node_size;
                 node->refs--;
                 space_reclaimed = reclaim_nodes(true);
-            }
-            else
-            {
-                ref.state = STATE_SIZE_ERROR;
             }
         }
 
@@ -787,7 +791,7 @@ bool Subscriber::reclaim_nodes(bool delete_data)
 {
     bool space_reclaimed = false;
 
-    /* handle subscriber of opportunities */
+    /* handle subscribers of opportunity */
     if(msgQ->soo_count > 0 && isFull())
     {
         for(int i = 0; i < msgQ->max_subscribers; i++)

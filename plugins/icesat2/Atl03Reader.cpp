@@ -542,6 +542,7 @@ void* Atl03Reader::readerThread (void* parm)
         {
             /* Indicate End of Data */
             reader->outQ->postCopy("", 0);
+            reader->signalComplete();
         }
     }
     reader->threadMut.unlock();
