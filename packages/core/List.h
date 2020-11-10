@@ -28,6 +28,15 @@
 #include <assert.h>
 #include <stdexcept>
 
+
+/******************************************************************************
+ * LIST TEMPLATE
+ ******************************************************************************/
+
+#ifndef LIST_BLOCK_SIZE
+#define LIST_BLOCK_SIZE 256
+#endif
+
 /******************************************************************************
  * LIST TEMPLATE
  ******************************************************************************/
@@ -57,17 +66,11 @@ class List
     protected:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int BLOCK_SIZE = 256;
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
         typedef struct list_block_t {
-            T                       data[BLOCK_SIZE];
+            T                       data[LIST_BLOCK_SIZE];
             int                     offset;
             struct list_block_t*    next;
         } list_node_t;
@@ -140,7 +143,7 @@ template <class T>
 int List<T>::add(const T& data)
 {
     /* Check if Current Node is Full */
-    if(tail->offset >= BLOCK_SIZE)
+    if(tail->offset >= LIST_BLOCK_SIZE)
     {
         tail->next = newNode();
         tail = tail->next;
@@ -163,8 +166,8 @@ bool List<T>::remove(int index)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / BLOCK_SIZE;
-        int node_offset = index % BLOCK_SIZE;
+        int node_block = index / LIST_BLOCK_SIZE;
+        int node_offset = index % LIST_BLOCK_SIZE;
         list_node_t* curr = &head;
         list_node_t* prev = NULL;
         for(int i = 0; i < node_block; i++)
@@ -202,7 +205,7 @@ bool List<T>::remove(int index)
             while(curr != NULL)
             {
                 /* Shift Current Block */
-                for(int i = start_offset; (i < BLOCK_SIZE - 1) && (curr_offset < len - 1); i++)
+                for(int i = start_offset; (i < LIST_BLOCK_SIZE - 1) && (curr_offset < len - 1); i++)
                 {
                     curr->data[i] = curr->data[i + 1];
                     curr_offset++;
@@ -211,7 +214,7 @@ bool List<T>::remove(int index)
                 /* Shift Last Item */
                 if(curr_offset < (len - 1) && curr->next != NULL)
                 {
-                    curr->data[BLOCK_SIZE - 1] = curr->next->data[0];
+                    curr->data[LIST_BLOCK_SIZE - 1] = curr->next->data[0];
                     curr_offset++;
                     if(curr_offset >= (len - 1))
                     {
@@ -235,7 +238,7 @@ bool List<T>::remove(int index)
         len--;
 
         /* Recalculate the Tail */
-        int tail_block = len / BLOCK_SIZE;
+        int tail_block = len / LIST_BLOCK_SIZE;
         tail = &head;
         for (int i = 0; i < tail_block; i++) { assert(tail); tail = tail->next; }
 
@@ -254,8 +257,8 @@ T& List<T>::get(int index)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / BLOCK_SIZE;
-        int node_offset = index % BLOCK_SIZE;
+        int node_block = index / LIST_BLOCK_SIZE;
+        int node_offset = index % LIST_BLOCK_SIZE;
 
         list_node_t* curr = &head;
         if(node_block == prevblock)
@@ -296,8 +299,8 @@ bool List<T>::set(int index, T& data, bool with_delete)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / BLOCK_SIZE;
-        int node_offset = index % BLOCK_SIZE;
+        int node_block = index / LIST_BLOCK_SIZE;
+        int node_offset = index % LIST_BLOCK_SIZE;
 
         list_node_t* curr = &head;
         if(node_block == prevblock)

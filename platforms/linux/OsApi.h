@@ -102,9 +102,6 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #define SYS_TIMEOUT                 (LocalLib::getIOTimeout()) // ms
 #define SYS_MAXSIZE                 (LocalLib::getIOMaxsize()) // bytes
 
-/* Strings */
-#define MAX_STR_SIZE                1024
-
 /* Ordered Keys */
 #define INVALID_KEY                 0xFFFFFFFFFFFFFFFFLL
 

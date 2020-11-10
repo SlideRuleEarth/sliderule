@@ -293,10 +293,10 @@ bool MsgQ::setStdQDepth(int depth)
 int MsgQ::calcFreeStackSize(int qdepth)
 {
     int depth = qdepth == CFG_DEPTH_STANDARD ? StandardQueueDepth : qdepth;
-    int stack_size = MSGQ_DEFAULT_FREE_BLOCKS;
+    int stack_size = MAX_FREE_STACK_SIZE;
     if(depth != CFG_DEPTH_INFINITY)
     {
-        stack_size = MIN(MSGQ_DEFAULT_FREE_BLOCKS, depth >> 8);
+        stack_size = MIN(stack_size, depth >> 8);
     }
     return MAX(1, stack_size);
 }

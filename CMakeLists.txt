@@ -111,7 +111,23 @@ target_compile_definitions (sliderule PUBLIC ${TOOLCHAIN})
 target_compile_definitions (sliderule PUBLIC ${ENDIAN})
 
 if (${ENABLE_TIME_HEARTBEAT})
+    message (STATUS "Enabling time heartbeat")
     target_compile_definitions (sliderule PUBLIC TIME_USE_HEARTBEAT)
+endif ()
+
+if (DEFINED MAX_STR_SIZE)
+    message (STATUS "Setting MAX_STR_SIZE to " ${MAX_STR_SIZE})
+    target_compile_definitions (sliderule PUBLIC MAX_STR_SIZE=${MAX_STR_SIZE})
+endif ()
+
+if (DEFINED MAX_FREE_STACK_SIZE)
+    message (STATUS "Setting MAX_FREE_STACK_SIZE to " ${MAX_FREE_STACK_SIZE})
+    target_compile_definitions (sliderule PUBLIC MAX_FREE_STACK_SIZE=${MAX_FREE_STACK_SIZE})
+endif ()
+
+if (DEFINED LIST_BLOCK_SIZE)
+    message (STATUS "Setting LIST_BLOCK_SIZE to " ${LIST_BLOCK_SIZE})
+    target_compile_definitions (sliderule PUBLIC LIST_BLOCK_SIZE=${LIST_BLOCK_SIZE})
 endif ()
 
 # Add Packages #

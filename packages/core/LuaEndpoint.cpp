@@ -98,6 +98,7 @@ void* LuaEndpoint::requestThread (void* parm)
     uint32_t trace_id = start_trace_ext(lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
+    mlog(INFO, "Hello world\n");
 //    mlog(INFO, "%s request at %s to %s\n", verb2str(request->verb), request->id, script_pathname);
 
     /* Create Publisher */
