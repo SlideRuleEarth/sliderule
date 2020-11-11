@@ -81,8 +81,11 @@ def build_event_list(trace, depth, max_depth, names, events, perf_ids):
     perf_id = names.index(name)
     perf_ids[name] = {"id": perf_id, "depth": depth}
     # Append Events
-    events.append({"id": perf_id, "time": trace["start"].default_clock_snapshot.ns_from_origin / 1000.0, "edge": 0})
-    events.append({"id": perf_id, "time": trace["stop"].default_clock_snapshot.ns_from_origin / 1000.0, "edge": 1})
+    try:
+        events.append({"id": perf_id, "time": trace["start"].default_clock_snapshot.ns_from_origin / 1000.0, "edge": 0})
+        events.append({"id": perf_id, "time": trace["stop"].default_clock_snapshot.ns_from_origin / 1000.0, "edge": 1})
+    except:
+        pass
     # Recurse on Children
     if (depth < max_depth) or (max_depth == 0):
         for child in trace["children"]:

@@ -14,6 +14,7 @@ default-build:
 config: development-config
 
 trace-config:
+	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_LTTNG_TRACING=ON $(SLIDERULE)
 
 development-config:

@@ -24,13 +24,20 @@
 
 ## III. Analyze a Trace with Babeltrace2
 
-To analyze a captured trace, run the targets/sliderule-lttng/trace.py python script and pass it the path to the trace folder (default: /tmp/sliderule-session): `/usr/bin/python3 trace.py /tmp/sliderule-session`.  
+To analyze a captured trace, run the targets/sliderule-lttng/trace.py python script and pass it the path to the trace folder (default: /tmp/sliderule-session): 
+```
+$ /usr/bin/python3 trace.py /tmp/sliderule-session  
+```
 
 __Note 1__: The system installation of python is used since the steps above install babeltrace2 into the system python.  If a separate python distribution is being used (e.g. Anaconda) then the installation steps above must be modified to install the babeltrace2 python bindings into that distribution's environment.
 
 __Note 2__: The trace must be killed before it can be analyzed.
 
-After running the `trace.py` as indicated above, subsequent runs can supply `sta <trace_id1> <trace_id2> ... <trace_idn>` where the trace ids listed are the ones interested in.  Running this command will produce a `pytrace.txt` trace file and a `pytrace.PerfIDSetup` file which can be injesting into the __Software Timing Analyzer__ tool.
+After running the `trace.py` as indicated above, subsequent runs can use:
+```
+$ /usr/bin/python3 trace.py --fmt sta --depth 0 --ids <trace_id1> <trace_id2> ... <trace_idn> /tmp/sliderule-session
+```
+where the trace ids listed are the ones interested in and the depth of zero indicates that all chilren are recursed into indefinitely.  Running this command will produce a `pytrace.txt` trace file and a `pytrace.PerfIDSetup` file which can be injesting into the __Software Timing Analyzer__ tool.
 
 ## IV. Analyze a Trace with Trace-Compass
 
