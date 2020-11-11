@@ -11,8 +11,14 @@
 
 * Babeltrace2
     - Go to `https://babeltrace.org/` for the latest version and instructions on getting babletrace2.
+        * `sudo apt-add-repository ppa:lttng/ppa`
+        * `sudo apt update`
+        * `sudo apt install babeltrace2`
     - `sudo apt install python3-bt2` to install the python bindings
-
+    - This will install into the system python; to use the tools below, pandas is also needed.
+        * `sudo apt install python3-pip`
+        * `/usr/bin/pip3 install pandas`
+        
 ## II. Start and Stop a Trace
 
 1. To run a fully instrumented version of sliderule, run the `instrument_and_run.sh` script and pass it the same parameters you would `sliderule`.  This script preloads wrappers for memory allocation and pthread mutex functions so that they can be correlated with other userspace traces.  If you don't want the wrappers, and just want the sliderule provided traces, then just run `sliderule` as you normally would.
