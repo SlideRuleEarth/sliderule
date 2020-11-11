@@ -29,8 +29,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         with open(sys.argv[1]) as regionfile:
             region = json.load(regionfile)["region"]
-        print(region)
-
 
     # Override dataset
     if len(sys.argv) > 2:
