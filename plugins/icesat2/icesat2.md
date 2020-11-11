@@ -11,7 +11,7 @@ The ICESat-2 plugin provides science data processing algorithms for derived ATL0
 
 3. Install __HDF5__, including the REST-VOL connector. See [Install H5 Library](https://github.com/ICESat2-SlideRule/sliderule/blob/master/packages/h5/h5.md) for installation instructions.
 
-4. Install __AWS SDK__. See [Install AWS SDK Library](https://github.com/ICESat2-SlideRule/sliderule/blob/asset/packages/aws/aws.md) for installation instructions.
+4. Install __AWS SDK__. See [Install AWS SDK Library](https://github.com/ICESat2-SlideRule/sliderule/blob/master/packages/aws/aws.md) for installation instructions.
 
 5. Use the [Makefile](build/Makefile) to build the software.
 
