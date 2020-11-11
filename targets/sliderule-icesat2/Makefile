@@ -13,10 +13,12 @@ default-build:
 
 config: development-config
 
+trace-config:
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_LTTNG_TRACING=ON $(SLIDERULE)
+
 development-config:
 	mkdir -p build
-#	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_LTTNG_TRACING=ON $(SLIDERULE)
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_CUSTOM_ALLOCATOR=ON $(SLIDERULE)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DMAX_FREE_STACK_SIZE=1 $(SLIDERULE)
 
 production-config:
 	mkdir -p build
@@ -55,8 +57,10 @@ run-docker:
 
 run-stand-alone:
 #	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/proxy.lua config.json 35100 &
-#	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
 	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
+
+run-memory-test:
+	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
 
 install:
 	make -C build install
