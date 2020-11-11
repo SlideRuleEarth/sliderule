@@ -2,7 +2,7 @@ ROOT = $(shell pwd)
 STAGEDIR = stage
 RUNDIR = /usr/local/etc/sliderule
 SLIDERULE = $(ROOT)/../..
-ICESAT2CFG = -DENABLE_H5_REST_VOL=ON -DUSE_AWS_PACKAGE=ON -DUSE_H5_PACKAGE=ON -DUSE_ICESAT2_PLUGIN=ON -DUSE_LEGACY_PACKAGE=OFF -DUSE_CCSDS_PACKAGE=OFF -DUSE_SIGVIEW_PLUGIN=OFF
+ICESAT2CFG = -DMAX_FREE_STACK_SIZE=1 -DENABLE_H5_REST_VOL=ON -DUSE_AWS_PACKAGE=ON -DUSE_H5_PACKAGE=ON -DUSE_ICESAT2_PLUGIN=ON -DUSE_LEGACY_PACKAGE=OFF -DUSE_CCSDS_PACKAGE=OFF -DUSE_SIGVIEW_PLUGIN=OFF
 DOCKERTAG = icesat2sliderule/sliderule:master
 HSDS_IP?=$(shell (getent hosts hsds.sliderule.beta | awk '{ print $$1 ; exit }'))
 
@@ -18,7 +18,7 @@ trace-config:
 
 development-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DMAX_FREE_STACK_SIZE=1 $(SLIDERULE)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) $(SLIDERULE)
 
 production-config:
 	mkdir -p build
@@ -32,6 +32,8 @@ docker-image: distclean production-config default-build
 	# copy over installation configuration #
 	cp plugins.conf $(STAGEDIR)/etc/sliderule
 	cp config.json $(STAGEDIR)/etc/sliderule
+	cp asset_directory.csv $(STAGEDIR)/etc/sliderule
+	cp atl03.index $(STAGEDIR)/etc/sliderule
 	# copy over scripts #
 	mkdir $(STAGEDIR)/scripts
 	cp -R $(SLIDERULE)/scripts/apps $(STAGEDIR)/scripts/apps
@@ -52,7 +54,6 @@ docker-image: distclean production-config default-build
 	cd $(STAGEDIR); docker build -t $(DOCKERTAG) .
 
 run-docker:
-	# note: /data must be populated with a `config` directory containing the asset_directory.csv and any corresponding index files
 	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 --entrypoint /usr/local/scripts/apps/docker-entrypoint.sh $(DOCKERTAG)
 
 run-stand-alone:
@@ -65,6 +66,8 @@ run-memory-test:
 install:
 	make -C build install
 	cp plugins.conf $(RUNDIR)
+	cp asset_directory.csv $(RUNDIR)
+	cp atl03.index $(RUNDIR)
 
 clean:
 	make -C build clean
