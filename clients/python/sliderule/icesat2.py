@@ -365,6 +365,7 @@ def get_values(data, dtype, size):
 #  H5
 #
 def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["REAL"]):
+
     # Baseline Request
     rqst = {
         "asset" : asset,
@@ -385,8 +386,11 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
         data = data + d["data"]
         size = size + d["size"]
 
-    # Return Response Values
-    return get_values(data, datatype, size)
+    # Get Values
+    values = get_values(data, datatype, size)
+
+    # Return Response
+    return values
 
 
 #
