@@ -3,6 +3,7 @@
 #
 import sys
 import logging
+import time
 
 import pandas as pd
 import numpy as np
@@ -52,7 +53,13 @@ def algoexec(resource, asset):
     }
 
     # Request ATL06 Data
-    rsps = icesat2.atl06(parms, resource, asset, as_numpy=False)
+    perf_start = time.perf_counter()
+    process_start = time.process_time()
+    rsps  = icesat2.atl06(parms, resource, asset, as_numpy=False)
+    perf_stop = time.perf_counter()
+    process_stop = time.process_time()
+    perf_duration = perf_stop - perf_start
+    process_duration = process_stop - process_start
 
     # Calculate Distances
     lat_origin = rsps["lat"][0]
@@ -63,6 +70,7 @@ def algoexec(resource, asset):
     df = pd.DataFrame(data=list(zip(rsps["h_mean"], distances, rsps["lat"], rsps["lon"], rsps["spot"])), index=rsps["segment_id"], columns=["h_mean", "distance", "latitude", "longitude", "spot"])
 
     # Return DataFrame
+    print("Completed in {:.3f} seconds of wall-clock time, and {:.3f} seconds of processing time". format(perf_duration, process_duration))
     print("Reference Ground Tracks: {} to {}".format(min(rsps["rgt"]), max(rsps["rgt"])))
     print("Cycle: {} to {}".format(min(rsps["cycle"]), max(rsps["cycle"])))
     print("Retrieved {} points from SlideRule".format(len(rsps["h_mean"])))
@@ -93,7 +101,6 @@ def expread(resource, asset):
     # Return DataFrame
     print("Retrieved {} points from ATL06, returning {} points".format(len(heights), len(df.values)))
     return df
-
 
 #
 # Plot Actual vs Expected
