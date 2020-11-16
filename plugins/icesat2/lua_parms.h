@@ -35,6 +35,7 @@
 #define LUA_PARM_SURFACE_TYPE                   "srt"
 #define LUA_PARM_SIGNAL_CONFIDENCE              "cnf"
 #define LUA_PARM_POLYGON                        "poly"
+#define LUA_PARM_STAGES                         "stages"
 #define LUA_PARM_LATITUDE                       "lat"
 #define LUA_PARM_LONGITUDE                      "lon"
 #define LUA_PARM_ALONG_TRACK_SPREAD             "ats"
@@ -44,7 +45,8 @@
 #define LUA_PARM_MAX_ITERATIONS                 "maxi"
 #define LUA_PARM_MIN_WINDOW                     "H_min_win"
 #define LUA_PARM_MAX_ROBUST_DISPERSION          "sigma_r_max"
-
+#define LUA_PARM_STAGE_RAW                      "RAW"
+#define LUA_PARM_STAGE_LSF                      "LSF"
 #define LUA_PARM_MAX_COORDS                     16
 
 /******************************************************************************
@@ -100,8 +102,9 @@ typedef enum {
 
 /* Algorithm Stages */
 typedef enum {
-    STAGE_LSF = 0,  // least squares fit
-    NUM_STAGES = 1
+    STAGE_RAW = 0,  // raw ATL03 subsetted data
+    STAGE_LSF = 1,  // least squares fit
+    NUM_STAGES = 2
 } atl06_stages_t;
 
 /* Extraction Parameters */

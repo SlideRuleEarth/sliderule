@@ -6,7 +6,6 @@
 --                  "atl03-asset":  "<name of asset to use, defaults to atl03-cloud>"
 --                  "resource":     "<url of hdf5 file or object>"
 --                  "track":        <track number: 1, 2, 3>
---                  "stages":       [<algorith stage 1>, ...]
 --                  "parms":        {<table of parameters>}
 --                  "timeout":      <milliseconds to wait for first response>
 --              }
@@ -24,7 +23,6 @@ local json = require("json")
 local asset = require("asset")
 
 -- Internal Parameters --
-local str2stage = { LSF=icesat2.STAGE_LSF }
 local recq = rspq .. "-atl03"
 
 -- Create User Status --
@@ -35,7 +33,6 @@ local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"] or "atl03-cloud"
 local resource = rqst["resource"]
 local track = rqst["track"] or icesat2.ALL_TRACKS
-local stages = rqst["stages"]
 local parms = rqst["parms"]
 local timeout = rqst["timeout"] or core.PEND
 
@@ -45,12 +42,6 @@ userlog:sendlog(core.INFO, string.format("atl06 processing initiated on %s ...\n
 -- ATL06 Dispatch Algorithm --
 local atl06_algo = icesat2.atl06(rspq, parms)
 atl06_algo:name("atl06_algo")
-if stages then
-    atl06_algo:select(icesat2.ALL_STAGES, false)
-    for k,v in pairs(stages) do
-        atl06_algo:select(str2stage[v], true)
-    end
-end
 
 -- ATL06 Dispatcher --
 atl06_disp = core.dispatcher(recq)

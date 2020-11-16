@@ -94,7 +94,6 @@ const RecordObject::fieldDef_t Atl06Dispatch::atRecDef[] = {
 const char* Atl06Dispatch::LuaMetaName = "Atl06Dispatch";
 const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
     {"stats",       luaStats},
-    {"select",      luaSelect},
     {NULL,          NULL}
 };
 
@@ -573,52 +572,6 @@ int Atl06Dispatch::luaStats (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status, num_obj_to_return);
-}
-
-/*----------------------------------------------------------------------------
- * luaSelect - :select(<algorithm stage>, <enable/disable>)
- *----------------------------------------------------------------------------*/
-int Atl06Dispatch::luaSelect (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        Atl06Dispatch* lua_obj = (Atl06Dispatch*)getLuaSelf(L, 1);
-
-        /* Get Parameters */
-        int algo_stage = getLuaInteger(L, 2);
-        bool enable = getLuaBoolean(L, 3);
-
-        /* Set Stage */
-        if(algo_stage >= 0 && algo_stage < NUM_STAGES)
-        {
-            mlog(INFO, "%s stage: %d\n", enable ? "Enabling" : "Disabling", algo_stage);
-            lua_obj->parms.stages[algo_stage] = enable;
-            status = true;
-        }
-        else if(algo_stage == NUM_STAGES)
-        {
-            mlog(INFO, "%s all stages\n", enable ? "Enabling" : "Disabling");
-            for(int s = 0; s < NUM_STAGES; s++)
-            {
-                lua_obj->parms.stages[s] = enable;
-            }
-            status = true;
-        }
-        else
-        {
-            throw LuaException("Invalid stage specified: %d\n", algo_stage);
-        }
-    }
-    catch(const LuaException& e)
-    {
-        mlog(CRITICAL, "Error selecting algorithm stage: %s\n", e.errmsg);
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------

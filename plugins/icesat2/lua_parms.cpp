@@ -45,7 +45,7 @@
 const atl06_parms_t DefaultParms = {
     .surface_type               = ATL06_DEFAULT_SURFACE_TYPE,
     .signal_confidence          = ATL06_DEFAULT_SIGNAL_CONFIDENCE,
-    .stages                     = { true },
+    .stages                     = { false, true },
     .polygon                    = { { 0, 0 } },
     .points_in_polygon          = 0,
     .max_iterations             = ATL06_DEFAULT_MAX_ITERATIONS,
@@ -103,6 +103,52 @@ void get_lua_polygon (lua_State* L, int index, atl06_parms_t* parms, bool* provi
     }
 }
 
+void get_lua_stages (lua_State* L, int index, atl06_parms_t* parms, bool* provided)
+{
+    /* Must be table of stages */
+    if(lua_istable(L, index))
+    {
+        /* Clear stages table (sets all to false) */
+        LocalLib::set(parms->stages, 0, sizeof(parms->stages));
+
+        /* Get number of stages in table */
+        int num_stages = lua_rawlen(L, index);
+        if(num_stages > 0 && provided) *provided = true;
+
+        /* Iterate through each stage in table */
+        for(int i = 0; i < num_stages; i++)
+        {
+            /* Get stage */
+            lua_rawgeti(L, index, i+1);
+
+            /* Set stage */
+            if(lua_isinteger(L, -1))
+            {
+                int stage = LuaObject::getLuaInteger(L, -1);
+                if(stage >= 0 && stage < NUM_STAGES)
+                {
+                    parms->stages[stage] = true;
+                }
+            }
+            else if(lua_isstring(L, -1))
+            {
+                const char* stage_str = LuaObject::getLuaString(L, -1);
+                if(StringLib::match(stage_str, LUA_PARM_STAGE_LSF))
+                {
+                    parms->stages[STAGE_LSF] = true;
+                }
+                else if(StringLib::match(stage_str, LUA_PARM_STAGE_RAW))
+                {
+                    parms->stages[STAGE_RAW] = true;
+                }
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+}
+
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
@@ -128,6 +174,11 @@ atl06_parms_t getLuaAtl06Parms (lua_State* L, int index)
         lua_getfield(L, index, LUA_PARM_POLYGON);
         get_lua_polygon(L, -1, &parms, &provided);
         if(provided) mlog(INFO, "Setting %s to %d points\n", LUA_PARM_POLYGON, (int)parms.points_in_polygon);
+        lua_pop(L, 1);
+
+        lua_getfield(L, index, LUA_PARM_STAGES);
+        get_lua_stages(L, -1, &parms, &provided);
+        if(provided) mlog(INFO, "Setting %s\n", LUA_PARM_STAGES);
         lua_pop(L, 1);
 
         lua_getfield(L, index, LUA_PARM_MAX_ITERATIONS);
