@@ -56,18 +56,8 @@ def test_time ():
 #  TEST H5
 #
 def test_h5 ():
-    rqst = {
-        "asset": asset,
-        "resource": h5file,
-        "dataset": "ancillary_data/atlas_sdp_gps_epoch",
-        "datatype": sliderule.datatypes["REAL"],
-        "id": 0
-    }
 
-    d = sliderule.engine("h5", rqst)
-    v = icesat2.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
-
-    epoch_offset = v[0]
+    epoch_offset = icesat2.h5("ancillary_data/atlas_sdp_gps_epoch", h5file, asset)[0]
     if(epoch_offset == 1198800018.0):
         logging.info("Passed h5 test")
     else:
@@ -77,17 +67,8 @@ def test_h5 ():
 #  TEST VARIABLE LENGTH
 #
 def test_variable_length ():
-    rqst = {
-        "asset": asset,
-        "resource": h5file,
-        "dataset": "/gt1r/geolocation/segment_ph_cnt",
-        "datatype": sliderule.datatypes["INTEGER"],
-        "id": 0
-    }
 
-    d = sliderule.engine("h5", rqst)
-    v = icesat2.get_values(d[0]["data"], d[0]["datatype"], d[0]["size"])
-
+    v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", h5file, asset)
     if v[0] == 245 and v[1] == 263 and v[2] == 273:
         logging.info("Passed variable length test")
     else:
