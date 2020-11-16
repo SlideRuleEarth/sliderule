@@ -3,7 +3,7 @@ STAGEDIR = stage
 RUNDIR = /usr/local/etc/sliderule
 SLIDERULE = $(ROOT)/../..
 ICESAT2CFG = -DMAX_FREE_STACK_SIZE=1 -DENABLE_H5_REST_VOL=ON -DUSE_AWS_PACKAGE=ON -DUSE_H5_PACKAGE=ON -DUSE_ICESAT2_PLUGIN=ON -DUSE_LEGACY_PACKAGE=OFF -DUSE_CCSDS_PACKAGE=OFF -DUSE_SIGVIEW_PLUGIN=OFF
-DOCKERTAG = icesat2sliderule/sliderule:master
+DOCKERTAG ?= icesat2sliderule/sliderule:master
 HSDS_IP?=$(shell (getent hosts hsds.sliderule.beta | awk '{ print $$1 ; exit }'))
 
 all: default-build
