@@ -290,9 +290,18 @@ def atl06 (parm, resource, asset="atl03-cloud", track=0, as_numpy=False):
     else:
         flattened = {}
         if (len(rsps) > 0) and ("elevation" in rsps[0]) and (len(rsps[0]["elevation"]) > 0):
+            # atl06rec
             for element in rsps[0]["elevation"][0].keys():
                 flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+        elif (len(rsps) > 0) and ("track" in rsps[0]) and ("segment_id" in rsps[0]):
+            # atl03rec
+            for element in rsps[0].keys():
+                if type(rsps[0][element]) == tuple:
+                    flattened[element] = [rsps[r][element][i] for r in range(len(rsps)) for i in range(2)]                    
+                elif type(rsps[0][element]) == int:
+                    flattened[element] = [rsps[r][element] for r in range(len(rsps)) for i in range(2)]
         else:
+            # Unrecognized
             logger.warning("unable to process resource %s: no elements", resource)
         rsps = flattened
 
