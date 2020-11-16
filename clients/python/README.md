@@ -27,3 +27,17 @@ git clone https://github.com/ICESat2-SlideRule/sliderule-client.git
 cd sliderule-client
 conda env create -f environment.yml
 ```
+
+### Licensing
+
+Sliderule-Python is licensed under the Apache License, Version 2.0
+to the University of Washington under one or more contributor
+license agreements.  See the NOTICE file distributed with this
+work for additional information regarding copyright ownership.
+
+You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+
+The following sliderule-python software components include code sourced from and/or
+based off of third party software that has been released as open source to the
+public under various open source agreements:
+* `sliderule/icesat2.py`: subsetting code sourced from NSIDC download script (Regents of the University of Colorado)

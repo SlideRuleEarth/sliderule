@@ -180,6 +180,31 @@ def __flatten_atl06(rsps):
 
     return flattened
 
+#
+#  __get_values
+#
+def __get_values(data, dtype, size):
+    """
+    data:   tuple of bytes
+    dtype:  element of datatypes
+    size:   bytes in data
+    """
+
+    datatype2nptype = {
+        sliderule.datatypes["TEXT"]:      numpy.byte,
+        sliderule.datatypes["REAL"]:      numpy.double,
+        sliderule.datatypes["INTEGER"]:   numpy.int32,
+        sliderule.datatypes["DYNAMIC"]:   numpy.byte
+    }
+
+    raw = bytes(data)
+    datatype = datatype2nptype[dtype]
+    datasize = int(size / numpy.dtype(datatype).itemsize)
+    slicesize = datasize * numpy.dtype(datatype).itemsize # truncates partial bytes
+    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
+
+    return values
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -246,14 +271,13 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
 #
 #  ATL06
 #
-def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False):
+def atl06 (parm, resource, asset="atl03-cloud", track=0, as_numpy=False):
 
     # Build ATL06 Request
     rqst = {
         "atl03-asset" : asset,
         "resource": resource,
         "track": track,
-        "stages": stages,
         "parms": parm
     }
 
@@ -278,7 +302,7 @@ def atl06 (parm, resource, asset="atl03-cloud", stages=["LSF"], track=0, as_nump
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False, max_workers=4, block=True):
+def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=4, block=True):
 
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
@@ -307,7 +331,7 @@ def atl06p(parm, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False, m
         # Make Parallel Processing Requests
         results = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(atl06, parm, resource, asset, stages, track, as_numpy) for resource in resources]
+            futures = [executor.submit(atl06, parm, resource, asset, track, as_numpy) for resource in resources]
 
             # Wait for Results
             result_cnt = 0
@@ -334,32 +358,7 @@ def atl06p(parm, asset="atl03-cloud", stages=["LSF"], track=0, as_numpy=False, m
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
         # Return List of Futures for Parallel Processing Request
-        return [executor.submit(atl06, parm, resource, asset, stages, track, as_numpy) for resource in resources]
-
-#
-#  GET VALUES
-#
-def get_values(data, dtype, size):
-    """
-    data:   tuple of bytes
-    dtype:  element of datatypes
-    size:   bytes in data
-    """
-
-    datatype2nptype = {
-        sliderule.datatypes["TEXT"]:      numpy.byte,
-        sliderule.datatypes["REAL"]:      numpy.double,
-        sliderule.datatypes["INTEGER"]:   numpy.int32,
-        sliderule.datatypes["DYNAMIC"]:   numpy.byte
-    }
-
-    raw = bytes(data)
-    datatype = datatype2nptype[dtype]
-    datasize = int(size / numpy.dtype(datatype).itemsize)
-    slicesize = datasize * numpy.dtype(datatype).itemsize # truncates partial bytes
-    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
-
-    return values
+        return [executor.submit(atl06, parm, resource, asset, track, as_numpy) for resource in resources]
 
 #
 #  H5
@@ -387,7 +386,7 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
         size = size + d["size"]
 
     # Get Values
-    values = get_values(data, datatype, size)
+    values = __get_values(data, datatype, size)
 
     # Return Response
     return values
