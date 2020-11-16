@@ -28,10 +28,8 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_STAT_SEGMENTS_READ_L        "read_l"
-#define LUA_STAT_SEGMENTS_READ_R        "read_r"
-#define LUA_STAT_EXTENTS_FILTERED_L     "filtered_l"
-#define LUA_STAT_EXTENTS_FILTERED_R     "filtered_r"
+#define LUA_STAT_SEGMENTS_READ          "read"
+#define LUA_STAT_EXTENTS_FILTERED       "filtered"
 #define LUA_STAT_EXTENTS_SENT           "sent"
 #define LUA_STAT_EXTENTS_DROPPED        "dropped"
 #define LUA_STAT_EXTENTS_RETRIED        "retried"
@@ -133,13 +131,11 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
     parms = _parms;
 
     /* Clear Statistics */
-    stats.segments_read[PRT_LEFT]       = 0;
-    stats.segments_read[PRT_RIGHT]      = 0;
-    stats.extents_filtered[PRT_LEFT]    = 0;
-    stats.extents_filtered[PRT_RIGHT]   = 0;
-    stats.extents_sent                  = 0;
-    stats.extents_dropped               = 0;
-    stats.extents_retried               = 0;
+    stats.segments_read     = 0;
+    stats.extents_filtered  = 0;
+    stats.extents_sent      = 0;
+    stats.extents_dropped   = 0;
+    stats.extents_retried   = 0;
 
     /* Initialize Readers */
     active = true;
@@ -158,7 +154,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
             info->reader = this;
             info->url = StringLib::duplicate(url);
             info->track = t + 1;
-            readerPid[t] = new Thread(readerThread, info);
+            readerPid[t] = new Thread(atl06Thread, info);
         }
     }
     else if(track >= 1 && track <= 3)
@@ -169,7 +165,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* url, const char* outq_name, 
         info->reader = this;
         info->url = StringLib::duplicate(url);
         info->track = track;
-        readerThread(info);
+        atl06Thread(info);
     }
 }
 
@@ -189,9 +185,130 @@ Atl03Reader::~Atl03Reader (void)
 }
 
 /*----------------------------------------------------------------------------
- * readerThread
+ * Region::Constructor
  *----------------------------------------------------------------------------*/
-void* Atl03Reader::readerThread (void* parm)
+Atl03Reader::Region::Region (info_t* info):
+    segment_lat    (info->url, info->track, "geolocation/reference_photon_lat"),
+    segment_lon    (info->url, info->track, "geolocation/reference_photon_lon"),
+    segment_ph_cnt (info->url, info->track, "geolocation/segment_ph_cnt")
+{
+    /* Initialize Region */
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        first_segment[t] = 0;
+        num_segments[t] = H5Lib::ALL_ROWS;
+        first_photon[t] = 0;
+        num_photons[t] = H5Lib::ALL_ROWS;
+    }
+
+    /* Determine Spatial Extent */
+    if(info->reader->parms.points_in_polygon > 0)
+    {
+        /* Determine Best Projection To Use */
+        MathLib::proj_t projection = MathLib::PLATE_CARREE;
+        if(segment_lat.gt[PRT_LEFT][0] > 60.0) projection = MathLib::NORTH_POLAR;
+        else if(segment_lat.gt[PRT_LEFT][0] < -60.0) projection = MathLib::SOUTH_POLAR;
+
+        /* Project Polygon */
+        List<MathLib::point_t> projected_poly;
+        for(int i = 0; i < info->reader->parms.points_in_polygon; i++)
+        {
+            MathLib::point_t projected_point;
+            MathLib::coord2point(info->reader->parms.polygon[i], projected_point, projection);
+            projected_poly.add(projected_point);
+        }
+
+        /* Find First Segment In Polygon */
+        bool first_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
+        bool last_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
+        for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+        {
+            int segment = 0;
+            while(segment < segment_ph_cnt.gt[t].size)           
+            {
+                bool inclusion = false;
+
+                /* Project Segment Coordinate */
+                MathLib::point_t segment_point; // output
+                MathLib::coord_t segment_coord = {segment_lat.gt[t][segment], segment_lon.gt[t][segment]};
+                MathLib::coord2point(segment_coord, segment_point, projection);
+
+                /* Test Inclusion */
+                if(MathLib::inpoly(projected_poly, segment_point))
+                {
+                    inclusion = true;
+                }
+
+                /* Check First Segment */
+                if(!first_segment_found[t])
+                {
+                    /* If Coordinate Is In Polygon */
+                    if(inclusion && segment_ph_cnt.gt[t][segment] != 0)
+                    {
+                        /* Set First Segment */
+                        first_segment_found[t] = true;
+                        first_segment[t] = segment;
+
+                        /* Include Photons From First Segment */
+                        num_photons[t] = segment_ph_cnt.gt[t][segment];
+                    }
+                    else
+                    {
+                        /* Update Photon Index */
+                        first_photon[t] += segment_ph_cnt.gt[t][segment];
+                    }
+                }
+                else if(!last_segment_found[t])
+                {
+                    /* If Coordinate Is NOT In Polygon */
+                    if(!inclusion && segment_ph_cnt.gt[t][segment] != 0)
+                    {
+                        /* Set Last Segment */
+                        last_segment_found[t] = true;
+                        break; // full extent found!
+                    }
+                    else
+                    {
+                        /* Update Photon Index */
+                        num_photons[t] += segment_ph_cnt.gt[t][segment];
+                    }
+                }
+
+                /* Bump Segment */
+                segment++;
+            }
+
+            /* Set Number of Segments */
+            if(first_segment_found[t])
+            {
+                num_segments[t] = segment - first_segment[t];
+            }
+        }
+
+        /* Check If Anything to Process */
+        if(num_photons[PRT_LEFT] < 0 || num_photons[PRT_RIGHT] < 0)
+        {
+            throw std::runtime_error("empty spatial region");
+        }
+    }
+
+    /* Trim Geospatial Extent Datasets Read from HDF5 File */
+    segment_lat.trim(first_segment);
+    segment_lon.trim(first_segment);
+    segment_ph_cnt.trim(first_segment);
+}
+
+/*----------------------------------------------------------------------------
+ * Region::Destructor
+ *----------------------------------------------------------------------------*/
+Atl03Reader::Region::~Region (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * atl06Thread
+ *----------------------------------------------------------------------------*/
+void* Atl03Reader::atl06Thread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
@@ -205,111 +322,8 @@ void* Atl03Reader::readerThread (void* parm)
 
     try
     {
-        /* Read Spatial Extent */
-        GTArray<double>     segment_lat         (url, track, "geolocation/reference_photon_lat");
-        GTArray<double>     segment_lon         (url, track, "geolocation/reference_photon_lon");
-        GTArray<int32_t>    segment_ph_cnt      (url, track, "geolocation/segment_ph_cnt");
-
-        /* Determine Spatial Extent */
-        long first_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        long num_segments[PAIR_TRACKS_PER_GROUND_TRACK] = { H5Lib::ALL_ROWS, H5Lib::ALL_ROWS };
-        long first_photon[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 };
-        long num_photons[PAIR_TRACKS_PER_GROUND_TRACK] = { H5Lib::ALL_ROWS, H5Lib::ALL_ROWS };
-        if(reader->parms.points_in_polygon > 0)
-        {
-            /* Determine Best Projection To Use */
-            MathLib::proj_t projection = MathLib::PLATE_CARREE;
-            if(segment_lat.gt[PRT_LEFT][0] > 60.0) projection = MathLib::NORTH_POLAR;
-            else if(segment_lat.gt[PRT_LEFT][0] < -60.0) projection = MathLib::SOUTH_POLAR;
-
-            /* Project Polygon */
-            List<MathLib::point_t> projected_poly;
-            for(int i = 0; i < reader->parms.points_in_polygon; i++)
-            {
-                MathLib::point_t projected_point;
-                MathLib::coord2point(reader->parms.polygon[i], projected_point, projection);
-                projected_poly.add(projected_point);
-            }
-
-            /* Find First Segment In Polygon */
-            bool first_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
-            bool last_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
-            for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
-            {
-                int segment = 0;
-                while(segment < segment_ph_cnt.gt[t].size)           
-                {
-                    bool inclusion = false;
-    
-                    /* Project Segment Coordinate */
-                    MathLib::point_t segment_point; // output
-                    MathLib::coord_t segment_coord = {segment_lat.gt[t][segment], segment_lon.gt[t][segment]};
-                    MathLib::coord2point(segment_coord, segment_point, projection);
-
-                    /* Test Inclusion */
-                    if(MathLib::inpoly(projected_poly, segment_point))
-                    {
-                        inclusion = true;
-                    }
-    
-                    /* Check First Segment */
-                    if(!first_segment_found[t])
-                    {
-                        /* If Coordinate Is In Polygon */
-                        if(inclusion && segment_ph_cnt.gt[t][segment] != 0)
-                        {
-                            /* Set First Segment */
-                            first_segment_found[t] = true;
-                            first_segment[t] = segment;
-
-                            /* Include Photons From First Segment */
-                            num_photons[t] = segment_ph_cnt.gt[t][segment];
-                        }
-                        else
-                        {
-                            /* Update Photon Index */
-                            first_photon[t] += segment_ph_cnt.gt[t][segment];
-                        }
-                    }
-                    else if(!last_segment_found[t])
-                    {
-                        /* If Coordinate Is NOT In Polygon */
-                        if(!inclusion && segment_ph_cnt.gt[t][segment] != 0)
-                        {
-                            /* Set Last Segment */
-                            last_segment_found[t] = true;
-                            break; // full extent found!
-                        }
-                        else
-                        {
-                            /* Update Photon Index */
-                            num_photons[t] += segment_ph_cnt.gt[t][segment];
-                        }
-                    }
-
-                    /* Bump Segment */
-                    segment++;
-                }
-
-                /* Set Number of Segments */
-                if(first_segment_found[t])
-                {
-                    num_segments[t] = segment - first_segment[t];
-                }
-
-            }
-
-            /* Check If Anything to Process */
-            if(num_photons[PRT_LEFT] < 0 || num_photons[PRT_RIGHT] < 0)
-            {
-                throw std::runtime_error("empty spatial region");
-            }
-        }
-
-        /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        segment_lat.trim(first_segment);
-        segment_lon.trim(first_segment);
-        segment_ph_cnt.trim(first_segment);
+        /* Subset to Region of Interest */
+        Region region(info);
 
         /* Read Data from HDF5 File */
         H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
@@ -318,12 +332,12 @@ void* Atl03Reader::readerThread (void* parm)
         H5Array<int32_t>    end_rgt             (url, "/ancillary_data/end_rgt");
         H5Array<int32_t>    start_cycle         (url, "/ancillary_data/start_cycle");
         H5Array<int32_t>    end_cycle           (url, "/ancillary_data/end_cycle");
-        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time", false, 0, first_segment, num_segments);
-        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id", false, 0, first_segment, num_segments);
-        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x", false, 0, first_segment, num_segments);
-        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along", false, 0, first_photon, num_photons);
-        GTArray<float>      h_ph                (url, track, "heights/h_ph", false, 0, first_photon, num_photons);
-        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", false, reader->parms.surface_type, first_photon, num_photons);
+        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time", false, 0, region.first_segment, region.num_segments);
+        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id", false, 0, region.first_segment, region.num_segments);
+        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x", false, 0, region.first_segment, region.num_segments);
+        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along", false, 0, region.first_photon, region.num_photons);
+        GTArray<float>      h_ph                (url, track, "heights/h_ph", false, 0, region.first_photon, region.num_photons);
+        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", false, reader->parms.surface_type, region.first_photon, region.num_photons);
         GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time");
         GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate");
 
@@ -337,12 +351,11 @@ void* Atl03Reader::readerThread (void* parm)
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
         /* Set Number of Photons to Process (if not already set by subsetter) */    
-        if(num_photons[PRT_LEFT] == H5Lib::ALL_ROWS) num_photons[PRT_LEFT] = dist_ph_along.gt[PRT_LEFT].size;
-        if(num_photons[PRT_RIGHT] == H5Lib::ALL_ROWS) num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
+        if(region.num_photons[PRT_LEFT] == H5Lib::ALL_ROWS) region.num_photons[PRT_LEFT] = dist_ph_along.gt[PRT_LEFT].size;
+        if(region.num_photons[PRT_RIGHT] == H5Lib::ALL_ROWS) region.num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
 
         /* Increment Read Statistics */
-        reader->stats.segments_read[PRT_LEFT] += segment_ph_cnt.gt[PRT_LEFT].size;
-        reader->stats.segments_read[PRT_RIGHT] += segment_ph_cnt.gt[PRT_RIGHT].size;  
+        reader->stats.segments_read += (region.segment_ph_cnt.gt[PRT_LEFT].size + region.segment_ph_cnt.gt[PRT_RIGHT].size);
 
         /* Traverse All Photons In Dataset */
         while( reader->active && (!track_complete[PRT_LEFT] || !track_complete[PRT_RIGHT]) )
@@ -370,7 +383,7 @@ void* Atl03Reader::readerThread (void* parm)
                 {
                     /* Go to Photon's Segment */
                     current_count++;
-                    while(current_count > segment_ph_cnt.gt[t][current_segment])
+                    while(current_count > region.segment_ph_cnt.gt[t][current_segment])
                     {
                         current_count = 1; // reset photons in segment
                         current_segment++; // go to next segment
@@ -428,7 +441,7 @@ void* Atl03Reader::readerThread (void* parm)
                 }
 
                 /* Check if Track Complete */
-                if((unsigned)current_photon >= num_photons[t])
+                if((unsigned)current_photon >= region.num_photons[t])
                 {
                     track_complete[t] = true;
                 }
@@ -453,7 +466,7 @@ void* Atl03Reader::readerThread (void* parm)
                 /* Incrment Statistics if Invalid */
                 if(!extent_valid[t])
                 {
-                    reader->stats.extents_filtered[t]++; 
+                    reader->stats.extents_filtered++; 
                 }
             }
 
@@ -495,8 +508,8 @@ void* Atl03Reader::readerThread (void* parm)
                     extent->segment_size[t]     = reader->parms.extent_step;
                     extent->background_rate[t]  = bckgrd_rate.gt[t][bckgrd_in[t]];
                     extent->gps_time[t]         = sdp_gps_epoch[0] + segment_delta_time.gt[t][extent_segment[t]];
-                    extent->latitude[t]         = segment_lat.gt[t][extent_segment[t]];
-                    extent->longitude[t]        = segment_lon.gt[t][extent_segment[t]];
+                    extent->latitude[t]         = region.segment_lat.gt[t][extent_segment[t]];
+                    extent->longitude[t]        = region.segment_lon.gt[t][extent_segment[t]];
                     extent->photon_count[t]     = extent_photons[t].length();
 
                     /* Populate Photons */
@@ -627,10 +640,8 @@ int Atl03Reader::luaStats (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ_L,      lua_obj->stats.segments_read[PRT_LEFT]);
-        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ_R,      lua_obj->stats.segments_read[PRT_RIGHT]);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED_L,   lua_obj->stats.extents_filtered[PRT_LEFT]);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED_R,   lua_obj->stats.extents_filtered[PRT_RIGHT]);
+        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ,        lua_obj->stats.segments_read);
+        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED,     lua_obj->stats.extents_filtered);
         LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_SENT,         lua_obj->stats.extents_sent);
         LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_DROPPED,      lua_obj->stats.extents_dropped);
         LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_RETRIED,      lua_obj->stats.extents_retried);

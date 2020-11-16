@@ -1,5 +1,5 @@
 --
--- ENDPOINT:    /source/atl03
+-- ENDPOINT:    /source/indexer
 --
 -- INPUT:       rqst
 --              {

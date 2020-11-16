@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     # Build Index
     rqst = { "atl03-asset": atl03_asset, "resources": resources }
-    rsps = sliderule.engine("atl03", rqst)
+    rsps = sliderule.engine("indexer", rqst)
     print(len(rsps))
     print(rsps)
     f = open(index, "w")

@@ -41,7 +41,8 @@ install (
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/subsetter.lua
     DESTINATION
         ${CONFDIR}
 )

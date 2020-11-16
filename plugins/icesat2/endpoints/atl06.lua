@@ -3,7 +3,7 @@
 --
 -- INPUT:       rqst
 --              {
---                  "atl03-asset":  "<name of asset to use, defaults to atl03-local>"
+--                  "atl03-asset":  "<name of asset to use, defaults to atl03-cloud>"
 --                  "resource":     "<url of hdf5 file or object>"
 --                  "track":        <track number: 1, 2, 3>
 --                  "stages":       [<algorith stage 1>, ...]
@@ -80,7 +80,7 @@ while not atl06_disp:waiton(interval) do
     if atl06_stats.h5atl03 == 0 then
         userlog:sendlog(core.INFO, string.format("... continuing to read %s (after %d seconds)\n", resource, duration / 1000))
     else
-        userlog:sendlog(core.INFO, string.format("processed %d out of %d segments in %s (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.read_l + atl03_stats.read_r, resource, duration / 1000))
+        userlog:sendlog(core.INFO, string.format("processed %d out of %d segments in %s (after %d seconds)\n", atl06_stats.h5atl03, atl03_stats.read, resource, duration / 1000))
     end
 end
 

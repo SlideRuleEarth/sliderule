@@ -74,14 +74,14 @@ class Atl03Reader: public LuaObject
         /* Statistics */
         typedef struct {
             /* TODO: thread safe version requires additional performance analysis
-            std::atomic<uint32_t>   segments_read[PAIR_TRACKS_PER_GROUND_TRACK];
-            std::atomic<uint32_t>   extents_filtered[PAIR_TRACKS_PER_GROUND_TRACK];
+            std::atomic<uint32_t>   segments_read;
+            std::atomic<uint32_t>   extents_filtered;
             std::atomic<uint32_t>   extents_sent;
             std::atomic<uint32_t>   extents_dropped;
             std::atomic<uint32_t>   extents_retried;
             */
-            uint32_t segments_read[PAIR_TRACKS_PER_GROUND_TRACK];
-            uint32_t extents_filtered[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t segments_read;
+            uint32_t extents_filtered;
             uint32_t extents_sent;
             uint32_t extents_dropped;
             uint32_t extents_retried;
@@ -121,6 +121,24 @@ class Atl03Reader: public LuaObject
             int             track;
         } info_t;
 
+        /* Region Subclass */
+        class Region
+        {
+            public:
+
+                Region  (info_t* info);
+                ~Region (void);
+            
+                GTArray<double>     segment_lat;
+                GTArray<double>     segment_lon;
+                GTArray<int32_t>    segment_ph_cnt;
+                
+                long                first_segment[PAIR_TRACKS_PER_GROUND_TRACK];
+                long                num_segments[PAIR_TRACKS_PER_GROUND_TRACK];
+                long                first_photon[PAIR_TRACKS_PER_GROUND_TRACK];
+                long                num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
+        };
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -148,7 +166,7 @@ class Atl03Reader: public LuaObject
                             Atl03Reader         (lua_State* L, const char* url, const char* outq_name, const atl06_parms_t& _parms, int track=ALL_TRACKS);
                             ~Atl03Reader        (void);
 
-        static void*        readerThread        (void* parm);
+        static void*        atl06Thread         (void* parm);
         static int          luaParms            (lua_State* L);
         static int          luaStats            (lua_State* L);
 };
