@@ -25,7 +25,6 @@ local asset = require("asset")
 -- Create User Status --
 local userlog = msg.publish(rspq)
 
-print(arg[1])
 -- Request Parameters --
 local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"] or "atl03-cloud"
