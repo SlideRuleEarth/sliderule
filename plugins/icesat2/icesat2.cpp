@@ -63,6 +63,7 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "SRT_SEA_ICE",         SRT_SEA_ICE);
     LuaEngine::setAttrInt(L, "SRT_LAND_ICE",        SRT_LAND_ICE);
     LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",    SRT_INLAND_WATER);
+    LuaEngine::setAttrInt(L, "STAGE_SUB",           STAGE_SUB);
     LuaEngine::setAttrInt(L, "STAGE_RAW",           STAGE_RAW);
     LuaEngine::setAttrInt(L, "STAGE_LSF",           STAGE_LSF);
     LuaEngine::setAttrInt(L, "ALL_STAGES",          NUM_STAGES);

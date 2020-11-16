@@ -9,15 +9,33 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from sliderule import icesat2
 
-#
-# Configure Logging
-#
-icesat2_logger = logging.getLogger("sliderule.icesat2")
-icesat2_logger.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-icesat2_logger.addHandler(ch)
-# logging.basicConfig(level=logging.INFO)
+###############################################################################
+# LOCAL FUNCTIONS
+###############################################################################
+
+def process_atl06_algorithm(parms, asset):
+
+    # Latch Start Time
+    perf_start = time.perf_counter()
+
+    # Request ATL06 Data
+    rsps = icesat2.atl06p(parms, asset)
+
+    # Latch Stop Time
+    perf_stop = time.perf_counter()
+
+    # Build DataFrame of SlideRule Responses
+    df = pd.DataFrame(rsps)
+
+    # Display Statistics
+    perf_duration = perf_stop - perf_start
+    print("Completed in {:.3f} seconds of wall-clock time". format(perf_duration))
+    print("Reference Ground Tracks: {}".format(df["rgt"].unique()))
+    print("Cycles: {}".format(df["cycle"].unique()))
+    print("Received {} elevations".format(len(df)))
+
+    # Return DataFrame
+    return df
 
 ###############################################################################
 # MAIN
@@ -25,6 +43,9 @@ icesat2_logger.addHandler(ch)
 
 if __name__ == '__main__':
 
+    # Configure Logging #
+    logging.basicConfig(level=logging.INFO)
+    
     # Region of Interest #
     region_filename = sys.argv[1]
     with open(region_filename) as regionfile:
@@ -40,8 +61,8 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
         asset = sys.argv[3]
 
-    # Latch Start Time
-    perf_start = time.perf_counter()
+    # Configure SlideRule
+    icesat2.init(url, False)
 
     # Build ATL06 Request
     parms = {
@@ -55,21 +76,12 @@ if __name__ == '__main__':
         "maxi": 1
     }
 
-    # Request ATL06 Data
-    rsps = icesat2.atl06p(parms, asset)
+    # Get ATL06 Elevations
+    atl06 = process_atl06_algorithm(parms, asset)
 
-    # Latch Stop Time
-    perf_stop = time.perf_counter()
-
-    # Build Dataframe of SlideRule Responses
-    df = pd.DataFrame(rsps)
-
-    # Display Statistics
-    perf_duration = perf_stop - perf_start
-    print("Completed in {:.3f} seconds of wall-clock time". format(perf_duration))
-    print("Reference Ground Tracks: {}".format(df["rgt"].unique()))
-    print("Cycles: {}".format(df["cycle"].unique()))
-    print("Received {} elevations".format(len(df)))
+    # Get ATL03 Subsetted Segments
+    parms["stages"] = ['SUB']
+    atl03 = process_atl06_algorithm(parms, asset)
 
     # Calculate Extent
     lons = [p["lon"] for p in region]
@@ -83,20 +95,28 @@ if __name__ == '__main__':
     box_lon = [e["lon"] for e in region]
     box_lat = [e["lat"] for e in region]
 
-    # Plot SlideRule Ground Tracks
-    ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
-    ax1.set_title("SlideRule Zoomed Ground Tracks")
-    ax1.scatter(df["lon"].values, df["lat"].values, s=2.5, c=df["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
+    # Plot SlideRule ATL06 Ground Tracks
+    ax1 = plt.subplot(131,projection=cartopy.crs.PlateCarree())
+    ax1.set_title("SlideRule Zoomed ATL06 Ground Tracks")
+    ax1.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, c=atl06["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax1.set_extent(extent,crs=cartopy.crs.PlateCarree())
     ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
+
+    # Plot SlideRule ATL03 Ground Tracks
+    ax2 = plt.subplot(132,projection=cartopy.crs.PlateCarree())
+    ax2.set_title("SlideRule Subsetted ATL03 Ground Tracks")
+    ax2.scatter(atl03["lon"].values, atl03["lat"].values, s=2.5, c=atl03["count"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax2.set_extent(extent,crs=cartopy.crs.PlateCarree())
+    ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
+
     # Plot SlideRule Global View
-    ax2 = plt.subplot(122,projection=cartopy.crs.PlateCarree())
-    ax2.set_title("SlideRule Global Reference")
-    ax2.scatter(df["lon"].values, df["lat"].values, s=2.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
-    ax2.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
-    ax2.add_feature(cartopy.feature.LAKES)
-    ax2.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
+    ax3 = plt.subplot(133,projection=cartopy.crs.PlateCarree())
+    ax3.set_title("SlideRule Global Reference")
+    ax3.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax3.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
+    ax3.add_feature(cartopy.feature.LAKES)
+    ax3.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
 
     # Show Plot
     plt.show()

@@ -136,10 +136,17 @@ void get_lua_stages (lua_State* L, int index, atl06_parms_t* parms, bool* provid
                 if(StringLib::match(stage_str, LUA_PARM_STAGE_LSF))
                 {
                     parms->stages[STAGE_LSF] = true;
+                    mlog(INFO, "Enabling %s stage\n", LUA_PARM_STAGE_LSF);
                 }
                 else if(StringLib::match(stage_str, LUA_PARM_STAGE_RAW))
                 {
                     parms->stages[STAGE_RAW] = true;
+                    mlog(INFO, "Enabling %s stage\n", LUA_PARM_STAGE_RAW);
+                }
+                else if(StringLib::match(stage_str, LUA_PARM_STAGE_SUB))
+                {
+                    parms->stages[STAGE_SUB] = true;
+                    mlog(INFO, "Enabling %s stage\n", LUA_PARM_STAGE_SUB);
                 }
             }
 
@@ -178,7 +185,6 @@ atl06_parms_t getLuaAtl06Parms (lua_State* L, int index)
 
         lua_getfield(L, index, LUA_PARM_STAGES);
         get_lua_stages(L, -1, &parms, &provided);
-        if(provided) mlog(INFO, "Setting %s\n", LUA_PARM_STAGES);
         lua_pop(L, 1);
 
         lua_getfield(L, index, LUA_PARM_MAX_ITERATIONS);
