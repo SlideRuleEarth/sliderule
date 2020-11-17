@@ -56,6 +56,7 @@ docker-image: distclean production-config default-build
 
 run-docker:
 	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 --entrypoint /usr/local/scripts/apps/docker-entrypoint.sh $(DOCKERTAG)
+#	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 --entrypoint /bin/bash $(DOCKERTAG)
 
 run-stand-alone:
 #	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/proxy.lua config.json 35100 &
