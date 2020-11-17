@@ -5,6 +5,7 @@ import json
 import logging
 import sliderule
 from sliderule import icesat2
+from sliderule import datatypes
 
 ###############################################################################
 # GLOBAL CODE
@@ -68,7 +69,7 @@ def test_h5 (asset):
 #
 def test_variable_length (asset):
 
-    v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", h5file, asset)
+    v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", h5file, asset, datatype=datatypes["INTEGER"])
     if v[0] == 245 and v[1] == 263 and v[2] == 273:
         logging.info("Passed variable length test")
     else:
