@@ -2,6 +2,7 @@
 message (STATUS "Including sigview plugin")
 
 add_library (sigviewLib SHARED "")
+set_property(GLOBAL APPEND PROPERTY plugins "sigview\n")
 
 set_target_properties (sigviewLib PROPERTIES OUTPUT_NAME sigview)
 set_target_properties (sigviewLib PROPERTIES PREFIX "")

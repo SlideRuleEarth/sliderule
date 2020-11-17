@@ -1,6 +1,7 @@
 message (STATUS "Including icesat2 plugin")
 
 add_library (icesat2Lib SHARED "")
+set_property(GLOBAL APPEND PROPERTY plugins "icesat2\n")
 
 set_target_properties (icesat2Lib PROPERTIES OUTPUT_NAME icesat2)
 set_target_properties (icesat2Lib PROPERTIES PREFIX "")

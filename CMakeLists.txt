@@ -166,6 +166,8 @@ endif()
 
 # Add Plugins #
 
+set_property(GLOBAL PROPERTY plugins "")
+
 if(${USE_ICESAT2_PLUGIN})
     add_subdirectory (plugins/icesat2)
 endif()
@@ -181,7 +183,10 @@ add_subdirectory (scripts)
 # Installation #
 
 install (TARGETS sliderule DESTINATION ${EXECDIR})
-install (FILES targets/sliderule-linux/plugins.conf DESTINATION ${CONFDIR})
+
+get_property(PLUGINS GLOBAL PROPERTY plugins)
+file (WRITE ${CMAKE_BINARY_DIR}/plugins.conf ${PLUGINS})
+install (FILES ${CMAKE_BINARY_DIR}/plugins.conf DESTINATION ${CONFDIR})
 
 install (
     DIRECTORY

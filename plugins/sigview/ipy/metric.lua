@@ -168,6 +168,7 @@ local function runDispatchers ()
     if ccsdsDispatcher then ccsdsDispatcher:run() end
     if reportDispatcher then reportDispatcher:run() end
 
+end
 
 --------------------------------------------------------------------------------------
 -- Return Local Package

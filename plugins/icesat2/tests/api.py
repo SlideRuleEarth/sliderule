@@ -55,7 +55,7 @@ def test_time ():
 #
 #  TEST H5
 #
-def test_h5 ():
+def test_h5 (asset):
 
     epoch_offset = icesat2.h5("ancillary_data/atlas_sdp_gps_epoch", h5file, asset)[0]
     if(epoch_offset == 1198800018.0):
@@ -66,7 +66,7 @@ def test_h5 ():
 #
 #  TEST VARIABLE LENGTH
 #
-def test_variable_length ():
+def test_variable_length (asset):
 
     v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", h5file, asset)
     if v[0] == 245 and v[1] == 263 and v[2] == 273:
@@ -92,7 +92,7 @@ def test_definition ():
 #
 #  TEST GEOSPATIAL
 #
-def test_geospatial ():
+def test_geospatial (asset):
 
     # Test 1 #
 
@@ -261,8 +261,8 @@ if __name__ == '__main__':
 
     # Tests
     test_time()
-    test_h5()
-    test_variable_length()
+    test_h5(asset)
+    test_variable_length(asset)
     test_definition()
-    test_geospatial()
+    test_geospatial(asset)
     test_index()
