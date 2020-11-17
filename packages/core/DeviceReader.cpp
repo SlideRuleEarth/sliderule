@@ -147,5 +147,6 @@ void* DeviceReader::readerThread (void* parm)
     delete [] buf;
     dr->device->closeConnection();
     dr->signalComplete();
+    dr->outq->postCopy("", 0); // send terminator
     return NULL;
 }

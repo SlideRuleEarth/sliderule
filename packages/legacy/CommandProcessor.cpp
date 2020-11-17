@@ -401,7 +401,7 @@ int CommandProcessor::getCurrentValue(const char* obj_name, const char* key, voi
         catch(std::out_of_range& e)
         {
             /* Error on Dictionary Exception */
-            mlog(ERROR, "Unable to find global data %s: %s\n", keyname, e.what());
+            mlog(WARNING, "Unable to find global data %s: %s\n", keyname, e.what());
         }
     }
     cvtCond.unlock();

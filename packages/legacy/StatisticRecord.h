@@ -298,7 +298,7 @@ void* StatisticRecord<T>::telemetryThread(void* parm)
                 bool status = procstat->post();
                 if(status != true)
                 {
-                    mlog(WARNING, "Unable to post %s telemetry!\n", procstat->getName());
+                    mlog(DEBUG, "Unable to post %s telemetry!\n", procstat->getName());
                 }
             }
         }

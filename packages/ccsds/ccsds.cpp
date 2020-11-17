@@ -54,6 +54,7 @@ okey_t calcCdsTime(unsigned char* buffer, int size)
         double timestamp_ms = pkt.getCdsTime() * 1000.0;
         key = (okey_t)timestamp_ms;
     }
+
     return key;
 }
 
@@ -80,6 +81,7 @@ int ccsds_open (lua_State *L)
 {
     static const struct luaL_Reg dispatch_functions[] = {
         {"packetizer",  CcsdsPacketizer::luaCreate},
+        {"interleaver", CcsdsPacketInterleaver::luaCreate},
         {"parser",      CcsdsPacketParser::luaCreate},
         {"aosmod",      CcsdsParserAOSFrameModule::luaCreate},
         {"pktmod",      CcsdsParserModule::luaCreate},

@@ -7,6 +7,7 @@ target_sources (sliderule
         ${CMAKE_CURRENT_LIST_DIR}/ccsds.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacket.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacketizer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacketInterleaver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacketParser.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsParserAOSFrameModule.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsParserModule.cpp
@@ -28,6 +29,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/ccsds.h
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacket.h
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacketizer.h
+        ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacketInterleaver.h
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacketParser.h
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsParserAOSFrameModule.h
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsParserModule.h

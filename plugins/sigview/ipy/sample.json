@@ -2,18 +2,18 @@
     "gui": false,
     "database": "/data/rec/atlas/fsw/*.rec",
     "threads": 4,
-    "block": false,
+    "block": true,
 
     "source": {
         "type": "FILE",
-        "files": "/data/ATL00/ATL00-1072_20190914020000_P01_01.dat",
+        "files": "/data/ATL00/ATL00-1088_20190914020000_P01_01.dat",
         "format": "CCSDS"
     },
 
     "metric": {
         "key": "CALCULATED_KEY CDS",
 	    "ccsds": {
-	        "A_DFC2.HK": ["SpwRxProtocolIDErr"]
+	        "A_DFC2.HK": ["EDACStatus", "TxPulsesInMajorFrame", "RangeWindowDropout_Err", "StartTag_FIFOEmpty", "Tracking_FIFOEmpty", "StartTag_FIFOWentFull", "Tracking_FIFOWentFull", "DidNotFinishTransfer_Err", "SDRAMMismatch_Err", "DidNotFinishWritingData_Err", "SpwRxEEP_Err", "SpwRxInvalidLength_Err", "SpwRxInvalidOpcode_Err", "SpwRxProtocolIDErr", "CardDataNotFinished_Err", "SpWDisconnectErrorCount", "SpWParityErrorCount"]
 	    }
     }
 }       

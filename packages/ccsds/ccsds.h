@@ -26,6 +26,7 @@
 
 #include "CcsdsPacket.h"
 #include "CcsdsPacketizer.h"
+#include "CcsdsPacketInterleaver.h"
 #include "CcsdsPacketParser.h"
 #include "CcsdsParserAOSFrameModule.h"
 #include "CcsdsParserModule.h"

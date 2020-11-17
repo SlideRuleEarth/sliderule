@@ -151,9 +151,32 @@ elseif clp(source["type"]) == "FILE" then
     sourceFile = core.file(core.READER, core.BINARY, filepaths)
     sourceFileReader = core.reader(sourceFile, parseq)
     -- Wait for File Reader to Finish Reading File --
-    if block_on_complete then
-        cmd.exec("WAIT 1")
-        cmd.stopuntil("sourceFile", false, 0)
+    sourceFileReader:waiton(core.PEND)
+elseif clp(source["type"]) == "ATL00" then
+    filelist = clp(source["files"])
+    -- Build Input Queue List and Create Parsers --
+    ccsdsParsers = {}
+    ccsdsQs = {}
+    fileQs = {}
+    for index,filepath in ipairs(filelist) do
+        fileq = "filedataq-"..tostring(index)
+        ccsdsq = "ccsdsdataq-"..tostring(index)
+        ccsdsParsers[filepath] = ccsds.parser(ccsds.pktmod(), ccsds.SPACE, fileq, ccsdsq) 
+        table.insert(ccsdsQs, ccsdsq)
+        table.insert(fileQs, fileq)
+    end
+    -- Create Interleaver --
+    interleaver = ccsds.interleaver(ccsdsQs, "ccsdsdataq")
+    -- Create Readers --
+    sourceFiles = {}
+    sourceFileReaders = {}
+    for index,filepath in ipairs(filelist) do
+        sourceFiles[filepath] = core.file(core.READER, core.BINARY, filepath)
+        sourceFileReaders[filepath] = core.reader(sourceFiles[filepath], fileQs[index])
+    end
+    -- Wait for Readers to Finish Reading --
+    for index,filepath in ipairs(filelist) do
+        sourceFileReaders[filepath]:waiton(core.PEND)
     end
 end
 
