@@ -31,7 +31,7 @@ docker-image: distclean production-config default-build
 	# copy over dockerfile #
 	cp $(SLIDERULE)/targets/sliderule-docker/dockerfile.app $(STAGEDIR)/Dockerfile
 	# copy over installation configuration #
-	cp plugins.conf $(STAGEDIR)/etc/sliderule
+	cp build/plugins.conf $(STAGEDIR)/etc/sliderule
 	cp config.json $(STAGEDIR)/etc/sliderule
 	cp asset_directory.csv $(STAGEDIR)/etc/sliderule
 	cp atl03.index $(STAGEDIR)/etc/sliderule
