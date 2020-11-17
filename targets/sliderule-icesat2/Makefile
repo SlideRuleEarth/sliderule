@@ -67,7 +67,6 @@ run-memory-test:
 
 install:
 	make -C build install
-	cp plugins.conf $(RUNDIR)
 	cp asset_directory.csv $(RUNDIR)
 	cp atl03.index $(RUNDIR)
 
