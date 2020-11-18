@@ -176,6 +176,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                     else
                     {
                         /* Terminator Received */
+                        mlog(CRITICAL, "Terminator received on %s (%d remaining)\n", processor->inQs[i]->getName(), num_valid);
                         processor->inQs[i]->dereference(pkt_refs[i]);
                         inq_valid[i] = false;
                         num_valid--;
@@ -195,7 +196,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
         double earliest_pkt_time = DBL_MAX;
         for(int i = 0; i < num_inputs; i++)
         {
-            if(pkt_refs[i].size > 0)
+            if(inq_valid[i] && pkt_refs[i].size > 0)
             {
                 if(pkt_times[i] < earliest_pkt_time)
                 {
@@ -216,6 +217,15 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                 {
                     processor->inQs[earliest_pkt]->dereference(pkt_refs[earliest_pkt]);
                     pkt_refs[earliest_pkt].size = 0;
+                }
+                else if(status == MsgQ::STATE_TIMEOUT)
+                {
+                    printf("WHY ARE WE TIMING OUT\n");
+                }
+                else
+                {
+                    mlog(CRITICAL, "Failed to post to %s... exiting interleaver!\n", processor->outQ->getName());
+                    processor->active = false;
                 }
             }
         }

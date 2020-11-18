@@ -82,7 +82,7 @@ console.logger:config(core.INFO)
 
 -- Create Metrics --
 if rectable["metric"] then
-    reportname = metric.createMetrics(rectable["metric"], outfilename)
+    report = metric.createMetrics(rectable["metric"], outfilename)
 end
 
 -- Create Limits --
@@ -161,7 +161,8 @@ elseif clp(source["type"]) == "ATL00" then
     for index,filepath in ipairs(filelist) do
         fileq = "filedataq-"..tostring(index)
         ccsdsq = "ccsdsdataq-"..tostring(index)
-        ccsdsParsers[filepath] = ccsds.parser(ccsds.pktmod(), ccsds.SPACE, fileq, ccsdsq) 
+        ccsdsParsers[filepath] = ccsds.parser(ccsds.pktmod(), ccsds.SPACE, fileq, ccsdsq)
+        ccsdsParsers[filepath]:name(filepath)
         table.insert(ccsdsQs, ccsdsq)
         table.insert(fileQs, fileq)
     end
@@ -177,6 +178,17 @@ elseif clp(source["type"]) == "ATL00" then
     -- Wait for Readers to Finish Reading --
     for index,filepath in ipairs(filelist) do
         sourceFileReaders[filepath]:waiton(core.PEND)
+        print("Finished reading "..filepath.." ["..tostring(index).."]")
+    end
+    -- Wait for Parsers to Finish Parsing --
+    for index,filepath in ipairs(filelist) do
+        while true do
+            if ccsdsParsers[filepath]:waiton(5000) then
+                break
+            end
+            print("Waiting on parser for "..filepath)
+        end
+        print("Finished parsing "..filepath.." ["..tostring(index).."]")
     end
 end
 
@@ -184,8 +196,8 @@ end
 if block_on_complete then
     cmd.exec(string.format('WAIT_ON_EMPTY scidataq %d', timeout_seconds), -1) -- wait forever
     cmd.exec("WAIT_ON_EMPTY metricq 3", -1) -- wait forever
-    if reportname then
-        cmd.exec(string.format('%s::FLUSH_ROW ALL', reportname))
+    if report then
+        report:flushrow('ALL')
     end
     cmd.exec("DISPLAY_STOPWATCH")
     cmd.exec("ABORT")

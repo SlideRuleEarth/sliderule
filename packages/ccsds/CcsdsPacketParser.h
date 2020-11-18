@@ -126,7 +126,8 @@ class CcsdsPacketParser: public MsgProcessor
 
         static void*    telemetry_thread        (void* parm);
 
-        bool            processMsg              (unsigned char* msg, int bytes);
+        bool            deinitProcessing        (void) override;
+        bool            processMsg              (unsigned char* msg, int bytes) override;
         bool            isValid                 (unsigned char* _pkt, unsigned int _len, bool ignore_length);
 
         static CcsdsPacket::type_t  str2pkttype         (const char* str);

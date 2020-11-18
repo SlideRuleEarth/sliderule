@@ -173,6 +173,12 @@ void* MsgProcessor::processorThread(void* parm)
             {
                 success = processor->processMsg((unsigned char*)ref.data, ref.size);
             }
+            else // terminator
+            {
+                mlog(INFO, "Terminator received on %s\n", processor->inQ->getName());
+                success = true;
+                self_delete = true;
+            }
             processor->inQ->dereference(ref);
         }
 
@@ -180,17 +186,13 @@ void* MsgProcessor::processorThread(void* parm)
         if (!success)
         {
             self_delete = true;
+            mlog(CRITICAL, "Fatal error detected in %s, exiting processor\n", processor->getName());
         }
     }
 
     /* Deinitialize Processing */
     processor->deinitProcessing();
-
-    /* Check Status */
-    if (self_delete)
-    {
-        mlog(CRITICAL, "Fatal error detected in %s, exiting processor\n", processor->getName());
-    }
+    processor->signalComplete();
 
     return NULL;
 }

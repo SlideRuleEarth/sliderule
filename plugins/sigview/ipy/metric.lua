@@ -96,7 +96,7 @@ local function createMetrics(metrictable, reportfilename)
         reportDispatcher:attach(metricDictionary[reportname], "Metric")
     end
 
-    return reportname
+    return metricDictionary[reportname]
 
 end
 
@@ -180,7 +180,7 @@ local package = {
     threads = threads,
     createMetrics = createMetrics,
     createLimits = createLimits,
-    runDispatchers = runDispatchers
+    runDispatchers = runDispatchers    
 }
 
 return package
