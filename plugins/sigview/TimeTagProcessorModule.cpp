@@ -530,7 +530,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             /* Handle GPS Time */
             double gps = 0.0;
             timeStat_t time_stat;
-            if(cmdProc->getCurrentValue(timeStatName, "cv", &time_stat ,sizeof(timeStat_t)) > 0)
+            if(cmdProc->getCurrentValue(timeStatName, "cv", &time_stat, sizeof(timeStat_t)) > 0)
             {
                 if(time_stat.uso_freq_calc == true)
                 {
@@ -539,7 +539,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                     cmdProc->getCurrentValue(getName(), lastGpsMfcKey, &LastGpsMfc, sizeof(LastGpsMfc));
 
                     /* Set GPS Time */
-                    int64_t amet_delta = amet - time_stat.asc_1pps_amet;
+                    int64_t amet_delta = (int64_t)amet - (int64_t)time_stat.asc_1pps_amet;
                     gps = time_stat.asc_1pps_time + (((double)amet_delta * TrueRulerClkPeriod) / 1000000000.0);
 
                     /* Check GPS Time */
@@ -616,7 +616,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 }
                 else
                 {
-                    mlog(WARNING, "Weak TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_s, tep_stop_bin_s, rws_s, rww_s);
+                    mlog(WARNING, "Strong TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_s, tep_stop_bin_s, rws_s, rww_s);
                     tep_start_bin_s = 0;
                     tep_stop_bin_s = 0;
                 }

@@ -78,7 +78,8 @@ if s1 then
     outfilename = string.format('%s.csv', string.sub(json_input, 0, s1 - 1))
 end
 
-console.logger:config(core.INFO)
+loglvl = rectable["loglvl"] or core.INFO
+console.logger:config(loglvl)
 
 -- Create Metrics --
 if rectable["metric"] then
@@ -88,6 +89,14 @@ end
 -- Create Limits --
 if rectable["limit"] then
     metric.createLimits(rectable["limit"])
+end
+
+-- Create Writers --
+if rectable["writer"] then
+    writer = clp(rectable["writer"])
+    local wformat = clp(writer["format"])
+    local wfile = clp(writer["file"])
+    cmd.exec(string.format("NEW ATLAS_FILE_WRITER atlasWriter %s %s recdataq", wformat, wfile))
 end
 
 -- Run Metrics --

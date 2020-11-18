@@ -1,0 +1,34 @@
+{
+    "gui": false,
+    "database": "/data/rec/atlas/fsw/*.rec",
+    "threads": 4,
+    "block": true,
+    "loglvl": "ERROR",
+
+    "source": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1088_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1026_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1044_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1063_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1099_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1140_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1033_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1061_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1070_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1103_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1264_20190914020000_P01_01.dat"]
+    },
+
+    "writer": {
+        "format": "META",
+        "file": "scihist.csv"
+    },
+            
+    "metric": {
+        "key": "CALCULATED_KEY CDS",
+	    "ccsds": {
+	        "A_DFC2.HK": ["EDACStatus", "TxPulsesInMajorFrame", "RangeWindowDropout_Err", "StartTag_FIFOEmpty", "Tracking_FIFOEmpty", "StartTag_FIFOWentFull", "Tracking_FIFOWentFull", "DidNotFinishTransfer_Err", "SDRAMMismatch_Err", "DidNotFinishWritingData_Err", "SpwRxEEP_Err", "SpwRxInvalidLength_Err", "SpwRxInvalidOpcode_Err", "SpwRxProtocolIDErr", "CardDataNotFinished_Err", "SpWDisconnectErrorCount", "SpWParityErrorCount"]
+	    }
+    }
+}       

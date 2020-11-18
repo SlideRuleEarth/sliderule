@@ -232,8 +232,8 @@ bool TimeProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, int
 bool TimeProcessorModule::parseSimHkPkt(unsigned char* pktbuf)
 {
     /* Parse Packet */
-    uint64_t          curr_amet_hi            = parseInt(pktbuf + 20, 4);
-    uint64_t          curr_amet_lo            = parseInt(pktbuf + 24, 4);
+    uint64_t        curr_amet_hi            = parseInt(pktbuf + 20, 4);
+    uint64_t        curr_amet_lo            = parseInt(pktbuf + 24, 4);
     unsigned int    asc_1pps_amet           = parseInt(pktbuf + 28, 4);
     unsigned int    sc_a_1pps_amet          = parseInt(pktbuf + 32, 4);
     unsigned int    sc_b_1pps_amet          = parseInt(pktbuf + 36, 4);

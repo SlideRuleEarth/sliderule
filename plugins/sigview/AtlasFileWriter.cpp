@@ -373,49 +373,62 @@ int AtlasFileWriter::writeHistoMeta (void* msg, int size, bool with_header)
 
     if(with_header)
     {
-        cnt += fprintf(outfp, "MFC,    PCE,    TYPE,   RWS,    RWW,    DLBW1,  DLBW2,  DLBW3,  DLBW4,  SIGRNG, BKGND,  SIGPES, HISTSUM,TXCNT,  MBPS,   TXERR,  WRERR,  STTDC,  WKTDC,  RWDERR, SDRMERR,SEQERR, LENERR, ODDERR, MFCERR, SEGERR, HDRERR, FMTERR, DLBERR, TAGERR, PKTERR, DLBS1,  DLBS2,  DLBS3,  DLBS4,\n");
+        cnt += fprintf(outfp, "GPS,MFC,PCE,TYPE,RWS,RWW,DLBW1,DLBW2,DLBW3,DLBW4,SIGRNG,BKGND,SIGPES,HISTSUM,TXCNT,MBPS,TXERR,WRERR,STTDC,WKTDC,RWDERR,SDRMERR,MFCERR,HDRERR,FMTERR,DLBERR,TAGERR,PKTERR,DLBS1,DLBS2,DLBS3,DLBS4\n");
     }
 
     const unsigned char* data = NULL;
     RecordObject::parseSerial((unsigned char*)msg, size, NULL, &data);
     if(!data) return 0;
 
+    if( !RecordObject::isType((unsigned char*)msg, size, "STT[1]") && 
+        !RecordObject::isType((unsigned char*)msg, size, "WTT[1]") && 
+        !RecordObject::isType((unsigned char*)msg, size, "STT[2]") && 
+        !RecordObject::isType((unsigned char*)msg, size, "WTT[2]") && 
+        !RecordObject::isType((unsigned char*)msg, size, "STT[2]") && 
+        !RecordObject::isType((unsigned char*)msg, size, "WTT[2]") ) return 0;
+
     TimeTagHistogram::ttHist_t* hist = (TimeTagHistogram::ttHist_t*)data;
     mfdata_t* mfdata = &hist->hist.majorFrameData;
     const TimeTagHistogram::band_t* dlb = hist->downlinkBands;
     TimeTagHistogram::stat_t* stat = &hist->pktStats;
 
-    cnt += fprintf(outfp, "%-7ld,",  hist->hist.majorFrameCounter);
-    cnt += fprintf(outfp, "%-7d,",   hist->hist.pceNum);
-    cnt += fprintf(outfp, "%-7d,",   hist->hist.type);
-    cnt += fprintf(outfp, "%-7.1lf,",hist->hist.rangeWindowStart);
-    cnt += fprintf(outfp, "%-7.1lf,",hist->hist.rangeWindowWidth);
-    cnt += fprintf(outfp, "%-7d,",   dlb[0].width);
-    cnt += fprintf(outfp, "%-7d,",   dlb[1].width);
-    cnt += fprintf(outfp, "%-7d,",   dlb[2].width);
-    cnt += fprintf(outfp, "%-7d,",   dlb[3].width);
-    cnt += fprintf(outfp, "%-7.1lf,",hist->hist.signalRange);
-    cnt += fprintf(outfp, "%-7.1lf,",hist->hist.noiseFloor);
-    cnt += fprintf(outfp, "%-7.1lf,",hist->hist.signalEnergy);
-    cnt += fprintf(outfp, "%-7d,",   hist->hist.sum);
-    cnt += fprintf(outfp, "%-7d,",   hist->hist.transmitCount);
-    cnt += fprintf(outfp, "%-7d,",   (hist->hist.pktBytes * 8) * 50);
-    cnt += fprintf(outfp, "%-7d,",   mfdata->DidNotFinishTransfer_Err);
-    cnt += fprintf(outfp, "%-7d,",   mfdata->DidNotFinishWritingData_Err);
-    cnt += fprintf(outfp, "%-7d,",   mfdata->TDC_StrongPath_Err);
-    cnt += fprintf(outfp, "%-7d,",   mfdata->TDC_WeakPath_Err);
-    cnt += fprintf(outfp, "%-7d,",   mfdata->RangeWindowDropout_Err);
-    cnt += fprintf(outfp, "%-7d,",   mfdata->SDRAMMismatch_Err);
-    cnt += fprintf(outfp, "%-7d,",   stat->mfc_errors);
-    cnt += fprintf(outfp, "%-7d,",   stat->hdr_errors);
-    cnt += fprintf(outfp, "%-7d,",   stat->fmt_errors);
-    cnt += fprintf(outfp, "%-7d,",   stat->dlb_errors);
-    cnt += fprintf(outfp, "%-7d,",   stat->tag_errors);
-    cnt += fprintf(outfp, "%-7d,",   stat->pkt_errors);
-    cnt += fprintf(outfp, "%-7d,",   dlb[0].start);
-    cnt += fprintf(outfp, "%-7d,",   dlb[1].start);
-    cnt += fprintf(outfp, "%-7d,",   dlb[2].start);
-    cnt += fprintf(outfp, "%-7d,",   dlb[3].start);
+    char gps_str[MAX_STR_SIZE];
+    long gps_ms = (long)(hist->hist.gpsAtMajorFrame * 1000.0);
+    TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(gps_ms);
+    StringLib::format(gps_str, MAX_STR_SIZE, "%d:%d:%d:%d:%d:%d", gmt.year, gmt.day, gmt.hour, gmt.minute, gmt.second, gmt.millisecond);
+
+    cnt += fprintf(outfp, "%s,",   gps_str);
+    cnt += fprintf(outfp, "%ld,",  hist->hist.majorFrameCounter);
+    cnt += fprintf(outfp, "%d,",   hist->hist.pceNum);
+    cnt += fprintf(outfp, "%d,",   hist->hist.type);
+    cnt += fprintf(outfp, "%.1lf,",hist->hist.rangeWindowStart);
+    cnt += fprintf(outfp, "%.1lf,",hist->hist.rangeWindowWidth);
+    cnt += fprintf(outfp, "%d,",   dlb[0].width);
+    cnt += fprintf(outfp, "%d,",   dlb[1].width);
+    cnt += fprintf(outfp, "%d,",   dlb[2].width);
+    cnt += fprintf(outfp, "%d,",   dlb[3].width);
+    cnt += fprintf(outfp, "%.1lf,",hist->hist.signalRange);
+    cnt += fprintf(outfp, "%.1lf,",hist->hist.noiseFloor);
+    cnt += fprintf(outfp, "%.1lf,",hist->hist.signalEnergy);
+    cnt += fprintf(outfp, "%d,",   hist->hist.sum);
+    cnt += fprintf(outfp, "%d,",   hist->hist.transmitCount);
+    cnt += fprintf(outfp, "%d,",   (hist->hist.pktBytes * 8) * 50);
+    cnt += fprintf(outfp, "%d,",   mfdata->DidNotFinishTransfer_Err);
+    cnt += fprintf(outfp, "%d,",   mfdata->DidNotFinishWritingData_Err);
+    cnt += fprintf(outfp, "%d,",   mfdata->TDC_StrongPath_Err);
+    cnt += fprintf(outfp, "%d,",   mfdata->TDC_WeakPath_Err);
+    cnt += fprintf(outfp, "%d,",   mfdata->RangeWindowDropout_Err);
+    cnt += fprintf(outfp, "%d,",   mfdata->SDRAMMismatch_Err);
+    cnt += fprintf(outfp, "%d,",   stat->mfc_errors);
+    cnt += fprintf(outfp, "%d,",   stat->hdr_errors);
+    cnt += fprintf(outfp, "%d,",   stat->fmt_errors);
+    cnt += fprintf(outfp, "%d,",   stat->dlb_errors);
+    cnt += fprintf(outfp, "%d,",   stat->tag_errors);
+    cnt += fprintf(outfp, "%d,",   stat->pkt_errors);
+    cnt += fprintf(outfp, "%d,",   dlb[0].start);
+    cnt += fprintf(outfp, "%d,",   dlb[1].start);
+    cnt += fprintf(outfp, "%d,",   dlb[2].start);
+    cnt += fprintf(outfp, "%d,",   dlb[3].start);
 
     cnt += fprintf(outfp, "\n");
 

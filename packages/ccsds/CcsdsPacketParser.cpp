@@ -434,9 +434,9 @@ int CcsdsPacketParser::luaStripHdrOnPost (lua_State* L)
 bool CcsdsPacketParser::deinitProcessing (void)
 {
     int status = outQ->postCopy("", 0, SYS_TIMEOUT);
-    if(status <= 0)
+    if(status < 0)
     {
-        mlog(CRITICAL, "Failed to post terminator to %s\n", outQ->getName());
+        mlog(CRITICAL, "Failed (%d) to post terminator to %s\n", status, outQ->getName());
     }
     
     return status > 0;
