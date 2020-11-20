@@ -242,7 +242,7 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-	TimeTagProcessorModule  (CommandProcessor* cmd_proc, const char* obj_name, int pcenum, const char* histq_name, const char* txtimeq_name);
+	                    TimeTagProcessorModule  (CommandProcessor* cmd_proc, const char* obj_name, int pcenum, const char* histq_name, const char* txtimeq_name);
                         ~TimeTagProcessorModule (void);
 
         static  bool    str2corr                (const char* str, correction_t* c);
@@ -304,6 +304,9 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         Publisher*      histQ;    // output histograms
         Publisher*      txTimeQ;  //output absolute Tx times
 
+        Mutex granMut;
+        long granHist[NUM_SPOTS][20000]; // ns
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -326,6 +329,7 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         int     attachTimeProcCmd       (int argc, char argv[][MAX_CMD_SIZE]);
         int     startResultFileCmd      (int argc, char argv[][MAX_CMD_SIZE]);
         int     stopResultFileCmd       (int argc, char argv[][MAX_CMD_SIZE]);
+        int     writeGranHistCmd        (int argc, char argv[][MAX_CMD_SIZE]);
 
 };
 

@@ -52,6 +52,7 @@ RecordObject::fieldDef_t TimeTagHistogram::rec_def[] =
     {"DLB3_START",    UINT32, offsetof(ttHist_t, downlinkBands[3].start),     1,    NULL, NATIVE_FLAGS},
     {"DLB3_WIDTH",    UINT16, offsetof(ttHist_t, downlinkBands[3].width),     1,    NULL, NATIVE_FLAGS},
     {"DLB3_MASK",     UINT16, offsetof(ttHist_t, downlinkBands[3].mask),      1,    NULL, NATIVE_FLAGS},
+    {"SLIP",          INT32,  offsetof(ttHist_t, slipCnt),                    1,    NULL, NATIVE_FLAGS},
     {"DLB3_TAGCNT",   INT32,  offsetof(ttHist_t, downlinkBandsTagCnt[3]),     1,    NULL, NATIVE_FLAGS},
     {"SEGCNT",        INT32,  offsetof(ttHist_t, pktStats.segcnt),            1,    NULL, NATIVE_FLAGS},
     {"PKTCNT",        INT32,  offsetof(ttHist_t, pktStats.pktcnt),            1,    NULL, NATIVE_FLAGS},
@@ -194,6 +195,14 @@ bool TimeTagHistogram::binTag(int bin, tag_t* tag)
     }
 
     return false;
+}
+
+/*----------------------------------------------------------------------------
+ * setSlipCnt  -
+ *----------------------------------------------------------------------------*/
+void TimeTagHistogram::setSlipCnt(int slip_cnt)
+{
+    tt->slipCnt = slip_cnt;
 }
 
 /*----------------------------------------------------------------------------

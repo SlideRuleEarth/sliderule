@@ -70,12 +70,16 @@ class CcsdsPacketInterleaver: public LuaObject
         Thread*             pid;
         List<Subscriber*>   inQs;
         Publisher*          outQ;
+        double              startTime;
+        double              stopTime;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static void*    processorThread (void* parm);
+        static int      luaSetStartTime (lua_State* L);
+        static int      luaSetStopTime  (lua_State* L);
 };
 
 #endif  /* __ccsds_packet_interleaver__ */

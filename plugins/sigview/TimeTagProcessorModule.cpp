@@ -303,6 +303,7 @@ TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const
     registerCommand("ATTACH_TIME_PROC",          (cmdFunc_t)&TimeTagProcessorModule::attachTimeProcCmd,       1, "<time processor name>");
     registerCommand("START_RESULT_FILE",         (cmdFunc_t)&TimeTagProcessorModule::startResultFileCmd,      1, "<result filename>");
     registerCommand("STOP_RESULT_FILE",          (cmdFunc_t)&TimeTagProcessorModule::stopResultFileCmd,       0, "");
+    registerCommand("WRITE_GRANULE_HIST",        (cmdFunc_t)&TimeTagProcessorModule::writeGranHistCmd,        2, "<strong histogram file> <weak histogram file>");
 }
 
 /*----------------------------------------------------------------------------
@@ -409,6 +410,9 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     int             tep_stop_bin_w  = 0;
     shot_data_t*    shot_data       = NULL;
 
+    /* Create String for Pretty Printing GPS Time */
+    char gps_str[128];
+
     /* Create Shot Data List */
     List<shot_data_t*> shot_data_list;
 
@@ -502,7 +506,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             /* Validate Number of Transmit Time Tags */
             if(txcnt_mf > MAX_NUM_SHOTS)
             {
-                mlog(ERROR, "[%08lX]: packet contained more than %d tx time tags: %d\n", mfc, MAX_NUM_SHOTS, shot_data_list.length());
+                mlog(ERROR, "[%ld]: packet contained more than %d tx time tags: %d\n", mfc, MAX_NUM_SHOTS, shot_data_list.length());
                 pkt_stat.pkt_errors++;
             }
             txcnt_mf = 0;
@@ -523,8 +527,15 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             MajorFrameProcessorModule::buildKey(mfc, keyname);
             if(cmdProc->getCurrentValue(majorFrameProcName, keyname, &mfdata, sizeof(mfdata_t)) > 0)
             {
-                if(mfdata.MajorFrameCount == mfc)   mfdata_ptr = &mfdata;
-//              else                                mlog(WARNING, "[%08lX]: could not associate major frame data with science time tag data\n", mfc);
+                if(mfdata.MajorFrameCount == mfc)
+                {
+                    mfdata_ptr = &mfdata;
+                }
+                else
+                {
+                    mlog(WARNING, "[%ld]: could not associate major frame data with science time tag data\n", mfc);
+                    pkt_stat.warnings++;
+                }
             }
 
             /* Handle GPS Time */
@@ -549,7 +560,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                         double gps_accuracy = fabs(expected_gps - gps);
                         if(gps_accuracy > (GpsAccuracyTolerance * intperiod))
                         {
-                            mlog(WARNING, "[%08lX]: AMET identification of major frame data exceeded accuracy tolerance of: %lf, actual: %lf\n", mfc, GpsAccuracyTolerance, gps_accuracy);
+                            mlog(WARNING, "[%ld]: AMET identification of major frame data exceeded accuracy tolerance of: %lf, actual: %lf\n", mfc, GpsAccuracyTolerance, gps_accuracy);
                             pkt_stat.warnings++;
                         }
                     }
@@ -560,10 +571,15 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 }
             }
 
+            /* Get Pretty Print of GPS Time */
+            long gps_ms = (long)(gps * 1000);
+            TimeLib::gmt_time_t gmt_time = TimeLib::gps2gmttime(gps_ms);
+            StringLib::format(gps_str, 128, "%d:%d:%d:%d:%d:%d", gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
+
             /* Validate Number of Downlink Bands */
             if(numdlb > MAX_NUM_DLBS)
             {
-                mlog(ERROR, "[%08lX]: number of downlink bands exceed maximum %d, act %ld\n", mfc, MAX_NUM_DLBS, numdlb);
+                mlog(ERROR, "%s [%ld]: number of downlink bands exceed maximum %d, act %ld\n", gps_str, mfc, MAX_NUM_DLBS, numdlb);
                 pkt_stat.hdr_errors++;
                 numdlb = MAX_NUM_DLBS; // set so processing can continue
             }
@@ -655,7 +671,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 /* Check for Empty Packet */
                 if((i == 1) && (id == 0xED))
                 {
-                    mlog(WARNING, "[%08lX]: packet includes no time tags\n", mfc);
+                    mlog(WARNING, "[%ld]: packet includes no time tags\n", mfc);
                     pkt_stat.warnings++;
                 }
 
@@ -706,10 +722,10 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 {
                     int spot;
 
-                    /* Check If Trasnmit Pulse First */
+                    /* Check If Transmit Pulse First */
                     if(shot_data == NULL)
                     {
-                        mlog(ERROR, "[%08lX]: fatal error... transmit time tag was not first in the packet\n", mfc);
+                        mlog(ERROR, "%s [%ld]: fatal error... transmit time tag was not first in the packet\n", gps_str, mfc);
                         pkt_stat.fmt_errors++;
 
                         delete hist[STRONG_SPOT];
@@ -738,7 +754,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                     /* Sanity Check Values*/
                     if(rx->fine >= MAX_FINE_COUNT)
                     {
-                        mlog(CRITICAL, "Fine count of %d exceeds maximum of %d\n", rx->fine, MAX_FINE_COUNT);
+                        mlog(CRITICAL, "%s [%08X]: Fine count of %d exceeds maximum of %d\n", gps_str, (unsigned int)mfc, rx->fine, MAX_FINE_COUNT);
                         pkt_stat.fmt_errors++;
                         break;
                     }
@@ -765,13 +781,13 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                             bool path_error = (spot == STRONG_SPOT) ? mfdata.TDC_StrongPath_Err : mfdata.TDC_WeakPath_Err;
                             if(!path_error)
                             {
-                                mlog(ERROR, "[%08lX]: time tag repeated %06X\n", mfc, prevtag);
+                                mlog(ERROR, "%s [%ld]: time tag repeated %06X\n", gps_str, mfc, prevtag);
                                 pkt_stat.tag_errors++;
                             }
                         }
                         else
                         {
-                            mlog(WARNING, "[%08lX]: time tag repeated %06X\n", mfc, prevtag_sticky);
+                            mlog(WARNING, "%s [%ld]: time tag repeated %06X\n", gps_str, mfc, prevtag_sticky);
                             pkt_stat.warnings++;
                         }
                     }
@@ -779,7 +795,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
                     if(rx->tag == prevtag_sticky)
                     {
-                        mlog(WARNING, "[%08lX]: time tag repeated %06X\n", mfc, prevtag_sticky);
+                        mlog(WARNING, "%s [%ld]: time tag repeated %06X\n", gps_str, mfc, prevtag_sticky);
                         pkt_stat.warnings++;
                     }
                     prevtag_sticky = rx->tag;
@@ -796,7 +812,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                     {
                         if(dlb_select != -1)
                         {
-                            mlog(ERROR, "[%08lX]: ambiguous downlink band settings\n", mfc);
+                            mlog(ERROR, "%s [%ld]: ambiguous downlink band settings\n", gps_str, mfc);
                             pkt_stat.dlb_errors++;
                         }
                         else
@@ -808,12 +824,12 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                     /* Process Time Tag */
                     if(dlb_select == -1)
                     {
-                        mlog(ERROR, "[%08lX]: no downlink band for timetag %06X\n", mfc, rx->tag);
+                        mlog(ERROR, "%s [%ld]: no downlink band for timetag %06X\n", gps_str, mfc, rx->tag);
                         pkt_stat.dlb_errors++;
                     }
                     else if(rx->coarse > dlb[dlb_select].width)
                     {
-                        mlog(ERROR, "[%08lX]: timetag %06X is outside of downlink band %d [%d: %d]\n", mfc, rx->tag, dlb_select, rx->coarse, dlb[dlb_select].width);
+                        mlog(ERROR, "%s [%ld]: timetag %06X is outside of downlink band %d [%d: %d]\n", gps_str, mfc, rx->tag, dlb_select, rx->coarse, dlb[dlb_select].width);
                         pkt_stat.tag_errors++;
                     }
                     else
@@ -1010,7 +1026,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 {
                     if(shot_data != NULL) shot_data->truncated = true;
                     int truncation_tag = parseInt(pktbuf + i, 3); i += 3;
-                    mlog(WARNING, "[%08lX]: packet truncation tag %06X detected\n", mfc, truncation_tag);
+                    mlog(WARNING, "%s [%ld]: packet truncation tag %06X detected\n", gps_str, mfc, truncation_tag);
                     pkt_stat.warnings++;
                 }
                 else if(id == 0xED) // channel == 29
@@ -1021,7 +1037,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 else
                 {
                     i += 1;
-                    mlog(ERROR, "[%08lX]: invalid channel detected. byte: %ld\n", mfc, id);
+                    mlog(ERROR, "%s [%ld]: invalid channel detected. byte: %ld\n", gps_str, mfc, id);
                     pkt_stat.pkt_errors++;
                 }
             }
@@ -1042,7 +1058,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
                     if(dfc_rws != hist[s]->getRangeWindowStart())
                     {
-                        mlog(ERROR, "[%08lX]: %s science data range window did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", mfc, s == STRONG_SPOT ? "strong" : "weak", hist[s]->getRangeWindowStart(), dfc_rws);
+                        mlog(ERROR, "%s [%ld]: %s science data range window did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", gps_str, mfc, s == STRONG_SPOT ? "strong" : "weak", hist[s]->getRangeWindowStart(), dfc_rws);
                         pkt_stat.pkt_errors++;
                     }
 
@@ -1053,7 +1069,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
                     if(dfc_rww != hist[s]->getRangeWindowWidth())
                     {
-                        mlog(ERROR, "[%08lX]: %s science data range window width did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", mfc, s == STRONG_SPOT ? "strong" : "weak", hist[s]->getRangeWindowWidth(), dfc_rww);
+                        mlog(ERROR, "%s [%ld]: %s science data range window width did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", gps_str, mfc, s == STRONG_SPOT ? "strong" : "weak", hist[s]->getRangeWindowWidth(), dfc_rww);
                         pkt_stat.pkt_errors++;
                     }
                 }
@@ -1062,12 +1078,12 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     }
 
     /* Add Last Shot Data */
-    shot_data_list.add(shot_data);
+    shot_data_list.add(shot_data);  
 
     /* Validate Number of Transmit Time Tags */
     if(txcnt_mf > MAX_NUM_SHOTS)
     {
-        mlog(ERROR, "[%08lX]: packet contained more than %d tx time tags: %d\n", mfc, MAX_NUM_SHOTS, shot_data_list.length());
+        mlog(ERROR, "%s [%ld]: packet contained more than %d tx time tags: %d\n", gps_str, mfc, MAX_NUM_SHOTS, shot_data_list.length());
         pkt_stat.pkt_errors++;
     }
 
@@ -1075,15 +1091,16 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     /* Process Transmit Stats */
     /*------------------------*/
 
-    int     num_shots               = shot_data_list.length();
+    int         num_shots               = shot_data_list.length();
 
-    double  tx_min_delta            = DBL_MAX;
-    double  tx_max_delta            = 0.0;
-    double  tx_sum_delta            = 0.0;
+    double*     tx_deltas               = new double[num_shots];           
+    double      tx_min_delta            = DBL_MAX;
+    double      tx_max_delta            = 0.0;
+    double      tx_sum_delta            = 0.0;
 
-    uint32_t  tx_min_tags[NUM_SPOTS]  = { INT_MAX, INT_MAX };
-    uint32_t  tx_max_tags[NUM_SPOTS]  = { 0, 0 };
-    uint32_t  tx_sum_tags[NUM_SPOTS]  = { 0, 0 };
+    uint32_t    tx_min_tags[NUM_SPOTS]  = { INT_MAX, INT_MAX };
+    uint32_t    tx_max_tags[NUM_SPOTS]  = { 0, 0 };
+    uint32_t    tx_sum_tags[NUM_SPOTS]  = { 0, 0 };
 
     for(int i = 0; i < num_shots; i++)
     {
@@ -1114,7 +1131,12 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             if      (delta < tx_min_delta)  tx_min_delta = delta;
             else if (delta > tx_max_delta)  tx_max_delta = delta;
 
+            tx_deltas[i] = delta;
             tx_sum_delta += fabs(delta);
+        }
+        else
+        {
+            tx_deltas[i] = 0.0;
         }
 
 //        long tx_absolute_time[1];
@@ -1173,7 +1195,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         bool sigfound = hist[s]->calcAttributes(SignalWidth, TrueRulerClkPeriod);
         if(!sigfound)
         {
-            mlog(WARNING, "[%08lX]: could not find signal in science time tag data for spot %s\n", mfc, s == 0 ? "STRONG_SPOT" : "WEAK_SPOT");
+            mlog(WARNING, "[%ld]: could not find signal in science time tag data for spot %s\n", mfc, s == 0 ? "STRONG_SPOT" : "WEAK_SPOT");
             pkt_stat.warnings++;
         }
     }
@@ -1280,9 +1302,95 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     }
     chStat->unlock();
 
+
+    /*----------------------*/
+    /* Tx/Rx Slip Detection */
+    /*----------------------*/
+
+    if(mfdata_ptr)
+    {
+        /* Get Counts in Range Window */
+        long total_counts = 0;
+        for(int b = 0; b < MajorFrameProcessorModule::NUM_BKGND_CNTS; b++)
+        {
+            total_counts += mfdata_ptr->BackgroundCounts[b];
+        }
+
+        /* Check if No Data */
+        if((hist[STRONG_SPOT]->getNumDownlinkBands()) > 0 && (total_counts == 0))
+        {
+            mlog(ERROR, "%s [%ld] - request for no data\n", gps_str, mfc);
+        }
+    }
+
+    int slipped_rxs[NUM_SPOTS] = { 0, 0 };
+    for(int tx = 0; tx < (num_shots - 1); tx++)
+    {
+        /* Only Look On Tx Sawtooth Drop */
+        if(fabs(tx_deltas[tx + 1]) > 20.0)
+        {
+            /* Get Shot Data */
+            shot_data = shot_data_list[tx];
+    
+            /* Loop Through Rxs in Shot */
+            int num_rxs = shot_data->tx.return_count[STRONG_SPOT] + shot_data->tx.return_count[WEAK_SPOT];
+            for(int rx = 0; rx < num_rxs; rx++)
+            {
+                /* Determine Spot */
+                int spot = STRONG_SPOT;
+                if(shot_data->rx[rx].channel > 16)
+                {
+                    spot = WEAK_SPOT;
+                }   
+
+                /* Get Signal Range and Width */
+                double signal_range = hist[spot]->getSignalRange();
+                double signal_energy = hist[spot]->getSignalEnergy();
+
+                /* Look For Slip Only When There Is Signal*/
+                if(signal_energy > 2.0)
+                {
+                    double range_delta = shot_data->rx[rx].range - signal_range;
+                    double slip_delta = range_delta - tx_deltas[tx + 1];
+
+                    if(fabs(slip_delta) < 1.0)
+                    {
+                        slipped_rxs[spot]++;
+                    }
+                }
+
+                /* Build Granule Histogram */
+                if(signal_energy > 2.0)
+                {
+                    double delta_range = shot_data->rx[rx].range - signal_range;
+                    delta_range = delta_range + 0.5 - (delta_range < 0);
+                    long bin = (long)delta_range;
+
+                    if(bin >= -10000 && bin < 10000)
+                    {
+                        granMut.lock();
+                        {
+                            granHist[spot][10000 + bin]++;
+                        }
+                        granMut.unlock();
+                    }
+                }
+
+
+            }
+        }
+    }
+
+    /* Populate Slip Count */
+    for(int s = 0; s < NUM_SPOTS; s++)
+    {
+        hist[s]->setSlipCnt(slipped_rxs[s]);
+    }
+
     /*---------------------------*/
     /* Process Packet Statistics */
     /*---------------------------*/
+
     pktStat->lock();
     {
         pktStat->rec->sum_tags = pkt_stat.sum_tags;
@@ -1660,6 +1768,35 @@ int TimeTagProcessorModule::stopResultFileCmd(int argc, char argv[][MAX_CMD_SIZE
     (void)argv;
 
     if(resultFile) fclose(resultFile);
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * writeGranHistCmd
+ *----------------------------------------------------------------------------*/
+int TimeTagProcessorModule::writeGranHistCmd(int argc, char argv[][MAX_CMD_SIZE])
+{
+    (void)argc;
+
+    for(int s = 0; s < NUM_SPOTS; s++)
+    {
+        FILE* fp = fopen(argv[s], "w");
+        if(!fp)
+        {
+            mlog(CRITICAL, "Unable to open granule histogram file: %s\n", argv[s]);
+            return -1;
+        }
+        else
+        {
+            fprintf(fp, "Index,Count\n");
+            for(int i = 0; i < 20000; i++)
+            {
+                fprintf(fp,"%d,%ld\n", i, granHist[s][i]);
+            }
+            fclose(fp);
+        }
+    }
 
     return 0;
 }

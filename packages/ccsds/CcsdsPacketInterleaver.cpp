@@ -33,6 +33,8 @@
 const char* CcsdsPacketInterleaver::OBJECT_TYPE = "CcsdsPacketInterleaver";
 const char* CcsdsPacketInterleaver::LuaMetaName = "CcsdsPacketInterleaver";
 const struct luaL_Reg CcsdsPacketInterleaver::LuaMetaTable[] = {
+    {"start",       luaSetStartTime},
+    {"stop",        luaSetStopTime},
     {NULL,          NULL}
 };
 
@@ -103,6 +105,10 @@ CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, MgList<const char*,
     /* Create Output Stream */
     outQ = new Publisher(outq_name);
 
+    /* Initialize Times */
+    startTime = 0;
+    stopTime = 0;
+
     /* Create Thread */
     active = true;
     pid = new Thread(processorThread, this);
@@ -172,6 +178,18 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                         /* Capture Packet Time */
                         CcsdsSpacePacket pkt((unsigned char*)pkt_refs[i].data, pkt_refs[i].size);
                         pkt_times[i] = pkt.getCdsTime();
+
+                        /* Check Time Filter */
+                        if(processor->startTime > 0 && pkt_times[i] < processor->startTime)
+                        {
+                            processor->inQs[i]->dereference(pkt_refs[i]);
+                            pkt_refs[i].size = 0;
+                        }
+                        else if(processor->stopTime > 0 && pkt_times[i] > processor->stopTime)
+                        {
+                            processor->inQs[i]->dereference(pkt_refs[i]);
+                            pkt_refs[i].size = 0;
+                        }
                     }
                     else
                     {
@@ -248,4 +266,72 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
     /* Signal Complete */
     processor->signalComplete();
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * luaSetStartTime - :start(<gmt time>)
+ *----------------------------------------------------------------------------*/
+int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        CcsdsPacketInterleaver* lua_obj = (CcsdsPacketInterleaver*)getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        const char* gmt_str = getLuaString(L, 2);
+
+        /* Get Time */
+        int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
+        if(gmt_ms == 0)
+        {
+            throw LuaException("failed to parse time string %s", gmt_str);
+        }
+
+        /* Set Start Time */
+        lua_obj->startTime = (double)gmt_ms / 1000.0;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error setting start time: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSetStopTime - :stop(<gmt time>)
+ *----------------------------------------------------------------------------*/
+int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        CcsdsPacketInterleaver* lua_obj = (CcsdsPacketInterleaver*)getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        const char* gmt_str = getLuaString(L, 2);
+
+        /* Get Time */
+        int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
+        if(gmt_ms == 0)
+        {
+            throw LuaException("failed to parse time string %s", gmt_str);
+        }
+
+        /* Set Stop Time */
+        lua_obj->stopTime = (double)gmt_ms / 1000.0;
+    }
+    catch(const LuaException& e)
+    {
+        mlog(CRITICAL, "Error setting stop time: %s\n", e.errmsg);
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }

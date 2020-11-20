@@ -78,9 +78,6 @@ if s1 then
     outfilename = string.format('%s.csv', string.sub(json_input, 0, s1 - 1))
 end
 
-loglvl = rectable["loglvl"] or core.INFO
-console.logger:config(loglvl)
-
 -- Create Metrics --
 if rectable["metric"] then
     report = metric.createMetrics(rectable["metric"], outfilename)
@@ -98,6 +95,18 @@ if rectable["writer"] then
     local wfile = clp(writer["file"])
     cmd.exec(string.format("NEW ATLAS_FILE_WRITER atlasWriter %s %s recdataq", wformat, wfile))
 end
+
+-- Execute Post Configuration Commands --
+console.logger:config(core.INFO)
+if rectable["postcfg"] then
+    for index,cfgcmd in ipairs(rectable["postcfg"]) do
+        cmd.exec(cfgcmd)
+    end
+end
+
+-- Set Run Log Level --
+loglvl = rectable["loglvl"] or core.INFO
+console.logger:config(loglvl)
 
 -- Run Metrics --
 metric.runDispatchers()
@@ -177,6 +186,12 @@ elseif clp(source["type"]) == "ATL00" then
     end
     -- Create Interleaver --
     interleaver = ccsds.interleaver(ccsdsQs, "ccsdsdataq")
+    if source["start"] then
+        interleaver:start(source["start"])
+    end
+    if source["stop"] then
+        interleaver:stop(source["stop"])
+    end
     -- Create Readers --
     sourceFiles = {}
     sourceFileReaders = {}
@@ -209,6 +224,7 @@ if block_on_complete then
         report:flushrow('ALL')
     end
     cmd.exec("DISPLAY_STOPWATCH")
+    cmd.exec("ttProc2::WRITE_GRANULE_HIST stronghist.csv weakhist.csv")
     cmd.exec("ABORT")
 end
 
