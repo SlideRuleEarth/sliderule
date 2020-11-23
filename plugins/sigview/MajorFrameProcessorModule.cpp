@@ -62,7 +62,7 @@ MajorFrameProcessorModule::~MajorFrameProcessorModule(void)
  *----------------------------------------------------------------------------*/
 void MajorFrameProcessorModule::buildKey(long mfc, char* name_buf)
 {
-    snprintf(name_buf, MAX_KEY_NAME_SIZE, "%s.%ld", majorFrameDataKey, mfc & 0xFF);
+    snprintf(name_buf, MAX_KEY_NAME_SIZE, "%s.%ld", majorFrameDataKey, mfc & 0xFFFF);
 }
 
 /******************************************************************************

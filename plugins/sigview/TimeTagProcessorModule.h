@@ -167,6 +167,7 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         static const int    NUM_MF_TO_BUFF                  = 256;
         static const int    MAX_RX_PER_SHOT                 = 1000;
         static const int    MAX_STAT_NAME_SIZE              = 128;
+        static const int    GRANULE_HIST_SIZE               = 2000;
         static const double DEFAULT_10NS_PERIOD;
         static const double DEFAULT_SIGNAL_WIDTH;
         static const double DEFAULT_GPS_TOLERANCE;
@@ -305,7 +306,7 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         Publisher*      txTimeQ;  //output absolute Tx times
 
         Mutex granMut;
-        long granHist[NUM_SPOTS][20000]; // ns
+        long granHist[NUM_SPOTS][GRANULE_HIST_SIZE]; // ns
 
         /*--------------------------------------------------------------------
          * Methods

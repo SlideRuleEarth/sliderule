@@ -533,7 +533,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 }
                 else
                 {
-                    mlog(WARNING, "[%ld]: could not associate major frame data with science time tag data\n", mfc);
+                    mlog(WARNING, "[%ld]: could not associate major frame data with science time tag data from %ld\n", mfc, mfdata.MajorFrameCount);
                     pkt_stat.warnings++;
                 }
             }
@@ -632,7 +632,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 }
                 else
                 {
-                    mlog(WARNING, "Strong TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_s, tep_stop_bin_s, rws_s, rww_s);
+                    mlog(DEBUG, "Strong TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_s, tep_stop_bin_s, rws_s, rww_s);
                     tep_start_bin_s = 0;
                     tep_stop_bin_s = 0;
                 }
@@ -643,7 +643,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 }
                 else
                 {
-                    mlog(WARNING, "Weak TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_w, tep_stop_bin_w, rws_w, rww_w);
+                    mlog(DEBUG, "Weak TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_w, tep_stop_bin_w, rws_w, rww_w);
                     tep_start_bin_w = 0;
                     tep_stop_bin_w = 0;
                 }
@@ -1326,58 +1326,54 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     int slipped_rxs[NUM_SPOTS] = { 0, 0 };
     for(int tx = 0; tx < (num_shots - 1); tx++)
     {
-        /* Only Look On Tx Sawtooth Drop */
-        if(fabs(tx_deltas[tx + 1]) > 20.0)
+        /* Get Shot Data */
+        shot_data = shot_data_list[tx];
+
+        /* Loop Through Rxs in Shot */
+        int num_rxs = shot_data->tx.return_count[STRONG_SPOT] + shot_data->tx.return_count[WEAK_SPOT];
+        for(int rx = 0; rx < num_rxs; rx++)
         {
-            /* Get Shot Data */
-            shot_data = shot_data_list[tx];
-    
-            /* Loop Through Rxs in Shot */
-            int num_rxs = shot_data->tx.return_count[STRONG_SPOT] + shot_data->tx.return_count[WEAK_SPOT];
-            for(int rx = 0; rx < num_rxs; rx++)
+            /* Determine Spot */
+            int spot = STRONG_SPOT;
+            if(shot_data->rx[rx].channel > 16)
             {
-                /* Determine Spot */
-                int spot = STRONG_SPOT;
-                if(shot_data->rx[rx].channel > 16)
+                spot = WEAK_SPOT;
+            }   
+
+            /* Get Signal Range and Width */
+            double signal_range = hist[spot]->getSignalRange();
+            double signal_energy = hist[spot]->getSignalEnergy();
+            double signal_width = hist[spot]->getSignalWidth();
+
+            /* Look For Slip Only On Sawtooth Drop and When There Is Signal*/
+            if(fabs(tx_deltas[tx + 1]) > 20.0 && signal_energy > 0.5)
+            {
+                double range_delta = shot_data->rx[rx].range - signal_range;
+                double slip_delta = range_delta - tx_deltas[tx + 1];
+
+                if(fabs(slip_delta) < 1.0)
                 {
-                    spot = WEAK_SPOT;
-                }   
-
-                /* Get Signal Range and Width */
-                double signal_range = hist[spot]->getSignalRange();
-                double signal_energy = hist[spot]->getSignalEnergy();
-
-                /* Look For Slip Only When There Is Signal*/
-                if(signal_energy > 2.0)
-                {
-                    double range_delta = shot_data->rx[rx].range - signal_range;
-                    double slip_delta = range_delta - tx_deltas[tx + 1];
-
-                    if(fabs(slip_delta) < 1.0)
-                    {
-                        slipped_rxs[spot]++;
-                    }
+                    slipped_rxs[spot]++;
                 }
-
-                /* Build Granule Histogram */
-                if(signal_energy > 2.0)
-                {
-                    double delta_range = shot_data->rx[rx].range - signal_range;
-                    delta_range = delta_range + 0.5 - (delta_range < 0);
-                    long bin = (long)delta_range;
-
-                    if(bin >= -10000 && bin < 10000)
-                    {
-                        granMut.lock();
-                        {
-                            granHist[spot][10000 + bin]++;
-                        }
-                        granMut.unlock();
-                    }
-                }
-
-
             }
+
+            /* Build Granule Histogram - Only Use High Energy Narrow Returns */
+//            if(signal_energy > 0.5 && signal_energy < 2.5 && signal_width < 20.0)
+//            {
+                double delta_range = signal_range - shot_data->rx[rx].range;
+                delta_range = delta_range + 0.5 - (delta_range < 0);
+                long bin = (long)delta_range;
+
+                long hist_radius = GRANULE_HIST_SIZE / 2;
+                if(bin >= -hist_radius && bin < hist_radius)
+                {
+                    granMut.lock();
+                    {
+                        granHist[spot][hist_radius + bin]++;
+                    }
+                    granMut.unlock();
+                }
+//            }
         }
     }
 
@@ -1448,6 +1444,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     /*---------------*/
     /* Write Summary */
     /*---------------*/
+
     if(resultFile)
     {
         fprintf(resultFile, "%ld, %d, %d, %u, %d, %d, %d, %d, %d, %d, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %ld, %04X, %d, %d, %04X, %d, %d, %04X, %d, %d, %04X, %d, %d\n",
@@ -1790,7 +1787,7 @@ int TimeTagProcessorModule::writeGranHistCmd(int argc, char argv[][MAX_CMD_SIZE]
         else
         {
             fprintf(fp, "Index,Count\n");
-            for(int i = 0; i < 20000; i++)
+            for(int i = 0; i < GRANULE_HIST_SIZE; i++)
             {
                 fprintf(fp,"%d,%ld\n", i, granHist[s][i]);
             }

@@ -1381,7 +1381,7 @@ int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE])
             break;
         }
 
-        mlog(INFO, "Waiting... %s is %d of %ld seconds empty (%d)\n", qname, q_empty_count, wait, q_count);
+        mlog(CRITICAL, "Waiting... %s is %d of %ld seconds empty (%d)\n", qname, q_empty_count, wait, q_count);
         LocalLib::sleep(1);
     }
 
