@@ -26,8 +26,9 @@
 #include <math.h>
 #include <semaphore.h>
 
-#include "rtap/core.h"
-#include "rtap/ccsds.h"
+#include "core.h"
+#include "ccsds.h"
+#include "legacy.h"
 
 #include "Charter.h"
 
@@ -157,7 +158,7 @@ Charter::~Charter(void)
     /* Delete Plots */
     DataPlot* plot;
     okey_t handle = plots.first(&plot);
-    while(handle != plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         delete plot;
         plots.remove(handle);
@@ -244,7 +245,7 @@ void Charter::setMarkers(marker_t marker, uint64_t key)
 {
     DataPlot* plot;
     okey_t handle = plots.first(&plot);
-    while(handle != plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->setMarker(marker, key);
         handle = plots.next(&plot);
@@ -333,7 +334,7 @@ int Charter::addPlotCmd(int argc, char argv[][MAX_CMD_SIZE])
     /* Check for Existing Name */
     DataPlot* old_plot;
     okey_t handle = plots.first(&old_plot);
-    while(handle != plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         if(strcmp(old_plot->getName(), name) == 0)
         {
@@ -465,7 +466,7 @@ void Charter::lockHandler(GtkButton* button, gpointer user_data)
     {
         DataPlot* plot;
         okey_t handle = charter->plots.first(&plot);
-        while(handle != charter->plots.INVALID_KEY)
+        while(handle != INVALID_KEY)
         {
             plot->lockData();
             handle = charter->plots.next(&plot);
@@ -475,7 +476,7 @@ void Charter::lockHandler(GtkButton* button, gpointer user_data)
     {
         DataPlot* plot;
         okey_t handle = charter->plots.first(&plot);
-        while(handle != charter->plots.INVALID_KEY)
+        while(handle != INVALID_KEY)
         {
             plot->unlockData();
             handle = charter->plots.next(&plot);
@@ -532,7 +533,7 @@ void Charter::exportHandler(GtkButton* button, gpointer user_data)
     GtkWidget* export_box = gtk_vbox_new(FALSE, 1);
     DataPlot* plot;
     okey_t handle = charter->plots.first(&plot);
-    while(handle != charter->plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         GtkWidget* selection_label = gtk_label_new("---");
         Charter::setLabel(selection_label, "%s", plot->getName());
@@ -565,7 +566,7 @@ void Charter::exportRangeHandler(GtkButton* button, gpointer user_data)
 
     DataPlot* plot;
     okey_t handle = charter->plots.first(&plot);
-    while(handle != charter->plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->exportData();
         handle = charter->plots.next(&plot);
@@ -587,7 +588,7 @@ void Charter::exportBlueHandler(GtkButton* button, gpointer user_data)
 
     DataPlot* plot;
     okey_t handle = charter->plots.first(&plot);
-    while(handle != charter->plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->exportMarker(BLUE_MARKER, false);
         handle = charter->plots.next(&plot);
@@ -609,7 +610,7 @@ void Charter::exportGreenHandler(GtkButton* button, gpointer user_data)
 
     DataPlot* plot;
     okey_t handle = charter->plots.first(&plot);
-    while(handle != charter->plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->exportMarker(GREEN_MARKER, false);
         handle = charter->plots.next(&plot);
@@ -631,7 +632,7 @@ void Charter::exportBluestepHandler(GtkButton* button, gpointer user_data)
 
     DataPlot* plot;
     okey_t handle = charter->plots.first(&plot);
-    while(handle != charter->plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->exportMarker(BLUE_MARKER, true);
         handle = charter->plots.next(&plot);
@@ -653,7 +654,7 @@ void Charter::exportGreenstepHandler(GtkButton* button, gpointer user_data)
 
     DataPlot* plot;
     okey_t handle = charter->plots.first(&plot);
-    while(handle != charter->plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->exportMarker(GREEN_MARKER, true);
         handle = charter->plots.next(&plot);
@@ -692,7 +693,7 @@ void Charter::clearHandler(GtkButton* button, gpointer user_data)
     /* Clear Plots */
     DataPlot* plot;
     okey_t handle = charter->plots.first(&plot);
-    while(handle != charter->plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->clearData();
         plot->redraw();
@@ -725,7 +726,7 @@ void Charter::redrawPlots(void)
 {
     DataPlot* plot;
     okey_t handle = plots.first(&plot);
-    while(handle != plots.INVALID_KEY)
+    while(handle != INVALID_KEY)
     {
         plot->redraw();
         handle = plots.next(&plot);
@@ -1434,7 +1435,7 @@ void* DataPlot::drawThread (void* parm)
                 /* Go to First Point */
                 i = 0;
                 okey_t handle = plot->points->first(&point);
-                while(handle != plot->points->INVALID_KEY && i < plot->charter->getOffsetPoints())
+                while(handle != INVALID_KEY && i < plot->charter->getOffsetPoints())
                 {
                     handle = plot->points->next(&point);
                     i++;
@@ -1442,7 +1443,7 @@ void* DataPlot::drawThread (void* parm)
 
                 /* Populate Data Buffers */
                 i = 0;
-                while(handle != plot->points->INVALID_KEY && i < numpoints)
+                while(handle != INVALID_KEY && i < numpoints)
                 {
                     xdata[i] = (double)point->index;
                     ydata[i] = (double)point->value;

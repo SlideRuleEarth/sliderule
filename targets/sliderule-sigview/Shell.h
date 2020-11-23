@@ -4,8 +4,9 @@
 #include <gtk/gtk.h>
 #include <gtkextra/gtkextra.h>
 
-#include "rtap/core.h"
-#include "rtap/ccsds.h"
+#include "core.h"
+#include "ccsds.h"
+#include "legacy.h"
 
 class Shell: public CommandableObject
 {
@@ -42,8 +43,8 @@ class Shell: public CommandableObject
         Subscriber*             logq_sub;
         okey_t                  msglog;
 
-        MgList<const char*>     cmd_history;
-        int                     cmd_index;
+        MgList<const char*,true> cmd_history;
+        int                      cmd_index;
         
         GtkWidget*              ignore_radio;
         GtkWidget*              debug_radio;

@@ -4,8 +4,9 @@
 #include <gtk/gtk.h>
 #include <gtkextra/gtkextra.h>
 
-#include "rtap/core.h"
-#include "rtap/ccsds.h"
+#include "core.h"
+#include "ccsds.h"
+#include "legacy.h"
 
 /***********************
  TYPEDEFS

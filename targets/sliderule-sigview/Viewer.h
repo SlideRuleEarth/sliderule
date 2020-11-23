@@ -1,8 +1,8 @@
 #ifndef __VIEWER_HPP__
 #define __VIEWER_HPP__
 
-#include "rtap/core.h"
-#include "rtap/ccsds.h"
+#include "core.h"
+#include "ccsds.h"
 
 #include "atlasdefines.h"
 

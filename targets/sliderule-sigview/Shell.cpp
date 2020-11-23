@@ -29,8 +29,9 @@
 #include <errno.h>
 #include <semaphore.h>
 
-#include "rtap/core.h"
-#include "rtap/ccsds.h"
+#include "core.h"
+#include "ccsds.h"
+#include "legacy.h"
 
 #include "Shell.h"
 
@@ -52,8 +53,7 @@ const char* Shell::SHELL_LOGGER_NAME = "shelllog";
   -------------------------------------------------------------------------------------*/
 
 Shell::Shell(CommandProcessor* cmd_proc, const char* obj_name, const char* _logq_name): 
-    CommandableObject(cmd_proc, obj_name, TYPE),
-    cmd_history(true)   // is array
+    CommandableObject(cmd_proc, obj_name, TYPE)
 {
     assert(_logq_name);
 

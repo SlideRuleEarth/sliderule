@@ -28,17 +28,17 @@
 #include <math.h>
 #include <semaphore.h>
 
-#include "rtap/core.h"
-#include "rtap/ccsds.h"
+#include "core.h"
+#include "ccsds.h"
+#include "sigview.h"
 
 #include "Viewer.h"
-#include "atlas.h"
 
 /******************************************************************************
  IMPORTED FUNCTION PROTOTYPES
  ******************************************************************************/
 
-extern void sigview_quick_exit (int parm);
+extern void console_quick_exit (int parm);
 
 /******************************************************************************
  STATIC DATA
@@ -1473,7 +1473,7 @@ void Viewer::timestatHandler(timeStat_t* timestat, int size)
         else if(timestat->int_1pps_source == UNK_1PPS_SRC) int_1pps_source_str = "UNK_1PPS_SRC";
 
         char timeinfo[2048];
-        sprintf(timeinfo,   "%20s%20.9lf\n%20s%20.9lf\n%20s%20.9lf\n%20s%20.9lf\n%20s%20.9lf, %.9lf, %.9lf\n%20s%20.1lf ns per sec\n%20s%20lld\n%20s%20s\n%20s%20s\n%20s%20s\n%20s%20s\n%20s%20s\n%20s%20u\n",
+        sprintf(timeinfo,   "%20s%20.9lf\n%20s%20.9lf\n%20s%20.9lf\n%20s%20.9lf\n%20s%20.9lf, %.9lf, %.9lf\n%20s%20.1lf ns per sec\n%20s%20ld\n%20s%20s\n%20s%20s\n%20s%20s\n%20s%20s\n%20s%20s\n%20s%20u\n",
                             "ASC 1PPS GPS:",        timestat->asc_1pps_time,
                             "SC 1PPS FREQ:",        timestat->sc_1pps_freq,
                             "ASC 1PPS FREQ:",       timestat->asc_1pps_freq,
@@ -1877,7 +1877,7 @@ void* Viewer::plotThread(void* parm)
                 if(viewer->plot_fft == true)
                 {
                     numpoints &= ~1;
-                    maxvalue = DSP::FFT(fftdata, core->bins, numpoints);
+                    maxvalue = MathLib::FFT(fftdata, core->bins, numpoints);
 
                     if(viewer->clear_accum == true)
                     {
@@ -2331,7 +2331,7 @@ void* Viewer::appstatThread(void* parm)
             int64_t latency = 0;
             viewer->cmdProc->getCurrentValue(viewer->ccsdsproc_name, CcsdsPacketProcessor::latencyKey, &latency, sizeof(latency));
 
-            char* sockinfo = DeviceIO::getDeviceList();
+            char* sockinfo = DeviceObject::getDeviceList();
 
             char msginfo[64];
             int warning_cnt     = LogLib::getLvlCnts(WARNING);
@@ -2340,11 +2340,11 @@ void* Viewer::appstatThread(void* parm)
             sprintf(msginfo, "%dw, %de, %dc", warning_cnt, error_cnt, critical_cnt);
 
             char info[1024];
-            sprintf(info, "%-8s%14s:%ld\n%-8s%14s:%d\n%-8s%14lld\n%-8s%14s\n%-8s%14s\n\n%s\n%s",
+            sprintf(info, "%-8s%14s:%ld\n%-8s%14s:%d\n%-8s%14ld\n%-8s%14s\n%-8s%14s\n\n%s\n%s",
                     "Pkt Q:",   pktinfo, ccsds_auto_flush_cnt,
                     "Rec Q:",   histinfo, viewer->autoflush_cnt,
                     "Latency:", latency,
-                    "Version:", APPID,
+                    "Version:", BINID,
                     "Mode:",    modeinfo,
                     sockinfo,
                     msginfo);
@@ -2401,7 +2401,7 @@ void Viewer::appQuit(GtkWidget* widget, gpointer data)
     (void)widget;
     (void)data;
     
-    sigview_quick_exit(0);
+    console_quick_exit(0);
 }
 
 /*--------------------------------------------------------------------------------------
@@ -2640,7 +2640,7 @@ void Viewer::fileOpenHandler(GtkButton* button, gpointer user_data)
             }
 
             /* Check File Reader Active */
-            if(viewer->cmdProc->getObject(VIEWER_FILE_READER, DeviceReader::TYPE) != NULL)
+            if(viewer->cmdProc->getObject(VIEWER_FILE_READER, DeviceIO::OBJECT_TYPE) != NULL)
             {
                 if(viewer->file_reader != NULL)
                 {
@@ -2657,7 +2657,7 @@ void Viewer::fileOpenHandler(GtkButton* button, gpointer user_data)
            
             viewer->cmdProc->postCommand("NEW DEVICE_READER %s FILE %s %s %s", VIEWER_FILE_READER, format, filename_string.getString(), viewer->parser_qlist[protocol_index]);
             LocalLib::sleep(1); // time for above command to execute            
-            viewer->file_reader = (DeviceReader*)viewer->cmdProc->getObject(VIEWER_FILE_READER, DeviceReader::TYPE);
+            viewer->file_reader = (DeviceReader*)viewer->cmdProc->getObject(VIEWER_FILE_READER, DeviceIO::OBJECT_TYPE);
             if(viewer->file_reader == NULL)
             {
                 mlog(CRITICAL, "Unable to register file reader for viewer: %s\n", VIEWER_FILE_READER);
