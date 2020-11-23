@@ -71,6 +71,11 @@ cfg.startScienceProcessing()
 --cfg.startReport()         
 cfg.startPacketParsers()     
 
+-- Initialize GUI --
+if gui then
+    cfg.startGui()
+end
+
 -- Create Report Dispatcher: Output File Name  --    
 outfilename = "metric.csv"
 s1,s2 = string.find(json_input, ".json")

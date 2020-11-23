@@ -75,9 +75,9 @@ Shell::Shell(CommandProcessor* cmd_proc, const char* obj_name, const char* _logq
         PangoFontDescription* font_desc = pango_font_description_from_string ("DejaVu Sans Mono");
 
         /* Build Toggle Buttons */
-        ignore_radio    = gtk_radio_button_new_with_label (NULL, 						"Ignore");
+        ignore_radio    = gtk_radio_button_new_with_label (NULL, 						                    "Ignore");
         debug_radio 	= gtk_radio_button_new_with_label_from_widget (GTK_RADIO_BUTTON (ignore_radio), 	"Debug");
-        info_radio 	= gtk_radio_button_new_with_label_from_widget (GTK_RADIO_BUTTON (debug_radio), 		"Info");
+        info_radio 	    = gtk_radio_button_new_with_label_from_widget (GTK_RADIO_BUTTON (debug_radio), 		"Info");
         warning_radio 	= gtk_radio_button_new_with_label_from_widget (GTK_RADIO_BUTTON (info_radio), 		"Warning");
         error_radio     = gtk_radio_button_new_with_label_from_widget (GTK_RADIO_BUTTON (warning_radio), 	"Error");
         critical_radio 	= gtk_radio_button_new_with_label_from_widget (GTK_RADIO_BUTTON (error_radio),		"Critical");
