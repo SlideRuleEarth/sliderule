@@ -32,7 +32,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* TimeTagHistogram::rec_type[NUM_PCES * NUM_SPOTS] = { "STT[1]", "WTT[1]", "STT[2]", "WTT[2]", "STT[3]", "WTT[3]" };
+const char* TimeTagHistogram::rec_type = "TagHist";
 
 RecordObject::fieldDef_t TimeTagHistogram::rec_def[] =
 {
@@ -84,7 +84,7 @@ TimeTagHistogram::TimeTagHistogram( AtlasHistogram::type_t _type, int _intperiod
                                     int _pcenum, long _mfc, mfdata_t* _mfdata,
                                     double _gps, double _rws, double _rww,
                                     band_t* _bands, int _numbands, bool _deep_free):
-    AtlasHistogram(rec_type[(_pcenum * NUM_SPOTS) + (_type == STT ? 0 : 1)], _type, _intperiod, _binsize, _pcenum, _mfc, _mfdata, _gps, _rws, _rww)
+    AtlasHistogram(rec_type, _type, _intperiod, _binsize, _pcenum, _mfc, _mfdata, _gps, _rws, _rww)
 {
     tt = (ttHist_t*)recordData;
 
@@ -290,10 +290,8 @@ const TimeTagHistogram::stat_t* TimeTagHistogram::getPktStats(void)
  *----------------------------------------------------------------------------*/
 RecordObject::recordDefErr_t TimeTagHistogram::defineHistogram(void)
 {
-    RecordObject::recordDefErr_t rc[NUM_PCES * NUM_SPOTS];
-    for(int i = 0; i < (NUM_PCES * NUM_SPOTS); i++) rc[i] = AtlasHistogram::defineHistogram(rec_type[i], sizeof(ttHist_t), rec_def, rec_elem);
-    for(int i = 0; i < (NUM_PCES * NUM_SPOTS); i++) if(rc[i] != RecordObject::SUCCESS_DEF) return rc[i];
-    return RecordObject::SUCCESS_DEF;
+    RecordObject::recordDefErr_t rc = AtlasHistogram::defineHistogram(rec_type, sizeof(ttHist_t), rec_def, rec_elem);
+    return rc;
 }
 
 /*----------------------------------------------------------------------------

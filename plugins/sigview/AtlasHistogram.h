@@ -37,6 +37,7 @@ class AtlasHistogram: public RecordObject
 
         static const int NUM_MAX_BINS  = 3;
         static const int MAX_HIST_SIZE = 10000;
+        static const int GPS_STR_SIZE = 32;
 
         static const double HISTOGRAM_DEFAULT_FILTER_WIDTH;
 
@@ -68,6 +69,7 @@ class AtlasHistogram: public RecordObject
             bool        majorFramePresent;
             mfdata_t    majorFrameData;
 
+            char        gpsString[GPS_STR_SIZE];
             double      gpsAtMajorFrame;
             double      rangeWindowStart;
             double      rangeWindowWidth;

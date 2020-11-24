@@ -458,11 +458,10 @@ if source["type"] == "ATL00" then
     end
 end
 
-sys.lsmsgq()
-
 -- Wait for Data to Finish --
-cmd.exec(string.format('WAIT_ON_EMPTY %s %d', scidataq, timeout_seconds), -1) -- wait forever
+cmd.exec(string.format('WAIT_ON_EMPTY %s 3', scidataq), -1) -- wait forever
 cmd.exec(string.format("WAIT_ON_EMPTY %s 3", metricq), -1) -- wait forever
+cmd.exec(string.format("WAIT_ON_EMPTY %s 3", rspq), -1) -- wait forever
 if report then
     report:flushrow('ALL')
 end

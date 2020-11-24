@@ -380,12 +380,7 @@ int AtlasFileWriter::writeHistoMeta (void* msg, int size, bool with_header)
     RecordObject::parseSerial((unsigned char*)msg, size, NULL, &data);
     if(!data) return 0;
 
-    if( !RecordObject::isType((unsigned char*)msg, size, "STT[1]") && 
-        !RecordObject::isType((unsigned char*)msg, size, "WTT[1]") && 
-        !RecordObject::isType((unsigned char*)msg, size, "STT[2]") && 
-        !RecordObject::isType((unsigned char*)msg, size, "WTT[2]") && 
-        !RecordObject::isType((unsigned char*)msg, size, "STT[2]") && 
-        !RecordObject::isType((unsigned char*)msg, size, "WTT[2]") ) return 0;
+    if( !RecordObject::isType((unsigned char*)msg, size, "TagHist") ) return 0;
 
     TimeTagHistogram::ttHist_t* hist = (TimeTagHistogram::ttHist_t*)data;
     mfdata_t* mfdata = &hist->hist.majorFrameData;

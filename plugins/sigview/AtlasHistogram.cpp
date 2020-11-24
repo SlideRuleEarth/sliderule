@@ -66,6 +66,11 @@ AtlasHistogram::AtlasHistogram(const char* _rec_type, type_t _type,
     hist->rangeWindowStart  = _rws;
     hist->rangeWindowWidth  = _rww;
 
+    /* Poopulate GPS String */
+    long gps_ms = (long)(hist->gpsAtMajorFrame * 1000.0);
+    TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(gps_ms);
+    StringLib::format(hist->gpsString, GPS_STR_SIZE, "%d:%d:%d:%d:%d:%d", gmt.year, gmt.day, gmt.hour, gmt.minute, gmt.second, gmt.millisecond);
+
     /* Set Major Frame Data */
     if(_mfdata != NULL)
     {
@@ -595,6 +600,7 @@ RecordObject::recordDefErr_t AtlasHistogram::defineHistogram(const char* rec_typ
         addField(def, "MFC",               INT64,  offsetof(hist_t, majorFrameCounter),                            1,   NULL, NATIVE_FLAGS);
         addField(def, "MFP",               INT8,   offsetof(hist_t, majorFramePresent),                            1,   NULL, NATIVE_FLAGS);
         addField(def, "GPS",               DOUBLE, offsetof(hist_t, gpsAtMajorFrame),                              1,   NULL, NATIVE_FLAGS);
+        addField(def, "GPSSTR",            STRING, offsetof(hist_t, gpsString),                         GPS_STR_SIZE,   NULL, NATIVE_FLAGS);
         addField(def, "RWS",               DOUBLE, offsetof(hist_t, rangeWindowStart),                             1,   NULL, NATIVE_FLAGS);
         addField(def, "RWW",               DOUBLE, offsetof(hist_t, rangeWindowWidth),                             1,   NULL, NATIVE_FLAGS);
         addField(def, "TXCNT",             INT32,  offsetof(hist_t, transmitCount),                                1,   NULL, NATIVE_FLAGS);

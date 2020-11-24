@@ -35,7 +35,7 @@ class AltimetryHistogram: public AtlasHistogram
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* rec_type[NUM_PCES];
+        static const char* rec_type;
 
         /*--------------------------------------------------------------------
          * Typedefs

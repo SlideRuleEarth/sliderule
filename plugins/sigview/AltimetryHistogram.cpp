@@ -35,7 +35,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* AltimetryHistogram::rec_type[NUM_PCES] = { "AltHist[1]", "AltHist[2]", "AltHist[3]" };
+const char* AltimetryHistogram::rec_type = "AltHist";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -47,7 +47,7 @@ const char* AltimetryHistogram::rec_type[NUM_PCES] = { "AltHist[1]", "AltHist[2]
 AltimetryHistogram::AltimetryHistogram(AtlasHistogram::type_t _type, int _intperiod, double _binsize,
                                        int _pcenum, long _mfc, mfdata_t* _mfdata,
                                        double _gps, double _rws, double _rww):
-    AtlasHistogram(rec_type[_pcenum], _type, _intperiod, _binsize, _pcenum, _mfc, _mfdata, _gps, _rws, _rww)
+    AtlasHistogram(rec_type, _type, _intperiod, _binsize, _pcenum, _mfc, _mfdata, _gps, _rws, _rww)
 {
     alt = (altHist_t*)recordData;
 }
@@ -64,10 +64,8 @@ AltimetryHistogram::~AltimetryHistogram(void)
  *----------------------------------------------------------------------------*/
 RecordObject::recordDefErr_t AltimetryHistogram::defineHistogram(void)
 {
-    RecordObject::recordDefErr_t rc[NUM_PCES];
-    for(int i = 0; i < NUM_PCES; i++) rc[i] = AtlasHistogram::defineHistogram(rec_type[i], sizeof(altHist_t), NULL, 0);
-    for(int i = 0; i < NUM_PCES; i++) if(rc[i] != RecordObject::SUCCESS_DEF) return rc[i];
-    return RecordObject::SUCCESS_DEF;
+    RecordObject::recordDefErr_t rc = AtlasHistogram::defineHistogram(rec_type, sizeof(altHist_t), NULL, 0);
+    return rc;
 }
 
 /*----------------------------------------------------------------------------

@@ -45,16 +45,67 @@ def atl00exec(parms):
 #
 # Application
 #
-class App(QWidget):
+class SigView(QWidget):
 
-    def __init__(self):
+    def processHists(self, rsps):
+        altHist = []
+        if "AltHist" in rsps:
+            altHist = rsps["AltHist"]
+        tagHist = []
+        if "TagHist" in rsps:
+            tagHist = rsps["TagHist"]
+        self.histSet = altHist + tagHist
+        self.histCounts = {}
+        self.histTotalCount = 0
+        for histType in self.histTypes:
+            self.histCounts[histType] = {}
+            for pceNum in self.pceNums:
+                self.histCounts[histType][pceNum] = 0
+        for hist in self.histSet:
+            if hist["TYPE"] in self.histMapping and hist["PCE"] >= 0 and hist["PCE"] <= 2:
+                histType = self.histMapping[hist["TYPE"]]
+                pceNum = hist["PCE"] + 1
+                self.histCounts[histType][pceNum] += 1
+                self.histTotalCount += 1
+
+    def displayHistAttributes(self, index):
+        displayText = ""
+        try:
+            hist = self.histSet[index]
+            displayText = """
+            GPS: {}
+            PCE:        {:8}     
+            MFC:        {:8}
+            TYPE:       {:8}
+            INTPERIOD:  {:8}
+            BINSIZE:    {:8.3f}
+            SUM:        {}
+            """.format(hist["GPSSTR"], hist["PCE"]+1, hist["MFC"], self.histMapping[hist["TYPE"]], hist["INTPERIOD"], hist["BINSIZE"], hist["SUM"])
+        except Exception as inst:
+            displayText = "Error displaying attributes for histogram {}: {}".format(index, inst)
+        self.histAttr.setText(displayText)
+
+    def plotHistBins(self, index):
+        try:
+            hist = self.histSet[index]
+            bins = hist["BINS"]
+            x = [i for i in range(len(bins))]
+            self.histPlot.plot(x, bins)
+        except Exception as inst:
+            print("Error plotting histogram {}: {}".format(index, inst))
+
+    def __init__(self, rsps):
         super().__init__()
+
+        # Histogram Data
+        self.histMapping = {0: "SAL", 1: "WAL", 2: "SAM", 3: "WAM", 4: "STT", 5: "WTT"}
+        self.histTypes = ["STT", "WTT", "SAL", "WAL", "SAM", "WAM"]
+        self.pceNums = [1, 2, 3]
+        self.processHists(rsps)
 
         # Plot Window #
         self.histPlot = pg.PlotWidget()
-        hour = [1,2,3,4,5,6,7,8,9,10]
-        temperature = [30,32,34,32,33,31,29,32,35,45]
-        self.histPlot.plot(hour, temperature)
+        self.plotHistBins(0)
 
         # Slider #
         self.histSlider = QSlider()
@@ -64,22 +115,44 @@ class App(QWidget):
         self.histSlider.setOrientation(Qt.Horizontal)
 
         # Filter
-        self.select_all_box = QCheckBox("Select All")
-        self.select_all_box.setChecked(True)
-        self.select_all_box.clicked.connect(self.on_click_select_all)
-
+        self.filters = {}
+        for histType in self.histTypes:
+            self.filters[histType] = {}
+        filterLayout = QVBoxLayout()
+        selectAllLayout = QHBoxLayout()
+        self.selectAllBox = QCheckBox("")
+        self.selectAllBox.setChecked(True)
+        self.selectAllBox.clicked.connect(self.on_click_select_all)
+        selectAllLayout.addWidget(QLabel("Select All", self), 1)
+        selectAllLayout.addWidget(self.selectAllBox, 1)
+        selectAllLayout.addWidget(QLabel("{}".format(self.histTotalCount), self), 10)
+        filterLayout.addLayout(selectAllLayout)
+        pceLabelLayout = QHBoxLayout()
+        pceLabelLayout.addWidget(QLabel("PCE", self), 1)
+        pceLabelLayout.addWidget(QLabel("1", self), 1)
+        pceLabelLayout.addWidget(QLabel("2", self), 1)
+        pceLabelLayout.addWidget(QLabel("3", self), 1)
+        filterLayout.addLayout(pceLabelLayout)
+        for histType in self.filters:
+            typeLayout = QHBoxLayout()
+            typeLayout.addWidget(QLabel("{}".format(histType), self), 1)
+            for pceNum in self.pceNums:
+                self.filters[histType][pceNum] = QCheckBox("{}".format(self.histCounts[histType][pceNum]))
+                self.filters[histType][pceNum].setChecked(True)
+                typeLayout.addWidget(self.filters[histType][pceNum], 1)
+            filterLayout.addLayout(typeLayout)
+                
         # Attributes
         self.histAttr = QTextEdit(self)
         self.histAttr.setFont(QFont('Consolas', 9)) 
         self.histAttr.setReadOnly(True)
-        opening_message = "Histogram Attributes\n\n"
-        self.histAttr.setText(opening_message)
-#        self.histAttr.setFixedWidth(self.histAttr.sizeHint().width() + 650)
-#        self.histAttr.setFixedHeight(self.histAttr.sizeHint().height() + 400)
+        self.displayHistAttributes(0)
+        self.histAttr.setFixedWidth(self.histAttr.sizeHint().width() + 100)
+        self.histAttr.setFixedHeight(self.histAttr.sizeHint().height() + 40)
 
         # Bottom Pane Layout
         bottomLayout = QHBoxLayout()
-        bottomLayout.addWidget(self.select_all_box, 1)
+        bottomLayout.addLayout(filterLayout, 1)
         bottomLayout.addWidget(self.histAttr, 1)
 
         # Window Layout
@@ -99,16 +172,12 @@ class App(QWidget):
         options = QFileDialog.Options()
         csv_file, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;CSV Files (*.csv)", options=options)
 
-
     @pyqtSlot()
     def on_click_select_all(self):
-        print("Select All")
+        for f in self.filters:
+            for p in [1,2,3]:
+                self.filters[f][p].setChecked(self.selectAllBox.isChecked())
         
-def main_app():
-    app = QApplication(sys.argv)
-    ex = App()
-    sys.exit(app.exec_())
-
 ###############################################################################
 # MAIN
 ###############################################################################
@@ -132,7 +201,9 @@ if __name__ == '__main__':
     icesat2.init(url, True)
 
     # Execute SlideRule Algorithm
-#    rsps = atl00exec(parms)
+    rsps = atl00exec(parms)
     
     # Start GUI
-    main_app()
+    app = QApplication(sys.argv)
+    ex = SigView(rsps)
+    sys.exit(app.exec_())

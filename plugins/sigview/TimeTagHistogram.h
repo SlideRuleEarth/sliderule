@@ -36,7 +36,7 @@ class TimeTagHistogram: public AtlasHistogram
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* rec_type[NUM_PCES * NUM_SPOTS];
+        static const char* rec_type;
 
         /*--------------------------------------------------------------------
          * Typedefs
