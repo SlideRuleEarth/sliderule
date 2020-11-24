@@ -112,29 +112,23 @@ void ChStat::defineRecord(void)
 {
     definition_t* def;
     recordDefErr_t status = addDefinition(&def, rec_type, "PCE", sizeof(chStat_t), NULL, 0, 128);
-
     if(status == SUCCESS_DEF)
     {
-        addField(def, "PCE", UINT32, offsetof(chStat_t, pce), 1, NULL, NATIVE_FLAGS);
-
-        for(int i = 0; i < NUM_CHANNELS; i++)
-        {
-            char field_name[MAX_FIELD_NAME_SIZE];
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "RX_CNT", i),    UINT32, offsetof(chStat_t, rx_cnt) + (i * sizeof(uint32_t)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "NUM_DUPR", i),  UINT32, offsetof(chStat_t, num_dupr) + (i * sizeof(uint32_t)),  1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "NUM_DUPF", i),  UINT32, offsetof(chStat_t, num_dupf) + (i * sizeof(uint32_t)),  1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "CELL_CNTS", i), UINT32, offsetof(chStat_t, cell_cnts) + (i * sizeof(uint32_t)), 1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "TDC_CALR", i),  DOUBLE, offsetof(chStat_t, tdc_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MIN_CALR", i),  DOUBLE, offsetof(chStat_t, min_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MAX_CALR", i),  DOUBLE, offsetof(chStat_t, max_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "AVG_CALR", i),  DOUBLE, offsetof(chStat_t, avg_calr) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "TDC_CALF", i),  DOUBLE, offsetof(chStat_t, tdc_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MIN_CALF", i),  DOUBLE, offsetof(chStat_t, min_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "MAX_CALF", i),  DOUBLE, offsetof(chStat_t, max_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "AVG_CALF", i),  DOUBLE, offsetof(chStat_t, avg_calf) + (i * sizeof(double)),    1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "BIAS", i),      DOUBLE, offsetof(chStat_t, bias) + (i * sizeof(double)),        1, NULL, NATIVE_FLAGS);
-            addField(def, StringLib::format(field_name, MAX_FIELD_NAME_SIZE, "%s[%d]", "DEAD_TIME", i), DOUBLE, offsetof(chStat_t, dead_time) + (i * sizeof(double)),   1, NULL, NATIVE_FLAGS);
-        }
+        addField(def, "PCE",        UINT32, offsetof(chStat_t, pce),        1,              NULL, NATIVE_FLAGS);
+        addField(def, "RX_CNT",     UINT32, offsetof(chStat_t, rx_cnt),     NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "NUM_DUPR",   UINT32, offsetof(chStat_t, num_dupr),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "NUM_DUPF",   UINT32, offsetof(chStat_t, num_dupf),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "CELL_CNTS",  UINT32, offsetof(chStat_t, cell_cnts),  NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "TDC_CALR",   DOUBLE, offsetof(chStat_t, tdc_calr),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "MIN_CALR",   DOUBLE, offsetof(chStat_t, min_calr),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "MAX_CALR",   DOUBLE, offsetof(chStat_t, max_calr),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "AVG_CALR",   DOUBLE, offsetof(chStat_t, avg_calr),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "TDC_CALF",   DOUBLE, offsetof(chStat_t, tdc_calf),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "MIN_CALF",   DOUBLE, offsetof(chStat_t, min_calf),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "MAX_CALF",   DOUBLE, offsetof(chStat_t, max_calf),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "AVG_CALF",   DOUBLE, offsetof(chStat_t, avg_calf),   NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "BIAS",       DOUBLE, offsetof(chStat_t, bias),       NUM_CHANNELS,   NULL, NATIVE_FLAGS);
+        addField(def, "DEAD_TIME",  DOUBLE, offsetof(chStat_t, dead_time),  NUM_CHANNELS,   NULL, NATIVE_FLAGS);
     }
 }
 
@@ -1317,9 +1311,27 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         }
 
         /* Check if No Data */
-        if((hist[STRONG_SPOT]->getNumDownlinkBands()) > 0 && (total_counts == 0))
+        if(total_counts == 0)
         {
-            mlog(ERROR, "%s [%ld] - request for no data\n", gps_str, mfc);
+            /* Check if Data Requested */
+            bool data_requested = false;
+            for(int s = 0; s < NUM_SPOTS; s++)
+            {
+                const TimeTagHistogram::band_t* bands = hist[s]->getDownlinkBands();
+                for(int b = 0; b < hist[s]->getNumDownlinkBands(); b++)
+                {
+                    if(bands[b].mask == 0xFFFFFF)
+                    {
+                        data_requested = true;
+                    }
+                }
+            }
+
+            /* Report if Data Requested */
+            if(data_requested)
+            {                        
+                mlog(ERROR, "%s [%ld] - request made for no data\n", gps_str, mfc);
+            }
         }
     }
 
@@ -1343,7 +1355,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             /* Get Signal Range and Width */
             double signal_range = hist[spot]->getSignalRange();
             double signal_energy = hist[spot]->getSignalEnergy();
-            double signal_width = hist[spot]->getSignalWidth();
+//            double signal_width = hist[spot]->getSignalWidth();
 
             /* Look For Slip Only On Sawtooth Drop and When There Is Signal*/
             if(fabs(tx_deltas[tx + 1]) > 20.0 && signal_energy > 0.5)

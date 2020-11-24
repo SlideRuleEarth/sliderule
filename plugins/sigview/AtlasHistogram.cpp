@@ -587,6 +587,7 @@ RecordObject::recordDefErr_t AtlasHistogram::defineHistogram(const char* rec_typ
     {
         addField(def, "SIZE",              INT32,  offsetof(hist_t, size),                                         1,   NULL, NATIVE_FLAGS);
         addField(def, "SUM",               INT32,  offsetof(hist_t, sum),                                          1,   NULL, NATIVE_FLAGS);
+        addField(def, "BINS",              INT32,  offsetof(hist_t, bins),                             MAX_HIST_SIZE,   NULL, NATIVE_FLAGS);
         addField(def, "TYPE",              INT32,  offsetof(hist_t, type),                                         1,   NULL, NATIVE_FLAGS);
         addField(def, "INTPERIOD",         INT32,  offsetof(hist_t, integrationPeriod),                            1,   NULL, NATIVE_FLAGS);
         addField(def, "BINSIZE",           DOUBLE, offsetof(hist_t, binSize),                                      1,   NULL, NATIVE_FLAGS);

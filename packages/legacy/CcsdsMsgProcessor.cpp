@@ -172,12 +172,18 @@ void* CcsdsMsgProcessor::processorThread(void* parm)
             {
                 success = processor->processMsg((unsigned char*)ref.data, ref.size);
             }
+            else /* terminator */
+            {
+                success = true;
+                self_delete = true;
+            }
             processor->inQ->dereference(ref);
         }
 
         /* Check Status */
         if (!success)
         {
+            mlog(CRITICAL, "Fatal error detected in %s, exiting processor\n", processor->getName());
             self_delete = true;
         }
     }
@@ -189,7 +195,6 @@ void* CcsdsMsgProcessor::processorThread(void* parm)
     if (self_delete)
     {
         /* Internally Initiated Exit - Delete Self */
-        mlog(CRITICAL, "Fatal error detected in %s, exiting processor\n", processor->getName());
         processor->cmdProc->deleteObject(processor->getName());
     }
 
