@@ -55,6 +55,7 @@ class SigView(QWidget):
         if "TagHist" in rsps:
             tagHist = rsps["TagHist"]
         self.histSet = altHist + tagHist
+        self.numHists = len(self.histSet)
         self.histCounts = {}
         self.histTotalCount = 0
         for histType in self.histTypes:
@@ -89,10 +90,16 @@ class SigView(QWidget):
         try:
             hist = self.histSet[index]
             bins = hist["BINS"]
-            x = [i for i in range(len(bins))]
+            x = [i * hist["BINSIZE"] for i in range(len(bins))]
+            self.histPlot.clear()
             self.histPlot.plot(x, bins)
         except Exception as inst:
             print("Error plotting histogram {}: {}".format(index, inst))
+
+    def updateHist(self, index):
+        self.sliderLabel.setText("{}".format(index))
+        self.plotHistBins(index)
+        self.displayHistAttributes(index)
 
     def __init__(self, rsps):
         super().__init__()
@@ -108,11 +115,24 @@ class SigView(QWidget):
         self.plotHistBins(0)
 
         # Slider #
+        sliderLayout = QHBoxLayout()
         self.histSlider = QSlider()
-        self.histSlider.setMinimum(0)
-        self.histSlider.setMaximum(100)
+        self.histSlider.setRange(0, self.numHists - 1)
+        self.histSlider.setPageStep(int(self.numHists / 20))
         self.histSlider.setTickPosition(QSlider.TicksLeft)
         self.histSlider.setOrientation(Qt.Horizontal)
+        self.histSlider.valueChanged.connect(self.on_slider_changed)
+        sliderLeft = QPushButton()
+        sliderLeft.setIcon(self.style().standardIcon(getattr(QStyle, 'SP_ArrowLeft')))
+        sliderLeft.clicked.connect(self.on_slider_left)
+        self.sliderLabel = QLabel("0", self)
+        sliderRight = QPushButton()
+        sliderRight.setIcon(self.style().standardIcon(getattr(QStyle, 'SP_ArrowRight')))
+        sliderRight.clicked.connect(self.on_slider_right)
+        sliderLayout.addWidget(self.histSlider)
+        sliderLayout.addWidget(sliderLeft)
+        sliderLayout.addWidget(self.sliderLabel)
+        sliderLayout.addWidget(sliderRight)
 
         # Filter
         self.filters = {}
@@ -158,7 +178,7 @@ class SigView(QWidget):
         # Window Layout
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.histPlot, 10)
-        mainLayout.addWidget(self.histSlider, 1)
+        mainLayout.addLayout(sliderLayout, 1)
         mainLayout.addLayout(bottomLayout, 1)
         self.setLayout(mainLayout)
 
@@ -168,9 +188,23 @@ class SigView(QWidget):
         self.show()
 
     @pyqtSlot()
-    def on_click_open(self):
-        options = QFileDialog.Options()
-        csv_file, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;CSV Files (*.csv)", options=options)
+    def on_slider_changed(self):
+        index = self.histSlider.value()
+        self.updateHist(index)
+
+    @pyqtSlot()
+    def on_slider_left(self):
+        index = self.histSlider.value()
+        if index > 0:
+            self.histSlider.setValue(index - 1)
+        self.updateHist(index)
+
+    @pyqtSlot()
+    def on_slider_right(self):
+        index = self.histSlider.value()
+        if index < self.numHists - 1:
+            self.histSlider.setValue(index + 1)
+        self.updateHist(index)
 
     @pyqtSlot()
     def on_click_select_all(self):
