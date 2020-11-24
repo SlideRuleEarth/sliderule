@@ -20,7 +20,7 @@ config: default-config
 
 default-config:
 	mkdir -p build
-	cd build; cmake $(ROOT)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
 
 release-config:
 	mkdir -p build

@@ -3,14 +3,10 @@ local asset = require("asset")
 local json = require("json")
 
 -- Process Arguments: JSON Configuration File
-json_input = arg[1]
+local cfgtbl = {}
+local json_input = arg[1]
 if json_input and string.match(json_input, ".json") then
     sys.log(core.CRITICAL, string.format('Reading json file: %s\n', json_input))
-end
-
--- Read JSON File and Decode Content --
-local cfgtbl = {}
-if json_input then
     local f = io.open(json_input, "r")
     local content = f:read("*all")
     f:close()

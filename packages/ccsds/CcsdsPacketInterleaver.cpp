@@ -194,10 +194,10 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                     else
                     {
                         /* Terminator Received */
-                        mlog(CRITICAL, "Terminator received on %s (%d remaining)\n", processor->inQs[i]->getName(), num_valid);
                         processor->inQs[i]->dereference(pkt_refs[i]);
                         inq_valid[i] = false;
                         num_valid--;
+                        mlog(CRITICAL, "Terminator received on %s (%d remaining)\n", processor->inQs[i]->getName(), num_valid);
                     }
                 }
                 else if(status != MsgQ::STATE_TIMEOUT)

@@ -451,7 +451,7 @@ int HttpServer::onWrite(int fd)
                 /* Write Chunk Header - HTTP */
                 unsigned long chunk_size = connection->state.ref.size > 0 ? connection->state.ref.size + sizeof(uint32_t) : 0;
                 StringLib::format((char*)connection->state.stream_buf, STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
-                connection->state.stream_buf_size = StringLib::size((const char*)connection->state.stream_buf);
+                connection->state.stream_buf_size = StringLib::size((const char*)connection->state.stream_buf, connection->state.stream_mem_size);
 
                 if(connection->state.ref.size > 0)
                 {

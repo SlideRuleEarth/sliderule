@@ -146,7 +146,7 @@ void LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publ
         const char* result = engine->getResult();
         if(result)
         {
-            int result_length = StringLib::size(result);
+            int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
             int header_length = buildheader(header, OK, "text/plain", result_length, NULL, ServerHeader.getString());
             rspq->postCopy(header, header_length);
             rspq->postCopy(result, result_length);

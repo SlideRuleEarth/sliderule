@@ -45,6 +45,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"setiosz",     LuaLibrarySys::lsys_setiosize},
     {"getiosz",     LuaLibrarySys::lsys_getiosize},
+    {"lsrec",       LuaLibrarySys::lsys_lsrec},
     {"lsdev",       DeviceObject::luaList},
     {NULL,          NULL}
 };
@@ -291,4 +292,27 @@ int LuaLibrarySys::lsys_getiosize (lua_State* L)
     return 1;
 }
 
+/*----------------------------------------------------------------------------
+ * lsys_lsrec
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_lsrec (lua_State* L)
+{
+    const char* pattern = NULL;
+    if(lua_isstring(L, 1)) pattern = lua_tostring(L, 1);
 
+    mlog(RAW, "\n%50s %24s %s\n", "Type", "Id", "Size");
+    char** rectypes = NULL;
+    int numrecs = RecordObject::getRecords(&rectypes);
+    for(int i = 0; i < numrecs; i++)
+    {
+        if(pattern == NULL || StringLib::find(rectypes[i], pattern))
+        {
+            const char* id_field = RecordObject::getRecordIdField(rectypes[i]);
+            int data_size = RecordObject::getRecordDataSize(rectypes[i]);
+            mlog(RAW, "%50s %24s %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size);
+        }
+        delete [] rectypes[i];
+    }
+    delete [] rectypes;
+    return 0;
+}

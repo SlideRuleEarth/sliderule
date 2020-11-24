@@ -46,6 +46,7 @@ class LuaEndpoint: public EndpointObject
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
+        static const int MAX_SOURCED_RESPONSE_SIZE = 1048576; // 1M
         static const int MAX_RESPONSE_TIME_MS = 5000;
         static const char* RESPONSE_QUEUE;
 

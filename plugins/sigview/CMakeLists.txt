@@ -71,4 +71,11 @@ install (
         ${INCDIR}
 )
 
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl00.lua
+    DESTINATION
+        ${CONFDIR}
+)
+
 install (TARGETS sigviewLib LIBRARY DESTINATION ${CONFDIR})
