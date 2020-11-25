@@ -79,8 +79,8 @@ class SigView(QWidget):
     # Display Histogram Attributes #
     def displayHistAttributes(self, index):
         basicText = ""
-        tagText = "tag"
-        channelText = "channel"
+        tagText = "No tag information available"
+        channelText = "No channel information available"
         try:
             hist = self.histWorkingSet[index]
             # Basic Text
@@ -109,33 +109,57 @@ SIGPES:     {:11.3f} ns       DFCSTATUS:  {:8x}
             hist["SIGWID"], hist["STARTTAGFIFO"],
             hist["SIGPES"], hist["DFCEDAC"])
             # Tag Text
-            if
-            tagText = """GPS: {}
+            if hist["TYPE"] == 4 or hist["TYPE"] == 5:
+                tagText = """GPS: {}
 PCE:        {:11}
 MFC:        {:11}
-DLB_START:  {:11} {:5} {:5}
-DLB_MASK:   {:11x} {:5x} {:5x}
-DLB_TAGCNT: {:11} {:5} {:5}
-RWS:        {:11.0f} 
-RWW:        {:11.0f} 
-BKGND:      {:11.3f}
-SIGRNG:     {:11.3f}
-SIGWID:     {:11.1f}
-SIGPES:     {:11.3f}
-""".format( hist["GPSSTR"],
-            hist["PCE"]+1,  hist["TXCNT"],
-            hist["MFC"],  hist["SUM"],
-            self.histMapping[hist["TYPE"]],  hist["SIZE"],
-            hist["INTPERIOD"],  hist["RWDROPOUT"],
-            hist["BINSIZE"] * (10. / 1.5),  hist["DIDNOTFINISHTX"],
-            hist["RWS"], hist["DIDNOTFINISHWR"],
-            hist["RWW"], hist["DFCEDAC"],
-            hist["BKGND"], hist["SDRAMMISMATCH"],
-            hist["SIGRNG"], hist["TRACKINGFIFO"],
-            hist["SIGWID"], hist["STARTTAGFIFO"],
-            hist["SIGPES"], hist["DFCEDAC"])
-            # Channel Text
+DLB_START:  {:8} {:8} {:8} {:8}
+DLB_WIDTH:  {:8} {:8} {:8} {:8}
+DLB_MASK:   {:8x} {:8x} {:8x} {:8x}
+DLB_TAGCNT: {:8} {:8} {:8} {:8}
 
+MFC HDR FMT DLB TAG PKT     TAGS MIN  MAX  AVG
+{:3} {:3} {:3} {:3} {:3} {:3}          {:3}  {:3}  {:3.1f}
+""".format( hist["GPSSTR"],
+            hist["PCE"]+1,
+            hist["MFC"],
+            hist["DLB0_START"], hist["DLB1_START"], hist["DLB2_START"], hist["DLB3_START"],
+            hist["DLB0_WIDTH"], hist["DLB1_WIDTH"], hist["DLB2_WIDTH"], hist["DLB3_WIDTH"],
+            hist["DLB0_MASK"], hist["DLB1_MASK"], hist["DLB2_MASK"], hist["DLB3_MASK"],
+            hist["DLB0_TAGCNT"], hist["DLB1_TAGCNT"], hist["DLB2_TAGCNT"], hist["DLB3_TAGCNT"],
+            hist["MFC_ERRORS"], hist["HDR_ERRORS"], hist["FMT_ERRORS"], hist["DLB_ERRORS"], hist["TAG_ERRORS"], hist["PKT_ERRORS"],
+            hist["MIN_TAGS"], hist["MAX_TAGS"], hist["AVG_TAGS"])
+            # Channel Text
+            if hist["TYPE"] == 4:
+                channelText = """GPS: {}
+PCE:        {:11}
+MFC:        {:11}
+               17    18    19    20
+CHCNT:      {:5} {:5} {:5} {:5}
+CHBIAS:     {:5.3f} {:5.3f} {:5.3f} {:5.3f}
+""".format( hist["GPSSTR"],
+            hist["PCE"]+1,
+            hist["MFC"],
+            hist["CHCNT"][16], hist["CHCNT"][17], hist["CHCNT"][18], hist["CHCNT"][19],
+            hist["CHBIAS"][16], hist["CHBIAS"][17], hist["CHBIAS"][18], hist["CHBIAS"][19])
+            if hist["TYPE"] == 5:
+                channelText = """GPS: {}
+PCE:        {:11}
+MFC:        {:11}
+                1     2     3     4     5     6     7     8
+CHCNT:      {:5} {:5} {:5} {:5} {:5} {:5} {:5} {:5}
+CHBIAS:     {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f}
+
+                9    10    11    12    13    14    15    16
+CHCNT:      {:5} {:5} {:5} {:5} {:5} {:5} {:5} {:5}
+CHBIAS:     {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f}
+""".format( hist["GPSSTR"],
+            hist["PCE"]+1,
+            hist["MFC"],
+            hist["CHCNT"][0], hist["CHCNT"][1], hist["CHCNT"][2], hist["CHCNT"][3], hist["CHCNT"][4], hist["CHCNT"][5], hist["CHCNT"][6], hist["CHCNT"][7], 
+            hist["CHCNT"][8], hist["CHCNT"][9], hist["CHCNT"][10], hist["CHCNT"][11], hist["CHCNT"][12], hist["CHCNT"][13], hist["CHCNT"][14], hist["CHCNT"][15],
+            hist["CHBIAS"][0], hist["CHBIAS"][1], hist["CHBIAS"][2], hist["CHBIAS"][3], hist["CHBIAS"][4], hist["CHBIAS"][5], hist["CHBIAS"][6], hist["CHBIAS"][7], 
+            hist["CHBIAS"][8], hist["CHBIAS"][9], hist["CHBIAS"][10], hist["CHBIAS"][11], hist["CHBIAS"][12], hist["CHBIAS"][13], hist["CHBIAS"][14], hist["CHBIAS"][15])
         except Exception as inst:
             basicText = "Nothing to display"
             tagText = "Nothing to display"
@@ -270,7 +294,6 @@ SIGPES:     {:11.3f}
         if index > 0:
             index -= 1
             self.histSlider.setValue(index)
-            self.updateHist(index)
 
     @pyqtSlot()
     def on_slider_right(self):
@@ -278,7 +301,6 @@ SIGPES:     {:11.3f}
         if index < self.numHists - 1:
             index += 1
             self.histSlider.setValue(index)
-            self.updateHist(index)
 
     @pyqtSlot()
     def on_click_select_all(self):
@@ -345,8 +367,7 @@ if __name__ == '__main__':
     icesat2.init(url, True)
 
     # Execute SlideRule Algorithm
-    # rsps = atl00exec(parms)
-    rsps = [] 
+    rsps = atl00exec(parms)
 
     # Start GUI
     app = QApplication(sys.argv)
