@@ -34,7 +34,7 @@ def atl00exec(parms):
             flattened[rectype] = [rsp]
         else:
             flattened[rectype].append(rsp)
-        
+
     return flattened
 
 
@@ -130,35 +130,35 @@ MFC HDR FMT DLB TAG PKT     TAGS MIN  MAX  AVG
             hist["MFC_ERRORS"], hist["HDR_ERRORS"], hist["FMT_ERRORS"], hist["DLB_ERRORS"], hist["TAG_ERRORS"], hist["PKT_ERRORS"],
             hist["MIN_TAGS"], hist["MAX_TAGS"], hist["AVG_TAGS"])
             # Channel Text
-            if hist["TYPE"] == 4:
+            if hist["TYPE"] == 5:
                 channelText = """GPS: {}
 PCE:        {:11}
 MFC:        {:11}
-               17    18    19    20
-CHCNT:      {:5} {:5} {:5} {:5}
-CHBIAS:     {:5.3f} {:5.3f} {:5.3f} {:5.3f}
+                17     18     19     20
+CHCNT:      {:6} {:6} {:6} {:6}
+CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f}
 """.format( hist["GPSSTR"],
             hist["PCE"]+1,
             hist["MFC"],
             hist["CHCNT"][16], hist["CHCNT"][17], hist["CHCNT"][18], hist["CHCNT"][19],
             hist["CHBIAS"][16], hist["CHBIAS"][17], hist["CHBIAS"][18], hist["CHBIAS"][19])
-            if hist["TYPE"] == 5:
+            if hist["TYPE"] == 4:
                 channelText = """GPS: {}
 PCE:        {:11}
 MFC:        {:11}
-                1     2     3     4     5     6     7     8
-CHCNT:      {:5} {:5} {:5} {:5} {:5} {:5} {:5} {:5}
-CHBIAS:     {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f}
+                 1      2      3      4      5      6      7     8
+CHCNT:      {:6} {:6} {:6} {:6} {:6} {:6} {:6} {:6}
+CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
 
-                9    10    11    12    13    14    15    16
-CHCNT:      {:5} {:5} {:5} {:5} {:5} {:5} {:5} {:5}
-CHBIAS:     {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f} {:5.3f}
+                 9     10     11     12     13     14     15     16
+CHCNT:      {:6} {:6} {:6} {:6} {:6} {:6} {:6} {:6}
+CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
 """.format( hist["GPSSTR"],
             hist["PCE"]+1,
             hist["MFC"],
             hist["CHCNT"][0], hist["CHCNT"][1], hist["CHCNT"][2], hist["CHCNT"][3], hist["CHCNT"][4], hist["CHCNT"][5], hist["CHCNT"][6], hist["CHCNT"][7], 
-            hist["CHCNT"][8], hist["CHCNT"][9], hist["CHCNT"][10], hist["CHCNT"][11], hist["CHCNT"][12], hist["CHCNT"][13], hist["CHCNT"][14], hist["CHCNT"][15],
             hist["CHBIAS"][0], hist["CHBIAS"][1], hist["CHBIAS"][2], hist["CHBIAS"][3], hist["CHBIAS"][4], hist["CHBIAS"][5], hist["CHBIAS"][6], hist["CHBIAS"][7], 
+            hist["CHCNT"][8], hist["CHCNT"][9], hist["CHCNT"][10], hist["CHCNT"][11], hist["CHCNT"][12], hist["CHCNT"][13], hist["CHCNT"][14], hist["CHCNT"][15],
             hist["CHBIAS"][8], hist["CHBIAS"][9], hist["CHBIAS"][10], hist["CHBIAS"][11], hist["CHBIAS"][12], hist["CHBIAS"][13], hist["CHBIAS"][14], hist["CHBIAS"][15])
         except Exception as inst:
             basicText = "Nothing to display"

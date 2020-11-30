@@ -461,7 +461,6 @@ end
 -- Wait for Data to Finish --
 cmd.exec(string.format('WAIT_ON_EMPTY %s 2', scidataq), -1) -- wait forever
 cmd.exec(string.format("WAIT_ON_EMPTY %s 2", metricq), -1) -- wait forever
-cmd.exec(string.format("WAIT_ON_EMPTY %s 2", rspq), 10) -- wait forever
 if report then
     report:flushrow('ALL')
 end

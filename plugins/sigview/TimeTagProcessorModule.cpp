@@ -1266,7 +1266,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 chStat->rec->avg_calr[ch] = integrateWeightedAverage(chStat->rec->num_dupr[ch], chStat->rec->avg_calr[ch], mf_ch_stat.avg_calr[ch], mf_ch_stat.num_dupr[ch]);
                 chStat->rec->max_calr[ch] = MAX(chStat->rec->max_calr[ch], mf_ch_stat.max_calr[ch]);
 
-                if(chStat->rec->min_calr[ch] != 0.0)         chStat->rec->min_calr[ch] = MIN(mf_ch_stat.min_calr[ch], chStat->rec->min_calr[ch]);
+                if(chStat->rec->min_calr[ch] != 0.0)        chStat->rec->min_calr[ch] = MIN(mf_ch_stat.min_calr[ch], chStat->rec->min_calr[ch]);
                 else if(mf_ch_stat.min_calr[ch] != DBL_MAX) chStat->rec->min_calr[ch] = mf_ch_stat.min_calr[ch];
 
                 chStat->rec->num_dupr[ch] += mf_ch_stat.num_dupr[ch];
@@ -1278,14 +1278,14 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 chStat->rec->avg_calf[ch] = integrateWeightedAverage(chStat->rec->num_dupf[ch], chStat->rec->avg_calf[ch], mf_ch_stat.avg_calf[ch], mf_ch_stat.num_dupf[ch]);
                 chStat->rec->max_calf[ch] = MAX(chStat->rec->max_calf[ch], mf_ch_stat.max_calf[ch]);
 
-                if(chStat->rec->min_calf[ch] != 0.0)         chStat->rec->min_calf[ch] = MIN(mf_ch_stat.min_calf[ch], chStat->rec->min_calf[ch]);
+                if(chStat->rec->min_calf[ch] != 0.0)        chStat->rec->min_calf[ch] = MIN(mf_ch_stat.min_calf[ch], chStat->rec->min_calf[ch]);
                 else if(mf_ch_stat.min_calf[ch] != DBL_MAX) chStat->rec->min_calf[ch] = mf_ch_stat.min_calf[ch];
 
                 chStat->rec->num_dupf[ch] += mf_ch_stat.num_dupf[ch];
             }
 
             /* Dead Time */
-            if(chStat->rec->dead_time[ch] != 0.0)            chStat->rec->dead_time[ch] = MIN(mf_ch_stat.dead_time[ch], chStat->rec->dead_time[ch]);
+            if(chStat->rec->dead_time[ch] != 0.0)           chStat->rec->dead_time[ch] = MIN(mf_ch_stat.dead_time[ch], chStat->rec->dead_time[ch]);
             else if(mf_ch_stat.dead_time[ch] != DBL_MAX)    chStat->rec->dead_time[ch] = mf_ch_stat.dead_time[ch];
 
             /* Stat Cnts */
@@ -1355,7 +1355,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             /* Get Signal Range and Width */
             double signal_range = hist[spot]->getSignalRange();
             double signal_energy = hist[spot]->getSignalEnergy();
-//            double signal_width = hist[spot]->getSignalWidth();
 
             /* Look For Slip Only On Sawtooth Drop and When There Is Signal*/
             if(fabs(tx_deltas[tx + 1]) > 20.0 && signal_energy > 0.5)
@@ -1370,22 +1369,19 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             }
 
             /* Build Granule Histogram - Only Use High Energy Narrow Returns */
-//            if(signal_energy > 0.5 && signal_energy < 2.5 && signal_width < 20.0)
-//            {
-                double delta_range = signal_range - shot_data->rx[rx].range;
-                delta_range = delta_range + 0.5 - (delta_range < 0);
-                long bin = (long)delta_range;
+            double delta_range = signal_range - shot_data->rx[rx].range;
+            delta_range = delta_range + 0.5 - (delta_range < 0);
+            long bin = (long)delta_range;
 
-                long hist_radius = GRANULE_HIST_SIZE / 2;
-                if(bin >= -hist_radius && bin < hist_radius)
+            long hist_radius = GRANULE_HIST_SIZE / 2;
+            if(bin >= -hist_radius && bin < hist_radius)
+            {
+                granMut.lock();
                 {
-                    granMut.lock();
-                    {
-                        granHist[spot][hist_radius + bin]++;
-                    }
-                    granMut.unlock();
+                    granHist[spot][hist_radius + bin]++;
                 }
-//            }
+                granMut.unlock();
+            }
         }
     }
 
@@ -1437,6 +1433,11 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
     for(int s = 0; s < NUM_SPOTS; s++)
     {
+        /* Set Spot Specific Packet Stats */
+        pkt_stat.avg_tags = tx_sum_tags[s] / (double)num_shots;
+        pkt_stat.min_tags = tx_min_tags[s];
+        pkt_stat.max_tags = tx_max_tags[s];
+
         /* Copy In Stats */
         hist[s]->setPktStats(&pkt_stat);
         hist[s]->setPktBytes(packet_bytes);
