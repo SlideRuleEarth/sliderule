@@ -173,8 +173,6 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         static const double DEFAULT_GPS_TOLERANCE;
         static const double DEFAULT_TEP_LOCATION;
         static const double DEFAULT_TEP_WIDTH;
-        static const double DEFAULT_LOOPBACK_LOCATION;
-        static const double DEFAULT_LOOPBACK_WIDTH;
 
         static const int    TransmitPulseCoarseCorrection   = -1;     // 100MHz clocks (this is a correction to T0 and does not take into account start pulse delay onto the board)
         static const int    ReturnPulseCoarseCorrection     = -1;     // 100MHz clocks
@@ -191,17 +189,10 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         static const char*  signalWidthKey;
         static const char*  tepLocationKey;
         static const char*  tepWidthKey;
-        static const char*  loopbackLocationKey;
-        static const char*  loopbackWidthKey;
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
-
-        typedef enum {
-            UNCORRECTED = 0,
-            LOOPBACK = 1
-        } correction_t;
 
         typedef enum {
             FALLING_EDGE = 0,
@@ -246,8 +237,6 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
 	                    TimeTagProcessorModule  (CommandProcessor* cmd_proc, const char* obj_name, int pcenum, const char* histq_name, const char* txtimeq_name);
                         ~TimeTagProcessorModule (void);
 
-        static  bool    str2corr                (const char* str, correction_t* c);
-
         static  CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
 
     private:
@@ -271,17 +260,13 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         bool            RemoveDuplicates;
         double          TrueRulerClkPeriod;
         double          SignalWidth;
-        correction_t    Correction;
         bool            FullColumnIntegration;
         bool            AutoSetTrueRulerClkPeriod;
         double          GpsAccuracyTolerance;
         double          TepLocation;
         double          TepWidth;
-        double          LoopbackLocation;
-        double          LoopbackWidth;
         bool            BlockTep;
-        double          TimeTagBinSize;       // in meters
-        double          TimeTagZoomOffset;    // in nanoseconds
+        double          TimeTagBinSize;         // in meters
         double          LastGps;
         long            LastGpsMfc;
         bool            BuildUpMfc;
@@ -305,9 +290,6 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         Publisher*      histQ;    // output histograms
         Publisher*      txTimeQ;  //output absolute Tx times
 
-        Mutex granMut;
-        long granHist[NUM_SPOTS][GRANULE_HIST_SIZE]; // ns
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -320,7 +302,6 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         int     setCorrectionCmd        (int argc, char argv[][MAX_CMD_SIZE]);
         int     fullColumnModeCmd       (int argc, char argv[][MAX_CMD_SIZE]);
         int     ttBinsizeCmd            (int argc, char argv[][MAX_CMD_SIZE]);
-        int     ttZoomCmd               (int argc, char argv[][MAX_CMD_SIZE]);
         int     chDisableCmd            (int argc, char argv[][MAX_CMD_SIZE]);
         int     autoSetRulerClkCmd      (int argc, char argv[][MAX_CMD_SIZE]);
         int     setTepLocationCmd       (int argc, char argv[][MAX_CMD_SIZE]);
@@ -330,8 +311,6 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         int     attachTimeProcCmd       (int argc, char argv[][MAX_CMD_SIZE]);
         int     startResultFileCmd      (int argc, char argv[][MAX_CMD_SIZE]);
         int     stopResultFileCmd       (int argc, char argv[][MAX_CMD_SIZE]);
-        int     writeGranHistCmd        (int argc, char argv[][MAX_CMD_SIZE]);
-
 };
 
 #endif  /* __time_tag_processor_module__ */

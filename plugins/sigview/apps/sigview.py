@@ -4,6 +4,7 @@
 import sys
 import logging
 import json
+import copy
 
 from sliderule import sliderule, icesat2
 
@@ -196,9 +197,11 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         self.pceNums = [1, 2, 3]
         self.altHist = rsps["AltHist"] if "AltHist" in rsps else []
         self.tagHist = rsps["TagHist"] if "TagHist" in rsps else []
-        self.histFullSet = self.altHist + self.tagHist  
+        self.histOriginalSet = self.altHist + self.tagHist 
+        self.histFullSet = self.histOriginalSet
         self.histWorkingSet = self.histFullSet 
         self.numHists = len(self.histWorkingSet)
+        self.histIntegration = 1
 
         # Plot Window
         self.histPlot = pg.PlotWidget()
@@ -253,8 +256,25 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
                 self.filters[histType][pceNum].clicked.connect(self.on_click_filter)
                 typeLayout.addWidget(self.filters[histType][pceNum], 1)
             filterLayout.addLayout(typeLayout)
-                
-        # Attributes
+        
+        # Analysis
+        analysisGbox = QGroupBox()
+        analysisVbox = QVBoxLayout()
+        self.progress = QProgressBar(self)
+        analysisVbox.addWidget(self.progress)
+        peakAlignRow = QHBoxLayout()
+        peakAlignButton = QPushButton("Peak Align")
+        self.integrateLabel = QLabel("{}".format(self.histIntegration))
+        peakAlignButton.clicked.connect(self.on_click_peak_align)
+        restoreButton = QPushButton("Restore")
+        restoreButton.clicked.connect(self.on_click_restore)
+        peakAlignRow.addWidget(peakAlignButton)
+        peakAlignRow.addWidget(self.integrateLabel)
+        analysisVbox.addLayout(peakAlignRow)
+        analysisVbox.addWidget(restoreButton)
+        analysisGbox.setLayout(analysisVbox)
+
+        # Tabs
         self.histTabs = QTabWidget()
         self.basicAttr = self.createAttrDisplay()
         self.tagAttr = self.createAttrDisplay()
@@ -262,6 +282,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         self.histTabs.addTab(self.basicAttr,"Basic")
         self.histTabs.addTab(self.tagAttr,"Tag")
         self.histTabs.addTab(self.channelAttr,"Channel")
+        self.histTabs.addTab(analysisGbox,"Analysis")
 
         # Bottom Pane Layout
         bottomLayout = QHBoxLayout()
@@ -343,6 +364,134 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         self.histSlider.setPageStep(int(self.numHists / 20))
         self.histSlider.setValue(new_index)
         self.updateHist(new_index)
+
+    @pyqtSlot()
+    def on_click_peak_align(self):
+        integration, okPressed = QInputDialog.getInt(self, "Histgram Integration Period","Major Frames:", self.histIntegration, 0, 500, 1)
+        if okPressed:
+            self.histIntegration = integration
+            self.integrateLabel.setText("{}".format(self.histIntegration))
+
+            # Build Empty Integrations #
+            currHists = {}
+            currCounts = {}
+            for histType in self.histTypes:
+                currHists[histType] = {}
+                currCounts[histType] = {}
+                for pceNum in self.pceNums:
+                    currHists[histType][pceNum] = None
+                    currCounts[histType][pceNum] = 0
+
+            # Set Progress Bar
+            self.progress.setMaximum(len(self.histOriginalSet))
+
+            # Integrate Histogram
+            progressCnt = 0
+            totalBins = 2000
+            centerBin = 1000
+            self.histWorkingSet = []     
+            for hist in self.histOriginalSet:
+                if hist["TYPE"] in self.histMapping and hist["PCE"] >= 0 and hist["PCE"] <= 2:
+                    histType = self.histMapping[hist["TYPE"]]
+                    pceNum = hist["PCE"] + 1
+                    if currCounts[histType][pceNum] == 0:
+                        currHists[histType][pceNum] = copy.deepcopy(hist)
+                        currCounts[histType][pceNum] = 1
+                        currHists[histType][pceNum]["BINS"] = [0 for i in range(totalBins)]
+                        currHists[histType][pceNum]["CHCNT"] = [cnt for cnt in currHists[histType][pceNum]["CHCNT"]]
+                        currHists[histType][pceNum]["CHBIAS"] = [cnt for cnt in currHists[histType][pceNum]["CHBIAS"]]
+                    else:
+                        currHist = currHists[histType][pceNum]
+                        currCounts[histType][pceNum] += 1
+                        # sums
+                        currHist["TXCNT"]           += hist["TXCNT"]
+                        currHist["SUM"]             += hist["SUM"]
+                        currHist["INTPERIOD"]       += hist["INTPERIOD"]
+                        currHist["RWDROPOUT"]       += hist["RWDROPOUT"]
+                        currHist["DIDNOTFINISHTX"]  += hist["DIDNOTFINISHTX"]
+                        currHist["DIDNOTFINISHWR"]  += hist["DIDNOTFINISHWR"]
+                        currHist["DFCEDAC"]         += hist["DFCEDAC"]
+                        currHist["SDRAMMISMATCH"]   += hist["SDRAMMISMATCH"]
+                        currHist["TRACKINGFIFO"]    += hist["TRACKINGFIFO"]
+                        currHist["STARTTAGFIFO"]    += hist["STARTTAGFIFO"]
+                        currHist["DFCEDAC"]         += hist["DFCEDAC"]
+                        # averages
+                        currHist["BKGND"]           += hist["BKGND"]
+                        currHist["SIGRNG"]          += hist["SIGRNG"]
+                        currHist["SIGWID"]          += hist["SIGWID"]
+                        currHist["SIGPES"]          += hist["SIGPES"]
+                        # time tag histograms only #
+                        if hist["TYPE"] == 4 or hist["TYPE"] == 5:
+                            # sums
+                            currHist["DLB0_TAGCNT"] += hist["DLB0_TAGCNT"]
+                            currHist["DLB1_TAGCNT"] += hist["DLB1_TAGCNT"]
+                            currHist["DLB2_TAGCNT"] += hist["DLB2_TAGCNT"] 
+                            currHist["DLB3_TAGCNT"] += hist["DLB3_TAGCNT"]
+                            currHist["MFC_ERRORS"]  += hist["MFC_ERRORS"] 
+                            currHist["HDR_ERRORS"]  += hist["HDR_ERRORS"] 
+                            currHist["FMT_ERRORS"]  += hist["FMT_ERRORS"] 
+                            currHist["DLB_ERRORS"]  += hist["DLB_ERRORS"] 
+                            currHist["TAG_ERRORS"]  += hist["TAG_ERRORS"]
+                            currHist["PKT_ERRORS"]  += hist["PKT_ERRORS"]
+                            for c in range(20):
+                                currHist["CHCNT"][c]+= hist["CHCNT"][c]                                
+                            # min and max
+                            if currHist["MIN_TAGS"] > hist["MIN_TAGS"]:
+                                currHist["MIN_TAGS"] = hist["MIN_TAGS"]
+                            if currHist["MAX_TAGS"] > hist["MAX_TAGS"]:
+                                currHist["MAX_TAGS"] = hist["MAX_TAGS"]
+                            # averages
+                            currHist["AVG_TAGS"]    += hist["AVG_TAGS"]
+                            for c in range(20):
+                                currHist["CHBIAS"][c] += hist["CHBIAS"][c]
+                    # rebin histogram
+                    newBins = currHists[histType][pceNum]["BINS"]
+                    oldBins = hist["BINS"]
+                    signalBin = (hist["SIGRNG"] - hist["RWS"]) / (hist["BINSIZE"] * 10.0 / 1.5)
+                    binOffset = int((centerBin - signalBin) + 0.5)
+                    for b in range(len(hist["BINS"])):
+                        newBin = b + binOffset
+                        if newBin >= 0 and newBin < totalBins:
+                            newBins[newBin] += oldBins[b]
+                    # integration period reached
+                    if currCounts[histType][pceNum] == self.histIntegration:
+                        currHists[histType][pceNum]["BKGND"]  /= self.histIntegration
+                        currHists[histType][pceNum]["SIGRNG"] /= self.histIntegration
+                        currHists[histType][pceNum]["SIGWID"] /= self.histIntegration
+                        currHists[histType][pceNum]["SIGPES"] /= self.histIntegration
+                        if currHists[histType][pceNum]["TYPE"] == 4 or currHists[histType][pceNum]["TYPE"] == 5:
+                            currHists[histType][pceNum]["AVG_TAGS"] /= self.histIntegration
+                            for c in range(20):
+                                currHists[histType][pceNum]["CHBIAS"][c] /= self.histIntegration  
+                        # append and reset
+                        self.histWorkingSet.append(currHists[histType][pceNum])
+                        currHists[histType][pceNum] = None
+                        currCounts[histType][pceNum] = 0
+                # update progress
+                progressCnt += 1
+                self.progress.setValue(progressCnt)
+            # update histogram sets
+            self.histFullSet = self.histWorkingSet
+            self.numHists = len(self.histWorkingSet)
+            # reset display
+            self.histSlider.setRange(0, self.numHists - 1)
+            self.histSlider.setPageStep(int(self.numHists / 20))
+            self.histSlider.setValue(0)
+            self.progress.setValue(0)
+            self.updateHist(0)
+
+    @pyqtSlot()
+    def on_click_restore(self):
+        self.histFullSet = self.histOriginalSet
+        self.histWorkingSet = self.histFullSet
+        self.numHists = len(self.histWorkingSet)
+        self.histSlider.setRange(0, self.numHists - 1)
+        self.histSlider.setPageStep(int(self.numHists / 20))
+        self.histSlider.setValue(0)
+        self.progress.setValue(0)
+        self.updateHist(0)
+
+
 
 ###############################################################################
 # MAIN

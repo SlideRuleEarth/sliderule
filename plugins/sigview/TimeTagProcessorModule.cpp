@@ -40,8 +40,6 @@ const double TimeTagProcessorModule::DEFAULT_SIGNAL_WIDTH           = 0.0;    //
 const double TimeTagProcessorModule::DEFAULT_GPS_TOLERANCE          = 0.00001;
 const double TimeTagProcessorModule::DEFAULT_TEP_LOCATION           = 18.0;   // ns
 const double TimeTagProcessorModule::DEFAULT_TEP_WIDTH              = 5.0;    // ns
-const double TimeTagProcessorModule::DEFAULT_LOOPBACK_LOCATION      = 75.0;   // ns
-const double TimeTagProcessorModule::DEFAULT_LOOPBACK_WIDTH         = 100.0;  // ns
 
 const double TimeTagProcessorModule::DetectorDeadTime               = 1.0;    // nanoseconds
 const double TimeTagProcessorModule::MaxFineTimeCal                 = 0.300;  // ns
@@ -56,8 +54,6 @@ const char* TimeTagProcessorModule::lastGpsMfcKey                   = "lastGpsMf
 const char* TimeTagProcessorModule::signalWidthKey                  = "signalWidthKey";
 const char* TimeTagProcessorModule::tepLocationKey                  = "tepLocationKey";
 const char* TimeTagProcessorModule::tepWidthKey                     = "tepWidthKey";
-const char* TimeTagProcessorModule::loopbackLocationKey             = "loopbackLocationKey";
-const char* TimeTagProcessorModule::loopbackWidthKey                = "loopbackWidthKey";
 
 /******************************************************************************
  * PACKET STATISTIC
@@ -215,17 +211,13 @@ TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const
     RemoveDuplicates            = true;
     TrueRulerClkPeriod          = DEFAULT_10NS_PERIOD;
     SignalWidth                 = DEFAULT_SIGNAL_WIDTH;
-    Correction                  = LOOPBACK;
     FullColumnIntegration       = false;
     AutoSetTrueRulerClkPeriod   = false;
     GpsAccuracyTolerance        = DEFAULT_GPS_TOLERANCE;
     TepLocation                 = DEFAULT_TEP_LOCATION;
     TepWidth                    = DEFAULT_TEP_WIDTH;
-    LoopbackLocation            = DEFAULT_LOOPBACK_LOCATION;
-    LoopbackWidth               = DEFAULT_LOOPBACK_WIDTH;
     BlockTep                    = true;
     TimeTagBinSize              = DefaultTimeTagBinSize;
-    TimeTagZoomOffset           = 0.0;
     LastGps                     = 0.0;
     LastGpsMfc                  = 0;
     BuildUpMfc                  = false;
@@ -240,8 +232,6 @@ TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const
     cmdProc->setCurrentValue(getName(), signalWidthKey,                 (void*)&SignalWidth,                sizeof(SignalWidth));
     cmdProc->setCurrentValue(getName(), tepLocationKey,                 (void*)&TepLocation,                sizeof(TepLocation));
     cmdProc->setCurrentValue(getName(), tepWidthKey,                    (void*)&TepWidth,                   sizeof(TepWidth));
-    cmdProc->setCurrentValue(getName(), loopbackLocationKey,            (void*)&LoopbackLocation,           sizeof(LoopbackLocation));
-    cmdProc->setCurrentValue(getName(), loopbackWidthKey,               (void*)&LoopbackWidth,              sizeof(LoopbackWidth));
 
     /* Define Statistic Records */
     PktStat::defineRecord(PktStat::rec_type, "PCE", sizeof(pktStat_t), PktStat::rec_def, PktStat::rec_elem, 64);
@@ -281,23 +271,20 @@ TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const
     TimeTagHistogram::defineHistogram();
 
     /* Register Commands */
-    registerCommand("REMOVE_DUPLICATES",         (cmdFunc_t)&TimeTagProcessorModule::removeDuplicatesCmd,     1, "<true|false>");
-    registerCommand("SET_CLK_PERIOD",            (cmdFunc_t)&TimeTagProcessorModule::setClkPeriodCmd,         1, "<period>");
-    registerCommand("SET_SIGNAL_WIDTH",          (cmdFunc_t)&TimeTagProcessorModule::setSignalWidthCmd,       1, "<width in ns>");
-    registerCommand("SET_CORRECTION",            (cmdFunc_t)&TimeTagProcessorModule::setCorrectionCmd,       -1, "<UNCORRECTED|LOOPBACK [<location in ns> <width in ns>]>");
-    registerCommand("FULL_COL_MODE",             (cmdFunc_t)&TimeTagProcessorModule::fullColumnModeCmd,       1, "<ENABLE|DISABLE>");
-    registerCommand("SET_TT_BINSIZE",            (cmdFunc_t)&TimeTagProcessorModule::ttBinsizeCmd,            1, "<binsize in ns | REVERT>");
-    registerCommand("SET_TT_ZOOM_OFFSET",        (cmdFunc_t)&TimeTagProcessorModule::ttZoomCmd,               1, "<relative offset from range window start for zoom (when binsize < 1.5 meters) in nanoseconds>");
-    registerCommand("CH_DISABLE",                (cmdFunc_t)&TimeTagProcessorModule::chDisableCmd,            2, "<ENABLE|DISABLE> <channel>");
-    registerCommand("AUTO_SET_RULER_CLK",        (cmdFunc_t)&TimeTagProcessorModule::autoSetRulerClkCmd,      1, "<ENABLE|DISABLE>");
-    registerCommand("SET_TEP_LOCATION",          (cmdFunc_t)&TimeTagProcessorModule::setTepLocationCmd,      -1, "<range in ns> [<width in ns>]");
-    registerCommand("BLOCK_TEP",                 (cmdFunc_t)&TimeTagProcessorModule::blockTepCmd,             1, "<ENABLE|DISABLE>");
-    registerCommand("BUILD_UP_MFC",              (cmdFunc_t)&TimeTagProcessorModule::buildUpMfcCmd,          -1, "<ENABLE [<major frame count>]|DISABLE>");
-    registerCommand("ATTACH_MAJOR_FRAME_PROC",   (cmdFunc_t)&TimeTagProcessorModule::attachMFProcCmd,         1, "<major frame processor name>");
-    registerCommand("ATTACH_TIME_PROC",          (cmdFunc_t)&TimeTagProcessorModule::attachTimeProcCmd,       1, "<time processor name>");
-    registerCommand("START_RESULT_FILE",         (cmdFunc_t)&TimeTagProcessorModule::startResultFileCmd,      1, "<result filename>");
-    registerCommand("STOP_RESULT_FILE",          (cmdFunc_t)&TimeTagProcessorModule::stopResultFileCmd,       0, "");
-    registerCommand("WRITE_GRANULE_HIST",        (cmdFunc_t)&TimeTagProcessorModule::writeGranHistCmd,        2, "<strong histogram file> <weak histogram file>");
+    registerCommand("REMOVE_DUPLICATES",        (cmdFunc_t)&TimeTagProcessorModule::removeDuplicatesCmd,     1, "<true|false>");
+    registerCommand("SET_CLK_PERIOD",           (cmdFunc_t)&TimeTagProcessorModule::setClkPeriodCmd,         1, "<period>");
+    registerCommand("SET_SIGNAL_WIDTH",         (cmdFunc_t)&TimeTagProcessorModule::setSignalWidthCmd,       1, "<width in ns>");
+    registerCommand("FULL_COL_MODE",            (cmdFunc_t)&TimeTagProcessorModule::fullColumnModeCmd,       1, "<ENABLE|DISABLE>");
+    registerCommand("SET_TT_BINSIZE",           (cmdFunc_t)&TimeTagProcessorModule::ttBinsizeCmd,            1, "<binsize in ns | REVERT>");
+    registerCommand("CH_DISABLE",               (cmdFunc_t)&TimeTagProcessorModule::chDisableCmd,            2, "<ENABLE|DISABLE> <channel>");
+    registerCommand("AUTO_SET_RULER_CLK",       (cmdFunc_t)&TimeTagProcessorModule::autoSetRulerClkCmd,      1, "<ENABLE|DISABLE>");
+    registerCommand("SET_TEP_LOCATION",         (cmdFunc_t)&TimeTagProcessorModule::setTepLocationCmd,      -1, "<range in ns> [<width in ns>]");
+    registerCommand("BLOCK_TEP",                (cmdFunc_t)&TimeTagProcessorModule::blockTepCmd,             1, "<ENABLE|DISABLE>");
+    registerCommand("BUILD_UP_MFC",             (cmdFunc_t)&TimeTagProcessorModule::buildUpMfcCmd,          -1, "<ENABLE [<major frame count>]|DISABLE>");
+    registerCommand("ATTACH_MAJOR_FRAME_PROC",  (cmdFunc_t)&TimeTagProcessorModule::attachMFProcCmd,         1, "<major frame processor name>");
+    registerCommand("ATTACH_TIME_PROC",         (cmdFunc_t)&TimeTagProcessorModule::attachTimeProcCmd,       1, "<time processor name>");
+    registerCommand("START_RESULT_FILE",        (cmdFunc_t)&TimeTagProcessorModule::startResultFileCmd,      1, "<result filename>");
+    registerCommand("STOP_RESULT_FILE",         (cmdFunc_t)&TimeTagProcessorModule::stopResultFileCmd,       0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -322,27 +309,6 @@ TimeTagProcessorModule::~TimeTagProcessorModule(void)
 /******************************************************************************
  * TIME TAG PROCESSOR MODULE: PUBLIC STATIC METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * str2clear
- *----------------------------------------------------------------------------*/
-bool TimeTagProcessorModule::str2corr(const char* str, correction_t* c)
-{
-    if( (strcmp(str, "UNCORRECTED") == 0) || (strcmp(str, "uncorrected") == 0) )
-    {
-        *c = UNCORRECTED;
-    }
-    else if( (strcmp(str, "LOOPBACK") == 0) || (strcmp(str, "loopback") == 0) )
-    {
-        *c = LOOPBACK;
-    }
-    else
-    {
-        return false;
-    }
-
-    return true;
-}
 
 /*----------------------------------------------------------------------------
  * createObject
@@ -387,44 +353,40 @@ CommandableObject* TimeTagProcessorModule::createObject(CommandProcessor* cmd_pr
  *----------------------------------------------------------------------------*/
 bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, int numpkts)
 {
-    int             numsegs         = segments.length();
-    int             intperiod       = numpkts;
-    double          cvr             = 0.0;      // calibration value rising
-    double          cvf             = 0.0;      // calibration value falling
-    uint64_t        amet            = 0;
-    long            mfc             = 0;
-    long            numdlb          = 0;
-    uint32_t        prevtag         = 0;        // only for within the shot
-    uint32_t        prevtag_sticky  = 0;        // stays across transmits
-    int             packet_bytes    = 0;
-    int             txcnt_mf        = 0;        // number of transmit pulses in major frame
-    int             tep_start_bin_s = 0;
-    int             tep_stop_bin_s  = 0;
-    int             tep_start_bin_w = 0;
-    int             tep_stop_bin_w  = 0;
-    shot_data_t*    shot_data       = NULL;
+    /* Initialized Data */
+    int                 numsegs                     = segments.length();
+    int                 intperiod                   = numpkts;
+    double              cvr                         = 0.0;      // calibration value rising
+    double              cvf                         = 0.0;      // calibration value falling
+    uint64_t            amet                        = 0;
+    long                mfc                         = 0;
+    double              rws[NUM_SPOTS]              = { 0.0, 0.0 };
+    double              rww[NUM_SPOTS]              = { 0.0, 0.0 };
+    long                numdlb                      = 0;
+    uint32_t            prevtag                     = 0;        // only for within the shot
+    uint32_t            prevtag_sticky              = 0;        // stays across transmits
+    int                 packet_bytes                = 0;
+    int                 txcnt_mf                    = 0;        // number of transmit pulses in major frame
+    int                 tep_start_bin[NUM_SPOTS]    = { 0, 0 };
+    int                 tep_stop_bin[NUM_SPOTS]     = { 0, 0 };
+    shot_data_t*        shot_data                   = NULL;
+    mfdata_t*           mfdata_ptr                  = NULL;
+    TimeTagHistogram*   hist[NUM_SPOTS]             = { NULL, NULL };
 
-    /* Create String for Pretty Printing GPS Time */
-    char gps_str[128];
+    /* Uninitialized Data */
+    mfdata_t            mfdata;
+    pktStat_t           pkt_stat;
+    chStat_t            mf_ch_stat;
+    List<shot_data_t*>  shot_data_list;
+    dlb_t               dlb[MAX_NUM_DLBS];
+    char                gps_str[128];
 
-    /* Create Shot Data List */
-    List<shot_data_t*> shot_data_list;
-
-    /* Create Packet Stats */
-    pktStat_t pkt_stat;
+    /* Initialize Packet Stats */
     memset(&pkt_stat, 0, sizeof(pktStat_t));
     pkt_stat.segcnt = numsegs;
     pkt_stat.pktcnt = numpkts;
 
-    /* Create Major Frame Data Buffer */
-    mfdata_t*   mfdata_ptr = NULL;
-    mfdata_t    mfdata;
-
-    /* Create Downlink Band Stats */
-    dlb_t dlb[MAX_NUM_DLBS];
-
-    /* Create Local Channel Stats */
-    chStat_t mf_ch_stat;
+    /* Initialize Local Channel Stats */
     memset(&mf_ch_stat, 0, sizeof(chStat_t));
     for(int c = 0; c < NUM_CHANNELS; c++)
     {
@@ -433,41 +395,9 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         mf_ch_stat.dead_time[c] = DBL_MAX;
     }
 
-    /* Create Histograms */
-    TimeTagHistogram* hist[NUM_SPOTS];
-    hist[STRONG_SPOT] = NULL;
-    hist[WEAK_SPOT]   = NULL;
-
     /*----------------------*/
     /* Pre-Process Settings */
     /*----------------------*/
-
-    /* Loopback Correction (used for TEP as well) */
-    int tx_loopback_index = 0;
-    int max_tx_cnt = intperiod * MAX_NUM_SHOTS;
-    int* tx_loopback_tags = new int[max_tx_cnt];
-    for(int p = 0; p < numsegs; p++)
-    {
-        unsigned char*                  pktbuf  = segments[p]->getBuffer();
-        CcsdsSpacePacket::seg_flags_t   seg     = segments[p]->getSEQFLG();
-        int                             len     = segments[p]->getLEN();
-
-        if(seg != CcsdsSpacePacket::SEG_START)
-        {
-            long i = 12;
-            while(i < len && tx_loopback_index < max_tx_cnt)
-            {
-                long channel = (parseInt(pktbuf + i, 1) & 0xF8) >> 3;
-                if(channel >= 24 && channel <= 27)
-                {
-                    tx_loopback_tags[tx_loopback_index++] = parseInt(pktbuf + i, 4);
-                    i += 4;
-                }
-                else if((channel >= 1 && channel <= 20) || channel == 28) i += 3;
-                else i += 1;
-            }
-        }
-    }
 
     /* Use Calculated Ruler Clock Period */
     if(AutoSetTrueRulerClkPeriod)
@@ -510,10 +440,10 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             amet            = parseInt(pktbuf + 16, 8);
             cvr             = TrueRulerClkPeriod / (parseInt(pktbuf + 24, 2) / 256.0); // ns
             cvf             = TrueRulerClkPeriod / (parseInt(pktbuf + 26, 2) / 256.0); // ns
-            double rws_s    = parseInt(pktbuf + 28, 3) * TrueRulerClkPeriod; // ns
-            double rww_s    = parseInt(pktbuf + 31, 2) * TrueRulerClkPeriod; // ns
-            double rws_w    = parseInt(pktbuf + 33, 3) * TrueRulerClkPeriod; // ns
-            double rww_w    = parseInt(pktbuf + 36, 2) * TrueRulerClkPeriod; // ns
+            rws[STRONG_SPOT]= parseInt(pktbuf + 28, 3) * TrueRulerClkPeriod; // ns
+            rww[STRONG_SPOT]= parseInt(pktbuf + 31, 2) * TrueRulerClkPeriod; // ns
+            rws[WEAK_SPOT]  = parseInt(pktbuf + 33, 3) * TrueRulerClkPeriod; // ns
+            rww[WEAK_SPOT]  = parseInt(pktbuf + 36, 2) * TrueRulerClkPeriod; // ns
             numdlb          = parseInt(pktbuf + 38, 1) + 1;
 
             /* Get Major Frame Data */
@@ -527,6 +457,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 }
                 else
                 {
+                    mfdata_ptr = NULL;
                     mlog(WARNING, "[%ld]: could not associate major frame data with science time tag data from %ld\n", mfc, mfdata.MajorFrameCount);
                     pkt_stat.warnings++;
                 }
@@ -587,59 +518,38 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             }
 
             /* Create Time Tag Histograms */
-            if(hist[STRONG_SPOT] == NULL) hist[STRONG_SPOT] = new TimeTagHistogram(AtlasHistogram::STT, intperiod, TimeTagBinSize, pce, mfc, mfdata_ptr, gps, rws_s, rww_s, dlb, numdlb, false);
-            if(hist[WEAK_SPOT]   == NULL) hist[WEAK_SPOT]   = new TimeTagHistogram(AtlasHistogram::WTT, intperiod, TimeTagBinSize, pce, mfc, mfdata_ptr, gps, rws_w, rww_w, dlb, numdlb, false);
+            if(hist[STRONG_SPOT] == NULL) hist[STRONG_SPOT] = new TimeTagHistogram(AtlasHistogram::STT, intperiod, TimeTagBinSize, pce, mfc, mfdata_ptr, gps, rws[STRONG_SPOT], rww[STRONG_SPOT], dlb, numdlb, false);
+            if(hist[WEAK_SPOT]   == NULL) hist[WEAK_SPOT]   = new TimeTagHistogram(AtlasHistogram::WTT, intperiod, TimeTagBinSize, pce, mfc, mfdata_ptr, gps, rws[WEAK_SPOT], rww[WEAK_SPOT], dlb, numdlb, false);
 
             /* Set TEP Blocking */
             if(BlockTep)
             {
-                /* Locate Start and Stop for Strong */
-                double rws_offset_s = fmod(rws_s, 100000.0);
-                if(rws_offset_s < TepLocation)
+                /* Locate Start and Stop */
+                for(int s = 0; s < NUM_SPOTS; s++)
                 {
-                    tep_start_bin_s = (int)MAX(floor((TepLocation - rws_offset_s - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
-                    tep_stop_bin_s  = (int)ceil((TepLocation - rws_offset_s + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
-                }
-                else
-                {
-                    tep_start_bin_s = (int)MAX(floor(((100000.0 - rws_offset_s) + TepLocation - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
-                    tep_stop_bin_s  = (int)ceil(((100000.0 - rws_offset_s) + TepLocation + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
-                }
+                    double rws_offset = fmod(rws[s], 100000.0);
+                    if(rws_offset < TepLocation)
+                    {
+                        tep_start_bin[s] = (int)MAX(floor((TepLocation - rws_offset - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
+                        tep_stop_bin[s]  = (int)ceil((TepLocation - rws_offset + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
+                    }
+                    else
+                    {
+                        tep_start_bin[s] = (int)MAX(floor(((100000.0 - rws_offset) + TepLocation - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
+                        tep_stop_bin[s]  = (int)ceil(((100000.0 - rws_offset) + TepLocation + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
+                    }
 
-                /* Locate Start and Stop for Weak */
-                double rws_offset_w = fmod(rws_w, 100000.0);
-                if(rws_offset_w < TepLocation)
-                {
-                    tep_start_bin_w = (int)MAX(floor((TepLocation - rws_offset_w - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
-                    tep_stop_bin_w  = (int)ceil((TepLocation - rws_offset_w + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
-                }
-                else
-                {
-                    tep_start_bin_w = (int)MAX(floor(((100000.0 - rws_offset_w) + TepLocation - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
-                    tep_stop_bin_w  = (int)ceil(((100000.0 - rws_offset_w) + TepLocation + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
-                }
-
-                /* Set Ignore Region */
-                if(tep_start_bin_s >= 0 && tep_stop_bin_s < AtlasHistogram::MAX_HIST_SIZE)
-                {
-                    hist[STRONG_SPOT]->setIgnore(tep_start_bin_s, tep_stop_bin_s);
-                }
-                else
-                {
-                    mlog(DEBUG, "Strong TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_s, tep_stop_bin_s, rws_s, rww_s);
-                    tep_start_bin_s = 0;
-                    tep_stop_bin_s = 0;
-                }
-
-                if(tep_start_bin_w >= 0 && tep_stop_bin_w < AtlasHistogram::MAX_HIST_SIZE)
-                {
-                    hist[WEAK_SPOT]->setIgnore(tep_start_bin_w, tep_stop_bin_w);
-                }
-                else
-                {
-                    mlog(DEBUG, "Weak TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin_w, tep_stop_bin_w, rws_w, rww_w);
-                    tep_start_bin_w = 0;
-                    tep_stop_bin_w = 0;
+                    /* Set Ignore Region */
+                    if(tep_start_bin[s] >= 0 && tep_stop_bin[s] < AtlasHistogram::MAX_HIST_SIZE)
+                    {
+                        hist[s]->setIgnore(tep_start_bin[s], tep_stop_bin[s]);
+                    }
+                    else
+                    {
+                        mlog(DEBUG, "Strong TEP region calculated outside of histogram: %d, %d - [%lf, %lf]\n", tep_start_bin[s], tep_stop_bin[s], rws[s], rww[s]);
+                        tep_start_bin[s] = 0;
+                        tep_stop_bin[s] = 0;
+                    }
                 }
             }
         }
@@ -859,70 +769,9 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
                         /* Calculate Range (all in ns) */
                         double coarse_time = (double)(dlb[rx->band].start + rx->coarse) * TrueRulerClkPeriod;
-                        rx->range = (coarse_time - (rx->fine * rx->calval)) + (hist[spot]->getRangeWindowStart() * (10.0 / TrueRulerClkPeriod));
+                        rx->range = (coarse_time - (rx->fine * rx->calval)) + (rws[spot] * (10.0 / TrueRulerClkPeriod));
                         rx->range -= chStat->rec->bias[channel_index];
                         rx->range += (shot_data->tx.leading_fine * cvr);
-
-                        /* Calculate Transmit Time Correction */
-                        bool able_to_correct = true;
-                        int tx_look_ahead = (int)lround(ceil(rx->range / (10000.0 * TrueRulerClkPeriod)));
-                        int current_tx = shot_data_list.length() - 1;
-                        int correct_tx = current_tx + tx_look_ahead;
-                        double tx_correction = 0.0;
-                        if(correct_tx < tx_loopback_index)
-                        {
-                            int correct_leading_coarse  = ((tx_loopback_tags[correct_tx] & 0x001FFF80) >> 7) + TransmitPulseCoarseCorrection;
-                            int correct_leading_fine    = (tx_loopback_tags[correct_tx]  & 0x0000007F) >> 0;
-                            double correct_time         = (correct_leading_coarse * TrueRulerClkPeriod) - (correct_leading_fine * cvr); // ns
-                            tx_correction               = shot_data->tx.time - correct_time;
-                        }
-#if 0
-                        else if(Correction == LOOPBACK)
-                        {
-                            // end of integration period... discard returns unable to associated to correct tx
-                            // break from processing rest of packet... nothing left to do
-                            // this also preserves the correct number of shots for scaling statistics
-                            p = numsegs;
-                            break;
-                        }
-#endif
-                        else
-                        {
-                            // this is used later on, so that loopback returns
-                            // that aren't corrected do not get binned in the histogram
-                            able_to_correct = false;
-                        }
-
-                        /* Adjust Range for Transmit Time Correction */
-                        bool valid_range = true;
-                        if(Correction == LOOPBACK)
-                        {
-                            double range_from_tx = fmod(rx->range, 10000.0 * TrueRulerClkPeriod);
-                            if(range_from_tx > (5000.0 * TrueRulerClkPeriod)) range_from_tx = range_from_tx - (10000.0 * TrueRulerClkPeriod);
-                            double distance_from_loopback = fabs(range_from_tx - LoopbackLocation);
-                            if(distance_from_loopback < LoopbackWidth)
-                            {
-                                if(able_to_correct)
-                                {
-                                    double candidate_range = rx->range + tx_correction;
-
-                                    // test to see if the correction takes the pulse outside the loopback region
-                                    // if it does, then don't correct, since it will artificially degrade the edges
-                                    // of the region (since pulses outside the region are not being corrected into the region)
-                                    double new_range_from_tx = fmod(candidate_range, 10000.0 * TrueRulerClkPeriod);
-                                    if(new_range_from_tx > (5000.0 * TrueRulerClkPeriod)) new_range_from_tx = new_range_from_tx - (10000.0 * TrueRulerClkPeriod);
-                                    double new_distance_from_loopback = fabs(new_range_from_tx - LoopbackLocation);
-                                    if(new_distance_from_loopback < LoopbackWidth)
-                                    {
-                                        rx->range += tx_correction;
-                                    }
-                                }
-                                else // uncorrected loopback return
-                                {
-                                    valid_range = false;
-                                }
-                            }
-                        }
 
                         /* Calculate Histogram Bin */
                         int return_bin = 0;
@@ -930,17 +779,9 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                         {
                             return_bin = (int)(rx->range * (0.15 / TimeTagBinSize)) % AtlasHistogram::MAX_HIST_SIZE; // 0.15 meters per nanosecond
                         }
-                        else if(TimeTagBinSize >= DefaultTimeTagBinSize)
-                        {
-                            return_bin = (int)((rx->range - (hist[spot]->getRangeWindowStart() * (10.0 / TrueRulerClkPeriod))) * (0.15 / TimeTagBinSize)); // 0.15 meters per nanosecond
-                        }
-                        else if(TimeTagBinSize < DefaultTimeTagBinSize)
-                        {
-                            return_bin = (int)((rx->range - (hist[spot]->getRangeWindowStart() + TimeTagZoomOffset)) * (0.15 / TimeTagBinSize)); // 0.15 meters per nanosecond
-                        }
                         else
                         {
-                            mlog(CRITICAL, "Unable to calculate bin for pce %d with range %lf and binsize: %lf\n", pce, rx->range, TimeTagBinSize);
+                            return_bin = (int)((rx->range - (rws[spot] * (10.0 / TrueRulerClkPeriod))) * (0.15 / TimeTagBinSize)); // 0.15 meters per nanosecond
                         }
 
                         /* Check For Duplicate */
@@ -984,7 +825,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                         }
 
                         /* Check For Dead-Time */
-                        if(valid_range == true && rx->duplicate == false)
+                        if(rx->duplicate == false)
                         {
                             int opposite_edge = (rx->toggle + 1) % 2;
                             for(int r = 0; r < shot_data->rx_list[opposite_edge][channel_index].length(); r++)
@@ -1005,13 +846,9 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                         {
                             mf_ch_stat.rx_cnt[channel_index]++;
                             mf_ch_stat.cell_cnts[channel_index][rx->fine]++;
-
-                            if(valid_range == true)
-                            {
-                                hist[spot]->binTag(return_bin, rx);
-                                shot_data->rx_list[rx->toggle][channel_index].add(rx);
-                                shot_data->rx_index++;
-                            }
+                            hist[spot]->binTag(return_bin, rx);
+                            shot_data->rx_list[rx->toggle][channel_index].add(rx);
+                            shot_data->rx_index++;
                         }
                     }
                 }
@@ -1043,16 +880,16 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
             /* Cross Check Major Frame Data */
             for(int s = 0; s < NUM_SPOTS; s++)
             {
-                if(mfdata_ptr != NULL && numpkts == 1) // only works if we are not integrating
+                if(mfdata_ptr != NULL)
                 {
                     /* Check Range Window Start */
                     double dfc_rws;
                     if(s == STRONG_SPOT)    dfc_rws = (mfdata.StrongAltimetricRangeWindowStart + 13) * TrueRulerClkPeriod;
                     else                    dfc_rws = (mfdata.WeakAltimetricRangeWindowStart + 13) * TrueRulerClkPeriod;
 
-                    if(dfc_rws != hist[s]->getRangeWindowStart())
+                    if(dfc_rws != rws[s])
                     {
-                        mlog(ERROR, "%s [%ld]: %s science data range window did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", gps_str, mfc, s == STRONG_SPOT ? "strong" : "weak", hist[s]->getRangeWindowStart(), dfc_rws);
+                        mlog(ERROR, "%s [%ld]: %s science data range window did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", gps_str, mfc, s == STRONG_SPOT ? "strong" : "weak", rws[s], dfc_rws);
                         pkt_stat.pkt_errors++;
                     }
 
@@ -1061,9 +898,9 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                     if(s == STRONG_SPOT)    dfc_rww = (mfdata.StrongAltimetricRangeWindowWidth + 1) * TrueRulerClkPeriod;
                     else                    dfc_rww = (mfdata.WeakAltimetricRangeWindowWidth + 1) * TrueRulerClkPeriod;
 
-                    if(dfc_rww != hist[s]->getRangeWindowWidth())
+                    if(dfc_rww != rww[s])
                     {
-                        mlog(ERROR, "%s [%ld]: %s science data range window width did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", gps_str, mfc, s == STRONG_SPOT ? "strong" : "weak", hist[s]->getRangeWindowWidth(), dfc_rww);
+                        mlog(ERROR, "%s [%ld]: %s science data range window width did not match value reported by hardware, FSW: %.1lf, DFC: %.1lf\n", gps_str, mfc, s == STRONG_SPOT ? "strong" : "weak", rww[s], dfc_rww);
                         pkt_stat.pkt_errors++;
                     }
                 }
@@ -1196,17 +1033,13 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
     /* Calculate TEP Strength */
     double teppe[NUM_SPOTS] = {0.0, 0.0};
-
-    double tepbkg_s = (double)(tep_stop_bin_s - tep_start_bin_s) * hist[STRONG_SPOT]->getNoiseBin();
-    double tepcnt_s = (double)hist[STRONG_SPOT]->getSumRange(tep_start_bin_s, tep_stop_bin_s);
-    teppe[STRONG_SPOT] = (tepcnt_s - tepbkg_s) / (double)num_shots;
-
-    double tepbkg_w = (double)(tep_stop_bin_w - tep_start_bin_w) * hist[WEAK_SPOT]->getNoiseBin();
-    double tepcnt_w = (double)hist[WEAK_SPOT]->getSumRange(tep_start_bin_w, tep_stop_bin_w);
-    teppe[WEAK_SPOT] = (tepcnt_w - tepbkg_w) / (double)num_shots;
-
-    hist[STRONG_SPOT]->setTepEnergy(teppe[STRONG_SPOT]);
-    hist[WEAK_SPOT]->setTepEnergy(teppe[WEAK_SPOT]);
+    for(int s = 0; s < NUM_SPOTS; s++)
+    {
+        double tepbkg = (double)(tep_stop_bin[s] - tep_start_bin[s]) * hist[s]->getNoiseBin();
+        double tepcnt = (double)hist[s]->getSumRange(tep_start_bin[s], tep_stop_bin[s]);
+        teppe[s] = (tepcnt - tepbkg) / (double)num_shots;
+        hist[s]->setTepEnergy(teppe[s]);
+    }
 
     /* Set Signal Statistics */
     sigStat->lock();
@@ -1301,40 +1134,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     /* Tx/Rx Slip Detection */
     /*----------------------*/
 
-    if(mfdata_ptr)
-    {
-        /* Get Counts in Range Window */
-        long total_counts = 0;
-        for(int b = 0; b < MajorFrameProcessorModule::NUM_BKGND_CNTS; b++)
-        {
-            total_counts += mfdata_ptr->BackgroundCounts[b];
-        }
-
-        /* Check if No Data */
-        if(total_counts == 0)
-        {
-            /* Check if Data Requested */
-            bool data_requested = false;
-            for(int s = 0; s < NUM_SPOTS; s++)
-            {
-                const TimeTagHistogram::band_t* bands = hist[s]->getDownlinkBands();
-                for(int b = 0; b < hist[s]->getNumDownlinkBands(); b++)
-                {
-                    if(bands[b].mask == 0xFFFFFF)
-                    {
-                        data_requested = true;
-                    }
-                }
-            }
-
-            /* Report if Data Requested */
-            if(data_requested)
-            {                        
-                mlog(ERROR, "%s [%ld] - request made for no data\n", gps_str, mfc);
-            }
-        }
-    }
-
     int slipped_rxs[NUM_SPOTS] = { 0, 0 };
     for(int tx = 0; tx < (num_shots - 1); tx++)
     {
@@ -1366,21 +1165,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                 {
                     slipped_rxs[spot]++;
                 }
-            }
-
-            /* Build Granule Histogram - Only Use High Energy Narrow Returns */
-            double delta_range = signal_range - shot_data->rx[rx].range;
-            delta_range = delta_range + 0.5 - (delta_range < 0);
-            long bin = (long)delta_range;
-
-            long hist_radius = GRANULE_HIST_SIZE / 2;
-            if(bin >= -hist_radius && bin < hist_radius)
-            {
-                granMut.lock();
-                {
-                    granHist[spot][hist_radius + bin]++;
-                }
-                granMut.unlock();
             }
         }
     }
@@ -1486,8 +1270,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         delete hist[s];
     }
 
-    delete [] tx_loopback_tags;
-
     for(int i = 0; i < shot_data_list.length(); i++)
     {
         delete shot_data_list[i];
@@ -1549,28 +1331,6 @@ int TimeTagProcessorModule::setSignalWidthCmd(int argc, char argv[][MAX_CMD_SIZE
 }
 
 /*----------------------------------------------------------------------------
- * setCorrectionCmd
- *----------------------------------------------------------------------------*/
-int TimeTagProcessorModule::setCorrectionCmd(int argc, char argv[][MAX_CMD_SIZE])
-{
-    TimeTagProcessorModule::correction_t c;
-    if(!TimeTagProcessorModule::str2corr(argv[0], &c)) return -1;
-
-    Correction = c;
-
-    if(c == LOOPBACK && argc == 3)
-    {
-        LoopbackLocation = strtod(argv[1], NULL);
-        LoopbackWidth = strtod(argv[2], NULL);
-    }
-
-    cmdProc->setCurrentValue(getName(), loopbackLocationKey, (void*)&LoopbackLocation, sizeof(LoopbackLocation));
-    cmdProc->setCurrentValue(getName(), loopbackWidthKey,    (void*)&LoopbackWidth,    sizeof(LoopbackWidth));
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
  * fullColumnModeCmd
  *----------------------------------------------------------------------------*/
 int TimeTagProcessorModule::fullColumnModeCmd(int argc, char argv[][MAX_CMD_SIZE])
@@ -1600,23 +1360,6 @@ int TimeTagProcessorModule::ttBinsizeCmd(int argc, char argv[][MAX_CMD_SIZE])
     else
     {
         TimeTagBinSize = (strtod(argv[0], NULL) * 3.0) / 20.0;
-    }
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
- * ttZoomCmd
- *----------------------------------------------------------------------------*/
-int TimeTagProcessorModule::ttZoomCmd(int argc, char argv[][MAX_CMD_SIZE])
-{
-    (void)argc;
-
-    double zoom_offset = strtod(argv[0], NULL);
-
-    for(int i = 0; i < NUM_PCES; i++)
-    {
-        TimeTagZoomOffset = zoom_offset;
     }
 
     return 0;
@@ -1778,35 +1521,6 @@ int TimeTagProcessorModule::stopResultFileCmd(int argc, char argv[][MAX_CMD_SIZE
     (void)argv;
 
     if(resultFile) fclose(resultFile);
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
- * writeGranHistCmd
- *----------------------------------------------------------------------------*/
-int TimeTagProcessorModule::writeGranHistCmd(int argc, char argv[][MAX_CMD_SIZE])
-{
-    (void)argc;
-
-    for(int s = 0; s < NUM_SPOTS; s++)
-    {
-        FILE* fp = fopen(argv[s], "w");
-        if(!fp)
-        {
-            mlog(CRITICAL, "Unable to open granule histogram file: %s\n", argv[s]);
-            return -1;
-        }
-        else
-        {
-            fprintf(fp, "Index,Count\n");
-            for(int i = 0; i < GRANULE_HIST_SIZE; i++)
-            {
-                fprintf(fp,"%d,%ld\n", i, granHist[s][i]);
-            }
-            fclose(fp);
-        }
-    }
 
     return 0;
 }
