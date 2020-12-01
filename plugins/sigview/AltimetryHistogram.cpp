@@ -87,7 +87,7 @@ bool AltimetryHistogram::calcAttributes(double sigwid, double true10ns)
 
     alt->hist.noiseBin = 0.0;
     if(bkgnd_bins > 0) alt->hist.noiseBin = (alt->hist.sum - _sigsum - _ignoresum) / bkgnd_bins;
-    alt->hist.noiseFloor = (((15000.0 / alt->hist.binSize) * (50.0 / alt->hist.integrationPeriod)) * alt->hist.noiseBin) / 1000000.0;
+    alt->hist.noiseFloor = (((100000.0 / alt->hist.binSize) * (50.0 / alt->hist.integrationPeriod)) * alt->hist.noiseBin) / 1000000.0;
     if(alt->hist.transmitCount != 0) alt->hist.noiseFloor *= ((double)alt->hist.integrationPeriod * 200.0) / (double)alt->hist.transmitCount; // scale for actual tx pulses received
 
     /* Calculate Type Specific Attributes */
@@ -102,7 +102,7 @@ bool AltimetryHistogram::calcAttributes(double sigwid, double true10ns)
     }
     sigloc /= (double)bincount;
 
-    alt->hist.signalRange    = (sigloc * alt->hist.binSize * (true10ns / 1.5)) + alt->hist.rangeWindowStart;
+    alt->hist.signalRange    = (sigloc * alt->hist.binSize * (true10ns / 10.0)) + alt->hist.rangeWindowStart;
     alt->hist.signalEnergy   = retcount / (200.0 * alt->hist.integrationPeriod);
 
     /* Return Heuristic on Signal Found */

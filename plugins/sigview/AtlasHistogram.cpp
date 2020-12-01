@@ -37,7 +37,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const double AtlasHistogram::HISTOGRAM_DEFAULT_FILTER_WIDTH = 1.5;
+const double AtlasHistogram::HISTOGRAM_DEFAULT_FILTER_WIDTH = 10.0;
 const double AtlasHistogram::histogramBias[NUM_TYPES] = { 4.0, 6.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 
 /******************************************************************************
@@ -483,7 +483,7 @@ bool AtlasHistogram::calcAttributes(double sigwid, double bincal)
     }
     else
     {
-        filter_width_bins = (int)round(sigwid * (3.0 / 20.0) / hist->binSize); // sigwid is ns
+        filter_width_bins = (int)round(sigwid / hist->binSize);
     }
 
     /* Calculate Signal Bin and Sum */
@@ -563,7 +563,7 @@ bool AtlasHistogram::calcAttributes(double sigwid, double bincal)
     }
 
     /* Calculate Signal Width in Nanoseconds */
-    hist->signalWidth = hist->signalWidth * hist->binSize * 20.0 / 3.0;
+    hist->signalWidth = hist->signalWidth * hist->binSize;
 
     /* Restore Begin and End Bins if Signal Width is Overridden */
     if(sigwid != 0.0)
@@ -586,6 +586,8 @@ RecordObject::recordDefErr_t AtlasHistogram::defineHistogram(const char* rec_typ
 {
     definition_t* def;
     recordDefErr_t status;
+
+    int num_bkgnd_cnts = MajorFrameProcessorModule::NUM_BKGND_CNTS;
 
     status = addDefinition(&def, rec_type, "TYPE", data_size, fields, num_fields, 128);
     if(status == SUCCESS_DEF)
@@ -619,6 +621,7 @@ RecordObject::recordDefErr_t AtlasHistogram::defineHistogram(const char* rec_typ
         addField(def, "MAXBIN[0]",         INT32,  offsetof(hist_t, maxBin[0]),                                    1,   NULL, NATIVE_FLAGS);
         addField(def, "MAXBIN[1]",         INT32,  offsetof(hist_t, maxBin[1]),                                    1,   NULL, NATIVE_FLAGS);
         addField(def, "MAXBIN[2]",         INT32,  offsetof(hist_t, maxBin[2]),                                    1,   NULL, NATIVE_FLAGS);
+        addField(def, "BKGNDCNTS",         INT32,  offsetof(hist_t, majorFrameData.BackgroundCounts), num_bkgnd_cnts,   NULL, NATIVE_FLAGS);
         addField(def, "RWDROPOUT",         UINT8,  offsetof(hist_t, majorFrameData.RangeWindowDropout_Err),        1,   NULL, NATIVE_FLAGS);
         addField(def, "DIDNOTFINISHTX",    UINT8,  offsetof(hist_t, majorFrameData.DidNotFinishTransfer_Err),      1,   NULL, NATIVE_FLAGS);
         addField(def, "DIDNOTFINISHWR",    UINT8,  offsetof(hist_t, majorFrameData.DidNotFinishWritingData_Err),   1,   NULL, NATIVE_FLAGS);
@@ -626,7 +629,7 @@ RecordObject::recordDefErr_t AtlasHistogram::defineHistogram(const char* rec_typ
         addField(def, "SDRAMMISMATCH",     UINT8,  offsetof(hist_t, majorFrameData.SDRAMMismatch_Err),             1,   NULL, NATIVE_FLAGS);
         addField(def, "TRACKINGFIFO",      UINT8,  offsetof(hist_t, majorFrameData.Tracking_FIFOWentFull),         1,   NULL, NATIVE_FLAGS);
         addField(def, "STARTTAGFIFO",      UINT8,  offsetof(hist_t, majorFrameData.StartTag_FIFOWentFull),         1,   NULL, NATIVE_FLAGS);
-        addField(def, "DFCSTATUS",         UINT64, offsetof(hist_t, majorFrameData.DFCStatusBits),                 1,   NULL, NATIVE_FLAGS);
+        addField(def, "DFCSTATUS",         UINT32, offsetof(hist_t, majorFrameData.DFCStatusBits),                 1,   NULL, NATIVE_FLAGS);
     }
 
     return status;

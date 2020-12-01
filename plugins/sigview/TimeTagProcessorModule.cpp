@@ -44,7 +44,7 @@ const double TimeTagProcessorModule::DEFAULT_TEP_WIDTH              = 5.0;    //
 const double TimeTagProcessorModule::DetectorDeadTime               = 1.0;    // nanoseconds
 const double TimeTagProcessorModule::MaxFineTimeCal                 = 0.300;  // ns
 const double TimeTagProcessorModule::MinFineTimeCal                 = 0.100;  // ns
-const double TimeTagProcessorModule::DefaultTimeTagBinSize          = 1.5;    // m
+const double TimeTagProcessorModule::DefaultTimeTagBinSize          = 10.0;   // ns
 
 const char* TimeTagProcessorModule::fullColumnIntegrationKey        = "fullColumnIntegration";
 const char* TimeTagProcessorModule::autoSetTrueRulerClkPeriodKey    = "autoSetTrueRulerClkPeriod";
@@ -530,13 +530,13 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                     double rws_offset = fmod(rws[s], 100000.0);
                     if(rws_offset < TepLocation)
                     {
-                        tep_start_bin[s] = (int)MAX(floor((TepLocation - rws_offset - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
-                        tep_stop_bin[s]  = (int)ceil((TepLocation - rws_offset + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
+                        tep_start_bin[s] = (int)MAX(floor((TepLocation - rws_offset - TepWidth) / TimeTagBinSize), 0);
+                        tep_stop_bin[s]  = (int)ceil((TepLocation - rws_offset + TepWidth) / TimeTagBinSize);
                     }
                     else
                     {
-                        tep_start_bin[s] = (int)MAX(floor(((100000.0 - rws_offset) + TepLocation - TepWidth) / (TimeTagBinSize * 20.0 / 3.0)), 0);
-                        tep_stop_bin[s]  = (int)ceil(((100000.0 - rws_offset) + TepLocation + TepWidth) / (TimeTagBinSize * 20.0 / 3.0));
+                        tep_start_bin[s] = (int)MAX(floor(((100000.0 - rws_offset) + TepLocation - TepWidth) / TimeTagBinSize), 0);
+                        tep_stop_bin[s]  = (int)ceil(((100000.0 - rws_offset) + TepLocation + TepWidth) / TimeTagBinSize);
                     }
 
                     /* Set Ignore Region */
@@ -768,20 +768,21 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                         }
 
                         /* Calculate Range (all in ns) */
-                        double coarse_time = (double)(dlb[rx->band].start + rx->coarse) * TrueRulerClkPeriod;
-                        rx->range = (coarse_time - (rx->fine * rx->calval)) + (rws[spot] * (10.0 / TrueRulerClkPeriod));
-                        rx->range -= chStat->rec->bias[channel_index];
-                        rx->range += (shot_data->tx.leading_fine * cvr);
+                        double calibrated_coarse = (double)(dlb[rx->band].start + rx->coarse) * TrueRulerClkPeriod;
+                        double calibrated_tof = calibrated_coarse - (rx->fine * rx->calval) + (shot_data->tx.leading_fine * cvr);
+                        double corrected_tof = calibrated_tof - (chStat->rec->bias[channel_index] * (TrueRulerClkPeriod / 10.0));
+                        double calibrated_rws = rws[spot] * (TrueRulerClkPeriod / 10.0);
+                        rx->range = corrected_tof + calibrated_rws;
 
                         /* Calculate Histogram Bin */
                         int return_bin = 0;
                         if(FullColumnIntegration)
                         {
-                            return_bin = (int)(rx->range * (0.15 / TimeTagBinSize)) % AtlasHistogram::MAX_HIST_SIZE; // 0.15 meters per nanosecond
+                            return_bin = (int)(rx->range / 10.0) % AtlasHistogram::MAX_HIST_SIZE; // 1.5 meter bins => 10 ns bins
                         }
                         else
                         {
-                            return_bin = (int)((rx->range - (rws[spot] * (10.0 / TrueRulerClkPeriod))) * (0.15 / TimeTagBinSize)); // 0.15 meters per nanosecond
+                            return_bin = (int)(corrected_tof / TimeTagBinSize);
                         }
 
                         /* Check For Duplicate */
@@ -1359,7 +1360,7 @@ int TimeTagProcessorModule::ttBinsizeCmd(int argc, char argv[][MAX_CMD_SIZE])
     }
     else
     {
-        TimeTagBinSize = (strtod(argv[0], NULL) * 3.0) / 20.0;
+        TimeTagBinSize = strtod(argv[0], NULL);
     }
 
     return 0;

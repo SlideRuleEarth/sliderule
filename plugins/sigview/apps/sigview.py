@@ -86,7 +86,7 @@ class SigView(QWidget):
             hist = self.histWorkingSet[index]
             # Basic Text
             basicText = """GPS: {}
-PCE:        {:11}          TXCNT:      {:8} shots
+PCE:        {:11}          TXCNT:      {:8} shots    
 MFC:        {:11}          SUM:        {:8} photons
 TYPE:       {:>11}          SIZE:       {:8} bins
 INTPERIOD:  {:11} mf       RWDROPOUT:  {:8}
@@ -97,18 +97,20 @@ BKGND:      {:11.3f} MHz      SDRAMMIS:   {:8}
 SIGRNG:     {:11.3f} ns       TRACKFIFO:  {:8}
 SIGWID:     {:11.1f} ns       STARTFIFO:  {:8}
 SIGPES:     {:11.3f} ns       DFCSTATUS:  {:8x}
+BKGNDCNTS:  {:11} {:5}    MFP:        {:8}
 """.format( hist["GPSSTR"],
             hist["PCE"]+1,  hist["TXCNT"],
             hist["MFC"],  hist["SUM"],
             self.histMapping[hist["TYPE"]],  hist["SIZE"],
             hist["INTPERIOD"],  hist["RWDROPOUT"],
-            hist["BINSIZE"] * (10. / 1.5),  hist["DIDNOTFINISHTX"],
+            hist["BINSIZE"],  hist["DIDNOTFINISHTX"],
             hist["RWS"], hist["DIDNOTFINISHWR"],
             hist["RWW"], hist["DFCEDAC"],
             hist["BKGND"], hist["SDRAMMISMATCH"],
             hist["SIGRNG"], hist["TRACKINGFIFO"],
             hist["SIGWID"], hist["STARTTAGFIFO"],
-            hist["SIGPES"], hist["DFCEDAC"])
+            hist["SIGPES"], hist["DFCSTATUS"],
+            sum(hist["BKGNDCNTS"][:4]), sum(hist["BKGNDCNTS"][4:]), hist["MFP"])
             # Tag Text
             if hist["TYPE"] == 4 or hist["TYPE"] == 5:
                 tagText = """GPS: {}
@@ -175,7 +177,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         try:
             hist = self.histWorkingSet[index]
             bins = hist["BINS"]
-            x = [i * hist["BINSIZE"] * (10.0 / 1.5) for i in range(len(bins))]
+            x = [i * hist["BINSIZE"] for i in range(len(bins))]
             self.histPlot.clear()
             self.histPlot.plot(x, bins, pen=self.histPen)
         except Exception as inst:
@@ -212,9 +214,10 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
 
         # Slider
         sliderLayout = QHBoxLayout()
+        self.histSliderPageSize = 1000
         self.histSlider = QSlider()
         self.histSlider.setRange(0, self.numHists - 1)
-        self.histSlider.setPageStep(int(self.numHists / 20))
+        self.histSlider.setPageStep(int(self.numHists / self.histSliderPageSize))
         self.histSlider.setTickPosition(QSlider.TicksLeft)
         self.histSlider.setOrientation(Qt.Horizontal)
         self.histSlider.valueChanged.connect(self.on_slider_changed)
@@ -339,7 +342,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
             new_index = 0
         self.numHists = len(self.histWorkingSet)
         self.histSlider.setRange(0, self.numHists - 1)
-        self.histSlider.setPageStep(int(self.numHists / 20))
+        self.histSlider.setPageStep(int(self.numHists / self.histSliderPageSize))
         self.histSlider.setValue(new_index)
         self.updateHist(new_index)
 
@@ -361,7 +364,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
                     curr_index += 1
         self.numHists = len(self.histWorkingSet)
         self.histSlider.setRange(0, self.numHists - 1)
-        self.histSlider.setPageStep(int(self.numHists / 20))
+        self.histSlider.setPageStep(int(self.numHists / self.histSliderPageSize))
         self.histSlider.setValue(new_index)
         self.updateHist(new_index)
 
@@ -447,7 +450,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
                     # rebin histogram
                     newBins = currHists[histType][pceNum]["BINS"]
                     oldBins = hist["BINS"]
-                    signalBin = (hist["SIGRNG"] - hist["RWS"]) / (hist["BINSIZE"] * 10.0 / 1.5)
+                    signalBin = (hist["SIGRNG"] - hist["RWS"]) / hist["BINSIZE"]
                     binOffset = int((centerBin - signalBin) + 0.5)
                     for b in range(len(hist["BINS"])):
                         newBin = b + binOffset
@@ -475,7 +478,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
             self.numHists = len(self.histWorkingSet)
             # reset display
             self.histSlider.setRange(0, self.numHists - 1)
-            self.histSlider.setPageStep(int(self.numHists / 20))
+            self.histSlider.setPageStep(int(self.numHists / self.histSliderPageSize))
             self.histSlider.setValue(0)
             self.progress.setValue(0)
             self.updateHist(0)
@@ -486,7 +489,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         self.histWorkingSet = self.histFullSet
         self.numHists = len(self.histWorkingSet)
         self.histSlider.setRange(0, self.numHists - 1)
-        self.histSlider.setPageStep(int(self.numHists / 20))
+        self.histSlider.setPageStep(int(self.numHists / self.histSliderPageSize))
         self.histSlider.setValue(0)
         self.progress.setValue(0)
         self.updateHist(0)

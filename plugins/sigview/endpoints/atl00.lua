@@ -37,7 +37,7 @@ local metricDictionary = {}
 --
 --  reportfilename: <file name of CSV report of metric values, nil if not desired>
 --------------------------------------------------------------------------------------
-local function createMetrics(metrictable, reportfilename)
+local function createMetrics(metrictable)
     local columnlist = {}
     local numcolumns = 0
     local cds_times_present = false
@@ -45,7 +45,7 @@ local function createMetrics(metrictable, reportfilename)
     -- Get Report Filename --
     reportfilename = "metric.csv"
     if metrictable["filename"] then
-        metric_filename = metrictable["filename"]
+        reportfilename = metrictable["filename"]
     end
     
     -- Get Key --

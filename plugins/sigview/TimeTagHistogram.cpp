@@ -323,7 +323,7 @@ bool TimeTagHistogram::calcAttributes (double sigwid, double bincal)
             ( (tt->hist.type == WTT) && ((~(tt->downlinkBands[d].mask) & 0xF0000) != 0) ) || // Week Spot Histogram
             ( (tt->hist.type != STT) && (tt->hist.type != WTT) ) )                           // Other
         {
-            bkgnd_bins += (double)(tt->downlinkBands[d].width + 1) / (tt->hist.binSize / 1.5);
+            bkgnd_bins += (double)(tt->downlinkBands[d].width + 1) / (tt->hist.binSize / 10.0);
             bkgnd_count += tt->downlinkBandsTagCnt[d];
         }
     }
@@ -331,7 +331,7 @@ bool TimeTagHistogram::calcAttributes (double sigwid, double bincal)
     /* Calculate Noise */
     tt->hist.noiseBin = 0.0;
     if(bkgnd_bins > 0) tt->hist.noiseBin = (double)bkgnd_count / bkgnd_bins;
-    tt->hist.noiseFloor = (((15000.0 / tt->hist.binSize) * (50.0 / tt->hist.integrationPeriod)) * tt->hist.noiseBin) / 1000000.0;
+    tt->hist.noiseFloor = (((100000.0 / tt->hist.binSize) * (50.0 / tt->hist.integrationPeriod)) * tt->hist.noiseBin) / 1000000.0;
     if(tt->hist.transmitCount != 0) tt->hist.noiseFloor *= ((double)tt->hist.integrationPeriod * 200.0) / (double)tt->hist.transmitCount; // scale for actual tx pulses received
 
     /* Calculate Signal Attributes */
