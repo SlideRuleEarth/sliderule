@@ -373,7 +373,7 @@ int AtlasFileWriter::writeHistoMeta (void* msg, int size, bool with_header)
 
     if(with_header)
     {
-        cnt += fprintf(outfp, "GPS,MFC,PCE,TYPE,RWS,RWW,DLBW1,DLBW2,DLBW3,DLBW4,SLIP,SIGRNG,BKGND,SIGPES,SIGWID,HISTSUM,TXCNT,MBPS,TXERR,WRERR,STTDC,WKTDC,RWDERR,SDRMERR,MFCERR,HDRERR,FMTERR,DLBERR,TAGERR,PKTERR,DLBS1,DLBS2,DLBS3,DLBS4\n");
+        cnt += fprintf(outfp, "GPS,MFC,PCE,TYPE,RWS,RWW,DLBW1,DLBW2,DLBW3,DLBW4,SPAN,SPANTXCNT,SIGRNG,BKGND,SIGPES,SIGWID,HISTSUM,TXCNT,MBPS,TXERR,WRERR,STTDC,WKTDC,RWDERR,SDRMERR,MFCERR,HDRERR,FMTERR,DLBERR,TAGERR,PKTERR,DLBS1,DLBS2,DLBS3,DLBS4\n");
     }
 
     const unsigned char* data = NULL;
@@ -402,7 +402,8 @@ int AtlasFileWriter::writeHistoMeta (void* msg, int size, bool with_header)
     cnt += fprintf(outfp, "%d,",   dlb[1].width);
     cnt += fprintf(outfp, "%d,",   dlb[2].width);
     cnt += fprintf(outfp, "%d,",   dlb[3].width);
-    cnt += fprintf(outfp, "%d,",   hist->slipCnt);
+    cnt += fprintf(outfp, "%.1lf,",hist->spanRng);
+    cnt += fprintf(outfp, "%d,",   hist->spanTxCnt);
     cnt += fprintf(outfp, "%.1lf,",hist->hist.signalRange);
     cnt += fprintf(outfp, "%.1lf,",hist->hist.noiseFloor);
     cnt += fprintf(outfp, "%.1lf,",hist->hist.signalEnergy);

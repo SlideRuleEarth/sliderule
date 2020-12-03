@@ -21,6 +21,7 @@ local rqst = json.decode(arg[1])
 local threads = rqst["threads"] or 4
 local timeout_seconds = rqst["timeout"] or 3
 local database = rqst["database"]
+local recdataq = (rqst["silent"] and "recdataq") or rspq
 local scidataq = "scidataq" -- ccsds packets
 local metricq = "metricq" -- metric records
 local baseDispatcher = nil
@@ -60,7 +61,7 @@ local function createMetrics(metrictable)
     -- Create Base Record Metrics --
     if metrictable["base"] then  
         if not baseDispatcher then
-            baseDispatcher = core.dispatcher(rspq, threads, player_key, key_parm)
+            baseDispatcher = core.dispatcher(recdataq, threads, player_key, key_parm)
             baseDispatcher:name("baseDispatcher")
         end
         for recname,fieldlist in pairs(metrictable["base"]) do
@@ -138,7 +139,7 @@ local function createLimits (limittable)
     -- Create Base Record Metrics --
     if limittable["base"] then        
         if not baseDispatcher then
-            baseDispatcher = core.dispatcher(rspq, threads, player_key, key_parm)
+            baseDispatcher = core.dispatcher(recdataq, threads, player_key, key_parm)
             baseDispatcher:name("baseDispatcher")
         end
         for i,limit in ipairs(limittable["base"]) do
@@ -275,9 +276,9 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     cmd.exec("pktProc::REGISTER   0x474 timeProc")  -- PCE 2 TIMEKEEPING
     cmd.exec("pktProc::REGISTER   0x475 timeProc")  -- PCE 3 TIMEKEEPING
     -- start time tag processors --
-    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc1 %s txtimeq 1", rspq))
-    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc2 %s txtimeq 2", rspq))
-    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc3 %s txtimeq 3", rspq))
+    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc1 %s txtimeq 1", recdataq))
+    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc2 %s txtimeq 2", recdataq))
+    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc3 %s txtimeq 3", recdataq))
     cmd.exec("ttProc1::ATTACH_MAJOR_FRAME_PROC mfProc1")
     cmd.exec("ttProc2::ATTACH_MAJOR_FRAME_PROC mfProc2")
     cmd.exec("ttProc3::ATTACH_MAJOR_FRAME_PROC mfProc3")
@@ -288,9 +289,9 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     cmd.exec("pktProc::REGISTER   0x4F0 ttProc2")
     cmd.exec("pktProc::REGISTER   0x4FA ttProc3")
     -- start strong altimetric processors --
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR salProc1 SAL %s 1", rspq)) 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR salProc2 SAL %s 2", rspq))
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR salProc3 SAL %s 3", rspq))  
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR salProc1 SAL %s 1", recdataq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR salProc2 SAL %s 2", recdataq))
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR salProc3 SAL %s 3", recdataq))  
     cmd.exec("salProc1::ATTACH_MAJOR_FRAME_PROC mfProc1")
     cmd.exec("salProc2::ATTACH_MAJOR_FRAME_PROC mfProc2")
     cmd.exec("salProc3::ATTACH_MAJOR_FRAME_PROC mfProc3")
@@ -298,9 +299,9 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     cmd.exec("pktProc::REGISTER   0x4EC salProc2")
     cmd.exec("pktProc::REGISTER   0x4F6 salProc3")
     -- start weak altimetric processors --
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR walProc1 WAL %s 1", rspq)) 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR walProc2 WAL %s 2", rspq)) 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR walProc3 WAL %s 3", rspq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR walProc1 WAL %s 1", recdataq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR walProc2 WAL %s 2", recdataq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR walProc3 WAL %s 3", recdataq)) 
     cmd.exec("walProc1::ATTACH_MAJOR_FRAME_PROC mfProc1")
     cmd.exec("walProc2::ATTACH_MAJOR_FRAME_PROC mfProc2")
     cmd.exec("walProc3::ATTACH_MAJOR_FRAME_PROC mfProc3")
@@ -308,9 +309,9 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     cmd.exec("pktProc::REGISTER   0x4ED walProc2")
     cmd.exec("pktProc::REGISTER   0x4F7 walProc3")
     -- start strong atmospheric processors --
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR samProc1 SAM %s 1", rspq)) 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR samProc2 SAM %s 2", rspq)) 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR samProc3 SAM %s 3", rspq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR samProc1 SAM %s 1", recdataq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR samProc2 SAM %s 2", recdataq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR samProc3 SAM %s 3", recdataq)) 
     cmd.exec("samProc1::ATTACH_MAJOR_FRAME_PROC mfProc1")
     cmd.exec("samProc2::ATTACH_MAJOR_FRAME_PROC mfProc2")
     cmd.exec("samProc3::ATTACH_MAJOR_FRAME_PROC mfProc3")
@@ -318,9 +319,9 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     cmd.exec("pktProc::REGISTER   0x4EE samProc2")
     cmd.exec("pktProc::REGISTER   0x4F8 samProc3")
     -- start weak atmospheric processors -- 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR wamProc1 WAM %s 1", rspq)) 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR wamProc2 WAM %s 2", rspq)) 
-    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR wamProc3 WAM %s 3", rspq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR wamProc1 WAM %s 1", recdataq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR wamProc2 WAM %s 2", recdataq)) 
+    cmd.exec(string.format("NEW ALTIMETRY_PROCESSOR wamProc3 WAM %s 3", recdataq)) 
     cmd.exec("wamProc1::ATTACH_MAJOR_FRAME_PROC mfProc1")
     cmd.exec("wamProc2::ATTACH_MAJOR_FRAME_PROC mfProc2")
     cmd.exec("wamProc3::ATTACH_MAJOR_FRAME_PROC mfProc3")
@@ -329,27 +330,27 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     cmd.exec("pktProc::REGISTER   0x4F9 wamProc3")
     -- attach statistics --
     if enTimeStat then 
-        cmd.exec(string.format("timeProc.TimeStat::ATTACH %s", rspq)) 
+        cmd.exec(string.format("timeProc.TimeStat::ATTACH %s", recdataq)) 
     end
     if enPktStat then 
-        cmd.exec(string.format("ttProc1.PktStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc2.PktStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc3.PktStat::ATTACH %s", rspq))
+        cmd.exec(string.format("ttProc1.PktStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc2.PktStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc3.PktStat::ATTACH %s", recdataq))
     end
     if enChStat then 
-        cmd.exec(string.format("ttProc1.ChStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc2.ChStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc3.ChStat::ATTACH %s", rspq))
+        cmd.exec(string.format("ttProc1.ChStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc2.ChStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc3.ChStat::ATTACH %s", recdataq))
     end
     if enTxStat then
-        cmd.exec(string.format("ttProc1.TxStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc2.TxStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc3.TxStat::ATTACH %s", rspq))
+        cmd.exec(string.format("ttProc1.TxStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc2.TxStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc3.TxStat::ATTACH %s", recdataq))
     end
     if enSigStat then
-        cmd.exec(string.format("ttProc1.SigStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc2.SigStat::ATTACH %s", rspq))
-        cmd.exec(string.format("ttProc3.SigStat::ATTACH %s", rspq))
+        cmd.exec(string.format("ttProc1.SigStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc2.SigStat::ATTACH %s", recdataq))
+        cmd.exec(string.format("ttProc3.SigStat::ATTACH %s", recdataq))
     end
     -- return success -- 
     return true
@@ -397,7 +398,7 @@ if rqst["writer"] then
     writer = rqst["writer"]
     local wformat = writer["format"]
     local wfile = writer["file"]
-    cmd.exec(string.format("NEW ATLAS_FILE_WRITER atlasWriter %s %s %s", wformat, wfile, rspq))
+    cmd.exec(string.format("NEW ATLAS_FILE_WRITER atlasWriter %s %s %s", wformat, wfile, recdataq))
 end
 
 -- Execute Post Configuration Commands --

@@ -256,8 +256,8 @@ bool AltimetryProcessorModule::parseAltHist(List<CcsdsSpacePacket*>& segments, i
         {
             /* Check Range Window Start */
             double dfc_rws = 0.0;
-            if      (type == AtlasHistogram::SAL)   dfc_rws = (mfdata.StrongAltimetricRangeWindowStart + 13) * trueRulerClkPeriod;
-            else if (type == AtlasHistogram::WAL)   dfc_rws = (mfdata.WeakAltimetricRangeWindowStart + 13) * trueRulerClkPeriod;
+            if      (type == AtlasHistogram::SAL)   dfc_rws = mfdata.StrongAltimetricRangeWindowStart * trueRulerClkPeriod;
+            else if (type == AtlasHistogram::WAL)   dfc_rws = mfdata.WeakAltimetricRangeWindowStart * trueRulerClkPeriod;
 
             if(dfc_rws != hist->getRangeWindowStart())
             {
@@ -267,8 +267,8 @@ bool AltimetryProcessorModule::parseAltHist(List<CcsdsSpacePacket*>& segments, i
 
             /* Check Range Window Width */
             double dfc_rww = 0.0;
-            if      (type == AtlasHistogram::SAL)   dfc_rww = (mfdata.StrongAltimetricRangeWindowWidth + 1) * trueRulerClkPeriod;
-            else if (type == AtlasHistogram::WAL)   dfc_rww = (mfdata.WeakAltimetricRangeWindowWidth + 1) * trueRulerClkPeriod;
+            if      (type == AtlasHistogram::SAL)   dfc_rww = mfdata.StrongAltimetricRangeWindowWidth * trueRulerClkPeriod;
+            else if (type == AtlasHistogram::WAL)   dfc_rww = mfdata.WeakAltimetricRangeWindowWidth * trueRulerClkPeriod;
 
             if(dfc_rww != hist->getRangeWindowWidth())
             {

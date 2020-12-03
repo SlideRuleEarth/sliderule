@@ -54,7 +54,8 @@ class TimeTagHistogram: public AtlasHistogram
             int32_t                 numDownlinkBands;
             band_t                  downlinkBands[MAX_NUM_DLBS];
             int32_t                 downlinkBandsTagCnt[MAX_NUM_DLBS];
-            int32_t                 slipCnt;
+            double                  spanRng;
+            int                     spanTxCnt;
             stat_t                  pktStats;
         } ttHist_t;
 
@@ -77,7 +78,7 @@ class TimeTagHistogram: public AtlasHistogram
                                 ~TimeTagHistogram   (void);
 
         bool                    binTag              (int bin, tag_t* tag);
-        void                    setSlipCnt          (int slip_cnt);
+        void                    setSpanRng          (double span_rng, int span_tx_cnt);
         void                    setPktStats         (const stat_t* stats);
         void                    incChCount          (int index);
         tag_t*                  getTag              (int bin, int offset);

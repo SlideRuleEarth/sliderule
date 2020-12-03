@@ -53,7 +53,8 @@ RecordObject::fieldDef_t TimeTagHistogram::rec_def[] =
     {"DLB3_WIDTH",  UINT16, offsetof(ttHist_t, downlinkBands[3].width),     1,    NULL, NATIVE_FLAGS},
     {"DLB3_MASK",   UINT32, offsetof(ttHist_t, downlinkBands[3].mask),      1,    NULL, NATIVE_FLAGS},
     {"DLB3_TAGCNT", INT32,  offsetof(ttHist_t, downlinkBandsTagCnt[3]),     1,    NULL, NATIVE_FLAGS},
-    {"SLIP",        INT32,  offsetof(ttHist_t, slipCnt),                    1,    NULL, NATIVE_FLAGS},
+    {"SPAN",        DOUBLE, offsetof(ttHist_t, spanRng),                    1,    NULL, NATIVE_FLAGS},
+    {"SPAN_TXCNT",  INT32,  offsetof(ttHist_t, spanTxCnt),                  1,    NULL, NATIVE_FLAGS},
     {"SEGCNT",      INT32,  offsetof(ttHist_t, pktStats.segcnt),            1,    NULL, NATIVE_FLAGS},
     {"PKTCNT",      INT32,  offsetof(ttHist_t, pktStats.pktcnt),            1,    NULL, NATIVE_FLAGS},
     {"MFC_ERRORS",  UINT32, offsetof(ttHist_t, pktStats.mfc_errors),        1,    NULL, NATIVE_FLAGS},
@@ -158,11 +159,12 @@ bool TimeTagHistogram::binTag(int bin, tag_t* tag)
 }
 
 /*----------------------------------------------------------------------------
- * setSlipCnt  -
+ * setSpanRng  -
  *----------------------------------------------------------------------------*/
-void TimeTagHistogram::setSlipCnt(int slip_cnt)
+void TimeTagHistogram::setSpanRng(double span_rng, int span_tx_cnt)
 {
-    tt->slipCnt = slip_cnt;
+    tt->spanRng = span_rng;
+    tt->spanTxCnt = span_tx_cnt;
 }
 
 /*----------------------------------------------------------------------------
