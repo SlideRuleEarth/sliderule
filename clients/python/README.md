@@ -1,4 +1,4 @@
-# sliderule-client
+# sliderule-python
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
@@ -10,7 +10,7 @@ SlideRule can be accessed by any http client (e.g. curl) by making GET and POST 
 
 ### Installing the SlideRule Python Client
 ```
-pip install https://github.com/ICESat2-SlideRule/sliderule-client
+pip install https://github.com/ICESat2-SlideRule/sliderule-python
 ```
 
 basic usage:
@@ -23,8 +23,8 @@ from sliderule import icesat2
 
 development install:
 ```
-git clone https://github.com/ICESat2-SlideRule/sliderule-client.git
-cd sliderule-client
+git clone https://github.com/ICESat2-SlideRule/sliderule-python.git
+cd sliderule-python
 conda env create -f environment.yml
 ```
 
