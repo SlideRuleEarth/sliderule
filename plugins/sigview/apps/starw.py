@@ -1,19 +1,36 @@
 #
-#   Purpose: process dfc housekeeping telemetry to produce software timing analyzer plots
+#   Purpose: process dfc range gate and tx settings to produce software timing analyzer plots
 #
 #   Example creation of Software Timing Analyzer files:
-#       python starw.py txrx_dfc2.csv
+#       python starw.py range_gates.json
+#
+#   where range_gates.json is:
+#
+#       {
+#            'TxCoarse':             [4096],
+#            'T0Offset':             [3096],
+#            'Alt_RWS_Strong':       [323488],
+#            'Alt_RWS_Weak':         [324734],
+#            'Alt_RWW_Strong':       [2110],
+#            'Alt_RWW_Weak':         [854],
+#            'Atm_RWS_Strong':       [316260],
+#            'Atm_RWS_Weak':         [316260],
+#            'Atm_RWW_Strong':       [9340],
+#            'Atm_RWW_Weak':         [9340]
+#       }
+# 
 #
 
 import sys
+import json
 import pandas as pd
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
 
-COLOR_MAP = [8421631, 8454143, 8454016, 16777088, 16744703, 16777215, 8421376, 255]
-PERFIDS = {"sal": 1, "wal": 2, "sam": 3, "wam": 4, "tx": 5, "t0": 6, "mf": 7, "tri": 8}
+COLOR_MAP = [65535, 12615935, 8454143, 16744703, 65280, 32768, 16777215, 8421376]
+PERFIDS = {"sam": 1, "wam": 2, "sal": 3, "wal": 4, "tx": 5, "txoff": 6, "t0": 7, "mf": 8}
 EDGES = {True: 0, False: 1 << 14}
 
 ###############################################################################
@@ -22,32 +39,48 @@ EDGES = {True: 0, False: 1 << 14}
 
 if __name__ == '__main__':
     
-    # Read Data Frame #
-    df = pd.read_csv(sys.argv[1], index_col=False)
+    if sys.argv[1] == "hardcode":
+        
+        # Hard Coded Parameters #
+        config = {
+            "num_major_frames": 1,
+            "correct_clocks": False        
+        }
+        settings = {
+            'TxCoarse':             [((0xA5935 & 0x001FFF80) / 128) + 1],
+            'T0Offset':             [((0xCC8B5 & 0x001FFF80) / 128) + 1],
+            'Alt_RWS_Strong':       [323488],
+            'Alt_RWS_Weak':         [324734],
+            'Alt_RWW_Strong':       [2110],
+            'Alt_RWW_Weak':         [854],
+            'Atm_RWS_Strong':       [316260],
+            'Atm_RWS_Weak':         [316260],
+            'Atm_RWW_Strong':       [9340],
+            'Atm_RWW_Weak':         [9340]
+        }
 
-    # Build Range Windows #    
-    df["SAL.rws"] = (df["A_DFC2.HK.StrongAltRWS[0]"] * 65536) + (df["A_DFC2.HK.StrongAltRWS[1]"] * 256) + df["A_DFC2.HK.StrongAltRWS[2]"]
-    df["SAL.rww"] = df["A_DFC2.HK.StrongAltRWW"]
-    df["SAM.rws"] = (df["A_DFC2.HK.StrongAtmRWS[0]"] * 65536) + (df["A_DFC2.HK.StrongAtmRWS[1]"] * 256) + df["A_DFC2.HK.StrongAtmRWS[2]"]
-    df["SAM.rww"] = df["A_DFC2.HK.StrongAtmRWW"]
-    df["WAL.rws"] = (df["A_DFC2.HK.WeakAltRWS[0]"] * 65536) + (df["A_DFC2.HK.WeakAltRWS[1]"] * 256) + df["A_DFC2.HK.WeakAltRWS[2]"]
-    df["WAL.rww"] = df["A_DFC2.HK.WeakAltRWW"]
-    df["WAM.rws"] = (df["A_DFC2.HK.WeakAtmRWS[0]"] * 65536) + (df["A_DFC2.HK.WeakAtmRWS[1]"] * 256) + df["A_DFC2.HK.WeakAtmRWS[2]"]
-    df["WAM.rww"] = df["A_DFC2.HK.WeakAtmRWW"]
-
-    # Build Transmits #
-    df["TxTag"] = (df["A_DFC2.HK.LeadingStartTimeTag[0]"] * 65536) + (df["A_DFC2.HK.LeadingStartTimeTag[1]"] * 256) + df["A_DFC2.HK.LeadingStartTimeTag[2]"]    
-    df["TxCoarse"] = ((df["TxTag"] & 0x001FFF80) / 128) + 1
+    else:
+        
+        # From JSON File #
+        with open(sys.argv[1]) as inputfile:
+            inputdict = json.load(inputfile)
+        config = inputdict["config"]
+        settings = inputdict["settings"]        
+            
+    # Correct Clocks #
+    if config["correct_clocks"]:
+        for setting in ["TxCoarse", "T0Offset"]:
+            for index in range(len(settings[setting])):
+                settings[setting][index] += 1
+        for setting in ["Alt_RWS_Strong", "Alt_RWS_Weak", "Alt_RWW_Strong", "Alt_RWW_Weak", "Atm_RWS_Strong", "Atm_RWS_Weak", "Atm_RWW_Strong", "Atm_RWW_Weak"]:
+            for index in range(len(settings[setting])):
+                settings[setting][index] += 13
     
-    # Filter Major Frames and Get Trigger #
-    trigger = -1
-    if len(sys.argv) > 3:
-        df = df[df['A_DFC2.HK.MajorFrameCount'] >= int(sys.argv[2])]
-        df = df[df['A_DFC2.HK.MajorFrameCount'] <= int(sys.argv[3])]    
-        if len(sys.argv) > 4:
-            trigger = int(sys.argv[4])
-    elif len(sys.argv) == 3:
-        trigger = int(sys.argv[2])
+    # Build Data Frame #
+    hc = {}
+    for setting in settings:
+        hc[setting] = [value for value in settings[setting] for major_frame in range(config["num_major_frames"])]        
+    df = pd.DataFrame(hc)    
 
     # Build Dictionary of all Events #
     t0time = 0
@@ -64,24 +97,11 @@ if __name__ == '__main__':
         events["signal"].append("mf")
         events["edge"].append(False)
 
-        # Check Trigger #
-        if row['A_DFC2.HK.MajorFrameCount'] == trigger:
-
-            # Find First Range Window Edge #
-            first_rw = min([row["SAL.rws"], row["WAL.rws"], row["SAM.rws"], row["WAM.rws"]])
-
-            # Trigger Rising #
-            events["time"].append(t0time + first_rw)
-            events["signal"].append("tri")
-            events["edge"].append(True)
-
-            # Trigger Falling #
-            events["time"].append(t0time + first_rw + 1)
-            events["signal"].append("tri")
-            events["edge"].append(False)
-
         # Loop Through Each Shot in Major Frame #
         for shot in range(200):
+
+            # Calculate Tx #
+            txtime = t0time + row["TxCoarse"]
 
             # T0 Rising #
             events["time"].append(t0time)
@@ -93,54 +113,64 @@ if __name__ == '__main__':
             events["signal"].append("t0")
             events["edge"].append(False)
 
-            # SAL Rising #
-            events["time"].append(t0time + row["SAL.rws"])
-            events["signal"].append("sal")
-            events["edge"].append(True)
-
-            # SAL Falling #
-            events["time"].append(t0time + row["SAL.rws"] + row["SAL.rww"])
-            events["signal"].append("sal")
-            events["edge"].append(False)
-
-            # WAL Rising #
-            events["time"].append(t0time + row["WAL.rws"])
-            events["signal"].append("wal")
-            events["edge"].append(True)
-
-            # WAL Falling #
-            events["time"].append(t0time + row["WAL.rws"] + row["WAL.rww"])
-            events["signal"].append("wal")
-            events["edge"].append(False)
-
-            # SAM Rising #
-            events["time"].append(t0time + row["SAM.rws"])
-            events["signal"].append("sam")
-            events["edge"].append(True)
-
-            # SAM Falling #
-            events["time"].append(t0time + row["SAM.rws"] + row["SAM.rww"])
-            events["signal"].append("sam")
-            events["edge"].append(False)
-
-            # WAM Rising #
-            events["time"].append(t0time + row["WAM.rws"])
-            events["signal"].append("wam")
-            events["edge"].append(True)
-
-            # WAM Falling #
-            events["time"].append(t0time + row["WAM.rws"] + row["WAM.rww"])
-            events["signal"].append("wam")
-            events["edge"].append(False)
-
             # Tx Rising #
-            events["time"].append(t0time + row["TxCoarse"])
+            events["time"].append(txtime)
             events["signal"].append("tx")
             events["edge"].append(True)
 
             # Tx Falling #
-            events["time"].append(t0time + row["TxCoarse"] + 1)
+            events["time"].append(txtime + 1)
             events["signal"].append("tx")
+            events["edge"].append(False)
+
+            # Tx Offset Rising #
+            events["time"].append(t0time + row["T0Offset"])
+            events["signal"].append("txoff")
+            events["edge"].append(True)
+
+            # Tx Offset Falling #
+            events["time"].append(t0time + row["T0Offset"] + 1)
+            events["signal"].append("txoff")
+            events["edge"].append(False)
+
+            # SAL Rising #
+            events["time"].append(txtime + row['Alt_RWS_Strong'])
+            events["signal"].append("sal")
+            events["edge"].append(True)
+
+            # SAL Falling #
+            events["time"].append(txtime + row['Alt_RWS_Strong'] + row['Alt_RWW_Strong'])
+            events["signal"].append("sal")
+            events["edge"].append(False)
+
+            # WAL Rising #
+            events["time"].append(txtime + row['Alt_RWS_Weak'])
+            events["signal"].append("wal")
+            events["edge"].append(True)
+
+            # WAL Falling #
+            events["time"].append(txtime + row['Alt_RWS_Weak'] + row['Alt_RWW_Weak'])
+            events["signal"].append("wal")
+            events["edge"].append(False)
+
+            # SAM Rising #
+            events["time"].append(txtime + row['Atm_RWS_Strong'])
+            events["signal"].append("sam")
+            events["edge"].append(True)
+
+            # SAM Falling #
+            events["time"].append(txtime + row['Atm_RWS_Strong'] + row['Atm_RWW_Strong'])
+            events["signal"].append("sam")
+            events["edge"].append(False)
+
+            # WAM Rising #
+            events["time"].append(txtime + row['Atm_RWS_Weak'])
+            events["signal"].append("wam")
+            events["edge"].append(True)
+
+            # WAM Falling #
+            events["time"].append(txtime + row['Atm_RWS_Weak'] + row['Atm_RWW_Weak'])
+            events["signal"].append("wam")
             events["edge"].append(False)
 
             # Increment T0 #
