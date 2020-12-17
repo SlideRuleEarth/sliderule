@@ -405,7 +405,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
     (void)argc;
     (void)argv;
 
-    int key, data;
+    int key, data = 0;
     int size = 64;
     int data_order[64];
     int test_cycles = 65536;

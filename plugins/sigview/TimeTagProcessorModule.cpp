@@ -369,10 +369,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     int                 txcnt_mf                    = 0;        // number of transmit pulses in major frame
     int                 tep_start_bin[NUM_SPOTS]    = { 0, 0 };
     int                 tep_stop_bin[NUM_SPOTS]     = { 0, 0 };
-    double              span                        = 0.0;
-    double              span_start                  = 0.0;
-    double              span_end                    = 0.0;
-    int                 span_tx_cnt                 = 0;
     shot_data_t*        shot_data                   = NULL;
     mfdata_t*           mfdata_ptr                  = NULL;
     TimeTagHistogram*   hist[NUM_SPOTS]             = { NULL, NULL };
@@ -556,25 +552,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
                     }
                 }
             }
-
-            /* Set Range Window Span */
-            if(mfdata_ptr)
-            {
-                /* Calculate Starts */
-                double atm_rws_s = mfdata_ptr->StrongAtmosphericRangeWindowStart * TrueRulerClkPeriod;
-                double atm_rws_w = mfdata_ptr->WeakAtmosphericRangeWindowStart * TrueRulerClkPeriod;
-
-                /* Calculate Ends */
-                double alt_rwe_s = rws[STRONG_SPOT] + rww[STRONG_SPOT];
-                double alt_rwe_w = rws[WEAK_SPOT] + rww[WEAK_SPOT];
-                double atm_rwe_s = atm_rws_s + (mfdata_ptr->StrongAtmosphericRangeWindowWidth * TrueRulerClkPeriod);
-                double atm_rwe_w = atm_rws_w + (mfdata_ptr->WeakAtmosphericRangeWindowWidth * TrueRulerClkPeriod);
-                
-                /* Calculate Span */
-                span_start = MIN(MIN(MIN(rws[STRONG_SPOT], rws[WEAK_SPOT]), atm_rws_s), atm_rws_w);
-                span_end = MAX(MAX(MAX(alt_rwe_s, alt_rwe_w), atm_rwe_s), atm_rwe_w);
-                span = span_end - span_start;
-            }
         }
         else /* Process Continuation and End Segments */
         {
@@ -643,14 +620,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
                     prevtag = 0; // reset previous tag for new shot
                     txcnt_mf++;  // count the transmit for check later on
-
-                    /* Span Tx Count */
-                    double span_start_offset =fmod(((shot_data->tx.leading_coarse + 1) * TrueRulerClkPeriod) + span_start, TrueRulerClkPeriod * 10000.0);
-                    if(shot_data->tx.time > span_start_offset && shot_data->tx.time < (span_start_offset + span))
-                    {
-                        double remaining_span = span - (shot_data->tx.time - span_start_offset);
-                        span_tx_cnt += 1 + (int)(remaining_span / 100000.0);
-                    }
                 }
                 /* Return Pulse */
                 else if(channel >= 1 && channel <= 20)
@@ -1207,9 +1176,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         pkt_stat.avg_tags = tx_sum_tags[s] / (double)num_shots;
         pkt_stat.min_tags = tx_min_tags[s];
         pkt_stat.max_tags = tx_max_tags[s];
-
-        /* Set Span Stats */
-        hist[s]->setSpanRng(span, span_tx_cnt);
 
         /* Copy In Stats */
         hist[s]->setPktStats(&pkt_stat);
