@@ -69,10 +69,10 @@ if __name__ == '__main__':
             
     # Correct Clocks #
     if config["correct_clocks"]:
-        for setting in ["TxCoarse", "T0Offset"]:
+        for setting in ["TxCoarse", "T0Offset", "Alt_RWW_Strong", "Alt_RWW_Weak", "Atm_RWW_Strong", "Atm_RWW_Weak"]:
             for index in range(len(settings[setting])):
                 settings[setting][index] += 1
-        for setting in ["Alt_RWS_Strong", "Alt_RWS_Weak", "Alt_RWW_Strong", "Alt_RWW_Weak", "Atm_RWS_Strong", "Atm_RWS_Weak", "Atm_RWW_Strong", "Atm_RWW_Weak"]:
+        for setting in ["Alt_RWS_Strong", "Alt_RWS_Weak", "Atm_RWS_Strong", "Atm_RWS_Weak"]:
             for index in range(len(settings[setting])):
                 settings[setting][index] += 13
     
