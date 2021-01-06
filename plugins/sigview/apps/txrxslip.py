@@ -166,7 +166,7 @@ def dangerzone(rws_s, rws_w, rww_s, rww_w, tx):
 # Nested Exit
 #
 def nestedexit(transition, dz):
-    return ((transition == -1.0) and (dz > 0.0)) * 1.0
+    return ((transition == -1.0) and (dz > 0.0)) * 1
 
 #
 # PyQt Plot Axis
@@ -188,26 +188,31 @@ class myaxis(pg.AxisItem):
 class TxRxSlip(QWidget):
 
     # Plot Data #
-    def plotData(self, start, stop):
+    def plotData(self, dfSlice):
         columnsToPlot = self.columnSelect.currentData()
         self.dataPlot.clear()
         for column,color in zip(columnsToPlot,COLOR_MAP):
             dataPen = pg.mkPen(color=color, width=3)
-            self.dataPlot.plot(self.df["mfc"][start:stop], self.df[column][start:stop], name=column, pen=dataPen)
+            self.dataPlot.plot(dfSlice["mfc"].values, dfSlice[column].values, name=column, pen=dataPen)
         self.dataPlot.plotItem.setAxisItems({'bottom': myaxis('bottom')})
         self.dataPlot.addLegend()
 
     # Display Data #
-    def displayData(self, start, stop):      
-        self.dataDisplay.setText(self.df.to_string(max_rows=1000, max_cols=1000))
+    def displayData(self, dfSlice):
+        self.dataDisplay.setText(dfSlice.to_string(max_rows=1000, max_cols=1000))
 
     # Update All Data GUI Components #
     def updateData(self):
         try:
             start = int(self.startBox.text())
             stop = int(self.stopBox.text())
-            self.plotData(start, stop)
-            self.displayData(start, stop)
+            if start != 0 or stop != 0:
+                dfSlice = self.df[self.df["mfc"] > start]
+                dfSlice = dfSlice[dfSlice["mfc"] < stop]
+            else:
+                dfSlice = self.df
+            self.plotData(dfSlice)
+            self.displayData(dfSlice)
         except Exception as inst:
             print("Unable to update data: {}".format(inst))
 
@@ -259,16 +264,14 @@ class TxRxSlip(QWidget):
     def openFile(self, filename):
         try:
             self.df = pd.read_csv(filename, index_col=False)
-            self.dataSize = len(self.df.index)
-            self.startBox.setText("0")
-            self.stopBox.setText(str(self.dataSize))
             self.processData()
+            self.startBox.setText(str(self.df["mfc"][0]))
+            self.stopBox.setText(str(self.df["mfc"].iat[-1]))
             self.columnSelect.clear()
             self.columnSelect.addItems(self.df.keys())
         except Exception as inst:
             print("Unable to open file: {}".format(inst))
             self.df = None
-            self.dataSize = 0
             self.startBox.setText("0")
             self.stopBox.setText("0")
 
@@ -322,7 +325,6 @@ class TxRxSlip(QWidget):
         self.setLayout(mainLayout)
 
         # Load Default DataFrame
-        self.dataSize = 0
         self.df = None
         if filename is not None:
             self.openFile(filename)

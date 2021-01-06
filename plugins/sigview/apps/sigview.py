@@ -522,6 +522,7 @@ if __name__ == '__main__':
     rsps = atl00exec(parms)
 
     # Start GUI
-    app = QApplication(sys.argv)
-    ex = SigView(rsps)
-    sys.exit(app.exec_())
+    if parms["silent"] == False:
+        app = QApplication(sys.argv)
+        ex = SigView(rsps)
+        sys.exit(app.exec_())
