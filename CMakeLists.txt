@@ -173,7 +173,7 @@ if(${USE_ICESAT2_PLUGIN})
 endif()
 
 if(${USE_ATLAS_PLUGIN})
-    add_subdirectory (plugins/sigview)
+    add_subdirectory (plugins/atlas)
 endif()
 
 # Scripts #
