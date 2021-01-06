@@ -225,14 +225,14 @@ class TxRxSlip(QWidget):
         elif "A_DFC3.HK.StrongAltRWW" in self.df.keys():
             pce = "A_DFC3.HK."
 
-        self.df["salStart"] = (self.df[pce + "StrongAltRWS[0]"] * 65536) + (self.df[pce + "StrongAltRWS[1]"] * 256) + self.df[pce + "StrongAltRWS[2]"]
-        self.df["samStart"] = (self.df[pce + "StrongAtmRWS[0]"] * 65536) + (self.df[pce + "StrongAtmRWS[1]"] * 256) + self.df[pce + "StrongAtmRWS[2]"]
-        self.df["walStart"] = (self.df[pce + "WeakAltRWS[0]"] * 65536) + (self.df[pce + "WeakAltRWS[1]"] * 256) + self.df[pce + "WeakAltRWS[2]"]
-        self.df["wamStart"] = (self.df[pce + "WeakAtmRWS[0]"] * 65536) + (self.df[pce + "WeakAtmRWS[1]"] * 256) + self.df[pce + "WeakAtmRWS[2]"]
-        self.df["salWidth"] = self.df[pce + "StrongAltRWW"]
-        self.df["samWidth"] = self.df[pce + "StrongAtmRWW"]
-        self.df["walWidth"] = self.df[pce + "WeakAltRWW"]
-        self.df["wamWidth"] = self.df[pce + "WeakAtmRWW"]
+        self.df["salStart"] = (self.df[pce + "StrongAltRWS[0]"] * 65536) + (self.df[pce + "StrongAltRWS[1]"] * 256) + self.df[pce + "StrongAltRWS[2]"] + 13
+        self.df["samStart"] = (self.df[pce + "StrongAtmRWS[0]"] * 65536) + (self.df[pce + "StrongAtmRWS[1]"] * 256) + self.df[pce + "StrongAtmRWS[2]"] + 13
+        self.df["walStart"] = (self.df[pce + "WeakAltRWS[0]"] * 65536) + (self.df[pce + "WeakAltRWS[1]"] * 256) + self.df[pce + "WeakAltRWS[2]"] + 13
+        self.df["wamStart"] = (self.df[pce + "WeakAtmRWS[0]"] * 65536) + (self.df[pce + "WeakAtmRWS[1]"] * 256) + self.df[pce + "WeakAtmRWS[2]"] + 13
+        self.df["salWidth"] = self.df[pce + "StrongAltRWW"] + 1
+        self.df["samWidth"] = self.df[pce + "StrongAtmRWW"] + 1
+        self.df["walWidth"] = self.df[pce + "WeakAltRWW"] + 1
+        self.df["wamWidth"] = self.df[pce + "WeakAtmRWW"] + 1
         self.df["mfc"] = self.df[pce + "MajorFrameCount"]
         self.df["tx"] = ((((self.df[pce + "LeadingStartTimeTag[0]"] * 65536) + (self.df[pce + "LeadingStartTimeTag[1]"] * 256) + self.df[pce + "LeadingStartTimeTag[2]"]) & 0x001FFF80) / 128) + 1
         self.df["dz"] = np.vectorize(dangerzone)(self.df['salStart'], self.df['walStart'], self.df['salWidth'], self.df['walWidth'], self.df['tx'])
