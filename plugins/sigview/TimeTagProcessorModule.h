@@ -234,7 +234,7 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-	                    TimeTagProcessorModule  (CommandProcessor* cmd_proc, const char* obj_name, int pcenum, const char* histq_name, const char* txtimeq_name);
+	                    TimeTagProcessorModule  (CommandProcessor* cmd_proc, const char* obj_name, int pcenum, const char* histq_name);
                         ~TimeTagProcessorModule (void);
 
         static  CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
@@ -288,7 +288,6 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
         FILE*           resultFile;
 
         Publisher*      histQ;    // output histograms
-        Publisher*      txTimeQ;  //output absolute Tx times
 
         /*--------------------------------------------------------------------
          * Methods

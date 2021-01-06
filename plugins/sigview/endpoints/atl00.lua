@@ -16,7 +16,7 @@ local packet = require("packet")
 local rqst = json.decode(arg[1])
 
 --------------------------------------------------------------------------------------
--- File Data  -
+-- File Data
 --------------------------------------------------------------------------------------
 local threads = rqst["threads"] or 4
 local timeout_seconds = rqst["timeout"] or 3
@@ -30,7 +30,7 @@ local reportDispatcher = nil
 local metricDictionary = {}
 
 --------------------------------------------------------------------------------------
--- createMetrics  -
+-- createMetrics
 --
 --  metrictable:  { base: { <recname>: [<field>, ... ], ... } 
 --                  ccsds: { <recname>: [<field>, ... ], ... } 
@@ -177,7 +177,7 @@ local function createLimits (limittable)
 end
 
 --------------------------------------------------------------------------------------
--- runDispatchers  -
+-- Run Dispatchers
 --------------------------------------------------------------------------------------
 local function runDispatchers ()
     if baseDispatcher then baseDispatcher:run() end
@@ -185,27 +185,27 @@ local function runDispatchers ()
     if reportDispatcher then reportDispatcher:run() end
 end
 
------------------------------
+--------------------------------------------------------------------------------------
 -- Set Queue Depth
------------------------------
+--------------------------------------------------------------------------------------
 local function setQDepth (_depth)
     local depth = _depth or 50000
     cmd.exec(string.format('STREAM_QDEPTH %d', depth))
     return true
 end
 
------------------------------
+--------------------------------------------------------------------------------------
 -- Start Packet Processor
------------------------------
+--------------------------------------------------------------------------------------
 local function startPacketProcessor (_num_threads)
     local num_threads = _num_threads or 4
     cmd.exec(string.format('NEW CCSDS_PACKET_PROCESSOR pktProc %s %d', scidataq, num_threads))
     return true
 end
 
------------------------------
+--------------------------------------------------------------------------------------
 -- Start Logs
------------------------------
+--------------------------------------------------------------------------------------
 local function startLogs ()
     sbcdiaglog = core.writer(core.file(core.WRITER, core.TEXT, "sbcdiag.log", core.FLUSHED), "sbcdiaglogq")
     pce1diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce1diag.log", core.FLUSHED), "pce1diaglogq")
@@ -222,9 +222,9 @@ local function startLogs ()
     return true
 end
 
------------------------------
+--------------------------------------------------------------------------------------
 -- Start Database
------------------------------
+--------------------------------------------------------------------------------------
 local function startDatabase (_rec_path)
     local rec_path = _rec_path or "../../itos/rec/atlas/fsw/*.rec"
     cmd.exec("NEW ITOS_RECORD_PARSER itosdb")
@@ -235,9 +235,9 @@ local function startDatabase (_rec_path)
     return true
 end
 
------------------------------
+--------------------------------------------------------------------------------------
 -- Start Echoes
------------------------------
+--------------------------------------------------------------------------------------
 local function startEchoes ()
     cmdecho = core.writer(core.file(core.WRITER, core.TEXT, "cmdecho.log", core.FLUSHED), "cmdechoq")
     cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc1 cmdechoq itosdb 1")
@@ -251,9 +251,9 @@ local function startEchoes ()
     return true
 end
 
------------------------------
+--------------------------------------------------------------------------------------
 -- Start Science Processing
------------------------------
+--------------------------------------------------------------------------------------
 local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSigStat)
     -- set stats --
     local enTimeStat = _enTimeStat   or true
@@ -276,9 +276,9 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     cmd.exec("pktProc::REGISTER   0x474 timeProc")  -- PCE 2 TIMEKEEPING
     cmd.exec("pktProc::REGISTER   0x475 timeProc")  -- PCE 3 TIMEKEEPING
     -- start time tag processors --
-    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc1 %s txtimeq 1", recdataq))
-    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc2 %s txtimeq 2", recdataq))
-    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc3 %s txtimeq 3", recdataq))
+    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc1 %s 1", recdataq))
+    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc2 %s 2", recdataq))
+    cmd.exec(string.format("NEW TIME_TAG_PROCESSOR ttProc3 %s 3", recdataq))
     cmd.exec("ttProc1::ATTACH_MAJOR_FRAME_PROC mfProc1")
     cmd.exec("ttProc2::ATTACH_MAJOR_FRAME_PROC mfProc2")
     cmd.exec("ttProc3::ATTACH_MAJOR_FRAME_PROC mfProc3")
@@ -356,9 +356,9 @@ local function startScienceProcessing (_enTimeStat, _enPktStat, _enChStat, _enSi
     return true
 end
 
------------------------------
+--------------------------------------------------------------------------------------
 -- Start Laser
------------------------------
+--------------------------------------------------------------------------------------
 local function startLaser ()
     cmd.exec("NEW LASER_PROCESSOR laserProc")
     cmd.exec("pktProc::REGISTER   0x425 laserProc") -- HKT_C (temperatures)
@@ -367,9 +367,8 @@ local function startLaser ()
 end
 
 --####################################################################################
--- Main  -
+-- Main
 --####################################################################################
-
 
 -- Create User Status --
 local userlog = msg.publish(rspq)

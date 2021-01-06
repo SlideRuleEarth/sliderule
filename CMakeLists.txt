@@ -45,7 +45,7 @@ option (USE_MONGOOSE_PACKAGE "Include the Mongoose package" OFF)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 
 option (USE_ICESAT2_PLUGIN "Include the ICESat-2 plugin" OFF)
-option (USE_SIGVIEW_PLUGIN "Include the SigView plugin" ON)
+option (USE_ATLAS_PLUGIN "Include the ATLAS plugin" ON)
 
 set (CMAKE_SKIP_BUILD_RPATH FALSE)
 set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
@@ -172,7 +172,7 @@ if(${USE_ICESAT2_PLUGIN})
     add_subdirectory (plugins/icesat2)
 endif()
 
-if(${USE_SIGVIEW_PLUGIN})
+if(${USE_ATLAS_PLUGIN})
     add_subdirectory (plugins/sigview)
 endif()
 

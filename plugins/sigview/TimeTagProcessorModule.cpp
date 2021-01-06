@@ -201,7 +201,7 @@ SigStat::SigStat(CommandProcessor* cmd_proc, const char* stat_name): StatisticRe
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const char* obj_name, int pcenum, const char* histq_name, const char* txtimeq_name):
+TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const char* obj_name, int pcenum, const char* histq_name):
     CcsdsProcessorModule(cmd_proc, obj_name),
     pce(pcenum)
 {
@@ -265,7 +265,6 @@ TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const
     
     /* Initialize Streams */
     histQ   = new Publisher(histq_name);
-    txTimeQ = new Publisher(txtimeq_name);
 
     /* Initialize Time Tag Histogram Record Definitions */
     TimeTagHistogram::defineHistogram();
@@ -293,7 +292,6 @@ TimeTagProcessorModule::TimeTagProcessorModule(CommandProcessor* cmd_proc, const
 TimeTagProcessorModule::~TimeTagProcessorModule(void)
 {
     delete histQ;
-    delete txTimeQ;
 
     if(majorFrameProcName)  delete [] majorFrameProcName;
     if(timeProcName)        delete [] timeProcName;
@@ -318,19 +316,12 @@ CommandableObject* TimeTagProcessorModule::createObject(CommandProcessor* cmd_pr
     (void)argc;
 
     const char* histq_name   = StringLib::checkNullStr(argv[0]);
-    const char* txtimeq_name = StringLib::checkNullStr(argv[1]);
-    int         pcenum       = (int)strtol(argv[2], NULL, 0);
+    int         pcenum       = (int)strtol(argv[1], NULL, 0);
 
     if(histq_name == NULL)
     {
         mlog(CRITICAL, "Histogram queue cannot be null!\n");
         return NULL;
-    }
-
-    if(txtimeq_name == NULL)
-    {
-      mlog(CRITICAL, "Histogram queue cannot be null!\n");
-      return NULL;
     }
 
     if(pcenum < 1 || pcenum > NUM_PCES)
@@ -339,7 +330,7 @@ CommandableObject* TimeTagProcessorModule::createObject(CommandProcessor* cmd_pr
         return NULL;
     }
 
-    return new TimeTagProcessorModule(cmd_proc, name, pcenum - 1, histq_name, txtimeq_name);
+    return new TimeTagProcessorModule(cmd_proc, name, pcenum - 1, histq_name);
 }
 
 /******************************************************************************
@@ -970,16 +961,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         {
             tx_deltas[i] = 0.0;
         }
-
-//        long tx_absolute_time[1];
-//        int stat = 0;
-//        tx_absolute_time[0] = shot_data->tx.time + (i * 100000) + (amet * TrueRulerClkPeriod);
-//
-//        if ((stat = txTimeQ->postCopy(tx_absolute_time, sizeof(long), IO_CHECK)) < 0)
-//        {
-//	        mlog(ERROR, "Post in TimeTagProcessorModfule failed with: %d\n", stat);
-//	    }
-
     }
 
     txStat->lock();

@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __sigview__
-#define __sigview__
+#ifndef __atlas__
+#define __atlas__
 
 /******************************************************************************
  * INCLUDES
@@ -30,36 +30,29 @@
 
 #include "atlasdefines.h"
 
-#include "AdasSocketReader.h"
 #include "ItosRecord.h"
 #include "ItosRecordParser.h"
-#include "DatasrvSocketReader.h"
 #include "AtlasFileWriter.h"
 #include "AtlasHistogram.h"
 #include "AltimetryHistogram.h"
 #include "TimeTagHistogram.h"
-#include "BceHistogram.h"
 #include "TimeTagProcessorModule.h"
 #include "AltimetryProcessorModule.h"
 #include "MajorFrameProcessorModule.h"
 #include "TimeProcessorModule.h"
 #include "LaserProcessorModule.h"
-#include "BceProcessorModule.h"
 #include "CmdEchoProcessorModule.h"
 #include "DiagLogProcessorModule.h"
-#include "ReportProcessorStatistic.h"
 #include "HstvsSimulator.h"
-#include "BlinkProcessorModule.h"
-#include "TxTimeProcessor.h"
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initsigview (void);
+void initatlas (void);
 }
 
-#endif  /* __sigview__ */
+#endif  /* __atlas__ */
 
 

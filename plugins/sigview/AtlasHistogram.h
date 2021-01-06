@@ -53,10 +53,9 @@ class AtlasHistogram: public RecordObject
             WAM     = 3,    // Weak Atmospheric Histogram Telemetry
             STT     = 4,    // Strong Time Tag Science Data
             WTT     = 5,    // Weak Time Tag Science Data
-            GRL     = 6,    // BCE Waveforms from GRL 1 - PCE 1 Strong
-            SHS     = 7,    // Strong HSTVS Simulated Waveforms
-            WHS     = 8,    // Weak HSTVS Simulator Waveforms
-            NUM_TYPES = 9   // Total number of scidata types
+            SHS     = 6,    // Strong HSTVS Simulated Waveforms
+            WHS     = 7,    // Weak HSTVS Simulator Waveforms
+            NUM_TYPES = 8   // Total number of scidata types
         } type_t;
 
         typedef struct {

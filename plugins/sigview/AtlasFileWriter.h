@@ -1,5 +1,5 @@
-#ifndef __ATLASFILEWRITER_HPP__
-#define __ATLASFILEWRITER_HPP__
+#ifndef __atlas_file_writer__
+#define __atlas_file_writer__
 
 #include "core.h"
 #include "ccsds.h"
@@ -54,4 +54,4 @@ class AtlasFileWriter: public CcsdsFileWriter
         int writeTimeStat       (void* record, int size, bool with_header=false);
 };
 
-#endif  /* __ATLASFILEWRITER_HPP__ */
+#endif  /* __atlas_file_writer__ */

@@ -1,5 +1,5 @@
-#ifndef __MAJOR_FRAME_PROCESSOR_MODULE__
-#define __MAJOR_FRAME_PROCESSOR_MODULE__
+#ifndef __major_frame_processor_module__
+#define __major_frame_processor_module__
 
 #include "core.h"
 #include "ccsds.h"
@@ -150,4 +150,4 @@ class MajorFrameProcessorModule: public CcsdsProcessorModule
 
 typedef MajorFrameProcessorModule::majorFrameData_t mfdata_t; // short cut
 
-#endif  /* __MAJOR_FRAME_PROCESSOR_MODULE__ */
+#endif  /* __major_frame_processor_module__ */

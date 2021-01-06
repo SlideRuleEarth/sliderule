@@ -38,7 +38,7 @@
  ******************************************************************************/
 
 const double AtlasHistogram::HISTOGRAM_DEFAULT_FILTER_WIDTH = 10.0;
-const double AtlasHistogram::histogramBias[NUM_TYPES] = { 4.0, 6.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+const double AtlasHistogram::histogramBias[NUM_TYPES] = { 4.0, 6.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0 };
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -404,7 +404,6 @@ AtlasHistogram::type_t AtlasHistogram::str2type(const char* str)
     else if(strcmp(str, "WAM") == 0) return WAM;
     else if(strcmp(str, "STT") == 0) return STT;
     else if(strcmp(str, "WTT") == 0) return WTT;
-    else if(strcmp(str, "GRL") == 0) return GRL;
     else if(strcmp(str, "SHS") == 0) return SHS;
     else if(strcmp(str, "WHS") == 0) return WHS;
     else if(strcmp(str, "NAS") == 0) return NAS;
@@ -424,7 +423,6 @@ const char* AtlasHistogram::type2str(type_t _type)
     else if(_type == WAM) return "WAM";
     else if(_type == STT) return "STT";
     else if(_type == WTT) return "WTT";
-    else if(_type == GRL) return "GRL";
     else if(_type == SHS) return "SHS";
     else if(_type == WHS) return "WHS";
 
