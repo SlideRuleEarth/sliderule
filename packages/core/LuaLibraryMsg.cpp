@@ -441,7 +441,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     RecordObject* record = new RecordObject(Logger::recType);
     Logger::log_message_t* logmsg = (Logger::log_message_t*)record->getRecordData();
     logmsg->level = lvl;
-    StringLib::copy(logmsg->message, str, len);
+    StringLib::copy(logmsg->message, str, len + 1);
 
     /* Post Record */
     uint8_t* rec_buf = NULL;
