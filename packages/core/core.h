@@ -55,6 +55,7 @@
 #include "MathLib.h"
 #include "MetricDispatch.h"
 #include "MetricRecord.h"
+#include "MsgBridge.h"
 #include "MsgProcessor.h"
 #include "MsgQ.h"
 #include "Ordering.h"

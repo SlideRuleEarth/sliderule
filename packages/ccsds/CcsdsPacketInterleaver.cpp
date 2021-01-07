@@ -238,7 +238,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                 }
                 else if(status == MsgQ::STATE_TIMEOUT)
                 {
-                    printf("WHY ARE WE TIMING OUT\n");
+                    mlog(WARNING, "Unexepected timeout in interleaver on %s\n", processor->outQ->getName());
                 }
                 else
                 {

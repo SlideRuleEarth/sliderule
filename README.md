@@ -68,7 +68,7 @@ Options include:
    -DUSE_ICESAT2_PLUGIN=[ON|OFF]       ICESat-2 science data processing
                                        default: OFF
 
-   -DUSE_SIGVIEW_PLUGIN=[ON|OFF]       ATLAS raw telemetry processing
+   -DUSE_ATLAS_PLUGIN=[ON|OFF]         ATLAS raw telemetry processing
                                        default: ON
 ```
 

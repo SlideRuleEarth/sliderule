@@ -51,8 +51,9 @@ int HttpServer::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        int         port      = (int)getLuaInteger(L, 1);
-        const char* ip_addr   = getLuaString(L, 2, true, NULL);
+        int         port            = (int)getLuaInteger(L, 1);
+        const char* ip_addr         = getLuaString(L, 2, true, NULL);
+        int         max_connections = (int)getLuaInteger(L, 3, true, DEFAULT_MAX_CONNECTIONS);
 
         /* Get Server Parameter */
         if( ip_addr && (StringLib::match(ip_addr, "0.0.0.0") || StringLib::match(ip_addr, "*")) )
@@ -61,7 +62,7 @@ int HttpServer::luaCreate (lua_State* L)
         }
 
         /* Return File Device Object */
-        return createLuaObject(L, new HttpServer(L, ip_addr, port));
+        return createLuaObject(L, new HttpServer(L, ip_addr, port, max_connections));
     }
     catch(const LuaException& e)
     {
@@ -73,9 +74,9 @@ int HttpServer::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port):
+HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_connections):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    connections(MAX_NUM_CONNECTIONS)
+    connections(max_connections)
 {
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
@@ -140,7 +141,7 @@ void* HttpServer::listenerThread(void* parm)
 
     try
     {
-        int status = SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
+        int status = SockLib::startserver (s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
         if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)\n", s->getIpAddr(), s->getPort(), status);
     }
     catch(const std::exception& e)

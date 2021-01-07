@@ -48,6 +48,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/MathLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MsgQ.cpp
             ${CMAKE_CURRENT_LIST_DIR}/PublisherDispatch.cpp
@@ -103,6 +104,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/MathLib.h
             ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.h
+            ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.h
             ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.h
             ${CMAKE_CURRENT_LIST_DIR}/MsgQ.h
             ${CMAKE_CURRENT_LIST_DIR}/Ordering.h

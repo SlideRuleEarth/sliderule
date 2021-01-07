@@ -511,7 +511,7 @@ if __name__ == '__main__':
         parms = json.load(parmfile)
 
     # Set URL #
-    url = "http://127.0.0.1:9081"
+    url = "http://127.0.0.1:9082"
     if len(sys.argv) > 2:
         url = sys.argv[2]
 

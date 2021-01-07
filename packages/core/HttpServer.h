@@ -45,13 +45,13 @@ class HttpServer: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int REQUEST_MSG_BUF_LEN    = MAX_STR_SIZE;
-        static const int REQUEST_ID_LEN         = 128;
-        static const int CONNECTION_TIMEOUT     = 5; // seconds
-        static const int INITIAL_POLL_SIZE      = 16;
-        static const int IP_ADDR_STR_SIZE       = 64;
-        static const int MAX_NUM_CONNECTIONS    = 256;
-        static const int STREAM_OVERHEAD_SIZE   = 128; // chunk size, record size, and line breaks
+        static const int REQUEST_MSG_BUF_LEN        = MAX_STR_SIZE;
+        static const int REQUEST_ID_LEN             = 128;
+        static const int CONNECTION_TIMEOUT         = 5; // seconds
+        static const int INITIAL_POLL_SIZE          = 16;
+        static const int IP_ADDR_STR_SIZE           = 64;
+        static const int DEFAULT_MAX_CONNECTIONS    = 256;
+        static const int STREAM_OVERHEAD_SIZE       = 128; // chunk size, record size, and line breaks
 
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
@@ -63,7 +63,7 @@ class HttpServer: public LuaObject
 
         static int          luaCreate       (lua_State* L);
 
-                            HttpServer      (lua_State* L, const char* _ip_addr, int _port);
+                            HttpServer      (lua_State* L, const char* _ip_addr, int _port, int max_connections);
                             ~HttpServer     (void);
 
         const char*         getUniqueId     (void);
