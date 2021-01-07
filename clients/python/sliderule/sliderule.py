@@ -10,7 +10,7 @@ import logging
 # GLOBALS
 ###############################################################################
 
-server_table = {'http://127.0.0.1:9081': 0}
+server_table = {}
 server_index = 0
 server_max_errors = 3
 
