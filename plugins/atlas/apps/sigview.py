@@ -25,7 +25,7 @@ import pyqtgraph as pg
 def atl00exec(parms):
 
     # Request ATL00 Processed Data
-    rsps  = sliderule.engine("atl00", parms)
+    rsps  = sliderule.source("atl00", parms, stream=True)
 
     # Flatten Response
     flattened = {}
