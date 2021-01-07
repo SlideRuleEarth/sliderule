@@ -157,7 +157,7 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
 #
 def __flatten_atl06(rsps):
     """
-    rsps: array of responses from engine call to atl06 endpoint
+    rsps: array of responses from streaming source call to atl06 endpoint
     """
     global keys, dtypes
     # total length of flattened response
@@ -212,9 +212,10 @@ def __get_values(data, dtype, size):
 #
 #  INIT
 #
-def init (url, verbose=False):
+def init (url, verbose=False, max_errors=3):
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
+    sliderule.set_max_errors(max_errors)
 
 #
 #  COMMON METADATA REPOSITORY
@@ -282,7 +283,7 @@ def atl06 (parm, resource, asset="atl03-cloud", track=0, as_numpy=False):
     }
 
     # Execute ATL06 Algorithm
-    rsps = sliderule.engine("atl06", rqst)
+    rsps = sliderule.source("atl06", rqst, stream=True)
 
     # Flatten Responses
     if as_numpy:
@@ -384,7 +385,7 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
     }
 
     # Read H5 File
-    rsps = sliderule.engine("h5", rqst)
+    rsps = sliderule.source("h5", rqst, stream=True)
 
     # Build Record Data
     datatype = rsps[0]["datatype"]
@@ -412,4 +413,4 @@ def log (level, duration):
     }
 
     # Initiate Connection for Logging
-    rsps = sliderule.engine("log", rqst)
+    rsps = sliderule.source("log", rqst, stream=True)

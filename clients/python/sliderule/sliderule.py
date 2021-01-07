@@ -10,7 +10,9 @@ import logging
 # GLOBALS
 ###############################################################################
 
-server_url = 'http://127.0.0.1:9081'
+server_table = {'http://127.0.0.1:9081': 0}
+server_index = 0
+server_max_errors = 3
 
 verbose = False
 
@@ -46,6 +48,42 @@ basictypes = {
 ###############################################################################
 
 #
+#  __getserv
+#
+def __getserv():
+    global server_table, server_index
+    server_list = list(server_table.keys())
+    num_server_tables = len(server_list)
+    if num_server_tables == 0:
+        raise RuntimeError('No available urls')
+    server_index = (server_index + 1) % num_server_tables
+    return server_list[server_index]
+
+#
+#  __errserv
+#
+def __errserv(serv):
+    global server_table, server_max_errors
+    server_table[serv] += 1
+    logger.critical(serv + " encountered consecutive error " + str(server_table[serv]))
+    if server_table[serv] > server_max_errors:
+        server_table.pop(serv, None)
+
+#
+#  __clrserv
+#
+def __clrserv(serv):
+    global server_table
+    server_table[serv] = 0
+
+#
+#  __populate
+#
+def __populate(rectype):
+    global recdef_tbl
+    recdef_tbl[rectype] = source("definition", {"rectype" : rectype})
+
+#
 #  __decode
 #
 def __decode(rectype, rawdata):
@@ -57,9 +95,9 @@ def __decode(rectype, rawdata):
     # initialize record
     rec = { "@rectype": rectype }
 
-    # attempt to populate record definition #
+    # attempt to __populate record definition #
     if rectype not in recdef_tbl:
-        populate(rectype)
+        __populate(rectype)
 
     # get record definition
     if rectype in recdef_tbl:
@@ -118,9 +156,9 @@ def __decode(rectype, rawdata):
         # decode user type
         else:
 
-            # attempt to populate record definition #
+            # attempt to __populate record definition #
             if ftype not in recdef_tbl:
-                populate(ftype)
+                __populate(ftype)
 
             # decode record
             if ftype in recdef_tbl:
@@ -219,46 +257,39 @@ def __parse(stream):
 ###############################################################################
 
 #
-#  ECHO
-#
-def echo (parm):
-    rqst = json.dumps(parm)
-    url  = '%s/echo' % server_url
-    rsps = requests.post(url, data=rqst).json()
-    return rsps
-
-#
 #  SOURCE
 #
-def source (api, parm):
+def source (api, parm, stream=False):
     rqst = json.dumps(parm)
-    url  = '%s/source/%s' % (server_url, api)
-    rsps = requests.get(url, data=rqst).json()
+    complete = False
+    while not complete:
+        serv = __getserv()
+        try:
+            url  = '%s/source/%s' % (serv, api)
+            if not stream:
+                rsps = requests.get(url, data=rqst).json()
+            else:
+                data = requests.post(url, data=rqst, stream=True)
+                rsps = __parse(data)
+            __clrserv(serv)
+            complete = True
+        except Exception as e:
+            logger.critical(e)
+            __errserv(serv)
     return rsps
-
-#
-#  ENGINE
-#
-def engine (api, parm):
-    rqst   = json.dumps(parm)
-    url    = '%s/source/%s' % (server_url, api)
-    stream = requests.post(url, data=rqst, stream=True)
-    rsps = __parse(stream)
-    return rsps
-
-#
-#  POPULATE
-#
-def populate(rectype):
-    global recdef_tbl
-    recdef_tbl[rectype] = source("definition", {"rectype" : rectype})
 
 #
 #  SET_URL
 #
-def set_url(new_url):
-    global server_url
-    server_url = new_url
+def set_url(urls):
+    global server_table
+    if type(urls) == list:
+        for url in urls:
+            server_table[url] = 0
+    elif type(urls) == str:
+        server_table[urls] = 0
+    else:
+        raise TypeError('urls must be string or list of strings')
 
 #
 #  SET_VERBOSE
@@ -266,3 +297,13 @@ def set_url(new_url):
 def set_verbose(enable):
     global verbose
     verbose = (enable == True)
+
+#
+#  SET_MAX_ERRORS
+#
+def set_max_errors(max_errors):
+    global server_max_errors
+    if max_errors > 0:
+        server_max_errors = max_errors
+    else:
+        raise TypeError('max errors must be greater than zero')
