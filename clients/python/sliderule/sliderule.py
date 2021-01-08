@@ -5,11 +5,13 @@ import json
 import struct
 import ctypes
 import logging
+import threading
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
 
+server_lock = threading.Lock()
 server_table = {}
 server_index = 0
 server_max_errors = 3
@@ -18,7 +20,8 @@ verbose = False
 
 logger = logging.getLogger(__name__)
 
-recdef_tbl = {}
+recdef_lock = threading.Lock()
+recdef_table = {}
 
 datatypes = {
     "TEXT":     0,
@@ -48,40 +51,83 @@ basictypes = {
 ###############################################################################
 
 #
+#  __setverb
+#
+def __setverb(enable):
+    global verbose
+    verbose = (enable == True)
+
+#
+#  __setmaxerr
+#
+def __setmaxerr(max_errors):
+    global server_max_errors
+    if max_errors > 0:
+        server_max_errors = max_errors
+    else:
+        raise TypeError('max errors must be greater than zero')
+
+#
+#  __setserv
+#
+def __setserv(servs):
+    global server_table
+    with server_lock:
+        server_index = 0
+        server_table = {}
+        if type(servs) == list:
+            for serv in servs:
+                server_table[serv] = 0
+        elif type(servs) == str:
+            server_table[servs] = 0
+        else:
+            raise TypeError('urls must be string or list of strings')
+
+#
 #  __getserv
 #
 def __getserv():
     global server_table, server_index
-    server_list = list(server_table.keys())
-    num_server_tables = len(server_list)
-    if num_server_tables == 0:
-        raise RuntimeError('No available urls')
-    server_index = (server_index + 1) % num_server_tables
-    return server_list[server_index]
+    serv = ""
+    with server_lock:
+        server_list = list(server_table.keys())
+        num_server_tables = len(server_list)
+        if num_server_tables == 0:
+            raise RuntimeError('No available urls')
+        server_index = (server_index + 1) % num_server_tables
+        serv = server_list[server_index]
+    return serv
 
 #
 #  __errserv
 #
 def __errserv(serv):
     global server_table, server_max_errors
-    server_table[serv] += 1
-    logger.critical(serv + " encountered consecutive error " + str(server_table[serv]))
-    if server_table[serv] > server_max_errors:
-        server_table.pop(serv, None)
+    with server_lock:
+        server_table[serv] += 1
+        logger.critical(serv + " encountered consecutive error " + str(server_table[serv]))
+        if server_table[serv] > server_max_errors:
+            server_table.pop(serv, None)
 
 #
 #  __clrserv
 #
 def __clrserv(serv):
     global server_table
-    server_table[serv] = 0
+    with server_lock:
+        server_table[serv] = 0
 
 #
 #  __populate
 #
 def __populate(rectype):
-    global recdef_tbl
-    recdef_tbl[rectype] = source("definition", {"rectype" : rectype})
+    global recdef_table
+    with recdef_lock:
+        need_to_populate = rectype not in recdef_table
+    if need_to_populate:
+        recdef = source("definition", {"rectype" : rectype})
+        with recdef_lock:
+            recdef_table[rectype] = recdef
 
 #
 #  __decode
@@ -91,19 +137,17 @@ def __decode(rectype, rawdata):
     rectype: record type supplied in response (string)
     rawdata: payload supplied in response (byte array)
     """
+    global recdef_table
 
     # initialize record
     rec = { "@rectype": rectype }
 
-    # attempt to __populate record definition #
-    if rectype not in recdef_tbl:
-        __populate(rectype)
+    # populate record definition (if needed) #
+    __populate(rectype)
 
     # get record definition
-    if rectype in recdef_tbl:
-        recdef = recdef_tbl[rectype]
-    else:
-        return rec
+    with recdef_lock:
+        recdef = recdef_table[rectype]
 
     # iterate through each field in definition
     for fieldname in recdef.keys():
@@ -156,31 +200,29 @@ def __decode(rectype, rawdata):
         # decode user type
         else:
 
-            # attempt to __populate record definition #
-            if ftype not in recdef_tbl:
-                __populate(ftype)
+            # populate record definition (if needed) #
+            __populate(ftype)
 
             # decode record
-            if ftype in recdef_tbl:
+            subrec = {}
+            with recdef_lock:
+                subrecdef = recdef_table[ftype]
 
-                subrec = {}
-                subrecdef = recdef_tbl[ftype]
+            # check if array
+            is_array = not (elems == 1)
 
-                # check if array
-                is_array = not (elems == 1)
+            # get number of elements
+            if elems <= 0:
+                elems = int((len(rawdata) - offset) / subrecdef["@datasize"])
 
-                # get number of elements
-                if elems <= 0:
-                    elems = int((len(rawdata) - offset) / subrecdef["@datasize"])
-
-                # return parsed data
-                if is_array:
-                    rec[fieldname] = []
-                    for e in range(elems):
-                        rec[fieldname].append(__decode(ftype, rawdata[offset:]))
-                        offset += subrecdef["@datasize"]
-                else:
-                    rec[fieldname] = __decode(ftype, rawdata[offset:])
+            # return parsed data
+            if is_array:
+                rec[fieldname] = []
+                for e in range(elems):
+                    rec[fieldname].append(__decode(ftype, rawdata[offset:]))
+                    offset += subrecdef["@datasize"]
+            else:
+                rec[fieldname] = __decode(ftype, rawdata[offset:])
 
     # return record #
     return rec
@@ -282,28 +324,16 @@ def source (api, parm, stream=False):
 #  SET_URL
 #
 def set_url(urls):
-    global server_table
-    if type(urls) == list:
-        for url in urls:
-            server_table[url] = 0
-    elif type(urls) == str:
-        server_table[urls] = 0
-    else:
-        raise TypeError('urls must be string or list of strings')
+    __setserv(urls)
 
 #
 #  SET_VERBOSE
 #
 def set_verbose(enable):
-    global verbose
-    verbose = (enable == True)
+    __setverb(enable)
 
 #
 #  SET_MAX_ERRORS
 #
 def set_max_errors(max_errors):
-    global server_max_errors
-    if max_errors > 0:
-        server_max_errors = max_errors
-    else:
-        raise TypeError('max errors must be greater than zero')
+    __setmaxerr(max_errors)
