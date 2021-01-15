@@ -60,9 +60,9 @@ typedef union {
 /*----------------------------------------------------------------------------
  * get_field
  *----------------------------------------------------------------------------*/
-uint64_t get_field(uint8_t* buffer, int buffer_size, int field_offset, int field_size)
+uint64_t get_field(uint8_t* buffer, int buffer_size, int* field_offset, int field_size)
 {
-    if(field_offset + field_size >= buffer_size)
+    if(*field_offset + field_size >= buffer_size)
     {
         return 0;
     }
@@ -71,7 +71,8 @@ uint64_t get_field(uint8_t* buffer, int buffer_size, int field_offset, int field
     {
         case 8:     
         {
-            uint64_t val = *(uint64_t*)&buffer[field_offset];
+            uint64_t val = *(uint64_t*)&buffer[*field_offset];
+            *field_offset += field_size;
             #ifdef __BE__
                 return LocalLib::swapll(val);
             #else
@@ -81,7 +82,8 @@ uint64_t get_field(uint8_t* buffer, int buffer_size, int field_offset, int field
 
         case 4:     
         {
-            uint32_t val = *(uint32_t*)&buffer[field_offset];
+            uint32_t val = *(uint32_t*)&buffer[*field_offset];
+            *field_offset += field_size;
             #ifdef __BE__
                 return LocalLib::swapl(val);
             #else
@@ -91,7 +93,8 @@ uint64_t get_field(uint8_t* buffer, int buffer_size, int field_offset, int field
 
         case 2:
         {
-            uint16_t val = *(uint16_t*)&buffer[field_offset];
+            uint16_t val = *(uint16_t*)&buffer[*field_offset];
+            *field_offset += field_size;
             #ifdef __BE__
                 return LocalLib::swaps(val);
             #else
@@ -107,7 +110,184 @@ uint64_t get_field(uint8_t* buffer, int buffer_size, int field_offset, int field
 }
 
 /******************************************************************************
- * HDF5 LIBRARY CLASS
+ * H5 FILE BUFFER CLASS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
+{
+    /* Initialize */
+    buffSize = 0;
+    currFilePos = 0;
+    currBuffPos = 0;
+    offsetSize = 0;
+    lengthSize = 0;
+    groupLeafNodeK = 0;
+    groupInternalNodeK = 0;
+    rootGroupOffset = 0;
+
+    /* Open File */
+    fp = fopen(filename, "r");
+    if(fp == NULL)
+    {
+        mlog(CRITICAL, "Failed to open filename: %s", filename);
+        throw std::runtime_error("H5FileBuffer failed to open file");
+    }
+
+    /* Read and Verify Superblock Info */
+    if(error_checking)
+    {
+        uint64_t signature = readNextField(8);
+        if(signature != H5_SIGNATURE_LE)
+        {
+            mlog(CRITICAL, "Invalid h5 file signature: %llX\n", (unsigned long long)signature);
+            throw std::runtime_error("H5FileBuffer invalid signature");
+        }
+
+        uint64_t superblock_version = readNextField(1);
+        if(superblock_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file superblock version: %d\n", (int)superblock_version);
+            throw std::runtime_error("H5FileBuffer invalid superblock version");
+        }
+
+        uint64_t freespace_version = readNextField(1);
+        if(freespace_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file free space version: %d\n", (int)freespace_version);
+            throw std::runtime_error("H5FileBuffer invalid free space version");
+        }
+
+        uint64_t roottable_version = readNextField(1);
+        if(roottable_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file root table version: %d\n", (int)roottable_version);
+            throw std::runtime_error("H5FileBuffer invalid root table version");
+        }
+
+        uint64_t headermsg_version = readNextField(1);
+        if(headermsg_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file header message version: %d\n", (int)headermsg_version);
+            throw std::runtime_error("H5FileBuffer invalid header message version");
+        }
+    }
+
+    /* Read Size and Root Info */
+    offsetSize          = readNextField(1, 13);
+    lengthSize          = readNextField(1, 14);
+    groupLeafNodeK      = readNextField(2, 16);
+    groupInternalNodeK  = readNextField(2, 18);
+    rootGroupOffset     = readNextField(USE_OFFSET_SIZE, 56);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+H5FileBuffer::~H5FileBuffer (void)
+{
+    fclose(fp);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+uint64_t H5FileBuffer::readNextField (int size, int64_t pos)
+{
+    /* Set Field Size */
+    int field_size;
+    if      (size == USE_OFFSET_SIZE)   field_size = offsetSize;
+    else if (size == USE_LENGTH_SIZE)   field_size = lengthSize;
+    else if (size > 0)                  field_size = size;
+    else throw std::runtime_error("H5FileBuffer size of field cannot be negative");
+
+    /* Set Field Position */
+    int64_t field_position;
+    if      (pos == USE_CURRENT_POSITION)   field_position = currFilePos + currBuffPos;
+    else if (pos > 0)                       field_position = pos;
+    else throw std::runtime_error("H5FileBuffer position of field cannot be negative");
+
+    /* Check if Different Data Needs to be Buffered */
+    if((field_position < currFilePos) || ((field_position + field_size) > (currFilePos + buffSize)))
+    {
+        if(fseek(fp, field_position, SEEK_SET) == 0)
+        {
+            buffSize = fread(buffer, 1, READ_BUFSIZE, fp);
+            currBuffPos = 0;
+            currFilePos = field_position;
+        }
+        else
+        {
+            throw std::runtime_error("H5FileBuffer failed to go to field position");
+        }
+    }
+
+    /*  Read Field Value */
+    uint64_t value;
+    switch(field_size)
+    {
+        case 8:     
+        {
+            value = *(uint64_t*)&buffer[currBuffPos];
+            #ifdef __BE__
+                value = LocalLib::swapll(value);
+            #endif
+            break;
+        }
+
+        case 4:     
+        {
+            value = *(uint32_t*)&buffer[currBuffPos];
+            #ifdef __BE__
+                value = LocalLib::swapl(value);
+            #endif
+            break;
+        }
+
+        case 2:
+        {
+            value = *(uint16_t*)&buffer[currBuffPos];
+            #ifdef __BE__
+                value = LocalLib::swaps(value);
+            #endif
+            break;
+        }
+
+        case 1:
+        {
+            value = buffer[currBuffPos];
+            break;
+        }
+
+        default:
+        {
+            throw std::runtime_error("H5FileBuffer invalid field size");;
+        }
+    }
+
+    /* Increment Current Buffer Position */
+    currBuffPos += field_size;
+
+    /* Return Field Value */
+    return value;
+}
+
+/*----------------------------------------------------------------------------
+ * displayFileInfo
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::displayFileInfo (void)
+{
+    printf("Size of Offsets:                            %lu\n",     (unsigned long)offsetSize);
+    printf("Size of Lengths:                            %lu\n",     (unsigned long)lengthSize);
+    printf("Group Leaf Node K:                          %lu\n",     (unsigned long)groupLeafNodeK);
+    printf("Group Internal Node K:                      %lu\n\n",   (unsigned long)groupInternalNodeK);
+    printf("Root Object Header Address:                 0x%lX\n",   (long unsigned)rootGroupOffset);
+}
+
+/******************************************************************************
+ * HDF5 LITE LIBRARY
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -253,58 +433,8 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
         }
 
         /* Open File */
-        fileptr_t file = fopen(resource, "r");
-        if(file == NULL)
-        {
-            mlog(CRITICAL, "Failed to open resource: %s", url);
-            break;
-        }
-
-        uint8_t buf[256];
-        fread(buf, 1, 256, file);
-
-        printf("Signature: ");
-        for(int i = 0; i < 8; i++) printf("%02X", buf[i]);
-        printf("\n\n");
-
-        printf("Superblock Version #: %d\n", buf[8]);
-        printf("File's Free Space Storage Version #: %d\n", buf[9]);
-        printf("Root Group Symbol Table Entry Version #: %d\n", buf[10]);
-        printf("Shared Header Message Version #: %d\n\n", buf[12]);
-
-        uint64_t size_of_offsets = buf[13];
-        uint64_t size_of_lengths = buf[14];
-        printf("Size of Offsets: %lu\n", (unsigned long)size_of_offsets);
-        printf("Size of Lengths: %lu\n\n", (unsigned long)size_of_lengths);
-
-        uint64_t group_leaf_node_k = get_field(buf, 256, 16, 2);
-        uint64_t group_internal_node_k = get_field(buf, 256, 18, 2);
-        printf("Group Leaf Node K: %lu\n", (unsigned long)group_leaf_node_k);
-        printf("Group Internal Node K: %lu\n\n", (unsigned long)group_internal_node_k);
-
-        int curr_file_pos = 24;
-
-        printf("Base Address: %016lX\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
-        curr_file_pos += size_of_offsets;
-
-        printf("Address of File Free Space Info: %016lX\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
-        curr_file_pos += size_of_offsets;
-
-        printf("End of File Address: %016lX\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
-        curr_file_pos += size_of_offsets;
-
-        printf("Driver Info Block Address: %016lX\n\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
-        curr_file_pos += size_of_offsets;
-
-
-        printf("Root Link Name Offset: %016lX\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
-        curr_file_pos += size_of_offsets;
-
-        printf("Root Object Header Address: %016lX\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
-        curr_file_pos += size_of_offsets;
-
-        printf("Root Cache Type: %lu\n", (long unsigned)get_field(buf, 256, curr_file_pos, 4));
-        curr_file_pos += 4;
+        H5FileBuffer h5file(resource);
+        h5file.displayFileInfo();
     }
     while(false);
 

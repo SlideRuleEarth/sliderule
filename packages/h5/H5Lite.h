@@ -27,7 +27,58 @@
 #include "RecordObject.h"
 
 /******************************************************************************
- * HDF5 I/O CLASS
+ * HDF5 FILE BUFFER CLASS
+ ******************************************************************************/
+
+class H5FileBuffer
+{
+    public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const long       READ_BUFSIZE            = 1048576; // 1MB
+        static const int64_t    USE_OFFSET_SIZE         = -1;
+        static const int64_t    USE_LENGTH_SIZE         = -2;
+        static const int64_t    USE_CURRENT_POSITION    = -1;
+        static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                            H5FileBuffer        (const char* filename, bool error_checking=true);
+        virtual             ~H5FileBuffer       ();
+
+        uint64_t            readNextField       (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
+
+        void                displayFileInfo     (void);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        fileptr_t   fp;
+
+        /* Buffer Management */
+        uint8_t     buffer[READ_BUFSIZE];
+        int64_t     buffSize;
+        int64_t     currFilePos;
+        int64_t     currBuffPos;
+
+        /* File Attributes */
+        int         offsetSize;
+        int         lengthSize;
+        int         groupLeafNodeK;
+        int         groupInternalNodeK;
+        int64_t     rootGroupOffset;
+};
+
+/******************************************************************************
+ * HDF5 I/O LITE LIBRARY
  ******************************************************************************/
 
 struct H5Lite
