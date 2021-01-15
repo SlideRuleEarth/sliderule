@@ -72,19 +72,31 @@ uint64_t get_field(uint8_t* buffer, int buffer_size, int field_offset, int field
         case 8:     
         {
             uint64_t val = *(uint64_t*)&buffer[field_offset];
-            return LocalLib::swapll(val);
+            #ifdef __BE__
+                return LocalLib::swapll(val);
+            #else
+                return val; 
+            #endif
         }
 
         case 4:     
         {
             uint32_t val = *(uint32_t*)&buffer[field_offset];
-            return LocalLib::swapl(val);
+            #ifdef __BE__
+                return LocalLib::swapl(val);
+            #else
+                return val; 
+            #endif
         }
 
         case 2:
         {
             uint16_t val = *(uint16_t*)&buffer[field_offset];
-            return LocalLib::swaps(val);
+            #ifdef __BE__
+                return LocalLib::swaps(val);
+            #else
+                return val; 
+            #endif
         }
 
         default:
@@ -258,38 +270,37 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
         printf("Superblock Version #: %d\n", buf[8]);
         printf("File's Free Space Storage Version #: %d\n", buf[9]);
         printf("Root Group Symbol Table Entry Version #: %d\n", buf[10]);
-        printf("Shared Header Message Version #: %d\n\n", buf[11]);
+        printf("Shared Header Message Version #: %d\n\n", buf[12]);
 
-        uint64_t size_of_offsets = buf[12];
-        uint64_t size_of_lengths = buf[13];
+        uint64_t size_of_offsets = buf[13];
+        uint64_t size_of_lengths = buf[14];
         printf("Size of Offsets: %lu\n", (unsigned long)size_of_offsets);
         printf("Size of Lengths: %lu\n\n", (unsigned long)size_of_lengths);
 
-        printf("Group Leaf Node K: %d\n", buf[14]);
-        printf("Group Internal Node K: %d\n\n", buf[15]);
+        uint64_t group_leaf_node_k = get_field(buf, 256, 16, 2);
+        uint64_t group_internal_node_k = get_field(buf, 256, 18, 2);
+        printf("Group Leaf Node K: %lu\n", (unsigned long)group_leaf_node_k);
+        printf("Group Internal Node K: %lu\n\n", (unsigned long)group_internal_node_k);
 
-        int curr_file_pos = 20;
+        int curr_file_pos = 24;
 
-        printf("Base Address: %lu\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
+        printf("Base Address: %016lX\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
         curr_file_pos += size_of_offsets;
 
-        printf("Address of File Free Space Info: %lu\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
+        printf("Address of File Free Space Info: %016lX\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
         curr_file_pos += size_of_offsets;
 
-        printf("End of File Address: %lu\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
+        printf("End of File Address: %016lX\n", (unsigned long)get_field(buf, 256, curr_file_pos, size_of_offsets));
         curr_file_pos += size_of_offsets;
 
-        printf("Driver Info Block Address: %lu\n\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
+        printf("Driver Info Block Address: %016lX\n\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
         curr_file_pos += size_of_offsets;
 
 
-        printf("Root Link Name Offset: %lu\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
+        printf("Root Link Name Offset: %016lX\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
         curr_file_pos += size_of_offsets;
 
-        printf("Root Object Header Address: %lu\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
-        curr_file_pos += size_of_offsets;
-
-        printf("Root Object Header Address: %lu\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
+        printf("Root Object Header Address: %016lX\n", (long unsigned)get_field(buf, 256, curr_file_pos, size_of_offsets));
         curr_file_pos += size_of_offsets;
 
         printf("Root Cache Type: %lu\n", (long unsigned)get_field(buf, 256, curr_file_pos, 4));
