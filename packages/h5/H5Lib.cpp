@@ -81,8 +81,7 @@ hid_t rest_vol_fapl = H5P_DEFAULT;
  *----------------------------------------------------------------------------*/
 H5Lib::driver_t url2driver (const char* url, const char** resource, hid_t* fapl)
 {
-    H5Lib::driver_t driver = H5Lib::UNKNOWN;
-    H5Lib::parseUrl(url, resource, &driver);
+    H5Lib::driver_t driver = H5Lib::parseUrl(url, resource);
 
     switch(driver)
     {
@@ -218,10 +217,10 @@ void H5Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * parseUrl
  *----------------------------------------------------------------------------*/
-void H5Lib::parseUrl (const char* url, const char** resource, driver_t* driver)
+H5Lib::driver_t H5Lib::parseUrl (const char* url, const char** resource)
 {
     /* Sanity Check Input */
-    if(!url) return;
+    if(!url) return UNKNOWN;
 
     /* Set Resource */
     if(resource) 
@@ -233,25 +232,22 @@ void H5Lib::parseUrl (const char* url, const char** resource, driver_t* driver)
         }
     }
 
-    /* Set Driver */
-    if(driver)
+    /* Return Driver */
+    if(StringLib::find(url, "file://"))
     {
-        if(StringLib::find(url, "file://"))
-        {
-            *driver = FILE;
-        }
-        else if(StringLib::find(url, "s3://"))
-        {
-            *driver = S3;
-        }
-        else if(StringLib::find(url, "hsds://"))    
-        {
-            *driver = HSDS;
-        }
-        else
-        {
-            *driver = UNKNOWN;
-        }
+        return FILE;
+    }
+    else if(StringLib::find(url, "s3://"))
+    {
+        return S3;
+    }
+    else if(StringLib::find(url, "hsds://"))    
+    {
+        return HSDS;
+    }
+    else
+    {
+        return UNKNOWN;
     }
 }
 
@@ -386,23 +382,24 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         /* Read Dataset */
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
         {
+            /* Set Success */
             status = true;
+
+            /* Set Info Return Structure */
+            info.elements = elements;
+            info.typesize = typesize;
+            info.datasize = datasize;
+            info.data = data;
         }
         else
         {
+            /* Free Data and Log Error */
             mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
             delete [] data;
-            break;
         }
 
         /* Stop Trace */
         stop_trace(trace_id);
-
-        /* Set Info Return Structure */
-        info.elements = elements;
-        info.typesize = typesize;
-        info.datasize = datasize;
-        info.data = data;
     }
     while(false);
 

@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef __h5_lib__
-#define __h5_lib__
+#ifndef __h5_lite__
+#define __h5_lite__
 
 /******************************************************************************
  * INCLUDES
@@ -30,7 +30,7 @@
  * HDF5 I/O CLASS
  ******************************************************************************/
 
-struct H5Lib
+struct H5Lite
 {
     /*--------------------------------------------------------------------
      * Constants
@@ -38,10 +38,6 @@ struct H5Lib
     
     static const int MAX_NDIMS = 8;
     static const long ALL_ROWS = -1;
-
-    /*--------------------------------------------------------------------
-     * Types
-     *--------------------------------------------------------------------*/
 
     typedef enum {
         FILE,
@@ -69,4 +65,4 @@ struct H5Lib
     static bool     traverse    (const char* url, int max_depth, const char* start_group);
 };
 
-#endif  /* __h5_lib__ */
+#endif  /* __h5_lite__ */

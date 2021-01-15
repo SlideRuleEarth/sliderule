@@ -28,6 +28,7 @@
 #include "H5File.h"
 #include "H5DatasetDevice.h"
 #include "H5Lib.h"
+#include "H5Lite.h"
 #include "H5Proxy.h"
 
 /******************************************************************************
