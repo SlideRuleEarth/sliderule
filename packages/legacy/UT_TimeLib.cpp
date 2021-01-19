@@ -123,7 +123,7 @@ int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE])
   (void)argv;
   for (int i = 0; i < 39; i++)
   {
-    int64_t leap_mseconds = Truth_Times[i][0] + TimeLib::getleapmsec(Truth_Times[i][0]);
+    int64_t leap_mseconds = Truth_Times[i][0] + TimeLib::getleapms(Truth_Times[i][0]);
     leap_mseconds = TIME_UNIX_TO_GPS(leap_mseconds);
     if (leap_mseconds != Truth_Times[i][1])
     {

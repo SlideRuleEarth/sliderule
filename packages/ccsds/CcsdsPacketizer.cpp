@@ -157,7 +157,7 @@ double CcsdsPacketizer::getCurrGPSTime(void)
     double gps_secs = unix_secs - 315964800;
 
     /* Get count of leap seconds between start of GPS epoch and now */
-    int leap_secs = (TimeLib::getleapmsec((int64_t)unix_secs * TIME_MILLISECS_IN_A_SECOND) / TIME_MILLISECS_IN_A_SECOND);
+    int leap_secs = (TimeLib::getleapms((int64_t)unix_secs * TIME_MILLISECS_IN_A_SECOND) / TIME_MILLISECS_IN_A_SECOND);
 
     /* Return GPS Seconds */
     return gps_secs - (double)leap_secs;

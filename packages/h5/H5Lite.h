@@ -43,6 +43,13 @@ class H5FileBuffer
         static const int64_t    USE_LENGTH_SIZE         = -2;
         static const int64_t    USE_CURRENT_POSITION    = -1;
         static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
+        static const uint64_t   H5_HDR_SIGNATURE_LE     = 0x5244484FLL; // OHDR
+
+        static const int        OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK       = 0x03;
+        static const int        OBJ_HDR_FLAG_ATTR_CREATION_TRACK_BIT    = 0x04;
+        static const int        OBJ_HDR_FLAG_ATTR_CREATION_INDEX_BIT    = 0x08;
+        static const int        OBJ_HDR_FLAG_STORE_CHANGE_PHASE_BIT     = 0x10;
+        static const int        OBJ_HDR_FLAG_FILE_STATS_BIT             = 0x20;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -51,7 +58,9 @@ class H5FileBuffer
                             H5FileBuffer        (const char* filename, bool error_checking=true);
         virtual             ~H5FileBuffer       ();
 
-        uint64_t            readNextField       (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
+        int64_t             getCurrPos          (void);
+        uint64_t            readField           (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
+        void                readData            (uint8_t* data, int size, int pos);
 
         void                displayFileInfo     (void);
 
@@ -69,12 +78,18 @@ class H5FileBuffer
         int64_t     currFilePos;
         int64_t     currBuffPos;
 
-        /* File Attributes */
+        /* File Meta Attributes */
         int         offsetSize;
         int         lengthSize;
         int         groupLeafNodeK;
         int         groupInternalNodeK;
         int64_t     rootGroupOffset;
+
+        /* File Time Attributes */
+        uint64_t    accessTime;
+        uint64_t    modificationTime;
+        uint64_t    changeTime;
+        uint64_t    birthTime;
 };
 
 /******************************************************************************

@@ -16,5 +16,7 @@ runner.check(f1:dir(2, "gt2l"), "failed to traverse h5lite file")
 
 -- Report Results --
 
+sys.wait(1)
+
 runner.report()
 

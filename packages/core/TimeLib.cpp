@@ -72,7 +72,7 @@ void TimeLib::init(void)
     parsenistfile();
     lastTime = LocalLib::time(LocalLib::SYS_CLK);
     baseTimeMs = lastTime / 1000;
-    baseTimeMs += getleapmsec(baseTimeMs);
+    baseTimeMs += getleapms(baseTimeMs);
     baseTimeMs -= LocalGpsEpochMs;
     currentTimeMs = baseTimeMs;
     runningTimeUs = 0;
@@ -119,17 +119,24 @@ double TimeLib::latchtime(void)
  * 
  *  grabs the current number of ms that have elapsed since gps time epoch
  *----------------------------------------------------------------------------*/
-int64_t TimeLib::gettimems(void)
+int64_t TimeLib::gettimems(int64_t now)
 {
-#ifdef TIME_USE_HEARTBEAT
-    return currentTimeMs;
-#else
-    int64_t now = LocalLib::time(LocalLib::SYS_CLK);
-    now /= 1000; // to milliseconds
-    now += getleapmsec(now);
-    now -= LocalGpsEpochMs; // to gps epoch
-    return now;
-#endif
+    if(now == USE_CURRENT_TIME)
+    {
+        #ifdef TIME_USE_HEARTBEAT
+            return currentTimeMs;
+        #else
+            int64_t sysnow = LocalLib::time(LocalLib::SYS_CLK);
+            sysnow /= 1000; // to milliseconds
+            sysnow += getleapms(sysnow);
+            sysnow -= LocalGpsEpochMs; // to gps epoch
+            return sysnow;
+        #endif
+    }
+    else
+    {
+        return now + getleapms(now) - LocalGpsEpochMs;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -137,7 +144,7 @@ int64_t TimeLib::gettimems(void)
  * 
  *  grabs the current GMT system time
  *----------------------------------------------------------------------------*/
-TimeLib::gmt_time_t TimeLib::gettime()
+TimeLib::gmt_time_t TimeLib::gettime(int64_t now)
 {
 #ifdef _USE_WINDOWS_TIME_
     SYSTEMTIME systime;
@@ -151,7 +158,7 @@ TimeLib::gmt_time_t TimeLib::gettime()
     gmttime.millisecond = systime.wMilliseconds;
     return gmttime;
 #else
-    return gps2gmttime(gettimems());
+    return gps2gmttime(gettimems(now));
 #endif
 }
 
@@ -178,7 +185,7 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     /* Calculate Leap Seconds */
     int64_t unix_msecs = (gps_days * (int64_t)TIME_MILLISECS_IN_A_DAY) + gps_msecs;
     unix_msecs         = TIME_GPS_TO_UNIX(unix_msecs);
-    gps_msecs         -= getleapmsec(unix_msecs);
+    gps_msecs         -= getleapms(unix_msecs);
 
     if(gps_msecs > 0)
     {
@@ -303,7 +310,7 @@ int64_t TimeLib::gmt2gpstime (gmt_time_t gmt_time)
 
     /* Calculate and add Leap Seconds */
     int64_t unix_mseconds = TIME_GPS_TO_UNIX(gps_msecs);
-    gps_msecs  += getleapmsec(unix_mseconds);
+    gps_msecs  += getleapms(unix_mseconds);
 
     return gps_msecs;
 }
@@ -431,9 +438,9 @@ int TimeLib::dayofyear(int year, int month, int day_of_month)
 }
 
 /*----------------------------------------------------------------------------
- * getleapmsec
+ * getleapms
  *----------------------------------------------------------------------------*/
-int TimeLib::getleapmsec(int64_t current_time, int64_t start_time)
+int TimeLib::getleapms(int64_t current_time, int64_t start_time)
 {
     int start_index = leapCount;
     int current_index = 0;
@@ -500,7 +507,7 @@ void TimeLib::heartbeat(void)
             dlog("Gross adjustment detected in step time: %lld\n", (long long)usec_per_sec);
 #endif
             baseTimeMs = now / 1000;
-            baseTimeMs += getleapmsec(baseTimeMs);
+            baseTimeMs += getleapms(baseTimeMs);
             baseTimeMs -= LocalGpsEpochMs; // moves time up to GPS epoch
             runningTimeUs = 0;
             stepTimeUs = 1000;

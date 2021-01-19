@@ -127,60 +127,106 @@ H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
     groupLeafNodeK = 0;
     groupInternalNodeK = 0;
     rootGroupOffset = 0;
+    accessTime = 0;
+    modificationTime = 0;
+    changeTime = 0;
+    birthTime = 0;
 
     /* Open File */
     fp = fopen(filename, "r");
     if(fp == NULL)
     {
         mlog(CRITICAL, "Failed to open filename: %s", filename);
-        throw std::runtime_error("H5FileBuffer failed to open file");
+        throw std::runtime_error("failed to open file");
     }
 
     /* Read and Verify Superblock Info */
     if(error_checking)
     {
-        uint64_t signature = readNextField(8);
+        uint64_t signature = readField(8);
         if(signature != H5_SIGNATURE_LE)
         {
             mlog(CRITICAL, "Invalid h5 file signature: %llX\n", (unsigned long long)signature);
-            throw std::runtime_error("H5FileBuffer invalid signature");
+            throw std::runtime_error("invalid signature");
         }
 
-        uint64_t superblock_version = readNextField(1);
+        uint64_t superblock_version = readField(1);
         if(superblock_version != 0)
         {
             mlog(CRITICAL, "Invalid h5 file superblock version: %d\n", (int)superblock_version);
-            throw std::runtime_error("H5FileBuffer invalid superblock version");
+            throw std::runtime_error("invalid superblock version");
         }
 
-        uint64_t freespace_version = readNextField(1);
+        uint64_t freespace_version = readField(1);
         if(freespace_version != 0)
         {
             mlog(CRITICAL, "Invalid h5 file free space version: %d\n", (int)freespace_version);
-            throw std::runtime_error("H5FileBuffer invalid free space version");
+            throw std::runtime_error("invalid free space version");
         }
 
-        uint64_t roottable_version = readNextField(1);
+        uint64_t roottable_version = readField(1);
         if(roottable_version != 0)
         {
             mlog(CRITICAL, "Invalid h5 file root table version: %d\n", (int)roottable_version);
-            throw std::runtime_error("H5FileBuffer invalid root table version");
+            throw std::runtime_error("invalid root table version");
         }
 
-        uint64_t headermsg_version = readNextField(1);
+        uint64_t headermsg_version = readField(1);
         if(headermsg_version != 0)
         {
             mlog(CRITICAL, "Invalid h5 file header message version: %d\n", (int)headermsg_version);
-            throw std::runtime_error("H5FileBuffer invalid header message version");
+            throw std::runtime_error("invalid header message version");
         }
     }
 
     /* Read Size and Root Info */
-    offsetSize          = readNextField(1, 13);
-    lengthSize          = readNextField(1, 14);
-    groupLeafNodeK      = readNextField(2, 16);
-    groupInternalNodeK  = readNextField(2, 18);
-    rootGroupOffset     = readNextField(USE_OFFSET_SIZE, 56);
+    offsetSize          = readField(1, 13); printf("OFFSETSIZE = %d\n", offsetSize);
+    lengthSize          = readField(1, 14);
+    groupLeafNodeK      = readField(2, 16);
+    groupInternalNodeK  = readField(2, 18);
+    rootGroupOffset     = readField(USE_OFFSET_SIZE, 64);
+
+    /* Read Root Object Header */
+    if(error_checking)
+    {
+        uint64_t signature = readField(4, rootGroupOffset);
+        if(signature != H5_HDR_SIGNATURE_LE)
+        {
+            mlog(CRITICAL, "Invalid h5 header signature: %llX\n", (unsigned long long)signature);
+            throw std::runtime_error("invalid header signature");
+        }
+
+        uint64_t version = readField(1);
+        if(version != 2)
+        {
+            mlog(CRITICAL, "unsupported header version: %d\n", (int)version);
+            throw std::runtime_error("invalid header version");
+        }
+    }
+
+    uint8_t obj_hdr_flags = (uint8_t)readField(1, rootGroupOffset + 6);
+//    printf("Flags = %lX\n", (unsigned long)readField(1));
+
+    if(obj_hdr_flags & OBJ_HDR_FLAG_FILE_STATS_BIT)
+    {
+        accessTime          = readField(4);
+        modificationTime    = readField(4);
+        changeTime          = readField(4);
+        birthTime           = readField(4);
+    }
+
+    if(obj_hdr_flags & OBJ_HDR_FLAG_STORE_CHANGE_PHASE_BIT)
+    {
+        uint64_t max_compact_attr = readField(4); (void)max_compact_attr;
+        uint64_t max_dense_attr = readField(4); (void)max_dense_attr;
+    }
+
+    printf("sizeofchunk0: %d\n", (int)readField(1 << (obj_hdr_flags & OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK)));
+
+    char chunk0[256];
+    LocalLib::set(chunk0,0,256);
+    readData((uint8_t*)&chunk0[0], 170, getCurrPos());
+    printf("chunk0: %s\n", chunk0);
 }
 
 /*----------------------------------------------------------------------------
@@ -192,22 +238,30 @@ H5FileBuffer::~H5FileBuffer (void)
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * getCurrPos
  *----------------------------------------------------------------------------*/
-uint64_t H5FileBuffer::readNextField (int size, int64_t pos)
+int64_t H5FileBuffer::getCurrPos (void)
+{
+    return currFilePos + currBuffPos;
+}
+
+/*----------------------------------------------------------------------------
+ * readField
+ *----------------------------------------------------------------------------*/
+uint64_t H5FileBuffer::readField (int size, int64_t pos)
 {
     /* Set Field Size */
     int field_size;
     if      (size == USE_OFFSET_SIZE)   field_size = offsetSize;
     else if (size == USE_LENGTH_SIZE)   field_size = lengthSize;
     else if (size > 0)                  field_size = size;
-    else throw std::runtime_error("H5FileBuffer size of field cannot be negative");
+    else throw std::runtime_error("size of field cannot be negative");
 
     /* Set Field Position */
     int64_t field_position;
     if      (pos == USE_CURRENT_POSITION)   field_position = currFilePos + currBuffPos;
     else if (pos > 0)                       field_position = pos;
-    else throw std::runtime_error("H5FileBuffer position of field cannot be negative");
+    else throw std::runtime_error("position of field cannot be negative");
 
     /* Check if Different Data Needs to be Buffered */
     if((field_position < currFilePos) || ((field_position + field_size) > (currFilePos + buffSize)))
@@ -220,7 +274,7 @@ uint64_t H5FileBuffer::readNextField (int size, int64_t pos)
         }
         else
         {
-            throw std::runtime_error("H5FileBuffer failed to go to field position");
+            throw std::runtime_error("failed to go to field position");
         }
     }
 
@@ -266,7 +320,8 @@ uint64_t H5FileBuffer::readNextField (int size, int64_t pos)
 
         default:
         {
-            throw std::runtime_error("H5FileBuffer invalid field size");;
+            assert(0);
+            throw std::runtime_error("invalid field size");
         }
     }
 
@@ -278,15 +333,59 @@ uint64_t H5FileBuffer::readNextField (int size, int64_t pos)
 }
 
 /*----------------------------------------------------------------------------
+ * readData
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readData (uint8_t* data, int size, int pos)
+{
+    assert(data);
+    assert(size > 0);
+    assert(pos > 0);
+
+    /* Set Data Position */
+    if(fseek(fp, pos, SEEK_SET) == 0)
+    {
+        currBuffPos = 0;
+        currFilePos = pos;
+    }
+    else
+    {
+        throw std::runtime_error("failed to go to data position");
+    }
+
+    /* Read Data */
+    int data_left_to_read = size;
+    while(data_left_to_read > 0)
+    {
+        int data_already_read = size - data_left_to_read;
+        int data_to_read = MIN(READ_BUFSIZE, data_left_to_read);
+        buffSize = fread(&data[data_already_read], 1, data_to_read, fp);
+        data_left_to_read -= buffSize;
+        currFilePos += buffSize;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * displayFileInfo
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::displayFileInfo (void)
 {
-    printf("Size of Offsets:                            %lu\n",     (unsigned long)offsetSize);
-    printf("Size of Lengths:                            %lu\n",     (unsigned long)lengthSize);
-    printf("Group Leaf Node K:                          %lu\n",     (unsigned long)groupLeafNodeK);
-    printf("Group Internal Node K:                      %lu\n\n",   (unsigned long)groupInternalNodeK);
-    printf("Root Object Header Address:                 0x%lX\n",   (long unsigned)rootGroupOffset);
+    mlog(RAW, "Size of Offsets:             %lu\n",     (unsigned long)offsetSize);
+    mlog(RAW, "Size of Lengths:             %lu\n",     (unsigned long)lengthSize);
+    mlog(RAW, "Group Leaf Node K:           %lu\n",     (unsigned long)groupLeafNodeK);
+    mlog(RAW, "Group Internal Node K:       %lu\n\n",   (unsigned long)groupInternalNodeK);
+    mlog(RAW, "Root Object Header Address:  0x%lX\n",   (long unsigned)rootGroupOffset);
+
+    TimeLib::gmt_time_t access_gmt = TimeLib::gettime(accessTime * TIME_MILLISECS_IN_A_SECOND);
+    mlog(RAW, "Access Time:                 %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.day, access_gmt.hour, access_gmt.minute, access_gmt.second);
+
+    TimeLib::gmt_time_t modification_gmt = TimeLib::gettime(modificationTime * TIME_MILLISECS_IN_A_SECOND);
+    mlog(RAW, "Modification Time:           %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.day, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
+
+    TimeLib::gmt_time_t change_gmt = TimeLib::gettime(changeTime * TIME_MILLISECS_IN_A_SECOND);
+    mlog(RAW, "Change Time:                 %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.day, change_gmt.hour, change_gmt.minute, change_gmt.second);
+
+    TimeLib::gmt_time_t birth_gmt = TimeLib::gettime(birthTime * TIME_MILLISECS_IN_A_SECOND);
+    mlog(RAW, "Birth Time:                  %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.day, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
 }
 
 /******************************************************************************
