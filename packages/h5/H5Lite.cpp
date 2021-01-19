@@ -224,6 +224,9 @@ uint64_t H5FileBuffer::readNextField (int size, int64_t pos)
         }
     }
 
+    /* Set Buffer Position */
+    currBuffPos = field_position - currFilePos;
+
     /*  Read Field Value */
     uint64_t value;
     switch(field_size)
@@ -389,12 +392,13 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
         uint32_t parent_trace_id = TraceLib::grabId();
         uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
+        /* Stop Trace */
+        stop_trace(trace_id);
+
         /* Read Dataset */
         status = true;
         mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
 
-        /* Stop Trace */
-        stop_trace(trace_id);
 
         /* Return Info */
         info.elements = elements;
@@ -417,7 +421,7 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 {
     bool status = false;
 
-    do
+    try
     {
         /* Initialize Recurse Data */
         rdepth_t recurse = {.data = 0};
@@ -428,15 +432,17 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
         driver_t driver = H5Lite::parseUrl(url, &resource);
         if(driver == UNKNOWN)
         {
-            mlog(CRITICAL, "Invalid url: %s\n", url);
-            break;
+            throw std::runtime_error("Invalid url");
         }
 
         /* Open File */
         H5FileBuffer h5file(resource);
         h5file.displayFileInfo();
     }
-    while(false);
+    catch (const std::exception &e)
+    {
+        mlog(CRITICAL, "Failed to traverse resource: %s\n", e.what());
+    }
 
     /* Return Status */
     return status;
