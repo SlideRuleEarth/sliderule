@@ -120,18 +120,14 @@ H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
 {
     /* Initialize */
     buffSize = 0;
-    currFilePos = 0;
-    currBuffPos = 0;
+    currBuffPosition = 0;
+    currBuffOffset = 0;
     offsetSize = 0;
     lengthSize = 0;
     groupLeafNodeK = 0;
     groupInternalNodeK = 0;
     rootGroupOffset = 0;
-    accessTime = 0;
-    modificationTime = 0;
-    changeTime = 0;
-    birthTime = 0;
-
+    
     /* Open File */
     fp = fopen(filename, "r");
     if(fp == NULL)
@@ -180,53 +176,14 @@ H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
     }
 
     /* Read Size and Root Info */
-    offsetSize          = readField(1, 13); printf("OFFSETSIZE = %d\n", offsetSize);
+    offsetSize          = readField(1, 13);
     lengthSize          = readField(1, 14);
     groupLeafNodeK      = readField(2, 16);
     groupInternalNodeK  = readField(2, 18);
     rootGroupOffset     = readField(USE_OFFSET_SIZE, 64);
 
-    /* Read Root Object Header */
-    if(error_checking)
-    {
-        uint64_t signature = readField(4, rootGroupOffset);
-        if(signature != H5_HDR_SIGNATURE_LE)
-        {
-            mlog(CRITICAL, "Invalid h5 header signature: %llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid header signature");
-        }
-
-        uint64_t version = readField(1);
-        if(version != 2)
-        {
-            mlog(CRITICAL, "unsupported header version: %d\n", (int)version);
-            throw std::runtime_error("invalid header version");
-        }
-    }
-
-    uint8_t obj_hdr_flags = (uint8_t)readField(1, rootGroupOffset + 6);
-//    printf("Flags = %lX\n", (unsigned long)readField(1));
-
-    if(obj_hdr_flags & OBJ_HDR_FLAG_FILE_STATS_BIT)
-    {
-        accessTime          = readField(4);
-        modificationTime    = readField(4);
-        changeTime          = readField(4);
-        birthTime           = readField(4);
-    }
-
-    if(obj_hdr_flags & OBJ_HDR_FLAG_STORE_CHANGE_PHASE_BIT)
-    {
-        uint64_t max_compact_attr = readField(4); (void)max_compact_attr;
-        uint64_t max_dense_attr = readField(4); (void)max_dense_attr;
-    }
-
-    printf("sizeofchunk0: %d\n", (int)readField(1 << (obj_hdr_flags & OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK)));
-
-    char chunk0[256];
-    LocalLib::set(chunk0,0,256);
-    readData((uint8_t*)&chunk0[0], 170, getCurrPos());
-    printf("chunk0: %s\n", chunk0);
+    /* Read Root Group */
+    readObjectHeader(rootGroupOffset);
 }
 
 /*----------------------------------------------------------------------------
@@ -238,11 +195,26 @@ H5FileBuffer::~H5FileBuffer (void)
 }
 
 /*----------------------------------------------------------------------------
+ * displayFileInfo
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::displayFileInfo (void)
+{
+    mlog(RAW, "\n----------------\n");
+    mlog(RAW, "File Information\n");
+    mlog(RAW, "----------------\n");
+    mlog(RAW, "Size of Offsets:             %lu\n",     (unsigned long)offsetSize);
+    mlog(RAW, "Size of Lengths:             %lu\n",     (unsigned long)lengthSize);
+    mlog(RAW, "Group Leaf Node K:           %lu\n",     (unsigned long)groupLeafNodeK);
+    mlog(RAW, "Group Internal Node K:       %lu\n",     (unsigned long)groupInternalNodeK);
+    mlog(RAW, "Root Object Header Address:  0x%lX\n",   (long unsigned)rootGroupOffset);
+}
+
+/*----------------------------------------------------------------------------
  * getCurrPos
  *----------------------------------------------------------------------------*/
 int64_t H5FileBuffer::getCurrPos (void)
 {
-    return currFilePos + currBuffPos;
+    return currBuffPosition + currBuffOffset;
 }
 
 /*----------------------------------------------------------------------------
@@ -259,18 +231,18 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
 
     /* Set Field Position */
     int64_t field_position;
-    if      (pos == USE_CURRENT_POSITION)   field_position = currFilePos + currBuffPos;
+    if      (pos == USE_CURRENT_POSITION)   field_position = currBuffPosition + currBuffOffset;
     else if (pos > 0)                       field_position = pos;
     else throw std::runtime_error("position of field cannot be negative");
 
     /* Check if Different Data Needs to be Buffered */
-    if((field_position < currFilePos) || ((field_position + field_size) > (currFilePos + buffSize)))
+    if((field_position < currBuffPosition) || ((field_position + field_size) > (currBuffPosition + buffSize)))
     {
         if(fseek(fp, field_position, SEEK_SET) == 0)
         {
             buffSize = fread(buffer, 1, READ_BUFSIZE, fp);
-            currBuffPos = 0;
-            currFilePos = field_position;
+            currBuffOffset = 0;
+            currBuffPosition = field_position;
         }
         else
         {
@@ -279,7 +251,7 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
     }
 
     /* Set Buffer Position */
-    currBuffPos = field_position - currFilePos;
+    currBuffOffset = field_position - currBuffPosition;
 
     /*  Read Field Value */
     uint64_t value;
@@ -287,7 +259,7 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
     {
         case 8:     
         {
-            value = *(uint64_t*)&buffer[currBuffPos];
+            value = *(uint64_t*)&buffer[currBuffOffset];
             #ifdef __BE__
                 value = LocalLib::swapll(value);
             #endif
@@ -296,7 +268,7 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
 
         case 4:     
         {
-            value = *(uint32_t*)&buffer[currBuffPos];
+            value = *(uint32_t*)&buffer[currBuffOffset];
             #ifdef __BE__
                 value = LocalLib::swapl(value);
             #endif
@@ -305,7 +277,7 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
 
         case 2:
         {
-            value = *(uint16_t*)&buffer[currBuffPos];
+            value = *(uint16_t*)&buffer[currBuffOffset];
             #ifdef __BE__
                 value = LocalLib::swaps(value);
             #endif
@@ -314,7 +286,7 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
 
         case 1:
         {
-            value = buffer[currBuffPos];
+            value = buffer[currBuffOffset];
             break;
         }
 
@@ -326,7 +298,7 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
     }
 
     /* Increment Current Buffer Position */
-    currBuffPos += field_size;
+    currBuffOffset += field_size;
 
     /* Return Field Value */
     return value;
@@ -344,8 +316,8 @@ void H5FileBuffer::readData (uint8_t* data, int size, int pos)
     /* Set Data Position */
     if(fseek(fp, pos, SEEK_SET) == 0)
     {
-        currBuffPos = 0;
-        currFilePos = pos;
+        currBuffOffset = 0;
+        currBuffPosition = pos;
     }
     else
     {
@@ -360,32 +332,163 @@ void H5FileBuffer::readData (uint8_t* data, int size, int pos)
         int data_to_read = MIN(READ_BUFSIZE, data_left_to_read);
         buffSize = fread(&data[data_already_read], 1, data_to_read, fp);
         data_left_to_read -= buffSize;
-        currFilePos += buffSize;
+        currBuffOffset += buffSize;
     }
 }
 
 /*----------------------------------------------------------------------------
- * displayFileInfo
+ * readObjectHeader
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::displayFileInfo (void)
+void H5FileBuffer::readObjectHeader (int pos, bool error_checking, bool verbose)
 {
-    mlog(RAW, "Size of Offsets:             %lu\n",     (unsigned long)offsetSize);
-    mlog(RAW, "Size of Lengths:             %lu\n",     (unsigned long)lengthSize);
-    mlog(RAW, "Group Leaf Node K:           %lu\n",     (unsigned long)groupLeafNodeK);
-    mlog(RAW, "Group Internal Node K:       %lu\n\n",   (unsigned long)groupInternalNodeK);
-    mlog(RAW, "Root Object Header Address:  0x%lX\n",   (long unsigned)rootGroupOffset);
+    static const int OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK      = 0x03;
+    static const int OBJ_HDR_FLAG_ATTR_CREATION_TRACK_BIT   = 0x04;
+    static const int OBJ_HDR_FLAG_ATTR_CREATION_INDEX_BIT   = 0x08;
+    static const int OBJ_HDR_FLAG_STORE_CHANGE_PHASE_BIT    = 0x10;
+    static const int OBJ_HDR_FLAG_FILE_STATS_BIT            = 0x20;
 
-    TimeLib::gmt_time_t access_gmt = TimeLib::gettime(accessTime * TIME_MILLISECS_IN_A_SECOND);
-    mlog(RAW, "Access Time:                 %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.day, access_gmt.hour, access_gmt.minute, access_gmt.second);
+    /* Read Object Header */
+    uint64_t signature = readField(4, pos);
+    uint64_t version = readField(1);
+    if(error_checking)
+    {
+        if(signature != H5_HDR_SIGNATURE_LE)
+        {
+            mlog(CRITICAL, "invalid header signature: %llX\n", (unsigned long long)signature);
+            throw std::runtime_error("invalid header signature");
+        }
 
-    TimeLib::gmt_time_t modification_gmt = TimeLib::gettime(modificationTime * TIME_MILLISECS_IN_A_SECOND);
-    mlog(RAW, "Modification Time:           %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.day, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
+        if(version != 2)
+        {
+            mlog(CRITICAL, "invalid header version: %d\n", (int)version);
+            throw std::runtime_error("invalid header version");
+        }
+    }
 
-    TimeLib::gmt_time_t change_gmt = TimeLib::gettime(changeTime * TIME_MILLISECS_IN_A_SECOND);
-    mlog(RAW, "Change Time:                 %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.day, change_gmt.hour, change_gmt.minute, change_gmt.second);
+    /* Read Option Time Fields */
+    uint8_t obj_hdr_flags = (uint8_t)readField(1);
+    if(obj_hdr_flags & OBJ_HDR_FLAG_FILE_STATS_BIT)
+    {
+        uint64_t access_time         = readField(4);
+        uint64_t modification_time   = readField(4);
+        uint64_t change_time         = readField(4);
+        uint64_t birth_time          = readField(4);
 
-    TimeLib::gmt_time_t birth_gmt = TimeLib::gettime(birthTime * TIME_MILLISECS_IN_A_SECOND);
-    mlog(RAW, "Birth Time:                  %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.day, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
+        if(verbose)
+        {
+            TimeLib::gmt_time_t access_gmt = TimeLib::gettime(access_time * TIME_MILLISECS_IN_A_SECOND);
+            mlog(RAW, "Access Time:         %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.day, access_gmt.hour, access_gmt.minute, access_gmt.second);
+
+            TimeLib::gmt_time_t modification_gmt = TimeLib::gettime(modification_time * TIME_MILLISECS_IN_A_SECOND);
+            mlog(RAW, "Modification Time:   %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.day, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
+
+            TimeLib::gmt_time_t change_gmt = TimeLib::gettime(change_time * TIME_MILLISECS_IN_A_SECOND);
+            mlog(RAW, "Change Time:         %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.day, change_gmt.hour, change_gmt.minute, change_gmt.second);
+
+            TimeLib::gmt_time_t birth_gmt = TimeLib::gettime(birth_time * TIME_MILLISECS_IN_A_SECOND);
+            mlog(RAW, "Birth Time:          %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.day, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
+        }
+    }
+
+    /* Optional Phase Attributes */
+    if(obj_hdr_flags & OBJ_HDR_FLAG_STORE_CHANGE_PHASE_BIT)
+    {
+        uint64_t max_compact_attr = readField(2); (void)max_compact_attr;
+        uint64_t max_dense_attr = readField(2); (void)max_dense_attr;
+    }
+
+    /* Read Header Messages */
+    uint64_t size_of_chunk0 = readField(1 << (obj_hdr_flags & OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK));
+    uint64_t chunk0_data_read = 0;
+    int msg_num = 0;
+    while(chunk0_data_read < size_of_chunk0)
+    {
+        uint8_t     hdr_msg_type    = (uint8_t)readField(1);
+        uint16_t    hdr_msg_size    = (uint16_t)readField(2);
+        uint8_t     hdr_msg_flags   = (uint8_t)readField(1);
+        chunk0_data_read += 4;
+
+        uint64_t hdr_msg_order = 0;
+        if(obj_hdr_flags & OBJ_HDR_FLAG_ATTR_CREATION_TRACK_BIT)
+        {
+            hdr_msg_order = (uint8_t)readField(2);
+            chunk0_data_read += 2;
+        }
+
+        /* Process Each Message Type */
+        switch(hdr_msg_type)
+        {
+            case 2:
+            {
+                readObjectLink(getCurrPos());
+                break;
+            }
+
+            default:
+            {
+                uint8_t hdr_msg_data[0x10000];
+                readData(hdr_msg_data, hdr_msg_size, getCurrPos());
+                break;
+            }
+        }
+
+        chunk0_data_read += hdr_msg_size;
+
+        if(verbose)
+        {
+            mlog(RAW, "Message[%d]:          type=%d, size=%d, flags=%x, order=%d, end=%x\n", msg_num++, (int)hdr_msg_type, (int)hdr_msg_size, (int)hdr_msg_flags, (int)hdr_msg_order, chunk0_data_read);
+        }
+    }
+
+    uint64_t check_sum = readField(4);
+    if(error_checking)
+    {
+        (void)check_sum;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * readObjectLink
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readObjectLink (int pos, bool error_checking, bool verbose)
+{
+    uint64_t version = readField(1, pos);
+    uint64_t flags = readField(1);
+
+    if(error_checking)
+    {
+        if(version != 0)
+        {
+            mlog(CRITICAL, "invalid link version: %d\n", version);
+            throw std::runtime_error("invalid link version");
+        }
+    }
+
+    if(flags & 0x1)
+    {
+        uint64_t max_create_index = readField(8); (void)max_create_index;
+        if(verbose)
+        {
+            mlog(RAW, "Maximum Creation Index:  %lu\n", (unsigned long)max_create_index);
+        }
+    }
+
+    uint64_t heap_address = readField();
+    uint64_t name_index = readField();
+    if(verbose)
+    {
+        mlog(RAW, "Heap Address:            %lX\n", (unsigned long)heap_address);
+        mlog(RAW, "Name Index:              %lX\n", (unsigned long)name_index);
+    }
+
+    if(flags & 0x2)
+    {
+        uint64_t create_order_index = readField(8); (void)create_order_index;
+        if(verbose)
+        {
+            mlog(RAW, "Creation Order Index:    %lX\n", (unsigned long)create_order_index);
+        }
+    }
 }
 
 /******************************************************************************
