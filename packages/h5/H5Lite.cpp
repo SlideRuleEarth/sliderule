@@ -32,28 +32,6 @@
 #include <stdexcept>
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-
-/******************************************************************************
- * TYPEDEFS
- ******************************************************************************/
-
-typedef union {
-    struct {
-        uint32_t depth;
-        uint32_t max;
-    } curr;
-    uint64_t data;
-} rdepth_t;
-
-/******************************************************************************
- * FILE DATA
- ******************************************************************************/
-
-
-/******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
@@ -183,7 +161,7 @@ H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
     rootGroupOffset     = readField(USE_OFFSET_SIZE, 64);
 
     /* Read Root Group */
-    readObjectHeader(rootGroupOffset);
+    readObjHdr(rootGroupOffset);
 }
 
 /*----------------------------------------------------------------------------
@@ -307,7 +285,7 @@ uint64_t H5FileBuffer::readField (int size, int64_t pos)
 /*----------------------------------------------------------------------------
  * readData
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readData (uint8_t* data, int size, int pos)
+void H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t pos)
 {
     assert(data);
     assert(size > 0);
@@ -337,13 +315,13 @@ void H5FileBuffer::readData (uint8_t* data, int size, int pos)
 }
 
 /*----------------------------------------------------------------------------
- * readObjectHeader
+ * readObjHdr
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readObjectHeader (int pos, bool error_checking, bool verbose)
+void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
 {
     static const int OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK      = 0x03;
     static const int OBJ_HDR_FLAG_ATTR_CREATION_TRACK_BIT   = 0x04;
-    static const int OBJ_HDR_FLAG_ATTR_CREATION_INDEX_BIT   = 0x08;
+//    static const int OBJ_HDR_FLAG_ATTR_CREATION_INDEX_BIT   = 0x08;
     static const int OBJ_HDR_FLAG_STORE_CHANGE_PHASE_BIT    = 0x10;
     static const int OBJ_HDR_FLAG_FILE_STATS_BIT            = 0x20;
 
@@ -352,7 +330,7 @@ void H5FileBuffer::readObjectHeader (int pos, bool error_checking, bool verbose)
     uint64_t version = readField(1);
     if(error_checking)
     {
-        if(signature != H5_HDR_SIGNATURE_LE)
+        if(signature != H5_OHDR_SIGNATURE_LE)
         {
             mlog(CRITICAL, "invalid header signature: %llX\n", (unsigned long long)signature);
             throw std::runtime_error("invalid header signature");
@@ -415,28 +393,13 @@ void H5FileBuffer::readObjectHeader (int pos, bool error_checking, bool verbose)
             chunk0_data_read += 2;
         }
 
-        /* Process Each Message Type */
-        switch(hdr_msg_type)
-        {
-            case 2:
-            {
-                readObjectLink(getCurrPos());
-                break;
-            }
-
-            default:
-            {
-                uint8_t hdr_msg_data[0x10000];
-                readData(hdr_msg_data, hdr_msg_size, getCurrPos());
-                break;
-            }
-        }
-
+        /* Read Each Message */
+        readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, getCurrPos());
         chunk0_data_read += hdr_msg_size;
 
         if(verbose)
         {
-            mlog(RAW, "Message[%d]:          type=%d, size=%d, flags=%x, order=%d, end=%x\n", msg_num++, (int)hdr_msg_type, (int)hdr_msg_size, (int)hdr_msg_flags, (int)hdr_msg_order, chunk0_data_read);
+            mlog(RAW, "Message[%d]:          type=%d, size=%d, flags=%x, order=%d, end=%x\n", msg_num++, (int)hdr_msg_type, (int)hdr_msg_size, (int)hdr_msg_flags, (int)hdr_msg_order, (int)chunk0_data_read);
         }
     }
 
@@ -448,10 +411,52 @@ void H5FileBuffer::readObjectHeader (int pos, bool error_checking, bool verbose)
 }
 
 /*----------------------------------------------------------------------------
- * readObjectLink
+ * readMessage
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readObjectLink (int pos, bool error_checking, bool verbose)
+void H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos, bool error_checking, bool verbose)
 {
+    switch(type)
+    {
+        case LINK_INFO_MSG: // Link Info Message
+        {
+            readLinkInfoMsg(pos, error_checking, verbose);
+            break;
+        }
+
+        case LINK_MSG: // Link Message
+        {
+            readLinkMsg(pos, error_checking, verbose);
+            break;
+        }
+
+//        case FILTER_MSG: // Data Storage - Filter Pipeline Message
+//        {
+//            readFilterMsg(pos, error_checking, verbose);
+//            break;
+//        }
+
+        default:
+        {
+            if(verbose)
+            {
+                mlog(RAW, "Vacuous read of message of type: %x\n", (int)type);
+            }
+
+            uint8_t hdr_msg_data[0x10000];
+            readData(hdr_msg_data, size, pos);
+            break;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * readLinkInfoMsg
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readLinkInfoMsg (int64_t pos, bool error_checking, bool verbose)
+{
+    static const int MAX_CREATE_PRESENT_BIT     = 0x01;
+    static const int CREATE_ORDER_PRESENT_BIT   = 0x02;
+
     uint64_t version = readField(1, pos);
     uint64_t flags = readField(1);
 
@@ -459,14 +464,14 @@ void H5FileBuffer::readObjectLink (int pos, bool error_checking, bool verbose)
     {
         if(version != 0)
         {
-            mlog(CRITICAL, "invalid link version: %d\n", version);
-            throw std::runtime_error("invalid link version");
+            mlog(CRITICAL, "invalid link info version: %d\n", (int)version);
+            throw std::runtime_error("invalid link info version");
         }
     }
 
-    if(flags & 0x1)
+    if(flags & MAX_CREATE_PRESENT_BIT)
     {
-        uint64_t max_create_index = readField(8); (void)max_create_index;
+        uint64_t max_create_index = readField(8);
         if(verbose)
         {
             mlog(RAW, "Maximum Creation Index:  %lu\n", (unsigned long)max_create_index);
@@ -481,14 +486,278 @@ void H5FileBuffer::readObjectLink (int pos, bool error_checking, bool verbose)
         mlog(RAW, "Name Index:              %lX\n", (unsigned long)name_index);
     }
 
-    if(flags & 0x2)
+    if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order_index = readField(8); (void)create_order_index;
+        uint64_t create_order_index = readField(8);
         if(verbose)
         {
             mlog(RAW, "Creation Order Index:    %lX\n", (unsigned long)create_order_index);
         }
     }
+
+    readFractalHeap(LINK_MSG, heap_address);
+}
+
+/*----------------------------------------------------------------------------
+ * readLinkMsg
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
+{
+    static const int SIZE_OF_LEN_OF_NAME_MASK   = 0x03;
+    static const int CREATE_ORDER_PRESENT_BIT   = 0x04;
+    static const int LINK_TYPE_PRESENT_BIT      = 0x08;
+    static const int CHAR_SET_PRESENT_BIT       = 0x10;
+
+    uint64_t version = readField(1, pos);
+    uint64_t flags = readField(1);
+
+    if(error_checking)
+    {
+        if(version != 1)
+        {
+            mlog(CRITICAL, "invalid link version: %d\n", (int)version);
+            throw std::runtime_error("invalid link version");
+        }
+    }
+
+    uint8_t link_type = 0;
+    if(flags & LINK_TYPE_PRESENT_BIT)
+    {
+        link_type = readField(1);
+        if(verbose)
+        {
+            mlog(RAW, "Link Type:           %lu\n", (unsigned long)link_type);
+        }
+    }
+
+    if(flags & CREATE_ORDER_PRESENT_BIT)
+    {
+        uint64_t create_order = readField(8);
+        if(verbose)
+        {
+            mlog(RAW, "Creation Order:      %lX\n", (unsigned long)create_order);
+        }
+    }
+
+    if(flags & CHAR_SET_PRESENT_BIT)
+    {
+        uint8_t char_set = readField(1);
+        if(verbose)
+        {
+            mlog(RAW, "Character Set:       %lu\n", (unsigned long)char_set);
+        }
+    }
+
+    int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
+    if(error_checking && (link_name_len_of_len > 8))
+    {
+        mlog(CRITICAL, "invalid link name length of length: %d\n", (int)link_name_len_of_len);
+        throw std::runtime_error("invalid link name length of length");
+    }
+    
+    uint64_t link_name_len = readField(link_name_len_of_len);
+    if(verbose)
+    {
+        mlog(RAW, "Link Name Length:        %lu\n", (unsigned long)link_name_len);
+    }
+
+    uint8_t link_name[512];
+    readData(link_name, link_name_len, getCurrPos());
+    if(verbose)
+    {
+        mlog(RAW, "Link Name:               %s\n", link_name);
+    }
+
+    if(link_type == 0) // hard link
+    {
+        uint64_t object_header_addr = readField(USE_OFFSET_SIZE);
+        if(verbose)
+        {
+            mlog(RAW, "Hard Link - Object Header Address: 0x%lx\n", object_header_addr);
+        }
+    }
+    else if(link_type == 1) // soft link
+    {
+        uint16_t soft_link_len = readField(2);
+        uint8_t soft_link[512];
+        readData(soft_link, soft_link_len, getCurrPos());
+        if(verbose)
+        {
+            mlog(RAW, "Soft Link:               %s\n", soft_link);
+        }
+    }
+    else if(link_type == 64) // external link
+    {
+        uint16_t ext_link_len = readField(2);
+        uint8_t ext_link[512];
+        readData(ext_link, ext_link_len, getCurrPos());
+        if(verbose)
+        {
+            mlog(RAW, "External Link:           %s\n", ext_link);
+        }
+    }
+    else if(error_checking)
+    {
+        mlog(CRITICAL, "invalid link type: %d\n", link_type);
+        throw std::runtime_error("invalid link type");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * readFilterMsg
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readFilterMsg (int64_t pos, bool error_checking, bool verbose)
+{
+    (void)pos;
+    (void)error_checking;
+    (void)verbose;
+
+    /* Unimplemented */
+}
+
+/*----------------------------------------------------------------------------
+ * readFractalHeap
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_checking, bool verbose)
+{
+//    static const int FRHP_HUGE_OBJ_WRAP             = 0x01;
+    static const int FRHP_CHECKSUM_DIRECT_BLOCKS    = 0x02;
+
+    uint32_t    signature       = (uint32_t)readField(4, pos);
+    uint8_t     version         =  (uint8_t)readField(1);
+    if(error_checking)
+    {
+        if(signature != H5_FRHP_SIGNATURE_LE)
+        {
+            mlog(CRITICAL, "invalid heap signature: %llX\n", (unsigned long long)signature);
+            throw std::runtime_error("invalid heap signature");
+        }
+
+        if(version != 0)
+        {
+            mlog(CRITICAL, "invalid heap version: %d\n", (int)version);
+            throw std::runtime_error("invalid heap version");
+        }
+    }
+
+    uint16_t    heap_obj_id_len     = (uint16_t)readField(2); // Heap ID Length
+    uint16_t    io_filter_len       = (uint16_t)readField(2); // I/O Filters' Encoded Length
+    uint8_t     flags               =  (uint8_t)readField(1); // Flags
+    uint32_t    max_size_mg_obj     = (uint32_t)readField(4); // Maximum Size of Managed Objects
+    uint64_t    next_huge_obj_id    = (uint64_t)readField(USE_LENGTH_SIZE); // Next Huge Object ID
+    uint64_t    btree_addr_huge_obj = (uint64_t)readField(USE_OFFSET_SIZE); // v2 B-tree Address of Huge Objects
+    uint64_t    free_space_mg_blks  = (uint64_t)readField(USE_LENGTH_SIZE); // Amount of Free Space in Managed Blocks
+    uint64_t    addr_free_space_mg  = (uint64_t)readField(USE_OFFSET_SIZE); // Address of Managed Block Free Space Manager
+    uint64_t    mg_space            = (uint64_t)readField(USE_LENGTH_SIZE); // Amount of Manged Space in Heap
+    uint64_t    alloc_mg_space      = (uint64_t)readField(USE_LENGTH_SIZE); // Amount of Allocated Managed Space in Heap
+    uint64_t    dblk_alloc_iter     = (uint64_t)readField(USE_LENGTH_SIZE); // Offset of Direct Block Allocation Iterator in Managed Space
+    uint64_t    mg_objs             = (uint64_t)readField(USE_LENGTH_SIZE); // Number of Managed Objects in Heap
+    uint64_t    huge_obj_size       = (uint64_t)readField(USE_LENGTH_SIZE); // Size of Huge Objects in Heap
+    uint64_t    huge_objs           = (uint64_t)readField(USE_LENGTH_SIZE); // Number of Huge Objects in Heap
+    uint64_t    tiny_obj_size       = (uint64_t)readField(USE_LENGTH_SIZE); // Size of Tiny Objects in Heap
+    uint64_t    tiny_objs           = (uint64_t)readField(USE_LENGTH_SIZE); // Number of Timing Objects in Heap
+    uint16_t    table_width         = (uint16_t)readField(2); // Table Width
+    uint64_t    starting_blk_size   = (uint64_t)readField(USE_LENGTH_SIZE); // Starting Block Size
+    uint64_t    max_dblk_size       = (uint64_t)readField(USE_LENGTH_SIZE); // Maximum Direct Block Size
+    uint16_t    max_heap_size       = (uint16_t)readField(2); // Maximum Heap Size
+    uint16_t    start_num_rows      = (uint16_t)readField(2); // Starting # of Rows in Root Indirect Block
+    uint64_t    root_blk_addr       = (uint64_t)readField(USE_OFFSET_SIZE); // Address of Root Block
+    uint16_t    curr_num_rows       = (uint16_t)readField(2); // Current # of Rows in Root Indirect Block
+
+    if(io_filter_len > 0)
+    {
+        uint64_t filter_root_dblk   = (uint64_t)readField(USE_LENGTH_SIZE); // Size of Filtered Root Direct Block
+        uint32_t filter_mask        = (uint32_t)readField(4); // I/O Filter Mask
+        mlog(RAW, "Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
+        mlog(RAW, "I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
+
+        readMessage(FILTER_MSG, io_filter_len, getCurrPos(), error_checking, verbose);
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "Heap ID Length:                                                  %lu\n", (unsigned long)heap_obj_id_len);
+        mlog(RAW, "I/O Filters' Encoded Length:                                     %lu\n", (unsigned long)io_filter_len);
+        mlog(RAW, "Flags:                                                           0x%lx\n", (unsigned long)flags);
+        mlog(RAW, "Maximum Size of Managed Objects:                                 %lu\n", (unsigned long)max_size_mg_obj);
+        mlog(RAW, "Next Huge Object ID:                                             %lu\n", (unsigned long)next_huge_obj_id);
+        mlog(RAW, "v2 B-tree Address of Huge Objects:                               0x%lx\n", (unsigned long)btree_addr_huge_obj);
+        mlog(RAW, "Amount of Free Space in Managed Blocks:                          %lu\n", (unsigned long)free_space_mg_blks);
+        mlog(RAW, "Address of Managed Block Free Space Manager:                     0x%lx\n", (unsigned long)addr_free_space_mg);
+        mlog(RAW, "Amount of Manged Space in Heap:                                  %lu\n", (unsigned long)mg_space);
+        mlog(RAW, "Amount of Allocated Managed Space in Heap:                       %lu\n", (unsigned long)alloc_mg_space);
+        mlog(RAW, "Offset of Direct Block Allocation Iterator in Managed Space:     %lu\n", (unsigned long)dblk_alloc_iter);
+        mlog(RAW, "Number of Managed Objects in Heap:                               %lu\n", (unsigned long)mg_objs);
+        mlog(RAW, "Size of Huge Objects in Heap:                                    %lu\n", (unsigned long)huge_obj_size);
+        mlog(RAW, "Number of Huge Objects in Heap:                                  %lu\n", (unsigned long)huge_objs);
+        mlog(RAW, "Size of Tiny Objects in Heap:                                    %lu\n", (unsigned long)tiny_obj_size);
+        mlog(RAW, "Number of Timing Objects in Heap:                                %lu\n", (unsigned long)tiny_objs);
+        mlog(RAW, "Table Width:                                                     %lu\n", (unsigned long)table_width);
+        mlog(RAW, "Starting Block Size:                                             %lu\n", (unsigned long)starting_blk_size);
+        mlog(RAW, "Maximum Direct Block Size:                                       %lu\n", (unsigned long)max_dblk_size);
+        mlog(RAW, "Maximum Heap Size:                                               %lu\n", (unsigned long)max_heap_size);
+        mlog(RAW, "Starting # of Rows in Root Indirect Block:                       %lu\n", (unsigned long)start_num_rows);
+        mlog(RAW, "Address of Root Block:                                           0x%lx\n", (unsigned long)root_blk_addr);
+        mlog(RAW, "Current # of Rows in Root Indirect Block:                        %lu\n", (unsigned long)curr_num_rows);
+    }
+
+    uint64_t check_sum = readField(4);
+    if(error_checking)
+    {
+        (void)check_sum;
+    }
+
+    if(curr_num_rows == 0)
+    {
+        int blk_offset_sz = (max_heap_size + 7) / 8;
+        bool checksum_present = (flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0;
+        int blk_size = starting_blk_size;
+        readDirectBlock(blk_offset_sz, checksum_present, blk_size, type, getCurrPos());
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * readDirectBlock
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, msg_type_t type, int64_t pos, bool error_checking, bool verbose)
+{
+    uint32_t    signature       = (uint32_t)readField(4, pos);
+    uint8_t     version         =  (uint8_t)readField(1);
+    if(error_checking)
+    {
+        if(signature != H5_FHDB_SIGNATURE_LE)
+        {
+            mlog(CRITICAL, "invalid direct block signature: %llX\n", (unsigned long long)signature);
+            throw std::runtime_error("invalid direct block signature");
+        }
+
+        if(version != 0)
+        {
+            mlog(CRITICAL, "invalid direct block version: %d\n", (int)version);
+            throw std::runtime_error("invalid direct block version");
+        }
+    }
+
+    uint64_t heap_hdr_addr = (uint64_t)readField(USE_OFFSET_SIZE); // Heap Header Address
+    uint64_t blk_offset    = (uint64_t)readField(blk_offset_size); // Block Offset
+    if(verbose)
+    {
+        mlog(RAW, "Heap Header Address: 0x%lx\n", heap_hdr_addr);
+        mlog(RAW, "Block Offset:        0x%lx\n", blk_offset);
+    }
+
+    if(checksum_present)
+    {
+        uint64_t check_sum = readField(4);
+        if(error_checking)
+        {
+            (void)check_sum;
+        }
+    }
+
+    /* Read Block Data */
+    int data_to_read = blk_size - (5 + offsetSize + blk_offset_size + ((int)checksum_present * 4));
+    readMessage(type, data_to_read, getCurrPos());
 }
 
 /******************************************************************************
@@ -553,6 +822,11 @@ H5Lite::driver_t H5Lite::parseUrl (const char* url, const char** resource)
  *----------------------------------------------------------------------------*/
 H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows)
 {
+    (void)valtype;
+    (void)col;
+    (void)startrow;
+    (void)numrows;
+
     info_t info;
     bool status = false;
 
@@ -621,14 +895,12 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
  *----------------------------------------------------------------------------*/
 bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 {
+    (void)max_depth;
+    (void)start_group;
     bool status = false;
 
     try
     {
-        /* Initialize Recurse Data */
-        rdepth_t recurse = {.data = 0};
-        recurse.curr.max = max_depth;
-
         /* Initialize Driver */
         const char* resource = NULL;
         driver_t driver = H5Lite::parseUrl(url, &resource);

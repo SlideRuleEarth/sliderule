@@ -43,6 +43,17 @@ class H5FileBuffer
         static const int64_t    USE_CURRENT_POSITION    = -1;
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+        
+        typedef enum {
+            LINK_INFO_MSG   = 0x2,
+            LINK_MSG        = 0x6,
+            FILTER_MSG      = 0xB
+        } msg_type_t;
+
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -59,7 +70,9 @@ class H5FileBuffer
 
         static const long       READ_BUFSIZE                            = 1048576; // 1MB
         static const uint64_t   H5_SIGNATURE_LE                         = 0x0A1A0A0D46444889LL;
-        static const uint64_t   H5_HDR_SIGNATURE_LE                     = 0x5244484FLL; // OHDR
+        static const uint64_t   H5_OHDR_SIGNATURE_LE                    = 0x5244484FLL; // object header
+        static const uint64_t   H5_FRHP_SIGNATURE_LE                    = 0x50485246LL; // fractal heap
+        static const uint64_t   H5_FHDB_SIGNATURE_LE                    = 0x42444846LL; // direct block
 
         /*--------------------------------------------------------------------
          * TypeDefs
@@ -77,11 +90,21 @@ class H5FileBuffer
          *--------------------------------------------------------------------*/
 
         int64_t             getCurrPos          (void);
-        uint64_t            readField           (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
-        void                readData            (uint8_t* data, int size, int pos);
-        void                readObjectHeader    (int pos, bool error_checking=true, bool verbose=true);
-        void                readObjectLink      (int pos, bool error_checking=true, bool verbose=true);
 
+        uint64_t            readField           (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
+        void                readData            (uint8_t* data, uint64_t size, uint64_t pos);
+        void                readObjHdr          (int64_t pos, bool error_checking=true, bool verbose=true);
+        
+        void                readMessage         (msg_type_t type, uint64_t size, int64_t pos, bool error_checking=true, bool verbose=true);
+        void                readLinkInfoMsg     (int64_t pos, bool error_checking=true, bool verbose=true);
+        void                readLinkMsg         (int64_t pos, bool error_checking=true, bool verbose=true);
+        void                readFilterMsg       (int64_t pos, bool error_checking=true, bool verbose=true);
+        
+        void                readFractalHeap     (msg_type_t type, int64_t pos, bool error_checking=true, bool verbose=true);
+        void                readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, msg_type_t type, int64_t pos, bool error_checking=true, bool verbose=true);
+        void                readIndirectBlock   (int64_t pos, bool error_checking=true, bool verbose=true);
+
+        
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
