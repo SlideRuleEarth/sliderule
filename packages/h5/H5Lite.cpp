@@ -180,11 +180,11 @@ void H5FileBuffer::displayFileInfo (void)
     mlog(RAW, "\n----------------\n");
     mlog(RAW, "File Information\n");
     mlog(RAW, "----------------\n");
-    mlog(RAW, "Size of Offsets:             %lu\n",     (unsigned long)offsetSize);
-    mlog(RAW, "Size of Lengths:             %lu\n",     (unsigned long)lengthSize);
-    mlog(RAW, "Group Leaf Node K:           %lu\n",     (unsigned long)groupLeafNodeK);
-    mlog(RAW, "Group Internal Node K:       %lu\n",     (unsigned long)groupInternalNodeK);
-    mlog(RAW, "Root Object Header Address:  0x%lX\n",   (long unsigned)rootGroupOffset);
+    mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)offsetSize);
+    mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)lengthSize);
+    mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)groupLeafNodeK);
+    mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)groupInternalNodeK);
+    mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)rootGroupOffset);
 }
 
 /*----------------------------------------------------------------------------
@@ -354,17 +354,21 @@ void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
 
         if(verbose)
         {
+            mlog(RAW, "\n----------------\n");
+            mlog(RAW, "Object Information\n");
+            mlog(RAW, "----------------\n");
+
             TimeLib::gmt_time_t access_gmt = TimeLib::gettime(access_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Access Time:         %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.day, access_gmt.hour, access_gmt.minute, access_gmt.second);
+            mlog(RAW, "Access Time:                                                     %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.day, access_gmt.hour, access_gmt.minute, access_gmt.second);
 
             TimeLib::gmt_time_t modification_gmt = TimeLib::gettime(modification_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Modification Time:   %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.day, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
+            mlog(RAW, "Modification Time:                                               %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.day, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
 
             TimeLib::gmt_time_t change_gmt = TimeLib::gettime(change_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Change Time:         %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.day, change_gmt.hour, change_gmt.minute, change_gmt.second);
+            mlog(RAW, "Change Time:                                                     %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.day, change_gmt.hour, change_gmt.minute, change_gmt.second);
 
             TimeLib::gmt_time_t birth_gmt = TimeLib::gettime(birth_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Birth Time:          %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.day, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
+            mlog(RAW, "Birth Time:                                                      %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.day, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
         }
     }
 
@@ -399,7 +403,7 @@ void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
 
         if(verbose)
         {
-            mlog(RAW, "Message[%d]:          type=%d, size=%d, flags=%x, order=%d, end=%x\n", msg_num++, (int)hdr_msg_type, (int)hdr_msg_size, (int)hdr_msg_flags, (int)hdr_msg_order, (int)chunk0_data_read);
+            mlog(CRITICAL, "Message[%d]: type=%d, size=%d, flags=%x, order=%d, end=%x\n", msg_num++, (int)hdr_msg_type, (int)hdr_msg_size, (int)hdr_msg_flags, (int)hdr_msg_order, (int)chunk0_data_read);
         }
     }
 
@@ -413,20 +417,20 @@ void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
 /*----------------------------------------------------------------------------
  * readMessage
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos, bool error_checking, bool verbose)
+bool H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos, bool error_checking, bool verbose)
 {
     switch(type)
     {
         case LINK_INFO_MSG: // Link Info Message
         {
             readLinkInfoMsg(pos, error_checking, verbose);
-            break;
+            return true;
         }
 
         case LINK_MSG: // Link Message
         {
             readLinkMsg(pos, error_checking, verbose);
-            break;
+            return true;
         }
 
 //        case FILTER_MSG: // Data Storage - Filter Pipeline Message
@@ -437,14 +441,9 @@ void H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos, boo
 
         default:
         {
-            if(verbose)
-            {
-                mlog(RAW, "Vacuous read of message of type: %x\n", (int)type);
-            }
-
             uint8_t hdr_msg_data[0x10000];
             readData(hdr_msg_data, size, pos);
-            break;
+            return false;
         }
     }
 }
@@ -469,12 +468,19 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos, bool error_checking, bool verbo
         }
     }
 
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Link Information Message\n");
+        mlog(RAW, "----------------\n");
+    }
+
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
         uint64_t max_create_index = readField(8);
         if(verbose)
         {
-            mlog(RAW, "Maximum Creation Index:  %lu\n", (unsigned long)max_create_index);
+            mlog(RAW, "Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
         }
     }
 
@@ -482,8 +488,8 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos, bool error_checking, bool verbo
     uint64_t name_index = readField();
     if(verbose)
     {
-        mlog(RAW, "Heap Address:            %lX\n", (unsigned long)heap_address);
-        mlog(RAW, "Name Index:              %lX\n", (unsigned long)name_index);
+        mlog(RAW, "Heap Address:                                                    %lX\n", (unsigned long)heap_address);
+        mlog(RAW, "Name Index:                                                      %lX\n", (unsigned long)name_index);
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
@@ -491,7 +497,7 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos, bool error_checking, bool verbo
         uint64_t create_order_index = readField(8);
         if(verbose)
         {
-            mlog(RAW, "Creation Order Index:    %lX\n", (unsigned long)create_order_index);
+            mlog(RAW, "Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
         }
     }
 
@@ -520,13 +526,20 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
         }
     }
 
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Link Message\n");
+        mlog(RAW, "----------------\n");
+    }
+
     uint8_t link_type = 0;
     if(flags & LINK_TYPE_PRESENT_BIT)
     {
         link_type = readField(1);
         if(verbose)
         {
-            mlog(RAW, "Link Type:           %lu\n", (unsigned long)link_type);
+            mlog(RAW, "Link Type:                                                       %lu\n", (unsigned long)link_type);
         }
     }
 
@@ -535,7 +548,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
         uint64_t create_order = readField(8);
         if(verbose)
         {
-            mlog(RAW, "Creation Order:      %lX\n", (unsigned long)create_order);
+            mlog(RAW, "Creation Order:                                                  %lX\n", (unsigned long)create_order);
         }
     }
 
@@ -544,7 +557,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
         uint8_t char_set = readField(1);
         if(verbose)
         {
-            mlog(RAW, "Character Set:       %lu\n", (unsigned long)char_set);
+            mlog(RAW, "Character Set:                                                   %lu\n", (unsigned long)char_set);
         }
     }
 
@@ -558,14 +571,15 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
     uint64_t link_name_len = readField(link_name_len_of_len);
     if(verbose)
     {
-        mlog(RAW, "Link Name Length:        %lu\n", (unsigned long)link_name_len);
+        mlog(RAW, "Link Name Length:                                                %lu\n", (unsigned long)link_name_len);
     }
 
     uint8_t link_name[512];
-    readData(link_name, link_name_len, getCurrPos());
+    readData(link_name, link_name_len, getCurrPos()); // plus one for null termination
+    link_name[link_name_len] = '\0';
     if(verbose)
     {
-        mlog(RAW, "Link Name:               %s\n", link_name);
+        mlog(RAW, "Link Name:                                                       %s\n", link_name);
     }
 
     if(link_type == 0) // hard link
@@ -573,7 +587,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
         uint64_t object_header_addr = readField(USE_OFFSET_SIZE);
         if(verbose)
         {
-            mlog(RAW, "Hard Link - Object Header Address: 0x%lx\n", object_header_addr);
+            mlog(RAW, "Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
         }
     }
     else if(link_type == 1) // soft link
@@ -583,7 +597,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
         readData(soft_link, soft_link_len, getCurrPos());
         if(verbose)
         {
-            mlog(RAW, "Soft Link:               %s\n", soft_link);
+            mlog(RAW, "Soft Link:                                                       %s\n", soft_link);
         }
     }
     else if(link_type == 64) // external link
@@ -593,7 +607,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
         readData(ext_link, ext_link_len, getCurrPos());
         if(verbose)
         {
-            mlog(RAW, "External Link:           %s\n", ext_link);
+            mlog(RAW, "External Link:                                                   %s\n", ext_link);
         }
     }
     else if(error_checking)
@@ -623,8 +637,8 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_che
 //    static const int FRHP_HUGE_OBJ_WRAP             = 0x01;
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS    = 0x02;
 
-    uint32_t    signature       = (uint32_t)readField(4, pos);
-    uint8_t     version         =  (uint8_t)readField(1);
+    uint32_t signature = (uint32_t)readField(4, pos);
+    uint8_t  version   =  (uint8_t)readField(1);
     if(error_checking)
     {
         if(signature != H5_FRHP_SIGNATURE_LE)
@@ -638,6 +652,13 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_che
             mlog(CRITICAL, "invalid heap version: %d\n", (int)version);
             throw std::runtime_error("invalid heap version");
         }
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Fractal Heap (%d)\n", (int)type);
+        mlog(RAW, "----------------\n");
     }
 
     uint16_t    heap_obj_id_len     = (uint16_t)readField(2); // Heap ID Length
@@ -712,17 +733,17 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_che
         int blk_offset_sz = (max_heap_size + 7) / 8;
         bool checksum_present = (flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0;
         int blk_size = starting_blk_size;
-        readDirectBlock(blk_offset_sz, checksum_present, blk_size, type, getCurrPos());
+        readDirectBlock(blk_offset_sz, checksum_present, blk_size, mg_objs, type, root_blk_addr);
     }
 }
 
 /*----------------------------------------------------------------------------
  * readDirectBlock
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, msg_type_t type, int64_t pos, bool error_checking, bool verbose)
+void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos, bool error_checking, bool verbose)
 {
-    uint32_t    signature       = (uint32_t)readField(4, pos);
-    uint8_t     version         =  (uint8_t)readField(1);
+    uint32_t signature = (uint32_t)readField(4, pos);
+    uint8_t  version   =  (uint8_t)readField(1);
     if(error_checking)
     {
         if(signature != H5_FHDB_SIGNATURE_LE)
@@ -738,12 +759,19 @@ void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, 
         }
     }
 
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Direct Block (%d)\n", (int)type);
+        mlog(RAW, "----------------\n");
+    }
+    
     uint64_t heap_hdr_addr = (uint64_t)readField(USE_OFFSET_SIZE); // Heap Header Address
     uint64_t blk_offset    = (uint64_t)readField(blk_offset_size); // Block Offset
     if(verbose)
     {
-        mlog(RAW, "Heap Header Address: 0x%lx\n", heap_hdr_addr);
-        mlog(RAW, "Block Offset:        0x%lx\n", blk_offset);
+        mlog(RAW, "Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
+        mlog(RAW, "Block Offset:                                                    0x%lx\n", blk_offset);
     }
 
     if(checksum_present)
@@ -756,8 +784,18 @@ void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, 
     }
 
     /* Read Block Data */
-    int data_to_read = blk_size - (5 + offsetSize + blk_offset_size + ((int)checksum_present * 4));
-    readMessage(type, data_to_read, getCurrPos());
+    int data_left = blk_size - (5 + offsetSize + blk_offset_size + ((int)checksum_present * 4));
+    for(int i = 0; i < msgs_in_blk && data_left > 0; i++)
+    {
+        int64_t start_pos = getCurrPos();
+        if(!readMessage(type, data_left, start_pos))
+        {
+            mlog(CRITICAL, "Failed to read message of type: %d\n", (int)type);
+            break;
+        }
+        int64_t end_pos = getCurrPos();
+        data_left -= end_pos - start_pos;
+    }
 }
 
 /******************************************************************************
