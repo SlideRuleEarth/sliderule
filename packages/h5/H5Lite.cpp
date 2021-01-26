@@ -99,7 +99,6 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     assert(filename);
     assert(_dataset);
 
-    parseDataset(_dataset);
     errorChecking = _error_checking;
     verbose = _verbose;
 
@@ -132,66 +131,18 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
         throw std::runtime_error("failed to open file");
     }
 
-    /* Read and Verify Superblock Info */
-    if(errorChecking)
-    {
-        uint64_t signature = readField(8);
-        if(signature != H5_SIGNATURE_LE)
-        {
-            mlog(CRITICAL, "Invalid h5 file signature: %llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid signature");
-        }
+    /* Get Dataset Path */
+    parseDataset(_dataset); // populates class members
 
-        uint64_t superblock_version = readField(1);
-        if(superblock_version != 0)
-        {
-            mlog(CRITICAL, "Invalid h5 file superblock version: %d\n", (int)superblock_version);
-            throw std::runtime_error("invalid superblock version");
-        }
-
-        uint64_t freespace_version = readField(1);
-        if(freespace_version != 0)
-        {
-            mlog(CRITICAL, "Invalid h5 file free space version: %d\n", (int)freespace_version);
-            throw std::runtime_error("invalid free space version");
-        }
-
-        uint64_t roottable_version = readField(1);
-        if(roottable_version != 0)
-        {
-            mlog(CRITICAL, "Invalid h5 file root table version: %d\n", (int)roottable_version);
-            throw std::runtime_error("invalid root table version");
-        }
-
-        uint64_t headermsg_version = readField(1);
-        if(headermsg_version != 0)
-        {
-            mlog(CRITICAL, "Invalid h5 file header message version: %d\n", (int)headermsg_version);
-            throw std::runtime_error("invalid header message version");
-        }
-    }
-
-    /* Read Size and Root Info */
-    offsetSize          = readField(1, 13);
-    lengthSize          = readField(1, 14);
-    groupLeafNodeK      = readField(2, 16);
-    groupInternalNodeK  = readField(2, 18);
-    rootGroupOffset     = readField(USE_OFFSET_SIZE, 64);
-
-    if(verbose)
-    {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "File Information\n");
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)offsetSize);
-        mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)lengthSize);
-        mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)groupLeafNodeK);
-        mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)groupInternalNodeK);
-        mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)rootGroupOffset);
-    }
+    /* Read Superblock */
+    readSuperblock(); // populates class members
 
     /* Start at Root Group */
-    readObjHdr(rootGroupOffset);
+    if(!readObjHdr(rootGroupOffset))
+    {
+        mlog(CRITICAL, "Failed to find dataset: %s\n", dataset);
+        throw std::runtime_error("failed to find dataset");
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -359,7 +310,7 @@ void H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t pos)
 /*----------------------------------------------------------------------------
  * readObjHdr
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readObjHdr (int64_t pos)
+bool H5FileBuffer::readObjHdr (int64_t pos)
 {
     static const int OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK      = 0x03;
     static const int OBJ_HDR_FLAG_ATTR_CREATION_TRACK_BIT   = 0x04;
@@ -397,7 +348,7 @@ void H5FileBuffer::readObjHdr (int64_t pos)
         if(verbose)
         {
             mlog(RAW, "\n----------------\n");
-            mlog(RAW, "Object Information\n");
+            mlog(RAW, "Object Information [%d]\n", datasetLevel);
             mlog(RAW, "----------------\n");
 
             TimeLib::gmt_time_t access_gmt = TimeLib::gettime(access_time * TIME_MILLISECS_IN_A_SECOND);
@@ -424,36 +375,37 @@ void H5FileBuffer::readObjHdr (int64_t pos)
     /* Read Header Messages */
     uint64_t size_of_chunk0 = readField(1 << (obj_hdr_flags & OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK));
     uint64_t chunk0_data_read = 0;
-    int msg_num = 0;
     while(chunk0_data_read < size_of_chunk0)
     {
         uint8_t     hdr_msg_type    = (uint8_t)readField(1);
         uint16_t    hdr_msg_size    = (uint16_t)readField(2);
-        uint8_t     hdr_msg_flags   = (uint8_t)readField(1);
+        uint8_t     hdr_msg_flags   = (uint8_t)readField(1); (void)hdr_msg_flags;
         chunk0_data_read += 4;
 
-        uint64_t hdr_msg_order = 0;
         if(obj_hdr_flags & OBJ_HDR_FLAG_ATTR_CREATION_TRACK_BIT)
         {
-            hdr_msg_order = (uint8_t)readField(2);
+            uint64_t hdr_msg_order = (uint8_t)readField(2); (void)hdr_msg_order;
             chunk0_data_read += 2;
         }
 
         /* Read Each Message */
-        readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, getCurrPos());
         chunk0_data_read += hdr_msg_size;
-
-        if(verbose)
+        if(readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, getCurrPos()))
         {
-            mlog(CRITICAL, "Message[%d]: type=%d, size=%d, flags=%x, order=%d, end=%x\n", msg_num++, (int)hdr_msg_type, (int)hdr_msg_size, (int)hdr_msg_flags, (int)hdr_msg_order, (int)chunk0_data_read);
+            /* Dataset Found */
+            return true;
         }
     }
 
+    /* Verify Checksum */
     uint64_t check_sum = readField(4);
     if(errorChecking)
     {
         (void)check_sum;
     }
+
+    /* Failed to Find Dataset */
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -461,25 +413,16 @@ void H5FileBuffer::readObjHdr (int64_t pos)
  *----------------------------------------------------------------------------*/
 bool H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos)
 {
+    if(verbose)
+    {
+        mlog(RAW, "\n** Message: type=0x%x, size=%d **\n", (int)type, (int)size);
+    }
+
     switch(type)
     {
-        case LINK_INFO_MSG: // Link Info Message
-        {
-            readLinkInfoMsg(pos);
-            return true;
-        }
-
-        case LINK_MSG: // Link Message
-        {
-            readLinkMsg(pos);
-            return true;
-        }
-
-//        case FILTER_MSG: // Data Storage - Filter Pipeline Message
-//        {
-//            readFilterMsg(pos);
-//            break;
-//        }
+        case LINK_INFO_MSG: return readLinkInfoMsg(pos);
+        case LINK_MSG: return readLinkMsg(pos);
+//        case FILTER_MSG: return readFilterMsg(pos);
 
         default:
         {
@@ -493,7 +436,7 @@ bool H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos)
 /*----------------------------------------------------------------------------
  * readLinkInfoMsg
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readLinkInfoMsg (int64_t pos)
+bool H5FileBuffer::readLinkInfoMsg (int64_t pos)
 {
     static const int MAX_CREATE_PRESENT_BIT     = 0x01;
     static const int CREATE_ORDER_PRESENT_BIT   = 0x02;
@@ -512,11 +455,13 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos)
 
     if(verbose)
     {
+        int dlvl = datasetLevel;
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Link Information Message\n");
+        mlog(RAW, "Link Information Message [%d]\n", dlvl);
         mlog(RAW, "----------------\n");
     }
 
+    /* Read Maximum Creation Index (number of elements in group) */
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
         uint64_t max_create_index = readField(8);
@@ -526,6 +471,7 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos)
         }
     }
 
+    /* Read Heap and Name Offsets */
     uint64_t heap_address = readField();
     uint64_t name_index = readField();
     if(verbose)
@@ -543,13 +489,19 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos)
         }
     }
 
-    readFractalHeap(LINK_MSG, heap_address);
+    /* Follow Heap Address if Provided */
+    if((int)heap_address != -1)
+    {
+        return readFractalHeap(LINK_MSG, heap_address);
+    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------
  * readLinkMsg
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readLinkMsg (int64_t pos)
+bool H5FileBuffer::readLinkMsg (int64_t pos)
 {
     static const int SIZE_OF_LEN_OF_NAME_MASK   = 0x03;
     static const int CREATE_ORDER_PRESENT_BIT   = 0x04;
@@ -570,11 +522,13 @@ void H5FileBuffer::readLinkMsg (int64_t pos)
 
     if(verbose)
     {
+        int dlvl = datasetLevel;
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Link Message\n");
+        mlog(RAW, "Link Message [%d]\n", dlvl);
         mlog(RAW, "----------------\n");
     }
 
+    /* Read Link Type */
     uint8_t link_type = 0;
     if(flags & LINK_TYPE_PRESENT_BIT)
     {
@@ -585,6 +539,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos)
         }
     }
 
+    /* Read Creation Order */
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
         uint64_t create_order = readField(8);
@@ -594,6 +549,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos)
         }
     }
 
+    /* Read Character Set */
     if(flags & CHAR_SET_PRESENT_BIT)
     {
         uint8_t char_set = readField(1);
@@ -603,6 +559,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos)
         }
     }
 
+    /* Read Link Name */
     int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
     if(errorChecking && (link_name_len_of_len > 8))
     {
@@ -624,12 +581,22 @@ void H5FileBuffer::readLinkMsg (int64_t pos)
         mlog(RAW, "Link Name:                                                       %s\n", link_name);
     }
 
+    /* Process Link Type */
     if(link_type == 0) // hard link
     {
         uint64_t object_header_addr = readField(USE_OFFSET_SIZE);
         if(verbose)
         {
             mlog(RAW, "Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
+        }
+
+        if(datasetLevel < datasetPath.length())
+        {
+            if(StringLib::match((const char*)link_name, datasetPath[datasetLevel]))
+            {
+                datasetLevel++;
+                return readObjHdr(object_header_addr);
+            }
         }
     }
     else if(link_type == 1) // soft link
@@ -657,24 +624,92 @@ void H5FileBuffer::readLinkMsg (int64_t pos)
         mlog(CRITICAL, "invalid link type: %d\n", link_type);
         throw std::runtime_error("invalid link type");
     }
+
+    /* Link NOT in Dataset Path */
+    return false;
 }
 
 /*----------------------------------------------------------------------------
  * readFilterMsg
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readFilterMsg (int64_t pos)
+bool H5FileBuffer::readFilterMsg (int64_t pos)
 {
     (void)pos;
     (void)errorChecking;
     (void)verbose;
 
     /* Unimplemented */
+    return false;
+}
+
+/*----------------------------------------------------------------------------
+ * readSuperblock
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::readSuperblock (void)
+{
+    /* Read and Verify Superblock Info */
+    if(errorChecking)
+    {
+        uint64_t signature = readField(8);
+        if(signature != H5_SIGNATURE_LE)
+        {
+            mlog(CRITICAL, "Invalid h5 file signature: %llX\n", (unsigned long long)signature);
+            throw std::runtime_error("invalid signature");
+        }
+
+        uint64_t superblock_version = readField(1);
+        if(superblock_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file superblock version: %d\n", (int)superblock_version);
+            throw std::runtime_error("invalid superblock version");
+        }
+
+        uint64_t freespace_version = readField(1);
+        if(freespace_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file free space version: %d\n", (int)freespace_version);
+            throw std::runtime_error("invalid free space version");
+        }
+
+        uint64_t roottable_version = readField(1);
+        if(roottable_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file root table version: %d\n", (int)roottable_version);
+            throw std::runtime_error("invalid root table version");
+        }
+
+        uint64_t headermsg_version = readField(1);
+        if(headermsg_version != 0)
+        {
+            mlog(CRITICAL, "Invalid h5 file header message version: %d\n", (int)headermsg_version);
+            throw std::runtime_error("invalid header message version");
+        }
+    }
+
+    /* Read Size and Root Info */
+    offsetSize          = readField(1, 13);
+    lengthSize          = readField(1, 14);
+    groupLeafNodeK      = readField(2, 16);
+    groupInternalNodeK  = readField(2, 18);
+    rootGroupOffset     = readField(USE_OFFSET_SIZE, 64);
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "File Information\n");
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)offsetSize);
+        mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)lengthSize);
+        mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)groupLeafNodeK);
+        mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)groupInternalNodeK);
+        mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)rootGroupOffset);
+    }
 }
 
 /*----------------------------------------------------------------------------
  * readFractalHeap
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos)
+bool H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos)
 {
 //    static const int FRHP_HUGE_OBJ_WRAP             = 0x01;
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS    = 0x02;
@@ -698,11 +733,13 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos)
 
     if(verbose)
     {
+        int dlvl = datasetLevel;
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Fractal Heap (%d)\n", (int)type);
+        mlog(RAW, "Fractal Heap [%d,%d]\n", dlvl, (int)type);
         mlog(RAW, "----------------\n");
     }
 
+    /*  Read Fractal Heap Header */
     uint16_t    heap_obj_id_len     = (uint16_t)readField(2); // Heap ID Length
     uint16_t    io_filter_len       = (uint16_t)readField(2); // I/O Filters' Encoded Length
     uint8_t     flags               =  (uint8_t)readField(1); // Flags
@@ -727,6 +764,7 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos)
     uint64_t    root_blk_addr       = (uint64_t)readField(USE_OFFSET_SIZE); // Address of Root Block
     uint16_t    curr_num_rows       = (uint16_t)readField(2); // Current # of Rows in Root Indirect Block
 
+    /* Read Filter Information */
     if(io_filter_len > 0)
     {
         uint64_t filter_root_dblk   = (uint64_t)readField(USE_LENGTH_SIZE); // Size of Filtered Root Direct Block
@@ -764,25 +802,30 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos)
         mlog(RAW, "Current # of Rows in Root Indirect Block:                        %lu\n", (unsigned long)curr_num_rows);
     }
 
+    /* Check Checksum */
     uint64_t check_sum = readField(4);
     if(errorChecking)
     {
         (void)check_sum;
     }
 
+    /* Process Direct Block */
     if(curr_num_rows == 0)
     {
         int blk_offset_sz = (max_heap_size + 7) / 8;
         bool checksum_present = (flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0;
         int blk_size = starting_blk_size;
-        readDirectBlock(blk_offset_sz, checksum_present, blk_size, mg_objs, type, root_blk_addr);
+        return readDirectBlock(blk_offset_sz, checksum_present, blk_size, mg_objs, type, root_blk_addr);
     }
+
+    /* Heap NOT in Dataset Path */
+    return false;
 }
 
 /*----------------------------------------------------------------------------
  * readDirectBlock
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos)
+bool H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos)
 {
     uint32_t signature = (uint32_t)readField(4, pos);
     uint8_t  version   =  (uint8_t)readField(1);
@@ -803,11 +846,13 @@ void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, 
 
     if(verbose)
     {
+        int dlvl = datasetLevel;
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Direct Block (%d)\n", (int)type);
+        mlog(RAW, "Direct Block [%d,%d]\n", dlvl, (int)type);
         mlog(RAW, "----------------\n");
     }
     
+    /* Read Block Header */
     uint64_t heap_hdr_addr = (uint64_t)readField(USE_OFFSET_SIZE); // Heap Header Address
     uint64_t blk_offset    = (uint64_t)readField(blk_offset_size); // Block Offset
     if(verbose)
@@ -830,14 +875,17 @@ void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, 
     for(int i = 0; i < msgs_in_blk && data_left > 0; i++)
     {
         int64_t start_pos = getCurrPos();
-        if(!readMessage(type, data_left, start_pos))
+        if(readMessage(type, data_left, start_pos))
         {
-            mlog(CRITICAL, "Failed to read message of type: %d\n", (int)type);
-            break;
+            /* Dataset Found */
+            return true;
         }
         int64_t end_pos = getCurrPos();
         data_left -= end_pos - start_pos;
     }
+
+    /* Direct Block NOT in Dataset Path */
+    return false;
 }
 
 /******************************************************************************

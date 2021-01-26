@@ -93,16 +93,17 @@ class H5FileBuffer
 
         uint64_t            readField           (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
         void                readData            (uint8_t* data, uint64_t size, uint64_t pos);
-        void                readObjHdr          (int64_t pos);
+        bool                readObjHdr          (int64_t pos);
         
         bool                readMessage         (msg_type_t type, uint64_t size, int64_t pos);
-        void                readLinkInfoMsg     (int64_t pos);
-        void                readLinkMsg         (int64_t pos);
-        void                readFilterMsg       (int64_t pos);
+        bool                readLinkInfoMsg     (int64_t pos);
+        bool                readLinkMsg         (int64_t pos);
+        bool                readFilterMsg       (int64_t pos);
         
-        void                readFractalHeap     (msg_type_t type, int64_t pos);
-        void                readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos);
-        void                readIndirectBlock   (int64_t pos);
+        void                readSuperblock      (void);        
+        bool                readFractalHeap     (msg_type_t type, int64_t pos);
+        bool                readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos);
+        bool                readIndirectBlock   (int64_t pos);
 
         
         /*--------------------------------------------------------------------
