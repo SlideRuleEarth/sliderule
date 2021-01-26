@@ -25,6 +25,7 @@
  ******************************************************************************/
 
 #include "RecordObject.h"
+#include "List.h"
 
 /******************************************************************************
  * HDF5 FILE BUFFER CLASS
@@ -57,10 +58,8 @@ class H5FileBuffer
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5FileBuffer        (const char* filename, bool error_checking=true);
+                            H5FileBuffer        (const char* filename, const char* _dataset, bool _error_checking=false, bool _verbose=false);
         virtual             ~H5FileBuffer       ();
-
-        void                displayFileInfo     (void);
 
     protected:
 
@@ -89,40 +88,46 @@ class H5FileBuffer
          * Methods
          *--------------------------------------------------------------------*/
 
+        void                parseDataset        (const char* _dataset);
         int64_t             getCurrPos          (void);
 
         uint64_t            readField           (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
         void                readData            (uint8_t* data, uint64_t size, uint64_t pos);
-        void                readObjHdr          (int64_t pos, bool error_checking=true, bool verbose=true);
+        void                readObjHdr          (int64_t pos);
         
-        bool                readMessage         (msg_type_t type, uint64_t size, int64_t pos, bool error_checking=true, bool verbose=true);
-        void                readLinkInfoMsg     (int64_t pos, bool error_checking=true, bool verbose=true);
-        void                readLinkMsg         (int64_t pos, bool error_checking=true, bool verbose=true);
-        void                readFilterMsg       (int64_t pos, bool error_checking=true, bool verbose=true);
+        bool                readMessage         (msg_type_t type, uint64_t size, int64_t pos);
+        void                readLinkInfoMsg     (int64_t pos);
+        void                readLinkMsg         (int64_t pos);
+        void                readFilterMsg       (int64_t pos);
         
-        void                readFractalHeap     (msg_type_t type, int64_t pos, bool error_checking=true, bool verbose=true);
-        void                readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos, bool error_checking=true, bool verbose=true);
-        void                readIndirectBlock   (int64_t pos, bool error_checking=true, bool verbose=true);
+        void                readFractalHeap     (msg_type_t type, int64_t pos);
+        void                readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos);
+        void                readIndirectBlock   (int64_t pos);
 
         
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        fileptr_t   fp;
+        fileptr_t           fp;
+        const char*         dataset;
+        List<const char*>   datasetPath;
+        int                 datasetLevel;        
+        bool                errorChecking;
+        bool                verbose;
 
         /* Buffer Management */
-        uint8_t     buffer[READ_BUFSIZE];
-        int64_t     buffSize;
-        int64_t     currBuffPosition;
-        int64_t     currBuffOffset;
+        uint8_t             buffer[READ_BUFSIZE];
+        int64_t             buffSize;
+        int64_t             currBuffPosition;
+        int64_t             currBuffOffset;
 
         /* File Meta Attributes */
-        int         offsetSize;
-        int         lengthSize;
-        int         groupLeafNodeK;
-        int         groupInternalNodeK;
-        int64_t     rootGroupOffset;
+        int                 offsetSize;
+        int                 lengthSize;
+        int                 groupLeafNodeK;
+        int                 groupInternalNodeK;
+        int64_t             rootGroupOffset;
 };
 
 /******************************************************************************

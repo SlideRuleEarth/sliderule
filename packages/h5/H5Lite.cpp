@@ -94,8 +94,26 @@ uint64_t get_field(uint8_t* buffer, int buffer_size, int* field_offset, int fiel
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
+H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _error_checking, bool _verbose)
 {
+    assert(filename);
+    assert(_dataset);
+
+    parseDataset(_dataset);
+    errorChecking = _error_checking;
+    verbose = _verbose;
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Dataset: ");
+        for(int g = 0; g < datasetPath.length(); g++)
+        {
+            mlog(RAW, "/%s", datasetPath[g]);
+        }
+        mlog(RAW, "\n----------------\n");
+    }
+
     /* Initialize */
     buffSize = 0;
     currBuffPosition = 0;
@@ -115,7 +133,7 @@ H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
     }
 
     /* Read and Verify Superblock Info */
-    if(error_checking)
+    if(errorChecking)
     {
         uint64_t signature = readField(8);
         if(signature != H5_SIGNATURE_LE)
@@ -160,7 +178,19 @@ H5FileBuffer::H5FileBuffer (const char* filename, bool error_checking)
     groupInternalNodeK  = readField(2, 18);
     rootGroupOffset     = readField(USE_OFFSET_SIZE, 64);
 
-    /* Read Root Group */
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "File Information\n");
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)offsetSize);
+        mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)lengthSize);
+        mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)groupLeafNodeK);
+        mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)groupInternalNodeK);
+        mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)rootGroupOffset);
+    }
+
+    /* Start at Root Group */
     readObjHdr(rootGroupOffset);
 }
 
@@ -173,18 +203,30 @@ H5FileBuffer::~H5FileBuffer (void)
 }
 
 /*----------------------------------------------------------------------------
- * displayFileInfo
+ * getCurrPos
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::displayFileInfo (void)
+void H5FileBuffer::parseDataset (const char* _dataset)
 {
-    mlog(RAW, "\n----------------\n");
-    mlog(RAW, "File Information\n");
-    mlog(RAW, "----------------\n");
-    mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)offsetSize);
-    mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)lengthSize);
-    mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)groupLeafNodeK);
-    mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)groupInternalNodeK);
-    mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)rootGroupOffset);
+    /* Create Copy of Dataset */
+    dataset = StringLib::duplicate(_dataset);
+
+    /* Initialize Level to Zero */
+    datasetLevel = 0;
+    
+    /* Get Pointer to First Group in Dataset */
+    const char* gptr; // group pointer
+    if(dataset[0] == '/')   gptr = &dataset[1];
+    else                    gptr = &dataset[0];
+
+    /* Build Path to Dataset */
+    while(true)
+    {        
+        datasetPath.add(gptr);                      // add group to dataset path
+        char* nptr = StringLib::find(gptr, '/');    // look for next group marker
+        if(nptr == NULL) break;                     // if not found, then exit
+        *nptr = '\0';                               // terminate group string
+        gptr = nptr + 1;                            // go to start of next group
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -317,7 +359,7 @@ void H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t pos)
 /*----------------------------------------------------------------------------
  * readObjHdr
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
+void H5FileBuffer::readObjHdr (int64_t pos)
 {
     static const int OBJ_HDR_FLAG_SIZE_OF_CHUNK_0_MASK      = 0x03;
     static const int OBJ_HDR_FLAG_ATTR_CREATION_TRACK_BIT   = 0x04;
@@ -328,7 +370,7 @@ void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
     /* Read Object Header */
     uint64_t signature = readField(4, pos);
     uint64_t version = readField(1);
-    if(error_checking)
+    if(errorChecking)
     {
         if(signature != H5_OHDR_SIGNATURE_LE)
         {
@@ -408,7 +450,7 @@ void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
     }
 
     uint64_t check_sum = readField(4);
-    if(error_checking)
+    if(errorChecking)
     {
         (void)check_sum;
     }
@@ -417,25 +459,25 @@ void H5FileBuffer::readObjHdr (int64_t pos, bool error_checking, bool verbose)
 /*----------------------------------------------------------------------------
  * readMessage
  *----------------------------------------------------------------------------*/
-bool H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos, bool error_checking, bool verbose)
+bool H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos)
 {
     switch(type)
     {
         case LINK_INFO_MSG: // Link Info Message
         {
-            readLinkInfoMsg(pos, error_checking, verbose);
+            readLinkInfoMsg(pos);
             return true;
         }
 
         case LINK_MSG: // Link Message
         {
-            readLinkMsg(pos, error_checking, verbose);
+            readLinkMsg(pos);
             return true;
         }
 
 //        case FILTER_MSG: // Data Storage - Filter Pipeline Message
 //        {
-//            readFilterMsg(pos, error_checking, verbose);
+//            readFilterMsg(pos);
 //            break;
 //        }
 
@@ -451,7 +493,7 @@ bool H5FileBuffer::readMessage (msg_type_t type, uint64_t size, int64_t pos, boo
 /*----------------------------------------------------------------------------
  * readLinkInfoMsg
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readLinkInfoMsg (int64_t pos, bool error_checking, bool verbose)
+void H5FileBuffer::readLinkInfoMsg (int64_t pos)
 {
     static const int MAX_CREATE_PRESENT_BIT     = 0x01;
     static const int CREATE_ORDER_PRESENT_BIT   = 0x02;
@@ -459,7 +501,7 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos, bool error_checking, bool verbo
     uint64_t version = readField(1, pos);
     uint64_t flags = readField(1);
 
-    if(error_checking)
+    if(errorChecking)
     {
         if(version != 0)
         {
@@ -507,7 +549,7 @@ void H5FileBuffer::readLinkInfoMsg (int64_t pos, bool error_checking, bool verbo
 /*----------------------------------------------------------------------------
  * readLinkMsg
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
+void H5FileBuffer::readLinkMsg (int64_t pos)
 {
     static const int SIZE_OF_LEN_OF_NAME_MASK   = 0x03;
     static const int CREATE_ORDER_PRESENT_BIT   = 0x04;
@@ -517,7 +559,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
     uint64_t version = readField(1, pos);
     uint64_t flags = readField(1);
 
-    if(error_checking)
+    if(errorChecking)
     {
         if(version != 1)
         {
@@ -562,7 +604,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
     }
 
     int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
-    if(error_checking && (link_name_len_of_len > 8))
+    if(errorChecking && (link_name_len_of_len > 8))
     {
         mlog(CRITICAL, "invalid link name length of length: %d\n", (int)link_name_len_of_len);
         throw std::runtime_error("invalid link name length of length");
@@ -610,7 +652,7 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
             mlog(RAW, "External Link:                                                   %s\n", ext_link);
         }
     }
-    else if(error_checking)
+    else if(errorChecking)
     {
         mlog(CRITICAL, "invalid link type: %d\n", link_type);
         throw std::runtime_error("invalid link type");
@@ -620,10 +662,10 @@ void H5FileBuffer::readLinkMsg (int64_t pos, bool error_checking, bool verbose)
 /*----------------------------------------------------------------------------
  * readFilterMsg
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readFilterMsg (int64_t pos, bool error_checking, bool verbose)
+void H5FileBuffer::readFilterMsg (int64_t pos)
 {
     (void)pos;
-    (void)error_checking;
+    (void)errorChecking;
     (void)verbose;
 
     /* Unimplemented */
@@ -632,14 +674,14 @@ void H5FileBuffer::readFilterMsg (int64_t pos, bool error_checking, bool verbose
 /*----------------------------------------------------------------------------
  * readFractalHeap
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_checking, bool verbose)
+void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos)
 {
 //    static const int FRHP_HUGE_OBJ_WRAP             = 0x01;
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS    = 0x02;
 
     uint32_t signature = (uint32_t)readField(4, pos);
     uint8_t  version   =  (uint8_t)readField(1);
-    if(error_checking)
+    if(errorChecking)
     {
         if(signature != H5_FRHP_SIGNATURE_LE)
         {
@@ -692,7 +734,7 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_che
         mlog(RAW, "Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
         mlog(RAW, "I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
 
-        readMessage(FILTER_MSG, io_filter_len, getCurrPos(), error_checking, verbose);
+        readMessage(FILTER_MSG, io_filter_len, getCurrPos());
     }
 
     if(verbose)
@@ -723,7 +765,7 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_che
     }
 
     uint64_t check_sum = readField(4);
-    if(error_checking)
+    if(errorChecking)
     {
         (void)check_sum;
     }
@@ -740,11 +782,11 @@ void H5FileBuffer::readFractalHeap (msg_type_t type, int64_t pos, bool error_che
 /*----------------------------------------------------------------------------
  * readDirectBlock
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos, bool error_checking, bool verbose)
+void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos)
 {
     uint32_t signature = (uint32_t)readField(4, pos);
     uint8_t  version   =  (uint8_t)readField(1);
-    if(error_checking)
+    if(errorChecking)
     {
         if(signature != H5_FHDB_SIGNATURE_LE)
         {
@@ -777,7 +819,7 @@ void H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, 
     if(checksum_present)
     {
         uint64_t check_sum = readField(4);
-        if(error_checking)
+        if(errorChecking)
         {
             (void)check_sum;
         }
@@ -880,6 +922,8 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
         }
 
         /* Open Resource */
+        H5FileBuffer h5file(resource, datasetname, true, true);
+
         fileptr_t file = NULL; //H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file == NULL)
         {
@@ -934,8 +978,8 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 {
     (void)max_depth;
-    (void)start_group;
-    bool status = false;
+ 
+    bool status = true;
 
     try
     {
@@ -948,8 +992,7 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
         }
 
         /* Open File */
-        H5FileBuffer h5file(resource);
-        h5file.displayFileInfo();
+        H5FileBuffer h5file(resource, start_group, true, true);
     }
     catch (const std::exception &e)
     {
