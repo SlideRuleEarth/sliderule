@@ -79,6 +79,7 @@ class H5FileBuffer
         int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readObjHdr          (uint64_t pos, int dlvl);
+        int                 readObjHdrV1        (uint64_t pos, int dlvl);
 
         int                 readMessage         (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkInfoMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);

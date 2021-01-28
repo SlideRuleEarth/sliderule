@@ -299,7 +299,7 @@ int H5FileBuffer::readSuperblock (void)
         uint64_t signature = readField(8, &pos);
         if(signature != H5_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "Invalid h5 file signature: %llX\n", (unsigned long long)signature);
+            mlog(CRITICAL, "Invalid h5 file signature: 0x%llX\n", (unsigned long long)signature);
             throw std::runtime_error("invalid signature");
         }
 
@@ -377,7 +377,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_t hdr_fl
         uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FRHP_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid heap signature: %llX\n", (unsigned long long)signature);
+            mlog(CRITICAL, "invalid heap signature: 0x%llX\n", (unsigned long long)signature);
             throw std::runtime_error("invalid heap signature");
         }
 
@@ -502,7 +502,7 @@ int H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, i
         uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FHDB_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid direct block signature: %llX\n", (unsigned long long)signature);
+            mlog(CRITICAL, "invalid direct block signature: 0x%llX\n", (unsigned long long)signature);
             throw std::runtime_error("invalid direct block signature");
         }
 
@@ -567,6 +567,11 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
 
     uint64_t starting_position = pos;
 
+    /* Peek at Version / Process Version 1 */
+    uint64_t peeking_position = pos;
+    uint8_t peek = readField(1, &peeking_position);
+    if(peek == 1) return readObjHdrV1(starting_position, dlvl);
+
     /* Read Object Header */
     if(!errorChecking)
     {
@@ -577,7 +582,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
         uint64_t signature = readField(4, &pos);
         if(signature != H5_OHDR_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid header signature: %llX\n", (unsigned long long)signature);
+            mlog(CRITICAL, "invalid header signature: 0x%llX\n", (unsigned long long)signature);
             throw std::runtime_error("invalid header signature");
         }
 
@@ -639,7 +644,6 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     /* Read Header Messages */
     uint64_t size_of_chunk0 = readField(1 << (obj_hdr_flags & SIZE_OF_CHUNK_0_MASK), &pos);
     uint64_t end_of_hdr = pos + size_of_chunk0;
-
     while(pos < end_of_hdr)
     {
         uint8_t     hdr_msg_type    = (uint8_t)readField(1, &pos);
@@ -668,6 +672,110 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
         (void)check_sum;
     }
 
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readObjHdrV1
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
+{
+    uint64_t starting_position = pos;
+
+    /* Read Version */
+    if(!errorChecking)
+    {
+        pos += 2;
+    }
+    else
+    {
+        uint8_t version = (uint8_t)readField(1, &pos);
+        if(version != 1)
+        {
+            mlog(CRITICAL, "invalid header version: %d\n", (int)version);
+            throw std::runtime_error("invalid header version");
+        }
+
+        uint8_t reserved0 = (uint8_t)readField(1, &pos); 
+        if(reserved0 != 0)
+        {
+            mlog(CRITICAL, "invalid reserved field: %d\n", (int)reserved0);
+            throw std::runtime_error("invalid reserved field");
+        }
+    }
+
+    /* Read Number of Header Messages */
+    uint16_t num_hdr_msgs = (uint16_t)readField(2, &pos);
+
+    /* Read Object Reference Count */
+    if(!verbose)
+    {
+        pos += 4;
+    }
+    else
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Object Information V1 [%d]\n", dlvl);
+        mlog(RAW, "----------------\n");
+
+        uint32_t obj_ref_count = (uint32_t)readField(4, &pos);
+        mlog(RAW, "Object Reference Count:                                          %d\n", (int)obj_ref_count);
+    }
+
+    /* Read Object Header Size */
+    uint64_t obj_hdr_size = readField(lengthSize, &pos);
+
+    /* Read Header Messages */
+    int msg_num = 0;
+    uint64_t end_of_hdr = pos + obj_hdr_size;
+    while((msg_num < num_hdr_msgs) && (pos < end_of_hdr))
+    {
+        uint16_t    hdr_msg_type    = (uint16_t)readField(2, &pos);
+        uint16_t    hdr_msg_size    = (uint16_t)readField(2, &pos);
+        uint8_t     hdr_msg_flags   = (uint8_t)readField(1, &pos); (void)hdr_msg_flags;
+        
+        /* Reserved Bytes */
+        if(!errorChecking)
+        {
+            pos += 3;
+        }
+        else
+        {
+            uint8_t  reserved1 = (uint8_t)readField(1, &pos);
+            uint16_t reserved2 = (uint16_t)readField(2, &pos);
+            if((reserved1 != 0) && (reserved2 != 0))
+            {
+                mlog(CRITICAL, "invalid reserved fields: %d, %d\n", (int)reserved1, (int)reserved2);
+                throw std::runtime_error("invalid reserved fields");
+            }
+        }
+
+        /* Read Each Message */
+        int bytes_read = readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, pos, 0, dlvl);
+        if(errorChecking && (bytes_read != hdr_msg_size))
+        {
+            mlog(CRITICAL, "Header message different size than specified: %d != %d\n", bytes_read, hdr_msg_size);
+            throw std::runtime_error("invalid header message");            
+        }
+        pos += hdr_msg_size;
+    }
+
+    /* Check Size */
+    if(errorChecking)
+    {
+        if(msg_num != num_hdr_msgs)
+        {
+            mlog(CRITICAL, "Did not read all messages: %d != %d\n", msg_num, num_hdr_msgs);
+            throw std::runtime_error("did not read all messages");            
+        }
+        else if(pos != end_of_hdr)
+        {
+            mlog(CRITICAL, "Did not read correct number of bytes: %lu != %lu\n", (unsigned long)pos, (unsigned long)end_of_hdr);
+            throw std::runtime_error("did not read correct number bytes");            
+        }
+    }
     /* Return Bytes Read */
     uint64_t ending_position = pos;    
     return ending_position - starting_position;
@@ -795,12 +903,12 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Link Message [%d]\n", dlvl);
+        mlog(RAW, "Link Message [%d]: 0x%x\n", dlvl, (unsigned)flags);
         mlog(RAW, "----------------\n");
     }
 
     /* Read Link Type */
-    uint8_t link_type = 0;
+    uint8_t link_type = 0; // default to hard link
     if(flags & LINK_TYPE_PRESENT_BIT)
     {
         link_type = readField(1, &pos);
@@ -931,7 +1039,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t signature = readField(4, &pos);
         if(signature != H5_OCHK_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid header continuation signature: %llX\n", (unsigned long long)signature);
+            mlog(CRITICAL, "invalid header continuation signature: 0x%llX\n", (unsigned long long)signature);
             throw std::runtime_error("invalid header continuation signature");
         }
     }

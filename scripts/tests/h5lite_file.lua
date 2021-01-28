@@ -10,7 +10,7 @@ console.logger:config(core.INFO)
 print('\n------------------\nTest01: Traverse\n------------------')
 
 f1 = h5.file("file:///data/ATLAS/ATL03_20200304065203_10470605_003_01.h5")
-runner.check(f1:dir(2, "gt2l"), "failed to traverse h5lite file")
+runner.check(f1:dir(2, "gt2l/heights"), "failed to traverse h5lite file")
 
 -- Clean Up --
 
