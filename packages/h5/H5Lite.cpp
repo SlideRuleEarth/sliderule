@@ -920,8 +920,6 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     static const int ATTR_CREATION_TRACK_BIT = 0x04;
 
-    uint64_t starting_position = pos;
-
     /* Continuation Info */
     uint64_t hc_offset = readField(offsetSize, &pos);
     uint64_t hc_length = readField(lengthSize, &pos);
@@ -951,7 +949,6 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t end_of_chdr = hc_offset + hc_length - 4; // leave 4 bytes for checksum below
     while(pos < end_of_chdr) 
     {
-mlog(RAW, "\nHC Message: 0x%lx of 0x%lx\n", (unsigned long)pos, (unsigned long)end_of_chdr);
         uint8_t     hdr_msg_type    = (uint8_t)readField(1, &pos);
         uint16_t    hdr_msg_size    = (uint16_t)readField(2, &pos);
         uint8_t     hdr_msg_flags   = (uint8_t)readField(1, &pos); (void)hdr_msg_flags;
@@ -970,7 +967,7 @@ mlog(RAW, "\nHC Message: 0x%lx of 0x%lx\n", (unsigned long)pos, (unsigned long)e
         }
         pos += hdr_msg_size;
     }
-mlog(RAW, "Finished Header Continuation\n\n");
+
     /* Verify Checksum */
     uint64_t check_sum = readField(4, &pos);
     if(errorChecking)
@@ -979,8 +976,7 @@ mlog(RAW, "Finished Header Continuation\n\n");
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
-    return ending_position - starting_position;
+    return offsetSize + lengthSize;
 }
 
 /******************************************************************************
