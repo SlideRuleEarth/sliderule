@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+u"""
+algorithm.py
+"""
 #
 # Imports
 #
@@ -40,7 +44,7 @@ def algoexec(resource, asset):
 
     # Build ATL06 Request
     parms = {
-#       "poly": [{"lat": -80.0, "lon": -70.0}, 
+#       "poly": [{"lat": -80.0, "lon": -70.0},
 #                {"lat": -82.5, "lon": -70.0},
 #                {"lat": -82.5, "lon": -65.0},
 #                {"lat": -80.0, "lon": -65.0}],
@@ -87,7 +91,7 @@ def expread(resource, asset):
     latitudes   = icesat2.h5("/gt1r/land_ice_segments/latitude",    resource, asset)
     longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
 
-    # Build Dataframe of SlideRule Responses    
+    # Build Dataframe of SlideRule Responses
     lat_origin = latitudes[0]
     lon_origin = longitudes[0]
     distances = [geodist(lat_origin, lon_origin, latitudes[i], longitudes[i]) for i in range(len(heights))]
