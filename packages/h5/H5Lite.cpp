@@ -472,13 +472,13 @@ int H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_t hdr_fl
         int blk_offset_sz = (max_heap_size + 7) / 8;
         bool checksum_present = (flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0;
         int blk_size = starting_blk_size;
-        pos += blk_size;
         int bytes_read = readDirectBlock(blk_offset_sz, checksum_present, blk_size, mg_objs, type, root_blk_addr, hdr_flags, dlvl);
-        if(errorChecking && (bytes_read != blk_size))
+        if(errorChecking && (bytes_read > blk_size))
         {
-            mlog(CRITICAL, "Direct block contained more bytes than specified: %d != %d\n", bytes_read, blk_size);
+            mlog(CRITICAL, "Direct block contianed more bytes than specified: %d > %d\n", bytes_read, blk_size);
             throw std::runtime_error("invalid direct block");            
         }
+        pos += blk_size;        
     }
 
     /* Return Bytes Read */
@@ -655,7 +655,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
         int bytes_read = readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, pos, obj_hdr_flags, dlvl);
         if(errorChecking && (bytes_read != hdr_msg_size))
         {
-            mlog(CRITICAL, "Header message contained more bytes than specified: %d != %d\n", bytes_read, hdr_msg_size);
+            mlog(CRITICAL, "Header message different size than specified: %d != %d\n", bytes_read, hdr_msg_size);
             throw std::runtime_error("invalid header message");            
         }
         pos += hdr_msg_size;
@@ -962,7 +962,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         int bytes_read = readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, pos, hdr_flags, dlvl);
         if(errorChecking && (bytes_read != hdr_msg_size))
         {
-            mlog(CRITICAL, "Header continuation message contained more bytes than specified: %d != %d\n", bytes_read, hdr_msg_size);
+            mlog(CRITICAL, "Header continuation message different size than specified: %d != %d\n", bytes_read, hdr_msg_size);
             throw std::runtime_error("invalid header continuation message");            
         }
         pos += hdr_msg_size;
