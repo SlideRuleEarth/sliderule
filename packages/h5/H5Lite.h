@@ -36,21 +36,14 @@ class H5FileBuffer
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int64_t    USE_OFFSET_SIZE         = -1;
-        static const int64_t    USE_LENGTH_SIZE         = -2;
-        static const int64_t    USE_CURRENT_POSITION    = -1;
-
-        /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
         
         typedef enum {
             LINK_INFO_MSG   = 0x2,
             LINK_MSG        = 0x6,
-            FILTER_MSG      = 0xB
+            FILTER_MSG      = 0xB,
+            HEADER_CONT_MSG = 0x10
         } msg_type_t;
 
 
@@ -72,39 +65,27 @@ class H5FileBuffer
         static const uint64_t   H5_OHDR_SIGNATURE_LE                    = 0x5244484FLL; // object header
         static const uint64_t   H5_FRHP_SIGNATURE_LE                    = 0x50485246LL; // fractal heap
         static const uint64_t   H5_FHDB_SIGNATURE_LE                    = 0x42444846LL; // direct block
-
-        /*--------------------------------------------------------------------
-         * TypeDefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            uint64_t    access_time;
-            uint64_t    modification_time;
-            uint64_t    change_time;
-            uint64_t    birth_time;
-        } obj_hdr_t;
+        static const uint64_t   H5_OCHK_SIGNATURE_LE                    = 0x4B48434FLL; // object header continuation block
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         void                parseDataset        (const char* _dataset);
-        int64_t             getCurrPos          (void);
+        uint64_t            readField           (int size, uint64_t* pos);
+        void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
 
-        uint64_t            readField           (int size=USE_OFFSET_SIZE, int64_t pos=USE_CURRENT_POSITION);
-        void                readData            (uint8_t* data, uint64_t size, uint64_t pos);
-        bool                readObjHdr          (int64_t pos);
-        
-        bool                readMessage         (msg_type_t type, uint64_t size, int64_t pos);
-        bool                readLinkInfoMsg     (int64_t pos);
-        bool                readLinkMsg         (int64_t pos);
-        bool                readFilterMsg       (int64_t pos);
-        
-        void                readSuperblock      (void);        
-        bool                readFractalHeap     (msg_type_t type, int64_t pos);
-        bool                readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, int64_t pos);
-        bool                readIndirectBlock   (int64_t pos);
+        int                 readSuperblock      (void);        
+        int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readObjHdr          (uint64_t pos, int dlvl);
 
+        int                 readMessage         (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readLinkInfoMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readLinkMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        
         
         /*--------------------------------------------------------------------
          * Data
@@ -113,22 +94,20 @@ class H5FileBuffer
         fileptr_t           fp;
         const char*         dataset;
         List<const char*>   datasetPath;
-        int                 datasetLevel;        
         bool                errorChecking;
         bool                verbose;
 
         /* Buffer Management */
         uint8_t             buffer[READ_BUFSIZE];
-        int64_t             buffSize;
-        int64_t             currBuffPosition;
-        int64_t             currBuffOffset;
+        uint64_t            buffSize;
+        uint64_t            currFilePosition;
 
         /* File Meta Attributes */
         int                 offsetSize;
         int                 lengthSize;
         int                 groupLeafNodeK;
         int                 groupInternalNodeK;
-        int64_t             rootGroupOffset;
+        uint64_t            rootGroupOffset;
 };
 
 /******************************************************************************
