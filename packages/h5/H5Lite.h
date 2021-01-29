@@ -66,6 +66,7 @@ class H5FileBuffer
         static const uint64_t   H5_FRHP_SIGNATURE_LE                    = 0x50485246LL; // fractal heap
         static const uint64_t   H5_FHDB_SIGNATURE_LE                    = 0x42444846LL; // direct block
         static const uint64_t   H5_OCHK_SIGNATURE_LE                    = 0x4B48434FLL; // object header continuation block
+        static const uint8_t    H5LITE_CUSTOM_V1_FLAG                   = 0x80; // used to indicate version 1 object header (reserved)
 
         /*--------------------------------------------------------------------
          * Methods
@@ -78,10 +79,13 @@ class H5FileBuffer
         int                 readSuperblock      (void);        
         int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readObjHdr          (uint64_t pos, int dlvl);
-        int                 readObjHdrV1        (uint64_t pos, int dlvl);
 
+        int                 readObjHdr          (uint64_t pos, int dlvl);
+        int                 readMessages        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
+        int                 readObjHdrV1        (uint64_t pos, int dlvl);
+        int                 readMessagesV1      (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
         int                 readMessage         (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
+
         int                 readLinkInfoMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);

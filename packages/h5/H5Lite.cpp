@@ -561,7 +561,6 @@ int H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, i
 int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
 {
     static const int SIZE_OF_CHUNK_0_MASK      = 0x03;
-    static const int ATTR_CREATION_TRACK_BIT   = 0x04;
     static const int STORE_CHANGE_PHASE_BIT    = 0x10;
     static const int FILE_STATS_BIT            = 0x20;
 
@@ -644,32 +643,61 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     /* Read Header Messages */
     uint64_t size_of_chunk0 = readField(1 << (obj_hdr_flags & SIZE_OF_CHUNK_0_MASK), &pos);
     uint64_t end_of_hdr = pos + size_of_chunk0;
-    while(pos < end_of_hdr)
-    {
-        uint8_t     hdr_msg_type    = (uint8_t)readField(1, &pos);
-        uint16_t    hdr_msg_size    = (uint16_t)readField(2, &pos);
-        uint8_t     hdr_msg_flags   = (uint8_t)readField(1, &pos); (void)hdr_msg_flags;
-
-        if(obj_hdr_flags & ATTR_CREATION_TRACK_BIT)
-        {
-            uint64_t hdr_msg_order = (uint8_t)readField(2, &pos); (void)hdr_msg_order;
-        }
-
-        /* Read Each Message */
-        int bytes_read = readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, pos, obj_hdr_flags, dlvl);
-        if(errorChecking && (bytes_read != hdr_msg_size))
-        {
-            mlog(CRITICAL, "Header message different size than specified: %d != %d\n", bytes_read, hdr_msg_size);
-            throw std::runtime_error("invalid header message");            
-        }
-        pos += hdr_msg_size;
-    }
+    pos += readMessages (pos, end_of_hdr, obj_hdr_flags, dlvl);    
 
     /* Verify Checksum */
     uint64_t check_sum = readField(4, &pos);
     if(errorChecking)
     {
         (void)check_sum;
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readMessages
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
+{
+    static const int ATTR_CREATION_TRACK_BIT   = 0x04;
+
+    uint64_t starting_position = pos;
+
+    while(pos < end) 
+    {
+        /* Read Message Info */
+        uint8_t     msg_type    = (uint8_t)readField(1, &pos);
+        uint16_t    msg_size    = (uint16_t)readField(2, &pos);
+        uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
+
+        if(hdr_flags & ATTR_CREATION_TRACK_BIT)
+        {
+            uint64_t msg_order = (uint8_t)readField(2, &pos); (void)msg_order;
+        }
+
+        /* Read Each Message */
+        int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
+        if(errorChecking && (bytes_read != msg_size))
+        {
+            mlog(CRITICAL, "Header continuation message different size than specified: %d != %d\n", bytes_read, msg_size);
+            throw std::runtime_error("invalid header continuation message");            
+        }
+
+        /* Update Position */
+        pos += msg_size;
+    }
+
+    /* Check Size */
+    if(errorChecking)
+    {
+        if(pos != end)
+        {
+            mlog(CRITICAL, "Did not read correct number of bytes: %lu != %lu\n", (unsigned long)pos, (unsigned long)end);
+            throw std::runtime_error("did not read correct number bytes");            
+        }
     }
 
     /* Return Bytes Read */
@@ -707,7 +735,19 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
 
     /* Read Number of Header Messages */
-    uint16_t num_hdr_msgs = (uint16_t)readField(2, &pos);
+    if(!verbose)
+    {
+        pos += 2;
+    }
+    else
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Object Information V1 [%d]\n", dlvl);
+        mlog(RAW, "----------------\n");
+
+        uint16_t num_hdr_msgs = (uint16_t)readField(2, &pos);
+        mlog(RAW, "Number of Header Messages:                                       %d\n", (int)num_hdr_msgs);
+    }
 
     /* Read Object Reference Count */
     if(!verbose)
@@ -716,10 +756,6 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
     else
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Object Information V1 [%d]\n", dlvl);
-        mlog(RAW, "----------------\n");
-
         uint32_t obj_ref_count = (uint32_t)readField(4, &pos);
         mlog(RAW, "Object Reference Count:                                          %d\n", (int)obj_ref_count);
     }
@@ -728,13 +764,26 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     uint64_t obj_hdr_size = readField(lengthSize, &pos);
 
     /* Read Header Messages */
-    int msg_num = 0;
     uint64_t end_of_hdr = pos + obj_hdr_size;
-    while((msg_num < num_hdr_msgs) && (pos < end_of_hdr))
+    pos += readMessagesV1(pos, end_of_hdr, H5LITE_CUSTOM_V1_FLAG, dlvl);
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readMessagesV1
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
+{
+    uint64_t starting_position = pos;
+
+    while(pos < end)
     {
-        uint16_t    hdr_msg_type    = (uint16_t)readField(2, &pos);
-        uint16_t    hdr_msg_size    = (uint16_t)readField(2, &pos);
-        uint8_t     hdr_msg_flags   = (uint8_t)readField(1, &pos); (void)hdr_msg_flags;
+        uint16_t    msg_type    = (uint16_t)readField(2, &pos);
+        uint16_t    msg_size    = (uint16_t)readField(2, &pos);
+        uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
         
         /* Reserved Bytes */
         if(!errorChecking)
@@ -753,29 +802,27 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
         }
 
         /* Read Each Message */
-        int bytes_read = readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, pos, 0, dlvl);
-        if(errorChecking && (bytes_read != hdr_msg_size))
+        int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
+        if(errorChecking && (bytes_read != msg_size))
         {
-            mlog(CRITICAL, "Header message different size than specified: %d != %d\n", bytes_read, hdr_msg_size);
+            mlog(CRITICAL, "Header message different size than specified: %d != %d\n", bytes_read, msg_size);
             throw std::runtime_error("invalid header message");            
         }
-        pos += hdr_msg_size;
+
+        /* Update Position */
+        pos += msg_size;
     }
 
     /* Check Size */
     if(errorChecking)
     {
-        if(msg_num != num_hdr_msgs)
+        if(pos != end)
         {
-            mlog(CRITICAL, "Did not read all messages: %d != %d\n", msg_num, num_hdr_msgs);
-            throw std::runtime_error("did not read all messages");            
-        }
-        else if(pos != end_of_hdr)
-        {
-            mlog(CRITICAL, "Did not read correct number of bytes: %lu != %lu\n", (unsigned long)pos, (unsigned long)end_of_hdr);
+            mlog(CRITICAL, "Did not read correct number of bytes: %lu != %lu\n", (unsigned long)pos, (unsigned long)end);
             throw std::runtime_error("did not read correct number bytes");            
         }
     }
+
     /* Return Bytes Read */
     uint64_t ending_position = pos;    
     return ending_position - starting_position;
@@ -790,7 +837,7 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
     {
         case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
         case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
-//        case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
+//      case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
 
         default:
@@ -1026,23 +1073,9 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
-    static const int ATTR_CREATION_TRACK_BIT = 0x04;
-
     /* Continuation Info */
     uint64_t hc_offset = readField(offsetSize, &pos);
     uint64_t hc_length = readField(lengthSize, &pos);
-
-    /* Read Continuation Header */
-    pos = hc_offset; // go to continuation block
-    if(errorChecking)
-    {
-        uint64_t signature = readField(4, &pos);
-        if(signature != H5_OCHK_SIGNATURE_LE)
-        {
-            mlog(CRITICAL, "invalid header continuation signature: 0x%llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid header continuation signature");
-        }
-    }
 
     if(verbose)
     {
@@ -1053,34 +1086,35 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         mlog(RAW, "Length:                                                          %lu\n", (unsigned long)hc_length);
     }
 
-    /* Read Continuation Header Messages */
-    uint64_t end_of_chdr = hc_offset + hc_length - 4; // leave 4 bytes for checksum below
-    while(pos < end_of_chdr) 
+    if(hdr_flags & H5LITE_CUSTOM_V1_FLAG)
     {
-        uint8_t     hdr_msg_type    = (uint8_t)readField(1, &pos);
-        uint16_t    hdr_msg_size    = (uint16_t)readField(2, &pos);
-        uint8_t     hdr_msg_flags   = (uint8_t)readField(1, &pos); (void)hdr_msg_flags;
-
-        if(hdr_flags & ATTR_CREATION_TRACK_BIT)
-        {
-            uint64_t hdr_msg_order = (uint8_t)readField(2, &pos); (void)hdr_msg_order;
-        }
-
-        /* Read Each Message */
-        int bytes_read = readMessage((msg_type_t)hdr_msg_type, hdr_msg_size, pos, hdr_flags, dlvl);
-        if(errorChecking && (bytes_read != hdr_msg_size))
-        {
-            mlog(CRITICAL, "Header continuation message different size than specified: %d != %d\n", bytes_read, hdr_msg_size);
-            throw std::runtime_error("invalid header continuation message");            
-        }
-        pos += hdr_msg_size;
+       uint64_t end_of_chdr = hc_offset + hc_length;
+       pos += readMessagesV1 (pos, end_of_chdr, hdr_flags, dlvl);
     }
-
-    /* Verify Checksum */
-    uint64_t check_sum = readField(4, &pos);
-    if(errorChecking)
+    else
     {
-        (void)check_sum;
+        /* Read Continuation Header */
+        pos = hc_offset; // go to continuation block
+        if(errorChecking)
+        {
+            uint64_t signature = readField(4, &pos);
+            if(signature != H5_OCHK_SIGNATURE_LE)
+            {
+                mlog(CRITICAL, "invalid header continuation signature: 0x%llX\n", (unsigned long long)signature);
+                throw std::runtime_error("invalid header continuation signature");
+            }
+        }
+
+        /* Read Continuation Header Messages */
+        uint64_t end_of_chdr = hc_offset + hc_length - 4; // leave 4 bytes for checksum below
+        pos += readMessages (pos, end_of_chdr, hdr_flags, dlvl);
+
+        /* Verify Checksum */
+        uint64_t check_sum = readField(4, &pos);
+        if(errorChecking)
+        {
+            (void)check_sum;
+        }
     }
 
     /* Return Bytes Read */
