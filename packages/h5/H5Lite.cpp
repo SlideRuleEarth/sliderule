@@ -260,7 +260,6 @@ uint64_t H5FileBuffer::readField (int size, uint64_t* pos)
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos)
 {
-    assert(data);
     assert(size > 0);
     assert(pos);
 
@@ -280,7 +279,7 @@ void H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos)
     {
         int data_already_read = size - data_left_to_read;
         int data_to_read = MIN(READ_BUFSIZE, data_left_to_read);
-        buffSize = fread(&data[data_already_read], 1, data_to_read, fp);
+        if(data) buffSize = fread(&data[data_already_read], 1, data_to_read, fp);
         data_left_to_read -= buffSize;
         *pos += buffSize;
     }
@@ -392,7 +391,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_t hdr_fl
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Fractal Heap [%d]: %d\n", dlvl, (int)type);
+        mlog(RAW, "Fractal Heap [%d]: %d, 0x%lx\n", dlvl, (int)type, starting_position);
         mlog(RAW, "----------------\n");
     }
 
@@ -491,7 +490,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_t hdr_fl
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
-    int starting_position = pos;
+    uint64_t starting_position = pos;
 
     if(!errorChecking)
     {
@@ -517,7 +516,7 @@ int H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, i
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Direct Block [%d,%d]\n", dlvl, (int)type);
+        mlog(RAW, "Direct Block [%d,%d]: 0x%lx\n", dlvl, (int)type, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
     }
     
@@ -609,7 +608,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
             uint64_t birth_time          = readField(4, &pos);
 
             mlog(RAW, "\n----------------\n");
-            mlog(RAW, "Object Information [%d]\n", dlvl);
+            mlog(RAW, "Object Information [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
             mlog(RAW, "----------------\n");
 
             TimeLib::gmt_time_t access_gmt = TimeLib::gettime(access_time * TIME_MILLISECS_IN_A_SECOND);
@@ -687,7 +686,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
         }
 
         /* Update Position */
-        pos += msg_size;
+        pos += bytes_read;
     }
 
     /* Check Size */
@@ -742,7 +741,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     else
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Object Information V1 [%d]\n", dlvl);
+        mlog(RAW, "Object Information V1 [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
 
         uint16_t num_hdr_msgs = (uint16_t)readField(2, &pos);
@@ -762,9 +761,14 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
 
     /* Read Object Header Size */
     uint64_t obj_hdr_size = readField(lengthSize, &pos);
+    uint64_t end_of_hdr = pos + obj_hdr_size;
+    if(verbose)
+    {
+        mlog(RAW, "Object Header Size:                                              %d\n", (int)obj_hdr_size);
+        mlog(RAW, "End of Header:                                                   0x%lx\n", (unsigned long)end_of_hdr);
+    }
 
     /* Read Header Messages */
-    uint64_t end_of_hdr = pos + obj_hdr_size;
     pos += readMessagesV1(pos, end_of_hdr, H5LITE_CUSTOM_V1_FLAG, dlvl);
 
     /* Return Bytes Read */
@@ -777,9 +781,11 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
 {
+    static const int SIZE_OF_V1_PREFIX = 8;
+
     uint64_t starting_position = pos;
 
-    while(pos < end)
+    while(pos < (end - SIZE_OF_V1_PREFIX))
     {
         uint16_t    msg_type    = (uint16_t)readField(2, &pos);
         uint16_t    msg_size    = (uint16_t)readField(2, &pos);
@@ -810,9 +816,13 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
         }
 
         /* Update Position */
-        pos += msg_size;
+        pos += bytes_read;
     }
 
+    /* Read Gap */
+    uint64_t gap = end - pos;
+    if(gap > 0) readData(NULL, gap, &pos);
+    
     /* Check Size */
     if(errorChecking)
     {
@@ -842,12 +852,12 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
 
         default:
         {
-            uint8_t hdr_msg_data[0x10000];
-            readData(hdr_msg_data, size, &pos);
             if(verbose)
             {
-                mlog(RAW, "Skipped Message [%d]: 0x%x, %d\n", dlvl, (int)type, (int)size);
+                mlog(RAW, "Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)type, (int)size, (unsigned long)pos);
             }
+
+            readData(NULL, size, &pos);
             return size;
         }
     }
@@ -878,7 +888,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Link Information Message [%d]\n", dlvl);
+        mlog(RAW, "Link Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
     }
 
@@ -950,7 +960,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Link Message [%d]: 0x%x\n", dlvl, (unsigned)flags);
+        mlog(RAW, "Link Message [%d]: 0x%x, 0x%lx\n", dlvl, (unsigned)flags, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
     }
 
@@ -1073,6 +1083,8 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
+    uint64_t starting_position = pos;
+
     /* Continuation Info */
     uint64_t hc_offset = readField(offsetSize, &pos);
     uint64_t hc_length = readField(lengthSize, &pos);
@@ -1080,12 +1092,14 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Header Continuation Message [%d]\n", dlvl);
+        mlog(RAW, "Header Continuation Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
         mlog(RAW, "Offset:                                                          0x%lx\n", (unsigned long)hc_offset);
         mlog(RAW, "Length:                                                          %lu\n", (unsigned long)hc_length);
     }
 
+    /* Read Continuation Block */
+    pos = hc_offset; // go to continuation block
     if(hdr_flags & H5LITE_CUSTOM_V1_FLAG)
     {
        uint64_t end_of_chdr = hc_offset + hc_length;
@@ -1094,7 +1108,6 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     else
     {
         /* Read Continuation Header */
-        pos = hc_offset; // go to continuation block
         if(errorChecking)
         {
             uint64_t signature = readField(4, &pos);
