@@ -42,6 +42,7 @@ class H5FileBuffer
         typedef enum {
             LINK_INFO_MSG   = 0x2,
             DATATYPE_MSG    = 0x3,
+            FILL_VALUE_MSG  = 0x5,
             LINK_MSG        = 0x6,
             FILTER_MSG      = 0xB,
             HEADER_CONT_MSG = 0x10
@@ -113,6 +114,7 @@ class H5FileBuffer
 
         int                 readLinkInfoMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readDatatypeMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readFillValueMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);

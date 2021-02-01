@@ -872,7 +872,8 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
     switch(type)
     {
         case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
-        case DATATYPE_MSG:      readDatatypeMsg(pos, hdr_flags, dlvl); return size; //return readDatatypeMsg(pos, hdr_flags, dlvl);
+        case DATATYPE_MSG:      return readDatatypeMsg(pos, hdr_flags, dlvl);
+        case FILL_VALUE_MSG:    readFillValueMsg(pos, hdr_flags, dlvl); return size; //return readFillValueMsg(pos, hdr_flags, dlvl);
         case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
 //      case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
@@ -998,7 +999,11 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         case FIXED_POINT_TYPE:
         {
-            if(verbose)
+            if(!verbose)
+            {
+                pos += 4;
+            }
+            else
             {
                 unsigned int byte_order = databits & 0x1;
                 unsigned int pad_type = (databits & 0x06) >> 1;
@@ -1013,12 +1018,17 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 mlog(RAW, "Bit Offset:                                                      %d\n", (int)bit_offset);
                 mlog(RAW, "Bit Precision:                                                   %d\n", (int)bit_precision);
             }
+            pos += 4; // alignment
             break;
         }
 
         case FLOATING_POINT_TYPE:
         {
-            if(verbose)
+            if(!verbose)
+            {
+                pos += 12;
+            }
+            else
             {
                 unsigned int byte_order = ((databits & 0x40) >> 5) | (databits & 0x1);
                 unsigned int pad_type = (databits & 0x0E) >> 1;
@@ -1045,6 +1055,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 mlog(RAW, "Mantissa Size:                                                   %d\n", (int)mant_size);
                 mlog(RAW, "Exponent Bias:                                                   %d\n", (int)exp_bias);
             }
+            pos += 4; // alignment
             break;
         }
 
@@ -1056,6 +1067,68 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 throw std::runtime_error("unsupported datatype");
             }
             break;
+        }
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readFillValueMsg
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    (void)hdr_flags;
+
+    uint64_t starting_position = pos;
+
+    uint64_t version = readField(1, &pos);
+
+    if(errorChecking)
+    {
+        if(version != 2)
+        {
+            mlog(CRITICAL, "invalid fill value version: %d\n", (int)version);
+            throw std::runtime_error("invalid fill value version");
+        }
+    }
+
+    if(!verbose)
+    {
+        pos += 2;
+    }
+    else
+    {
+        uint8_t space_allocation_time = (uint8_t)readField(1, &pos);
+        uint8_t fill_value_write_time = (uint8_t)readField(1, &pos);
+
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Fill Value Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "Space Allocation Time:                                           %d\n", (int)space_allocation_time);
+        mlog(RAW, "Fill Value Write Time:                                           %d\n", (int)fill_value_write_time);
+    }
+
+    uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
+    if(fill_value_defined)
+    {
+        uint32_t fill_value_size = (uint32_t)readField(4, &pos);
+        if(verbose)
+        {
+            mlog(RAW, "Fill Value Size:                                                 %d\n", (int)fill_value_size);
+        }
+
+        if(fill_value_size > 0)
+        {
+            uint64_t fill_value = readField(fill_value_size, &pos);
+            dataFill.fill_ll = fill_value;
+            if(verbose)
+            {
+                mlog(RAW, "Fill Value Size:                                                 %d\n", (int)fill_value_size);
+                mlog(RAW, "Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
+            }
         }
     }
 
