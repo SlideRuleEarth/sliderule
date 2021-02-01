@@ -179,6 +179,28 @@ void H5FileBuffer::parseDataset (const char* _dataset)
 /*----------------------------------------------------------------------------
  * readField
  *----------------------------------------------------------------------------*/
+const char* H5FileBuffer::type2str (data_type_t datatype)
+{
+    switch(datatype)
+    {
+        case FIXED_POINT_TYPE:      return "FIXED_POINT_TYPE";
+        case FLOATING_POINT_TYPE:   return "FLOATING_POINT_TYPE";
+        case TIME_TYPE:             return "TIME_TYPE";
+        case STRING_TYPE:           return "STRING_TYPE";
+        case BIT_FIELD_TYPE:        return "BIT_FIELD_TYPE";
+        case OPAQUE_TYPE:           return "OPAQUE_TYPE";
+        case COMPOUND_TYPE:         return "COMPOUND_TYPE";
+        case REFERENCE_TYPE:        return "REFERENCE_TYPE";
+        case ENUMERATED_TYPE:       return "ENUMERATED_TYPE";
+        case VARIABLE_LENGTH_TYPE:  return "VARIABLE_LENGTH_TYPE";
+        case ARRAY_TYPE:            return "ARRAY_TYPE";
+        default:                    return "UNKNOWN_TYPE";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * readField
+ *----------------------------------------------------------------------------*/
 uint64_t H5FileBuffer::readField (int size, uint64_t* pos)
 {
     assert(pos);
@@ -846,6 +868,7 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
     switch(type)
     {
         case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
+        case DATATYPE_MSG:      readDatatypeMsg(pos, hdr_flags, dlvl); return size; //return readDatatypeMsg(pos, hdr_flags, dlvl);
         case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
 //      case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
@@ -923,6 +946,110 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if((int)heap_address != -1)
     {
         readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl);
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readDatatypeMsg
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    (void)hdr_flags;
+
+    uint64_t starting_position = pos;
+
+    uint64_t version_class = readField(4, &pos);
+    uint32_t datasize = (uint32_t)readField(4, &pos);
+    uint64_t version = (version_class & 0xF0) >> 4;
+    data_type_t dataclass = (data_type_t)(version_class & 0x0F);
+    uint64_t databits = version_class >> 8;
+
+    if(errorChecking)
+    {
+        if(version != 1)
+        {
+            mlog(CRITICAL, "invalid datatype version: %d\n", (int)version);
+            throw std::runtime_error("invalid datatype version");
+        }
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Datatype Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "Version:                                                         %d\n", (int)version);
+        mlog(RAW, "Data Class:                                                      %d, %s\n", (int)dataclass, type2str(dataclass));
+        mlog(RAW, "Data Size:                                                       %d\n", (int)datasize);
+    }
+
+    switch(dataclass)
+    {
+        case FIXED_POINT_TYPE:
+        {
+            if(verbose)
+            {
+                unsigned int byte_order = databits & 0x1;
+                unsigned int pad_type = (databits & 0x06) >> 1;
+                unsigned int sign_loc = (databits & 0x08) >> 3;
+
+                uint16_t bit_offset     = (uint16_t)readField(2, &pos);
+                uint16_t bit_precision  = (uint16_t)readField(2, &pos);
+
+                mlog(RAW, "Byte Order:                                                      %d\n", (int)byte_order);
+                mlog(RAW, "Pading Type:                                                     %d\n", (int)pad_type);
+                mlog(RAW, "Sign Location:                                                   %d\n", (int)sign_loc);
+                mlog(RAW, "Bit Offset:                                                      %d\n", (int)bit_offset);
+                mlog(RAW, "Bit Precision:                                                   %d\n", (int)bit_precision);
+            }
+            break;
+        }
+
+        case FLOATING_POINT_TYPE:
+        {
+            if(verbose)
+            {
+                unsigned int byte_order = ((databits & 0x40) >> 5) | (databits & 0x1);
+                unsigned int pad_type = (databits & 0x0E) >> 1;
+                unsigned int mant_norm = (databits & 0x30) >> 4;
+                unsigned int sign_loc = (databits & 0xFF00) >> 8;
+
+                uint16_t bit_offset     = (uint16_t)readField(2, &pos);
+                uint16_t bit_precision  = (uint16_t)readField(2, &pos);
+                uint8_t  exp_location   =  (uint8_t)readField(1, &pos);
+                uint8_t  exp_size       =  (uint8_t)readField(1, &pos);
+                uint8_t  mant_location  =  (uint8_t)readField(1, &pos);
+                uint8_t  mant_size      =  (uint8_t)readField(1, &pos);
+                uint32_t exp_bias       = (uint32_t)readField(4, &pos);
+
+                mlog(RAW, "Byte Order:                                                      %d\n", (int)byte_order);
+                mlog(RAW, "Pading Type:                                                     %d\n", (int)pad_type);
+                mlog(RAW, "Mantissa Normalization:                                          %d\n", (int)mant_norm);
+                mlog(RAW, "Sign Location:                                                   %d\n", (int)sign_loc);
+                mlog(RAW, "Bit Offset:                                                      %d\n", (int)bit_offset);
+                mlog(RAW, "Bit Precision:                                                   %d\n", (int)bit_precision);
+                mlog(RAW, "Exponent Location:                                               %d\n", (int)exp_location);
+                mlog(RAW, "Exponent Size:                                                   %d\n", (int)exp_size);
+                mlog(RAW, "Mantissa Location:                                               %d\n", (int)mant_location);
+                mlog(RAW, "Mantissa Size:                                                   %d\n", (int)mant_size);
+                mlog(RAW, "Exponent Bias:                                                   %d\n", (int)exp_bias);
+            }
+            break;
+        }
+
+        default: 
+        {
+            if(errorChecking)
+            {
+                mlog(CRITICAL, "unsupported datatype: %d\n", (int)dataclass);
+                throw std::runtime_error("unsupported datatype");
+            }
+            break;
+        }
     }
 
     /* Return Bytes Read */

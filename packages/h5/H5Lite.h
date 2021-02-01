@@ -41,11 +41,25 @@ class H5FileBuffer
         
         typedef enum {
             LINK_INFO_MSG   = 0x2,
+            DATATYPE_MSG    = 0x3,
             LINK_MSG        = 0x6,
             FILTER_MSG      = 0xB,
             HEADER_CONT_MSG = 0x10
         } msg_type_t;
 
+        typedef enum {
+            FIXED_POINT_TYPE        = 0,
+            FLOATING_POINT_TYPE     = 1,
+            TIME_TYPE               = 2,
+            STRING_TYPE             = 3,
+            BIT_FIELD_TYPE          = 4,
+            OPAQUE_TYPE             = 5,
+            COMPOUND_TYPE           = 6,
+            REFERENCE_TYPE          = 7,
+            ENUMERATED_TYPE         = 8,
+            VARIABLE_LENGTH_TYPE    = 9,
+            ARRAY_TYPE              = 10
+        } data_type_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -73,6 +87,7 @@ class H5FileBuffer
          *--------------------------------------------------------------------*/
 
         void                parseDataset        (const char* _dataset);
+        const char*         type2str            (data_type_t datatype);
         uint64_t            readField           (int size, uint64_t* pos);
         void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
 
@@ -87,6 +102,7 @@ class H5FileBuffer
         int                 readMessage         (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
 
         int                 readLinkInfoMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readDatatypeMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
