@@ -260,6 +260,7 @@ uint64_t H5FileBuffer::readField (int size, uint64_t* pos)
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos)
 {
+    assert(data);
     assert(size > 0);
     assert(pos);
 
@@ -279,7 +280,7 @@ void H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos)
     {
         int data_already_read = size - data_left_to_read;
         int data_to_read = MIN(READ_BUFSIZE, data_left_to_read);
-        if(data) buffSize = fread(&data[data_already_read], 1, data_to_read, fp);
+        buffSize = fread(&data[data_already_read], 1, data_to_read, fp);
         data_left_to_read -= buffSize;
         *pos += buffSize;
     }
@@ -819,9 +820,8 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
         pos += bytes_read;
     }
 
-    /* Read Gap */
-    uint64_t gap = end - pos;
-    if(gap > 0) readData(NULL, gap, &pos);
+    /* Move Past Gap */
+    if(pos < end) pos = end;
     
     /* Check Size */
     if(errorChecking)
@@ -856,8 +856,7 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
             {
                 mlog(RAW, "Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)type, (int)size, (unsigned long)pos);
             }
-
-            readData(NULL, size, &pos);
+            
             return size;
         }
     }
