@@ -111,6 +111,10 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     groupInternalNodeK = 0;
     rootGroupOffset = 0;
     
+    /* Initialize Data */
+    dataType = UNKNOWN_TYPE;
+    dataFill.fill_ll = 0LL;
+
     /* Open File */
     fp = fopen(filename, "r");
     if(fp == NULL)
@@ -962,10 +966,10 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     uint64_t starting_position = pos;
 
+    /* Read Message Info */
     uint64_t version_class = readField(4, &pos);
     uint32_t datasize = (uint32_t)readField(4, &pos);
     uint64_t version = (version_class & 0xF0) >> 4;
-    data_type_t dataclass = (data_type_t)(version_class & 0x0F);
     uint64_t databits = version_class >> 8;
 
     if(errorChecking)
@@ -977,17 +981,20 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
+    /* Set Data Type */
+    dataType = (data_type_t)(version_class & 0x0F);
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
         mlog(RAW, "Datatype Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
         mlog(RAW, "Version:                                                         %d\n", (int)version);
-        mlog(RAW, "Data Class:                                                      %d, %s\n", (int)dataclass, type2str(dataclass));
+        mlog(RAW, "Data Class:                                                      %d, %s\n", (int)dataType, type2str(dataType));
         mlog(RAW, "Data Size:                                                       %d\n", (int)datasize);
     }
 
-    switch(dataclass)
+    /* Read Data Class Properties */
+    switch(dataType)
     {
         case FIXED_POINT_TYPE:
         {
@@ -1045,7 +1052,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             if(errorChecking)
             {
-                mlog(CRITICAL, "unsupported datatype: %d\n", (int)dataclass);
+                mlog(CRITICAL, "unsupported datatype: %d\n", (int)dataType);
                 throw std::runtime_error("unsupported datatype");
             }
             break;

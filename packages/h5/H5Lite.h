@@ -58,8 +58,18 @@ class H5FileBuffer
             REFERENCE_TYPE          = 7,
             ENUMERATED_TYPE         = 8,
             VARIABLE_LENGTH_TYPE    = 9,
-            ARRAY_TYPE              = 10
+            ARRAY_TYPE              = 10,
+            UNKNOWN_TYPE            = 11
         } data_type_t;
+
+        typedef union {
+            double                  fill_lf;
+            float                   fill_f;
+            uint64_t                fill_ll;
+            uint32_t                fill_l;
+            uint16_t                fill_s;
+            uint8_t                 fill_b;
+        } fill_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -129,6 +139,10 @@ class H5FileBuffer
         int                 groupLeafNodeK;
         int                 groupInternalNodeK;
         uint64_t            rootGroupOffset;
+
+        /* Data Members */
+        data_type_t         dataType;
+        fill_t              dataFill;
 };
 
 /******************************************************************************
