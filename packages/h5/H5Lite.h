@@ -72,6 +72,17 @@ class H5FileBuffer
             UNKNOWN_LAYOUT          = 3
         } layout_t;
 
+        typedef enum {
+            INVALID_FILTER          = 0,
+            DEFLATE_FILTER          = 1,
+            SHUFFLE_FILTER          = 2,
+            FLETCHER32_FILTER       = 3,
+            SZIP_FILTER             = 4,
+            NBIT_FILTER             = 5,
+            SCALEOFFSET_FILTER      = 6,
+            UNKNOWN_FILTER          = 7
+        } filter_t;
+
         typedef union {
             double                  fill_lf;
             float                   fill_f;
@@ -162,6 +173,9 @@ class H5FileBuffer
         uint8_t*            dataBuffer;
         uint64_t*           dataDimensions;
         int                 dataNumDimensions;
+        filter_t            dataFilter;
+        uint32_t*           dataFilterParms;
+        int32_t             dataNumFilterParms;
 };
 
 /******************************************************************************

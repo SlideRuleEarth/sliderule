@@ -124,6 +124,9 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     dataBuffer = NULL;
     dataDimensions = NULL;
     dataNumDimensions = 0;
+    dataFilter = INVALID_FILTER;
+    dataFilterParms = NULL;
+    dataNumFilterParms = 0;
 
     /* Open File */
     fp = fopen(filename, "r");
@@ -155,6 +158,7 @@ H5FileBuffer::~H5FileBuffer (void)
     fclose(fp);
     if(dataBuffer) delete [] dataBuffer;
     if(dataDimensions) delete [] dataDimensions;
+    if(dataFilterParms) delete [] dataFilterParms;
 }
 
 /*----------------------------------------------------------------------------
@@ -897,7 +901,7 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
 {
     switch(type)
     {
-        case DATASPACE_MSG:     readDataspaceMsg(pos, hdr_flags, dlvl); return size;
+        case DATASPACE_MSG:     return readDataspaceMsg(pos, hdr_flags, dlvl);
         case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
         case DATATYPE_MSG:      return readDatatypeMsg(pos, hdr_flags, dlvl);
         case FILL_VALUE_MSG:    return readFillValueMsg(pos, hdr_flags, dlvl);
@@ -1503,10 +1507,10 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Read Filter Description */
-    uint16_t filter_id          = (uint16_t)readField(2, &pos);
+    dataFilter                  = (filter_t)readField(2, &pos);
     uint16_t name_len           = (uint16_t)readField(2, &pos);
     uint16_t flags              = (uint16_t)readField(2, &pos);
-    uint16_t num_client_dvals   = (uint16_t)readField(2, &pos);
+    dataNumFilterParms          = (int)readField(2, &pos);
 
     if(verbose)
     {
@@ -1515,9 +1519,9 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         mlog(RAW, "----------------\n");
         mlog(RAW, "Version:                                                         %d\n", (int)version);
         mlog(RAW, "Number of Filters:                                               %d\n", (int)num_filters);
-        mlog(RAW, "Filter Identification Value:                                     %d\n", (int)filter_id);
+        mlog(RAW, "Filter Identification Value:                                     %d\n", (int)dataFilter);
         mlog(RAW, "Flags:                                                           0x%x\n", (int)flags);
-        mlog(RAW, "Number Client Data Values:                                       %d\n", (int)num_client_dvals);
+        mlog(RAW, "Number Client Data Values:                                       %d\n", (int)dataNumFilterParms);
     }
 
     /* Read Name */
@@ -1530,11 +1534,11 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Client Data */
-    uint32_t client_data_size = num_client_dvals * 4;
-    if(client_data_size <= STR_BUFF_SIZE)
+    uint32_t client_data_size = dataNumFilterParms * 4;
+    if(client_data_size)
     {
-        uint32_t client_data[STR_BUFF_SIZE / 4];
-        readData((uint8_t*)client_data, client_data_size, &pos);
+        dataFilterParms = new uint32_t [dataNumFilterParms];
+        readData((uint8_t*)dataFilterParms, client_data_size, &pos);
     }
     else
     {
@@ -1542,7 +1546,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Handle Padding */
-    if(num_client_dvals % 2 == 1)
+    if(dataNumFilterParms % 2 == 1)
     {
         pos += 4;
     }
