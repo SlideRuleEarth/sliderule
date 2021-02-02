@@ -130,6 +130,7 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     dataType            = UNKNOWN_TYPE;
     dataElementSize     = 0;
     dataFill.fill_ll    = 0LL;
+    dataFillSize        = 0;
     dataSize            = 0;
     dataBuffer          = NULL;
     dataDimensions      = NULL;
@@ -289,6 +290,26 @@ int H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * createDataBuffer
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::createDataBuffer (uint64_t buffer_size)
+{
+    if(buffer_size > 0)
+    {
+        dataBuffer = new uint8_t [buffer_size];
+        if(dataFillSize > 0)
+        {
+            for(uint64_t i = 0; i < buffer_size; i += dataFillSize)
+            {
+                LocalLib::copy(&dataBuffer[i], &dataFill.fill_ll, dataFillSize);
+            }
+        }
+    }
+
+    return buffer_size;
 }
 
 /*----------------------------------------------------------------------------
@@ -1390,19 +1411,18 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
     if(fill_value_defined)
     {
-        uint32_t fill_value_size = (uint32_t)readField(4, &pos);
+        dataFillSize = (int)readField(4, &pos);
         if(verbose)
         {
-            mlog(RAW, "Fill Value Size:                                                 %d\n", (int)fill_value_size);
+            mlog(RAW, "Fill Value Size:                                                 %d\n", dataFillSize);
         }
 
-        if(fill_value_size > 0)
+        if(dataFillSize > 0)
         {
-            uint64_t fill_value = readField(fill_value_size, &pos);
+            uint64_t fill_value = readField(dataFillSize, &pos);
             dataFill.fill_ll = fill_value;
             if(verbose)
             {
-                mlog(RAW, "Fill Value Size:                                                 %d\n", (int)fill_value_size);
                 mlog(RAW, "Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
             }
         }
@@ -1586,7 +1606,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             dataSize = (uint16_t)readField(2, &pos);
             if(dataSize > 0)
             {
-                dataBuffer = new uint8_t [dataSize];
+                createDataBuffer(dataSize);
                 readData(dataBuffer, dataSize, &pos);
             }
             break;
@@ -1598,7 +1618,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             dataSize = readField(lengthSize, &pos);
             if((dataSize > 0) && (!H5_INVALID(data_addr)))
             {
-                dataBuffer = new uint8_t [dataSize];
+                createDataBuffer(dataSize);
                 readData(dataBuffer, dataSize, &data_addr);
             }
             break;
@@ -1662,13 +1682,15 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 throw std::runtime_error("unable to read data, missing info");
             }
 
-            /* Allocate Data Buffer */
+            /* Calculate Size of Data Buffer */
             dataSize = dataElementSize;
             for(int d = 0; d < dataNumDimensions; d++)
             {
                 dataSize *= dataDimensions[d];
             }
-            dataBuffer = new uint8_t [dataSize];
+
+            /* Allocate Data Buffer */
+            createDataBuffer(dataSize);
 
             /* Read Data from B-Tree */
             readBTreeV1(data_addr);

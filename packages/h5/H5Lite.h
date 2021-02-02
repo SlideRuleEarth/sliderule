@@ -124,6 +124,7 @@ class H5FileBuffer
         const char*         type2str            (data_type_t datatype);
         const char*         layout2str          (layout_t layout);
         int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
+        int                 createDataBuffer    (uint64_t buffer_size);
         uint64_t            readField           (int size, uint64_t* pos);
         void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
 
@@ -173,15 +174,20 @@ class H5FileBuffer
         /* Data Members */
         data_type_t         dataType;
         int                 dataElementSize;
+
         fill_t              dataFill;
+        int                 dataFillSize;
+
         uint64_t            dataSize;
         uint8_t*            dataBuffer;
         uint64_t*           dataDimensions;
         uint64_t*           dataSliceBuffer;
         int                 dataNumDimensions;
+
         filter_t            dataFilter;
         uint32_t*           dataFilterParms;
         int                 dataNumFilterParms;
+
         int                 dataChunkSize;
         uint8_t*            dataChunkBuffer;
         uint64_t            dataChunkBufferSize;
