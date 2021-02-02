@@ -105,29 +105,32 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     assert(filename);
     assert(_dataset);
 
-    errorChecking = _errorChecking;
-    verbose = _verbose;
+    errorChecking       = _errorChecking;
+    verbose             = _verbose;
 
     /* Initialize */
-    buffSize = 0;
-    currFilePosition = 0;
-    offsetSize = 0;
-    lengthSize = 0;
-    groupLeafNodeK = 0;
-    groupInternalNodeK = 0;
-    rootGroupOffset = 0;
+    buffSize            = 0;
+    currFilePosition    = 0;
+    offsetSize          = 0;
+    lengthSize          = 0;
+    groupLeafNodeK      = 0;
+    groupInternalNodeK  = 0;
+    rootGroupOffset     = 0;
     
     /* Initialize Data */
-    dataType = UNKNOWN_TYPE;
-    dataElementSize = 0;
-    dataFill.fill_ll = 0LL;
-    dataSize = 0;
-    dataBuffer = NULL;
-    dataDimensions = NULL;
-    dataNumDimensions = 0;
-    dataFilter = INVALID_FILTER;
-    dataFilterParms = NULL;
-    dataNumFilterParms = 0;
+    dataType            = UNKNOWN_TYPE;
+    dataElementSize     = 0;
+    dataFill.fill_ll    = 0LL;
+    dataSize            = 0;
+    dataBuffer          = NULL;
+    dataDimensions      = NULL;
+    dataSliceBuffer     = NULL;
+    dataNumDimensions   = 0;
+    dataFilter          = INVALID_FILTER;
+    dataFilterParms     = NULL;
+    dataNumFilterParms  = 0;
+    dataChunk           = NULL;
+    dataChunkSize       = 0;
 
     /* Open File */
     fp = fopen(filename, "r");
@@ -153,9 +156,11 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
 H5FileBuffer::~H5FileBuffer (void)
 {
     fclose(fp);
-    if(dataBuffer) delete [] dataBuffer;
-    if(dataDimensions) delete [] dataDimensions;
+    if(dataBuffer)      delete [] dataBuffer;
+    if(dataDimensions)  delete [] dataDimensions;
+    if(dataSliceBuffer) delete [] dataSliceBuffer;
     if(dataFilterParms) delete [] dataFilterParms;
+    if(dataChunk)       delete [] dataChunk;
 }
 
 /*----------------------------------------------------------------------------
@@ -615,9 +620,10 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos)
 {
     uint64_t starting_position = pos;
 
+    /* Check Signature and Node Type */
     if(!errorChecking)
     {
-        pos += 4;
+        pos += 5;
     }
     else
     {
@@ -627,13 +633,76 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos)
             mlog(CRITICAL, "invalid b-tree signature: 0x%llX\n", (unsigned long long)signature);
             throw std::runtime_error("invalid b-tree signature");
         }
+        
+        uint8_t node_type = (uint8_t)readField(1, &pos);
+        if(node_type != 1)
+        {
+            mlog(CRITICAL, "only raw data chunk b-trees supported: %d\n", node_type);
+            throw std::runtime_error("only raw data chunk b-trees supported");
+        }
     }
+
+    /* Read Node Level and Number of Entries */
+    uint8_t node_level = (uint8_t)readField(1, &pos);
+    uint16_t entries_used = (uint16_t)readField(2, &pos);
 
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "B-Tree: 0x%lx\n", (unsigned long)starting_position);
+        mlog(RAW, "B-Tree Node: 0x%lx\n", (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
+        mlog(RAW, "Node Level:                                                      %d\n", (int)node_level);
+        mlog(RAW, "Entries Used:                                                    %d\n", (int)entries_used);
+    }
+
+    /* Skip Sibling Addresses */
+    pos += offsetSize * 2;
+
+    /* Read and Process Children */
+    for(int e = 0; e < entries_used; e++)
+    {
+        /* Read Child Entry */
+        uint32_t chunk_size = (uint32_t)readField(4, &pos);
+        uint32_t filter_mask = (uint32_t)readField(4, &pos);
+        for(int d = 0; d < dataNumDimensions; d++)
+        {
+            dataSliceBuffer[d] = readField(8, &pos);
+        }
+        uint64_t data_offset = readField(8, &pos);
+        uint64_t child_addr = readField(offsetSize, &pos);
+
+        if(verbose)
+        {
+            mlog(RAW, "\nEntry:                                                           %d,%d\n", node_level, e);
+            mlog(RAW, "Chunk Size:                                                      %u\n", (unsigned int)chunk_size);
+            mlog(RAW, "Filter Mask:                                                     0x%x\n", (unsigned int)filter_mask);
+            mlog(RAW, "Chunk Key:                                                       [");
+            for(int d = 0; d < dataNumDimensions; d++)
+            {
+                mlog(RAW, "%d,", (int)dataSliceBuffer[d]);
+            }
+            mlog(RAW, "%u]\n", (unsigned int)data_offset);
+            mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
+        }
+
+        /* Process Child Entry */
+        if(node_level > 0)
+        {
+            readBTreeV1(child_addr);
+        }
+        else
+        {
+            /* Check Chunk Allocation */
+            if(chunk_size > dataChunkSize)
+            {
+                if(dataChunk) delete [] dataChunk;
+                dataChunkSize = chunk_size * CHUNK_ALLOC_FACTOR;
+                dataChunk = new uint8_t [dataChunkSize];
+            }
+
+            /* Read Chunk */
+            readData(dataChunk, chunk_size, &child_addr);
+        }
     }
 
     return 0;
@@ -997,9 +1066,11 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(dataNumDimensions > 0)
     {
         dataDimensions = new uint64_t [dataNumDimensions];
+        dataSliceBuffer = new uint64_t [dataNumDimensions];
         for(int d = 0; d < dataNumDimensions; d++)
         {
             dataDimensions[d] = readField(lengthSize, &pos);
+            dataSliceBuffer[d] = 0;
             if(verbose)
             {
                 mlog(RAW, "Dimension %d:                                                     %lu\n", (int)dataNumDimensions, (unsigned long)dataDimensions[d]);
