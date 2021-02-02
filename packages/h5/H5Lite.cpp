@@ -32,6 +32,12 @@
 #include <stdexcept>
 
 /******************************************************************************
+ * MACROS
+ ******************************************************************************/
+
+#define H5_INVALID(var)  (var == (0xFFFFFFFFFFFFFFFFllu >> (64 - (sizeof(var) * 8))))
+
+/******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
@@ -114,6 +120,10 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     /* Initialize Data */
     dataType = UNKNOWN_TYPE;
     dataFill.fill_ll = 0LL;
+    dataSize = 0;
+    dataBuffer = NULL;
+    dataDimensions = NULL;
+    dataNumDimensions = 0;
 
     /* Open File */
     fp = fopen(filename, "r");
@@ -143,6 +153,8 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
 H5FileBuffer::~H5FileBuffer (void)
 {
     fclose(fp);
+    if(dataBuffer) delete [] dataBuffer;
+    if(dataDimensions) delete [] dataDimensions;
 }
 
 /*----------------------------------------------------------------------------
@@ -181,7 +193,7 @@ void H5FileBuffer::parseDataset (const char* _dataset)
 }
 
 /*----------------------------------------------------------------------------
- * readField
+ * type2str
  *----------------------------------------------------------------------------*/
 const char* H5FileBuffer::type2str (data_type_t datatype)
 {
@@ -199,6 +211,20 @@ const char* H5FileBuffer::type2str (data_type_t datatype)
         case VARIABLE_LENGTH_TYPE:  return "VARIABLE_LENGTH_TYPE";
         case ARRAY_TYPE:            return "ARRAY_TYPE";
         default:                    return "UNKNOWN_TYPE";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * layout2str
+ *----------------------------------------------------------------------------*/
+const char* H5FileBuffer::layout2str (layout_t layout)
+{
+    switch(layout)
+    {
+        case COMPACT_LAYOUT:    return "COMPACT_LAYOUT";
+        case CONTIGUOUS_LAYOUT: return "CONTIGUOUS_LAYOUT";
+        case CHUNKED_LAYOUT:    return "CHUNKED_LAYOUT";
+        default:                return "UNKNOWN_LAYOUT";
     }
 }
 
@@ -871,10 +897,12 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
 {
     switch(type)
     {
+        case DATASPACE_MSG:     readDataspaceMsg(pos, hdr_flags, dlvl); return size;
         case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
         case DATATYPE_MSG:      return readDatatypeMsg(pos, hdr_flags, dlvl);
         case FILL_VALUE_MSG:    return readFillValueMsg(pos, hdr_flags, dlvl);
         case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
+        case DATA_LAYOUT_MSG:   return readDataLayoutMsg(pos, hdr_flags, dlvl);
         case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
 
@@ -888,6 +916,74 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
             return size;
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * readDataspaceMsg
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    (void)hdr_flags;
+
+    static const int MAX_DIM_PRESENT    = 0x1;
+    static const int PERM_INDEX_PRESENT = 0x2;
+
+    uint64_t starting_position = pos;
+
+    uint8_t version         = (uint8_t)readField(1, &pos);
+    uint8_t dimensionality  = (uint8_t)readField(1, &pos);
+    uint8_t flags           = (uint8_t)readField(1, &pos);
+    pos += 5; // go past reserved bytes
+
+    if(errorChecking)
+    {
+        if(version != 1)
+        {
+            mlog(CRITICAL, "invalid dataspace version: %d\n", (int)version);
+            throw std::runtime_error("invalid dataspace version");
+        }
+
+        if(flags & PERM_INDEX_PRESENT)
+        {
+            mlog(CRITICAL, "unsupported permutation indexes\n");
+            throw std::runtime_error("unsupported permutation indexes");
+        }
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Dataspace Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "Version:                                                         %d\n", (int)version);
+        mlog(RAW, "Dimensionality:                                                  %d\n", (int)dimensionality);
+        mlog(RAW, "Flags:                                                           0x%x\n", (int)flags);
+    }
+
+    /* Read and Populate Data Dimensions */
+    dataNumDimensions = dimensionality;
+    if(dataNumDimensions > 0)
+    {
+        dataDimensions = new uint64_t [dataNumDimensions];
+        for(int d = 0; d < dataNumDimensions; d++)
+        {
+            dataDimensions[d] = readField(lengthSize, &pos);
+            if(verbose)
+            {
+                mlog(RAW, "Dimension %d:                                                     %lu\n", (int)dataNumDimensions, (unsigned long)dataDimensions[d]);
+            }
+        }
+
+        /* Skip Over Maximum Dimensions */
+        if(flags & MAX_DIM_PRESENT)
+        {
+            pos += dataNumDimensions * lengthSize;
+        }
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
 }
 
 /*----------------------------------------------------------------------------
@@ -1272,6 +1368,118 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 }
 
 /*----------------------------------------------------------------------------
+ * readDataLayoutMsg
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    (void)hdr_flags;
+
+    uint64_t starting_position = pos;
+
+    /* Read Message Info */
+    uint64_t version = readField(1, &pos);
+    layout_t layout = (layout_t)readField(1, &pos);
+
+    if(errorChecking)
+    {
+        if(version != 3)
+        {
+            mlog(CRITICAL, "invalid data layout version: %d\n", (int)version);
+            throw std::runtime_error("invalid data layout version");
+        }
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Data Layout Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "Version:                                                         %d\n", (int)version);
+        mlog(RAW, "Layout:                                                          %d, %s\n", (int)layout, layout2str(layout));
+    }
+
+    /* Read Layout Classes */
+    switch(layout)
+    {
+        case COMPACT_LAYOUT:
+        {
+            dataSize = (uint16_t)readField(2, &pos);
+            if(dataSize > 0)
+            {
+                dataBuffer = new uint8_t [dataSize];
+                readData(dataBuffer, dataSize, &pos);
+            }
+            break;
+        }
+
+        case CONTIGUOUS_LAYOUT:
+        {
+            uint64_t data_addr = readField(offsetSize, &pos);
+            dataSize = readField(lengthSize, &pos);
+            if((dataSize > 0) && (!H5_INVALID(data_addr)))
+            {
+                dataBuffer = new uint8_t [dataSize];
+                readData(dataBuffer, dataSize, &data_addr);
+            }
+            break;
+        }
+
+        case CHUNKED_LAYOUT:
+        {
+            /* Read Number of Dimensions */
+            int chunk_num_dim = (int)readField(1, &pos) - 1; // dimensionality is plus one over actual number of dimensions
+
+            /* Read Address of B-Tree */
+            uint64_t data_addr = readField(offsetSize, &pos);
+
+            /* Read Dimensions */
+            uint64_t* chunk_dim = NULL;
+            if(chunk_num_dim > 0)
+            {
+                chunk_dim = new uint64_t [chunk_num_dim];
+                for(int d = 0; d < chunk_num_dim; d++)
+                {
+                    chunk_dim[d] = (uint32_t)readField(4, &pos);
+                }
+            }
+
+            /* Read Size of Data Element */
+            uint32_t element_size = (uint32_t)readField(4, &pos);
+
+            /* Display Data Attributes */
+            if(verbose)
+            {
+                mlog(RAW, "Chunk Element Size:                                              %d\n", (int)element_size);
+                mlog(RAW, "Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
+                for(int d = 0; d < dataNumDimensions; d++)
+                {
+                    mlog(RAW, "Chunk Dimension %d:                                               %d\n", d, (int)chunk_dim[d]);
+                }
+            }
+
+            /* Read Data from B-Tree */
+            (void)data_addr;
+            break;
+        }
+
+        default:
+        {
+            if(errorChecking)
+            {
+                mlog(CRITICAL, "invalid data layout: %d\n", (int)layout);
+                throw std::runtime_error("invalid data layout");
+            }
+        }
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;
+    uint64_t msg_size = ending_position - starting_position;
+    if((msg_size % 8) > 0) msg_size += 8 - (msg_size % 8);
+    return msg_size;
+}
+
+/*----------------------------------------------------------------------------
  * readFilterMsg
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
@@ -1308,7 +1516,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         mlog(RAW, "Version:                                                         %d\n", (int)version);
         mlog(RAW, "Number of Filters:                                               %d\n", (int)num_filters);
         mlog(RAW, "Filter Identification Value:                                     %d\n", (int)filter_id);
-        mlog(RAW, "Glags:                                                         0x%x\n", (int)flags);
+        mlog(RAW, "Flags:                                                           0x%x\n", (int)flags);
         mlog(RAW, "Number Client Data Values:                                       %d\n", (int)num_client_dvals);
     }
 

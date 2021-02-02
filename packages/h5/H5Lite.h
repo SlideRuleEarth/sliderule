@@ -40,12 +40,14 @@ class H5FileBuffer
          *--------------------------------------------------------------------*/
         
         typedef enum {
-            LINK_INFO_MSG   = 0x2,
-            DATATYPE_MSG    = 0x3,
-            FILL_VALUE_MSG  = 0x5,
-            LINK_MSG        = 0x6,
-            FILTER_MSG      = 0xB,
-            HEADER_CONT_MSG = 0x10
+            DATASPACE_MSG           = 0x1,
+            LINK_INFO_MSG           = 0x2,
+            DATATYPE_MSG            = 0x3,
+            FILL_VALUE_MSG          = 0x5,
+            LINK_MSG                = 0x6,
+            DATA_LAYOUT_MSG         = 0x8,
+            FILTER_MSG              = 0xB,
+            HEADER_CONT_MSG         = 0x10
         } msg_type_t;
 
         typedef enum {
@@ -62,6 +64,13 @@ class H5FileBuffer
             ARRAY_TYPE              = 10,
             UNKNOWN_TYPE            = 11
         } data_type_t;
+
+        typedef enum {
+            COMPACT_LAYOUT          = 0,
+            CONTIGUOUS_LAYOUT       = 1,
+            CHUNKED_LAYOUT          = 2,
+            UNKNOWN_LAYOUT          = 3
+        } layout_t;
 
         typedef union {
             double                  fill_lf;
@@ -100,6 +109,7 @@ class H5FileBuffer
 
         void                parseDataset        (const char* _dataset);
         const char*         type2str            (data_type_t datatype);
+        const char*         layout2str          (layout_t layout);
         uint64_t            readField           (int size, uint64_t* pos);
         void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
 
@@ -113,10 +123,12 @@ class H5FileBuffer
         int                 readMessagesV1      (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
         int                 readMessage         (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
 
+        int                 readDataspaceMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkInfoMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readDatatypeMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readFillValueMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readDataLayoutMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
         
@@ -146,6 +158,10 @@ class H5FileBuffer
         /* Data Members */
         data_type_t         dataType;
         fill_t              dataFill;
+        uint64_t            dataSize;
+        uint8_t*            dataBuffer;
+        uint64_t*           dataDimensions;
+        int                 dataNumDimensions;
 };
 
 /******************************************************************************
