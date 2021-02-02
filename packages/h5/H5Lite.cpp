@@ -30,6 +30,15 @@
 
 #include <assert.h>
 #include <stdexcept>
+#include <zlib.h>
+
+/******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#ifndef H5_EXTRA_DEBUG
+#define H5_EXTRA_DEBUG true
+#endif
 
 /******************************************************************************
  * MACROS
@@ -129,8 +138,9 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     dataFilter          = INVALID_FILTER;
     dataFilterParms     = NULL;
     dataNumFilterParms  = 0;
-    dataChunk           = NULL;
     dataChunkSize       = 0;
+    dataChunkBuffer     = NULL;
+    dataChunkBufferSize = 0;
 
     /* Open File */
     fp = fopen(filename, "r");
@@ -156,11 +166,11 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
 H5FileBuffer::~H5FileBuffer (void)
 {
     fclose(fp);
-    if(dataBuffer)      delete [] dataBuffer;
-    if(dataDimensions)  delete [] dataDimensions;
-    if(dataSliceBuffer) delete [] dataSliceBuffer;
-    if(dataFilterParms) delete [] dataFilterParms;
-    if(dataChunk)       delete [] dataChunk;
+    if(dataBuffer)          delete [] dataBuffer;
+    if(dataDimensions)      delete [] dataDimensions;
+    if(dataSliceBuffer)     delete [] dataSliceBuffer;
+    if(dataFilterParms)     delete [] dataFilterParms;
+    if(dataChunkBuffer)     delete [] dataChunkBuffer;
 }
 
 /*----------------------------------------------------------------------------
@@ -232,6 +242,53 @@ const char* H5FileBuffer::layout2str (layout_t layout)
         case CHUNKED_LAYOUT:    return "CHUNKED_LAYOUT";
         default:                return "UNKNOWN_LAYOUT";
     }
+}
+
+/*----------------------------------------------------------------------------
+ * inflateChunk
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size)
+{
+    int status;
+    z_stream strm;
+
+    /* Initialize z_stream State */
+    strm.zalloc     = Z_NULL;
+    strm.zfree      = Z_NULL;
+    strm.opaque     = Z_NULL;
+    strm.avail_in   = 0;
+    strm.next_in    = Z_NULL;
+    status = inflateInit(&strm);
+    if(status != Z_OK)
+    {
+        mlog(CRITICAL, "failed to initialize z_stream: %d\n", status);
+        throw std::runtime_error("failed to initialize z_stream");
+    }
+
+    /* Decompress Until Entire Chunk is Processed */
+    strm.avail_in = input_size;
+    strm.next_in = input;
+
+    /* Decompress Chunk */
+    do 
+    {
+        strm.avail_out = output_size;
+        strm.next_out = output;
+        status = inflate(&strm, Z_NO_FLUSH);
+        if(status != Z_OK) break;
+    } while (strm.avail_out == 0);
+
+    /* Clean Up z_stream */
+    inflateEnd(&strm);
+
+    /* Check Decompression Complete */
+    if(status != Z_STREAM_END)
+    {
+        mlog(CRITICAL, "failed to inflate entire z_stream: %d\n", status);
+        throw std::runtime_error("failed to inflate entire z_stream");
+    }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -671,7 +728,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos)
         uint64_t data_offset = readField(8, &pos);
         uint64_t child_addr = readField(offsetSize, &pos);
 
-        if(verbose)
+        if(verbose && H5_EXTRA_DEBUG)
         {
             mlog(RAW, "\nEntry:                                                           %d,%d\n", node_level, e);
             mlog(RAW, "Chunk Size:                                                      %u\n", (unsigned int)chunk_size);
@@ -693,15 +750,35 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos)
         else
         {
             /* Check Chunk Allocation */
-            if(chunk_size > dataChunkSize)
+            if(chunk_size > dataChunkBufferSize)
             {
-                if(dataChunk) delete [] dataChunk;
-                dataChunkSize = chunk_size * CHUNK_ALLOC_FACTOR;
-                dataChunk = new uint8_t [dataChunkSize];
+                if(dataChunkBuffer) delete [] dataChunkBuffer;
+                dataChunkBufferSize = chunk_size * CHUNK_ALLOC_FACTOR;
+                dataChunkBuffer = new uint8_t [dataChunkBufferSize];
             }
 
-            /* Read Chunk */
-            readData(dataChunk, chunk_size, &child_addr);
+            /* Calculate Chunk Location */
+            uint64_t chunk_offset = 0;
+            for(int i = 0; i < dataNumDimensions; i++)
+            {
+                uint64_t slice_size = dataSliceBuffer[i];
+                for(int j = i + 1; j < dataNumDimensions; j++)
+                {
+                    slice_size *= dataDimensions[j];
+                }
+                chunk_offset += slice_size;
+            }
+
+            /* Read Chunk (if necessary) */
+            if(dataFilter == DEFLATE_FILTER)
+            {
+                readData(dataChunkBuffer, chunk_size, &child_addr);
+                inflateChunk(dataChunkBuffer, chunk_size, &dataBuffer[chunk_offset], dataChunkSize);
+            }
+            else
+            {
+                readData(&dataBuffer[chunk_offset], chunk_size, &child_addr);
+            }
         }
     }
 
@@ -1531,6 +1608,14 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             /* Read Number of Dimensions */
             int chunk_num_dim = (int)readField(1, &pos) - 1; // dimensionality is plus one over actual number of dimensions
+            if(errorChecking)
+            {
+                if(chunk_num_dim != dataNumDimensions)
+                {
+                    mlog(CRITICAL, "number of chunk dimensions does not match data dimensions: %d != %d\n", chunk_num_dim, dataNumDimensions);
+                    throw std::runtime_error("number of chunk dimensions does not match data dimensions");
+                }
+            }
 
             /* Read Address of B-Tree */
             uint64_t data_addr = readField(offsetSize, &pos);
@@ -1539,10 +1624,12 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             uint64_t* chunk_dim = NULL;
             if(chunk_num_dim > 0)
             {
+                dataChunkSize = dataElementSize;
                 chunk_dim = new uint64_t [chunk_num_dim];
                 for(int d = 0; d < chunk_num_dim; d++)
                 {
                     chunk_dim[d] = (uint32_t)readField(4, &pos);
+                    dataChunkSize *= chunk_dim[d];
                 }
             }
 
