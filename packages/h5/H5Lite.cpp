@@ -609,6 +609,37 @@ int H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, i
 }
 
 /*----------------------------------------------------------------------------
+ * readBTreeV1
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readBTreeV1 (uint64_t pos)
+{
+    uint64_t starting_position = pos;
+
+    if(!errorChecking)
+    {
+        pos += 4;
+    }
+    else
+    {
+        uint32_t signature = (uint32_t)readField(4, &pos);
+        if(signature != H5_TREE_SIGNATURE_LE)
+        {
+            mlog(CRITICAL, "invalid b-tree signature: 0x%llX\n", (unsigned long long)signature);
+            throw std::runtime_error("invalid b-tree signature");
+        }
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "B-Tree: 0x%lx\n", (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
  * readObjHdr
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
@@ -1482,7 +1513,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             dataBuffer = new uint8_t [dataSize];
 
             /* Read Data from B-Tree */
-            (void)data_addr;
+            readBTreeV1(data_addr);
             break;
         }
 
