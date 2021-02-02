@@ -128,7 +128,8 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
         }
 
         /* Open Resource */
-        H5FileBuffer h5file(resource, datasetname, true, true);
+        info_t data_info;
+        H5FileBuffer h5file(&data_info, resource, datasetname, true, true);
 
         fileptr_t file = NULL; //H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file == NULL)
@@ -198,7 +199,12 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
         }
 
         /* Open File */
-        H5FileBuffer h5file(resource, start_group, true, true);
+        info_t data_info;
+        H5FileBuffer h5file(&data_info, resource, start_group, true, true);
+
+        /* Free Data */
+        if(data_info.data) delete [] data_info.data;
+
     }
     catch (const std::exception &e)
     {
@@ -217,10 +223,11 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _errorChecking, bool _verbose)
+H5Lite::H5FileBuffer::H5FileBuffer (info_t* _data_info, const char* filename, const char* _dataset, bool _errorChecking, bool _verbose)
 {
+    assert(_data_info);
     assert(filename);
-    assert(_dataset);
+    assert(_dataset);    
 
     errorChecking       = _errorChecking;
     verbose             = _verbose;
@@ -236,13 +243,8 @@ H5Lite::H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, 
     
     /* Initialize Data */
     dataType            = UNKNOWN_TYPE;
-    dataElementSize     = 0;
     dataFill.fill_ll    = 0LL;
     dataFillSize        = 0;
-    dataSize            = 0;
-    dataBuffer          = NULL;
-    dataDimensions      = NULL;
-    dataSliceBuffer     = NULL;
     dataNumDimensions   = 0;
     dataFilter          = INVALID_FILTER;
     dataFilterParms     = NULL;
@@ -250,6 +252,10 @@ H5Lite::H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, 
     dataChunkSize       = 0;
     dataChunkBuffer     = NULL;
     dataChunkBufferSize = 0;
+
+    /* Set Info Pointer */
+    dataInfo = _data_info;
+    LocalLib::set(dataInfo, 0, sizeof(info_t));
 
     /* Open File */
     fp = fopen(filename, "r");
@@ -275,9 +281,6 @@ H5Lite::H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, 
 H5Lite::H5FileBuffer::~H5FileBuffer (void)
 {
     fclose(fp);
-    if(dataBuffer)          delete [] dataBuffer;
-    if(dataDimensions)      delete [] dataDimensions;
-    if(dataSliceBuffer)     delete [] dataSliceBuffer;
     if(dataFilterParms)     delete [] dataFilterParms;
     if(dataChunkBuffer)     delete [] dataChunkBuffer;
 }
@@ -407,12 +410,12 @@ int H5Lite::H5FileBuffer::createDataBuffer (uint64_t buffer_size)
 {
     if(buffer_size > 0)
     {
-        dataBuffer = new uint8_t [buffer_size];
+        dataInfo->data = new uint8_t [buffer_size];
         if(dataFillSize > 0)
         {
             for(uint64_t i = 0; i < buffer_size; i += dataFillSize)
             {
-                LocalLib::copy(&dataBuffer[i], &dataFill.fill_ll, dataFillSize);
+                LocalLib::copy(&dataInfo->data[i], &dataFill.fill_ll, dataFillSize);
             }
         }
     }
@@ -902,11 +905,11 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos)
             if(dataFilter == DEFLATE_FILTER)
             {
                 readData(dataChunkBuffer, chunk_size, &child_addr);
-                inflateChunk(dataChunkBuffer, chunk_size, &dataBuffer[chunk_offset], dataChunkSize);
+                inflateChunk(dataChunkBuffer, chunk_size, &dataInfo->data[chunk_offset], dataChunkSize);
             }
             else
             {
-                readData(&dataBuffer[chunk_offset], chunk_size, &child_addr);
+                readData(&dataInfo->data[chunk_offset], chunk_size, &child_addr);
             }
         }
     }
@@ -1255,6 +1258,12 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
             mlog(CRITICAL, "unsupported permutation indexes\n");
             throw std::runtime_error("unsupported permutation indexes");
         }
+
+        if(dimensionality > MAX_NDIMS)
+        {
+            mlog(CRITICAL, "unsupported number of dimensions: %d\n", dimensionality);
+            throw std::runtime_error("unsupported number of dimensions");
+        }
     }
 
     if(verbose)
@@ -1268,11 +1277,9 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
     }
 
     /* Read and Populate Data Dimensions */
-    dataNumDimensions = dimensionality;
+    dataNumDimensions = MIN(dimensionality, MAX_NDIMS);
     if(dataNumDimensions > 0)
     {
-        dataDimensions = new uint64_t [dataNumDimensions];
-        dataSliceBuffer = new uint64_t [dataNumDimensions];
         for(int d = 0; d < dataNumDimensions; d++)
         {
             dataDimensions[d] = readField(lengthSize, &pos);
@@ -1374,7 +1381,7 @@ int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int 
 
     /* Read Message Info */
     uint64_t version_class = readField(4, &pos);
-    dataElementSize = (int)readField(4, &pos);
+    dataInfo->typesize = (int)readField(4, &pos);
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
@@ -1396,7 +1403,7 @@ int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int 
         mlog(RAW, "----------------\n");
         mlog(RAW, "Version:                                                         %d\n", (int)version);
         mlog(RAW, "Data Class:                                                      %d, %s\n", (int)dataType, type2str(dataType));
-        mlog(RAW, "Data Size:                                                       %d\n", dataElementSize);
+        mlog(RAW, "Data Size:                                                       %d\n", dataInfo->typesize);
     }
 
     /* Read Data Class Properties */
@@ -1711,11 +1718,11 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
     {
         case COMPACT_LAYOUT:
         {
-            dataSize = (uint16_t)readField(2, &pos);
-            if(dataSize > 0)
+            dataInfo->datasize = (uint16_t)readField(2, &pos);
+            if(dataInfo->datasize > 0)
             {
-                createDataBuffer(dataSize);
-                readData(dataBuffer, dataSize, &pos);
+                createDataBuffer(dataInfo->datasize);
+                readData(dataInfo->data, dataInfo->datasize, &pos);
             }
             break;
         }
@@ -1723,11 +1730,11 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
         case CONTIGUOUS_LAYOUT:
         {
             uint64_t data_addr = readField(offsetSize, &pos);
-            dataSize = readField(lengthSize, &pos);
-            if((dataSize > 0) && (!H5_INVALID(data_addr)))
+            dataInfo->datasize = readField(lengthSize, &pos);
+            if((dataInfo->datasize > 0) && (!H5_INVALID(data_addr)))
             {
-                createDataBuffer(dataSize);
-                readData(dataBuffer, dataSize, &data_addr);
+                createDataBuffer(dataInfo->datasize);
+                readData(dataInfo->data, dataInfo->datasize, &data_addr);
             }
             break;
         }
@@ -1736,6 +1743,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
         {
             /* Read Number of Dimensions */
             int chunk_num_dim = (int)readField(1, &pos) - 1; // dimensionality is plus one over actual number of dimensions
+            chunk_num_dim = MIN(chunk_num_dim, MAX_NDIMS); // dataNumDimensions has more robust error checking against MAX_NDIMS
             if(errorChecking)
             {
                 if(chunk_num_dim != dataNumDimensions)
@@ -1749,11 +1757,10 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             uint64_t data_addr = readField(offsetSize, &pos);
 
             /* Read Dimensions */
-            uint64_t* chunk_dim = NULL;
+            uint64_t chunk_dim[MAX_NDIMS];
             if(chunk_num_dim > 0)
             {
-                dataChunkSize = dataElementSize;
-                chunk_dim = new uint64_t [chunk_num_dim];
+                dataChunkSize = dataInfo->typesize;
                 for(int d = 0; d < chunk_num_dim; d++)
                 {
                     chunk_dim[d] = (uint32_t)readField(4, &pos);
@@ -1765,9 +1772,9 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             int element_size = (int)readField(4, &pos);
             if(errorChecking)
             {
-                if(element_size != dataElementSize)
+                if(element_size != dataInfo->typesize)
                 {
-                    mlog(CRITICAL, "chunk element size does not match data element size: %d != %d\n", element_size, dataElementSize);
+                    mlog(CRITICAL, "chunk element size does not match data element size: %d != %d\n", element_size, dataInfo->typesize);
                     throw std::runtime_error("chunk element size does not match data element size");
                 }
             }
@@ -1784,21 +1791,21 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             }
 
             /* Check All Parameters Ready */
-            if(dataElementSize <= 0 || dataNumDimensions <= 0)
+            if(dataInfo->typesize <= 0 || dataNumDimensions <= 0)
             {
-                mlog(CRITICAL, "unable to read data, missing info: %d, %d\n", dataElementSize, dataNumDimensions);
+                mlog(CRITICAL, "unable to read data, missing info: %d, %d\n", dataInfo->typesize, dataNumDimensions);
                 throw std::runtime_error("unable to read data, missing info");
             }
 
             /* Calculate Size of Data Buffer */
-            dataSize = dataElementSize;
+            dataInfo->datasize = dataInfo->typesize;
             for(int d = 0; d < dataNumDimensions; d++)
             {
-                dataSize *= dataDimensions[d];
+                dataInfo->datasize *= dataDimensions[d];
             }
 
             /* Allocate Data Buffer */
-            createDataBuffer(dataSize);
+            createDataBuffer(dataInfo->datasize);
 
             /* Read Data from B-Tree */
             readBTreeV1(data_addr);

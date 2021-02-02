@@ -67,7 +67,7 @@ struct H5Lite
 
 
     protected:
-    
+
         /******************************************************************************
          * HDF5 FILE BUFFER SUBCLASS
          ******************************************************************************/
@@ -137,7 +137,7 @@ struct H5Lite
                 * Methods
                 *--------------------------------------------------------------------*/
 
-                                    H5FileBuffer        (const char* filename, const char* _dataset, bool _error_checking=false, bool _verbose=false);
+                                    H5FileBuffer        (info_t* _data_info, const char* filename, const char* _dataset, bool _error_checking=false, bool _verbose=false);
                 virtual             ~H5FileBuffer       ();
 
             protected:
@@ -158,7 +158,8 @@ struct H5Lite
                 static const uint8_t    H5LITE_CUSTOM_V1_FLAG                   = 0x80; // used to indicate version 1 object header (reserved)
 
                 /*--------------------------------------------------------------------
-                * Methods
+                * Methods                int                 dataElementSize;
+
                 *--------------------------------------------------------------------*/
 
                 void                parseDataset        (const char* _dataset);
@@ -212,17 +213,14 @@ struct H5Lite
                 int                 groupInternalNodeK;
                 uint64_t            rootGroupOffset;
 
-                /* Data Members */
+                /* Data Meta Attributes */
                 data_type_t         dataType;
-                int                 dataElementSize;
 
                 fill_t              dataFill;
                 int                 dataFillSize;
 
-                uint64_t            dataSize;
-                uint8_t*            dataBuffer;
-                uint64_t*           dataDimensions;
-                uint64_t*           dataSliceBuffer;
+                uint64_t            dataDimensions[MAX_NDIMS];
+                uint64_t            dataSliceBuffer[MAX_NDIMS];
                 int                 dataNumDimensions;
 
                 filter_t            dataFilter;
@@ -232,6 +230,9 @@ struct H5Lite
                 int                 dataChunkSize;
                 uint8_t*            dataChunkBuffer;
                 uint64_t            dataChunkBufferSize;
+
+                /* Data Info */
+                info_t*             dataInfo;
         };
 };
 
