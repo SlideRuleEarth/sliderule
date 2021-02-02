@@ -119,6 +119,7 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     
     /* Initialize Data */
     dataType = UNKNOWN_TYPE;
+    dataElementSize = 0;
     dataFill.fill_ll = 0LL;
     dataSize = 0;
     dataBuffer = NULL;
@@ -143,11 +144,7 @@ H5FileBuffer::H5FileBuffer (const char* filename, const char* _dataset, bool _er
     readSuperblock(); // populates class members
 
     /* Start at Root Group */
-    if(!readObjHdr(rootGroupOffset, 0))
-    {
-        mlog(CRITICAL, "Failed to find dataset: %s\n", dataset);
-        throw std::runtime_error("failed to find dataset");
-    }
+    readObjHdr(rootGroupOffset, 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -1069,7 +1066,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Message Info */
     uint64_t version_class = readField(4, &pos);
-    uint32_t datasize = (uint32_t)readField(4, &pos);
+    dataElementSize = (int)readField(4, &pos);
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
@@ -1091,7 +1088,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         mlog(RAW, "----------------\n");
         mlog(RAW, "Version:                                                         %d\n", (int)version);
         mlog(RAW, "Data Class:                                                      %d, %s\n", (int)dataType, type2str(dataType));
-        mlog(RAW, "Data Size:                                                       %d\n", (int)datasize);
+        mlog(RAW, "Data Size:                                                       %d\n", dataElementSize);
     }
 
     /* Read Data Class Properties */
@@ -1448,7 +1445,15 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             }
 
             /* Read Size of Data Element */
-            uint32_t element_size = (uint32_t)readField(4, &pos);
+            int element_size = (int)readField(4, &pos);
+            if(errorChecking)
+            {
+                if(element_size != dataElementSize)
+                {
+                    mlog(CRITICAL, "chunk element size does not match data element size: %d != %d\n", element_size, dataElementSize);
+                    throw std::runtime_error("chunk element size does not match data element size");
+                }
+            }
 
             /* Display Data Attributes */
             if(verbose)
@@ -1460,6 +1465,21 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                     mlog(RAW, "Chunk Dimension %d:                                               %d\n", d, (int)chunk_dim[d]);
                 }
             }
+
+            /* Check All Parameters Ready */
+            if(dataElementSize <= 0 || dataNumDimensions <= 0)
+            {
+                mlog(CRITICAL, "unable to read data, missing info: %d, %d\n", dataElementSize, dataNumDimensions);
+                throw std::runtime_error("unable to read data, missing info");
+            }
+
+            /* Allocate Data Buffer */
+            dataSize = dataElementSize;
+            for(int d = 0; d < dataNumDimensions; d++)
+            {
+                dataSize *= dataDimensions[d];
+            }
+            dataBuffer = new uint8_t [dataSize];
 
             /* Read Data from B-Tree */
             (void)data_addr;

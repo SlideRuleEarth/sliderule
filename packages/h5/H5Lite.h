@@ -168,6 +168,7 @@ class H5FileBuffer
 
         /* Data Members */
         data_type_t         dataType;
+        int                 dataElementSize;
         fill_t              dataFill;
         uint64_t            dataSize;
         uint8_t*            dataBuffer;
