@@ -873,9 +873,9 @@ int H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uin
     {
         case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
         case DATATYPE_MSG:      return readDatatypeMsg(pos, hdr_flags, dlvl);
-        case FILL_VALUE_MSG:    readFillValueMsg(pos, hdr_flags, dlvl); return size; //return readFillValueMsg(pos, hdr_flags, dlvl);
+        case FILL_VALUE_MSG:    return readFillValueMsg(pos, hdr_flags, dlvl);
         case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
-//      case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
+        case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
 
         default:
@@ -1215,7 +1215,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         mlog(RAW, "Link Name Length:                                                %lu\n", (unsigned long)link_name_len);
     }
 
-    uint8_t link_name[512];
+    uint8_t link_name[STR_BUFF_SIZE];
     readData(link_name, link_name_len, &pos); // plus one for null termination
     link_name[link_name_len] = '\0';
     if(verbose)
@@ -1243,7 +1243,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     else if(link_type == 1) // soft link
     {
         uint16_t soft_link_len = readField(2, &pos);
-        uint8_t soft_link[512];
+        uint8_t soft_link[STR_BUFF_SIZE];
         readData(soft_link, soft_link_len, &pos);
         if(verbose)
         {
@@ -1253,7 +1253,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     else if(link_type == 64) // external link
     {
         uint16_t ext_link_len = readField(2, &pos);
-        uint8_t ext_link[512];
+        uint8_t ext_link[STR_BUFF_SIZE];
         readData(ext_link, ext_link_len, &pos);
         if(verbose)
         {
@@ -1276,12 +1276,72 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
-    (void)pos;
     (void)hdr_flags;
-    (void)dlvl;
 
-    /* Unimplemented */
-    return 0;
+    uint64_t starting_position = pos;
+
+    /* Read Message Info */
+    uint64_t version = readField(1, &pos);
+    uint32_t num_filters = (uint32_t)readField(1, &pos);
+    pos += 6; // move past reserved bytes
+
+    if(errorChecking)
+    {
+        if(version != 1)
+        {
+            mlog(CRITICAL, "invalid filter version: %d\n", (int)version);
+            throw std::runtime_error("invalid filter version");
+        }
+    }
+
+    /* Read Filter Description */
+    uint16_t filter_id          = (uint16_t)readField(2, &pos);
+    uint16_t name_len           = (uint16_t)readField(2, &pos);
+    uint16_t flags              = (uint16_t)readField(2, &pos);
+    uint16_t num_client_dvals   = (uint16_t)readField(2, &pos);
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Filter Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "Version:                                                         %d\n", (int)version);
+        mlog(RAW, "Number of Filters:                                               %d\n", (int)num_filters);
+        mlog(RAW, "Filter Identification Value:                                     %d\n", (int)filter_id);
+        mlog(RAW, "Glags:                                                         0x%x\n", (int)flags);
+        mlog(RAW, "Number Client Data Values:                                       %d\n", (int)num_client_dvals);
+    }
+
+    /* Read Name */
+    uint8_t filter_name[STR_BUFF_SIZE];
+    readData(filter_name, name_len, &pos);
+    filter_name[name_len] = '\0';
+    if(verbose)
+    {
+        mlog(RAW, "Filter Name:                                                     %s\n", filter_name);
+    }
+
+    /* Client Data */
+    uint32_t client_data_size = num_client_dvals * 4;
+    if(client_data_size <= STR_BUFF_SIZE)
+    {
+        uint32_t client_data[STR_BUFF_SIZE / 4];
+        readData((uint8_t*)client_data, client_data_size, &pos);
+    }
+    else
+    {
+        pos += client_data_size;
+    }
+
+    /* Handle Padding */
+    if(num_client_dvals % 2 == 1)
+    {
+        pos += 4;
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
 }
 
 /*----------------------------------------------------------------------------

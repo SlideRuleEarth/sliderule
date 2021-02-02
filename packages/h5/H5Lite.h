@@ -86,6 +86,7 @@ class H5FileBuffer
          *--------------------------------------------------------------------*/
 
         static const long       READ_BUFSIZE                            = 1048576; // 1MB
+        static const long       STR_BUFF_SIZE                           = 512;
         static const uint64_t   H5_SIGNATURE_LE                         = 0x0A1A0A0D46444889LL;
         static const uint64_t   H5_OHDR_SIGNATURE_LE                    = 0x5244484FLL; // object header
         static const uint64_t   H5_FRHP_SIGNATURE_LE                    = 0x50485246LL; // fractal heap
