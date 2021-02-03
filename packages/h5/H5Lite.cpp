@@ -911,7 +911,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
 
     /* Process Children */
     uint64_t data_key1 = datasetStartRow;
-    uint64_t data_key2 = datasetStartRow + datasetNumRows;
+    uint64_t data_key2 = datasetStartRow + datasetNumRows - 1;
     for(int e = 0; e < entries_used; e++)
     {
         /* Check Inclusion */
@@ -925,6 +925,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
             /* Process Child Entry */
             if(node_level > 0)
             {
+mlog(RAW, "CHILDREN: (%lu, %lu), (%lu, %lu)\n", data_key1, data_key2, child_key1, child_key2);
                 readBTreeV1(nodes[e].child_addr, start_offset);
             }
             else
@@ -1959,7 +1960,10 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             }
 
             /* Read Data from B-Tree */
-            readBTreeV1(data_addr, start_offset);
+            if(dataInfo->datasize > 0)
+            {
+                readBTreeV1(data_addr, start_offset);
+            }
             break;
         }
 
