@@ -129,7 +129,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 
         /* Open Resource */
         info_t data_info;
-        H5FileBuffer h5file(&data_info, resource, datasetname, true, true);
+        H5FileBuffer h5file(&data_info, resource, datasetname, startrow, numrows, true, true);
 
         fileptr_t file = NULL; //H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file == NULL)
@@ -200,7 +200,7 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 
         /* Open File */
         info_t data_info;
-        H5FileBuffer h5file(&data_info, resource, start_group, true, true);
+        H5FileBuffer h5file(&data_info, resource, start_group, 0, 0, true, true);
 
         /* Free Data */
         if(data_info.data) delete [] data_info.data;
@@ -223,13 +223,15 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::H5FileBuffer (info_t* _data_info, const char* filename, const char* _dataset, bool _errorChecking, bool _verbose)
+H5Lite::H5FileBuffer::H5FileBuffer (info_t* _data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
 {
     assert(_data_info);
     assert(filename);
     assert(_dataset);    
 
-    errorChecking       = _errorChecking;
+    datasetStartRow     = startrow;
+    datasetNumRows      = numrows;
+    errorChecking       = _error_checking;
     verbose             = _verbose;
 
     /* Initialize */
@@ -249,9 +251,12 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* _data_info, const char* filename, co
     dataFilter          = INVALID_FILTER;
     dataFilterParms     = NULL;
     dataNumFilterParms  = 0;
-    dataChunkSize       = 0;
+    dataTotalElements   = 0;
+    dataChunkElements   = 0;
     dataChunkBuffer     = NULL;
     dataChunkBufferSize = 0;
+    chunkBuffer         = NULL;
+    chunkBufferSize     = 0;
 
     /* Set Info Pointer */
     dataInfo = _data_info;
@@ -281,8 +286,9 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* _data_info, const char* filename, co
 H5Lite::H5FileBuffer::~H5FileBuffer (void)
 {
     fclose(fp);
-    if(dataFilterParms)     delete [] dataFilterParms;
-    if(dataChunkBuffer)     delete [] dataChunkBuffer;
+    if(dataFilterParms) delete [] dataFilterParms;
+    if(dataChunkBuffer) delete [] dataChunkBuffer;
+    if(chunkBuffer)     delete [] chunkBuffer;
 }
 
 /*----------------------------------------------------------------------------
@@ -805,7 +811,7 @@ int H5Lite::H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_pr
 /*----------------------------------------------------------------------------
  * readBTreeV1
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos)
+int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
 {
     uint64_t starting_position = pos;
 
@@ -834,6 +840,11 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos)
     /* Read Node Level and Number of Entries */
     uint8_t node_level = (uint8_t)readField(1, &pos);
     uint16_t entries_used = (uint16_t)readField(2, &pos);
+    if(entries_used > MAX_CHUNK_NODE_K)
+    {
+        mlog(CRITICAL, "unsupported number of btree children: %d\n", entries_used);
+        throw std::runtime_error("unsupported number of btree children");\
+    }
 
     if(verbose)
     {
@@ -847,69 +858,166 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos)
     /* Skip Sibling Addresses */
     pos += offsetSize * 2;
 
-    /* Read and Process Children */
-    for(int e = 0; e < entries_used; e++)
+    /* Read Children */
+    static btree_node_t nodes[MAX_CHUNK_NODE_K]; // single thread, allocated on heap
+    for(int e = 0; e < entries_used + 1; e++)
     {
-        /* Read Child Entry */
-        uint32_t chunk_size = (uint32_t)readField(4, &pos);
-        uint32_t filter_mask = (uint32_t)readField(4, &pos);
+        /* Read Child Key */
+        nodes[e].chunk_size = (uint32_t)readField(4, &pos);
+        nodes[e].filter_mask = (uint32_t)readField(4, &pos);
         for(int d = 0; d < dataNumDimensions; d++)
         {
             dataSliceBuffer[d] = readField(8, &pos);
         }
+        nodes[e].row_key = dataSliceBuffer[0];
         uint64_t data_offset = readField(8, &pos);
-        uint64_t child_addr = readField(offsetSize, &pos);
 
+        /* Calculate Chunk Location */
+        nodes[e].chunk_offset = 0;
+        for(int i = 0; i < dataNumDimensions; i++)
+        {
+            uint64_t slice_size = dataSliceBuffer[i] * dataInfo->typesize;
+            for(int j = i + 1; j < dataNumDimensions; j++)
+            {
+                slice_size *= dataDimensions[j];
+            }
+            nodes[e].chunk_offset += slice_size;
+        }
+
+        /* Read Child Address */
+        if(e < entries_used)
+        {
+            nodes[e].child_addr = readField(offsetSize, &pos);
+        }
+
+        /* Display */
         if(verbose && H5_EXTRA_DEBUG)
         {
             mlog(RAW, "\nEntry:                                                           %d,%d\n", node_level, e);
-            mlog(RAW, "Chunk Size:                                                      %u\n", (unsigned int)chunk_size);
-            mlog(RAW, "Filter Mask:                                                     0x%x\n", (unsigned int)filter_mask);
+            mlog(RAW, "Chunk Size:                                                      %u\n", (unsigned int)nodes[e].chunk_size);
+            mlog(RAW, "Filter Mask:                                                     0x%x\n", (unsigned int)nodes[e].filter_mask);
             mlog(RAW, "Chunk Key:                                                       [");
             for(int d = 0; d < dataNumDimensions; d++)
             {
                 mlog(RAW, "%d,", (int)dataSliceBuffer[d]);
             }
             mlog(RAW, "%u]\n", (unsigned int)data_offset);
-            mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
-        }
-
-        /* Process Child Entry */
-        if(node_level > 0)
-        {
-            readBTreeV1(child_addr);
-        }
-        else
-        {
-            /* Check Chunk Allocation */
-            if(chunk_size > dataChunkBufferSize)
+            if(e < entries_used)
             {
-                if(dataChunkBuffer) delete [] dataChunkBuffer;
-                dataChunkBufferSize = chunk_size * CHUNK_ALLOC_FACTOR;
-                dataChunkBuffer = new uint8_t [dataChunkBufferSize];
+                mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)nodes[e].child_addr);
             }
+        }
+    }
 
-            /* Calculate Chunk Location */
-            uint64_t chunk_offset = 0;
-            for(int i = 0; i < dataNumDimensions; i++)
+    /* Process Children */
+    uint64_t data_key1 = datasetStartRow;
+    uint64_t data_key2 = datasetStartRow + datasetNumRows;
+    for(int e = 0; e < entries_used; e++)
+    {
+        /* Check Inclusion */
+        uint64_t child_key1 = nodes[e].row_key;
+        uint64_t child_key2 = nodes[e+1].row_key; // there is always +1 keys
+        if ((data_key1  >= child_key1 && data_key1  <  child_key2) ||
+            (data_key2  >= child_key1 && data_key2  <  child_key2) || 
+            (child_key1 >= data_key1  && child_key1 <= data_key2)  ||
+            (child_key2 >  data_key1  && child_key2 <  data_key2))
+        {
+            /* Process Child Entry */
+            if(node_level > 0)
             {
-                uint64_t slice_size = dataSliceBuffer[i];
-                for(int j = i + 1; j < dataNumDimensions; j++)
-                {
-                    slice_size *= dataDimensions[j];
-                }
-                chunk_offset += slice_size;
-            }
-
-            /* Read Chunk (if necessary) */
-            if(dataFilter == DEFLATE_FILTER)
-            {
-                readData(dataChunkBuffer, chunk_size, &child_addr);
-                inflateChunk(dataChunkBuffer, chunk_size, &dataInfo->data[chunk_offset], dataChunkSize);
+                readBTreeV1(nodes[e].child_addr, start_offset);
             }
             else
             {
-                readData(&dataInfo->data[chunk_offset], chunk_size, &child_addr);
+                /* Calculate Buffer Index - offset into data buffer to put chunked data */
+                uint64_t buffer_index = 0;
+                if(nodes[e].chunk_offset > start_offset)
+                {
+                    buffer_index = nodes[e].chunk_offset - start_offset;
+                    if((int)buffer_index >= dataInfo->datasize)
+                    {
+                        mlog(CRITICAL, "invalid location to read data: %ld, %lu\n", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
+                        throw std::runtime_error("invalid location to read data");
+                    }
+                }
+                
+                /* Calculate Chunk Index - offset into chunk buffer to read from */
+                uint64_t chunk_index = 0;
+                if(start_offset > nodes[e].chunk_offset)
+                {
+                    chunk_index = start_offset - nodes[e].chunk_offset;
+                    if((int64_t)chunk_index >= dataChunkBufferSize)
+                    {
+                        mlog(CRITICAL, "invalid location to read chunk: %ld, %lu\n", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
+                        throw std::runtime_error("invalid location to read chunk");
+                    }
+                }
+
+                /* Calculate Chunk Bytes - number of bytes to read from chunk buffer */
+                int64_t chunk_bytes = dataChunkBufferSize - chunk_index;
+                if(chunk_bytes < 0)
+                {
+                    mlog(CRITICAL, "no bytes of chunk data to read: %ld, %lu\n", (long)chunk_bytes, (unsigned long)chunk_index);
+                    throw std::runtime_error("no bytes of chunk data to read");
+                }
+                else if((int)(buffer_index + chunk_bytes) > dataInfo->datasize)
+                {
+                    chunk_bytes = dataInfo->datasize - buffer_index;
+                }
+
+                /* Read Chunk */
+                if(dataFilter == DEFLATE_FILTER)
+                {
+                    /* Check Chunk Buffer Allocation */
+                    if(nodes[e].chunk_size > chunkBufferSize)
+                    {
+                        if(chunkBuffer) delete [] chunkBuffer;
+                        chunkBufferSize = nodes[e].chunk_size * CHUNK_ALLOC_FACTOR;
+                        chunkBuffer = new uint8_t [chunkBufferSize];
+                    }
+
+                    /* Read Data into Chunk Buffer */
+                    readData(chunkBuffer, nodes[e].chunk_size, &nodes[e].child_addr);
+
+                    if(chunk_bytes == dataChunkBufferSize)
+                    {
+                        /* Inflate Directly into Data Buffer */
+                        inflateChunk(chunkBuffer, nodes[e].chunk_size, &dataInfo->data[buffer_index], chunk_bytes);
+                    }
+                    else
+                    {
+                        /* Inflate into Data Chunk Buffer */
+                        inflateChunk(chunkBuffer, nodes[e].chunk_size, dataChunkBuffer, dataChunkBufferSize);
+
+                        /* Copy Data Chunk Buffer into Data Buffer */
+                        LocalLib::copy(&dataInfo->data[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
+                    }
+                }
+                else
+                {
+                    if(chunk_bytes == dataChunkBufferSize)
+                    {
+                        if(errorChecking)
+                        {
+                            if(nodes[e].chunk_size != chunk_bytes)
+                            {
+                                mlog(CRITICAL, "mismatch in chunk size: %lu, %lu\n", (unsigned long)nodes[e].chunk_size, (unsigned long)chunk_bytes);
+                                throw std::runtime_error("mismatch in chunk size");
+                            }
+                        }
+
+                        /* Read Data Directly into Data Buffer */
+                        readData(&dataInfo->data[buffer_index], nodes[e].chunk_size, &nodes[e].child_addr);
+                    }
+                    else
+                    {
+                        /* Read Data into Chunk Buffer */
+                        readData(chunkBuffer, nodes[e].chunk_size, &nodes[e].child_addr);
+
+                        /* Copy Data Chunk Buffer into Data Buffer */
+                        LocalLib::copy(&dataInfo->data[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
+                    }
+                }
             }
         }
     }
@@ -1280,10 +1388,11 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
     dataNumDimensions = MIN(dimensionality, MAX_NDIMS);
     if(dataNumDimensions > 0)
     {
+        dataTotalElements = 1;
         for(int d = 0; d < dataNumDimensions; d++)
         {
             dataDimensions[d] = readField(lengthSize, &pos);
-            dataSliceBuffer[d] = 0;
+            dataTotalElements *= dataDimensions[d];
             if(verbose)
             {
                 mlog(RAW, "Dimension %d:                                                     %lu\n", (int)dataNumDimensions, (unsigned long)dataDimensions[d]);
@@ -1713,27 +1822,86 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
         mlog(RAW, "Layout:                                                          %d, %s\n", (int)layout, layout2str(layout));
     }
 
+    /* Check All Parameters Ready */
+    if(dataInfo->typesize <= 0 || dataNumDimensions <= 0)
+    {
+        mlog(CRITICAL, "unable to read data, missing info: %d, %d\n", dataInfo->typesize, dataNumDimensions);
+        throw std::runtime_error("unable to read data, missing info");
+    }
+
+    /* Calculate Size of Data Row (note dimension starts at 1) */
+    uint64_t row_size = dataInfo->typesize;
+    for(int d = 1; d < dataNumDimensions; d++)
+    {
+        row_size *= dataDimensions[d];
+    }
+
+    /* Get Number of Rows */
+    uint64_t num_rows = (datasetNumRows == ALL_ROWS) ? dataDimensions[0] : datasetNumRows;
+    if((datasetStartRow + num_rows) > dataDimensions[0])
+    {
+        mlog(CRITICAL, "read exceeds number of rows: %d + %d > %d\n", (int)datasetStartRow, (int)num_rows, (int)dataDimensions[0]);
+        throw std::runtime_error("read exceeds number of rows");
+    }
+
+    /* Allocate Data Buffer */
+    dataInfo->datasize = row_size * num_rows;
+    if(dataInfo->datasize <= 0)
+    {
+        createDataBuffer(dataInfo->datasize);
+    }
+
+    /* Allocate Data Chunk Buffer */
+    dataChunkBufferSize = dataChunkElements * dataInfo->typesize;
+    if(dataChunkBufferSize > 0)
+    {
+        dataChunkBuffer = new uint8_t [dataChunkBufferSize];
+    }
+
+    /* Calculate Buffer Start and Stop Offset */
+    uint64_t start_offset = row_size * datasetStartRow;
+
     /* Read Layout Classes */
     switch(layout)
     {
         case COMPACT_LAYOUT:
         {
-            dataInfo->datasize = (uint16_t)readField(2, &pos);
+            uint16_t data_size = (uint16_t)readField(2, &pos);
+            if(data_size < (start_offset + dataInfo->datasize))
+            {
+                mlog(CRITICAL, "read exceeds data in compact layout: %d != %d\n", data_size, dataInfo->datasize);
+                throw std::runtime_error("read exceeds data in compact layout");
+            }
+
+            uint64_t data_addr = pos + start_offset;
             if(dataInfo->datasize > 0)
             {
-                createDataBuffer(dataInfo->datasize);
-                readData(dataInfo->data, dataInfo->datasize, &pos);
+                readData(dataInfo->data, dataInfo->datasize, &data_addr);
             }
+            
+            pos += data_size;
             break;
         }
 
         case CONTIGUOUS_LAYOUT:
         {
             uint64_t data_addr = readField(offsetSize, &pos);
-            dataInfo->datasize = readField(lengthSize, &pos);
-            if((dataInfo->datasize > 0) && (!H5_INVALID(data_addr)))
+            if(H5_INVALID(data_addr))
             {
-                createDataBuffer(dataInfo->datasize);
+                mlog(CRITICAL, "data not allocated in contiguous layout\n");
+                throw std::runtime_error("data not allocated in contiguous layout");
+            }
+
+            uint64_t data_size = readField(lengthSize, &pos);
+            if(data_size < (start_offset + dataInfo->datasize))
+            {
+                mlog(CRITICAL, "read exceeds data in contiguous layout: %lu != %d\n", (unsigned long)data_size, dataInfo->datasize);
+                throw std::runtime_error("read exceeds data in contiguous layout");
+            }
+
+            if(dataInfo->datasize > 0)
+            {
+                data_addr += start_offset;
                 readData(dataInfo->data, dataInfo->datasize, &data_addr);
             }
             break;
@@ -1760,11 +1928,11 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             uint64_t chunk_dim[MAX_NDIMS];
             if(chunk_num_dim > 0)
             {
-                dataChunkSize = dataInfo->typesize;
+                dataChunkElements = 1;
                 for(int d = 0; d < chunk_num_dim; d++)
                 {
                     chunk_dim[d] = (uint32_t)readField(4, &pos);
-                    dataChunkSize *= chunk_dim[d];
+                    dataChunkElements *= chunk_dim[d];
                 }
             }
 
@@ -1790,25 +1958,8 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
                 }
             }
 
-            /* Check All Parameters Ready */
-            if(dataInfo->typesize <= 0 || dataNumDimensions <= 0)
-            {
-                mlog(CRITICAL, "unable to read data, missing info: %d, %d\n", dataInfo->typesize, dataNumDimensions);
-                throw std::runtime_error("unable to read data, missing info");
-            }
-
-            /* Calculate Size of Data Buffer */
-            dataInfo->datasize = dataInfo->typesize;
-            for(int d = 0; d < dataNumDimensions; d++)
-            {
-                dataInfo->datasize *= dataDimensions[d];
-            }
-
-            /* Allocate Data Buffer */
-            createDataBuffer(dataInfo->datasize);
-
             /* Read Data from B-Tree */
-            readBTreeV1(data_addr);
+            readBTreeV1(data_addr, start_offset);
             break;
         }
 

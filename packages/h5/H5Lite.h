@@ -37,7 +37,7 @@ struct H5Lite
      * Constants
      *--------------------------------------------------------------------*/
     
-    static const int MAX_NDIMS = 8;
+    static const int MAX_NDIMS = 2;
     static const long ALL_ROWS = -1;
 
     typedef enum {
@@ -124,6 +124,43 @@ struct H5Lite
                     UNKNOWN_FILTER          = 7
                 } filter_t;
 
+                /*--------------------------------------------------------------------
+                * Methods
+                *--------------------------------------------------------------------*/
+
+                                    H5FileBuffer        (info_t* _data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
+                virtual             ~H5FileBuffer       (void);
+
+            protected:
+
+                /*--------------------------------------------------------------------
+                * Constants
+                *--------------------------------------------------------------------*/
+
+                static const long       READ_BUFSIZE            = 1048576; // 1MB
+                static const long       STR_BUFF_SIZE           = 512;
+                static const int        CHUNK_ALLOC_FACTOR      = 2;
+                static const int        MAX_CHUNK_NODE_K        = 512;
+                static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
+                static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
+                static const uint64_t   H5_FRHP_SIGNATURE_LE    = 0x50485246LL; // fractal heap
+                static const uint64_t   H5_FHDB_SIGNATURE_LE    = 0x42444846LL; // direct block
+                static const uint64_t   H5_OCHK_SIGNATURE_LE    = 0x4B48434FLL; // object header continuation block
+                static const uint64_t   H5_TREE_SIGNATURE_LE    = 0x45455254LL; // binary tree version 1
+                static const uint8_t    H5LITE_CUSTOM_V1_FLAG   = 0x80; // used to indicate version 1 object header (reserved)
+
+                /*--------------------------------------------------------------------
+                * Typedefs
+                *--------------------------------------------------------------------*/
+
+                typedef struct {
+                    uint32_t                chunk_size;
+                    uint32_t                filter_mask;
+                    uint64_t                row_key;
+                    uint64_t                chunk_offset;
+                    uint64_t                child_addr;
+                } btree_node_t;
+
                 typedef union {
                     double                  fill_lf;
                     float                   fill_f;
@@ -137,31 +174,6 @@ struct H5Lite
                 * Methods
                 *--------------------------------------------------------------------*/
 
-                                    H5FileBuffer        (info_t* _data_info, const char* filename, const char* _dataset, bool _error_checking=false, bool _verbose=false);
-                virtual             ~H5FileBuffer       ();
-
-            protected:
-
-                /*--------------------------------------------------------------------
-                * Constants
-                *--------------------------------------------------------------------*/
-
-                static const long       READ_BUFSIZE                            = 1048576; // 1MB
-                static const long       STR_BUFF_SIZE                           = 512;
-                static const int        CHUNK_ALLOC_FACTOR                      = 2;
-                static const uint64_t   H5_SIGNATURE_LE                         = 0x0A1A0A0D46444889LL;
-                static const uint64_t   H5_OHDR_SIGNATURE_LE                    = 0x5244484FLL; // object header
-                static const uint64_t   H5_FRHP_SIGNATURE_LE                    = 0x50485246LL; // fractal heap
-                static const uint64_t   H5_FHDB_SIGNATURE_LE                    = 0x42444846LL; // direct block
-                static const uint64_t   H5_OCHK_SIGNATURE_LE                    = 0x4B48434FLL; // object header continuation block
-                static const uint64_t   H5_TREE_SIGNATURE_LE                    = 0x45455254LL; // binary tree version 1
-                static const uint8_t    H5LITE_CUSTOM_V1_FLAG                   = 0x80; // used to indicate version 1 object header (reserved)
-
-                /*--------------------------------------------------------------------
-                * Methods                int                 dataElementSize;
-
-                *--------------------------------------------------------------------*/
-
                 void                parseDataset        (const char* _dataset);
                 const char*         type2str            (data_type_t datatype);
                 const char*         layout2str          (layout_t layout);
@@ -173,7 +185,7 @@ struct H5Lite
                 int                 readSuperblock      (void);        
                 int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
                 int                 readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
-                int                 readBTreeV1         (uint64_t pos);
+                int                 readBTreeV1         (uint64_t pos, uint64_t start_offset);
 
                 int                 readObjHdr          (uint64_t pos, int dlvl);
                 int                 readMessages        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
@@ -198,6 +210,8 @@ struct H5Lite
                 fileptr_t           fp;
                 const char*         dataset;
                 List<const char*>   datasetPath;
+                uint64_t            datasetStartRow;
+                int                 datasetNumRows;
                 bool                errorChecking;
                 bool                verbose;
 
@@ -227,9 +241,13 @@ struct H5Lite
                 uint32_t*           dataFilterParms;
                 int                 dataNumFilterParms;
 
-                int                 dataChunkSize;
-                uint8_t*            dataChunkBuffer;
-                uint64_t            dataChunkBufferSize;
+                uint64_t            dataTotalElements;
+                uint64_t            dataChunkElements;        
+                uint8_t*            dataChunkBuffer; 
+                int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
+
+                uint8_t*            chunkBuffer;
+                int64_t             chunkBufferSize;
 
                 /* Data Info */
                 info_t*             dataInfo;
