@@ -114,69 +114,34 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     (void)numrows;
 
     info_t info;
-    bool status = false;
 
-    do
+    /* Initialize Driver */
+    const char* resource = NULL;
+    driver_t driver = H5Lite::parseUrl(url, &resource);    
+    if(driver == UNKNOWN)
     {
-        /* Initialize Driver */
-        const char* resource = NULL;
-        driver_t driver = H5Lite::parseUrl(url, &resource);
-        if(driver == UNKNOWN)
-        {
-            mlog(CRITICAL, "Invalid url: %s\n", url);
-            break;
-        }
-
-        /* Open Resource */
-        info_t data_info;
-        H5FileBuffer h5file(&data_info, resource, datasetname, startrow, numrows, true, true);
-
-        fileptr_t file = NULL; //H5Fopen(resource, H5F_ACC_RDONLY, fapl);
-        if(file == NULL)
-        {
-            mlog(CRITICAL, "Failed to open resource: %s\n", url);
-            break;
-        }
-
-        /* Open Dataset */
-        int dataset = 0; // H5Dopen(file, datasetname, H5P_DEFAULT);
-        if(dataset < 0)
-        {
-            mlog(CRITICAL, "Failed to open dataset: %s\n", datasetname);
-            break;
-        }
-
-        /* Set Info */
-        uint8_t* data = NULL;
-        int elements = 0;
-        int typesize = 0;
-        long datasize = 0;
-
-        /* Start Trace */
-        mlog(INFO, "Reading %d elements (%ld bytes) from %s %s\n", elements, datasize, url, datasetname);
-        uint32_t parent_trace_id = TraceLib::grabId();
-        uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
-
-        /* Stop Trace */
-        stop_trace(trace_id);
-
-        /* Read Dataset */
-        status = true;
-        mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
-
-
-        /* Return Info */
-        info.elements = elements;
-        info.typesize = typesize;
-        info.datasize = datasize;
-        info.data = data;
+        throw RunTimeException("Invalid url: %s", url);
     }
-    while(false);
 
+    /* Start Trace */
+    uint32_t parent_trace_id = TraceLib::grabId();
+    uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+
+    /* Open Resource and Read Dataset */
+    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, false);
+
+    double* test_ptr = (double*)info.data;
+    for(int i = 0; i < info.elements; i++)
+    {
+        printf("%lf\n", test_ptr[i]);
+    }
+    
+    /* Stop Trace */
+    stop_trace(trace_id);
+    mlog(INFO, "Read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
 
     /* Return Info */
-    if(status)  return info;
-    else        throw RunTimeException("H5Lite failed to read");
+    return info;
 }
 
 /*----------------------------------------------------------------------------
@@ -251,7 +216,6 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* _data_info, const char* filename, co
     dataFilter          = INVALID_FILTER;
     dataFilterParms     = NULL;
     dataNumFilterParms  = 0;
-    dataTotalElements   = 0;
     dataChunkElements   = 0;
     dataChunkBuffer     = NULL;
     dataChunkBufferSize = 0;
@@ -1369,11 +1333,11 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
     dataNumDimensions = MIN(dimensionality, MAX_NDIMS);
     if(dataNumDimensions > 0)
     {
-        dataTotalElements = 1;
+        dataInfo->elements = 1;
         for(int d = 0; d < dataNumDimensions; d++)
         {
             dataDimensions[d] = readField(lengthSize, &pos);
-            dataTotalElements *= dataDimensions[d];
+            dataInfo->elements *= dataDimensions[d];
             if(verbose)
             {
                 mlog(RAW, "Dimension %d:                                                     %lu\n", (int)dataNumDimensions, (unsigned long)dataDimensions[d]);

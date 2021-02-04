@@ -233,7 +233,6 @@ struct H5Lite
                 int                 dataFillSize;
 
                 uint64_t            dataDimensions[MAX_NDIMS];
-                uint64_t            dataSliceBuffer[MAX_NDIMS];
                 int                 dataNumDimensions;
 
                 filter_t            dataFilter;
