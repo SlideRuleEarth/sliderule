@@ -176,7 +176,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 
     /* Return Info */
     if(status)  return info;
-    else        throw std::runtime_error("H5Lite");
+    else        throw RunTimeException("H5Lite failed to read");
 }
 
 /*----------------------------------------------------------------------------
@@ -195,7 +195,7 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
         driver_t driver = H5Lite::parseUrl(url, &resource);
         if(driver == UNKNOWN)
         {
-            throw std::runtime_error("Invalid url");
+            throw RunTimeException("Invalid url: %s", url);
         }
 
         /* Open File */
@@ -266,8 +266,7 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* _data_info, const char* filename, co
     fp = fopen(filename, "r");
     if(fp == NULL)
     {
-        mlog(CRITICAL, "Failed to open filename: %s", filename);
-        throw std::runtime_error("failed to open file");
+        throw RunTimeException("Failed to open filename: %s", filename);
     }
 
     /* Get Dataset Path */
@@ -379,8 +378,7 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
     status = inflateInit(&strm);
     if(status != Z_OK)
     {
-        mlog(CRITICAL, "failed to initialize z_stream: %d\n", status);
-        throw std::runtime_error("failed to initialize z_stream");
+        throw RunTimeException("failed to initialize z_stream: %d", status);
     }
 
     /* Decompress Until Entire Chunk is Processed */
@@ -402,8 +400,7 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
     /* Check Decompression Complete */
     if(status != Z_STREAM_END)
     {
-        mlog(CRITICAL, "failed to inflate entire z_stream: %d\n", status);
-        throw std::runtime_error("failed to inflate entire z_stream");
+        throw RunTimeException("failed to inflate entire z_stream: %d", status);
     }
 
     return 0;
@@ -450,7 +447,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
         }
         else
         {
-            throw std::runtime_error("failed to go to field position");
+            throw RunTimeException("failed to go to field position: %d", field_position);
         }
     }
 
@@ -496,8 +493,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 
         default:
         {
-            assert(0);
-            throw std::runtime_error("invalid field size");
+            throw RunTimeException("invalid field size: %d", field_size);
         }
     }
 
@@ -524,7 +520,7 @@ void H5Lite::H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos
     }
     else
     {
-        throw std::runtime_error("failed to go to data position");
+        throw RunTimeException("failed to go to data position: %d", *pos);
     }
 
     /* Read Data */
@@ -552,36 +548,31 @@ int H5Lite::H5FileBuffer::readSuperblock (void)
         uint64_t signature = readField(8, &pos);
         if(signature != H5_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "Invalid h5 file signature: 0x%llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid signature");
+            throw RunTimeException("invalid h5 file signature: 0x%llX", (unsigned long long)signature);
         }
 
         uint64_t superblock_version = readField(1, &pos);
         if(superblock_version != 0)
         {
-            mlog(CRITICAL, "Invalid h5 file superblock version: %d\n", (int)superblock_version);
-            throw std::runtime_error("invalid superblock version");
+            throw RunTimeException("invalid h5 file superblock version: %d", (int)superblock_version);
         }
 
         uint64_t freespace_version = readField(1, &pos);
         if(freespace_version != 0)
         {
-            mlog(CRITICAL, "Invalid h5 file free space version: %d\n", (int)freespace_version);
-            throw std::runtime_error("invalid free space version");
+            throw RunTimeException("invalid h5 file free space version: %d", (int)freespace_version);
         }
 
         uint64_t roottable_version = readField(1, &pos);
         if(roottable_version != 0)
         {
-            mlog(CRITICAL, "Invalid h5 file root table version: %d\n", (int)roottable_version);
-            throw std::runtime_error("invalid root table version");
+            throw RunTimeException("invalid h5 file root table version: %d", (int)roottable_version);
         }
 
         uint64_t headermsg_version = readField(1, &pos);
         if(headermsg_version != 0)
         {
-            mlog(CRITICAL, "Invalid h5 file header message version: %d\n", (int)headermsg_version);
-            throw std::runtime_error("invalid header message version");
+            throw RunTimeException("invalid h5 file header message version: %d", (int)headermsg_version);
         }
     }
 
@@ -630,15 +621,13 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_
         uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FRHP_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid heap signature: 0x%llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid heap signature");
+            throw RunTimeException("invalid heap signature: 0x%llX", (unsigned long long)signature);
         }
 
         uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
-            mlog(CRITICAL, "invalid heap version: %d\n", (int)version);
-            throw std::runtime_error("invalid heap version");
+            throw RunTimeException("invalid heap version: %d", (int)version);
         }
     }
 
@@ -728,8 +717,7 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_
         int bytes_read = readDirectBlock(blk_offset_sz, checksum_present, blk_size, mg_objs, type, root_blk_addr, hdr_flags, dlvl);
         if(errorChecking && (bytes_read > blk_size))
         {
-            mlog(CRITICAL, "Direct block contianed more bytes than specified: %d > %d\n", bytes_read, blk_size);
-            throw std::runtime_error("invalid direct block");            
+            throw RunTimeException("direct block contianed more bytes than specified: %d > %d", bytes_read, blk_size);            
         }
         pos += blk_size;        
     }
@@ -755,15 +743,13 @@ int H5Lite::H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_pr
         uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FHDB_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid direct block signature: 0x%llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid direct block signature");
+            throw RunTimeException("invalid direct block signature: 0x%llX", (unsigned long long)signature);
         }
 
         uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
-            mlog(CRITICAL, "invalid direct block version: %d\n", (int)version);
-            throw std::runtime_error("invalid direct block version");
+            throw RunTimeException("invalid direct block version: %d", (int)version);
         }
     }
 
@@ -825,15 +811,13 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
         uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_TREE_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid b-tree signature: 0x%llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid b-tree signature");
+            throw RunTimeException("invalid b-tree signature: 0x%llX", (unsigned long long)signature);
         }
         
         uint8_t node_type = (uint8_t)readField(1, &pos);
         if(node_type != 1)
         {
-            mlog(CRITICAL, "only raw data chunk b-trees supported: %d\n", node_type);
-            throw std::runtime_error("only raw data chunk b-trees supported");
+            throw RunTimeException("only raw data chunk b-trees supported: %d", node_type);
         }
     }
 
@@ -842,8 +826,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
     uint16_t entries_used = (uint16_t)readField(2, &pos);
     if(entries_used > MAX_CHUNK_NODE_K)
     {
-        mlog(CRITICAL, "unsupported number of btree children: %d\n", entries_used);
-        throw std::runtime_error("unsupported number of btree children");\
+        throw RunTimeException("unsupported number of btree children: %d", entries_used);
     }
 
     if(verbose)
@@ -925,7 +908,6 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
             /* Process Child Entry */
             if(node_level > 0)
             {
-mlog(RAW, "CHILDREN: (%lu, %lu), (%lu, %lu)\n", data_key1, data_key2, child_key1, child_key2);
                 readBTreeV1(nodes[e].child_addr, start_offset);
             }
             else
@@ -937,8 +919,7 @@ mlog(RAW, "CHILDREN: (%lu, %lu), (%lu, %lu)\n", data_key1, data_key2, child_key1
                     buffer_index = nodes[e].chunk_offset - start_offset;
                     if((int)buffer_index >= dataInfo->datasize)
                     {
-                        mlog(CRITICAL, "invalid location to read data: %ld, %lu\n", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
-                        throw std::runtime_error("invalid location to read data");
+                        throw RunTimeException("invalid location to read data: %ld, %lu", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
                     }
                 }
                 
@@ -949,8 +930,7 @@ mlog(RAW, "CHILDREN: (%lu, %lu), (%lu, %lu)\n", data_key1, data_key2, child_key1
                     chunk_index = start_offset - nodes[e].chunk_offset;
                     if((int64_t)chunk_index >= dataChunkBufferSize)
                     {
-                        mlog(CRITICAL, "invalid location to read chunk: %ld, %lu\n", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
-                        throw std::runtime_error("invalid location to read chunk");
+                        throw RunTimeException("invalid location to read chunk: %ld, %lu", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
                     }
                 }
 
@@ -958,8 +938,7 @@ mlog(RAW, "CHILDREN: (%lu, %lu), (%lu, %lu)\n", data_key1, data_key2, child_key1
                 int64_t chunk_bytes = dataChunkBufferSize - chunk_index;
                 if(chunk_bytes < 0)
                 {
-                    mlog(CRITICAL, "no bytes of chunk data to read: %ld, %lu\n", (long)chunk_bytes, (unsigned long)chunk_index);
-                    throw std::runtime_error("no bytes of chunk data to read");
+                    throw RunTimeException("no bytes of chunk data to read: %ld, %lu", (long)chunk_bytes, (unsigned long)chunk_index);
                 }
                 else if((int)(buffer_index + chunk_bytes) > dataInfo->datasize)
                 {
@@ -1002,8 +981,7 @@ mlog(RAW, "CHILDREN: (%lu, %lu), (%lu, %lu)\n", data_key1, data_key2, child_key1
                         {
                             if(nodes[e].chunk_size != chunk_bytes)
                             {
-                                mlog(CRITICAL, "mismatch in chunk size: %lu, %lu\n", (unsigned long)nodes[e].chunk_size, (unsigned long)chunk_bytes);
-                                throw std::runtime_error("mismatch in chunk size");
+                                throw RunTimeException("mismatch in chunk size: %lu, %lu", (unsigned long)nodes[e].chunk_size, (unsigned long)chunk_bytes);
                             }
                         }
 
@@ -1052,15 +1030,13 @@ int H5Lite::H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
         uint64_t signature = readField(4, &pos);
         if(signature != H5_OHDR_SIGNATURE_LE)
         {
-            mlog(CRITICAL, "invalid header signature: 0x%llX\n", (unsigned long long)signature);
-            throw std::runtime_error("invalid header signature");
+            throw RunTimeException("invalid header signature: 0x%llX", (unsigned long long)signature);
         }
 
         uint64_t version = readField(1, &pos);
         if(version != 2)
         {
-            mlog(CRITICAL, "invalid header version: %d\n", (int)version);
-            throw std::runtime_error("invalid header version");
+            throw RunTimeException("invalid header version: %d", (int)version);
         }
     }
 
@@ -1153,8 +1129,7 @@ int H5Lite::H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_
         int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
         if(errorChecking && (bytes_read != msg_size))
         {
-            mlog(CRITICAL, "Header continuation message different size than specified: %d != %d\n", bytes_read, msg_size);
-            throw std::runtime_error("invalid header continuation message");            
+            throw RunTimeException("header continuation message different size than specified: %d != %d", bytes_read, msg_size);            
         }
 
         /* Update Position */
@@ -1166,8 +1141,7 @@ int H5Lite::H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_
     {
         if(pos != end)
         {
-            mlog(CRITICAL, "Did not read correct number of bytes: %lu != %lu\n", (unsigned long)pos, (unsigned long)end);
-            throw std::runtime_error("did not read correct number bytes");            
+            throw RunTimeException("did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);            
         }
     }
 
@@ -1193,15 +1167,13 @@ int H5Lite::H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
         uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 1)
         {
-            mlog(CRITICAL, "invalid header version: %d\n", (int)version);
-            throw std::runtime_error("invalid header version");
+            throw RunTimeException("invalid header version: %d", (int)version);
         }
 
         uint8_t reserved0 = (uint8_t)readField(1, &pos); 
         if(reserved0 != 0)
         {
-            mlog(CRITICAL, "invalid reserved field: %d\n", (int)reserved0);
-            throw std::runtime_error("invalid reserved field");
+            throw RunTimeException("invalid reserved field: %d", (int)reserved0);
         }
     }
 
@@ -1274,8 +1246,7 @@ int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hd
             uint16_t reserved2 = (uint16_t)readField(2, &pos);
             if((reserved1 != 0) && (reserved2 != 0))
             {
-                mlog(CRITICAL, "invalid reserved fields: %d, %d\n", (int)reserved1, (int)reserved2);
-                throw std::runtime_error("invalid reserved fields");
+                throw RunTimeException("invalid reserved fields: %d, %d", (int)reserved1, (int)reserved2);
             }
         }
 
@@ -1283,8 +1254,7 @@ int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hd
         int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
         if(errorChecking && (bytes_read != msg_size))
         {
-            mlog(CRITICAL, "Header message different size than specified: %d != %d\n", bytes_read, msg_size);
-            throw std::runtime_error("invalid header message");            
+            throw RunTimeException("header message different size than specified: %d != %d", bytes_read, msg_size);            
         }
 
         /* Update Position */
@@ -1299,8 +1269,7 @@ int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hd
     {
         if(pos != end)
         {
-            mlog(CRITICAL, "Did not read correct number of bytes: %lu != %lu\n", (unsigned long)pos, (unsigned long)end);
-            throw std::runtime_error("did not read correct number bytes");            
+            throw RunTimeException("did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);            
         }
     }
 
@@ -1358,20 +1327,17 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
     {
         if(version != 1)
         {
-            mlog(CRITICAL, "invalid dataspace version: %d\n", (int)version);
-            throw std::runtime_error("invalid dataspace version");
+            throw RunTimeException("invalid dataspace version: %d", (int)version);
         }
 
         if(flags & PERM_INDEX_PRESENT)
         {
-            mlog(CRITICAL, "unsupported permutation indexes\n");
-            throw std::runtime_error("unsupported permutation indexes");
+            throw RunTimeException("unsupported permutation indexes");
         }
 
         if(dimensionality > MAX_NDIMS)
         {
-            mlog(CRITICAL, "unsupported number of dimensions: %d\n", dimensionality);
-            throw std::runtime_error("unsupported number of dimensions");
+            throw RunTimeException("unsupported number of dimensions: %d", dimensionality);
         }
     }
 
@@ -1429,8 +1395,7 @@ int H5Lite::H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int 
     {
         if(version != 0)
         {
-            mlog(CRITICAL, "invalid link info version: %d\n", (int)version);
-            throw std::runtime_error("invalid link info version");
+            throw RunTimeException("invalid link info version: %d", (int)version);
         }
     }
 
@@ -1499,8 +1464,7 @@ int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int 
     {
         if(version != 1)
         {
-            mlog(CRITICAL, "invalid datatype version: %d\n", (int)version);
-            throw std::runtime_error("invalid datatype version");
+            throw RunTimeException("invalid datatype version: %d", (int)version);
         }
     }
 
@@ -1585,8 +1549,7 @@ int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int 
         {
             if(errorChecking)
             {
-                mlog(CRITICAL, "unsupported datatype: %d\n", (int)dataType);
-                throw std::runtime_error("unsupported datatype");
+                throw RunTimeException("unsupported datatype: %d", (int)dataType);
             }
             break;
         }
@@ -1612,8 +1575,7 @@ int H5Lite::H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int
     {
         if(version != 2)
         {
-            mlog(CRITICAL, "invalid fill value version: %d\n", (int)version);
-            throw std::runtime_error("invalid fill value version");
+            throw RunTimeException("invalid fill value version: %d", (int)version);
         }
     }
 
@@ -1679,8 +1641,7 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
     {
         if(version != 1)
         {
-            mlog(CRITICAL, "invalid link version: %d\n", (int)version);
-            throw std::runtime_error("invalid link version");
+            throw RunTimeException("invalid link version: %d", (int)version);
         }
     }
 
@@ -1726,8 +1687,7 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
     int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
     if(errorChecking && (link_name_len_of_len > 8))
     {
-        mlog(CRITICAL, "invalid link name length of length: %d\n", (int)link_name_len_of_len);
-        throw std::runtime_error("invalid link name length of length");
+        throw RunTimeException("invalid link name length of length: %d", (int)link_name_len_of_len);
     }
     
     uint64_t link_name_len = readField(link_name_len_of_len, &pos);
@@ -1783,8 +1743,7 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
     }
     else if(errorChecking)
     {
-        mlog(CRITICAL, "invalid link type: %d\n", link_type);
-        throw std::runtime_error("invalid link type");
+        throw RunTimeException("invalid link type: %d", link_type);
     }
 
     /* Return Bytes Read */
@@ -1809,8 +1768,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
     {
         if(version != 3)
         {
-            mlog(CRITICAL, "invalid data layout version: %d\n", (int)version);
-            throw std::runtime_error("invalid data layout version");
+            throw RunTimeException("invalid data layout version: %d", (int)version);
         }
     }
 
@@ -1826,8 +1784,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
     /* Check All Parameters Ready */
     if(dataInfo->typesize <= 0 || dataNumDimensions <= 0)
     {
-        mlog(CRITICAL, "unable to read data, missing info: %d, %d\n", dataInfo->typesize, dataNumDimensions);
-        throw std::runtime_error("unable to read data, missing info");
+        throw RunTimeException("unable to read data, missing info: %d, %d", dataInfo->typesize, dataNumDimensions);
     }
 
     /* Calculate Size of Data Row (note dimension starts at 1) */
@@ -1838,15 +1795,14 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
     }
 
     /* Get Number of Rows */
-    uint64_t num_rows = (datasetNumRows == ALL_ROWS) ? dataDimensions[0] : datasetNumRows;
-    if((datasetStartRow + num_rows) > dataDimensions[0])
+    datasetNumRows = (datasetNumRows == ALL_ROWS) ? dataDimensions[0] : datasetNumRows;
+    if((datasetStartRow + datasetNumRows) > dataDimensions[0])
     {
-        mlog(CRITICAL, "read exceeds number of rows: %d + %d > %d\n", (int)datasetStartRow, (int)num_rows, (int)dataDimensions[0]);
-        throw std::runtime_error("read exceeds number of rows");
+        throw RunTimeException("read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, (int)datasetNumRows, (int)dataDimensions[0]);
     }
 
     /* Allocate Data Buffer */
-    dataInfo->datasize = row_size * num_rows;
+    dataInfo->datasize = row_size * datasetNumRows;
     if(dataInfo->datasize <= 0)
     {
         createDataBuffer(dataInfo->datasize);
@@ -1870,8 +1826,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             uint16_t data_size = (uint16_t)readField(2, &pos);
             if(data_size < (start_offset + dataInfo->datasize))
             {
-                mlog(CRITICAL, "read exceeds data in compact layout: %d != %d\n", data_size, dataInfo->datasize);
-                throw std::runtime_error("read exceeds data in compact layout");
+                throw RunTimeException("read exceeds data in compact layout: %d != %d", data_size, dataInfo->datasize);
             }
 
             uint64_t data_addr = pos + start_offset;
@@ -1889,15 +1844,13 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             uint64_t data_addr = readField(offsetSize, &pos);
             if(H5_INVALID(data_addr))
             {
-                mlog(CRITICAL, "data not allocated in contiguous layout\n");
-                throw std::runtime_error("data not allocated in contiguous layout");
+                throw RunTimeException("data not allocated in contiguous layout");
             }
 
             uint64_t data_size = readField(lengthSize, &pos);
             if(data_size < (start_offset + dataInfo->datasize))
             {
-                mlog(CRITICAL, "read exceeds data in contiguous layout: %lu != %d\n", (unsigned long)data_size, dataInfo->datasize);
-                throw std::runtime_error("read exceeds data in contiguous layout");
+                throw RunTimeException("read exceeds data in contiguous layout: %lu != %d", (unsigned long)data_size, dataInfo->datasize);
             }
 
             if(dataInfo->datasize > 0)
@@ -1917,8 +1870,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             {
                 if(chunk_num_dim != dataNumDimensions)
                 {
-                    mlog(CRITICAL, "number of chunk dimensions does not match data dimensions: %d != %d\n", chunk_num_dim, dataNumDimensions);
-                    throw std::runtime_error("number of chunk dimensions does not match data dimensions");
+                    throw RunTimeException("number of chunk dimensions does not match data dimensions: %d != %d", chunk_num_dim, dataNumDimensions);
                 }
             }
 
@@ -1943,8 +1895,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
             {
                 if(element_size != dataInfo->typesize)
                 {
-                    mlog(CRITICAL, "chunk element size does not match data element size: %d != %d\n", element_size, dataInfo->typesize);
-                    throw std::runtime_error("chunk element size does not match data element size");
+                    throw RunTimeException("chunk element size does not match data element size: %d != %d", element_size, dataInfo->typesize);
                 }
             }
 
@@ -1971,8 +1922,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
         {
             if(errorChecking)
             {
-                mlog(CRITICAL, "invalid data layout: %d\n", (int)layout);
-                throw std::runtime_error("invalid data layout");
+                throw RunTimeException("invalid data layout: %d", (int)layout);
             }
         }
     }
@@ -2002,8 +1952,7 @@ int H5Lite::H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dl
     {
         if(version != 1)
         {
-            mlog(CRITICAL, "invalid filter version: %d\n", (int)version);
-            throw std::runtime_error("invalid filter version");
+            throw RunTimeException("invalid filter version: %d", (int)version);
         }
     }
 
@@ -2092,8 +2041,7 @@ int H5Lite::H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, in
             uint64_t signature = readField(4, &pos);
             if(signature != H5_OCHK_SIGNATURE_LE)
             {
-                mlog(CRITICAL, "invalid header continuation signature: 0x%llX\n", (unsigned long long)signature);
-                throw std::runtime_error("invalid header continuation signature");
+                throw RunTimeException("invalid header continuation signature: 0x%llX", (unsigned long long)signature);
             }
         }
 
