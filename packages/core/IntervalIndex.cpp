@@ -59,9 +59,9 @@ int IntervalIndex::luaCreate (lua_State* L)
         /* Return AssetIndex Object */
         return createLuaObject(L, new IntervalIndex(L, _asset, _fieldname0, _fieldname1, _threshold));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

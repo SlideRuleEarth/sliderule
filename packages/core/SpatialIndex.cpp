@@ -68,9 +68,9 @@ int SpatialIndex::luaCreate (lua_State* L)
         /* Return AssetIndex Object */
         return createLuaObject(L, new SpatialIndex(L, _asset, _projection, _threshold));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -387,9 +387,9 @@ int SpatialIndex::luaProject (lua_State* L)
         /* Return Coordinates */
         return 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error projecting: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error projecting: %s\n", e.what());
     }
 
     /* Return Failure */
@@ -420,9 +420,9 @@ int SpatialIndex::luaSphere (lua_State* L)
         /* Return Coordinates */
         return 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error restoring: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error restoring: %s\n", e.what());
     }
 
     /* Return Failure */
@@ -470,9 +470,9 @@ int SpatialIndex::luaSplit (lua_State* L)
         /* Return Spans */
         return 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error splitting: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error splitting: %s\n", e.what());
     }
 
     /* Return Failure */
@@ -500,9 +500,9 @@ int SpatialIndex::luaIntersect (lua_State* L)
         /* Return Intersection */
         return 1;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error intersecting: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error intersecting: %s\n", e.what());
     }
 
     /* Return Failure */
@@ -536,9 +536,9 @@ int SpatialIndex::luaCombine (lua_State* L)
         /* Return Span */
         return 1;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error combining: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error combining: %s\n", e.what());
     }
 
     /* Return Failure */

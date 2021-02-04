@@ -62,9 +62,9 @@ int LimitDispatch::luaCreate (lua_State* L)
         /* Create Record Monitor */
         return createLuaObject(L, new LimitDispatch(L, rec, deepq, limitq));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -202,7 +202,7 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
         log_lvl_t lvl;
         if(LogLib::str2lvl(lvl_str, &lvl) == false)
         {
-            throw LuaException("invalid level");
+            throw RunTimeException("invalid level");
         }
 
         /* Set Level */
@@ -211,9 +211,9 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting level: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting level: %s\n", e.what());
     }
 
     /* Return Status */
@@ -235,9 +235,9 @@ int LimitDispatch::luaGMTDisplay(lua_State* L)
         /* Configure Display */
         lua_obj->gmtDisplay = getLuaBoolean(L, 2, false, false, &status);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring GMT display: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring GMT display: %s\n", e.what());
     }
 
     /* Return Status */

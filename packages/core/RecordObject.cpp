@@ -193,7 +193,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
         }
         else
         {
-            throw InvalidRecordException("invalid memory allocation in record creation");
+            throw RunTimeException("invalid memory allocation in record creation");
         }
 
         /* Allocate Record Memory */
@@ -208,7 +208,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
     }
     else
     {
-        throw InvalidRecordException("could not locate record definition");
+        throw RunTimeException("could not locate record definition");
     }
 }
 
@@ -235,12 +235,12 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
         }
         else
         {
-            throw InvalidRecordException("buffer passed in not large enough to populate record");
+            throw RunTimeException("buffer passed in not large enough to populate record");
         }
     }
     else
     {
-        throw InvalidRecordException("buffer did not contain defined record");
+        throw RunTimeException("buffer did not contain defined record");
     }
 }
 
@@ -530,7 +530,7 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
     if(f.flags & POINTER)
     {
         field_t ptr_field = getPointedToField(f, false, element);
-        if(val == NULL) throw AccessRecordException("Cannot null existing pointer!");
+        if(val == NULL) throw RunTimeException("Cannot null existing pointer!");
         else            setValueText(ptr_field, val);
     }
     else if(val_type == TEXT)
@@ -578,7 +578,7 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueReal(field_t f, const double val, int element)
 {
-    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -649,7 +649,7 @@ void RecordObject::setValueReal(field_t f, const double val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueInteger(field_t f, const long val, int element)
 {
-    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -777,7 +777,7 @@ const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
  *----------------------------------------------------------------------------*/
 double RecordObject::getValueReal(field_t f, int element)
 {
-    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -838,7 +838,7 @@ double RecordObject::getValueReal(field_t f, int element)
  *----------------------------------------------------------------------------*/
 long RecordObject::getValueInteger(field_t f, int element)
 {
-    if(element > 0 && element >= f.elements) throw AccessRecordException("Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException("Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -1458,13 +1458,13 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         // Check Offset
         if(f.offset == 0 && !allow_null)
         {
-            throw AccessRecordException("Attempted to dereference null pointer field!\n");
+            throw RunTimeException("Attempted to dereference null pointer field!\n");
         }
         else if((memoryAllocated > 0) && (f.offset > ((memoryAllocated - recordDefinition->type_size) * 8)))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
-            throw AccessRecordException("Pointer access exceeded size of memory allocated!");
+            throw RunTimeException("Pointer access exceeded size of memory allocated!");
         }
     }
 
@@ -1528,7 +1528,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
                 /* Get Element */
                 if(!StringLib::str2long(element_str, &element))
                 {
-                    throw AccessRecordException("Invalid array element!");
+                    throw RunTimeException("Invalid array element!");
                 }
             }
         }
@@ -1556,7 +1556,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
             field = subfield;
         }
     }
-    catch(const AccessRecordException& e)
+    catch(const RunTimeException& e)
     {
         dlog("Failed to parse field %s: %s\n", field_name, e.what());
     }
@@ -1702,8 +1702,8 @@ RecordObject::definition_t* RecordObject::getDefinition(const char* rec_type)
 RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, int size)
 {
     /* Check Parameters */
-    if(buffer == NULL) throw InvalidRecordException("Null buffer used to retrieve record definition");
-    else if(size <= 0) throw InvalidRecordException("Zero length buffer used to retrieve record definition");
+    if(buffer == NULL) throw RunTimeException("Null buffer used to retrieve record definition");
+    else if(size <= 0) throw RunTimeException("Zero length buffer used to retrieve record definition");
 
     /* Find Null Terminator */
     int i;
@@ -1718,7 +1718,7 @@ RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, i
     /* Check Null Terminator */
     if(i == size)
     {
-        throw InvalidRecordException("Record buffer does not contain record type");
+        throw RunTimeException("Record buffer does not contain record type");
     }
 
     /* Get Record Definitions */
@@ -1748,11 +1748,11 @@ RecordInterface::RecordInterface(unsigned char* buffer, int size): RecordObject(
             {
                 /* no additional initialization needed */
             }
-            else throw InvalidRecordException("Unable to differentiate the record type from record data");
+            else throw RunTimeException("Unable to differentiate the record type from record data");
         }
-        else throw InvalidRecordException("Buffer passed in not large enough to populate record");
+        else throw RunTimeException("Buffer passed in not large enough to populate record");
     }
-    else throw InvalidRecordException("Could not find a definition that matches the record buffer");
+    else throw RunTimeException("Could not find a definition that matches the record buffer");
 }
 
 /*----------------------------------------------------------------------------

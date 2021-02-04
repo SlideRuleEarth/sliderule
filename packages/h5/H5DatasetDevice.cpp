@@ -61,15 +61,15 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
         {
-            throw LuaException("unrecognized file access specified: %d\n", _role);
+            throw RunTimeException("unrecognized file access specified: %d\n", _role);
         }
 
         /* Return Dispatch Object */
         return createLuaObject(L, new H5DatasetDevice(L, (role_t)_role, filename, dataset_name, id, raw_mode, datatype));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating H5DatasetDevice: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating H5DatasetDevice: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }

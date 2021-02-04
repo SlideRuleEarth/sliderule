@@ -51,9 +51,9 @@ int LuaEndpoint::luaCreate (lua_State* L)
         /* Create Lua Endpoint */
         return createLuaObject(L, new LuaEndpoint(L));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

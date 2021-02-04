@@ -90,10 +90,9 @@ void TimeLib::init(void)
         heartBeat = NULL;
 #endif
     }
-    catch(InvalidTimerException& e)
+    catch(RunTimeException& e)
     {
-        (void)e;
-        dlog("Fatal error: unable to start heart beat timer\n");
+        dlog("Fatal error: unable to start heart beat timer: %s\n", e.what());
         assert(false);
     }
 }

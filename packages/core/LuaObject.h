@@ -41,29 +41,12 @@
 #include "OsApi.h"
 #include "Dictionary.h"
 
-#include <exception>
-#include <stdexcept>
 #include <atomic>
 
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
 
-/******************************************************************************
- * LUA EXCEPTION
- ******************************************************************************/
-
-class LuaException : public std::runtime_error
-{
-   public:
-
-        static const char* ERROR_TYPE;
-        static const int ERROR_MSG_LEN = 64;
-
-        char errmsg[ERROR_MSG_LEN];
-
-        LuaException(const char* _errmsg, ...);
-};
 
 /******************************************************************************
  * LUA OBJECT CLASS

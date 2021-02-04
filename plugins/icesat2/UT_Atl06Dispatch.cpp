@@ -52,9 +52,9 @@ int UT_Atl06Dispatch::luaCreate (lua_State* L)
         /* Create Math Library Unit Test */
         return createLuaObject(L, new UT_Atl06Dispatch(L));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -112,9 +112,9 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
         /* Set Status */
         status = tests_passed;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error executing test %s: %s\n", __FUNCTION__, e.errmsg);
+        mlog(CRITICAL, "Error executing test %s: %s\n", __FUNCTION__, e.what());
     }
 
     /* Return Status */
@@ -177,9 +177,9 @@ int UT_Atl06Dispatch::luaSortTest (lua_State* L)
         /* Set Status */
         status = tests_passed;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error executing test %s: %s\n", __FUNCTION__, e.errmsg);
+        mlog(CRITICAL, "Error executing test %s: %s\n", __FUNCTION__, e.what());
     }
 
     /* Return Status */

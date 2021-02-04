@@ -45,22 +45,6 @@
 #endif
 
 /******************************************************************************
- * RECORD EXCEPTION CLASSES
- ******************************************************************************/
-
-class InvalidRecordException : public std::runtime_error
-{
-   public:
-       InvalidRecordException(const char* _errmsg="InvalidRecordException") : std::runtime_error(_errmsg) { }
-};
-
-class AccessRecordException : public std::runtime_error
-{
-   public:
-       AccessRecordException(const char* _errmsg="AccessRecordException") : std::runtime_error(_errmsg) { }
-};
-
-/******************************************************************************
  * RECORD OBJECT CLASS
  ******************************************************************************/
 

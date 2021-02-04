@@ -114,9 +114,9 @@ int DeviceIO::luaLogPktStats(lua_State* L)
         status = true;
         num_obj_to_return = 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error logging device I/O statistics: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error logging device I/O statistics: %s\n", e.what());
     }
 
     /* Return Success */
@@ -142,7 +142,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
         /* Check Device Exists */
         if(!lua_obj->device)
         {
-            throw LuaException("device invalid... unable to execute command!");
+            throw RunTimeException("device invalid... unable to execute command!");
         }
 
         /* Wait for Device */
@@ -155,15 +155,15 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
         /* Check Success */
         if(!lua_obj->device->isConnected(number_of_connections))
         {
-            throw LuaException ("timeout occurred waiting for connection on device");
+            throw RunTimeException ("timeout occurred waiting for connection on device");
         }
 
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error waiting on device: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error waiting on device: %s\n", e.what());
     }
 
     /* Return Success */
@@ -196,15 +196,15 @@ int DeviceIO::luaConfigBlock(lua_State* L)
         }
         else
         {
-            throw LuaException("invalid block configuration specified");
+            throw RunTimeException("invalid block configuration specified");
         }
 
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring blocking on device: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring blocking on device: %s\n", e.what());
     }
 
     /* Return Success */
@@ -230,9 +230,9 @@ int DeviceIO::luaDieOnDisconnect(lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring blocking on device: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring blocking on device: %s\n", e.what());
     }
 
     /* Return Success */

@@ -257,9 +257,9 @@ int AssetIndex<T>::luaAdd (lua_State* L)
         /* Add Resource */
         status = lua_obj->add(span);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error adding: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error adding: %s\n", e.what());
     }
 
     /* Return Status */
@@ -302,9 +302,9 @@ int AssetIndex<T>::luaQuery (lua_State* L)
         /* Set Status */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error querying: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error querying: %s\n", e.what());
     }
 
     /* Return Status */
@@ -330,9 +330,9 @@ int AssetIndex<T>::luaDisplay (lua_State* L)
         /* Set Status */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error displaying: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error displaying: %s\n", e.what());
     }
 
     /* Return Status */

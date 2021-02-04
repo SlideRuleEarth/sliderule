@@ -55,9 +55,9 @@ int CcsdsPacketizer::luaCreate (lua_State* L)
         /* Create Packet Parser */
         return createLuaObject(L, new CcsdsPacketizer(L, inq, outq, pkttype, (uint16_t)apid, fc, (uint16_t)maxsize));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

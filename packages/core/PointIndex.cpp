@@ -58,9 +58,9 @@ int PointIndex::luaCreate (lua_State* L)
         /* Return AssetIndex Object */
         return createLuaObject(L, new PointIndex(L, _asset, _fieldname, _threshold));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

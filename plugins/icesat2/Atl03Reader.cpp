@@ -90,9 +90,9 @@ int Atl03Reader::luaCreate (lua_State* L)
         /* Return Reader Object */
         return createLuaObject(L, new Atl03Reader(L, url, outq_name, parms, track));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating Atl03Reader: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating Atl03Reader: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -593,7 +593,7 @@ int Atl03Reader::luaParms (lua_State* L)
         /* Get Self */
         lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
         return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
     }
@@ -613,9 +613,9 @@ int Atl03Reader::luaParms (lua_State* L)
         status = true;
         num_obj_to_return = 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error returning parameters %s: %s\n", lua_obj->getName(), e.errmsg);
+        mlog(CRITICAL, "Error returning parameters %s: %s\n", lua_obj->getName(), e.what());
     }
 
     /* Return Status */
@@ -636,7 +636,7 @@ int Atl03Reader::luaStats (lua_State* L)
         /* Get Self */
         lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
         return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
     }
@@ -661,9 +661,9 @@ int Atl03Reader::luaStats (lua_State* L)
         status = true;
         num_obj_to_return = 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error returning stats %s: %s\n", lua_obj->getName(), e.errmsg);
+        mlog(CRITICAL, "Error returning stats %s: %s\n", lua_obj->getName(), e.what());
     }
 
     /* Return Status */

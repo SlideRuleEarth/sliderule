@@ -48,9 +48,9 @@ int Uart::luaCreate (lua_State* L)
         /* Return File Device Object */
         return createLuaObject(L, new Uart(L, dev_name, baud_rate, (Uart::parity_t)parity));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating Uart: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating Uart: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }

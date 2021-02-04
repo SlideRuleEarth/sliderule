@@ -46,9 +46,9 @@ int H5File::luaCreate(lua_State* L)
         /* Return File Device Object */
         return createLuaObject(L, new H5File(L, _filename));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating HDF5 File: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating HDF5 File: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -167,9 +167,9 @@ int H5File::luaTraverse (lua_State* L)
 //        status = H5Lib::traverse(lua_obj->filename, max_depth, group_path);
         status = H5Lite::traverse(lua_obj->filename, max_depth, group_path);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error traversing hdf5 file: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error traversing hdf5 file: %s\n", e.what());
     }
 
     /* Return Status */
@@ -229,9 +229,9 @@ int H5File::luaInspect (lua_State* L)
             for(int i = 0; i < values.size; i++) printf("%02X\n", values[i]);
         }
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error inspecting hdf5 file: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error inspecting hdf5 file: %s\n", e.what());
         status = false;
     }
 

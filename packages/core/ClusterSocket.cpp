@@ -69,9 +69,9 @@ int ClusterSocket::luaCreate (lua_State* L)
         /* Return File Device Object */
         return createLuaObject(L, new ClusterSocket(L, ip_addr, port, (ClusterSocket::role_t)role, (ClusterSocket::protocol_t)protocol, is_server, false, q_name));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating ClusterSocket: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating ClusterSocket: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }

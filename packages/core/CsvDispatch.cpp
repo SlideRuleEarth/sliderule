@@ -67,9 +67,9 @@ int CsvDispatch::luaCreate (lua_State* L)
         /* Create Report Dispatch */
         return createLuaObject(L, new CsvDispatch(L, outq_name, _columns, _num_columns));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

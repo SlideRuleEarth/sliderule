@@ -117,7 +117,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
     {
         record = createRecord((unsigned char*)msg, size);
     }
-    catch (const InvalidRecordException& e)
+    catch (const RunTimeException& e)
     {
         mlog(ERROR, "Failed to create record in %s: %s\n", getName(), e.what());
         return 0;

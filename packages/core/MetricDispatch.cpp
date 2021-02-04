@@ -70,9 +70,9 @@ int MetricDispatch::luaCreate (lua_State* L)
         /* Return Metric Object */
         return createLuaObject(L, new MetricDispatch(L, data_field, outq_name, id_filter));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -275,9 +275,9 @@ int MetricDispatch::luaPlaybackSource(lua_State* L)
         /* Configure Playback Source */
         lua_obj->playbackSource = getLuaBoolean(L, 2, false, false, &status);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback source: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring playback source: %s\n", e.what());
     }
 
     /* Return Status */
@@ -299,9 +299,9 @@ int MetricDispatch::luaPlaybackText(lua_State* L)
         /* Configure Playback Source */
         lua_obj->playbackText = getLuaBoolean(L, 2, false, false, &status);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback test; %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring playback test; %s\n", e.what());
     }
 
     /* Return Status */
@@ -323,9 +323,9 @@ int MetricDispatch::luaPlaybackName(lua_State* L)
         /* Configure Playback Source */
         lua_obj->playbackName = getLuaBoolean(L, 2, false, false, &status);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback name: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring playback name: %s\n", e.what());
     }
 
     /* Return Status */
@@ -364,9 +364,9 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
             mlog(CRITICAL, "Unable to set key offset to: %s\n", offset_str);
         }
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting key offset: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting key offset: %s\n", e.what());
     }
 
     /* Return Status */
@@ -430,9 +430,9 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
             lua_obj->maxKey = max_key;
         }
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting key range: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting key range: %s\n", e.what());
     }
 
     /* Return Status */
@@ -484,9 +484,9 @@ int MetricDispatch::luaAddFilter(lua_State* L)
         }
         lua_obj->metricMutex.unlock();
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error adding filter: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error adding filter: %s\n", e.what());
     }
 
     /* Return Status */

@@ -55,9 +55,9 @@ int UdpSocket::luaCreate (lua_State* L)
         /* Return File Device Object */
         return createLuaObject(L, new UdpSocket(L, ip_addr, port, is_server, multicast));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating UdpSocket: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating UdpSocket: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }

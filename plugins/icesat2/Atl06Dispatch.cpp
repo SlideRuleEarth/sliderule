@@ -115,9 +115,9 @@ int Atl06Dispatch::luaCreate (lua_State* L)
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -565,9 +565,9 @@ int Atl06Dispatch::luaStats (lua_State* L)
         status = true;
         num_obj_to_return = 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.what());
     }
 
     /* Return Status */

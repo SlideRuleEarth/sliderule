@@ -80,9 +80,9 @@ int H5Proxy::luaCreate (lua_State* L)
         /* Return File Device Object */
         return createLuaObject(L, new H5Proxy(L, ip_addr, port));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating H5Proxy: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating H5Proxy: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -101,7 +101,7 @@ int H5Proxy::luaConnect(lua_State* L)
             /* Check Connections */
             if(clientThreadPool.length() > 0)
             {
-                throw LuaException("%d proxy connections active", clientThreadPool.length());
+                throw RunTimeException("%d proxy connections active", clientThreadPool.length());
             }
 
             /* Get List of Proxy Ports to Connect To */
@@ -133,9 +133,9 @@ int H5Proxy::luaConnect(lua_State* L)
                 clientThreadPool.add(pid);
             }
         }
-        catch(const LuaException& e)
+        catch(const RunTimeException& e)
         {
-            mlog(CRITICAL, "Error connecting to proxies: %s\n", e.errmsg);
+            mlog(CRITICAL, "Error connecting to proxies: %s\n", e.what());
             status = false;
         }
     }

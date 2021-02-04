@@ -142,9 +142,9 @@ int DeviceObject::luaSend (lua_State* L)
         /* Set Status */
         status = (bytes == (int)str_len);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error sending data: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error sending data: %s\n", e.what());
     }
 
     /* Return Status */
@@ -173,9 +173,9 @@ int DeviceObject::luaReceive (lua_State* L)
         /* Set Status */
         status = (bytes > 0);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error receiving data: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error receiving data: %s\n", e.what());
     }
 
     /* Return Status */
@@ -201,9 +201,9 @@ int DeviceObject::luaConfig (lua_State* L)
         /* Set Status */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error getting configuration: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error getting configuration: %s\n", e.what());
     }
 
     /* Return Status */
@@ -225,9 +225,9 @@ int DeviceObject::luaIsConnected (lua_State* L)
         /* Set Status */
         status = dev->isConnected(1);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error determining if connected: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error determining if connected: %s\n", e.what());
     }
 
     /* Return Status */
@@ -252,9 +252,9 @@ int DeviceObject::luaClose (lua_State* L)
         /* Set Status */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error closing connection: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error closing connection: %s\n", e.what());
     }
 
     /* Return Status */

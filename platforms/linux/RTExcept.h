@@ -17,41 +17,29 @@
  * under the License.
  */
 
-#ifndef __timer__
-#define __timer__
+#ifndef __runtime_exception__
+#define __runtime_exception__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Mutex.h"
-
-#include <signal.h>
+#include <stdexcept>
 
 /******************************************************************************
- * TIMER CLASS
+ * EXCEPTION
  ******************************************************************************/
 
-class Timer
+class RunTimeException : public std::runtime_error
 {
-    public:
+   public:
 
-        typedef void (*timerHandler_t) (void);
+        static const int ERROR_MSG_LEN = 128;
 
-        Timer (timerHandler_t handler, int period_ms);
-        ~Timer (void);
+        char errmsg[ERROR_MSG_LEN];
 
-    private:
-
-        static const int MAX_TIMERS = 32;
-        static int signum;
-        static Mutex sigmut;
-        static timerHandler_t sighdl[MAX_TIMERS];
-
-        timer_t timerid;
-        int     index;
-
-        static void _handler (int sig, siginfo_t *si, void *uc);
+        RunTimeException(const char* _errmsg, ...); VARG_CHECK(printf, 1, 2);
+        char const * what() const noexcept override { return errmsg; };
 };
 
-#endif  /* __timer__ */
+#endif // __runtime_exception__

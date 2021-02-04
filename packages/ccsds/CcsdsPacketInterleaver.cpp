@@ -78,9 +78,9 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
         /* Create Lua Object */
         return createLuaObject(L, new CcsdsPacketInterleaver(L, inq_names, outq_name));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating CcsdsPacketInterleaver: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating CcsdsPacketInterleaver: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -287,15 +287,15 @@ int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
         int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
-            throw LuaException("failed to parse time string %s", gmt_str);
+            throw RunTimeException("failed to parse time string %s", gmt_str);
         }
 
         /* Set Start Time */
         lua_obj->startTime = (double)gmt_ms / 1000.0;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting start time: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting start time: %s\n", e.what());
     }
 
     /* Return Status */
@@ -321,15 +321,15 @@ int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
         int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
-            throw LuaException("failed to parse time string %s", gmt_str);
+            throw RunTimeException("failed to parse time string %s", gmt_str);
         }
 
         /* Set Stop Time */
         lua_obj->stopTime = (double)gmt_ms / 1000.0;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting stop time: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting stop time: %s\n", e.what());
     }
 
     /* Return Status */

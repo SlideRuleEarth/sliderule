@@ -61,9 +61,9 @@ int PistacheClient::luaCreate (lua_State* L)
         /* Create Lua Endpoint */
         return createLuaObject(L, new PistacheClient(L, outq_name, num_threads));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -134,7 +134,7 @@ int PistacheClient::luaRequest(lua_State* L)
         /* Check Action */
         if(action != PistacheServer::GET && action != PistacheServer::POST && action != PistacheServer::PUT)
         {
-            throw LuaException("Invalid action: %d", action);
+            throw RunTimeException("Invalid action: %d", action);
         }
 
         /* Get URL */
@@ -231,9 +231,9 @@ int PistacheClient::luaRequest(lua_State* L)
             status = true;
         }
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error making request: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error making request: %s\n", e.what());
     }
 
     /* Return Status */

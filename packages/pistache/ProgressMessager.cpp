@@ -58,9 +58,9 @@ int ProgressMessager::luaCreate (lua_State* L)
         /* Return Dispatch Object */
         return createLuaObject(L, new ProgressMessager(L, rspq_name));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating ProgressMessager: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating ProgressMessager: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -123,15 +123,15 @@ int ProgressMessager::luaPost (lua_State* L)
         int post_status = lua_obj->rspQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);
         if(post_status <= 0)
         {
-            throw LuaException("Failed to post progress message: %d", post_status);
+            throw RunTimeException("Failed to post progress message: %d", post_status);
         }
         
         /* Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error posting message: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error posting message: %s\n", e.what());
     }
 
     /* Return Status */

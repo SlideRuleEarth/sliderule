@@ -44,9 +44,9 @@ int DeviceReader::luaCreate (lua_State* L)
         /* Return DeviceReader Object */
         return createLuaObject(L, new DeviceReader(L, _device, q_name));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

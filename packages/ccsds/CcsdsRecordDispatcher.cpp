@@ -44,7 +44,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         /* Check Number of Threads */
         if(num_threads < 1)
         {
-            throw LuaException("invalid number of threads supplied (must be >= 1)");
+            throw RunTimeException("invalid number of threads supplied (must be >= 1)");
         }
 
         /* Set Key Mode */
@@ -53,7 +53,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         calcFunc_t  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
-            throw LuaException("Invalid key mode specified: %s\n", key_mode_str);
+            throw RunTimeException("Invalid key mode specified: %s\n", key_mode_str);
         }
         else if(key_mode == FIELD_KEY_MODE)
         {
@@ -68,9 +68,9 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         /* Create Record Dispatcher */
         return createLuaObject(L, new CcsdsRecordDispatcher(L, qname, key_mode, key_field, key_func, num_threads));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
     catch(std::out_of_range& e)

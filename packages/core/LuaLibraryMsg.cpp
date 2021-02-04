@@ -179,7 +179,7 @@ RecordObject* LuaLibraryMsg::populateRecord (const char* population_string)
             record->populate(pop_str);
         }
     }
-    catch (const InvalidRecordException& e)
+    catch (const RunTimeException& e)
     {
         if(record) delete record;
         mlog(ERROR, "could not locate record definition for %s: %s\n", population_string, e.what());
@@ -207,7 +207,7 @@ RecordObject* LuaLibraryMsg::associateRecord (const char* recclass, unsigned cha
             record = new RecordObject(data, size);
         }
     }
-    catch (const InvalidRecordException& e)
+    catch (const RunTimeException& e)
     {
         if(record) delete record;
         mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
@@ -533,7 +533,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
                     record = new RecordObject((unsigned char*)ref.data, ref.size);
                 }
             }
-            catch (const InvalidRecordException& e)
+            catch (const RunTimeException& e)
             {
                 mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
             }
@@ -868,7 +868,7 @@ int LuaLibraryMsg::lmsg_detabulate(lua_State* L)
             record = new RecordObject(rec_type);
         }
     }
-    catch (const InvalidRecordException& e)
+    catch (const RunTimeException& e)
     {
         return luaL_error(L, "could not locate record definition");
     }

@@ -50,9 +50,9 @@ int CcsdsParserStripModule::luaCreate (lua_State* L)
         /* Return Dispatch Object */
         return createLuaObject(L, new CcsdsParserStripModule(L, header_size));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

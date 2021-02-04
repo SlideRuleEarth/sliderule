@@ -213,9 +213,9 @@ int S3Lib::luaGet(lua_State* L)
         /* Get Object and Write to File */
         return LuaObject::returnLuaStatus(L, status, 2);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error getting S3 object: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error getting S3 object: %s\n", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -242,9 +242,9 @@ int S3Lib::luaConfig(lua_State* L)
         /* Get Object and Write to File */
         return LuaObject::returnLuaStatus(L, true);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring S3 access: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring S3 access: %s\n", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -319,9 +319,9 @@ int S3Lib::luaCreateCache(lua_State* L)
         /* Get Object and Write to File */
         return LuaObject::returnLuaStatus(L, true);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating S3 cache: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating S3 cache: %s\n", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -345,9 +345,9 @@ int S3Lib::luaFlushCache(lua_State* L)
         /* Get Object and Write to File */
         return LuaObject::returnLuaStatus(L, true);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error flushing S3 cache: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error flushing S3 cache: %s\n", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }

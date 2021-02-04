@@ -17,41 +17,31 @@
  * under the License.
  */
 
-#ifndef __timer__
-#define __timer__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Mutex.h"
+#include "OsApi.h"
 
-#include <signal.h>
+#include <stdarg.h>
 
 /******************************************************************************
- * TIMER CLASS
+ * PUBLIC METHODS
  ******************************************************************************/
 
-class Timer
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+RunTimeException::RunTimeException(const char* _errmsg, ...):
+    std::runtime_error("RunTimeException")
 {
-    public:
+    errmsg[0] = '\0';
 
-        typedef void (*timerHandler_t) (void);
+    va_list args;
+    va_start(args, _errmsg);
+    int vlen = vsnprintf(errmsg, ERROR_MSG_LEN - 1, _errmsg, args);
+    int msglen = MIN(vlen, ERROR_MSG_LEN - 1);
+    va_end(args);
 
-        Timer (timerHandler_t handler, int period_ms);
-        ~Timer (void);
-
-    private:
-
-        static const int MAX_TIMERS = 32;
-        static int signum;
-        static Mutex sigmut;
-        static timerHandler_t sighdl[MAX_TIMERS];
-
-        timer_t timerid;
-        int     index;
-
-        static void _handler (int sig, siginfo_t *si, void *uc);
-};
-
-#endif  /* __timer__ */
+    if (msglen >= 0) errmsg[msglen] = '\0';
+}

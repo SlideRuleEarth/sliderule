@@ -54,9 +54,9 @@ int TcpSocket::luaCreate (lua_State* L)
         /* Return File Device Object */
         return createLuaObject(L, new TcpSocket(L, ip_addr, port, is_server, NULL, die));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating TcpSocket: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating TcpSocket: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }

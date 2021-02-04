@@ -79,15 +79,15 @@ int Atl03Indexer::luaCreate (lua_State* L)
         }
         else
         {
-            throw LuaException("parm #1 must be a table of resource names");
+            throw RunTimeException("parm #1 must be a table of resource names");
         }
 
         /* Return Indexer Object */
         return createLuaObject(L, new Atl03Indexer(L, _asset, _resources, outq_name, num_threads));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating Atl03Indexer: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating Atl03Indexer: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -308,9 +308,9 @@ int Atl03Indexer::luaStats (lua_State* L)
         status = true;
         num_obj_to_return = 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error configuring %s: %s\n", LuaMetaName, e.what());
     }
 
     /* Return Status */

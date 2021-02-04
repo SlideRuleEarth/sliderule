@@ -51,9 +51,9 @@ int MsgBridge::luaCreate (lua_State* L)
         /* Create Record bridge */
         return createLuaObject(L, new MsgBridge(L, inq_name, outq_name));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }

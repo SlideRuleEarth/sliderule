@@ -64,9 +64,9 @@ int HttpServer::luaCreate (lua_State* L)
         /* Return File Device Object */
         return createLuaObject(L, new HttpServer(L, ip_addr, port, max_connections));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating HttpServer: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error creating HttpServer: %s\n", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -213,9 +213,9 @@ int HttpServer::luaAttach (lua_State* L)
         /* Add Route to Table */
         status = lua_obj->routeTable.add(url, endpoint, true);
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error attaching handler: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error attaching handler: %s\n", e.what());
     }
 
     /* Return Status */

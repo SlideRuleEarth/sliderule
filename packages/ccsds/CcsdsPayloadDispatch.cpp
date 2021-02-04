@@ -51,9 +51,9 @@ int CcsdsPayloadDispatch::luaCreate (lua_State* L)
         /* Return Dispatch Object */
         return createLuaObject(L, new CcsdsPayloadDispatch(L));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -230,15 +230,15 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
         }
         else
         {
-            throw LuaException("invalid APID specified: %04X\n", (uint16_t)apid);
+            throw RunTimeException("invalid APID specified: %04X\n", (uint16_t)apid);
         }
 
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error forwarding packet: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error forwarding packet: %s\n", e.what());
     }
 
     /* Return Status */
@@ -266,9 +266,9 @@ int CcsdsPayloadDispatch::luaCheckLength(lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring length check: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring length check: %s\n", e.what());
     }
 
     /* Return Status */
@@ -296,9 +296,9 @@ int CcsdsPayloadDispatch::luaCheckChecksum(lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring checsum check: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring checsum check: %s\n", e.what());
     }
 
     /* Return Status */

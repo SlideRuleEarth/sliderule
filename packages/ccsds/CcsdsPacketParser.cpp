@@ -65,15 +65,15 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
         CcsdsPacket::type_t pkt_type = str2pkttype(type_str);
         if(pkt_type == CcsdsPacket::INVALID_PACKET)
         {
-            throw LuaException("invalid packet type: %s", type_str);
+            throw RunTimeException("invalid packet type: %s", type_str);
         }
 
         /* Create Packet Parser */
         return createLuaObject(L, new CcsdsPacketParser(L, _parser, pkt_type, inq_name, outq_name, statq_name));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -186,9 +186,9 @@ int CcsdsPacketParser::luaPassInvalid (lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.what());
     }
 
     /* Return Success */
@@ -216,9 +216,9 @@ int CcsdsPacketParser::luaResetInvalid (lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.what());
     }
 
     /* Return Success */
@@ -245,7 +245,7 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         /* Check APID */
         if(apid < 0 && apid > CCSDS_NUM_APIDS)
         {
-            throw LuaException("invalid apid: %04X", apid);
+            throw RunTimeException("invalid apid: %04X", apid);
         }
 
         /* Create Statistics Table */
@@ -297,9 +297,9 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         status = true;
         num_obj_to_return = 2;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.what());
     }
 
     /* Return Success */
@@ -345,9 +345,9 @@ int CcsdsPacketParser::luaFilterPkt (lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting filter: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting filter: %s\n", e.what());
     }
 
     /* Return Success */
@@ -389,9 +389,9 @@ int CcsdsPacketParser::luaClearApidStats (lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting filter: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting filter: %s\n", e.what());
     }
 
     /* Return Success */
@@ -419,9 +419,9 @@ int CcsdsPacketParser::luaStripHdrOnPost (lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting strip header on post: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error setting strip header on post: %s\n", e.what());
     }
 
     /* Return Success */

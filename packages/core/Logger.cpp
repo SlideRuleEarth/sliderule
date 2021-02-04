@@ -80,7 +80,7 @@ int Logger::luaCreate (lua_State* L)
             const char* lvl_str = getLuaString(L, 2);
             if(!LogLib::str2lvl(lvl_str, &lvl))
             {
-                throw LuaException("invalid log level supplied: %s", lvl_str);
+                throw RunTimeException("invalid log level supplied: %s", lvl_str);
             }
         }
 
@@ -90,9 +90,9 @@ int Logger::luaCreate (lua_State* L)
         /* Return Dispatch Object */
         return createLuaObject(L, new Logger(L, lvl, outq_name, MsgQ::CFG_DEPTH_STANDARD, as_record));
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.errmsg);
+        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -183,7 +183,7 @@ int Logger::luaConfig (lua_State* L)
             const char* lvl_str = getLuaString(L, 2);
             if(!LogLib::str2lvl(lvl_str, &lvl))
             {
-                throw LuaException("invalid log level supplied: %s", lvl_str);
+                throw RunTimeException("invalid log level supplied: %s", lvl_str);
             }
         }
 
@@ -193,9 +193,9 @@ int Logger::luaConfig (lua_State* L)
         /* Set Success */
         status = true;
     }
-    catch(const LuaException& e)
+    catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring logger: %s\n", e.errmsg);
+        mlog(CRITICAL, "Error configuring logger: %s\n", e.what());
     }
 
     /* Return Status */
