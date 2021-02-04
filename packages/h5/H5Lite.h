@@ -140,7 +140,6 @@ struct H5Lite
                 static const long       READ_BUFSIZE            = 1048576; // 1MB
                 static const long       STR_BUFF_SIZE           = 512;
                 static const int        CHUNK_ALLOC_FACTOR      = 2;
-                static const int        MAX_CHUNK_NODE_K        = 512;
                 static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
                 static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
                 static const uint64_t   H5_FRHP_SIGNATURE_LE    = 0x50485246LL; // fractal heap
@@ -156,9 +155,8 @@ struct H5Lite
                 typedef struct {
                     uint32_t                chunk_size;
                     uint32_t                filter_mask;
+                    uint64_t                slice[MAX_NDIMS];
                     uint64_t                row_key;
-                    uint64_t                chunk_offset;
-                    uint64_t                child_addr;
                 } btree_node_t;
 
                 typedef union {
@@ -181,6 +179,7 @@ struct H5Lite
                 int                 createDataBuffer    (uint64_t buffer_size);
                 uint64_t            readField           (int size, uint64_t* pos);
                 void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
+                btree_node_t        readNode            (int ndims, uint64_t* pos);
 
                 int                 readSuperblock      (void);        
                 int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);

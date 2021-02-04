@@ -288,7 +288,7 @@ Atl03Reader::Region::Region (info_t* info):
         /* Check If Anything to Process */
         if(num_photons[PRT_LEFT] < 0 || num_photons[PRT_RIGHT] < 0)
         {
-            throw std::runtime_error("empty spatial region");
+            throw RunTimeException("empty spatial region");
         }
     }
 

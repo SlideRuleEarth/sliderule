@@ -375,6 +375,8 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
     strm.opaque     = Z_NULL;
     strm.avail_in   = 0;
     strm.next_in    = Z_NULL;
+
+    /* Initialize z_stream */
     status = inflateInit(&strm);
     if(status != Z_OK)
     {
@@ -534,6 +536,39 @@ void H5Lite::H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos
         *pos += buffSize;
     }
 }
+
+/*----------------------------------------------------------------------------
+ * readNode
+ *----------------------------------------------------------------------------*/
+H5Lite::H5FileBuffer::btree_node_t H5Lite::H5FileBuffer::readNode (int ndims, uint64_t* pos)
+{
+    btree_node_t node;
+
+    /* Read Key */
+    node.chunk_size = (uint32_t)readField(4, pos);
+    node.filter_mask = (uint32_t)readField(4, pos);
+    for(int d = 0; d < ndims; d++)
+    {
+        node.slice[d] = readField(8, pos);
+    }
+
+    /* Read Trailing Zero */
+    uint64_t trailing_zero = readField(8, pos);
+    if(errorChecking)
+    {
+        if(trailing_zero % dataInfo->typesize != 0)
+        {
+            throw RunTimeException("key did not include a trailing zero: %d", trailing_zero);
+        }
+    }
+
+    /* Set Node Key */
+    node.row_key = node.slice[0];
+
+    /* Return Copy of Node */
+    return node;    
+}
+
 
 /*----------------------------------------------------------------------------
  * readSuperblock
@@ -800,6 +835,8 @@ int H5Lite::H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_pr
 int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
 {
     uint64_t starting_position = pos;
+    uint64_t data_key1 = datasetStartRow;
+    uint64_t data_key2 = datasetStartRow + datasetNumRows - 1;
 
     /* Check Signature and Node Type */
     if(!errorChecking)
@@ -824,10 +861,6 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
     /* Read Node Level and Number of Entries */
     uint8_t node_level = (uint8_t)readField(1, &pos);
     uint16_t entries_used = (uint16_t)readField(2, &pos);
-    if(entries_used > MAX_CHUNK_NODE_K)
-    {
-        throw RunTimeException("unsupported number of btree children: %d", entries_used);
-    }
 
     if(verbose)
     {
@@ -841,65 +874,31 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
     /* Skip Sibling Addresses */
     pos += offsetSize * 2;
 
+    /* Read First Key */
+    btree_node_t curr_node = readNode(dataNumDimensions, &pos);
+
     /* Read Children */
-    static btree_node_t nodes[MAX_CHUNK_NODE_K]; // single thread, allocated on heap
-    for(int e = 0; e < entries_used + 1; e++)
+    for(int e = 0; e < entries_used; e++)
     {
-        /* Read Child Key */
-        nodes[e].chunk_size = (uint32_t)readField(4, &pos);
-        nodes[e].filter_mask = (uint32_t)readField(4, &pos);
-        for(int d = 0; d < dataNumDimensions; d++)
-        {
-            dataSliceBuffer[d] = readField(8, &pos);
-        }
-        nodes[e].row_key = dataSliceBuffer[0];
-        uint64_t data_offset = readField(8, &pos);
-
-        /* Calculate Chunk Location */
-        nodes[e].chunk_offset = 0;
-        for(int i = 0; i < dataNumDimensions; i++)
-        {
-            uint64_t slice_size = dataSliceBuffer[i] * dataInfo->typesize;
-            for(int j = i + 1; j < dataNumDimensions; j++)
-            {
-                slice_size *= dataDimensions[j];
-            }
-            nodes[e].chunk_offset += slice_size;
-        }
-
         /* Read Child Address */
-        if(e < entries_used)
-        {
-            nodes[e].child_addr = readField(offsetSize, &pos);
-        }
+        uint64_t child_addr = readField(offsetSize, &pos);
+
+        /* Read Next Key */
+        btree_node_t next_node = readNode(dataNumDimensions, &pos);
 
         /* Display */
         if(verbose && H5_EXTRA_DEBUG)
         {
-            mlog(RAW, "\nEntry:                                                           %d,%d\n", node_level, e);
-            mlog(RAW, "Chunk Size:                                                      %u\n", (unsigned int)nodes[e].chunk_size);
-            mlog(RAW, "Filter Mask:                                                     0x%x\n", (unsigned int)nodes[e].filter_mask);
-            mlog(RAW, "Chunk Key:                                                       [");
-            for(int d = 0; d < dataNumDimensions; d++)
-            {
-                mlog(RAW, "%d,", (int)dataSliceBuffer[d]);
-            }
-            mlog(RAW, "%u]\n", (unsigned int)data_offset);
-            if(e < entries_used)
-            {
-                mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)nodes[e].child_addr);
-            }
+            mlog(RAW, "\nEntry:                                                           %d[%d]\n", (int)node_level, e);
+            mlog(RAW, "Chunk Size:                                                      %u | %u\n", (unsigned int)curr_node.chunk_size, (unsigned int)next_node.chunk_size);
+            mlog(RAW, "Filter Mask:                                                     0x%x | 0x%x\n", (unsigned int)curr_node.filter_mask, (unsigned int)next_node.filter_mask);
+            mlog(RAW, "Chunk Key:                                                       %lu | %lu\n", (unsigned long)curr_node.row_key, (unsigned long)next_node.row_key);
+            mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
         }
-    }
 
-    /* Process Children */
-    uint64_t data_key1 = datasetStartRow;
-    uint64_t data_key2 = datasetStartRow + datasetNumRows - 1;
-    for(int e = 0; e < entries_used; e++)
-    {
         /* Check Inclusion */
-        uint64_t child_key1 = nodes[e].row_key;
-        uint64_t child_key2 = nodes[e+1].row_key; // there is always +1 keys
+        uint64_t child_key1 = curr_node.row_key;
+        uint64_t child_key2 = next_node.row_key; // there is always +1 keys
         if ((data_key1  >= child_key1 && data_key1  <  child_key2) ||
             (data_key2  >= child_key1 && data_key2  <  child_key2) || 
             (child_key1 >= data_key1  && child_key1 <= data_key2)  ||
@@ -908,29 +907,41 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
             /* Process Child Entry */
             if(node_level > 0)
             {
-                readBTreeV1(nodes[e].child_addr, start_offset);
+                readBTreeV1(child_addr, start_offset);
             }
             else
             {
+                /* Calculate Chunk Location */
+                uint64_t chunk_offset = 0;
+                for(int i = 0; i < dataNumDimensions; i++)
+                {
+                    uint64_t slice_size = curr_node.slice[i] * dataInfo->typesize;
+                    for(int j = i + 1; j < dataNumDimensions; j++)
+                    {
+                        slice_size *= dataDimensions[j];
+                    }
+                    chunk_offset += slice_size;
+                }
+
                 /* Calculate Buffer Index - offset into data buffer to put chunked data */
                 uint64_t buffer_index = 0;
-                if(nodes[e].chunk_offset > start_offset)
+                if(chunk_offset > start_offset)
                 {
-                    buffer_index = nodes[e].chunk_offset - start_offset;
+                    buffer_index = chunk_offset - start_offset;
                     if((int)buffer_index >= dataInfo->datasize)
                     {
-                        throw RunTimeException("invalid location to read data: %ld, %lu", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
+                        throw RunTimeException("invalid location to read data: %ld, %lu", (unsigned long)chunk_offset, (unsigned long)start_offset);
                     }
                 }
                 
                 /* Calculate Chunk Index - offset into chunk buffer to read from */
                 uint64_t chunk_index = 0;
-                if(start_offset > nodes[e].chunk_offset)
+                if(start_offset > chunk_offset)
                 {
-                    chunk_index = start_offset - nodes[e].chunk_offset;
+                    chunk_index = start_offset - chunk_offset;
                     if((int64_t)chunk_index >= dataChunkBufferSize)
                     {
-                        throw RunTimeException("invalid location to read chunk: %ld, %lu", (unsigned long)nodes[e].chunk_offset, (unsigned long)start_offset);
+                        throw RunTimeException("invalid location to read chunk: %ld, %lu", (unsigned long)chunk_offset, (unsigned long)start_offset);
                     }
                 }
 
@@ -949,25 +960,25 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
                 if(dataFilter == DEFLATE_FILTER)
                 {
                     /* Check Chunk Buffer Allocation */
-                    if(nodes[e].chunk_size > chunkBufferSize)
+                    if(curr_node.chunk_size > chunkBufferSize)
                     {
                         if(chunkBuffer) delete [] chunkBuffer;
-                        chunkBufferSize = nodes[e].chunk_size * CHUNK_ALLOC_FACTOR;
+                        chunkBufferSize = curr_node.chunk_size * CHUNK_ALLOC_FACTOR;
                         chunkBuffer = new uint8_t [chunkBufferSize];
                     }
 
                     /* Read Data into Chunk Buffer */
-                    readData(chunkBuffer, nodes[e].chunk_size, &nodes[e].child_addr);
+                    readData(chunkBuffer, curr_node.chunk_size, &child_addr);
 
                     if(chunk_bytes == dataChunkBufferSize)
                     {
                         /* Inflate Directly into Data Buffer */
-                        inflateChunk(chunkBuffer, nodes[e].chunk_size, &dataInfo->data[buffer_index], chunk_bytes);
+                        inflateChunk(chunkBuffer, curr_node.chunk_size, &dataInfo->data[buffer_index], chunk_bytes);
                     }
                     else
                     {
                         /* Inflate into Data Chunk Buffer */
-                        inflateChunk(chunkBuffer, nodes[e].chunk_size, dataChunkBuffer, dataChunkBufferSize);
+                        inflateChunk(chunkBuffer, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
 
                         /* Copy Data Chunk Buffer into Data Buffer */
                         LocalLib::copy(&dataInfo->data[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
@@ -979,19 +990,19 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
                     {
                         if(errorChecking)
                         {
-                            if(nodes[e].chunk_size != chunk_bytes)
+                            if(curr_node.chunk_size != chunk_bytes)
                             {
-                                throw RunTimeException("mismatch in chunk size: %lu, %lu", (unsigned long)nodes[e].chunk_size, (unsigned long)chunk_bytes);
+                                throw RunTimeException("mismatch in chunk size: %lu, %lu", (unsigned long)curr_node.chunk_size, (unsigned long)chunk_bytes);
                             }
                         }
 
                         /* Read Data Directly into Data Buffer */
-                        readData(&dataInfo->data[buffer_index], nodes[e].chunk_size, &nodes[e].child_addr);
+                        readData(&dataInfo->data[buffer_index], curr_node.chunk_size, &child_addr);
                     }
                     else
                     {
                         /* Read Data into Chunk Buffer */
-                        readData(chunkBuffer, nodes[e].chunk_size, &nodes[e].child_addr);
+                        readData(chunkBuffer, curr_node.chunk_size, &child_addr);
 
                         /* Copy Data Chunk Buffer into Data Buffer */
                         LocalLib::copy(&dataInfo->data[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
@@ -999,6 +1010,9 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint64_t start_offset)
                 }
             }
         }
+
+        /* Goto Next Key */
+        curr_node = next_node;
     }
 
     return 0;
@@ -1803,16 +1817,9 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
 
     /* Allocate Data Buffer */
     dataInfo->datasize = row_size * datasetNumRows;
-    if(dataInfo->datasize <= 0)
+    if(dataInfo->datasize > 0)
     {
         createDataBuffer(dataInfo->datasize);
-    }
-
-    /* Allocate Data Chunk Buffer */
-    dataChunkBufferSize = dataChunkElements * dataInfo->typesize;
-    if(dataChunkBufferSize > 0)
-    {
-        dataChunkBuffer = new uint8_t [dataChunkBufferSize];
     }
 
     /* Calculate Buffer Start and Stop Offset */
@@ -1887,6 +1894,13 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
                     chunk_dim[d] = (uint32_t)readField(4, &pos);
                     dataChunkElements *= chunk_dim[d];
                 }
+            }
+
+            /* Allocate Data Chunk Buffer */
+            dataChunkBufferSize = dataChunkElements * dataInfo->typesize;
+            if(dataChunkBufferSize > 0)
+            {
+                dataChunkBuffer = new uint8_t [dataChunkBufferSize];
             }
 
             /* Read Size of Data Element */

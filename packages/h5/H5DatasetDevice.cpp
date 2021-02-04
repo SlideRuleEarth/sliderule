@@ -128,7 +128,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
         dataSize = info.datasize;
         connected = true;
     }
-    catch (const std::runtime_error& e)
+    catch (const RunTimeException& e)
     {
         mlog(CRITICAL, "Failed to create H5DatasetDevice: %s\n", e.what());
         dataBuffer = NULL;

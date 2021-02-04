@@ -412,7 +412,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
     /* Return Info */
     if(status)  return info;
-    else        throw std::runtime_error("H5Lib");
+    else        throw RunTimeException("H5Lib failed to read dataset");
 }
 
 /*----------------------------------------------------------------------------
