@@ -17,28 +17,24 @@
  * under the License.
  */
 
-#ifndef __h5pkg__
-#define __h5pkg__
+#ifndef __h5api__
+#define __h5api__
 
-/******************************************************************************
- * INCLUDES
- ******************************************************************************/
+#ifndef H5_API_VERSION
+#define H5_API_VERSION H5LITE
+#endif
 
-#include "H5Api.h"
-#include "H5Proxy.h"
-#include "H5Array.h"
-#include "H5File.h"
-#include "H5DatasetDevice.h"
+#if H5_API_VERSION == H5LITE
+    #include "H5Lite.h"
+    #define H5Api H5Lite
 
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
+#elif H5_API_VERSION == H5LIB
+    #include "H5Lib.h"
+x    #define H5Api H5Lib
 
-extern "C" {
-void inith5 (void);
-void deinith5 (void);
-}
+#else
+    CompileTimeAssert("Invalid H5 Library Selection");
 
-#endif  /* __h5pkg__ */
+#endif
 
-
+#endif  /* __h5api__ */

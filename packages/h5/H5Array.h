@@ -26,8 +26,8 @@
 
 #include "StringLib.h"
 #include "LogLib.h"
-#include "H5Lib.h"
 #include "H5Proxy.h"
+#include "H5Api.h"
 
 /******************************************************************************
  * H5Array TEMPLATE
@@ -42,7 +42,7 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, bool async=false, long col=0, long startrow=0, long numrows=H5Lib::ALL_ROWS);
+                H5Array     (const char* url, const char* dataset, bool async=false, long col=0, long startrow=0, long numrows=H5Api::ALL_ROWS);
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
@@ -75,7 +75,7 @@ H5Array<T>::H5Array(const char* url, const char* dataset, bool async, long col, 
     if(!async)
     {
         pending = NULL;
-        H5Lib::info_t info = H5Lib::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
+        H5Api::info_t info = H5Api::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
         data = (T*)info.data;
         size = info.elements;
     }

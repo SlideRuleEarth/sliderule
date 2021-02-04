@@ -196,9 +196,9 @@ Atl03Reader::Region::Region (info_t* info):
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
         first_segment[t] = 0;
-        num_segments[t] = H5Lib::ALL_ROWS;
+        num_segments[t] = H5Api::ALL_ROWS;
         first_photon[t] = 0;
-        num_photons[t] = H5Lib::ALL_ROWS;
+        num_photons[t] = H5Api::ALL_ROWS;
     }
 
     /* Determine Spatial Extent */
@@ -318,7 +318,7 @@ void* Atl03Reader::atl06Thread (void* parm)
 
     /* Start Trace */
     uint32_t trace_id = start_trace_ext(reader->traceId, "atl03_reader", "{\"url\":\"%s\", \"track\":%d}", url, track);
-    TraceLib::stashId (trace_id); // set thread specific trace id for H5Lib
+    TraceLib::stashId (trace_id); // set thread specific trace id for H5Api
 
     try
     {
@@ -351,8 +351,8 @@ void* Atl03Reader::atl06Thread (void* parm)
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
         /* Set Number of Photons to Process (if not already set by subsetter) */    
-        if(region.num_photons[PRT_LEFT] == H5Lib::ALL_ROWS) region.num_photons[PRT_LEFT] = dist_ph_along.gt[PRT_LEFT].size;
-        if(region.num_photons[PRT_RIGHT] == H5Lib::ALL_ROWS) region.num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
+        if(region.num_photons[PRT_LEFT] == H5Api::ALL_ROWS) region.num_photons[PRT_LEFT] = dist_ph_along.gt[PRT_LEFT].size;
+        if(region.num_photons[PRT_RIGHT] == H5Api::ALL_ROWS) region.num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
 
         /* Increment Read Statistics */
         reader->stats.segments_read += (region.segment_ph_cnt.gt[PRT_LEFT].size + region.segment_ph_cnt.gt[PRT_RIGHT].size);

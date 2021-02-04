@@ -75,7 +75,7 @@ template <class T>
 const long GTArray<T>::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
 
 template <class T>
-const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Lib::ALL_ROWS, H5Lib::ALL_ROWS};
+const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Api::ALL_ROWS, H5Api::ALL_ROWS};
 
 /******************************************************************************
  * GTArray METHODS

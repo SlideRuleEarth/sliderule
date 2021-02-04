@@ -21,8 +21,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "H5DatasetDevice.h"
-#include "H5Lib.h"
+#include "h5.h"
 #include "core.h"
 
 /******************************************************************************
@@ -95,7 +94,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
 {
     /* Start Trace */
     uint32_t trace_id = start_trace_ext(traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", filename, dataset_name);
-    TraceLib::stashId (trace_id); // set thread specific trace id for H5Lib
+    TraceLib::stashId (trace_id); // set thread specific trace id for H5Api
 
     /* Set Record */
     recObj = new RecordObject(recType);
@@ -124,7 +123,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     /* Read File */
     try
     {
-        H5Lib::info_t info = H5Lib::read(fileName, dataName, datatype, 0, 0, H5Lib::ALL_ROWS);
+        H5Api::info_t info = H5Api::read(fileName, dataName, datatype, 0, 0, H5Api::ALL_ROWS);
         dataBuffer = info.data;
         dataSize = info.datasize;
         connected = true;
