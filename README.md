@@ -44,7 +44,10 @@ Options include:
    -DRUNTIMEDIR=[directory]            location for run-time files like plugins, configuration files, and lua scripts
                                        default: /usr/local/etc/sliderule
 
-   -DENABLE_H5_REST_VOL=[ON|OFF]       configure H5 package to use REST VOL plugin
+   -DENABLE_HDF5_LIB=[ON|OFF]          configure H5 package to use the HDF5 library
+                                       default: OFF
+
+   -DENABLE_H5_REST_VOL=[ON|OFF]       configure H5 package to use REST VOL plugin (requires ENABLE_HDF5_LIB=ON)
                                        default: OFF
 
    -DENABLE_LTTNG_TRACING=[ON|OFF]     configure use of LTTng tracking (see packages/core/core.md for installation instructions)
