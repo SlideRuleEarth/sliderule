@@ -20,8 +20,11 @@
 #ifndef __h5api__
 #define __h5api__
 
+#define H5LITE  0
+#define H5LIB   1
+
 #ifndef H5_API_VERSION
-#define H5_API_VERSION H5LITE
+#define H5_API_VERSION H5LIB
 #endif
 
 #if H5_API_VERSION == H5LITE
@@ -30,7 +33,7 @@
 
 #elif H5_API_VERSION == H5LIB
     #include "H5Lib.h"
-x    #define H5Api H5Lib
+    #define H5Api H5Lib
 
 #else
     CompileTimeAssert("Invalid H5 Library Selection");

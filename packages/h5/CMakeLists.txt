@@ -34,7 +34,6 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5Lib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5Lite.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/H5Proxy.cpp
     )
 
     target_include_directories (sliderule
@@ -51,7 +50,6 @@ if (HDF5_LIB AND ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Lib.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Lite.h
-            ${CMAKE_CURRENT_LIST_DIR}/H5Proxy.h
         DESTINATION
             ${INCDIR}
     )

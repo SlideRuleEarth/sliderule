@@ -25,7 +25,6 @@
  ******************************************************************************/
 
 #include "H5Api.h"
-#include "H5Proxy.h"
 #include "H5Array.h"
 #include "H5File.h"
 #include "H5DatasetDevice.h"

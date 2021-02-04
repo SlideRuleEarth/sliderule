@@ -30,20 +30,20 @@ local asset_index_file = core.file(core.WRITER, core.TEXT, index_filename)
 local writer = core.writer(asset_index_file, "indexq")
 
 -- setup csv dispatch
-local recq = msg.subscribe("recq")
-local dispatcher = core.dispatcher("recq")
+local indexrecq = msg.subscribe("indexrecq")
+local dispatcher = core.dispatcher("indexrecq")
 local csvdispatch = core.csv({"name", "t0", "t1", "lat0", "lon0", "lat1", "lon1", "cycle", "rgt"}, "indexq")
 dispatcher:attach(csvdispatch, "atl03rec.index")
 dispatcher:run()
 
 -- create and run indexer
-local indexer = icesat2.atl03indexer(atl03, filelist, "recq", 1)
+local indexer = icesat2.atl03indexer(atl03, filelist, "indexrecq", 1)
 
 -- read in index list
 local indexlist = {}
 print("--------------------------")
 for r=1,2 do
-    local indexrec = recq:recvrecord(3000)
+    local indexrec = indexrecq:recvrecord(3000)
     runner.check(indexrec, "Failed to read an extent record")
     if indexrec then
         local index = indexrec:tabulate()
@@ -60,6 +60,10 @@ for r=1,2 do
         print("--------------------------")
     end
 end
+
+-- close index file --
+sys.wait(1)
+asset_index_file:close()
 
 -- check records against index file
 local i = 1
@@ -79,7 +83,7 @@ end
 
 -- Clean Up --
 
-recq:destroy()
+indexrecq:destroy()
 os.remove(index_filename)
 
 -- Report Results --

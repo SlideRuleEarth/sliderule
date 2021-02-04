@@ -42,9 +42,6 @@ int h5_open (lua_State *L)
     static const struct luaL_Reg h5_functions[] = {
         {"file",        H5File::luaCreate},
         {"dataset",     H5DatasetDevice::luaCreate},
-        {"proxy",       H5Proxy::luaCreate},
-        {"connect",     H5Proxy::luaConnect},
-        {"disconnect",  H5Proxy::luaDisconnect},
         {NULL,          NULL}
     };
 
@@ -62,9 +59,8 @@ extern "C" {
 void inith5 (void)
 {
     /* Initialize Modules */
-    H5Lib::init();
+    H5Api::init();
     H5DatasetDevice::init();
-    H5Proxy::init();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_H5_LIBNAME, h5_open);
@@ -78,6 +74,6 @@ void inith5 (void)
 
 void deinith5 (void)
 {
-    H5Lib::deinit();
+    H5Api::deinit();
 }
 }

@@ -26,7 +26,6 @@
 
 #include "StringLib.h"
 #include "LogLib.h"
-#include "H5Proxy.h"
 #include "H5Api.h"
 
 /******************************************************************************
@@ -57,7 +56,6 @@ class H5Array
         long                size;
         T*                  data;
         T*                  pointer;
-        H5Proxy::pending_t* pending;
 };
 
 /******************************************************************************
@@ -74,14 +72,13 @@ H5Array<T>::H5Array(const char* url, const char* dataset, bool async, long col, 
     
     if(!async)
     {
-        pending = NULL;
         H5Api::info_t info = H5Api::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
         data = (T*)info.data;
         size = info.elements;
     }
     else /* async */
     {
-        pending = H5Proxy::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
+        throw RunTimeException("Asynchronous H5Array currently unsupported");
         data = NULL;
         size = 0;
     }
@@ -97,12 +94,6 @@ H5Array<T>::~H5Array(void)
 {
     if(name) delete [] name;
     if(data) delete [] data;
-    if(pending)
-    {
-        delete pending->request;
-        delete pending->response;
-        delete pending;
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -143,16 +134,8 @@ bool H5Array<T>::join(int timeout)
         return true;
     }
 
-    /* Join */
-    bool joined = join(pending, timeout);
-
-    /* Populate */
-    if(joined)
-    {
-        data = (T*)pending->response->data;
-        size = pending->response->elements;
-        pointer = data;
-    }
+    /* Currently Unimplemented */
+    return true;
 }
 
 #endif  /* __h5_array__ */
