@@ -128,7 +128,7 @@ struct H5Lite
                 * Methods
                 *--------------------------------------------------------------------*/
 
-                                    H5FileBuffer        (info_t* _data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
+                                    H5FileBuffer        (info_t* data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
                 virtual             ~H5FileBuffer       (void);
 
             protected:
@@ -179,12 +179,13 @@ struct H5Lite
                 int                 createDataBuffer    (uint64_t buffer_size);
                 uint64_t            readField           (int size, uint64_t* pos);
                 void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
-                btree_node_t        readNode            (int ndims, uint64_t* pos);
+                void                readDataset         (info_t* _data_info);
 
                 int                 readSuperblock      (void);        
                 int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
                 int                 readDirectBlock     (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
-                int                 readBTreeV1         (uint64_t pos, uint64_t start_offset);
+                int                 readBTreeV1         (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset);
+                btree_node_t        readBTreeNodeV1     (int ndims, uint64_t* pos);
 
                 int                 readObjHdr          (uint64_t pos, int dlvl);
                 int                 readMessages        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
@@ -214,10 +215,9 @@ struct H5Lite
                 bool                errorChecking;
                 bool                verbose;
 
-                /* Buffer Management */
-                uint8_t             buffer[READ_BUFSIZE];
-                uint64_t            buffSize;
-                uint64_t            currFilePosition;
+                /* File Management */
+                uint64_t            fileBuffSize;
+                uint64_t            fileCurrPosition;
 
                 /* File Meta Attributes */
                 int                 offsetSize;
@@ -228,27 +228,30 @@ struct H5Lite
 
                 /* Data Meta Attributes */
                 data_type_t         dataType;
+                int                 dataTypeSize;
 
                 fill_t              dataFill;
                 int                 dataFillSize;
 
                 uint64_t            dataDimensions[MAX_NDIMS];
                 int                 dataNumDimensions;
+                uint64_t            dataElements;
 
                 filter_t            dataFilter;
                 uint32_t*           dataFilterParms;
                 int                 dataNumFilterParms;
 
-                uint64_t            dataTotalElements;
+                layout_t            dataLayout;
+                uint64_t            dataAddress;
+                uint64_t            dataSize;
+
                 uint64_t            dataChunkElements;        
+                int                 dataChunkElementSize;
                 uint8_t*            dataChunkBuffer; 
                 int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
 
                 uint8_t*            chunkBuffer;
                 int64_t             chunkBufferSize;
-
-                /* Data Info */
-                info_t*             dataInfo;
         };
 };
 
