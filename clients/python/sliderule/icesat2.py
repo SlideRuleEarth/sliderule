@@ -186,7 +186,7 @@ def __flatten_atl06(rsps):
 def __get_values(data, dtype, size):
     """
     data:   tuple of bytes
-    dtype:  element of datatypes
+    dtype:  element of datatypes OR basictypes
     size:   bytes in data
     """
 
@@ -197,11 +197,31 @@ def __get_values(data, dtype, size):
         sliderule.datatypes["DYNAMIC"]:   numpy.byte
     }
 
+    basictype2nptype = {
+        "INT8":     numpy.int8,
+        "INT16":    numpy.int16,
+        "INT32":    numpy.int32,
+        "INT64":    numpy.int64,
+        "UINT8":    numpy.uint8,
+        "UINT16":   numpy.uint16,
+        "UINT32":   numpy.uint32,
+        "UINT64":   numpy.uint64,
+        "BITFIELD": numpy.byte,
+        "FLOAT":    numpy.single,
+        "DOUBLE":   numpy.double,
+        "TIME8":    numpy.byte,
+        "STRING":   numpy.byte
+    }
+
+    if type(dtype) == int:
+        datatype = datatype2nptype[dtype]
+    else:
+        datatype = basictype2nptype[dtype]
+
     raw = bytes(data)
-    datatype = datatype2nptype[dtype]
-    datasize = int(size / numpy.dtype(datatype).itemsize)
-    slicesize = datasize * numpy.dtype(datatype).itemsize # truncates partial bytes
-    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=datasize)
+    num_elements = int(size / numpy.dtype(datatype).itemsize)
+    slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
+    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
 
     return values
 
@@ -375,12 +395,17 @@ def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=4, bl
 #
 def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["REAL"]):
 
+    # Handle Request Datatype Options
+    rqst_datatype = sliderule.datatypes["DYNAMIC"]
+    if type(datatype) == int:
+        rqst_datatype = datatype
+
     # Baseline Request
     rqst = {
         "asset" : asset,
         "resource": resource,
         "dataset": dataset,
-        "datatype": datatype,
+        "datatype": rqst_datatype,
         "id": 0
     }
 
@@ -388,15 +413,19 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
     rsps = sliderule.source("h5", rqst, stream=True)
 
     # Build Record Data
-    datatype = rsps[0]["datatype"]
+    rsps_datatype = rsps[0]["datatype"]
     data = ()
     size = 0
     for d in rsps:
         data = data + d["data"]
         size = size + d["size"]
 
+    # Handle Response Datatype Options
+    if rsps_datatype == sliderule.datatypes["DYNAMIC"]:
+        rsps_datatype = datatype
+
     # Get Values
-    values = __get_values(data, datatype, size)
+    values = __get_values(data, rsps_datatype, size)
 
     # Return Response
     return values

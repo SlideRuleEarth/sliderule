@@ -56,9 +56,9 @@ def test_time ():
 #
 #  TEST H5
 #
-def test_h5 (asset):
+def test_h5 (atl03_asset):
 
-    epoch_offset = icesat2.h5("ancillary_data/atlas_sdp_gps_epoch", h5file, asset)[0]
+    epoch_offset = icesat2.h5("ancillary_data/atlas_sdp_gps_epoch", h5file, atl03_asset)[0]
     if(epoch_offset == 1198800018.0):
         logging.info("Passed h5 test")
     else:
@@ -67,18 +67,21 @@ def test_h5 (asset):
 #
 #  TEST H5 TYPES
 #
-def test_h5_types (asset):
+def test_h5_types (atl03_asset, atl06_asset):
 
-    heights_64 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181019065445_03150111_003_01.h5", asset)
-    heights_32 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181110092841_06530106_003_01.h5", asset)
-
+    heights_64 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181019065445_03150111_003_01.h5", atl06_asset)
     expected_64 = [45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465, 45.82339277, 45.85106103, 45.81983169, 45.81150041, 45.83502945]
+
+    heights_32 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181110092841_06530106_003_01.h5", atl06_asset, "FLOAT")
     expected_32 = [350.76831055, 352.20120239, 352.45202637, 353.35467529, 353.70120239, 352.09786987, 349.70581055, 346.0881958, 342.42398071, 341.35415649]
+
+    bckgrd_32nf = icesat2.h5("/gt1l/bckgrd_atlas/bckgrd_rate", "ATL03_20181016104402_02720106_003_01.h5", atl03_asset, "FLOAT")
+    expected_32nf = [29311.68359375, 6385.93652344, 6380.84130859, 28678.95117188, 55349.19921875, 38201.08203125, 19083.43554688, 38045.66796875, 34942.43359375, 38096.26953125]
 
     cmp_error = False
     last_fail = (0,0,0,0)
-    for c in zip(heights_64, expected_64, heights_32, expected_32):
-        if (round(c[0]) != round(c[1])) or (round(c[2]) != round(c[3])):
+    for c in zip(heights_64, expected_64, heights_32, expected_32, bckgrd_32nf, expected_32nf):
+        if (round(c[0]) != round(c[1])) or (round(c[2]) != round(c[3])) or (round(c[4]) != round(c[5])):
             cmp_error = True
             last_fail = c
     
@@ -90,9 +93,9 @@ def test_h5_types (asset):
 #
 #  TEST VARIABLE LENGTH
 #
-def test_variable_length (asset):
+def test_variable_length (atl03_asset):
 
-    v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", h5file, asset, datatype=datatypes["INTEGER"])
+    v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", h5file, atl03_asset, datatype=datatypes["INTEGER"])
     if v[0] == 245 and v[1] == 263 and v[2] == 273:
         logging.info("Passed variable length test")
     else:
@@ -116,12 +119,12 @@ def test_definition ():
 #
 #  TEST GEOSPATIAL
 #
-def test_geospatial (asset):
+def test_geospatial (atl03_asset):
 
     # Test 1 #
 
     test1 = {
-        "asset": asset,
+        "asset": atl03_asset,
         "pole": "north",
         "lat": 40.0,
         "lon": 60.0,
@@ -181,7 +184,7 @@ def test_geospatial (asset):
     # Test 2 # 
 
     test2 = {
-        "asset": asset,
+        "asset": atl03_asset,
         "pole": "north",
         "lat": 30.0,
         "lon": 100.0,
@@ -199,7 +202,7 @@ def test_geospatial (asset):
     # Test 3 # 
 
     test3 = {
-        "asset": asset,
+        "asset": atl03_asset,
         "pole": "north",
         "lat": 30.0,
         "lon": 100.0,
@@ -217,7 +220,7 @@ def test_geospatial (asset):
     # Test 4 # 
 
     test4 = {
-        "asset": asset,
+        "asset": atl03_asset,
         "pole": "north",
         "lat": 30.0,
         "lon": 100.0,
@@ -276,9 +279,9 @@ if __name__ == '__main__':
         url = sys.argv[1]
 
     # Override asset from command line
-    asset = "atl03-local"
+    atl03_asset = "atl03-local"
     if len(sys.argv) > 2:
-        asset = sys.argv[2]
+        atl03_asset = sys.argv[2]
 
     # Override asset from command line
     atl06_asset = "atl06-local"
@@ -290,9 +293,9 @@ if __name__ == '__main__':
 
     # Tests
     test_time()
-    test_h5(asset)
-    test_h5_types(atl06_asset)
-    test_variable_length(asset)
+    test_h5(atl03_asset)
+    test_h5_types(atl03_asset, atl06_asset)
+    test_variable_length(atl03_asset)
     test_definition()
-    test_geospatial(asset)
+    test_geospatial(atl03_asset)
     test_index()
