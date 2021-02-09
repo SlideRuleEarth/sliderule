@@ -110,8 +110,6 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 {
     (void)valtype;
     (void)col;
-    (void)startrow;
-    (void)numrows;
 
     info_t info;
 
@@ -128,10 +126,196 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, false);
-    
+    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, true);
+    if(info.data)
+    {
+        bool data_valid = true;
+
+        /* Perform Column Translation */
+        if(info.numcols > 1)
+        {
+            /* Allocate Column Buffer */
+            int tbuf_size = info.datasize / info.numcols;
+            uint8_t* tbuf = new uint8_t [tbuf_size]; 
+
+            /* Copy Column into Buffer */
+            int tbuf_row_size = info.datasize / info.numrows;
+            int tbuf_col_size = tbuf_row_size / info.numcols;
+            for(int row = 0; row < info.numrows; row++)
+            {
+                int tbuf_offset = (row * tbuf_col_size);
+                int data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
+                LocalLib::copy(&tbuf[tbuf_offset], &info.data[data_offset], tbuf_col_size);
+            }
+
+            /* Switch Buffers */
+            delete [] info.data;
+            info.data = tbuf;
+            info.datasize = tbuf_size;
+            info.elements = info.elements / info.numcols;
+        }
+        
+        /* Perform Integer Type Transaltion */        
+        if(valtype == RecordObject::INTEGER)
+        {
+            /* Allocate Buffer of Integers */
+            long* tbuf = new long [info.elements];
+
+            /* Float to Int */
+            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
+            {
+                float* dptr = (float*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (long)dptr[i];
+                }
+            }
+            /* Double to Int */
+            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
+            {
+                double* dptr = (double*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (long)dptr[i];
+                }
+            }
+            /* Char to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint8_t))
+            {
+                uint8_t* dptr = (uint8_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (long)dptr[i];
+                }
+            }
+            /* Short to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint16_t))
+            {
+                uint16_t* dptr = (uint16_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (long)dptr[i];
+                }
+            }
+            /* Int to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint32_t))
+            {
+                uint32_t* dptr = (uint32_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (long)dptr[i];
+                }
+            }
+            /* Long to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint64_t))
+            {
+                uint64_t* dptr = (uint64_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (long)dptr[i];
+                }
+            }
+            else
+            {
+                data_valid = false;
+            }
+
+            /* Switch Buffers */
+            delete [] info.data;
+            info.data = (uint8_t*)tbuf;
+            info.datasize = sizeof(long) * info.elements;
+        }
+        
+        /* Perform Integer Type Transaltion */        
+        if(valtype == RecordObject::REAL)
+        {
+            /* Allocate Buffer of Integers */
+            double* tbuf = new double [info.elements];
+
+            /* Float to Double */
+            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
+            {
+                float* dptr = (float*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Double to Double */
+            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
+            {
+                double* dptr = (double*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Char to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint8_t))
+            {
+                uint8_t* dptr = (uint8_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Short to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint16_t))
+            {
+                uint16_t* dptr = (uint16_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Int to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint32_t))
+            {
+                uint32_t* dptr = (uint32_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Long to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint64_t))
+            {
+                uint64_t* dptr = (uint64_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            else
+            {
+                data_valid = false;
+            }
+
+            /* Switch Buffers */
+            delete [] info.data;
+            info.data = (uint8_t*)tbuf;
+            info.datasize = sizeof(double) * info.elements;
+        }
+
+        /* Check Data Valid */
+        if(!data_valid)
+        {
+            delete [] info.data;
+            info.data = NULL;
+            info.datasize = 0;
+            throw RunTimeException("data translation failed for %s: [%d] %d --> %d", datasetname, info.numcols, (int)info.datatype, (int)valtype);
+        }
+
+    }
+    else
+    {
+        throw RunTimeException("failed to read dataset: %s", datasetname);
+    }
+
     /* Stop Trace */
     stop_trace(trace_id);
+
+    /* Log Info Message */
     mlog(INFO, "Read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
 
     /* Return Info */
@@ -208,7 +392,6 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     dataFill.fill_ll        = 0LL;
     dataFillSize            = 0;
     dataNumDimensions       = 0;
-    dataElements            = 0;
     dataFilter              = INVALID_FILTER;
     dataFilterParms         = NULL;
     dataNumFilterParms      = 0;
@@ -514,11 +697,20 @@ void H5Lite::H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos
 void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
 {
     /* Populate Info Struct */
-    data_info->elements = dataElements;
     data_info->typesize = dataTypeSize;
+    data_info->elements = 0;
     data_info->datasize = 0;
     data_info->data     = NULL;
+    data_info->datatype = RecordObject::DYNAMIC;
+    data_info->numrows  = 0;
+    data_info->numcols  = 0;
 
+    /* Sanity Check Data Attributes */
+    if(dataTypeSize <= 0)
+    {
+        throw RunTimeException("missing data type information");
+    }
+    
     /* Calculate Size of Data Row (note dimension starts at 1) */
     uint64_t row_size = dataTypeSize;
     for(int d = 1; d < dataNumDimensions; d++)
@@ -527,10 +719,11 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
     }
 
     /* Get Number of Rows */
-    datasetNumRows = (datasetNumRows == ALL_ROWS) ? dataDimensions[0] : datasetNumRows;
-    if((datasetStartRow + datasetNumRows) > dataDimensions[0])
+    uint64_t first_dimension = (dataNumDimensions > 0) ? dataDimensions[0] : 0;
+    datasetNumRows = (datasetNumRows == ALL_ROWS) ? first_dimension : datasetNumRows;
+    if((datasetStartRow + datasetNumRows) > first_dimension)
     {
-        throw RunTimeException("read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, (int)datasetNumRows, (int)dataDimensions[0]);
+        throw RunTimeException("read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, (int)datasetNumRows, (int)first_dimension);
     }
 
     /* Allocate Data Buffer */
@@ -539,10 +732,6 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
     if(buffer_size > 0)
     {
         buffer = new uint8_t [buffer_size];
-
-        /* Populate Rest of Info Struct */
-        data_info->datasize = buffer_size;
-        data_info->data = buffer;
 
         /* Fill Buffer with Fill Value (if provided) */
         if(dataFillSize > 0)
@@ -554,6 +743,20 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
         }
     }
 
+    /* Populate Rest of Info Struct */
+    data_info->elements = buffer_size / dataTypeSize;
+    data_info->datasize = buffer_size;
+    data_info->data     = buffer;
+    data_info->numrows  = datasetNumRows; 
+
+    if      (dataNumDimensions == 0)            data_info->numcols = 0;
+    else if (dataNumDimensions == 1)            data_info->numcols = 1;
+    else if (dataNumDimensions >= 2)            data_info->numcols = dataDimensions[1];
+
+    if      (dataType == FIXED_POINT_TYPE)      data_info->datatype = RecordObject::INTEGER;
+    else if (dataType == FLOATING_POINT_TYPE)   data_info->datatype = RecordObject::REAL;
+    else if (dataType == STRING_TYPE)           data_info->datatype = RecordObject::TEXT;
+    
     /* Calculate Buffer Start */
     uint64_t buffer_offset = row_size * datasetStartRow;
 
@@ -1452,14 +1655,15 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
     }
 
     /* Read and Populate Data Dimensions */
+    uint64_t num_elements = 0;
     dataNumDimensions = MIN(dimensionality, MAX_NDIMS);
     if(dataNumDimensions > 0)
     {
-        dataElements = 1;
+        num_elements = 1;
         for(int d = 0; d < dataNumDimensions; d++)
         {
             dataDimensions[d] = readField(lengthSize, &pos);
-            dataElements *= dataDimensions[d];
+            num_elements *= dataDimensions[d];
             if(verbose)
             {
                 mlog(RAW, "Dimension %d:                                                     %lu\n", (int)dataNumDimensions, (unsigned long)dataDimensions[d]);
@@ -1471,6 +1675,11 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
         {
             pos += dataNumDimensions * lengthSize;
         }
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "Number of Elements:                                               %lu\n", (unsigned long)num_elements);
     }
 
     /* Return Bytes Read */

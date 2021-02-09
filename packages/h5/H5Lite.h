@@ -48,10 +48,14 @@ struct H5Lite
     } driver_t;
 
     typedef struct {
-        int elements;   // number of elements in dataset
-        int typesize;   // number of bytes per element
-        int datasize;   // total number of bytes in dataset
-        uint8_t* data;  // point to allocated data buffer
+        int                     elements;   // number of elements in dataset
+        int                     typesize;   // number of bytes per element
+        int                     datasize;   // total number of bytes in dataset
+        uint8_t*                data;       // point to allocated data buffer
+        /* h5lite specific */
+        RecordObject::valType_t datatype;   // high level data type
+        int                     numcols;    // number of columns - anything past the second dimension is grouped togeher
+        int                     numrows;    // number of rows - includes all dimensions after the first as a single row
     } info_t;
 
     /*--------------------------------------------------------------------
@@ -235,7 +239,6 @@ struct H5Lite
 
                 uint64_t            dataDimensions[MAX_NDIMS];
                 int                 dataNumDimensions;
-                uint64_t            dataElements;
 
                 filter_t            dataFilter;
                 uint32_t*           dataFilterParms;
