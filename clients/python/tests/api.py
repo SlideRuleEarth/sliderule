@@ -65,6 +65,29 @@ def test_h5 (asset):
         logging.error("Failed h5 test: ", v)
 
 #
+#  TEST H5 TYPES
+#
+def test_h5_types (asset):
+
+    heights_64 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181019065445_03150111_003_01.h5", asset)
+    heights_32 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181110092841_06530106_003_01.h5", asset)
+
+    expected_64 = [45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465, 45.82339277, 45.85106103, 45.81983169, 45.81150041, 45.83502945]
+    expected_32 = [350.76831055, 352.20120239, 352.45202637, 353.35467529, 353.70120239, 352.09786987, 349.70581055, 346.0881958, 342.42398071, 341.35415649]
+
+    cmp_error = False
+    last_fail = (0,0,0,0)
+    for c in zip(heights_64, expected_64, heights_32, expected_32):
+        if (round(c[0]) != round(c[1])) or (round(c[2]) != round(c[3])):
+            cmp_error = True
+            last_fail = c
+    
+    if(not cmp_error):
+        logging.info("Passed h5 types test")
+    else:
+        logging.error("Failed h5 types test: %s", str(last_fail))
+
+#
 #  TEST VARIABLE LENGTH
 #
 def test_variable_length (asset):
@@ -257,12 +280,18 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         asset = sys.argv[2]
 
+    # Override asset from command line
+    atl06_asset = "atl06-local"
+    if len(sys.argv) > 3:
+        atl06_asset = sys.argv[3]
+
     # Initialize ICESat2/SlideRule Package
     icesat2.init(url, False)
 
     # Tests
     test_time()
     test_h5(asset)
+    test_h5_types(atl06_asset)
     test_variable_length(asset)
     test_definition()
     test_geospatial(asset)
