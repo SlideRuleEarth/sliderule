@@ -525,6 +525,16 @@ const char* H5Lite::H5FileBuffer::layout2str (layout_t layout)
 }
 
 /*----------------------------------------------------------------------------
+ * highestBit
+ *----------------------------------------------------------------------------*/
+int H5Lite::H5FileBuffer::highestBit (uint64_t value)
+{
+    int bit = 0;
+    while(value >>= 1) bit++;
+    return bit;
+}
+
+/*----------------------------------------------------------------------------
  * inflateChunk
  *----------------------------------------------------------------------------*/
 int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size)
@@ -898,7 +908,7 @@ int H5Lite::H5FileBuffer::readSuperblock (void)
 /*----------------------------------------------------------------------------
  * readFractalHeap
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS = 0x02;
 
@@ -926,7 +936,7 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Fractal Heap [%d]: %d, 0x%lx\n", dlvl, (int)type, starting_position);
+        mlog(RAW, "Fractal Heap [%d]: %d, 0x%lx\n", dlvl, (int)msg_type, starting_position);
         mlog(RAW, "----------------\n");
     }
 
@@ -954,18 +964,6 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_
     uint16_t    start_num_rows      = (uint16_t)readField(2, &pos); // Starting # of Rows in Root Indirect Block
     uint64_t    root_blk_addr       = (uint64_t)readField(offsetSize, &pos); // Address of Root Block
     uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
-
-    /* Read Filter Information */
-    if(io_filter_len > 0)
-    {
-        uint64_t filter_root_dblk   = (uint64_t)readField(lengthSize, &pos); // Size of Filtered Root Direct Block
-        uint32_t filter_mask        = (uint32_t)readField(4, &pos); // I/O Filter Mask
-        mlog(RAW, "Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
-        mlog(RAW, "I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
-
-        readMessage(FILTER_MSG, io_filter_len, pos, hdr_flags, dlvl);
-    }
-
     if(verbose)
     {
         mlog(RAW, "Heap ID Length:                                                  %lu\n", (unsigned long)heap_obj_id_len);
@@ -993,6 +991,18 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_
         mlog(RAW, "Current # of Rows in Root Indirect Block:                        %lu\n", (unsigned long)curr_num_rows);
     }
 
+    /* Read Filter Information */
+    if(io_filter_len > 0)
+    {
+        uint64_t filter_root_dblk   = (uint64_t)readField(lengthSize, &pos); // Size of Filtered Root Direct Block
+        uint32_t filter_mask        = (uint32_t)readField(4, &pos); // I/O Filter Mask
+        mlog(RAW, "Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
+        mlog(RAW, "I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
+
+        throw RunTimeException("Filtering unsupported on fractal heap: %d", io_filter_len);
+        // readMessage(FILTER_MSG, io_filter_len, pos, hdr_flags, dlvl); // this currently populates filter for dataset
+    }
+
     /* Check Checksum */
     uint64_t check_sum = readField(4, &pos);
     if(errorChecking)
@@ -1000,18 +1010,39 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_
         (void)check_sum;
     }
 
-    /* Process Direct Block */
-    if(curr_num_rows == 0)
+    /* Build Heap Info Structure */
+    heap_info_t heap_info = {
+        .table_width        = table_width,
+        .curr_num_rows      = curr_num_rows,
+        .starting_blk_size  = (int)starting_blk_size,
+        .max_dblk_size      = (int)max_dblk_size,
+        .blk_offset_size    = ((max_heap_size + 7) / 8),
+        .dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0),
+        .msg_type           = msg_type,
+        .num_objects        = (int)mg_objs,
+        .cur_objects        = 0 // updated as objects are read
+    };
+
+    /* Process Blocks */
+    if(heap_info.curr_num_rows == 0)
     {
-        int blk_offset_sz = (max_heap_size + 7) / 8;
-        bool checksum_present = (flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0;
-        int blk_size = starting_blk_size;
-        int bytes_read = readDirectBlock(blk_offset_sz, checksum_present, blk_size, mg_objs, type, root_blk_addr, hdr_flags, dlvl);
-        if(errorChecking && (bytes_read > blk_size))
+        /* Direct Blocks */
+        int bytes_read = readDirectBlock(&heap_info, heap_info.starting_blk_size, root_blk_addr, hdr_flags, dlvl);
+        if(errorChecking && (bytes_read > heap_info.starting_blk_size))
         {
-            throw RunTimeException("direct block contianed more bytes than specified: %d > %d", bytes_read, blk_size);            
+            throw RunTimeException("direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);            
         }
-        pos += blk_size;        
+        pos += heap_info.starting_blk_size;        
+    }
+    else
+    {
+        /* Indirect Blocks */
+        int bytes_read = readIndirectBlock(&heap_info, 0, root_blk_addr, hdr_flags, dlvl);
+        if(errorChecking && (bytes_read > heap_info.starting_blk_size))
+        {
+            throw RunTimeException("indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);            
+        }
+        pos += bytes_read;        
     }
 
     /* Return Bytes Read */
@@ -1022,7 +1053,7 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t type, uint64_t pos, uint8_
 /*----------------------------------------------------------------------------
  * readDirectBlock
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_present, int blk_size, int msgs_in_blk, msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5Lite::H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     uint64_t starting_position = pos;
 
@@ -1048,24 +1079,24 @@ int H5Lite::H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_pr
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Direct Block [%d,%d]: 0x%lx\n", dlvl, (int)type, (unsigned long)starting_position);
+        mlog(RAW, "Direct Block [%d,%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, block_size, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
     }
     
     /* Read Block Header */
     if(!verbose)
     {
-        pos += offsetSize + blk_offset_size;
+        pos += offsetSize + heap_info->blk_offset_size;
     }
     else
     {
-        uint64_t heap_hdr_addr = (uint64_t)readField(offsetSize, &pos); // Heap Header Address
-        uint64_t blk_offset    = (uint64_t)readField(blk_offset_size, &pos); // Block Offset
+        uint64_t heap_hdr_addr = readField(offsetSize, &pos); // Heap Header Address
+        uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
         mlog(RAW, "Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
         mlog(RAW, "Block Offset:                                                    0x%lx\n", blk_offset);
     }
 
-    if(checksum_present)
+    if(heap_info->dblk_checksum)
     {
         uint64_t check_sum = readField(4, &pos);
         if(errorChecking)
@@ -1075,10 +1106,173 @@ int H5Lite::H5FileBuffer::readDirectBlock (int blk_offset_size, bool checksum_pr
     }
 
     /* Read Block Data */
-    int data_left = blk_size - (5 + offsetSize + blk_offset_size + ((int)checksum_present * 4));
-    for(int i = 0; i < msgs_in_blk && data_left > 0; i++)
+    int data_left = block_size - (5 + offsetSize + heap_info->blk_offset_size + ((int)heap_info->dblk_checksum * 4));
+    while((data_left > 0) && (heap_info->cur_objects < heap_info->num_objects))
     {
-        pos += readMessage(type, data_left, pos, hdr_flags, dlvl);
+        /* Peak if More Messages */
+        uint64_t peak_addr = pos;
+        int peak_size = MIN((1 << highestBit(data_left)), 8);
+        if(readField(peak_size, &peak_addr) == 0)
+        {
+            if(verbose)
+            {
+                mlog(RAW, "\nExiting direct block 0x%lx early at 0x%lx\n", starting_position, pos);
+            }
+            break;
+        }
+
+        /* Read Message */
+        uint64_t data_read = readMessage(heap_info->msg_type, data_left, pos, hdr_flags, dlvl);
+        pos += data_read;
+        data_left -= data_read;
+
+        /* Update Number of Objects Read */
+        heap_info->cur_objects++;
+
+        /* Check Reading Past Block */
+        if(errorChecking)
+        {
+            if(data_left < 0)
+            {
+                throw RunTimeException("reading message exceeded end of direct block: 0x%x", starting_position);
+            }
+        }
+    }
+
+    /* Skip to End of Block */
+    pos += data_left;
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readIndirectBlock
+ *----------------------------------------------------------------------------*/
+int H5Lite::H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    uint64_t starting_position = pos;
+
+    if(!errorChecking)
+    {
+        pos += 5;
+    }
+    else
+    {
+        uint32_t signature = (uint32_t)readField(4, &pos);
+        if(signature != H5_FHIB_SIGNATURE_LE)
+        {
+            throw RunTimeException("invalid direct block signature: 0x%llX", (unsigned long long)signature);
+        }
+
+        uint8_t version = (uint8_t)readField(1, &pos);
+        if(version != 0)
+        {
+            throw RunTimeException("invalid direct block version: %d", (int)version);
+        }
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Indirect Block [%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+    }
+    
+    /* Read Block Header */
+    if(!verbose)
+    {
+        pos += offsetSize + heap_info->blk_offset_size;
+    }
+    else
+    {
+        uint64_t heap_hdr_addr = readField(offsetSize, &pos); // Heap Header Address
+        uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
+        mlog(RAW, "Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
+        mlog(RAW, "Block Offset:                                                    0x%lx\n", blk_offset);
+    }
+
+    /* Calculate Number of Direct and Indirect Blocks (see III.G. Disk Format: Level 1G - Fractal Heap) */
+    int nrows = heap_info->curr_num_rows; // used for "root" indirect block only
+    if(block_size > 0) nrows = (highestBit(block_size) - highestBit(heap_info->starting_blk_size * heap_info->table_width)) + 1;
+    int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
+    int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
+    int N = K - (max_dblock_rows * heap_info->table_width);
+    if(verbose)
+    {
+        mlog(RAW, "Number of Rows:                                                  %d\n", nrows);
+        mlog(RAW, "Maximum Direct Block Rows:                                       %d\n", max_dblock_rows);
+        mlog(RAW, "Number of Direct Blocks (K):                                     %d\n", K);
+        mlog(RAW, "Number of Indirect Blocks (N):                                   %d\n", N);
+    }
+
+    /* Read Direct Child Blocks */
+    for(int row = 0; row < nrows; row++)
+    {
+        /* Calculate Row's Block Size */
+        int row_block_size;
+        if      (row == 0)  row_block_size = heap_info->starting_blk_size;
+        else if (row == 1)  row_block_size = heap_info->starting_blk_size;
+        else                row_block_size = heap_info->starting_blk_size * (0x2 << (row - 2));
+        
+        /* Process Entries in Row */
+        for(int entry = 0; entry < heap_info->table_width; entry++)
+        {
+            /* Direct Block Entry */
+            if(row_block_size <= heap_info->max_dblk_size)
+            {
+                if(errorChecking)
+                {
+                    if(row >= K)
+                    {
+                        throw RunTimeException("unexpected direct block row: %d, %d >= %d\n", row_block_size, row, K);
+                    }
+                }
+
+                /* Read Direct Block Address */
+                uint64_t direct_block_addr = readField(offsetSize, &pos);
+                // note: filters are unsupported, but if present would be read here
+                if(!H5_INVALID(direct_block_addr))
+                {
+                    /* Read Direct Block */
+                    int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
+                    if(errorChecking && (bytes_read > row_block_size))
+                    {
+                        throw RunTimeException("direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);            
+                    }
+                }
+            }
+            else /* Indirect Block Entry */
+            {
+                if(errorChecking)
+                {
+                    if(row < K || row >= N)
+                    {
+                        throw RunTimeException("unexpected indirect block row: %d, %d, %d\n", row_block_size, row, N);
+                    }
+                }
+
+                /* Read Indirect Block Address */
+                uint64_t indirect_block_addr = readField(offsetSize, &pos);
+                if(!H5_INVALID(indirect_block_addr))
+                {
+                    /* Read Direct Block */
+                    int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
+                    if(errorChecking && (bytes_read > row_block_size))
+                    {
+                        throw RunTimeException("indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);            
+                    }
+                }
+            }
+        }
+    }
+
+    /* Read Checksum */
+    uint64_t check_sum = readField(4, &pos);
+    if(errorChecking)
+    {
+        (void)check_sum;
     }
 
     /* Return Bytes Read */
@@ -1584,9 +1778,9 @@ int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hd
 /*----------------------------------------------------------------------------
  * readMessage
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5Lite::H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
-    switch(type)
+    switch(msg_type)
     {
         case DATASPACE_MSG:     return readDataspaceMsg(pos, hdr_flags, dlvl);
         case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
@@ -1601,7 +1795,7 @@ int H5Lite::H5FileBuffer::readMessage (msg_type_t type, uint64_t size, uint64_t 
         {
             if(verbose)
             {
-                mlog(RAW, "Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)type, (int)size, (unsigned long)pos);
+                mlog(RAW, "Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)msg_type, (int)size, (unsigned long)pos);
             }
             
             return size;
@@ -1679,7 +1873,7 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
 
     if(verbose)
     {
-        mlog(RAW, "Number of Elements:                                               %lu\n", (unsigned long)num_elements);
+        mlog(RAW, "Number of Elements:                                              %lu\n", (unsigned long)num_elements);
     }
 
     /* Return Bytes Read */
