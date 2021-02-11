@@ -50,7 +50,7 @@ class H5DatasetDevice: public DeviceObject
         typedef struct {
             int64_t     id;
             uint32_t    dataset; // record object pointer
-            uint32_t    datatype; // RecordObject::fieldType_t
+            uint32_t    datatype; // RecordObject::valType_t
             uint32_t    offset;
             uint32_t    size;
         } h5dataset_t;
