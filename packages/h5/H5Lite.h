@@ -125,7 +125,7 @@ struct H5Lite
                     SZIP_FILTER             = 4,
                     NBIT_FILTER             = 5,
                     SCALEOFFSET_FILTER      = 6,
-                    UNKNOWN_FILTER          = 7
+                    NUM_FILTERS             = 7
                 } filter_t;
 
                 /*--------------------------------------------------------------------
@@ -255,9 +255,9 @@ struct H5Lite
                 uint64_t            dataDimensions[MAX_NDIMS];
                 int                 dataNumDimensions;
 
-                filter_t            dataFilter;
-                uint32_t*           dataFilterParms;
-                int                 dataNumFilterParms;
+                bool                dataFilter[NUM_FILTERS]; // true if enabled for dataset
+                uint32_t*           dataFilterParms[NUM_FILTERS];
+                int                 dataNumFilterParms[NUM_FILTERS];
 
                 layout_t            dataLayout;
                 uint64_t            dataAddress;

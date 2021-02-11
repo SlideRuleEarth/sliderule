@@ -197,9 +197,12 @@ int H5DatasetDevice::readBuffer (void* buf, int len)
         if(rawMode)
         {
             int bytes_to_copy = MIN(len, bytes_remaining);
-            LocalLib::copy(buf, &dataBuffer[dataOffset], bytes_to_copy);
-            dataOffset += bytes_to_copy;
-            bytes = bytes_to_copy;
+            if(bytes_to_copy > 0)
+            {
+                LocalLib::copy(buf, &dataBuffer[dataOffset], bytes_to_copy);
+                dataOffset += bytes_to_copy;
+                bytes = bytes_to_copy;
+            }
         }
         else // record
         {
