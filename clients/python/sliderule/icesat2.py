@@ -332,7 +332,7 @@ def atl06 (parm, resource, asset="atl03-cloud", track=0, as_numpy=False):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=4, block=True):
+def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=0, block=True):
 
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
@@ -354,6 +354,16 @@ def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=4, bl
 
     # Make CMR Request #
     resources = cmr(polygon, time_start, time_end)
+
+    # Update Available Servers #
+    num_servers = sliderule.update_available_servers()
+    if max_workers <= 0:
+        max_workers = num_servers
+
+    # Check if Servers are Available #
+    if max_workers <= 0:
+        logger.error("There are no servers available to fulfill this request")
+        return
 
     # For Blocking Calls
     if block:

@@ -143,9 +143,9 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     # Set URL #
-    url = "http://127.0.0.1:9081"
+    url = ["127.0.0.1"]
     if len(sys.argv) > 1:
-        url = sys.argv[1]
+        url = [sys.argv[1]]
 
     # Set ATL03 Asset #
     atl03_asset = "atl03-local"

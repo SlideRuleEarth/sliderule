@@ -68,9 +68,9 @@ if __name__ == '__main__':
         region = json.load(regionfile)["region"]
         
     # Set URL #
-    url = "http://127.0.0.1:9081"
+    url = ["127.0.0.1"]
     if len(sys.argv) > 2:
-        url = sys.argv[2]
+        url = [sys.argv[2]]
 
     # Set Asset #
     asset = "atl03-local"
