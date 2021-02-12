@@ -88,13 +88,14 @@ def __setserv(servs):
             service_url = "http://" + servs + "/v1/catalog/service/srds?passing"
         else:
             raise TypeError('expected ip address or hostname as a string or list of strings')
+    # then update server table
+    __upserv()
 
 #
 # update server urls
 #
 def __upserv():
     global server_table, server_index, service_url
-    num_servers = 0
     with server_lock:
         if service_url != None:
             server_index = 0
@@ -102,8 +103,7 @@ def __upserv():
             services = requests.get(service_url).json()
             for entry in services:
                 server_table[service_url] = 0
-                num_servers += 1
-    return num_servers
+    return len(server_table)
 
 #
 #  get the ip address of an available sliderule server
