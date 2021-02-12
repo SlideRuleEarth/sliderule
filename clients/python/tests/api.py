@@ -288,6 +288,11 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
         atl06_asset = sys.argv[3]
 
+    # Check for use of service discovery
+    if len(sys.argv) > 4:
+        if sys.argv[4] == "service":
+            url = url[0]
+
     # Initialize ICESat2/SlideRule Package
     icesat2.init(url, False)
 

@@ -85,7 +85,7 @@ def __setserv(servs):
                 server_url = "http://" + serv + ":9081"
                 server_table[server_url] = 0
         elif type(servs) == str: # IP address of sliderule's service discovery
-            service_url = "http://" + servs + "/v1/catalog/service/srds?passing"
+            service_url = "http://" + servs + ":8500/v1/catalog/service/srds?passing"
         else:
             raise TypeError('expected ip address or hostname as a string or list of strings')
     # then update server table
@@ -102,7 +102,8 @@ def __upserv():
             server_table = {}
             services = requests.get(service_url).json()
             for entry in services:
-                server_table[service_url] = 0
+                server_url = "http://" + entry["Address"] + ":" + str(entry["ServicePort"])
+                server_table[server_url] = 0
     return len(server_table)
 
 #

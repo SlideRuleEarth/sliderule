@@ -440,7 +440,6 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
     # Return Response
     return values
 
-
 #
 #  LOG
 #
