@@ -11,6 +11,8 @@ import threading
 # GLOBALS
 ###############################################################################
 
+service_url = None
+
 server_lock = threading.Lock()
 server_table = {}
 server_index = 0
@@ -51,14 +53,14 @@ basictypes = {
 ###############################################################################
 
 #
-#  __setverb
+#  set verbose
 #
 def __setverb(enable):
     global verbose
     verbose = (enable == True)
 
 #
-#  __setmaxerr
+#  set maximum server errors allowed
 #
 def __setmaxerr(max_errors):
     global server_max_errors
@@ -68,23 +70,43 @@ def __setmaxerr(max_errors):
         raise TypeError('max errors must be greater than zero')
 
 #
-#  __setserv
+#  set server urls
+#   - you either pass in a single ip address or hostname which is used for service discovery
+#   - OR you pass in a list of ip address or hostnames which are treated as a fixed list of servers
 #
 def __setserv(servs):
-    global server_table
+    global server_table, server_index, service_url
     with server_lock:
+        service_url = None
         server_index = 0
         server_table = {}
-        if type(servs) == list:
+        if type(servs) == list: # hardcoded list of sliderule server IP addresses
             for serv in servs:
-                server_table[serv] = 0
-        elif type(servs) == str:
-            server_table[servs] = 0
+                server_url = "http://" + serv + ":9081"
+                server_table[server_url] = 0
+        elif type(servs) == str: # IP address of sliderule's service discovery
+            service_url = "http://" + servs + "/v1/catalog/service/srds?passing"
         else:
-            raise TypeError('urls must be string or list of strings')
+            raise TypeError('expected ip address or hostname as a string or list of strings')
 
 #
-#  __getserv
+# update server urls
+#
+def __upserv():
+    global server_table, server_index, service_url
+    num_servers = 0
+    with server_lock:
+        if service_url != None:
+            server_index = 0
+            server_table = {}
+            services = requests.get(service_url).json()
+            for entry in services:
+                server_table[service_url] = 0
+                num_servers += 1
+    return num_servers
+
+#
+#  get the ip address of an available sliderule server
 #
 def __getserv():
     global server_table, server_index
@@ -325,6 +347,12 @@ def source (api, parm, stream=False):
 #
 def set_url(urls):
     __setserv(urls)
+
+#
+#  UPDATE_AVAIABLE_SERVERS
+#
+def update_available_servers():
+    return __upserv()
 
 #
 #  SET_VERBOSE
