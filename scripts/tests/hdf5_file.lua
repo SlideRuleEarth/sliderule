@@ -64,19 +64,20 @@ r4:destroy()
 
 o4:waiton()
 o4:destroy()
---
---[[
+
+local expected_segment_id = 671087 -- starting segment id in file
+local status = true
 local f = assert(io.open(segment_file, "rb"))
-while true do
+while status do
     local bytes = f:read(4)
     if not bytes then break end
-    local segment_id = string.unpack(">i4", bytes)
-    print("Segment Id: ", segment_id)
+    local segment_id = string.unpack("<i4", bytes)
+    status = runner.check(segment_id == expected_segment_id, string.format("unexpected segment id, %d != %d", segment_id, expected_segment_id))
+    expected_segment_id = expected_segment_id + 1
 end
 
 f:close()
---]]
---os.remove(segment_file)
+os.remove(segment_file)
 
 -- Report Results --
 
