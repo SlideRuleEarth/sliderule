@@ -20,7 +20,6 @@ r4:destroy()
 o4:waiton()
 o4:destroy()
 
---local expected_segment_id = 555764 -- starting segment id in file
 local status = true
 local f = assert(io.open(test_file, "rb"))
 while status do
@@ -30,7 +29,7 @@ while status do
 end
 
 f:close()
---os.remove(test_file)
+os.remove(test_file)
 
 -- Report Results --
 
