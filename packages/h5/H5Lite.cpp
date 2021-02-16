@@ -593,10 +593,28 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
 /*----------------------------------------------------------------------------
  * createDataBuffer
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::createDataBuffer (uint64_t buffer_size)
+int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint8_t* output, uint32_t buffer_size, int type_size)
 {
+    if(errorChecking)
+    {
+        if(type_size < 0 || type_size > 8)
+        {
+            throw RunTimeException("invalid data size to perform shuffle on: %d\n", type_size);
+        }
+    }
 
-    return buffer_size;
+    int64_t dst_index = 0;
+    int64_t num_elements = buffer_size / type_size;
+    for(int element_index = 0; element_index < num_elements; element_index++)
+    {
+        for(int val_index = 0; val_index < type_size; val_index++)
+        {
+            int64_t src_index = (val_index * num_elements) + element_index;
+            output[dst_index++] = input[src_index];
+        }
+    }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -790,6 +808,10 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
         {
             throw RunTimeException("read exceeds available data: %d != %d", dataSize, buffer_size);
         }
+        if((dataFilter[DEFLATE_FILTER] || dataFilter[SHUFFLE_FILTER]) && ((dataLayout == COMPACT_LAYOUT) || (dataLayout == CONTIGUOUS_LAYOUT)))
+        {
+            throw RunTimeException("filters unsupported on non-chunked layouts");
+        }
     }
 
     /* Read Dataset */
@@ -799,15 +821,15 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
         {
             case COMPACT_LAYOUT:
             {
-                dataAddress += buffer_offset;
-                readData(buffer, buffer_size, &dataAddress);
+                uint64_t data_addr = dataAddress + buffer_offset;
+                readData(buffer, buffer_size, &data_addr);
                 break;
             }
 
             case CONTIGUOUS_LAYOUT:
             {
-                dataAddress += buffer_offset;
-                readData(buffer, buffer_size, &dataAddress);
+                uint64_t data_addr = dataAddress + buffer_offset;
+                readData(buffer, buffer_size, &data_addr);
                 break;
             }
 
@@ -1430,7 +1452,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                     /* Read Data into Chunk Buffer */
                     readData(chunkBuffer, curr_node.chunk_size, &child_addr);
 
-                    if(chunk_bytes == dataChunkBufferSize)
+                    if((chunk_bytes == dataChunkBufferSize) && (!dataFilter[SHUFFLE_FILTER]))
                     {
                         /* Inflate Directly into Data Buffer */
                         inflateChunk(chunkBuffer, curr_node.chunk_size, &buffer[buffer_index], chunk_bytes);
@@ -1440,12 +1462,28 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                         /* Inflate into Data Chunk Buffer */
                         inflateChunk(chunkBuffer, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
 
-                        /* Copy Data Chunk Buffer into Data Buffer */
-                        LocalLib::copy(&buffer[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
+                        if(dataFilter[SHUFFLE_FILTER])
+                        {
+                            /* Shuffle Data Chunk Buffer into Data Buffer */
+                            shuffleChunk(dataChunkBuffer, &buffer[buffer_index], chunk_bytes, dataTypeSize);
+                        }
+                        else
+                        {
+                            /* Copy Data Chunk Buffer into Data Buffer */
+                            LocalLib::copy(&buffer[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
+                        }
                     }
                 }
-                else
+                else /* no supported filters */
                 {
+                    if(errorChecking)
+                    {
+                        if(dataFilter[SHUFFLE_FILTER])
+                        {
+                            throw RunTimeException("shuffle filter unsupported on uncompressed chunk");
+                        }
+                    }
+
                     if(chunk_bytes == dataChunkBufferSize)
                     {
                         if(errorChecking)
