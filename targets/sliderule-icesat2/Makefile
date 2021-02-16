@@ -2,9 +2,18 @@ ROOT = $(shell pwd)
 STAGEDIR = stage
 RUNDIR = /usr/local/etc/sliderule
 SLIDERULE = $(ROOT)/../..
-ICESAT2CFG = -DMAX_FREE_STACK_SIZE=1 -DUSE_AWS_PACKAGE=ON -DUSE_H5_PACKAGE=ON -DUSE_ICESAT2_PLUGIN=ON -DUSE_LEGACY_PACKAGE=OFF -DUSE_CCSDS_PACKAGE=OFF -DUSE_ATLAS_PLUGIN=OFF
 DOCKERTAG ?= icesat2sliderule/sliderule:master
 HSDS_IP?=$(shell (getent hosts hsds.sliderule.beta | awk '{ print $$1 ; exit }'))
+
+ICESAT2CFG := -DMAX_FREE_STACK_SIZE=1
+ICESAT2CFG += -DUSE_AWS_PACKAGE=ON
+ICESAT2CFG += -DUSE_H5_PACKAGE=ON
+ICESAT2CFG += -DENABLE_HDF5_LIB=ON
+ICESAT2CFG += -DENABLE_H5_REST_VOL=ON
+ICESAT2CFG += -DUSE_ICESAT2_PLUGIN=ON
+ICESAT2CFG += -DUSE_LEGACY_PACKAGE=OFF
+ICESAT2CFG += -DUSE_CCSDS_PACKAGE=OFF
+ICESAT2CFG += -DUSE_ATLAS_PLUGIN=OFF
 
 all: default-build
 
@@ -16,6 +25,10 @@ config: development-config
 trace-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_LTTNG_TRACING=ON $(SLIDERULE)
+
+hsds-config:
+	mkdir -p build
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_HDF5_LIB=ON -DENABLE_H5_REST_VOL=ON $(SLIDERULE)
 
 development-config:
 	mkdir -p build
