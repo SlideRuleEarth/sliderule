@@ -6,7 +6,7 @@ local console = require("console")
 console.logger:config(core.INFO)
 
 -- Unit Test --
---[[
+
 print('\n------------------\nTest01: Traverse\n------------------')
 
 f1 = h5.file("file:///data/ATLAS/ATL03_20200304065203_10470605_003_01.h5")
@@ -50,14 +50,12 @@ runner.check(rectable.id == 5)
 rsps3:destroy()
 r3:destroy()
 
---]]
---
 print('\n------------------\nTest04: Read Dataset Raw\n------------------')
 
 segment_file = "segment_id.bin"
+o4 = core.writer(core.file(core.WRITER, core.BINARY, segment_file, core.FLUSHED), "h5rawq")
 f4 = h5.dataset(core.READER, "file:///data/ATLAS/ATL03_20190111063212_02110206_003_01.h5", "gt1l/geolocation/segment_id", 0, true)
 r4 = core.reader(f4, "h5rawq")
-o4 = core.writer(core.file(core.WRITER, core.BINARY, segment_file, core.FLUSHED), "h5rawq")
 
 r4:waiton()
 r4:destroy()
