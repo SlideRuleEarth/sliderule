@@ -593,7 +593,7 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
 /*----------------------------------------------------------------------------
  * createDataBuffer
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint8_t* output, uint32_t buffer_size, int type_size)
+int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size)
 {
     if(errorChecking)
     {
@@ -604,12 +604,13 @@ int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint8_t* output, uint32_
     }
 
     int64_t dst_index = 0;
-    int64_t num_elements = buffer_size / type_size;
+    int64_t num_elements = input_size / type_size;
+    int64_t shuffle_block_size = output_size / type_size;
     for(int element_index = 0; element_index < num_elements; element_index++)
     {
         for(int val_index = 0; val_index < type_size; val_index++)
         {
-            int64_t src_index = (val_index * num_elements) + element_index;
+            int64_t src_index = (val_index * shuffle_block_size) + element_index;
             output[dst_index++] = input[src_index];
         }
     }
@@ -1368,6 +1369,10 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
         /* Read Next Key */
         btree_node_t next_node = readBTreeNodeV1(dataNumDimensions, &pos);
 
+        /*  Get Child Keys */
+        uint64_t child_key1 = curr_node.row_key;
+        uint64_t child_key2 = next_node.row_key; // there is always +1 keys
+
         /* Display */
         if(verbose && H5_EXTRA_DEBUG)
         {
@@ -1375,12 +1380,11 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
             mlog(RAW, "Chunk Size:                                                      %u | %u\n", (unsigned int)curr_node.chunk_size, (unsigned int)next_node.chunk_size);
             mlog(RAW, "Filter Mask:                                                     0x%x | 0x%x\n", (unsigned int)curr_node.filter_mask, (unsigned int)next_node.filter_mask);
             mlog(RAW, "Chunk Key:                                                       %lu | %lu\n", (unsigned long)curr_node.row_key, (unsigned long)next_node.row_key);
+            mlog(RAW, "Data Key:                                                        %lu | %lu\n", (unsigned long)data_key1, (unsigned long)data_key2);
             mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
         }
 
         /* Check Inclusion */
-        uint64_t child_key1 = curr_node.row_key;
-        uint64_t child_key2 = next_node.row_key; // there is always +1 keys
         if ((data_key1  >= child_key1 && data_key1  <  child_key2) ||
             (data_key2  >= child_key1 && data_key2  <  child_key2) || 
             (child_key1 >= data_key1  && child_key1 <= data_key2)  ||
@@ -1438,6 +1442,13 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                     chunk_bytes = buffer_size - buffer_index;
                 }
 
+                /* Display Info */
+                if(verbose && H5_EXTRA_DEBUG)
+                {
+                    mlog(RAW, "Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/dataTypeSize));
+                    mlog(RAW, "Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/dataTypeSize));
+                }
+
                 /* Read Chunk */
                 if(dataFilter[DEFLATE_FILTER])
                 {
@@ -1465,7 +1476,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                         if(dataFilter[SHUFFLE_FILTER])
                         {
                             /* Shuffle Data Chunk Buffer into Data Buffer */
-                            shuffleChunk(dataChunkBuffer, &buffer[buffer_index], chunk_bytes, dataTypeSize);
+                            shuffleChunk(dataChunkBuffer, chunk_bytes, &buffer[buffer_index], dataChunkBufferSize, dataTypeSize);
                         }
                         else
                         {
@@ -1538,6 +1549,10 @@ H5Lite::H5FileBuffer::btree_node_t H5Lite::H5FileBuffer::readBTreeNodeV1 (int nd
         if(trailing_zero % dataTypeSize != 0)
         {
             throw RunTimeException("key did not include a trailing zero: %d", trailing_zero);
+        }
+        else if(verbose && H5_EXTRA_DEBUG)
+        {
+            mlog(RAW, "Trailing Zero:                                                   %d\n", (int)trailing_zero);
         }
     }
 

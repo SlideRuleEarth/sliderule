@@ -194,7 +194,7 @@ struct H5Lite
                 const char*         layout2str          (layout_t layout);
                 int                 highestBit          (uint64_t value);
                 int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
-                int                 shuffleChunk        (uint8_t* input, uint8_t* output, uint32_t buffer_size, int type_size);
+                int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size);
                 uint64_t            readField           (int size, uint64_t* pos);
                 void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
                 void                readDataset         (info_t* _data_info);
