@@ -1449,17 +1449,17 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                     mlog(RAW, "Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/dataTypeSize));
                 }
 
+                /* Check Chunk Buffer Allocation */
+                if(curr_node.chunk_size > chunkBufferSize)
+                {
+                    if(chunkBuffer) delete [] chunkBuffer;
+                    chunkBufferSize = curr_node.chunk_size * CHUNK_ALLOC_FACTOR;
+                    chunkBuffer = new uint8_t [chunkBufferSize];
+                }
+
                 /* Read Chunk */
                 if(dataFilter[DEFLATE_FILTER])
                 {
-                    /* Check Chunk Buffer Allocation */
-                    if(curr_node.chunk_size > chunkBufferSize)
-                    {
-                        if(chunkBuffer) delete [] chunkBuffer;
-                        chunkBufferSize = curr_node.chunk_size * CHUNK_ALLOC_FACTOR;
-                        chunkBuffer = new uint8_t [chunkBufferSize];
-                    }
-
                     /* Read Data into Chunk Buffer */
                     readData(chunkBuffer, curr_node.chunk_size, &child_addr);
 
@@ -1514,7 +1514,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                         readData(chunkBuffer, curr_node.chunk_size, &child_addr);
 
                         /* Copy Data Chunk Buffer into Data Buffer */
-                        LocalLib::copy(&buffer[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
+                        LocalLib::copy(&buffer[buffer_index], &chunkBuffer[chunk_index], chunk_bytes);
                     }
                 }
             }
