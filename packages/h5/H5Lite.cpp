@@ -1811,9 +1811,12 @@ int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hd
 
         /* Read Each Message */
         int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
+
+        /* Handle 8-byte Alignment of Messages */
+        if((bytes_read % 8) > 0) bytes_read += 8 - (bytes_read % 8);
         if(errorChecking && (bytes_read != msg_size))
         {
-            throw RunTimeException("header message different size than specified: %d != %d", bytes_read, msg_size);            
+            throw RunTimeException("message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);            
         }
 
         /* Update Position */
@@ -2069,7 +2072,6 @@ int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int 
                 mlog(RAW, "Bit Offset:                                                      %d\n", (int)bit_offset);
                 mlog(RAW, "Bit Precision:                                                   %d\n", (int)bit_precision);
             }
-            pos += 4; // alignment
             break;
         }
 
@@ -2106,7 +2108,6 @@ int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int 
                 mlog(RAW, "Mantissa Size:                                                   %d\n", (int)mant_size);
                 mlog(RAW, "Exponent Bias:                                                   %d\n", (int)exp_bias);
             }
-            pos += 4; // alignment
             break;
         }
 
@@ -2420,9 +2421,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
 
     /* Return Bytes Read */
     uint64_t ending_position = pos;
-    uint64_t msg_size = ending_position - starting_position;
-    if((msg_size % 8) > 0) msg_size += 8 - (msg_size % 8);
-    return msg_size;
+    return ending_position - starting_position;
 }
 
 /*----------------------------------------------------------------------------
