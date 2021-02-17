@@ -43,7 +43,7 @@ const RecordObject::fieldDef_t H5DatasetDevice::recDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<role>, <filename>, <dataset name>, [<id>], [<raw>], [<datatype>])
+ * luaCreate - create(<role>, <filename>, <dataset name>, [<id>], [<raw>], [<datatype>], [col], [startrow], [numrows])
  *----------------------------------------------------------------------------*/
 int H5DatasetDevice::luaCreate (lua_State* L)
 {
@@ -55,6 +55,9 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         const char* dataset_name    = getLuaString(L, 3);
         long        id              = getLuaInteger(L, 4, true, 0);
         bool        raw_mode        = getLuaBoolean(L, 5, true, true);
+        long        col             = getLuaInteger(L, 6, true, 0);
+        long        startrow        = getLuaInteger(L, 7, true, 0);
+        long        numrows         = getLuaInteger(L, 8, true, H5Api::ALL_ROWS);
         RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 6, true, RecordObject::DYNAMIC);
 
         /* Check Access Type */
@@ -64,7 +67,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         }
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new H5DatasetDevice(L, (role_t)_role, filename, dataset_name, id, raw_mode, datatype));
+        return createLuaObject(L, new H5DatasetDevice(L, (role_t)_role, filename, dataset_name, id, raw_mode, datatype, col, startrow, numrows));
     }
     catch(const RunTimeException& e)
     {
@@ -89,7 +92,8 @@ void H5DatasetDevice::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype):
+H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, 
+                                    RecordObject::valType_t datatype, long col, long startrow, long numrows):
     DeviceObject(L, _role)
 {
     /* Start Trace */
@@ -123,7 +127,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     /* Read File */
     try
     {
-        H5Api::info_t info = H5Api::read(fileName, dataName, datatype, 0, 0, H5Api::ALL_ROWS);
+        H5Api::info_t info = H5Api::read(fileName, dataName, datatype, col, startrow, numrows);
         dataBuffer = info.data;
         dataSize = info.datasize;
         connected = true;

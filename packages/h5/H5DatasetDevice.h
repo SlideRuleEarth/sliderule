@@ -84,7 +84,8 @@ class H5DatasetDevice: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DatasetDevice     (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, RecordObject::valType_t datatype);
+                            H5DatasetDevice     (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, 
+                                                    RecordObject::valType_t datatype, long col, long startrow, long numrows);
                             ~H5DatasetDevice    (void);
 
         virtual bool        isConnected         (int num_open=0);   // is the file open

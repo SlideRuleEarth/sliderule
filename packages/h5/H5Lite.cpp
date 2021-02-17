@@ -399,6 +399,7 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     dataChunkElementSize    = 0;
     dataChunkBuffer         = NULL;
     dataChunkBufferSize     = 0;
+    dataShuffleBuffer       = NULL;
     chunkBuffer             = NULL;
     chunkBufferSize         = 0;
 
@@ -453,8 +454,9 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
 H5Lite::H5FileBuffer::~H5FileBuffer (void)
 {
     fclose(fp);
-    if(dataChunkBuffer) delete [] dataChunkBuffer;
-    if(chunkBuffer)     delete [] chunkBuffer;
+    if(dataChunkBuffer)     delete [] dataChunkBuffer;
+    if(dataShuffleBuffer)   delete [] dataShuffleBuffer;
+    if(chunkBuffer)         delete [] chunkBuffer;
     for(int f = 0; f < NUM_FILTERS; f++)
     {
         if(dataFilterParms[f]) delete [] dataFilterParms[f];
@@ -845,6 +847,7 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
                 /* Allocate Data Chunk Buffer */
                 dataChunkBufferSize = dataChunkElements * dataTypeSize;
                 dataChunkBuffer = new uint8_t [dataChunkBufferSize];
+                dataShuffleBuffer = new uint8_t [dataChunkBufferSize];
 
                 /* Read B-Tree */
                 readBTreeV1(dataAddress, buffer, buffer_size, buffer_offset);
@@ -1469,7 +1472,10 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                         if(dataFilter[SHUFFLE_FILTER])
                         {
                             /* Shuffle Data Chunk Buffer into Data Buffer */
-                            shuffleChunk(dataChunkBuffer, chunk_bytes, &buffer[buffer_index], dataChunkBufferSize, dataTypeSize);
+                            shuffleChunk(dataChunkBuffer, dataChunkBufferSize, dataShuffleBuffer, dataChunkBufferSize, dataTypeSize);
+
+                            /* Copy Unshuffled Data into Data Buffer */
+                            LocalLib::copy(&buffer[buffer_index], &dataShuffleBuffer[chunk_index], chunk_bytes);
                         }
                         else
                         {

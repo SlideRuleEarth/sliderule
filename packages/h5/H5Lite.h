@@ -268,13 +268,14 @@ struct H5Lite
                 uint64_t            dataAddress;
                 uint64_t            dataSize;
 
-                uint64_t            dataChunkElements;        
-                int                 dataChunkElementSize;
-                uint8_t*            dataChunkBuffer; 
+                uint64_t            dataChunkElements; // number of data elements per chunk
+                int                 dataChunkElementSize; // size of the data element in the chunk; should be equal to the typesize
+                uint8_t*            dataChunkBuffer; // buffer for reading uncompressed chunk
                 int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
+                uint8_t*            dataShuffleBuffer; // buffer for shuffling uncompressed chunk; same size as dataChunkBuffer
 
-                uint8_t*            chunkBuffer;
-                int64_t             chunkBufferSize;
+                uint8_t*            chunkBuffer; // buffer for reading raw and often compressed chunk data
+                int64_t             chunkBufferSize; // variable size
         };
 };
 
