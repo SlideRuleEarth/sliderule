@@ -126,7 +126,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, true);
+    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, false);
     if(info.data)
     {
         bool data_valid = true;
@@ -159,7 +159,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
         if(valtype == RecordObject::INTEGER)
         {
             /* Allocate Buffer of Integers */
-            long* tbuf = new long [info.elements];
+            int* tbuf = new int [info.elements];
 
             /* Float to Int */
             if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
@@ -167,7 +167,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
                 float* dptr = (float*)info.data;
                 for(int i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (long)dptr[i];
+                    tbuf[i] = (int)dptr[i];
                 }
             }
             /* Double to Int */
@@ -176,43 +176,43 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
                 double* dptr = (double*)info.data;
                 for(int i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (long)dptr[i];
+                    tbuf[i] = (int)dptr[i];
                 }
             }
             /* Char to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint8_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
             {
                 uint8_t* dptr = (uint8_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (long)dptr[i];
+                    tbuf[i] = (int)dptr[i];
                 }
             }
             /* Short to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint16_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
             {
                 uint16_t* dptr = (uint16_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (long)dptr[i];
+                    tbuf[i] = (int)dptr[i];
                 }
             }
             /* Int to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint32_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
             {
                 uint32_t* dptr = (uint32_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (long)dptr[i];
+                    tbuf[i] = (int)dptr[i];
                 }
             }
             /* Long to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint64_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
             {
                 uint64_t* dptr = (uint64_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (long)dptr[i];
+                    tbuf[i] = (int)dptr[i];
                 }
             }
             else
@@ -223,7 +223,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
             /* Switch Buffers */
             delete [] info.data;
             info.data = (uint8_t*)tbuf;
-            info.datasize = sizeof(long) * info.elements;
+            info.datasize = sizeof(int) * info.elements;
         }
         
         /* Perform Integer Type Transaltion */        
@@ -251,7 +251,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Char to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint8_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
             {
                 uint8_t* dptr = (uint8_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -260,7 +260,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Short to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint16_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
             {
                 uint16_t* dptr = (uint16_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -269,7 +269,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Int to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint32_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
             {
                 uint32_t* dptr = (uint32_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -278,7 +278,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Long to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.datasize == sizeof(uint64_t))
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
             {
                 uint64_t* dptr = (uint64_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -303,7 +303,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
             delete [] info.data;
             info.data = NULL;
             info.datasize = 0;
-            throw RunTimeException("data translation failed for %s: [%d] %d --> %d", datasetname, info.numcols, (int)info.datatype, (int)valtype);
+            throw RunTimeException("data translation failed for %s: [%d,%d] %d --> %d", datasetname, info.numcols, info.typesize, (int)info.datatype, (int)valtype);
         }
 
     }
