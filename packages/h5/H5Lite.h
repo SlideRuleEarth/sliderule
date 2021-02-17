@@ -231,6 +231,7 @@ struct H5Lite
                 *--------------------------------------------------------------------*/
 
                 fileptr_t           fp;
+                uint8_t             fileBuffer[READ_BUFSIZE];
                 const char*         dataset;
                 List<const char*>   datasetPath;
                 uint64_t            datasetStartRow;

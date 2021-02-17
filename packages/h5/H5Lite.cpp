@@ -126,7 +126,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, false);
+    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, true);
     if(info.data)
     {
         bool data_valid = true;
@@ -626,8 +626,6 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
     assert(pos);
     assert(size > 0);
 
-    static uint8_t file_buf[READ_BUFSIZE];
-
     int field_size = size;
     uint64_t field_position = *pos;
 
@@ -636,7 +634,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
     {
         if(fseek(fp, field_position, SEEK_SET) == 0)
         {
-            fileBuffSize = fread(file_buf, 1, READ_BUFSIZE, fp);
+            fileBuffSize = fread(fileBuffer, 1, READ_BUFSIZE, fp);
             fileCurrPosition = field_position;
         }
         else
@@ -654,7 +652,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
     {
         case 8:     
         {
-            value = *(uint64_t*)&file_buf[buff_offset];
+            value = *(uint64_t*)&fileBuffer[buff_offset];
             #ifdef __BE__
                 value = LocalLib::swapll(value);
             #endif
@@ -663,7 +661,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 
         case 4:     
         {
-            value = *(uint32_t*)&file_buf[buff_offset];
+            value = *(uint32_t*)&fileBuffer[buff_offset];
             #ifdef __BE__
                 value = LocalLib::swapl(value);
             #endif
@@ -672,7 +670,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 
         case 2:
         {
-            value = *(uint16_t*)&file_buf[buff_offset];
+            value = *(uint16_t*)&fileBuffer[buff_offset];
             #ifdef __BE__
                 value = LocalLib::swaps(value);
             #endif
@@ -681,7 +679,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 
         case 1:
         {
-            value = file_buf[buff_offset];
+            value = fileBuffer[buff_offset];
             break;
         }
 
@@ -708,25 +706,20 @@ void H5Lite::H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos
     assert(pos);
 
     /* Set Data Position */
-    if(fseek(fp, *pos, SEEK_SET) == 0)
-    {
-        fileCurrPosition = *pos;
-    }
-    else
+    if(fseek(fp, *pos, SEEK_SET) != 0)
     {
         throw RunTimeException("failed to go to data position: %d", *pos);
     }
 
     /* Read Data */
-    int data_left_to_read = size;
-    while(data_left_to_read > 0)
+    size_t bytes_read = fread(data, 1, size, fp);
+    if(bytes_read != size)
     {
-        int data_already_read = size - data_left_to_read;
-        int data_to_read = MIN(READ_BUFSIZE, data_left_to_read);
-        fileBuffSize = fread(&data[data_already_read], 1, data_to_read, fp);
-        data_left_to_read -= fileBuffSize;
-        *pos += fileBuffSize;
+        throw RunTimeException("failed to read %lu bytes of data: %ld", size, bytes_read);
     }
+
+    /* Update Position */
+    *pos += bytes_read;
 }
 
 /*----------------------------------------------------------------------------
