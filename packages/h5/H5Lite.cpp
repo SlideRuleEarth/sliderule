@@ -126,7 +126,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, true);
+    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, false);
     if(info.data)
     {
         bool data_valid = true;
