@@ -126,7 +126,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, false);
+    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, true);
     if(info.data)
     {
         bool data_valid = true;
@@ -1564,6 +1564,106 @@ H5Lite::H5FileBuffer::btree_node_t H5Lite::H5FileBuffer::readBTreeNodeV1 (int nd
 }
 
 /*----------------------------------------------------------------------------
+ * readSymbolTable
+ *----------------------------------------------------------------------------*/
+int H5Lite::H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
+{
+    uint64_t starting_position = pos;
+
+    /* Check Signature and Version */
+    if(!errorChecking)
+    {
+        pos += 6;
+    }
+    else
+    {
+        uint32_t signature = (uint32_t)readField(4, &pos);
+        if(signature != H5_SNOD_SIGNATURE_LE)
+        {
+            throw RunTimeException("invalid symbol table signature: 0x%llX", (unsigned long long)signature);
+        }
+        
+        uint8_t version = (uint8_t)readField(1, &pos);
+        if(version != 1)
+        {
+            throw RunTimeException("incorrect version of symbole table: %d", (int)version);
+        }
+
+        uint8_t reserved0 = (uint8_t)readField(1, &pos);
+        if(reserved0 != 0)
+        {
+            throw RunTimeException("incorrect reserved value: %d", (int)reserved0);
+        }
+    }
+
+    /* Read Number of Symbols */
+    uint16_t num_symbols = (uint16_t)readField(2, &pos);
+    if(errorChecking)
+    {
+        if(num_symbols > groupLeafNodeK)
+        {
+            throw RunTimeException("number of symbols exceeds group leaf node K: %d > %d\n", (int)num_symbols, (int)groupLeafNodeK);
+        }
+    }
+
+    /* Read Symbols */
+    for(int s = 0; s < num_symbols; s++)
+    {
+        /* Read Symbol Entry */
+        uint64_t link_name_offset = readField(offsetSize, &pos);
+        uint64_t obj_hdr_addr = readField(offsetSize, &pos);
+        uint32_t cache_type = (uint32_t)readField(4, &pos);
+        pos += 20; // reserved + scratch pad
+        if(errorChecking)
+        {
+            if(cache_type == 2)
+            {
+                throw RunTimeException("symbolic links are unsupported");
+            }
+        }
+
+        /* Read Link Name */
+        uint64_t link_name_addr = heap_data_addr + link_name_offset;
+        uint8_t link_name[STR_BUFF_SIZE];
+        int i = 0;
+        while(true)
+        {
+            if(i >= STR_BUFF_SIZE)
+            {
+                throw RunTimeException("link name string exceeded maximum length: %d, 0x%lx\n", i, (unsigned long)pos);
+            }
+
+            uint8_t c = (uint8_t)readField(1, &link_name_addr);
+            link_name[i++] = c;
+
+            if(c == 0)
+            {
+                break;
+            }
+        }
+        link_name[i] = '\0';
+        if(verbose)
+        {
+            mlog(RAW, "Link Name:                                                       %s\n", link_name);
+            mlog(RAW, "Object Header Address:                                           0x%lx\n", obj_hdr_addr);
+        }
+
+        /* Process Link */
+        if(dlvl < datasetPath.length())
+        {
+            if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
+            {
+                readObjHdr(obj_hdr_addr, dlvl + 1);
+            }
+        }
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;    
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
  * readObjHdr
  *----------------------------------------------------------------------------*/
 int H5Lite::H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
@@ -1855,6 +1955,7 @@ int H5Lite::H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint6
         case DATA_LAYOUT_MSG:   return readDataLayoutMsg(pos, hdr_flags, dlvl);
         case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
+        case SYMBOL_TABLE_MSG:  return readSymbolTableMsg(pos, hdr_flags, dlvl);
 
         default:
         {
@@ -2566,4 +2667,125 @@ int H5Lite::H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, in
 
     /* Return Bytes Read */
     return offsetSize + lengthSize;
+}
+
+/*----------------------------------------------------------------------------
+ * readSymbolTableMsg
+ *----------------------------------------------------------------------------*/
+int H5Lite::H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    (void)hdr_flags;
+
+    uint64_t starting_position = pos;
+
+    /* Symbol Table Info */
+    uint64_t btree_addr = readField(offsetSize, &pos);
+    uint64_t heap_addr = readField(offsetSize, &pos);
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Symbol Table Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        mlog(RAW, "----------------\n");
+        mlog(RAW, "B-Tree Address:                                                  0x%lx\n", (unsigned long)btree_addr);
+        mlog(RAW, "Heap Address:                                                    0x%lx\n", (unsigned long)heap_addr);
+    }
+
+    /* Read Heap Info */
+    pos = heap_addr;
+    if(!errorChecking)
+    {
+        pos += 24;
+    }
+    else
+    {
+        uint32_t signature = (uint32_t)readField(4, &pos);
+        if(signature != H5_HEAP_SIGNATURE_LE)
+        {
+            throw RunTimeException("invalid heap signature: 0x%llX", (unsigned long long)signature);
+        }            
+
+        uint8_t version = (uint8_t)readField(1, &pos);
+        if(version != 0)
+        {
+            throw RunTimeException("incorrect version of heap: %d", version);
+        }
+
+        pos += 19;
+    }
+    uint64_t head_data_addr = readField(offsetSize, &pos);
+
+    /* Go to Left-Most Node */
+    pos = btree_addr;
+    while(true)
+    {
+        /* Read Header Info */
+        if(!errorChecking)
+        {
+            pos += 5;
+        }
+        else
+        {
+            uint32_t signature = (uint32_t)readField(4, &pos);
+            if(signature != H5_TREE_SIGNATURE_LE)
+            {
+                throw RunTimeException("invalid group b-tree signature: 0x%llX", (unsigned long long)signature);
+            }            
+
+            uint8_t node_type = (uint8_t)readField(1, &pos);
+            if(node_type != 0)
+            {
+                throw RunTimeException("only group b-trees supported: %d", node_type);
+            }
+        }
+
+        /* Read Branch Info */
+        uint8_t node_level = (uint8_t)readField(1, &pos);
+        if(node_level == 0)
+        {
+            break;
+        }
+        else
+        {
+            pos += 2 + (2 * offsetSize) + lengthSize; // skip entries used, sibling addresses, and first key
+            pos = readField(offsetSize, &pos); // read and go to first child
+        }
+    }
+
+    /* Traverse Children Left to Right */
+    while(true)
+    {
+        uint16_t entries_used = (uint16_t)readField(2, &pos);
+        uint64_t left_sibling = readField(offsetSize, &pos);
+        uint64_t right_sibling = readField(offsetSize, &pos);
+        uint64_t key0 = readField(lengthSize, &pos);
+        if(verbose && H5_EXTRA_DEBUG)
+        {
+            mlog(RAW, "Entries Used:                                                    %d\n", (int)entries_used);
+            mlog(RAW, "Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
+            mlog(RAW, "Right Sibling:                                                   0x%lx\n", (unsigned long)right_sibling);
+            mlog(RAW, "First Key:                                                       %ld\n", (unsigned long)key0);
+        }
+
+        /* Loop Through Entries in Current Node */
+        for(int entry = 0; entry < entries_used; entry++)
+        {
+            uint64_t symbol_table_addr = readField(offsetSize, &pos);
+            readSymbolTable(symbol_table_addr, head_data_addr, dlvl);
+            pos += lengthSize; // skip next key;
+        }
+
+        /* Exit Loop or Go to Next Node */
+        if(H5_INVALID(right_sibling))
+        {
+            break;
+        }
+        else
+        {
+            pos = right_sibling;
+        }
+    }
+
+    /* Return Bytes Read */
+    return offsetSize + offsetSize;
 }

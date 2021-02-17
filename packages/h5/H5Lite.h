@@ -93,6 +93,7 @@ struct H5Lite
                     DATA_LAYOUT_MSG         = 0x8,
                     FILTER_MSG              = 0xB,
                     HEADER_CONT_MSG         = 0x10,
+                    SYMBOL_TABLE_MSG        = 0x11
                 } msg_type_t;
 
                 typedef enum {
@@ -151,6 +152,8 @@ struct H5Lite
                 static const uint64_t   H5_FHIB_SIGNATURE_LE    = 0x42494846LL; // indirect block
                 static const uint64_t   H5_OCHK_SIGNATURE_LE    = 0x4B48434FLL; // object header continuation block
                 static const uint64_t   H5_TREE_SIGNATURE_LE    = 0x45455254LL; // binary tree version 1
+                static const uint64_t   H5_HEAP_SIGNATURE_LE    = 0x50414548LL; // local heap
+                static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
                 static const uint8_t    H5LITE_CUSTOM_V1_FLAG   = 0x80; // used to indicate version 1 object header (reserved)
                 
                 /*--------------------------------------------------------------------
@@ -205,6 +208,7 @@ struct H5Lite
                 int                 readIndirectBlock   (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
                 int                 readBTreeV1         (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset);
                 btree_node_t        readBTreeNodeV1     (int ndims, uint64_t* pos);
+                int                 readSymbolTable     (uint64_t pos, uint64_t heap_data_addr, int dlvl);
 
                 int                 readObjHdr          (uint64_t pos, int dlvl);
                 int                 readMessages        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
@@ -220,7 +224,7 @@ struct H5Lite
                 int                 readDataLayoutMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
                 int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
                 int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
-                
+                int                 readSymbolTableMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
                 
                 /*--------------------------------------------------------------------
                 * Data
