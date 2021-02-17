@@ -316,7 +316,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     stop_trace(trace_id);
 
     /* Log Info Message */
-    mlog(INFO, "Read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
+    mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
 
     /* Return Info */
     return info;
@@ -454,6 +454,7 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
 H5Lite::H5FileBuffer::~H5FileBuffer (void)
 {
     fclose(fp);
+    if(dataset)             delete [] dataset;
     if(dataChunkBuffer)     delete [] dataChunkBuffer;
     if(dataShuffleBuffer)   delete [] dataShuffleBuffer;
     if(chunkBuffer)         delete [] chunkBuffer;
@@ -1368,6 +1369,10 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
         /*  Get Child Keys */
         uint64_t child_key1 = curr_node.row_key;
         uint64_t child_key2 = next_node.row_key; // there is always +1 keys
+        if(next_node.chunk_size == 0 && dataNumDimensions > 0)
+        {
+            child_key2 = dataDimensions[0];
+        }
 
         /* Display */
         if(verbose && H5_EXTRA_DEBUG)
@@ -1375,7 +1380,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
             mlog(RAW, "\nEntry:                                                           %d[%d]\n", (int)node_level, e);
             mlog(RAW, "Chunk Size:                                                      %u | %u\n", (unsigned int)curr_node.chunk_size, (unsigned int)next_node.chunk_size);
             mlog(RAW, "Filter Mask:                                                     0x%x | 0x%x\n", (unsigned int)curr_node.filter_mask, (unsigned int)next_node.filter_mask);
-            mlog(RAW, "Chunk Key:                                                       %lu | %lu\n", (unsigned long)curr_node.row_key, (unsigned long)next_node.row_key);
+            mlog(RAW, "Chunk Key:                                                       %lu | %lu\n", (unsigned long)child_key1, (unsigned long)child_key2);
             mlog(RAW, "Data Key:                                                        %lu | %lu\n", (unsigned long)data_key1, (unsigned long)data_key2);
             mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
         }

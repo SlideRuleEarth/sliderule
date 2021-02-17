@@ -55,10 +55,10 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         const char* dataset_name    = getLuaString(L, 3);
         long        id              = getLuaInteger(L, 4, true, 0);
         bool        raw_mode        = getLuaBoolean(L, 5, true, true);
-        long        col             = getLuaInteger(L, 6, true, 0);
-        long        startrow        = getLuaInteger(L, 7, true, 0);
-        long        numrows         = getLuaInteger(L, 8, true, H5Api::ALL_ROWS);
         RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 6, true, RecordObject::DYNAMIC);
+        long        col             = getLuaInteger(L, 7, true, 0);
+        long        startrow        = getLuaInteger(L, 8, true, 0);
+        long        numrows         = getLuaInteger(L, 9, true, H5Api::ALL_ROWS);
 
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
