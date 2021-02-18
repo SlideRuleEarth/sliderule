@@ -26,6 +26,7 @@
 
 #include "RecordObject.h"
 #include "List.h"
+#include "Table.h"
 
 /******************************************************************************
  * HDF5 I/O LITE LIBRARY
@@ -142,9 +143,14 @@ struct H5Lite
                 * Constants
                 *--------------------------------------------------------------------*/
 
-                static const long       IO_BUFFSIZE             = 1048576; // 1MB
+                static const long       IO_BUFFSIZE             = 0x100000; // 1MB
+                static const long       IO_MASK                 = 0x0FFFFF; // lower inverse of buffer size
+                static const long       IO_CACHE_SIZE           = 47; // 47MB per dataset
+
                 static const long       STR_BUFF_SIZE           = 512;
+
                 static const int        CHUNK_ALLOC_FACTOR      = 2;
+
                 static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
                 static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
                 static const uint64_t   H5_FRHP_SIGNATURE_LE    = 0x50485246LL; // fractal heap
@@ -154,6 +160,7 @@ struct H5Lite
                 static const uint64_t   H5_TREE_SIGNATURE_LE    = 0x45455254LL; // binary tree version 1
                 static const uint64_t   H5_HEAP_SIGNATURE_LE    = 0x50414548LL; // local heap
                 static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
+                
                 static const uint8_t    H5LITE_CUSTOM_V1_FLAG   = 0x80; // used to indicate version 1 object header (reserved)
                 
                 /*--------------------------------------------------------------------
@@ -188,11 +195,20 @@ struct H5Lite
                     uint8_t                 fill_b;
                 } fill_t;
 
+                typedef struct {
+                    uint8_t*                data;
+                    int64_t                 size;
+                    uint64_t                pos;
+                } cache_entry_t;
+
+                typedef Table<cache_entry_t, uint64_t> cache_t;
+
                 /*--------------------------------------------------------------------
                 * Methods
                 *--------------------------------------------------------------------*/
                 
                 void                ioRequest           (uint8_t** data, int64_t size, uint64_t pos);
+                static uint64_t     ioHash              (uint64_t key);
 
                 void                parseDataset        (const char* _dataset);
                 const char*         type2str            (data_type_t datatype);
@@ -239,11 +255,11 @@ struct H5Lite
                 bool                errorChecking;
                 bool                verbose;
 
-                /* File Management */
+                /* I/O Hashing and Management */
                 fileptr_t           fp;
-                uint8_t             ioBuffer[IO_BUFFSIZE];
-                int64_t             ioBufferSize;
-                uint64_t            ioCurrentPosition;
+                cache_t             ioCache;
+                
+                /* File Management */
 
                 /* File Meta Attributes */
                 int                 offsetSize;

@@ -366,7 +366,8 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
+H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose):
+    ioCache(IO_CACHE_SIZE, ioHash)
 {
     assert(data_info);
     assert(filename);
@@ -378,8 +379,6 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     verbose                 = _verbose;
 
     /* Initialize */
-    ioBufferSize            = 0;
-    ioCurrentPosition       = 0;
     offsetSize              = 0;
     lengthSize              = 0;
     groupLeafNodeK          = 0;
@@ -464,6 +463,13 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
         if(dataFilterParms[f]) delete [] dataFilterParms[f];
     }
 
+    cache_entry_t entry;
+    uint64_t key = ioCache.first(&entry);
+    while(key != INVALID_KEY)
+    {
+        if(entry.data) delete [] entry.data;
+        key = ioCache.next(&entry);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -471,18 +477,31 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos)
 {
-//static int num_reads = 0;
+static int num_reads = 0;
     assert(data);
 
-    int64_t buff_offset = -1;
+    uint8_t* buffer = NULL;
+    int64_t buffer_offset = -1;
 
-    /* Check if Data Request can be Fulfilled from I/O Buffer */
-    if((pos >= ioCurrentPosition) && ((pos + size) <= (ioCurrentPosition + ioBufferSize)))
+
+    /* Check if Data Request can be Fulfilled from I/O Cache */
+    try
     {
-        /* Set Buffer Offset to Start of Requested Data */
-        buff_offset = pos - ioCurrentPosition;
+        cache_entry_t entry = ioCache.get(pos, cache_t::MATCH_NEAREST_UNDER);
+        if((pos >= entry.pos) && ((pos + size) <= (entry.pos + entry.size)))
+        {
+            /* Set Buffer and Offset to Start of Requested Data */
+            buffer = entry.data;
+            buffer_offset = pos - entry.pos;
+        }
     }
-    else /* Data Request Requires I/O Read */
+    catch(const std::out_of_range& e)
+    {
+        // do nothing
+    }
+    
+    /* If Data Request Requires I/O Read */
+    if(buffer == NULL)
     {
         /* Seek to New Position */
         if(fseek(fp, pos, SEEK_SET) != 0)
@@ -495,25 +514,31 @@ void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos
         {
             /* Leave Buffer Offset Unset and Read Directly into Data */
             size_t bytes_read = fread(*data, 1, size, fp);
-//mlog(RAW, "FILE 0x%08lx [%ld] (%d)\n", pos, size, ++num_reads);
             if(bytes_read != (size_t)size)
             {
                 throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
             }
+printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++num_reads);
         }
-        else if(size <= IO_BUFFSIZE) // data fits within buffer
+        else if(size <= IO_BUFFSIZE) // data fits within cache buffer
         {
-            /* Read into I/O Buffer  */
-            ioCurrentPosition = pos;
-            ioBufferSize = fread(ioBuffer, 1, IO_BUFFSIZE, fp);
-//mlog(RAW, "BUFF 0x%08lx [%ld] (%d)\n", pos, ioBufferSize, ++num_reads);
-            if(ioBufferSize < size)
+            /* Read into Cache */
+            cache_entry_t entry;
+            entry.data = new uint8_t [IO_BUFFSIZE];
+            entry.pos = pos;
+            entry.size = fread(entry.data, 1, IO_BUFFSIZE, fp);
+            if(entry.size < size)
             {
-                throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, ioBufferSize);
+                throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, entry.size);
             }
 
-            /* Set Buffer Offset to Start of I/O Buffer */
-            buff_offset = 0;
+            /* Add Cache Entry */
+            ioCache.add(pos, entry);
+
+            /* Set Buffer and Offset to Start of I/O Cached Buffer */
+            buffer = entry.data;
+            buffer_offset = 0;
+printf("BUFF 0x%08lx [%ld] (%d)\n", pos, size, ++num_reads);
         }
         else /* Cannot Perform Direct Read if no Data Buffer Provided */
         {
@@ -522,19 +547,27 @@ void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos
     }
 
     /* Return Data to Caller */
-    if(buff_offset >= 0)
+    if(buffer_offset >= 0)
     {
         if(*data) // buffer provided
         {
             /* Copy into Data Buffer */
-            LocalLib::copy(*data, &ioBuffer[buff_offset], size);
+            LocalLib::copy(*data, &buffer[buffer_offset], size);
         }
         else // pointer provided
         {
             /* Set Pointer to I/O Buffer Position */
-            *data = &ioBuffer[buff_offset];
+            *data = &buffer[buffer_offset];
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * ioHash
+ *----------------------------------------------------------------------------*/
+uint64_t H5Lite::H5FileBuffer::ioHash (uint64_t key)
+{
+    return key & (~IO_MASK);
 }
 
 /*----------------------------------------------------------------------------
