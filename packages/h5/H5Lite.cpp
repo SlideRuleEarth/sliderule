@@ -477,13 +477,11 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos)
 {
-static int buff_reads = 0;
-static int file_reads = 0;
+//static int io_reads = 0;
     assert(data);
 
     uint8_t* buffer = NULL;
     int64_t buffer_offset = -1;
-
 
     /* Check if Data Request can be Fulfilled from I/O Cache */
     try
@@ -511,17 +509,7 @@ static int file_reads = 0;
         }
 
         /* Read Data */
-        if(*data) // uncached read
-        {
-            /* Leave Buffer Offset Unset and Read Directly into Data */
-            size_t bytes_read = fread(*data, 1, size, fp);
-            if(bytes_read != (size_t)size)
-            {
-                throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
-            }
-printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++file_reads);
-        }
-        else if(size <= IO_BUFFSIZE) // data fits within cache buffer
+        if(size <= IO_BUFFSIZE) // data fits within cache buffer
         {
             /* Read into Cache */
             cache_entry_t entry;
@@ -533,13 +521,32 @@ printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++file_reads);
                 throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, entry.size);
             }
 
+            /* Ensure Room in Cache */
+            if(ioCache.length() >= IO_CACHE_SIZE)
+            {
+                cache_entry_t oldest_entry;
+                uint64_t oldest_pos = ioCache.first(&oldest_entry);
+                delete [] oldest_entry.data;
+                ioCache.remove(oldest_pos);
+            }
+
             /* Add Cache Entry */
             ioCache.add(pos, entry);
 
             /* Set Buffer and Offset to Start of I/O Cached Buffer */
             buffer = entry.data;
             buffer_offset = 0;
-printf("BUFF 0x%08lx [%ld] (%d)\n", pos, size, ++buff_reads);
+//printf("BUFF 0x%08lx [%ld] (%d)\n", pos, size, ++io_reads);
+        }
+        else if(*data) // uncached read
+        {
+            /* Leave Buffer Offset Unset and Read Directly into Data */
+            size_t bytes_read = fread(*data, 1, size, fp);
+            if(bytes_read != (size_t)size)
+            {
+                throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
+            }
+//printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++io_reads);
         }
         else /* Cannot Perform Direct Read if no Data Buffer Provided */
         {

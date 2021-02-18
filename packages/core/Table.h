@@ -473,7 +473,7 @@ K Table<T,K>::first(T* data)
     if(current_entry != (K)INVALID_KEY)
     {
         assert(table[current_entry].occupied);
-        if(data != NULL) *data = table[current_entry].data;
+        if(data) *data = table[current_entry].data;
         return table[current_entry].key;
     }
 
@@ -492,7 +492,7 @@ K Table<T,K>::next(T* data)
         if(current_entry != (K)INVALID_KEY)
         {
             assert(table[current_entry].occupied);
-            if(data != NULL) *data = table[current_entry].data;
+            if(data) *data = table[current_entry].data;
             return table[current_entry].key;
         }
     }
@@ -510,7 +510,7 @@ K Table<T,K>::last(T* data)
     if(current_entry != (K)INVALID_KEY)
     {
         assert(table[current_entry].occupied);
-        if(data != NULL) *data = table[current_entry].data;
+        if(data) *data = table[current_entry].data;
         return table[current_entry].key;
     }
 
@@ -529,7 +529,7 @@ K Table<T,K>::prev(T* data)
         if(current_entry != (K)INVALID_KEY)
         {
             assert(table[current_entry].occupied);
-            if(data != NULL) *data = table[current_entry].data;
+            if(data) *data = table[current_entry].data;
             return table[current_entry].key;
         }
     }
