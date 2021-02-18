@@ -29,12 +29,6 @@
 #include "OsApi.h"
 
 /******************************************************************************
- * DEFINES 
- ******************************************************************************/
-
-#define TABLE_HASH(k) k // identity function
-
-/******************************************************************************
  * TABLE TEMPLATE
  ******************************************************************************/
 /*
@@ -52,14 +46,27 @@ class Table
         static const int DEFAULT_TABLE_SIZE = 256;
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef K (*hash_func_t) (K);
+
+        typedef enum {
+            MATCH_EXACTLY,
+            MATCH_NEAREST_UNDER,
+            MATCH_NEAREST_OVER
+        } match_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Table       (K table_size=DEFAULT_TABLE_SIZE);
+                    Table       (K table_size=DEFAULT_TABLE_SIZE, hash_func_t _hash=identity);
         virtual     ~Table      (void);
 
+
         bool        add         (K key, T& data, bool overwrite=false, bool with_delete=true);
-        T&          get         (K key);
+        T&          get         (K key, match_t match=MATCH_EXACTLY);
         bool        remove      (K key);
         long        length      (void);
         void        clear       (void);
@@ -92,6 +99,7 @@ class Table
          * Data
          *--------------------------------------------------------------------*/
 
+        hash_func_t hash;
         node_t*     table;
         K           size;
         K           num_entries;
@@ -102,6 +110,8 @@ class Table
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
+        
+        static K        identity        (K key);
         bool            writeNode       (K index, K key, T& data);
         bool            overwriteNode   (K index, K key, T& data, bool with_delete);
         virtual void    freeNode        (K index);
@@ -115,7 +125,7 @@ template <class T, typename K=unsigned long, bool is_array=false>
 class MgTable: public Table<T,K>
 {
     public:
-        MgTable (K table_size=Table<T,K>::DEFAULT_TABLE_SIZE);
+        MgTable (K table_size=Table<T,K>::DEFAULT_TABLE_SIZE, typename Table<T,K>::hash_func_t _hash=Table<T,K>::identity);
         ~MgTable (void);
     private:
         void freeNode (K index) override;
@@ -129,10 +139,13 @@ class MgTable: public Table<T,K>
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-Table<T,K>::Table(K table_size)
+Table<T,K>::Table(K table_size, hash_func_t _hash)
 {
     assert(table_size > 0);
 
+    /*  Set Hash Function */
+    hash = _hash;
+    
     /* Allocate Hash Structure */
     size = table_size;
     table = new node_t [size];
@@ -165,7 +178,7 @@ Table<T,K>::~Table(void)
 template <class T, typename K>
 bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
 {
-    K curr_index = TABLE_HASH(key) % size;
+    K curr_index = hash(key) % size;
 
     /* Add Entry to Hash */
     if(table[curr_index].occupied == false)
@@ -267,31 +280,55 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
  * get
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-T& Table<T,K>::get(K key)
+T& Table<T,K>::get(K key, match_t match)
 {
-    K curr_index = TABLE_HASH(key) % size;
+    K curr_index = hash(key) % size;
 
     /* Find Node to Return */
-    while(curr_index != (K)INVALID_KEY)
+    K best_delta = (K)INVALID_KEY;
+    K best_index = (K)INVALID_KEY;
+    while((curr_index != (K)INVALID_KEY) && table[curr_index].occupied)
     {
-        if(table[curr_index].occupied == false) /* end of chain */
+        if(table[curr_index].key == key)
         {
-            curr_index = (K)INVALID_KEY;
-        }
-        else if(table[curr_index].key == key) /* matched key */
-        {
+            /* equivalent key is always nearest */
+            best_delta = (K)0;
+            best_index = curr_index;
             break;
         }
-        else /* go to next */
+        else if(match == MATCH_NEAREST_UNDER)
         {
-            curr_index = table[curr_index].next;
+            if(table[curr_index].key < key)
+            {
+                K delta = key - table[curr_index].key;
+                if(delta < best_delta)
+                {
+                    best_delta = delta;
+                    best_index = curr_index;
+                }
+            }
         }
+        else if(match == MATCH_NEAREST_OVER)
+        {
+            if(table[curr_index].key > key)
+            {
+                K delta = table[curr_index].key - key;
+                if(delta < best_delta)
+                {
+                    best_delta = delta;
+                    best_index = curr_index;
+                }
+            }
+        }
+
+        /* go to next */
+        curr_index = table[curr_index].next;
     }
 
     /* Check if Node Found */
-    if(curr_index != (K)INVALID_KEY)
+    if(best_index != (K)INVALID_KEY)
     {
-        return table[curr_index].data;
+        return table[best_index].data;
     }
 
     /* Throw Exception When Not Found */
@@ -304,7 +341,7 @@ T& Table<T,K>::get(K key)
 template <class T, typename K>
 bool Table<T,K>::remove(K key)
 {
-    K curr_index = TABLE_HASH(key) % size;
+    K curr_index = hash(key) % size;
 
     /* Find Node to Remove */
     while(curr_index != (K)INVALID_KEY)
@@ -543,6 +580,15 @@ T& Table<T,K>::operator[](K key)
  * freeNode
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
+K Table<T,K>::identity(K key)
+{
+    return key;
+}
+
+/*----------------------------------------------------------------------------
+ * freeNode
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
 bool Table<T,K>::writeNode(K index, K key, T& data)
 {
     table[index].occupied   = true;
@@ -629,8 +675,8 @@ void Table<T,K>::freeNode(K index)
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, typename K, bool is_array>
-MgTable<T,K,is_array>::MgTable(K table_size): 
-    Table<T,K>(table_size)
+MgTable<T,K,is_array>::MgTable(K table_size, typename Table<T,K>::hash_func_t _hash): 
+    Table<T,K>(table_size, _hash)
 {
 }
 
