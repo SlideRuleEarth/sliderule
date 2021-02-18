@@ -378,8 +378,8 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     verbose                 = _verbose;
 
     /* Initialize */
-    fileBuffSize            = 0;
-    fileCurrPosition        = 0;
+    ioBufferSize            = 0;
+    ioCurrentPosition       = 0;
     offsetSize              = 0;
     lengthSize              = 0;
     groupLeafNodeK          = 0;
@@ -466,7 +466,75 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
 }
 
 /*----------------------------------------------------------------------------
- * getCurrPos
+ * ioRequest
+ *----------------------------------------------------------------------------*/
+void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos)
+{
+    assert(data);
+
+    int64_t buff_offset = -1;
+
+    /* Check if Data Request can be Fulfilled from I/O Buffer */
+    if((pos >= ioCurrentPosition) && ((pos + size) <= (ioCurrentPosition + ioBufferSize)))
+    {
+        /* Set Buffer Offset to Start of Requested Data */
+        buff_offset = pos - ioCurrentPosition;
+    }
+    else /* Data Request Requires I/O Read */
+    {
+        /* Seek to New Position */
+        if(fseek(fp, pos, SEEK_SET) != 0)
+        {
+            throw RunTimeException("failed to go to I/O position: 0x%lx", pos);
+        }
+
+        /* If Data Fits Within Buffer */
+        if(size <= IO_BUFFSIZE)
+        {
+            /* Read into I/O Buffer  */
+            ioCurrentPosition = pos;
+            ioBufferSize = fread(ioBuffer, 1, IO_BUFFSIZE, fp);
+            if(ioBufferSize < size)
+            {
+                throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, ioBufferSize);
+            }
+
+            /* Set Buffer Offset to Start of I/O Buffer */
+            buff_offset = 0;
+        }
+        else if(*data) /* Uncached Read */
+        {
+            /* Leave Buffer Offset Unset and Read Directly into Data */
+            size_t bytes_read = fread(*data, 1, size, fp);
+            if(bytes_read != (size_t)size)
+            {
+                throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
+            }
+        }
+        else /* Cannot Perform Direct Read if no Data Buffer Provided */
+        {
+            throw RunTimeException("invalid data request of %ld bytes at 0x%lx", size, pos);
+        }
+    }
+
+    /* Return Data to Caller */
+    if(buff_offset >= 0)
+    {
+        if(*data) // buffer provided
+        {
+            /* Copy into Data Buffer */
+            LocalLib::copy(*data, &ioBuffer[buff_offset], size);
+        }
+        else // pointer provided
+        {
+            /* Set Pointer to I/O Buffer Position */
+            *data = &ioBuffer[buff_offset];
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * parseDataset
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::parseDataset (const char* _dataset)
 {
@@ -594,7 +662,7 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
 }
 
 /*----------------------------------------------------------------------------
- * createDataBuffer
+ * shuffleChunk
  *----------------------------------------------------------------------------*/
 int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size)
 {
@@ -624,38 +692,22 @@ int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uin
 /*----------------------------------------------------------------------------
  * readField
  *----------------------------------------------------------------------------*/
-uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
+uint64_t H5Lite::H5FileBuffer::readField (int64_t size, uint64_t* pos)
 {
     assert(pos);
     assert(size > 0);
 
-    int field_size = size;
-    uint64_t field_position = *pos;
-
-    /* Check if Different Data Needs to be Buffered */
-    if((field_position < fileCurrPosition) || ((field_position + field_size) > (fileCurrPosition + fileBuffSize)))
-    {
-        if(fseek(fp, field_position, SEEK_SET) == 0)
-        {
-            fileBuffSize = fread(fileBuffer, 1, READ_BUFSIZE, fp);
-            fileCurrPosition = field_position;
-        }
-        else
-        {
-            throw RunTimeException("failed to go to field position: %d", field_position);
-        }
-    }
-
-    /* Set Buffer Position */
-    uint64_t buff_offset = field_position - fileCurrPosition;
+    /* Request Data from I/O */
+    uint8_t* data_ptr = NULL;
+    ioRequest (&data_ptr, size, *pos);
 
     /*  Read Field Value */
     uint64_t value;
-    switch(field_size)
+    switch(size)
     {
         case 8:     
         {
-            value = *(uint64_t*)&fileBuffer[buff_offset];
+            value = *(uint64_t*)data_ptr;
             #ifdef __BE__
                 value = LocalLib::swapll(value);
             #endif
@@ -664,7 +716,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 
         case 4:     
         {
-            value = *(uint32_t*)&fileBuffer[buff_offset];
+            value = *(uint32_t*)data_ptr;
             #ifdef __BE__
                 value = LocalLib::swapl(value);
             #endif
@@ -673,7 +725,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 
         case 2:
         {
-            value = *(uint16_t*)&fileBuffer[buff_offset];
+            value = *(uint16_t*)data_ptr;
             #ifdef __BE__
                 value = LocalLib::swaps(value);
             #endif
@@ -682,18 +734,18 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 
         case 1:
         {
-            value = fileBuffer[buff_offset];
+            value = *(uint8_t*)data_ptr;
             break;
         }
 
         default:
         {
-            throw RunTimeException("invalid field size: %d", field_size);
+            throw RunTimeException("invalid field size: %d", size);
         }
     }
 
     /* Increment Position */
-    *pos += field_size;
+    *pos += size;
 
     /* Return Field Value */
     return value;
@@ -702,27 +754,17 @@ uint64_t H5Lite::H5FileBuffer::readField (int size, uint64_t* pos)
 /*----------------------------------------------------------------------------
  * readData
  *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::readData (uint8_t* data, uint64_t size, uint64_t* pos)
+void H5Lite::H5FileBuffer::readData (uint8_t* data, int64_t size, uint64_t* pos)
 {
     assert(data);
     assert(size > 0);
     assert(pos);
 
-    /* Set Data Position */
-    if(fseek(fp, *pos, SEEK_SET) != 0)
-    {
-        throw RunTimeException("failed to go to data position: %d", *pos);
-    }
-
-    /* Read Data */
-    size_t bytes_read = fread(data, 1, size, fp);
-    if(bytes_read != size)
-    {
-        throw RunTimeException("failed to read %lu bytes of data: %ld", size, bytes_read);
-    }
+    /* Request Data from I/O */
+    ioRequest(&data, size, *pos);
 
     /* Update Position */
-    *pos += bytes_read;
+    *pos += size;
 }
 
 /*----------------------------------------------------------------------------
@@ -762,7 +804,7 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
 
     /* Allocate Data Buffer */
     uint8_t* buffer = NULL;
-    uint64_t buffer_size = row_size * datasetNumRows;
+    int64_t buffer_size = row_size * datasetNumRows;
     if(buffer_size > 0)
     {
         buffer = new uint8_t [buffer_size];
@@ -770,7 +812,7 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
         /* Fill Buffer with Fill Value (if provided) */
         if(dataFillSize > 0)
         {
-            for(uint64_t i = 0; i < buffer_size; i += dataFillSize)
+            for(int64_t i = 0; i < buffer_size; i += dataFillSize)
             {
                 LocalLib::copy(&buffer[i], &dataFill.fill_ll, dataFillSize);
             }
@@ -801,7 +843,7 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
         {
             throw RunTimeException("data not allocated in contiguous layout");
         }
-        else if(dataSize != 0 && dataSize < (buffer_offset + buffer_size))
+        else if(dataSize != 0 && dataSize < ((int64_t)buffer_offset + buffer_size))
         {
             throw RunTimeException("read exceeds available data: %d != %d", dataSize, buffer_size);
         }

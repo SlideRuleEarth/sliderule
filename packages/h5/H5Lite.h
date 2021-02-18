@@ -142,7 +142,7 @@ struct H5Lite
                 * Constants
                 *--------------------------------------------------------------------*/
 
-                static const long       READ_BUFSIZE            = 1048576; // 1MB
+                static const long       IO_BUFFSIZE            = 1048576; // 1MB
                 static const long       STR_BUFF_SIZE           = 512;
                 static const int        CHUNK_ALLOC_FACTOR      = 2;
                 static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
@@ -191,6 +191,8 @@ struct H5Lite
                 /*--------------------------------------------------------------------
                 * Methods
                 *--------------------------------------------------------------------*/
+                
+                void                ioRequest           (uint8_t** data, int64_t size, uint64_t pos);
 
                 void                parseDataset        (const char* _dataset);
                 const char*         type2str            (data_type_t datatype);
@@ -198,8 +200,8 @@ struct H5Lite
                 int                 highestBit          (uint64_t value);
                 int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
                 int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size);
-                uint64_t            readField           (int size, uint64_t* pos);
-                void                readData            (uint8_t* data, uint64_t size, uint64_t* pos);
+                uint64_t            readField           (int64_t size, uint64_t* pos);
+                void                readData            (uint8_t* data, int64_t size, uint64_t* pos);
                 void                readDataset         (info_t* _data_info);
 
                 int                 readSuperblock      (void);        
@@ -230,8 +232,6 @@ struct H5Lite
                 * Data
                 *--------------------------------------------------------------------*/
 
-                fileptr_t           fp;
-                uint8_t             fileBuffer[READ_BUFSIZE];
                 const char*         dataset;
                 List<const char*>   datasetPath;
                 uint64_t            datasetStartRow;
@@ -240,8 +240,10 @@ struct H5Lite
                 bool                verbose;
 
                 /* File Management */
-                uint64_t            fileBuffSize;
-                uint64_t            fileCurrPosition;
+                fileptr_t           fp;
+                uint8_t             ioBuffer[IO_BUFFSIZE];
+                int64_t             ioBufferSize;
+                uint64_t            ioCurrentPosition;
 
                 /* File Meta Attributes */
                 int                 offsetSize;
@@ -266,7 +268,7 @@ struct H5Lite
 
                 layout_t            dataLayout;
                 uint64_t            dataAddress;
-                uint64_t            dataSize;
+                int64_t             dataSize;
 
                 uint64_t            dataChunkElements; // number of data elements per chunk
                 int                 dataChunkElementSize; // size of the data element in the chunk; should be equal to the typesize
