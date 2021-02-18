@@ -477,7 +477,8 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos)
 {
-static int num_reads = 0;
+static int buff_reads = 0;
+static int file_reads = 0;
     assert(data);
 
     uint8_t* buffer = NULL;
@@ -518,7 +519,7 @@ static int num_reads = 0;
             {
                 throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
             }
-printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++num_reads);
+printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++file_reads);
         }
         else if(size <= IO_BUFFSIZE) // data fits within cache buffer
         {
@@ -538,7 +539,7 @@ printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++num_reads);
             /* Set Buffer and Offset to Start of I/O Cached Buffer */
             buffer = entry.data;
             buffer_offset = 0;
-printf("BUFF 0x%08lx [%ld] (%d)\n", pos, size, ++num_reads);
+printf("BUFF 0x%08lx [%ld] (%d)\n", pos, size, ++buff_reads);
         }
         else /* Cannot Perform Direct Read if no Data Buffer Provided */
         {

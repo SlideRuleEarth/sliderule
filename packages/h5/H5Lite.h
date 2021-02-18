@@ -145,7 +145,7 @@ struct H5Lite
 
                 static const long       IO_BUFFSIZE             = 0x100000; // 1MB
                 static const long       IO_MASK                 = 0x0FFFFF; // lower inverse of buffer size
-                static const long       IO_CACHE_SIZE           = 47; // 47MB per dataset
+                static const long       IO_CACHE_SIZE           = 91; // 91MB per dataset
 
                 static const long       STR_BUFF_SIZE           = 512;
 
