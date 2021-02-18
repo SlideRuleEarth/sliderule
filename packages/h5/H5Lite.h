@@ -142,7 +142,7 @@ struct H5Lite
                 * Constants
                 *--------------------------------------------------------------------*/
 
-                static const long       IO_BUFFSIZE            = 1048576; // 1MB
+                static const long       IO_BUFFSIZE             = 1048576; // 1MB
                 static const long       STR_BUFF_SIZE           = 512;
                 static const int        CHUNK_ALLOC_FACTOR      = 2;
                 static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
@@ -252,7 +252,7 @@ struct H5Lite
                 int                 groupInternalNodeK;
                 uint64_t            rootGroupOffset;
 
-                /* Data Meta Attributes */
+                /* Data Meta Attributes */                
                 data_type_t         dataType;
                 int                 dataTypeSize;
 
@@ -278,6 +278,8 @@ struct H5Lite
 
                 uint8_t*            chunkBuffer; // buffer for reading raw and often compressed chunk data
                 int64_t             chunkBufferSize; // variable size
+
+                int                 highestDataLevel; // high water mark for traversing dataset path
         };
 };
 

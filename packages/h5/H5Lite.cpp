@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #ifndef H5_EXTRA_DEBUG
-#define H5_EXTRA_DEBUG true
+#define H5_EXTRA_DEBUG false
 #endif
 
 /******************************************************************************
@@ -402,6 +402,7 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     dataShuffleBuffer       = NULL;
     chunkBuffer             = NULL;
     chunkBufferSize         = 0;
+    highestDataLevel        = 0;
 
     /* Initialize Filters */
     for(int f = 0; f < NUM_FILTERS; f++)
@@ -470,6 +471,7 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos)
 {
+//static int num_reads = 0;
     assert(data);
 
     int64_t buff_offset = -1;
@@ -488,12 +490,23 @@ void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos
             throw RunTimeException("failed to go to I/O position: 0x%lx", pos);
         }
 
-        /* If Data Fits Within Buffer */
-        if(size <= IO_BUFFSIZE)
+        /* Read Data */
+        if(*data) // uncached read
+        {
+            /* Leave Buffer Offset Unset and Read Directly into Data */
+            size_t bytes_read = fread(*data, 1, size, fp);
+//mlog(RAW, "FILE 0x%08lx [%ld] (%d)\n", pos, size, ++num_reads);
+            if(bytes_read != (size_t)size)
+            {
+                throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
+            }
+        }
+        else if(size <= IO_BUFFSIZE) // data fits within buffer
         {
             /* Read into I/O Buffer  */
             ioCurrentPosition = pos;
             ioBufferSize = fread(ioBuffer, 1, IO_BUFFSIZE, fp);
+//mlog(RAW, "BUFF 0x%08lx [%ld] (%d)\n", pos, ioBufferSize, ++num_reads);
             if(ioBufferSize < size)
             {
                 throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, ioBufferSize);
@@ -501,15 +514,6 @@ void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos
 
             /* Set Buffer Offset to Start of I/O Buffer */
             buff_offset = 0;
-        }
-        else if(*data) /* Uncached Read */
-        {
-            /* Leave Buffer Offset Unset and Read Directly into Data */
-            size_t bytes_read = fread(*data, 1, size, fp);
-            if(bytes_read != (size_t)size)
-            {
-                throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
-            }
         }
         else /* Cannot Perform Direct Read if no Data Buffer Provided */
         {
@@ -1208,6 +1212,12 @@ int H5Lite::H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_siz
                 throw RunTimeException("reading message exceeded end of direct block: 0x%x", starting_position);
             }
         }
+
+        /* Check if Dataset Found */
+        if(highestDataLevel > dlvl)
+        {
+            break; // dataset found
+        }
     }
 
     /* Skip to End of Block */
@@ -1304,7 +1314,7 @@ int H5Lite::H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_s
                 /* Read Direct Block Address */
                 uint64_t direct_block_addr = readField(offsetSize, &pos);
                 // note: filters are unsupported, but if present would be read here
-                if(!H5_INVALID(direct_block_addr))
+                if(!H5_INVALID(direct_block_addr) && (dlvl <= highestDataLevel))
                 {
                     /* Read Direct Block */
                     int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
@@ -1326,7 +1336,7 @@ int H5Lite::H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_s
 
                 /* Read Indirect Block Address */
                 uint64_t indirect_block_addr = readField(offsetSize, &pos);
-                if(!H5_INVALID(indirect_block_addr))
+                if(!H5_INVALID(indirect_block_addr) && (dlvl <= highestDataLevel))
                 {
                     /* Read Direct Block */
                     int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
@@ -1699,7 +1709,9 @@ int H5Lite::H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr
         {
             if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
             {
-                readObjHdr(obj_hdr_addr, dlvl + 1);
+                highestDataLevel = dlvl + 1;
+                readObjHdr(obj_hdr_addr, highestDataLevel);
+                break; // dataset found
             }
         }
     }
@@ -1837,6 +1849,13 @@ int H5Lite::H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_
             throw RunTimeException("header continuation message different size than specified: %d != %d", bytes_read, msg_size);            
         }
 
+        /* Check if Dataset Found */
+        if(highestDataLevel > dlvl)
+        {
+            pos = end; // go directly to end of header
+            break; // dataset found
+        }
+
         /* Update Position */
         pos += bytes_read;
     }
@@ -1963,6 +1982,13 @@ int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hd
         if(errorChecking && (bytes_read != msg_size))
         {
             throw RunTimeException("message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);            
+        }
+
+        /* Check if Dataset Found */
+        if(highestDataLevel > dlvl)
+        {
+            pos = end; // go directly to end of header
+            break; // dataset found
         }
 
         /* Update Position */
@@ -2430,7 +2456,8 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
         {
             if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
             {
-                readObjHdr(object_header_addr, dlvl + 1);
+                highestDataLevel = dlvl + 1;
+                readObjHdr(object_header_addr, highestDataLevel);
             }
         }
     }
@@ -2819,6 +2846,7 @@ int H5Lite::H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, i
             uint64_t symbol_table_addr = readField(offsetSize, &pos);
             readSymbolTable(symbol_table_addr, head_data_addr, dlvl);
             pos += lengthSize; // skip next key;
+            if(highestDataLevel > dlvl) break; // dataset found
         }
 
         /* Exit Loop or Go to Next Node */
