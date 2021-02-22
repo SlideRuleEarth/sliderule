@@ -27,7 +27,7 @@ import pandas as pd
 from sliderule import icesat2
 
 # initialize
-icesat2.init("http://127.0.0.1", verbose=True, max_errors=3)
+icesat2.init("127.0.0.1", verbose=True, max_errors=3)
 
 # make request
 parms = {
