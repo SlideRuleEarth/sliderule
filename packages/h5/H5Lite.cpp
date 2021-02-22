@@ -441,7 +441,7 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
         data_info->datasize = 0;
 
         /* Rethrow Error */
-        throw RunTimeException("%s", e.what());
+        throw RunTimeException("%s (%s)", e.what(), _dataset);
     }    
 }
 
@@ -1021,7 +1021,7 @@ int H5Lite::H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_siz
 
     /* Read Block Data */
     int data_left = block_size - (5 + offsetSize + heap_info->blk_offset_size + ((int)heap_info->dblk_checksum * 4));
-    while((data_left > 0) && (heap_info->cur_objects < heap_info->num_objects))
+    while(data_left > 0)
     {
         /* Peak if More Messages */
         uint64_t peak_addr = pos;
@@ -1040,7 +1040,11 @@ int H5Lite::H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_siz
         pos += data_read;
         data_left -= data_read;
 
-        /* Update Number of Objects Read */
+        /* Update Number of Objects Read 
+         *  There are often more links in a heap than managed objects
+         *  therefore, the number of objects cannot be used to know when
+         *  to stop reading links.
+         */
         heap_info->cur_objects++;
 
         /* Check Reading Past Block */
