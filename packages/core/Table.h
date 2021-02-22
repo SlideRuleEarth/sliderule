@@ -232,7 +232,7 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
 
         /* Move Open Entry to Next Open Index */
         open_entry = table[open_entry].next;
-        table[open_entry].prev = (K)INVALID_KEY;
+        if(open_entry != (K)INVALID_KEY) table[open_entry].prev = (K)INVALID_KEY;
 
         /* Insert Node */
         if(table[curr_index].prev == (K)INVALID_KEY) /* End of Chain Insertion (chain == 1) */
