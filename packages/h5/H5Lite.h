@@ -143,9 +143,13 @@ struct H5Lite
                 * Constants
                 *--------------------------------------------------------------------*/
 
-                static const long       IO_BUFFSIZE             = 0x100000; // 1MB cache line
-                static const long       IO_MASK                 = 0x0FFFFF; // lower inverse of buffer size
-                static const long       IO_CACHE_SIZE           = 47; // 47 cache lines per dataset
+                static const long       IO_CACHE_L1_LINESIZE    = 0x100000; // 1MB cache line
+                static const long       IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
+                static const long       IO_CACHE_L1_ENTRIES     = 47; // 47 cache lines per dataset
+
+                static const long       IO_CACHE_L2_LINESIZE    = 0x8000000; // 128MB cache line
+                static const long       IO_CACHE_L2_MASK        = 0x7FFFFFFF; // lower inverse of buffer size
+                static const long       IO_CACHE_L2_ENTRIES     = 17; // 17 cache lines per dataset
 
                 static const long       STR_BUFF_SIZE           = 512;
 
@@ -207,8 +211,13 @@ struct H5Lite
                 * Methods
                 *--------------------------------------------------------------------*/
                 
-                uint8_t*            ioRequest           (int64_t size, uint64_t* pos);
-                static uint64_t     ioHash              (uint64_t key);
+                void                ioOpen              (const char* filename);
+                void                ioClose             (void);
+                int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
+
+                uint8_t*            ioRequest           (int64_t size, uint64_t* pos, int64_t hint=IO_CACHE_L1_LINESIZE);
+                static uint64_t     ioHashL1            (uint64_t key);
+                static uint64_t     ioHashL2            (uint64_t key);
 
                 void                readByteArray       (uint8_t* data, int64_t size, uint64_t* pos);
                 uint64_t            readField           (int64_t size, uint64_t* pos);
@@ -258,7 +267,8 @@ struct H5Lite
 
                 /* I/O Hashing and Management */
                 fileptr_t           fp;
-                cache_t             ioCache;
+                cache_t             ioCacheL1;
+                cache_t             ioCacheL2;
                 
                 /* File Management */
 
@@ -293,6 +303,7 @@ struct H5Lite
                 int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
 
                 int                 highestDataLevel; // high water mark for traversing dataset path
+                int64_t             dataSizeHint;
         };
 };
 

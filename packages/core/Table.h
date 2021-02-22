@@ -67,6 +67,7 @@ class Table
 
         bool        add         (K key, T& data, bool overwrite=false, bool with_delete=true);
         T&          get         (K key, match_t match=MATCH_EXACTLY);
+        bool        find        (K key, match_t match, T* data);
         bool        remove      (K key);
         long        length      (void);
         void        clear       (void);
@@ -342,6 +343,24 @@ T& Table<T,K>::get(K key, match_t match)
 
     /* Throw Exception When Not Found */
     throw std::out_of_range("key not found");
+}
+
+/*----------------------------------------------------------------------------
+ * get
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+bool Table<T,K>::find(K key, match_t match, T* data)
+{
+    try
+    {
+        T& entry = get(key, match);
+        if(data) *data = entry;
+        return true;
+    }
+    catch(const std::exception& e)
+    {
+        return false;
+    }
 }
 
 /*----------------------------------------------------------------------------
