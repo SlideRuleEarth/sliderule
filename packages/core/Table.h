@@ -184,6 +184,16 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
     /* Add Entry to Hash */
     if(table[curr_index].occupied == false)
     {
+        /* Remove Index from Open List */
+        K next_index = table[curr_index].next;
+        K prev_index = table[curr_index].prev;
+        if(next_index != (K)INVALID_KEY) table[next_index].prev = prev_index;
+        if(prev_index != (K)INVALID_KEY) table[prev_index].next = next_index;
+
+        /* Update Open Entry if Collision on Head */
+        if(open_entry == curr_index) open_entry = next_index;
+        
+        /* Populate Index */
         writeNode(curr_index, key, data);
     }
     else /* collision */
@@ -219,17 +229,10 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
             /* Hash Full */
             return false;
         }
-        else
-        {
-            /* Move Open Entry to Next Open Index */
-            open_entry = table[open_entry].next;
 
-            /* Remove Open Index from Open List */
-            K next_index = table[open_index].next;
-            K prev_index = table[open_index].prev;
-            if(next_index != (K)INVALID_KEY) table[next_index].prev = prev_index;
-            if(prev_index != (K)INVALID_KEY) table[prev_index].next = next_index;
-        }
+        /* Move Open Entry to Next Open Index */
+        open_entry = table[open_entry].next;
+        table[open_entry].prev = (K)INVALID_KEY;
 
         /* Insert Node */
         if(table[curr_index].prev == (K)INVALID_KEY) /* End of Chain Insertion (chain == 1) */
@@ -566,7 +569,7 @@ template <class T, typename K>
 Table<T,K>& Table<T,K>::operator=(const Table& other)
 {
     /* clear existing table */
-    clear();
+    clear(); // calls freeNode needed for managed tables
     delete [] table;
 
     /* set parameters */
