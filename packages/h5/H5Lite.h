@@ -210,13 +210,6 @@ struct H5Lite
                 uint8_t*            ioRequest           (int64_t size, uint64_t* pos);
                 static uint64_t     ioHash              (uint64_t key);
 
-                void                parseDataset        (const char* _dataset);
-                const char*         type2str            (data_type_t datatype);
-                const char*         layout2str          (layout_t layout);
-                int                 highestBit          (uint64_t value);
-                int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
-                int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size);
-
                 void                readByteArray       (uint8_t* data, int64_t size, uint64_t* pos);
                 uint64_t            readField           (int64_t size, uint64_t* pos);
                 void                readDataset         (info_t* _data_info);
@@ -244,7 +237,14 @@ struct H5Lite
                 int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
                 int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
                 int                 readSymbolTableMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
-                
+
+                void                parseDataset        (const char* _dataset);
+                const char*         type2str            (data_type_t datatype);
+                const char*         layout2str          (layout_t layout);
+                int                 highestBit          (uint64_t value);
+                int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
+                int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size);
+
                 /*--------------------------------------------------------------------
                 * Data
                 *--------------------------------------------------------------------*/

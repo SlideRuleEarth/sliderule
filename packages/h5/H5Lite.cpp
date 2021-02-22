@@ -550,162 +550,6 @@ uint64_t H5Lite::H5FileBuffer::ioHash (uint64_t key)
 }
 
 /*----------------------------------------------------------------------------
- * parseDataset
- *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::parseDataset (const char* _dataset)
-{
-    /* Create Copy of Dataset */
-    dataset = StringLib::duplicate(_dataset);
-
-    /* Get Pointer to First Group in Dataset */
-    const char* gptr; // group pointer
-    if(dataset[0] == '/')   gptr = &dataset[1];
-    else                    gptr = &dataset[0];
-
-    /* Build Path to Dataset */
-    while(true)
-    {        
-        datasetPath.add(gptr);                      // add group to dataset path
-        char* nptr = StringLib::find(gptr, '/');    // look for next group marker
-        if(nptr == NULL) break;                     // if not found, then exit
-        *nptr = '\0';                               // terminate group string
-        gptr = nptr + 1;                            // go to start of next group
-    }
-
-    if(verbose)
-    {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Dataset: ");
-        for(int g = 0; g < datasetPath.length(); g++)
-        {
-            mlog(RAW, "/%s", datasetPath[g]);
-        }
-        mlog(RAW, "\n----------------\n");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * type2str
- *----------------------------------------------------------------------------*/
-const char* H5Lite::H5FileBuffer::type2str (data_type_t datatype)
-{
-    switch(datatype)
-    {
-        case FIXED_POINT_TYPE:      return "FIXED_POINT_TYPE";
-        case FLOATING_POINT_TYPE:   return "FLOATING_POINT_TYPE";
-        case TIME_TYPE:             return "TIME_TYPE";
-        case STRING_TYPE:           return "STRING_TYPE";
-        case BIT_FIELD_TYPE:        return "BIT_FIELD_TYPE";
-        case OPAQUE_TYPE:           return "OPAQUE_TYPE";
-        case COMPOUND_TYPE:         return "COMPOUND_TYPE";
-        case REFERENCE_TYPE:        return "REFERENCE_TYPE";
-        case ENUMERATED_TYPE:       return "ENUMERATED_TYPE";
-        case VARIABLE_LENGTH_TYPE:  return "VARIABLE_LENGTH_TYPE";
-        case ARRAY_TYPE:            return "ARRAY_TYPE";
-        default:                    return "UNKNOWN_TYPE";
-    }
-}
-
-/*----------------------------------------------------------------------------
- * layout2str
- *----------------------------------------------------------------------------*/
-const char* H5Lite::H5FileBuffer::layout2str (layout_t layout)
-{
-    switch(layout)
-    {
-        case COMPACT_LAYOUT:    return "COMPACT_LAYOUT";
-        case CONTIGUOUS_LAYOUT: return "CONTIGUOUS_LAYOUT";
-        case CHUNKED_LAYOUT:    return "CHUNKED_LAYOUT";
-        default:                return "UNKNOWN_LAYOUT";
-    }
-}
-
-/*----------------------------------------------------------------------------
- * highestBit
- *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::highestBit (uint64_t value)
-{
-    int bit = 0;
-    while(value >>= 1) bit++;
-    return bit;
-}
-
-/*----------------------------------------------------------------------------
- * inflateChunk
- *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size)
-{
-    int status;
-    z_stream strm;
-
-    /* Initialize z_stream State */
-    strm.zalloc     = Z_NULL;
-    strm.zfree      = Z_NULL;
-    strm.opaque     = Z_NULL;
-    strm.avail_in   = 0;
-    strm.next_in    = Z_NULL;
-
-    /* Initialize z_stream */
-    status = inflateInit(&strm);
-    if(status != Z_OK)
-    {
-        throw RunTimeException("failed to initialize z_stream: %d", status);
-    }
-
-    /* Decompress Until Entire Chunk is Processed */
-    strm.avail_in = input_size;
-    strm.next_in = input;
-
-    /* Decompress Chunk */
-    do 
-    {
-        strm.avail_out = output_size;
-        strm.next_out = output;
-        status = inflate(&strm, Z_NO_FLUSH);
-        if(status != Z_OK) break;
-    } while (strm.avail_out == 0);
-
-    /* Clean Up z_stream */
-    inflateEnd(&strm);
-
-    /* Check Decompression Complete */
-    if(status != Z_STREAM_END)
-    {
-        throw RunTimeException("failed to inflate entire z_stream: %d", status);
-    }
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
- * shuffleChunk
- *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size)
-{
-    if(errorChecking)
-    {
-        if(type_size < 0 || type_size > 8)
-        {
-            throw RunTimeException("invalid data size to perform shuffle on: %d\n", type_size);
-        }
-    }
-
-    int64_t dst_index = 0;
-    int64_t num_elements = input_size / type_size;
-    int64_t shuffle_block_size = output_size / type_size;
-    for(int element_index = 0; element_index < num_elements; element_index++)
-    {
-        for(int val_index = 0; val_index < type_size; val_index++)
-        {
-            int64_t src_index = (val_index * shuffle_block_size) + element_index;
-            output[dst_index++] = input[src_index];
-        }
-    }
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
  * readField
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::readByteArray (uint8_t* data, int64_t size, uint64_t* pos)
@@ -2840,4 +2684,160 @@ int H5Lite::H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, i
 
     /* Return Bytes Read */
     return offsetSize + offsetSize;
+}
+
+/*----------------------------------------------------------------------------
+ * parseDataset
+ *----------------------------------------------------------------------------*/
+void H5Lite::H5FileBuffer::parseDataset (const char* _dataset)
+{
+    /* Create Copy of Dataset */
+    dataset = StringLib::duplicate(_dataset);
+
+    /* Get Pointer to First Group in Dataset */
+    const char* gptr; // group pointer
+    if(dataset[0] == '/')   gptr = &dataset[1];
+    else                    gptr = &dataset[0];
+
+    /* Build Path to Dataset */
+    while(true)
+    {        
+        datasetPath.add(gptr);                      // add group to dataset path
+        char* nptr = StringLib::find(gptr, '/');    // look for next group marker
+        if(nptr == NULL) break;                     // if not found, then exit
+        *nptr = '\0';                               // terminate group string
+        gptr = nptr + 1;                            // go to start of next group
+    }
+
+    if(verbose)
+    {
+        mlog(RAW, "\n----------------\n");
+        mlog(RAW, "Dataset: ");
+        for(int g = 0; g < datasetPath.length(); g++)
+        {
+            mlog(RAW, "/%s", datasetPath[g]);
+        }
+        mlog(RAW, "\n----------------\n");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * type2str
+ *----------------------------------------------------------------------------*/
+const char* H5Lite::H5FileBuffer::type2str (data_type_t datatype)
+{
+    switch(datatype)
+    {
+        case FIXED_POINT_TYPE:      return "FIXED_POINT_TYPE";
+        case FLOATING_POINT_TYPE:   return "FLOATING_POINT_TYPE";
+        case TIME_TYPE:             return "TIME_TYPE";
+        case STRING_TYPE:           return "STRING_TYPE";
+        case BIT_FIELD_TYPE:        return "BIT_FIELD_TYPE";
+        case OPAQUE_TYPE:           return "OPAQUE_TYPE";
+        case COMPOUND_TYPE:         return "COMPOUND_TYPE";
+        case REFERENCE_TYPE:        return "REFERENCE_TYPE";
+        case ENUMERATED_TYPE:       return "ENUMERATED_TYPE";
+        case VARIABLE_LENGTH_TYPE:  return "VARIABLE_LENGTH_TYPE";
+        case ARRAY_TYPE:            return "ARRAY_TYPE";
+        default:                    return "UNKNOWN_TYPE";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * layout2str
+ *----------------------------------------------------------------------------*/
+const char* H5Lite::H5FileBuffer::layout2str (layout_t layout)
+{
+    switch(layout)
+    {
+        case COMPACT_LAYOUT:    return "COMPACT_LAYOUT";
+        case CONTIGUOUS_LAYOUT: return "CONTIGUOUS_LAYOUT";
+        case CHUNKED_LAYOUT:    return "CHUNKED_LAYOUT";
+        default:                return "UNKNOWN_LAYOUT";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * highestBit
+ *----------------------------------------------------------------------------*/
+int H5Lite::H5FileBuffer::highestBit (uint64_t value)
+{
+    int bit = 0;
+    while(value >>= 1) bit++;
+    return bit;
+}
+
+/*----------------------------------------------------------------------------
+ * inflateChunk
+ *----------------------------------------------------------------------------*/
+int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size)
+{
+    int status;
+    z_stream strm;
+
+    /* Initialize z_stream State */
+    strm.zalloc     = Z_NULL;
+    strm.zfree      = Z_NULL;
+    strm.opaque     = Z_NULL;
+    strm.avail_in   = 0;
+    strm.next_in    = Z_NULL;
+
+    /* Initialize z_stream */
+    status = inflateInit(&strm);
+    if(status != Z_OK)
+    {
+        throw RunTimeException("failed to initialize z_stream: %d", status);
+    }
+
+    /* Decompress Until Entire Chunk is Processed */
+    strm.avail_in = input_size;
+    strm.next_in = input;
+
+    /* Decompress Chunk */
+    do 
+    {
+        strm.avail_out = output_size;
+        strm.next_out = output;
+        status = inflate(&strm, Z_NO_FLUSH);
+        if(status != Z_OK) break;
+    } while (strm.avail_out == 0);
+
+    /* Clean Up z_stream */
+    inflateEnd(&strm);
+
+    /* Check Decompression Complete */
+    if(status != Z_STREAM_END)
+    {
+        throw RunTimeException("failed to inflate entire z_stream: %d", status);
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * shuffleChunk
+ *----------------------------------------------------------------------------*/
+int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size)
+{
+    if(errorChecking)
+    {
+        if(type_size < 0 || type_size > 8)
+        {
+            throw RunTimeException("invalid data size to perform shuffle on: %d\n", type_size);
+        }
+    }
+
+    int64_t dst_index = 0;
+    int64_t num_elements = input_size / type_size;
+    int64_t shuffle_block_size = output_size / type_size;
+    for(int element_index = 0; element_index < num_elements; element_index++)
+    {
+        for(int val_index = 0; val_index < type_size; val_index++)
+        {
+            int64_t src_index = (val_index * shuffle_block_size) + element_index;
+            output[dst_index++] = input[src_index];
+        }
+    }
+
+    return 0;
 }
