@@ -41,7 +41,7 @@
 #endif
 
 #ifndef H5_CHARACTERIZE_IO
-#define H5_CHARACTERIZE_IO true
+#define H5_CHARACTERIZE_IO false
 #endif
 
 /******************************************************************************
@@ -813,8 +813,7 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
                 dataSizeHint = buffer_size;
                 if(buffer_offset < (uint64_t)buffer_size)
                 {
-                    uint64_t prefetch_addr = dataAddress;
-                    ioRequest(buffer_offset + buffer_size, &prefetch_addr);
+                    ioRequest(0, &dataAddress, buffer_offset + buffer_size);
                 }
 
                 /* Read B-Tree */
