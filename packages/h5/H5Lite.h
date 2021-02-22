@@ -207,7 +207,7 @@ struct H5Lite
                 * Methods
                 *--------------------------------------------------------------------*/
                 
-                void                ioRequest           (uint8_t** data, int64_t size, uint64_t pos);
+                uint8_t*            ioRequest           (int64_t size, uint64_t* pos);
                 static uint64_t     ioHash              (uint64_t key);
 
                 void                parseDataset        (const char* _dataset);
@@ -216,8 +216,9 @@ struct H5Lite
                 int                 highestBit          (uint64_t value);
                 int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
                 int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size);
+
+                void                readByteArray       (uint8_t* data, int64_t size, uint64_t* pos);
                 uint64_t            readField           (int64_t size, uint64_t* pos);
-                void                readData            (uint8_t* data, int64_t size, uint64_t* pos);
                 void                readDataset         (info_t* _data_info);
 
                 int                 readSuperblock      (void);        
@@ -291,9 +292,6 @@ struct H5Lite
                 uint8_t*            dataChunkBuffer; // buffer for reading uncompressed chunk
                 int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
                 uint8_t*            dataShuffleBuffer; // buffer for shuffling uncompressed chunk; same size as dataChunkBuffer
-
-                uint8_t*            chunkBuffer; // buffer for reading raw and often compressed chunk data
-                int64_t             chunkBufferSize; // variable size
 
                 int                 highestDataLevel; // high water mark for traversing dataset path
         };

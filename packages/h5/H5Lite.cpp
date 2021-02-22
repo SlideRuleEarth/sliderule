@@ -399,8 +399,6 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     dataChunkBuffer         = NULL;
     dataChunkBufferSize     = 0;
     dataShuffleBuffer       = NULL;
-    chunkBuffer             = NULL;
-    chunkBufferSize         = 0;
     highestDataLevel        = 0;
 
     /* Initialize Filters */
@@ -457,7 +455,6 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
     if(dataset)             delete [] dataset;
     if(dataChunkBuffer)     delete [] dataChunkBuffer;
     if(dataShuffleBuffer)   delete [] dataShuffleBuffer;
-    if(chunkBuffer)         delete [] chunkBuffer;
     for(int f = 0; f < NUM_FILTERS; f++)
     {
         if(dataFilterParms[f]) delete [] dataFilterParms[f];
@@ -475,99 +472,73 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
 /*----------------------------------------------------------------------------
  * ioRequest
  *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::ioRequest (uint8_t** data, int64_t size, uint64_t pos)
+uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos)
 {
 //static int io_reads = 0;
-    assert(data);
-
     uint8_t* buffer = NULL;
     int64_t buffer_offset = -1;
+    uint64_t file_position = *pos;
 
-    /* Check if Data Request can be Fulfilled from I/O Cache */
-    try
+    try // data request can be fulfilled from I/O cache
     {
-        cache_entry_t entry = ioCache.get(pos, cache_t::MATCH_NEAREST_UNDER);
-        if((pos >= entry.pos) && ((pos + size) <= (entry.pos + entry.size)))
+        cache_entry_t entry = ioCache.get(file_position, cache_t::MATCH_NEAREST_UNDER);
+        if((file_position >= entry.pos) && ((file_position + size) <= (entry.pos + entry.size)))
         {
             /* Set Buffer and Offset to Start of Requested Data */
             buffer = entry.data;
-            buffer_offset = pos - entry.pos;
+            buffer_offset = file_position - entry.pos;
+        }
+        else
+        {
+            throw std::out_of_range("file position outside cache entry");
         }
     }
-    catch(const std::out_of_range& e)
+    catch(const std::out_of_range& e) // data request requires I/O read
     {
-        // do nothing
-    }
-    
-    /* If Data Request Requires I/O Read */
-    if(buffer == NULL)
-    {
+        (void)e;
+
         /* Seek to New Position */
-        if(fseek(fp, pos, SEEK_SET) != 0)
+        if(fseek(fp, file_position, SEEK_SET) != 0)
         {
-            throw RunTimeException("failed to go to I/O position: 0x%lx", pos);
+            throw RunTimeException("failed to go to I/O position: 0x%lx", file_position);
         }
 
-        /* Read Data */
-        if(size <= IO_BUFFSIZE) // data fits within cache buffer
-        {
-            /* Read into Cache */
-            cache_entry_t entry;
-            entry.data = new uint8_t [IO_BUFFSIZE];
-            entry.pos = pos;
-            entry.size = fread(entry.data, 1, IO_BUFFSIZE, fp);
-            if(entry.size < size)
-            {
-                throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, entry.size);
-            }
+        /* Calculate Size of Read */
+        int64_t read_size = MAX(size, IO_BUFFSIZE);
 
-            /* Ensure Room in Cache */
-            if(ioCache.length() >= IO_CACHE_SIZE)
-            {
-                cache_entry_t oldest_entry;
-                uint64_t oldest_pos = ioCache.first(&oldest_entry);
-                delete [] oldest_entry.data;
-                ioCache.remove(oldest_pos);
-            }
-
-            /* Add Cache Entry */
-            ioCache.add(pos, entry);
-
-            /* Set Buffer and Offset to Start of I/O Cached Buffer */
-            buffer = entry.data;
-            buffer_offset = 0;
-//printf("BUFF 0x%08lx [%ld] (%d)\n", pos, size, ++io_reads);
-        }
-        else if(*data) // uncached read
+        /* Read into Cache */
+        cache_entry_t entry;
+        entry.data = new uint8_t [read_size];
+        entry.pos = file_position;
+        entry.size = fread(entry.data, 1, read_size, fp);
+//printf("READ 0x%08lx [%ld] (%d)\n", file_position, size, ++io_reads);
+        if(entry.size < size)
         {
-            /* Leave Buffer Offset Unset and Read Directly into Data */
-            size_t bytes_read = fread(*data, 1, size, fp);
-            if(bytes_read != (size_t)size)
-            {
-                throw RunTimeException("failed to read %ld bytes of data: %ld", size, bytes_read);
-            }
-//printf("FILE 0x%08lx [%ld] (%d)\n", pos, size, ++io_reads);
+            throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, entry.size);
         }
-        else /* Cannot Perform Direct Read if no Data Buffer Provided */
+
+        /* Ensure Room in Cache */
+        if(ioCache.length() >= IO_CACHE_SIZE)
         {
-            throw RunTimeException("invalid data request of %ld bytes at 0x%lx", size, pos);
+            cache_entry_t oldest_entry;
+            uint64_t oldest_pos = ioCache.first(&oldest_entry);
+            delete [] oldest_entry.data;
+            ioCache.remove(oldest_pos);
         }
+
+        /* Add Cache Entry */
+        ioCache.add(file_position, entry);
+
+        /* Set Buffer and Offset to Start of I/O Cached Buffer */
+        buffer = entry.data;
+        buffer_offset = 0;
     }
+
+    /* Update Position */
+    *pos += size;
 
     /* Return Data to Caller */
-    if(buffer_offset >= 0)
-    {
-        if(*data) // buffer provided
-        {
-            /* Copy into Data Buffer */
-            LocalLib::copy(*data, &buffer[buffer_offset], size);
-        }
-        else // pointer provided
-        {
-            /* Set Pointer to I/O Buffer Position */
-            *data = &buffer[buffer_offset];
-        }
-    }
+    return &buffer[buffer_offset];
 }
 
 /*----------------------------------------------------------------------------
@@ -737,14 +708,24 @@ int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uin
 /*----------------------------------------------------------------------------
  * readField
  *----------------------------------------------------------------------------*/
+void H5Lite::H5FileBuffer::readByteArray (uint8_t* data, int64_t size, uint64_t* pos)
+{
+    assert(data);
+
+    uint8_t* byte_ptr = ioRequest(size, pos);
+    LocalLib::copy(data, byte_ptr, size);
+}
+
+/*----------------------------------------------------------------------------
+ * readField
+ *----------------------------------------------------------------------------*/
 uint64_t H5Lite::H5FileBuffer::readField (int64_t size, uint64_t* pos)
 {
     assert(pos);
     assert(size > 0);
 
     /* Request Data from I/O */
-    uint8_t* data_ptr = NULL;
-    ioRequest (&data_ptr, size, *pos);
+    uint8_t* data_ptr = ioRequest(size, pos);
 
     /*  Read Field Value */
     uint64_t value;
@@ -789,27 +770,8 @@ uint64_t H5Lite::H5FileBuffer::readField (int64_t size, uint64_t* pos)
         }
     }
 
-    /* Increment Position */
-    *pos += size;
-
     /* Return Field Value */
     return value;
-}
-
-/*----------------------------------------------------------------------------
- * readData
- *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::readData (uint8_t* data, int64_t size, uint64_t* pos)
-{
-    assert(data);
-    assert(size > 0);
-    assert(pos);
-
-    /* Request Data from I/O */
-    ioRequest(&data, size, *pos);
-
-    /* Update Position */
-    *pos += size;
 }
 
 /*----------------------------------------------------------------------------
@@ -904,16 +866,11 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
         switch(dataLayout)
         {
             case COMPACT_LAYOUT:
-            {
-                uint64_t data_addr = dataAddress + buffer_offset;
-                readData(buffer, buffer_size, &data_addr);
-                break;
-            }
-
             case CONTIGUOUS_LAYOUT:
             {
                 uint64_t data_addr = dataAddress + buffer_offset;
-                readData(buffer, buffer_size, &data_addr);
+                uint8_t* data_ptr = ioRequest(buffer_size, &data_addr);
+                LocalLib::copy(buffer, data_ptr, buffer_size);
                 break;
             }
 
@@ -1543,29 +1500,21 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                     mlog(RAW, "Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/dataTypeSize));
                 }
 
-                /* Check Chunk Buffer Allocation */
-                if(curr_node.chunk_size > chunkBufferSize)
-                {
-                    if(chunkBuffer) delete [] chunkBuffer;
-                    chunkBufferSize = curr_node.chunk_size * CHUNK_ALLOC_FACTOR;
-                    chunkBuffer = new uint8_t [chunkBufferSize];
-                }
-
                 /* Read Chunk */
                 if(dataFilter[DEFLATE_FILTER])
                 {
                     /* Read Data into Chunk Buffer */
-                    readData(chunkBuffer, curr_node.chunk_size, &child_addr);
+                    uint8_t* chunk_ptr = ioRequest(curr_node.chunk_size, &child_addr);
 
                     if((chunk_bytes == dataChunkBufferSize) && (!dataFilter[SHUFFLE_FILTER]))
                     {
                         /* Inflate Directly into Data Buffer */
-                        inflateChunk(chunkBuffer, curr_node.chunk_size, &buffer[buffer_index], chunk_bytes);
+                        inflateChunk(chunk_ptr, curr_node.chunk_size, &buffer[buffer_index], chunk_bytes);
                     }
                     else
                     {
                         /* Inflate into Data Chunk Buffer */
-                        inflateChunk(chunkBuffer, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
+                        inflateChunk(chunk_ptr, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
 
                         if(dataFilter[SHUFFLE_FILTER])
                         {
@@ -1590,29 +1539,15 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                         {
                             throw RunTimeException("shuffle filter unsupported on uncompressed chunk");
                         }
-                    }
-
-                    if(chunk_bytes == dataChunkBufferSize)
-                    {
-                        if(errorChecking)
+                        else if((chunk_bytes == dataChunkBufferSize) && (curr_node.chunk_size != chunk_bytes))
                         {
-                            if(curr_node.chunk_size != chunk_bytes)
-                            {
-                                throw RunTimeException("mismatch in chunk size: %lu, %lu", (unsigned long)curr_node.chunk_size, (unsigned long)chunk_bytes);
-                            }
+                            throw RunTimeException("mismatch in chunk size: %lu, %lu", (unsigned long)curr_node.chunk_size, (unsigned long)chunk_bytes);
                         }
-
-                        /* Read Data Directly into Data Buffer */
-                        readData(&buffer[buffer_index], curr_node.chunk_size, &child_addr);
                     }
-                    else
-                    {
-                        /* Read Data into Chunk Buffer */
-                        readData(chunkBuffer, curr_node.chunk_size, &child_addr);
 
-                        /* Copy Data Chunk Buffer into Data Buffer */
-                        LocalLib::copy(&buffer[buffer_index], &chunkBuffer[chunk_index], chunk_bytes);
-                    }
+                    /* Read Data into Data Buffer */
+                    uint8_t* chunk_ptr = ioRequest(curr_node.chunk_size, &child_addr);
+                    LocalLib::copy(&buffer[buffer_index], &chunk_ptr[chunk_index], chunk_bytes);
                 }
             }
         }
@@ -2477,7 +2412,7 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
     }
 
     uint8_t link_name[STR_BUFF_SIZE];
-    readData(link_name, link_name_len, &pos); // plus one for null termination
+    readByteArray(link_name, link_name_len, &pos);
     link_name[link_name_len] = '\0';
     if(verbose)
     {
@@ -2506,7 +2441,8 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
     {
         uint16_t soft_link_len = readField(2, &pos);
         uint8_t soft_link[STR_BUFF_SIZE];
-        readData(soft_link, soft_link_len, &pos);
+        readByteArray(soft_link, soft_link_len, &pos);
+        soft_link[soft_link_len] = '\0';
         if(verbose)
         {
             mlog(RAW, "Soft Link:                                                       %s\n", soft_link);
@@ -2516,7 +2452,8 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
     {
         uint16_t ext_link_len = readField(2, &pos);
         uint8_t ext_link[STR_BUFF_SIZE];
-        readData(ext_link, ext_link_len, &pos);
+        readByteArray(ext_link, ext_link_len, &pos);
+        ext_link[ext_link_len] = '\0';
         if(verbose)
         {
             mlog(RAW, "External Link:                                                   %s\n", ext_link);
@@ -2681,7 +2618,7 @@ int H5Lite::H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dl
 
         /* Read Name */
         uint8_t filter_name[STR_BUFF_SIZE];
-        readData(filter_name, name_len, &pos);
+        readByteArray(filter_name, name_len, &pos);
         filter_name[name_len] = '\0';
 
         /* Display */
@@ -2709,7 +2646,7 @@ int H5Lite::H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dl
         if(client_data_size)
         {
             dataFilterParms[filter] = new uint32_t [dataNumFilterParms[filter]];
-            readData((uint8_t*)dataFilterParms[filter], client_data_size, &pos);
+            readByteArray((uint8_t*)dataFilterParms[filter], client_data_size, &pos);
         }
         else
         {
