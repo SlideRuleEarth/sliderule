@@ -243,7 +243,7 @@ struct H5Lite
                 const char*         layout2str          (layout_t layout);
                 int                 highestBit          (uint64_t value);
                 int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
-                int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size);
+                int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
 
                 /*--------------------------------------------------------------------
                 * Data
@@ -291,7 +291,6 @@ struct H5Lite
                 int                 dataChunkElementSize; // size of the data element in the chunk; should be equal to the typesize
                 uint8_t*            dataChunkBuffer; // buffer for reading uncompressed chunk
                 int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
-                uint8_t*            dataShuffleBuffer; // buffer for shuffling uncompressed chunk; same size as dataChunkBuffer
 
                 int                 highestDataLevel; // high water mark for traversing dataset path
         };

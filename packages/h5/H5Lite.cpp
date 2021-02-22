@@ -398,7 +398,6 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     dataChunkElementSize    = 0;
     dataChunkBuffer         = NULL;
     dataChunkBufferSize     = 0;
-    dataShuffleBuffer       = NULL;
     highestDataLevel        = 0;
 
     /* Initialize Filters */
@@ -454,7 +453,6 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
     fclose(fp);
     if(dataset)             delete [] dataset;
     if(dataChunkBuffer)     delete [] dataChunkBuffer;
-    if(dataShuffleBuffer)   delete [] dataShuffleBuffer;
     for(int f = 0; f < NUM_FILTERS; f++)
     {
         if(dataFilterParms[f]) delete [] dataFilterParms[f];
@@ -736,7 +734,6 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
                 /* Allocate Data Chunk Buffer */
                 dataChunkBufferSize = dataChunkElements * dataTypeSize;
                 dataChunkBuffer = new uint8_t [dataChunkBufferSize];
-                dataShuffleBuffer = new uint8_t [dataChunkBufferSize];
 
                 /* Read B-Tree */
                 readBTreeV1(dataAddress, buffer, buffer_size, buffer_offset);
@@ -1363,10 +1360,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
                         if(dataFilter[SHUFFLE_FILTER])
                         {
                             /* Shuffle Data Chunk Buffer into Data Buffer */
-                            shuffleChunk(dataChunkBuffer, dataChunkBufferSize, dataShuffleBuffer, dataChunkBufferSize, dataTypeSize);
-
-                            /* Copy Unshuffled Data into Data Buffer */
-                            LocalLib::copy(&buffer[buffer_index], &dataShuffleBuffer[chunk_index], chunk_bytes);
+                            shuffleChunk(dataChunkBuffer, dataChunkBufferSize, &buffer[buffer_index], chunk_index, chunk_bytes, dataTypeSize);
                         }
                         else
                         {
@@ -2817,7 +2811,7 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
 /*----------------------------------------------------------------------------
  * shuffleChunk
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size, int type_size)
+int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
 {
     if(errorChecking)
     {
@@ -2828,9 +2822,10 @@ int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uin
     }
 
     int64_t dst_index = 0;
-    int64_t num_elements = input_size / type_size;
-    int64_t shuffle_block_size = output_size / type_size;
-    for(int element_index = 0; element_index < num_elements; element_index++)
+    int64_t shuffle_block_size = input_size / type_size;
+    int64_t num_elements = output_size / type_size;
+    int64_t start_element = output_offset / type_size;
+    for(int element_index = start_element; element_index < num_elements; element_index++)
     {
         for(int val_index = 0; val_index < type_size; val_index++)
         {
