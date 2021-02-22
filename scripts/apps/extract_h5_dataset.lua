@@ -6,8 +6,7 @@ dataset = arg[2] or "/gt2l/heights/h_ph"
 col = tonumber(arg[3]) or 0
 startrow = tonumber(arg[4]) or 13665185
 numrows = tonumber(arg[5]) or 89624
-
-dataset_file = dataset:sub(string.find(dataset, "/[^/]*$") + 1)
+dataset_file = arg[6] or dataset:sub(string.find(dataset, "/[^/]*$") + 1)
 
 file_writer = core.writer(core.file(core.WRITER, core.BINARY, dataset_file..".bin", core.FLUSHED), "h5rawq")
 file_reader = core.reader(h5.dataset(core.READER, "file://"..resource, dataset, 0, true, core.DYNAMIC, col, startrow, numrows), "h5rawq")
