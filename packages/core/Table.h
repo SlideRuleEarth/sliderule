@@ -106,6 +106,7 @@ class Table
         K           oldest_entry;
         K           newest_entry;
         K           current_entry;
+        K           open_entry;
         
         /*--------------------------------------------------------------------
          * Methods
@@ -212,17 +213,22 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
         }
 
         /* Find First Open Hash Slot */
-        K open_index = (curr_index + 1) % size;
-        while( (table[open_index].occupied == true) &&
-               (open_index != curr_index) )
+        K open_index = open_entry;
+        if(open_index == (K)INVALID_KEY)
         {
-            open_index = (open_index + 1) % size;
-        }
-
-        /* Check for Full Hash */
-        if(open_index == curr_index)
-        {
+            /* Hash Full */
             return false;
+        }
+        else
+        {
+            /* Move Open Entry to Next Open Index */
+            open_entry = table[open_entry].next;
+
+            /* Remove Open Index from Open List */
+            K next_index = table[open_index].next;
+            K prev_index = table[open_index].prev;
+            if(next_index != (K)INVALID_KEY) table[next_index].prev = prev_index;
+            if(prev_index != (K)INVALID_KEY) table[prev_index].next = next_index;
         }
 
         /* Insert Node */
@@ -381,7 +387,7 @@ bool Table<T,K>::remove(K key)
 
     /* Remove End of Chain */
     K end_index = curr_index;
-    K next_index = table[curr_index].next;
+    K next_index = table[end_index].next;
     if(next_index != (K)INVALID_KEY)
     {
         /* Transverse to End of Chain */
@@ -410,11 +416,17 @@ bool Table<T,K>::remove(K key)
     }
 
     /* Remove End of Chain */
-    table[end_index].occupied = false;
+    K open_index = end_index;
+    table[open_index].occupied = false;
 
     /* Update Hash Order */
-    K prev_index = table[end_index].prev;
+    K prev_index = table[open_index].prev;
     if(prev_index != (K)INVALID_KEY) table[prev_index].next = (K)INVALID_KEY;
+
+    /* Add to Open List */
+    table[open_index].prev = (K)INVALID_KEY;
+    table[open_index].next = open_entry;
+    open_entry = open_index;
 
     /* Update Statistics */
     num_entries--;
@@ -461,6 +473,16 @@ void Table<T,K>::clear(void)
     oldest_entry    = (K)INVALID_KEY;
     newest_entry    = (K)INVALID_KEY;
     current_entry   = (K)INVALID_KEY;
+
+    /* Build Open List */
+    open_entry = (K)0;
+    for(K i = 0; i < size; i++)
+    {
+        table[i].prev = i - 1;
+        table[i].next = i + 1;
+    }
+    table[0].prev = (K)INVALID_KEY;
+    table[size - 1].next = (K)INVALID_KEY; 
 }
 
 /*----------------------------------------------------------------------------

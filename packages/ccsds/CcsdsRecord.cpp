@@ -59,7 +59,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
     }
     else
     {
-        throw RunTimeException();
+        throw RunTimeException("could not find record definition: %s", rec_type);
     }
 
     /* Set Packet Definition */
