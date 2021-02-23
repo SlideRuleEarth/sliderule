@@ -254,8 +254,10 @@ H5Lib::driver_t H5Lib::parseUrl (const char* url, const char** resource)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows)
+H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
 {
+    (void)context;
+    
     info_t info;
     bool status = false;
 

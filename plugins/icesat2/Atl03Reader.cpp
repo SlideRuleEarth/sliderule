@@ -187,10 +187,10 @@ Atl03Reader::~Atl03Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Region::Region (info_t* info):
-    segment_lat    (info->url, info->track, "geolocation/reference_photon_lat"),
-    segment_lon    (info->url, info->track, "geolocation/reference_photon_lon"),
-    segment_ph_cnt (info->url, info->track, "geolocation/segment_ph_cnt")
+Atl03Reader::Region::Region (info_t* info, H5Api::context_t* context):
+    segment_lat    (info->url, info->track, "geolocation/reference_photon_lat", context),
+    segment_lon    (info->url, info->track, "geolocation/reference_photon_lon", context),
+    segment_ph_cnt (info->url, info->track, "geolocation/segment_ph_cnt",       context)
 {
     /* Initialize Region */
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
@@ -322,25 +322,31 @@ void* Atl03Reader::atl06Thread (void* parm)
 
     try
     {
+        /* Create H5 Context */
+        H5Api::context_t* context = new H5Api::context_t;
+
         /* Subset to Region of Interest */
-        Region region(info);
+        Region region(info, context);
 
         /* Read Data from HDF5 File */
-        H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
-        H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient");
-        H5Array<int32_t>    start_rgt           (url, "/ancillary_data/start_rgt");
-        H5Array<int32_t>    end_rgt             (url, "/ancillary_data/end_rgt");
-        H5Array<int32_t>    start_cycle         (url, "/ancillary_data/start_cycle");
-        H5Array<int32_t>    end_cycle           (url, "/ancillary_data/end_cycle");
-        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time", false, 0, region.first_segment, region.num_segments);
-        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id", false, 0, region.first_segment, region.num_segments);
-        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x", false, 0, region.first_segment, region.num_segments);
-        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along", false, 0, region.first_photon, region.num_photons);
-        GTArray<float>      h_ph                (url, track, "heights/h_ph", false, 0, region.first_photon, region.num_photons);
-        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", false, reader->parms.surface_type, region.first_photon, region.num_photons);
-        GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time");
-        GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate");
+        H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch", context);
+        H5Array<int8_t>     sc_orient           (url, "/orbit_info/sc_orient", context);
+        H5Array<int32_t>    start_rgt           (url, "/ancillary_data/start_rgt", context);
+        H5Array<int32_t>    end_rgt             (url, "/ancillary_data/end_rgt", context);
+        H5Array<int32_t>    start_cycle         (url, "/ancillary_data/start_cycle", context);
+        H5Array<int32_t>    end_cycle           (url, "/ancillary_data/end_cycle", context);
+        GTArray<double>     segment_delta_time  (url, track, "geolocation/delta_time", context, 0, region.first_segment, region.num_segments);
+        GTArray<int32_t>    segment_id          (url, track, "geolocation/segment_id", context, 0, region.first_segment, region.num_segments);
+        GTArray<double>     segment_dist_x      (url, track, "geolocation/segment_dist_x", context, 0, region.first_segment, region.num_segments);
+        GTArray<float>      dist_ph_along       (url, track, "heights/dist_ph_along", context, 0, region.first_photon, region.num_photons);
+        GTArray<float>      h_ph                (url, track, "heights/h_ph", context, 0, region.first_photon, region.num_photons);
+        GTArray<char>       signal_conf_ph      (url, track, "heights/signal_conf_ph", context, reader->parms.surface_type, region.first_photon, region.num_photons);
+        GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time", context);
+        GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate", context);
 
+        /* Tear Down Context */
+        delete context;
+        
         /* Initialize Dataset Scope Variables */
         int32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
         int32_t seg_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // segment index

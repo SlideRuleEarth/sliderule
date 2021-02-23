@@ -126,7 +126,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Region  (info_t* info);
+                Region  (info_t* info, H5Api::context_t* context);
                 ~Region (void);
             
                 GTArray<double>     segment_lat;

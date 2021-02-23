@@ -41,7 +41,7 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, bool async=false, long col=0, long startrow=0, long numrows=H5Api::ALL_ROWS);
+                H5Array     (const char* url, const char* dataset, H5Api::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Api::ALL_ROWS);
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
@@ -66,23 +66,12 @@ class H5Array
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const char* url, const char* dataset, bool async, long col, long startrow, long numrows)
+H5Array<T>::H5Array(const char* url, const char* dataset, H5Api::context_t* context, long col, long startrow, long numrows)
 {
     name = StringLib::duplicate(dataset);
-    
-    if(!async)
-    {
-        H5Api::info_t info = H5Api::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows);
-        data = (T*)info.data;
-        size = info.elements;
-    }
-    else /* async */
-    {
-        throw RunTimeException("Asynchronous H5Array currently unsupported");
-        data = NULL;
-        size = 0;
-    }
-
+    H5Api::info_t info = H5Api::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
+    data = (T*)info.data;
+    size = info.elements;
     pointer = data;
 }
 
@@ -128,12 +117,6 @@ T& H5Array<T>::operator[](long index)
 template <class T>
 bool H5Array<T>::join(int timeout)
 {
-    /* Check if already joined */
-    if(data != NULL)
-    {
-        return true;
-    }
-
     /* Currently Unimplemented */
     return true;
 }

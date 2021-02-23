@@ -55,7 +55,7 @@ class GTArray
          * Methods
          *--------------------------------------------------------------------*/
 
-                    GTArray     (const char* url, int track, const char* gt_dataset, bool async=false, unsigned col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
+                    GTArray     (const char* url, int track, const char* gt_dataset, H5Api::context_t* context, unsigned col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
         virtual     ~GTArray    (void);
 
         bool        trim        (long* prt_offset);
@@ -85,9 +85,9 @@ const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Api::AL
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-GTArray<T>::GTArray(const char* url, int track, const char* gt_dataset, bool async, unsigned col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5Array<T>(url, SafeString("/gt%dl/%s", track, gt_dataset).getString(), async, col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
-        H5Array<T>(url, SafeString("/gt%dr/%s", track, gt_dataset).getString(), async, col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
+GTArray<T>::GTArray(const char* url, int track, const char* gt_dataset, H5Api::context_t* context, unsigned col, const long* prt_startrow, const long* prt_numrows):
+    gt{ H5Array<T>(url, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
+        H5Array<T>(url, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
 {
 }
 

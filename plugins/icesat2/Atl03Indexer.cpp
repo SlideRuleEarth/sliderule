@@ -220,16 +220,18 @@ void* Atl03Indexer::indexerThread (void* parm)
             /* Index Resource */
             if(resource_name)
             {
+                H5Api::context_t* context = new H5Api::context_t;
+
                 /* Read Data from HDF5 File */
-                H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch");
-                H5Array<double>     start_delta_time    (url, "/ancillary_data/start_delta_time");
-                H5Array<double>     end_delta_time      (url, "/ancillary_data/end_delta_time");
-                H5Array<int8_t>     cycle               (url, "/orbit_info/cycle_number");
-                H5Array<uint16_t>   rgt                 (url, "/orbit_info/rgt");
-                H5Array<double>     gt3r_lat            (url, "/gt3r/geolocation/reference_photon_lat", false, 0, 0, 1);
-                H5Array<double>     gt3r_lon            (url, "/gt3r/geolocation/reference_photon_lon", false, 0, 0, 1);
-                H5Array<double>     gt1l_lat            (url, "/gt1l/geolocation/reference_photon_lat");
-                H5Array<double>     gt1l_lon            (url, "/gt1l/geolocation/reference_photon_lon");
+                H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch", context);
+                H5Array<double>     start_delta_time    (url, "/ancillary_data/start_delta_time", context);
+                H5Array<double>     end_delta_time      (url, "/ancillary_data/end_delta_time", context);
+                H5Array<int8_t>     cycle               (url, "/orbit_info/cycle_number", context);
+                H5Array<uint16_t>   rgt                 (url, "/orbit_info/rgt", context);
+                H5Array<double>     gt3r_lat            (url, "/gt3r/geolocation/reference_photon_lat", context, 0, 0, 1);
+                H5Array<double>     gt3r_lon            (url, "/gt3r/geolocation/reference_photon_lon", context, 0, 0, 1);
+                H5Array<double>     gt1l_lat            (url, "/gt1l/geolocation/reference_photon_lat", context);
+                H5Array<double>     gt1l_lon            (url, "/gt1l/geolocation/reference_photon_lon", context);
 
                 /* Allocate Record */
                 RecordObject* record = new RecordObject(recType);

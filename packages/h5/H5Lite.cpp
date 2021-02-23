@@ -51,331 +51,13 @@
 #define H5_INVALID(var)  (var == (0xFFFFFFFFFFFFFFFFllu >> (64 - (sizeof(var) * 8))))
 
 /******************************************************************************
- * HDF5 LITE LIBRARY
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void H5Lite::init (void)
-{
-
-}
-
-/*----------------------------------------------------------------------------
- * deinit
- *----------------------------------------------------------------------------*/
-void H5Lite::deinit (void)
-{
-
-}
-
-/*----------------------------------------------------------------------------
- * parseUrl
- *----------------------------------------------------------------------------*/
-H5Lite::driver_t H5Lite::parseUrl (const char* url, const char** resource)
-{
-    /* Sanity Check Input */
-    if(!url) return UNKNOWN;
-
-    /* Set Resource */
-    if(resource) 
-    {
-        const char* rptr = StringLib::find(url, "//");
-        if(rptr)
-        {
-            *resource = rptr + 2;
-        }
-    }
-
-    /* Return Driver */
-    if(StringLib::find(url, "file://"))
-    {
-        return FILE;
-    }
-    else if(StringLib::find(url, "s3://"))
-    {
-        return S3;
-    }
-    else if(StringLib::find(url, "hsds://"))    
-    {
-        return HSDS;
-    }
-    else
-    {
-        return UNKNOWN;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * read
- *----------------------------------------------------------------------------*/
-H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows)
-{
-    (void)valtype;
-    (void)col;
-
-    info_t info;
-
-    /* Initialize Driver */
-    const char* resource = NULL;
-    driver_t driver = H5Lite::parseUrl(url, &resource);    
-    if(driver == UNKNOWN)
-    {
-        throw RunTimeException("Invalid url: %s", url);
-    }
-
-    /* Start Trace */
-    uint32_t parent_trace_id = TraceLib::grabId();
-    uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
-
-    /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, resource, datasetname, startrow, numrows, true, false);
-    if(info.data)
-    {
-        bool data_valid = true;
-
-        /* Perform Column Translation */
-        if(info.numcols > 1)
-        {
-            /* Allocate Column Buffer */
-            int tbuf_size = info.datasize / info.numcols;
-            uint8_t* tbuf = new uint8_t [tbuf_size]; 
-
-            /* Copy Column into Buffer */
-            int tbuf_row_size = info.datasize / info.numrows;
-            int tbuf_col_size = tbuf_row_size / info.numcols;
-            for(int row = 0; row < info.numrows; row++)
-            {
-                int tbuf_offset = (row * tbuf_col_size);
-                int data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
-                LocalLib::copy(&tbuf[tbuf_offset], &info.data[data_offset], tbuf_col_size);
-            }
-
-            /* Switch Buffers */
-            delete [] info.data;
-            info.data = tbuf;
-            info.datasize = tbuf_size;
-            info.elements = info.elements / info.numcols;
-        }
-        
-        /* Perform Integer Type Transaltion */        
-        if(valtype == RecordObject::INTEGER)
-        {
-            /* Allocate Buffer of Integers */
-            int* tbuf = new int [info.elements];
-
-            /* Float to Int */
-            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
-            {
-                float* dptr = (float*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (int)dptr[i];
-                }
-            }
-            /* Double to Int */
-            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
-            {
-                double* dptr = (double*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (int)dptr[i];
-                }
-            }
-            /* Char to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
-            {
-                uint8_t* dptr = (uint8_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (int)dptr[i];
-                }
-            }
-            /* Short to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
-            {
-                uint16_t* dptr = (uint16_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (int)dptr[i];
-                }
-            }
-            /* Int to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
-            {
-                uint32_t* dptr = (uint32_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (int)dptr[i];
-                }
-            }
-            /* Long to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
-            {
-                uint64_t* dptr = (uint64_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (int)dptr[i];
-                }
-            }
-            else
-            {
-                data_valid = false;
-            }
-
-            /* Switch Buffers */
-            delete [] info.data;
-            info.data = (uint8_t*)tbuf;
-            info.datasize = sizeof(int) * info.elements;
-        }
-        
-        /* Perform Integer Type Transaltion */        
-        if(valtype == RecordObject::REAL)
-        {
-            /* Allocate Buffer of Integers */
-            double* tbuf = new double [info.elements];
-
-            /* Float to Double */
-            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
-            {
-                float* dptr = (float*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (double)dptr[i];
-                }
-            }
-            /* Double to Double */
-            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
-            {
-                double* dptr = (double*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (double)dptr[i];
-                }
-            }
-            /* Char to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
-            {
-                uint8_t* dptr = (uint8_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (double)dptr[i];
-                }
-            }
-            /* Short to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
-            {
-                uint16_t* dptr = (uint16_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (double)dptr[i];
-                }
-            }
-            /* Int to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
-            {
-                uint32_t* dptr = (uint32_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (double)dptr[i];
-                }
-            }
-            /* Long to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
-            {
-                uint64_t* dptr = (uint64_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
-                {
-                    tbuf[i] = (double)dptr[i];
-                }
-            }
-            else
-            {
-                data_valid = false;
-            }
-
-            /* Switch Buffers */
-            delete [] info.data;
-            info.data = (uint8_t*)tbuf;
-            info.datasize = sizeof(double) * info.elements;
-        }
-
-        /* Check Data Valid */
-        if(!data_valid)
-        {
-            delete [] info.data;
-            info.data = NULL;
-            info.datasize = 0;
-            throw RunTimeException("data translation failed for %s: [%d,%d] %d --> %d", datasetname, info.numcols, info.typesize, (int)info.datatype, (int)valtype);
-        }
-
-    }
-    else
-    {
-        throw RunTimeException("failed to read dataset: %s", datasetname);
-    }
-
-    /* Stop Trace */
-    stop_trace(trace_id);
-
-    /* Log Info Message */
-    mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
-
-    /* Return Info */
-    return info;
-}
-
-/*----------------------------------------------------------------------------
- * traverse
- *----------------------------------------------------------------------------*/
-bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
-{
-    (void)max_depth;
- 
-    bool status = true;
-
-    try
-    {
-        /* Initialize Driver */
-        const char* resource = NULL;
-        driver_t driver = H5Lite::parseUrl(url, &resource);
-        if(driver == UNKNOWN)
-        {
-            throw RunTimeException("Invalid url: %s", url);
-        }
-
-        /* Open File */
-        info_t data_info;
-        H5FileBuffer h5file(&data_info, resource, start_group, 0, 0, true, true);
-
-        /* Free Data */
-        if(data_info.data) delete [] data_info.data;
-
-    }
-    catch (const std::exception &e)
-    {
-        mlog(CRITICAL, "Failed to traverse resource: %s\n", e.what());
-    }
-
-    /* Return Status */
-    return status;
-}
-
-/******************************************************************************
  * H5 FILE BUFFER CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Static Data
- *----------------------------------------------------------------------------*/
-MgDictionary<H5Lite::H5FileBuffer::io_context_t*> H5Lite::H5FileBuffer::ioDatabase(IO_CACHE_MAX_CONTEXTS*2);
-Mutex H5Lite::H5FileBuffer::ioMutex;
-
-/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::io_context_t::io_context_t (void):
+H5FileBuffer::io_context_t::io_context_t (void):
     l1(IO_CACHE_L1_ENTRIES, ioHashL1),
     l2(IO_CACHE_L2_ENTRIES, ioHashL2)
 {
@@ -384,7 +66,7 @@ H5Lite::H5FileBuffer::io_context_t::io_context_t (void):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::io_context_t::~io_context_t (void)
+H5FileBuffer::io_context_t::~io_context_t (void)
 {
     /* Empty L1 Cache */
     {
@@ -412,7 +94,7 @@ H5Lite::H5FileBuffer::io_context_t::~io_context_t (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
+H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
 {
     assert(data_info);
     assert(filename);
@@ -457,27 +139,23 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
     /* Open File */
     ioOpen(filename);
 
-    /* Get or Create I/O Context */
-    ioMutex.lock();
+    /* Set or Create I/O Context */
+    if(context)
     {
-        ioContext = NULL;
-        if(!ioDatabase.find(filename, &ioContext))
-        {
-            ioContext = new io_context_t;
-            if(!ioDatabase.add(filename, ioContext, true))
-            {
-                ioMutex.unlock();
-                throw RunTimeException("unable to create context (%s)", _dataset);
-            }
-        }
+        ioContext = context;
+        ioContextLocal = false;
     }
-    ioMutex.unlock();
+    else
+    {
+        ioContext = new io_context_t;
+        ioContextLocal = true;
+    }
 
     /* Process File */
     try
     {
         /* Clear Data Info */
-        LocalLib::set(data_info, 0, sizeof(info_t));
+        LocalLib::set(data_info, 0, sizeof(dataset_info_t));
 
         /* Get Dataset Path */
         parseDataset(_dataset);
@@ -506,10 +184,16 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::~H5FileBuffer (void)
+H5FileBuffer::~H5FileBuffer (void)
 {
     /* Close I/O Resources */
     ioClose();
+
+    /* Delete Local Context */
+    if(ioContextLocal)
+    {
+        if(ioContext) delete ioContext;
+    }
 
     /* Delete Dataset Strings */
     if(dataset)         delete [] dataset;
@@ -528,7 +212,7 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
 /*----------------------------------------------------------------------------
  * ioOpen
  *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::ioOpen (const char* filename)
+void H5FileBuffer::ioOpen (const char* filename)
 {
     ioFile = fopen(filename, "r");
     if(ioFile == NULL)
@@ -540,7 +224,7 @@ void H5Lite::H5FileBuffer::ioOpen (const char* filename)
 /*----------------------------------------------------------------------------
  * ioClose
  *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::ioClose (void)
+void H5FileBuffer::ioClose (void)
 {
     fclose(ioFile);
 }
@@ -548,7 +232,7 @@ void H5Lite::H5FileBuffer::ioClose (void)
 /*----------------------------------------------------------------------------
  * ioRead
  *----------------------------------------------------------------------------*/
-int64_t H5Lite::H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
+int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     static int io_reads = 0;
     static long io_data = 0;
@@ -575,7 +259,7 @@ int64_t H5Lite::H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 /*----------------------------------------------------------------------------
  * ioRequest
  *----------------------------------------------------------------------------*/
-uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, bool* cached)
+uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, bool* cached)
 {
     cache_entry_t entry;
     uint8_t* buffer = NULL;
@@ -651,7 +335,7 @@ uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t h
 /*----------------------------------------------------------------------------
  * ioCheckCache
  *----------------------------------------------------------------------------*/
-bool H5Lite::H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* cache, long line_mask, cache_entry_t* entry)
+bool H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* cache, long line_mask, cache_entry_t* entry)
 {
     uint64_t prev_line_pos = (pos & ~line_mask) - 1;
     bool check_prev = pos > prev_line_pos; // checks for rollover
@@ -671,7 +355,7 @@ bool H5Lite::H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* ca
 /*----------------------------------------------------------------------------
  * ioHashL1
  *----------------------------------------------------------------------------*/
-uint64_t H5Lite::H5FileBuffer::ioHashL1 (uint64_t key)
+uint64_t H5FileBuffer::ioHashL1 (uint64_t key)
 {
     return key & (~IO_CACHE_L1_MASK);
 }
@@ -679,7 +363,7 @@ uint64_t H5Lite::H5FileBuffer::ioHashL1 (uint64_t key)
 /*----------------------------------------------------------------------------
  * ioHashL2
  *----------------------------------------------------------------------------*/
-uint64_t H5Lite::H5FileBuffer::ioHashL2 (uint64_t key)
+uint64_t H5FileBuffer::ioHashL2 (uint64_t key)
 {
     return key & (~IO_CACHE_L2_MASK);
 }
@@ -687,7 +371,7 @@ uint64_t H5Lite::H5FileBuffer::ioHashL2 (uint64_t key)
 /*----------------------------------------------------------------------------
  * readField
  *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::readByteArray (uint8_t* data, int64_t size, uint64_t* pos)
+void H5FileBuffer::readByteArray (uint8_t* data, int64_t size, uint64_t* pos)
 {
     assert(data);
 
@@ -698,7 +382,7 @@ void H5Lite::H5FileBuffer::readByteArray (uint8_t* data, int64_t size, uint64_t*
 /*----------------------------------------------------------------------------
  * readField
  *----------------------------------------------------------------------------*/
-uint64_t H5Lite::H5FileBuffer::readField (int64_t size, uint64_t* pos)
+uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 {
     assert(pos);
     assert(size > 0);
@@ -756,7 +440,7 @@ uint64_t H5Lite::H5FileBuffer::readField (int64_t size, uint64_t* pos)
 /*----------------------------------------------------------------------------
  * readDataset
  *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
+void H5FileBuffer::readDataset (dataset_info_t* data_info)
 {
     /* Populate Info Struct */
     data_info->typesize = dataTypeSize;
@@ -906,7 +590,7 @@ void H5Lite::H5FileBuffer::readDataset (info_t* data_info)
 /*----------------------------------------------------------------------------
  * readSuperblock
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readSuperblock (void)
+int H5FileBuffer::readSuperblock (void)
 {
     uint64_t pos = 0;
 
@@ -974,7 +658,7 @@ int H5Lite::H5FileBuffer::readSuperblock (void)
 /*----------------------------------------------------------------------------
  * readFractalHeap
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS = 0x02;
 
@@ -1119,7 +803,7 @@ int H5Lite::H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, ui
 /*----------------------------------------------------------------------------
  * readDirectBlock
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     uint64_t starting_position = pos;
 
@@ -1226,7 +910,7 @@ int H5Lite::H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_siz
 /*----------------------------------------------------------------------------
  * readIndirectBlock
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     uint64_t starting_position = pos;
 
@@ -1359,7 +1043,7 @@ int H5Lite::H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_s
 /*----------------------------------------------------------------------------
  * readBTreeV1
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset)
+int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset)
 {
     uint64_t starting_position = pos;
     uint64_t data_key1 = datasetStartRow;
@@ -1560,7 +1244,7 @@ int H5Lite::H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t b
 /*----------------------------------------------------------------------------
  * readBTreeNodeV1
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::btree_node_t H5Lite::H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* pos)
+H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* pos)
 {
     btree_node_t node;
 
@@ -1596,7 +1280,7 @@ H5Lite::H5FileBuffer::btree_node_t H5Lite::H5FileBuffer::readBTreeNodeV1 (int nd
 /*----------------------------------------------------------------------------
  * readSymbolTable
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
+int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
 {
     uint64_t starting_position = pos;
 
@@ -1698,7 +1382,7 @@ int H5Lite::H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr
 /*----------------------------------------------------------------------------
  * readObjHdr
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
+int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
 {
     static const int SIZE_OF_CHUNK_0_MASK      = 0x03;
     static const int STORE_CHANGE_PHASE_BIT    = 0x10;
@@ -1798,7 +1482,7 @@ int H5Lite::H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
 /*----------------------------------------------------------------------------
  * readMessages
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
 {
     static const int ATTR_CREATION_TRACK_BIT   = 0x04;
 
@@ -1851,7 +1535,7 @@ int H5Lite::H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_
 /*----------------------------------------------------------------------------
  * readObjHdrV1
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
+int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
 {
     uint64_t starting_position = pos;
 
@@ -1921,7 +1605,7 @@ int H5Lite::H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
 /*----------------------------------------------------------------------------
  * readMessagesV1
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
 {
     static const int SIZE_OF_V1_PREFIX = 8;
 
@@ -1989,7 +1673,7 @@ int H5Lite::H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hd
 /*----------------------------------------------------------------------------
  * readMessage
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     switch(msg_type)
     {
@@ -2018,7 +1702,7 @@ int H5Lite::H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint6
 /*----------------------------------------------------------------------------
  * readDataspaceMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
@@ -2096,7 +1780,7 @@ int H5Lite::H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int
 /*----------------------------------------------------------------------------
  * readLinkInfoMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     static const int MAX_CREATE_PRESENT_BIT     = 0x01;
     static const int CREATE_ORDER_PRESENT_BIT   = 0x02;
@@ -2163,7 +1847,7 @@ int H5Lite::H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int 
 /*----------------------------------------------------------------------------
  * readDatatypeMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
@@ -2276,7 +1960,7 @@ int H5Lite::H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int 
 /*----------------------------------------------------------------------------
  * readFillValueMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
@@ -2336,7 +2020,7 @@ int H5Lite::H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int
 /*----------------------------------------------------------------------------
  * readLinkMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
@@ -2470,7 +2154,7 @@ int H5Lite::H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl
 /*----------------------------------------------------------------------------
  * readDataLayoutMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
@@ -2577,7 +2261,7 @@ int H5Lite::H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, in
 /*----------------------------------------------------------------------------
  * readFilterMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
@@ -2666,7 +2350,7 @@ int H5Lite::H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dl
 /*----------------------------------------------------------------------------
  * readHeaderContMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     uint64_t starting_position = pos;
 
@@ -2721,7 +2405,7 @@ int H5Lite::H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, in
 /*----------------------------------------------------------------------------
  * readSymbolTableMsg
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
@@ -2843,7 +2527,7 @@ int H5Lite::H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, i
 /*----------------------------------------------------------------------------
  * parseDataset
  *----------------------------------------------------------------------------*/
-void H5Lite::H5FileBuffer::parseDataset (const char* _dataset)
+void H5FileBuffer::parseDataset (const char* _dataset)
 {
     /* Create Copy of Dataset */
     dataset = StringLib::duplicate(_dataset);
@@ -2879,7 +2563,7 @@ void H5Lite::H5FileBuffer::parseDataset (const char* _dataset)
 /*----------------------------------------------------------------------------
  * type2str
  *----------------------------------------------------------------------------*/
-const char* H5Lite::H5FileBuffer::type2str (data_type_t datatype)
+const char* H5FileBuffer::type2str (data_type_t datatype)
 {
     switch(datatype)
     {
@@ -2901,7 +2585,7 @@ const char* H5Lite::H5FileBuffer::type2str (data_type_t datatype)
 /*----------------------------------------------------------------------------
  * layout2str
  *----------------------------------------------------------------------------*/
-const char* H5Lite::H5FileBuffer::layout2str (layout_t layout)
+const char* H5FileBuffer::layout2str (layout_t layout)
 {
     switch(layout)
     {
@@ -2915,7 +2599,7 @@ const char* H5Lite::H5FileBuffer::layout2str (layout_t layout)
 /*----------------------------------------------------------------------------
  * highestBit
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::highestBit (uint64_t value)
+int H5FileBuffer::highestBit (uint64_t value)
 {
     int bit = 0;
     while(value >>= 1) bit++;
@@ -2925,7 +2609,7 @@ int H5Lite::H5FileBuffer::highestBit (uint64_t value)
 /*----------------------------------------------------------------------------
  * inflateChunk
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size)
+int H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size)
 {
     int status;
     z_stream strm;
@@ -2972,7 +2656,7 @@ int H5Lite::H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uin
 /*----------------------------------------------------------------------------
  * shuffleChunk
  *----------------------------------------------------------------------------*/
-int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
+int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
 {
     if(errorChecking)
     {
@@ -2996,4 +2680,315 @@ int H5Lite::H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uin
     }
 
     return 0;
+}
+
+/******************************************************************************
+ * HDF5 LITE LIBRARY
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void H5Lite::init (void)
+{
+
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void H5Lite::deinit (void)
+{
+
+}
+
+/*----------------------------------------------------------------------------
+ * parseUrl
+ *----------------------------------------------------------------------------*/
+H5Lite::driver_t H5Lite::parseUrl (const char* url, const char** resource)
+{
+    /* Sanity Check Input */
+    if(!url) return UNKNOWN;
+
+    /* Set Resource */
+    if(resource) 
+    {
+        const char* rptr = StringLib::find(url, "//");
+        if(rptr)
+        {
+            *resource = rptr + 2;
+        }
+    }
+
+    /* Return Driver */
+    if(StringLib::find(url, "file://"))
+    {
+        return FILE;
+    }
+    else if(StringLib::find(url, "s3://"))
+    {
+        return S3;
+    }
+    else if(StringLib::find(url, "hsds://"))    
+    {
+        return HSDS;
+    }
+    else
+    {
+        return UNKNOWN;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * read
+ *----------------------------------------------------------------------------*/
+H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
+{
+    (void)valtype;
+    (void)col;
+
+    info_t info;
+
+    /* Initialize Driver */
+    const char* resource = NULL;
+    driver_t driver = H5Lite::parseUrl(url, &resource);    
+    if(driver == UNKNOWN)
+    {
+        throw RunTimeException("Invalid url: %s", url);
+    }
+
+    /* Start Trace */
+    uint32_t parent_trace_id = TraceLib::grabId();
+    uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+
+    /* Open Resource and Read Dataset */
+    H5FileBuffer h5file(&info, context, resource, datasetname, startrow, numrows, true, false);
+    if(info.data)
+    {
+        bool data_valid = true;
+
+        /* Perform Column Translation */
+        if(info.numcols > 1)
+        {
+            /* Allocate Column Buffer */
+            int tbuf_size = info.datasize / info.numcols;
+            uint8_t* tbuf = new uint8_t [tbuf_size]; 
+
+            /* Copy Column into Buffer */
+            int tbuf_row_size = info.datasize / info.numrows;
+            int tbuf_col_size = tbuf_row_size / info.numcols;
+            for(int row = 0; row < info.numrows; row++)
+            {
+                int tbuf_offset = (row * tbuf_col_size);
+                int data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
+                LocalLib::copy(&tbuf[tbuf_offset], &info.data[data_offset], tbuf_col_size);
+            }
+
+            /* Switch Buffers */
+            delete [] info.data;
+            info.data = tbuf;
+            info.datasize = tbuf_size;
+            info.elements = info.elements / info.numcols;
+        }
+        
+        /* Perform Integer Type Transaltion */        
+        if(valtype == RecordObject::INTEGER)
+        {
+            /* Allocate Buffer of Integers */
+            int* tbuf = new int [info.elements];
+
+            /* Float to Int */
+            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
+            {
+                float* dptr = (float*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+            }
+            /* Double to Int */
+            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
+            {
+                double* dptr = (double*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+            }
+            /* Char to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
+            {
+                uint8_t* dptr = (uint8_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+            }
+            /* Short to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
+            {
+                uint16_t* dptr = (uint16_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+            }
+            /* Int to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
+            {
+                uint32_t* dptr = (uint32_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+            }
+            /* Long to Int */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
+            {
+                uint64_t* dptr = (uint64_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+            }
+            else
+            {
+                data_valid = false;
+            }
+
+            /* Switch Buffers */
+            delete [] info.data;
+            info.data = (uint8_t*)tbuf;
+            info.datasize = sizeof(int) * info.elements;
+        }
+        
+        /* Perform Integer Type Transaltion */        
+        if(valtype == RecordObject::REAL)
+        {
+            /* Allocate Buffer of Integers */
+            double* tbuf = new double [info.elements];
+
+            /* Float to Double */
+            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
+            {
+                float* dptr = (float*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Double to Double */
+            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
+            {
+                double* dptr = (double*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Char to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
+            {
+                uint8_t* dptr = (uint8_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Short to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
+            {
+                uint16_t* dptr = (uint16_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Int to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
+            {
+                uint32_t* dptr = (uint32_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            /* Long to Double */
+            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
+            {
+                uint64_t* dptr = (uint64_t*)info.data;
+                for(int i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = (double)dptr[i];
+                }
+            }
+            else
+            {
+                data_valid = false;
+            }
+
+            /* Switch Buffers */
+            delete [] info.data;
+            info.data = (uint8_t*)tbuf;
+            info.datasize = sizeof(double) * info.elements;
+        }
+
+        /* Check Data Valid */
+        if(!data_valid)
+        {
+            delete [] info.data;
+            info.data = NULL;
+            info.datasize = 0;
+            throw RunTimeException("data translation failed for %s: [%d,%d] %d --> %d", datasetname, info.numcols, info.typesize, (int)info.datatype, (int)valtype);
+        }
+    }
+    else
+    {
+        throw RunTimeException("failed to read dataset: %s", datasetname);
+    }
+
+    /* Stop Trace */
+    stop_trace(trace_id);
+
+    /* Log Info Message */
+    mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
+
+    /* Return Info */
+    return info;
+}
+
+/*----------------------------------------------------------------------------
+ * traverse
+ *----------------------------------------------------------------------------*/
+bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
+{
+    (void)max_depth;
+ 
+    bool status = true;
+
+    try
+    {
+        /* Initialize Driver */
+        const char* resource = NULL;
+        driver_t driver = H5Lite::parseUrl(url, &resource);
+        if(driver == UNKNOWN)
+        {
+            throw RunTimeException("Invalid url: %s", url);
+        }
+
+        /* Open File */
+        info_t data_info;
+        H5FileBuffer h5file((H5FileBuffer::dataset_info_t*)&data_info, NULL, resource, start_group, 0, 0, true, true);
+
+        /* Free Data */
+        if(data_info.data) delete [] data_info.data;
+
+    }
+    catch (const std::exception &e)
+    {
+        mlog(CRITICAL, "Failed to traverse resource: %s\n", e.what());
+    }
+
+    /* Return Status */
+    return status;
 }

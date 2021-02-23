@@ -56,6 +56,8 @@ struct H5Lib
         uint8_t* data;  // point to allocated data buffer
     } info_t;
 
+    typedef int context_t;
+    
     /*--------------------------------------------------------------------
      * Methods
      *--------------------------------------------------------------------*/
@@ -64,7 +66,7 @@ struct H5Lib
     static void     deinit      (void);
 
     static driver_t parseUrl    (const char* url, const char** resource);
-    static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows);
+    static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
     static bool     traverse    (const char* url, int max_depth, const char* start_group);
 };
 
