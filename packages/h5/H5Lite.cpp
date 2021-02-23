@@ -55,6 +55,12 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Static Data
+ *----------------------------------------------------------------------------*/
+Table<H5FileBuffer::meta_t> H5FileBuffer::metaRepo;
+Mutex H5FileBuffer::metaMutex;
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 H5FileBuffer::io_context_t::io_context_t (void):
@@ -100,6 +106,9 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     assert(filename);
     assert(_dataset);    
 
+    /* Clear Data Info */
+    LocalLib::set(data_info, 0, sizeof(dataset_info_t));
+
     /* Initialize Class Data */
     datasetStartRow         = startrow;
     datasetNumRows          = numrows;
@@ -113,21 +122,22 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     highestDataLevel        = 0;
     dataSizeHint            = 0;
     
-    /* Initialize Meta Data */
-    metaData.type           = UNKNOWN_TYPE;
-    metaData.typesize       = 0;
-    metaData.fill.fill_ll   = 0LL;
-    metaData.fillsize       = 0;
-    metaData.ndims          = 0;
-    metaData.chunkelements  = 0;
-    metaData.elementsize    = 0;
-    metaData.layout         = UNKNOWN_LAYOUT;
-    metaData.address        = 0;
-    metaData.size           = 0;
-    for(int f = 0; f < NUM_FILTERS; f++)
+    /* Check Meta Repository */
+    const char* dataset_name_ptr = _dataset;
+    if(_dataset[0] == '/') dataset_name_ptr++;
+    char meta_url[MAX_META_FILENAME];
+    LocalLib::set(meta_url, 0, MAX_META_FILENAME);
+    StringLib::format(meta_url, MAX_META_FILENAME, "%s/%s", filename, dataset_name_ptr)
+    uint32_t meta_key = metaHash(meta_url);
+    bool meta_found = false;
+    metaMutex.lock();
     {
-        metaData.filter[f]  = INVALID_FILTER;
+        if(metaRepo.find(meta_key, Table<meta_t, uint32_t>::MATCH_EXACTLY, &metaData))
+        {
+            meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
+        }
     }
+    metaMutex.unlock();
 
     /* Open File */
     ioOpen(filename);
@@ -147,20 +157,44 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     /* Process File */
     try
     {
-        /* Clear Data Info */
-        LocalLib::set(data_info, 0, sizeof(dataset_info_t));
+        if(!meta_found)
+        {
+            /* Initialize Meta Data */
+            LocalLib::copy(metaData.url, meta_url, MAX_META_FILENAME);
+            metaData.type           = UNKNOWN_TYPE;
+            metaData.typesize       = 0;
+            metaData.fill.fill_ll   = 0LL;
+            metaData.fillsize       = 0;
+            metaData.ndims          = 0;
+            metaData.chunkelements  = 0;
+            metaData.elementsize    = 0;
+            metaData.layout         = UNKNOWN_LAYOUT;
+            metaData.address        = 0;
+            metaData.size           = 0;
+            for(int f = 0; f < NUM_FILTERS; f++)
+            {
+                metaData.filter[f]  = INVALID_FILTER;
+            }
 
-        /* Get Dataset Path */
-        parseDataset(_dataset);
+            /* Get Dataset Path */
+            parseDataset(_dataset);
 
-        /* Read Superblock */
-        readSuperblock();
+            /* Read Superblock */
+            readSuperblock();
 
-        /* Read Data Attributes (Start at Root Group) */
-        readObjHdr(rootGroupOffset, 0);
+            /* Read Data Attributes (Start at Root Group) */
+            readObjHdr(rootGroupOffset, 0);
+        }
 
         /* Read Dataset */
-        readDataset(data_info);        
+        readDataset(data_info);
+
+        /* Add to Meta Repository */
+        //....
+        // look into updating the entry if it was found so that it becomes the newest
+        // that way we can remove the oldest when the table is full
+        //
+        // if not found, it can just be added, though we will need to check if table is full or not
     }
     catch(const RunTimeException& e)
     {
@@ -2648,6 +2682,21 @@ int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * metaHash
+ *----------------------------------------------------------------------------*/
+uint32_t H5FileBuffer::metaHash (const char* url)
+{
+    uint32_t hash_value = 0;
+    uint32_t* url_ptr = (uint32_t*)url;
+    for(int i = 0; i < MAX_META_FILENAME; i+=4)
+    {
+        hash_value = *url_ptr;
+        url_ptr++;
+    }
+    return hash_value % MAX_META_STORE;
 }
 
 /******************************************************************************

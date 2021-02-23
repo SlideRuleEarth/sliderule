@@ -346,7 +346,7 @@ void* Atl03Reader::atl06Thread (void* parm)
 
         /* Tear Down Context */
         delete context;
-        
+
         /* Initialize Dataset Scope Variables */
         int32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
         int32_t seg_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // segment index

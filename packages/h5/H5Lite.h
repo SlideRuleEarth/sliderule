@@ -138,13 +138,27 @@ class H5FileBuffer
         * Constants
         *--------------------------------------------------------------------*/
 
+        /* 
+         * Assuming:
+         *  50 regions of interest
+         *  100 granuels per region
+         *  30 datasets per granule
+         *  200 bytes per dataset
+         * Then:
+         *  15000 datasets are needed
+         *  30MB of data is used
+         */ 
+
+        static const long       MAX_META_STORE          = 150000;
+        static const long       MAX_META_FILENAME       = 84; // must be multiple of 4
+
         /*
-        * Assuming:
-        *  50ms of latency per read
-        * Then per throughput:
-        *  ~500Mbits/second --> 1MB (L1 LINESIZE)
-        *  ~2Gbits/second --> 8MB (L1 LINESIZE)
-        */
+         * Assuming:
+         *  50ms of latency per read
+         * Then per throughput:
+         *  ~500Mbits/second --> 1MB (L1 LINESIZE)
+         *  ~2Gbits/second --> 8MB (L1 LINESIZE)
+         */
 
         static const long       IO_CACHE_L1_LINESIZE    = 0x100000; // 1MB cache line
         static const long       IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
@@ -154,7 +168,7 @@ class H5FileBuffer
         static const long       IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
         static const long       IO_CACHE_L2_ENTRIES     = 17; // cache lines per dataset
 
-        static const long       STR_BUFF_SIZE           = 512;
+        static const long       STR_BUFF_SIZE           = 128;
 
         static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
         static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
@@ -201,16 +215,17 @@ class H5FileBuffer
         } fill_t;
 
         typedef struct {
+            char                    url[MAX_META_FILENAME]
             data_type_t             type;
-            int                     typesize;
-            fill_t                  fill;
-            int                     fillsize;
-            uint64_t                dimensions[MAX_NDIMS];
-            int                     ndims;
-            bool                    filter[NUM_FILTERS]; // true if enabled for dataset
-            uint64_t                chunkelements; // number of data elements per chunk
-            int                     elementsize; // size of the data element in the chunk; should be equal to the typesize
             layout_t                layout;
+            fill_t                  fill;
+            bool                    filter[NUM_FILTERS]; // true if enabled for dataset
+            int                     typesize;
+            int                     fillsize;
+            int                     ndims;
+            int                     elementsize; // size of the data element in the chunk; should be equal to the typesize
+            uint64_t                dimensions[MAX_NDIMS];
+            uint64_t                chunkelements; // number of data elements per chunk
             uint64_t                address;
             int64_t                 size;
         } meta_t;
@@ -262,10 +277,15 @@ class H5FileBuffer
         int                 highestBit          (uint64_t value);
         int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
         int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
+        static uint32_t     metaHash            (const char* url);
 
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
+
+        /* Meta Repository */
+        static Table<meta_t, uint32_t> metaRepo;
+        static Mutex metaMutex;
 
         /* Class Data */
         const char*         dataset;
