@@ -367,11 +367,52 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Static Data
+ *----------------------------------------------------------------------------*/
+MgDictionary<H5Lite::H5FileBuffer::io_context_t*> H5Lite::H5FileBuffer::ioDatabase(IO_CACHE_MAX_CONTEXTS*2);
+Mutex H5Lite::H5FileBuffer::ioMutex;
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose):
-    ioCacheL1(IO_CACHE_L1_ENTRIES, ioHashL1),
-    ioCacheL2(IO_CACHE_L2_ENTRIES, ioHashL2)
+H5Lite::H5FileBuffer::io_context_t::io_context_t (void):
+    l1(IO_CACHE_L1_ENTRIES, ioHashL1),
+    l2(IO_CACHE_L2_ENTRIES, ioHashL2)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+H5Lite::H5FileBuffer::io_context_t::~io_context_t (void)
+{
+    /* Empty L1 Cache */
+    {
+        cache_entry_t entry;
+        uint64_t key = l1.first(&entry);
+        while(key != INVALID_KEY)
+        {
+            if(entry.data) delete [] entry.data;
+            key = l1.next(&entry);
+        }
+    }
+
+    /* Empty L2 Cache */
+    {
+        cache_entry_t entry;
+        uint64_t key = l2.first(&entry);
+        while(key != INVALID_KEY)
+        {
+            if(entry.data) delete [] entry.data;
+            key = l2.next(&entry);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
 {
     assert(data_info);
     assert(filename);
@@ -415,6 +456,22 @@ H5Lite::H5FileBuffer::H5FileBuffer (info_t* data_info, const char* filename, con
 
     /* Open File */
     ioOpen(filename);
+
+    /* Get or Create I/O Context */
+    ioMutex.lock();
+    {
+        ioContext = NULL;
+        if(!ioDatabase.find(filename, &ioContext))
+        {
+            ioContext = new io_context_t;
+            if(!ioDatabase.add(filename, ioContext, true))
+            {
+                ioMutex.unlock();
+                throw RunTimeException("unable to create context (%s)", _dataset);
+            }
+        }
+    }
+    ioMutex.unlock();
 
     /* Process File */
     try
@@ -465,28 +522,6 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
     for(int f = 0; f < NUM_FILTERS; f++)
     {
         if(dataFilterParms[f]) delete [] dataFilterParms[f];
-    }
-
-    /* Empty L1 Cache */
-    {
-        cache_entry_t entry;
-        uint64_t key = ioCacheL1.first(&entry);
-        while(key != INVALID_KEY)
-        {
-            if(entry.data) delete [] entry.data;
-            key = ioCacheL1.next(&entry);
-        }
-    }
-
-    /* Empty L2 Cache */
-    {
-        cache_entry_t entry;
-        uint64_t key = ioCacheL2.first(&entry);
-        while(key != INVALID_KEY)
-        {
-            if(entry.data) delete [] entry.data;
-            key = ioCacheL2.next(&entry);
-        }
     }
 }
 
@@ -550,14 +585,18 @@ uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t h
     /* Initialize Cached Variable */
     if(cached) *cached = false;
 
-    /* Attempt to fulfill data request I/O cache */
-    if( ioCheckCache (size, file_position, &ioCacheL1, IO_CACHE_L1_MASK, &entry) ||
-        ioCheckCache (size, file_position, &ioCacheL2, IO_CACHE_L2_MASK, &entry) )
+    ioContext->mut.lock();
     {
-        /* Set Buffer and Offset to Start of Requested Data */
-        buffer = entry.data;
-        buffer_offset = file_position - entry.pos;
+        /* Attempt to fulfill data request I/O cache */
+        if( ioCheckCache (size, file_position, &ioContext->l1, IO_CACHE_L1_MASK, &entry) ||
+            ioCheckCache (size, file_position, &ioContext->l2, IO_CACHE_L2_MASK, &entry) )
+        {
+            /* Set Buffer and Offset to Start of Requested Data */
+            buffer = entry.data;
+            buffer_offset = file_position - entry.pos;
+        }
     }
+    ioContext->mut.unlock();
 
     /* Read data to fulfill request */
     if(buffer == NULL)
@@ -574,25 +613,29 @@ uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t h
             throw RunTimeException("failed to read at least %ld bytes of data: %ld", size, entry.size);
         }
 
-        /* Select Cache */
-        cache_t* cache = &ioCacheL2;
-        if(entry.size <= IO_CACHE_L1_LINESIZE)
+        ioContext->mut.lock();
         {
-            cache = &ioCacheL1;
-        }
+            /* Select Cache */
+            cache_t* cache = &ioContext->l2;
+            if(entry.size <= IO_CACHE_L1_LINESIZE)
+            {
+                cache = &ioContext->l1;
+            }
 
-        /* Ensure Room in Cache */
-        if(cache->isfull())
-        {
-            cache_entry_t oldest_entry;
-            uint64_t oldest_pos = cache->first(&oldest_entry);
-            delete [] oldest_entry.data;
-            cache->remove(oldest_pos);
-        }
+            /* Ensure Room in Cache */
+            if(cache->isfull())
+            {
+                cache_entry_t oldest_entry;
+                uint64_t oldest_pos = cache->first(&oldest_entry);
+                delete [] oldest_entry.data;
+                cache->remove(oldest_pos);
+            }
 
-        /* Add Cache Entry */
-        cache->add(file_position, entry);
-        if(cached) *cached = true;
+            /* Add Cache Entry */
+            cache->add(file_position, entry);
+            if(cached) *cached = true;
+        }
+        ioContext->mut.unlock();
 
         /* Set Buffer to I/O Cached Buffer */
         buffer = entry.data;

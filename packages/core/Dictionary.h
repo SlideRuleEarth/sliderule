@@ -57,7 +57,7 @@ class Dictionary
 
         bool        add             (const char* key, T& data, bool unique=false);
         T&          get             (const char* key);
-        bool        find            (const char* key);
+        bool        find            (const char* key, T* data=NULL);
         bool        remove          (const char* key);
         int         length          (void);
         int         getHashSize     (void);
@@ -266,7 +266,7 @@ T& Dictionary<T>::get(const char* key)
  *  returns false if key not in dictionary, else returns true
  *----------------------------------------------------------------------------*/
 template <class T>
-bool Dictionary<T>::find(const char* key)
+bool Dictionary<T>::find(const char* key, T* data)
 {
     bool found = false;
     
@@ -276,6 +276,7 @@ bool Dictionary<T>::find(const char* key)
         if(index != NULL_INDEX)
         {
             found = true;
+            if(data) *data = hashTable[index].data;
         }
     }
     

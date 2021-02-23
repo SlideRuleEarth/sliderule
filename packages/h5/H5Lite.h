@@ -151,17 +151,17 @@ struct H5Lite
                  *  ~2Gbits/second --> 8MB (L1 LINESIZE)
                  */
 
+                static const long       IO_CACHE_MAX_CONTEXTS   = 8;
+
                 static const long       IO_CACHE_L1_LINESIZE    = 0x100000; // 1MB cache line
                 static const long       IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
-                static const long       IO_CACHE_L1_ENTRIES     = 47; // 47 cache lines per dataset
+                static const long       IO_CACHE_L1_ENTRIES     = 157; // cache lines per dataset
 
                 static const long       IO_CACHE_L2_LINESIZE    = 0x8000000; // 128MB cache line
                 static const long       IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
-                static const long       IO_CACHE_L2_ENTRIES     = 7; // 7 cache lines per dataset
+                static const long       IO_CACHE_L2_ENTRIES     = 17; // cache lines per dataset
 
                 static const long       STR_BUFF_SIZE           = 512;
-
-                static const int        CHUNK_ALLOC_FACTOR      = 2;
 
                 static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
                 static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
@@ -215,6 +215,16 @@ struct H5Lite
 
                 typedef Table<cache_entry_t, uint64_t> cache_t;
 
+                struct io_context_t
+                {
+                    cache_t     l1; // level 1 cache
+                    cache_t     l2; // level 2 cache
+                    Mutex       mut; // cache mutex
+
+                    io_context_t    (void);
+                    ~io_context_t   (void);
+                };
+
                 /*--------------------------------------------------------------------
                 * Methods
                 *--------------------------------------------------------------------*/
@@ -266,6 +276,12 @@ struct H5Lite
                 /*--------------------------------------------------------------------
                 * Data
                 *--------------------------------------------------------------------*/
+
+                /* I/O Caching */
+                static MgDictionary<io_context_t*>  ioDatabase;
+                static Mutex                        ioMutex;
+
+                /* Dataset Info and Attributes */
                 const char*         dataset;
                 const char*         datasetPrint;
                 List<const char*>   datasetPath;
@@ -274,10 +290,9 @@ struct H5Lite
                 bool                errorChecking;
                 bool                verbose;
 
-                /* I/O Hashing and Management */
+                /* I/O Management */
                 fileptr_t           ioFile;
-                cache_t             ioCacheL1;
-                cache_t             ioCacheL2;
+                io_context_t*       ioContext;
 
                 /* File Meta Attributes */
                 int                 offsetSize;
