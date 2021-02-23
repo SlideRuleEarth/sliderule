@@ -148,7 +148,7 @@ struct H5Lite
                 static const long       IO_CACHE_L1_ENTRIES     = 47; // 47 cache lines per dataset
 
                 static const long       IO_CACHE_L2_LINESIZE    = 0x8000000; // 128MB cache line
-                static const long       IO_CACHE_L2_MASK        = 0x7FFFFFFF; // lower inverse of buffer size
+                static const long       IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
                 static const long       IO_CACHE_L2_ENTRIES     = 17; // 17 cache lines per dataset
 
                 static const long       STR_BUFF_SIZE           = 512;
@@ -216,7 +216,7 @@ struct H5Lite
                 int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
 
                 uint8_t*            ioRequest           (int64_t size, uint64_t* pos, int64_t hint=IO_CACHE_L1_LINESIZE, bool* cached=NULL);
-                bool                ioCheckCache        (int64_t size, uint64_t pos, cache_t* cache, cache_entry_t* entry);
+                bool                ioCheckCache        (int64_t size, uint64_t pos, cache_t* cache, long line_mask, cache_entry_t* entry);
                 static uint64_t     ioHashL1            (uint64_t key);
                 static uint64_t     ioHashL2            (uint64_t key);
 

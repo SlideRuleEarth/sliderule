@@ -545,15 +545,15 @@ uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t h
 {
     cache_entry_t entry;
     uint8_t* buffer = NULL;
-    int64_t buffer_offset = -1;
+    int64_t buffer_offset = 0;
     uint64_t file_position = *pos;
 
     /* Initialize Cached Variable */
     if(cached) *cached = false;
 
     /* Attempt to fulfill data request I/O cache */
-    if( ioCheckCache (size, file_position, &ioCacheL1, &entry) ||
-        ioCheckCache (size, file_position, &ioCacheL2, &entry) )
+    if( ioCheckCache (size, file_position, &ioCacheL1, IO_CACHE_L1_MASK, &entry) ||
+        ioCheckCache (size, file_position, &ioCacheL2, IO_CACHE_L2_MASK, &entry) )
     {
         /* Set Buffer and Offset to Start of Requested Data */
         buffer = entry.data;
@@ -577,13 +577,13 @@ uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t h
 
         /* Select Cache */
         cache_t* cache = &ioCacheL2;
-        if(entry.size < IO_CACHE_L1_LINESIZE)
+        if(entry.size <= IO_CACHE_L1_LINESIZE)
         {
             cache = &ioCacheL1;
         }
 
         /* Ensure Room in Cache */
-        if(cache->length() >= IO_CACHE_L1_ENTRIES)
+        if(cache->isfull())
         {
             cache_entry_t oldest_entry;
             uint64_t oldest_pos = cache->first(&oldest_entry);
@@ -595,9 +595,8 @@ uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t h
         cache->add(file_position, entry);
         if(cached) *cached = true;
 
-        /* Set Buffer and Offset to Start of I/O Cached Buffer */
+        /* Set Buffer to I/O Cached Buffer */
         buffer = entry.data;
-        buffer_offset = 0;
     }
 
     /* Update Position */
@@ -610,9 +609,13 @@ uint8_t* H5Lite::H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t h
 /*----------------------------------------------------------------------------
  * ioCheckCache
  *----------------------------------------------------------------------------*/
-bool H5Lite::H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* cache, cache_entry_t* entry)
+bool H5Lite::H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* cache, long line_mask, cache_entry_t* entry)
 {
-    if(cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry))
+    uint64_t prev_line_pos = (pos & ~line_mask) - 1;
+    bool check_prev = pos > prev_line_pos; // checks for rollover
+
+    if( cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry) || 
+        (check_prev && cache->find(prev_line_pos, cache_t::MATCH_NEAREST_UNDER, entry)) )
     {
         if((pos >= entry->pos) && ((pos + size) <= (entry->pos + entry->size)))
         {

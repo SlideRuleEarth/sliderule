@@ -70,6 +70,7 @@ class Table
         bool        find        (K key, match_t match, T* data);
         bool        remove      (K key);
         long        length      (void);
+        bool        isfull      (void);
         void        clear       (void);
     
         K           first       (T* data);
@@ -464,6 +465,15 @@ template <class T, typename K>
 long Table<T,K>::length(void)
 {
     return num_entries;
+}
+
+/*----------------------------------------------------------------------------
+ * isfull
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+bool Table<T,K>::isfull(void)
+{
+    return num_entries >= size;
 }
 
 /*----------------------------------------------------------------------------
