@@ -362,7 +362,6 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
     return status;
 }
 
-
 /******************************************************************************
  * H5 FILE BUFFER CLASS
  ******************************************************************************/
@@ -496,8 +495,8 @@ H5Lite::H5FileBuffer::~H5FileBuffer (void)
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::ioOpen (const char* filename)
 {
-    fp = fopen(filename, "r");
-    if(fp == NULL)
+    ioFile = fopen(filename, "r");
+    if(ioFile == NULL)
     {
         throw RunTimeException("Failed to open filename: %s", filename);
     }
@@ -508,7 +507,7 @@ void H5Lite::H5FileBuffer::ioOpen (const char* filename)
  *----------------------------------------------------------------------------*/
 void H5Lite::H5FileBuffer::ioClose (void)
 {
-    fclose(fp);
+    fclose(ioFile);
 }
 
 /*----------------------------------------------------------------------------
@@ -520,13 +519,13 @@ int64_t H5Lite::H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     static long io_data = 0;
 
     /* Seek to New Position */
-    if(fseek(fp, pos, SEEK_SET) != 0)
+    if(fseek(ioFile, pos, SEEK_SET) != 0)
     {
         throw RunTimeException("failed to go to I/O position: 0x%lx", pos);
     }
 
     /* Read Data */
-    int64_t bytes_read = fread(data, 1, size, fp);
+    int64_t bytes_read = fread(data, 1, size, ioFile);
 
     /* Characterize Performance */
     if(H5_CHARACTERIZE_IO)

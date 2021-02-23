@@ -143,13 +143,21 @@ struct H5Lite
                 * Constants
                 *--------------------------------------------------------------------*/
 
+                /*
+                 * Assuming:
+                 *  50ms of latency per read
+                 * Then per throughput:
+                 *  ~500Mbits/second --> 1MB (L1 LINESIZE)
+                 *  ~2Gbits/second --> 8MB (L1 LINESIZE)
+                 */
+
                 static const long       IO_CACHE_L1_LINESIZE    = 0x100000; // 1MB cache line
                 static const long       IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
                 static const long       IO_CACHE_L1_ENTRIES     = 47; // 47 cache lines per dataset
 
                 static const long       IO_CACHE_L2_LINESIZE    = 0x8000000; // 128MB cache line
                 static const long       IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
-                static const long       IO_CACHE_L2_ENTRIES     = 17; // 17 cache lines per dataset
+                static const long       IO_CACHE_L2_ENTRIES     = 7; // 7 cache lines per dataset
 
                 static const long       STR_BUFF_SIZE           = 512;
 
@@ -267,7 +275,7 @@ struct H5Lite
                 bool                verbose;
 
                 /* I/O Hashing and Management */
-                fileptr_t           fp;
+                fileptr_t           ioFile;
                 cache_t             ioCacheL1;
                 cache_t             ioCacheL2;
 
