@@ -631,7 +631,7 @@ T& Table<T,K>::operator[](K key)
 }
 
 /*----------------------------------------------------------------------------
- * freeNode
+ * identity
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
 K Table<T,K>::identity(K key)
@@ -640,7 +640,7 @@ K Table<T,K>::identity(K key)
 }
 
 /*----------------------------------------------------------------------------
- * freeNode
+ * writeNode
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
 bool Table<T,K>::writeNode(K index, K key, T& data)
@@ -672,7 +672,7 @@ bool Table<T,K>::writeNode(K index, K key, T& data)
 }
 
 /*----------------------------------------------------------------------------
- * freeNode
+ * overwriteNode
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
 bool Table<T,K>::overwriteNode(K index, K key, T& data, bool with_delete)
