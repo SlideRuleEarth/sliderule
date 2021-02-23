@@ -269,8 +269,6 @@ class H5FileBuffer
         /* File Meta Attributes */
         int                 offsetSize;
         int                 lengthSize;
-        int                 groupLeafNodeK;
-        int                 groupInternalNodeK;
         uint64_t            rootGroupOffset;
 
         /* Data Meta Attributes */                
@@ -284,8 +282,6 @@ class H5FileBuffer
         int                 dataNumDimensions;
 
         bool                dataFilter[NUM_FILTERS]; // true if enabled for dataset
-        uint32_t*           dataFilterParms[NUM_FILTERS];
-        int                 dataNumFilterParms[NUM_FILTERS];
 
         layout_t            dataLayout;
         uint64_t            dataAddress;

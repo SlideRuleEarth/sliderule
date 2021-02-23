@@ -41,7 +41,7 @@
 #endif
 
 #ifndef H5_CHARACTERIZE_IO
-#define H5_CHARACTERIZE_IO true
+#define H5_CHARACTERIZE_IO false
 #endif
 
 /******************************************************************************
@@ -108,8 +108,6 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     /* Initialize */
     offsetSize              = 0;
     lengthSize              = 0;
-    groupLeafNodeK          = 0;
-    groupInternalNodeK      = 0;
     rootGroupOffset         = 0;
     
     /* Initialize Data */
@@ -131,9 +129,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     /* Initialize Filters */
     for(int f = 0; f < NUM_FILTERS; f++)
     {
-        dataFilter[f]           = INVALID_FILTER;
-        dataFilterParms[f]      = NULL;
-        dataNumFilterParms[f]   = 0;
+        dataFilter[f]       = INVALID_FILTER;
     }
 
     /* Open File */
@@ -201,12 +197,6 @@ H5FileBuffer::~H5FileBuffer (void)
 
     /* Delete Chunk Buffer */
     if(dataChunkBuffer) delete [] dataChunkBuffer;
-
-    /* Delete Filter Parameters */
-    for(int f = 0; f < NUM_FILTERS; f++)
-    {
-        if(dataFilterParms[f]) delete [] dataFilterParms[f];
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -632,8 +622,8 @@ int H5FileBuffer::readSuperblock (void)
     pos = 13;
     offsetSize          = readField(1, &pos);
     lengthSize          = readField(1, &pos);
-    groupLeafNodeK      = readField(2, &pos);
-    groupInternalNodeK  = readField(2, &pos);
+    uint16_t leaf_k     = (uint16_t)readField(2, &pos);
+    uint16_t internal_k = (uint16_t)readField(2, &pos);
 
     /* Read Group Offset */
     pos = 64;
@@ -646,8 +636,8 @@ int H5FileBuffer::readSuperblock (void)
         mlog(RAW, "----------------\n");
         mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)offsetSize);
         mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)lengthSize);
-        mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)groupLeafNodeK);
-        mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)groupInternalNodeK);
+        mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)leaf_k);
+        mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)internal_k);
         mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)rootGroupOffset);
     }
 
@@ -1310,17 +1300,8 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         }
     }
 
-    /* Read Number of Symbols */
-    uint16_t num_symbols = (uint16_t)readField(2, &pos);
-    if(errorChecking)
-    {
-        if(num_symbols > groupLeafNodeK)
-        {
-            throw RunTimeException("number of symbols exceeds group leaf node K: %d > %d\n", (int)num_symbols, (int)groupLeafNodeK);
-        }
-    }
-
     /* Read Symbols */
+    uint16_t num_symbols = (uint16_t)readField(2, &pos);
     for(int s = 0; s < num_symbols; s++)
     {
         /* Read Symbol Entry */
@@ -2316,7 +2297,6 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         if(filter < NUM_FILTERS)
         {
             dataFilter[filter] = true;
-            dataNumFilterParms[filter] = num_parms;
         }
         else
         {
@@ -2324,19 +2304,10 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
 
         /* Client Data */
-        uint32_t client_data_size = dataNumFilterParms[filter] * 4;
-        if(client_data_size)
-        {
-            dataFilterParms[filter] = new uint32_t [dataNumFilterParms[filter]];
-            readByteArray((uint8_t*)dataFilterParms[filter], client_data_size, &pos);
-        }
-        else
-        {
-            pos += client_data_size;
-        }
+        pos += num_parms * 4;
 
         /* Handle Padding */
-        if(dataNumFilterParms[filter] % 2 == 1)
+        if(num_parms % 2 == 1)
         {
             pos += 4;
         }
