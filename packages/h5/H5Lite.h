@@ -215,7 +215,8 @@ struct H5Lite
                 void                ioClose             (void);
                 int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
 
-                uint8_t*            ioRequest           (int64_t size, uint64_t* pos, int64_t hint=IO_CACHE_L1_LINESIZE);
+                uint8_t*            ioRequest           (int64_t size, uint64_t* pos, int64_t hint=IO_CACHE_L1_LINESIZE, bool* cached=NULL);
+                bool                ioCheckCache        (int64_t size, uint64_t pos, cache_t* cache, cache_entry_t* entry);
                 static uint64_t     ioHashL1            (uint64_t key);
                 static uint64_t     ioHashL2            (uint64_t key);
 
@@ -257,8 +258,8 @@ struct H5Lite
                 /*--------------------------------------------------------------------
                 * Data
                 *--------------------------------------------------------------------*/
-
                 const char*         dataset;
+                const char*         datasetPrint;
                 List<const char*>   datasetPath;
                 uint64_t            datasetStartRow;
                 int                 datasetNumRows;
@@ -269,8 +270,6 @@ struct H5Lite
                 fileptr_t           fp;
                 cache_t             ioCacheL1;
                 cache_t             ioCacheL2;
-                
-                /* File Management */
 
                 /* File Meta Attributes */
                 int                 offsetSize;
