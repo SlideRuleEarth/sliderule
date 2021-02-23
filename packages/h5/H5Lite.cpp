@@ -100,36 +100,33 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     assert(filename);
     assert(_dataset);    
 
+    /* Initialize Class Data */
     datasetStartRow         = startrow;
     datasetNumRows          = numrows;
     errorChecking           = _error_checking;
     verbose                 = _verbose;
-
-    /* Initialize */
     offsetSize              = 0;
     lengthSize              = 0;
     rootGroupOffset         = 0;
-    
-    /* Initialize Data */
-    dataType                = UNKNOWN_TYPE;
-    dataTypeSize            = 0;
-    dataFill.fill_ll        = 0LL;
-    dataFillSize            = 0;
-    dataNumDimensions       = 0;
-    dataLayout              = UNKNOWN_LAYOUT;
-    dataAddress             = 0;
-    dataSize                = 0;
-    dataChunkElements       = 0;
-    dataChunkElementSize    = 0;
     dataChunkBuffer         = NULL;
     dataChunkBufferSize     = 0;
     highestDataLevel        = 0;
     dataSizeHint            = 0;
-
-    /* Initialize Filters */
+    
+    /* Initialize Meta Data */
+    metaData.type           = UNKNOWN_TYPE;
+    metaData.typesize       = 0;
+    metaData.fill.fill_ll   = 0LL;
+    metaData.fillsize       = 0;
+    metaData.ndims          = 0;
+    metaData.chunkelements  = 0;
+    metaData.elementsize    = 0;
+    metaData.layout         = UNKNOWN_LAYOUT;
+    metaData.address        = 0;
+    metaData.size           = 0;
     for(int f = 0; f < NUM_FILTERS; f++)
     {
-        dataFilter[f]       = INVALID_FILTER;
+        metaData.filter[f]  = INVALID_FILTER;
     }
 
     /* Open File */
@@ -433,7 +430,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 void H5FileBuffer::readDataset (dataset_info_t* data_info)
 {
     /* Populate Info Struct */
-    data_info->typesize = dataTypeSize;
+    data_info->typesize = metaData.typesize;
     data_info->elements = 0;
     data_info->datasize = 0;
     data_info->data     = NULL;
@@ -442,20 +439,20 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     data_info->numcols  = 0;
 
     /* Sanity Check Data Attributes */
-    if(dataTypeSize <= 0)
+    if(metaData.typesize <= 0)
     {
         throw RunTimeException("missing data type information");
     }
     
     /* Calculate Size of Data Row (note dimension starts at 1) */
-    uint64_t row_size = dataTypeSize;
-    for(int d = 1; d < dataNumDimensions; d++)
+    uint64_t row_size = metaData.typesize;
+    for(int d = 1; d < metaData.ndims; d++)
     {
-        row_size *= dataDimensions[d];
+        row_size *= metaData.dimensions[d];
     }
 
     /* Get Number of Rows */
-    uint64_t first_dimension = (dataNumDimensions > 0) ? dataDimensions[0] : 0;
+    uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 0;
     datasetNumRows = (datasetNumRows == ALL_ROWS) ? first_dimension : datasetNumRows;
     if((datasetStartRow + datasetNumRows) > first_dimension)
     {
@@ -470,28 +467,28 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
         buffer = new uint8_t [buffer_size];
 
         /* Fill Buffer with Fill Value (if provided) */
-        if(dataFillSize > 0)
+        if(metaData.fillsize > 0)
         {
-            for(int64_t i = 0; i < buffer_size; i += dataFillSize)
+            for(int64_t i = 0; i < buffer_size; i += metaData.fillsize)
             {
-                LocalLib::copy(&buffer[i], &dataFill.fill_ll, dataFillSize);
+                LocalLib::copy(&buffer[i], &metaData.fill.fill_ll, metaData.fillsize);
             }
         }
     }
 
     /* Populate Rest of Info Struct */
-    data_info->elements = buffer_size / dataTypeSize;
+    data_info->elements = buffer_size / metaData.typesize;
     data_info->datasize = buffer_size;
     data_info->data     = buffer;
     data_info->numrows  = datasetNumRows; 
 
-    if      (dataNumDimensions == 0)            data_info->numcols = 0;
-    else if (dataNumDimensions == 1)            data_info->numcols = 1;
-    else if (dataNumDimensions >= 2)            data_info->numcols = dataDimensions[1];
+    if      (metaData.ndims == 0)   data_info->numcols = 0;
+    else if (metaData.ndims == 1)   data_info->numcols = 1;
+    else if (metaData.ndims >= 2)   data_info->numcols = metaData.dimensions[1];
 
-    if      (dataType == FIXED_POINT_TYPE)      data_info->datatype = RecordObject::INTEGER;
-    else if (dataType == FLOATING_POINT_TYPE)   data_info->datatype = RecordObject::REAL;
-    else if (dataType == STRING_TYPE)           data_info->datatype = RecordObject::TEXT;
+    if      (metaData.type == FIXED_POINT_TYPE)      data_info->datatype = RecordObject::INTEGER;
+    else if (metaData.type == FLOATING_POINT_TYPE)   data_info->datatype = RecordObject::REAL;
+    else if (metaData.type == STRING_TYPE)           data_info->datatype = RecordObject::TEXT;
     
     /* Calculate Buffer Start */
     uint64_t buffer_offset = row_size * datasetStartRow;
@@ -499,15 +496,15 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     /* Check if Data Address and Data Size is Valid */
     if(errorChecking)
     {
-        if(H5_INVALID(dataAddress))
+        if(H5_INVALID(metaData.address))
         {
             throw RunTimeException("data not allocated in contiguous layout");
         }
-        else if(dataSize != 0 && dataSize < ((int64_t)buffer_offset + buffer_size))
+        else if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
         {
-            throw RunTimeException("read exceeds available data: %d != %d", dataSize, buffer_size);
+            throw RunTimeException("read exceeds available data: %d != %d", metaData.size, buffer_size);
         }
-        if((dataFilter[DEFLATE_FILTER] || dataFilter[SHUFFLE_FILTER]) && ((dataLayout == COMPACT_LAYOUT) || (dataLayout == CONTIGUOUS_LAYOUT)))
+        if((metaData.filter[DEFLATE_FILTER] || metaData.filter[SHUFFLE_FILTER]) && ((metaData.layout == COMPACT_LAYOUT) || (metaData.layout == CONTIGUOUS_LAYOUT)))
         {
             throw RunTimeException("filters unsupported on non-chunked layouts");
         }
@@ -516,12 +513,12 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     /* Read Dataset */
     if(buffer_size > 0)
     {
-        switch(dataLayout)
+        switch(metaData.layout)
         {
             case COMPACT_LAYOUT:
             case CONTIGUOUS_LAYOUT:
             {
-                uint64_t data_addr = dataAddress + buffer_offset;
+                uint64_t data_addr = metaData.address + buffer_offset;
                 uint8_t* data_ptr = ioRequest(buffer_size, &data_addr);
                 LocalLib::copy(buffer, data_ptr, buffer_size);
                 break;
@@ -532,18 +529,18 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                 /* Chunk Layout Specific Error Checks */
                 if(errorChecking)
                 {
-                    if(dataChunkElementSize != dataTypeSize)
+                    if(metaData.elementsize != metaData.typesize)
                     {
-                        throw RunTimeException("chunk element size does not match data element size: %d != %d", dataChunkElementSize, dataTypeSize);
+                        throw RunTimeException("chunk element size does not match data element size: %d != %d", metaData.elementsize, metaData.typesize);
                     }
-                    else if(dataChunkElements <= 0)
+                    else if(metaData.chunkelements <= 0)
                     {
-                        throw RunTimeException("invalid number of chunk elements: %ld\n", (long)dataChunkElements);
+                        throw RunTimeException("invalid number of chunk elements: %ld\n", (long)metaData.chunkelements);
                     }
                 }
 
                 /* Allocate Data Chunk Buffer */
-                dataChunkBufferSize = dataChunkElements * dataTypeSize;
+                dataChunkBufferSize = metaData.chunkelements * metaData.typesize;
                 dataChunkBuffer = new uint8_t [dataChunkBufferSize];
 
                 /* 
@@ -557,12 +554,12 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                 if(buffer_offset < (uint64_t)buffer_size)
                 {
                     bool cached;
-                    ioRequest(0, &dataAddress, buffer_offset + buffer_size, &cached);
+                    ioRequest(0, &metaData.address, buffer_offset + buffer_size, &cached);
                     if(cached) dataSizeHint = IO_CACHE_L1_LINESIZE;
                 }
 
                 /* Read B-Tree */
-                readBTreeV1(dataAddress, buffer, buffer_size, buffer_offset);
+                readBTreeV1(metaData.address, buffer, buffer_size, buffer_offset);
                 break;
             }
 
@@ -570,7 +567,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
             {
                 if(errorChecking)
                 {
-                    throw RunTimeException("invalid data layout: %d", (int)dataLayout);
+                    throw RunTimeException("invalid data layout: %d", (int)metaData.layout);
                 }
             }
         }
@@ -1076,7 +1073,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
     pos += offsetSize * 2;
 
     /* Read First Key */
-    btree_node_t curr_node = readBTreeNodeV1(dataNumDimensions, &pos);
+    btree_node_t curr_node = readBTreeNodeV1(metaData.ndims, &pos);
 
     /* Read Children */
     for(int e = 0; e < entries_used; e++)
@@ -1085,14 +1082,14 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
         uint64_t child_addr = readField(offsetSize, &pos);
 
         /* Read Next Key */
-        btree_node_t next_node = readBTreeNodeV1(dataNumDimensions, &pos);
+        btree_node_t next_node = readBTreeNodeV1(metaData.ndims, &pos);
 
         /*  Get Child Keys */
         uint64_t child_key1 = curr_node.row_key;
         uint64_t child_key2 = next_node.row_key; // there is always +1 keys
-        if(next_node.chunk_size == 0 && dataNumDimensions > 0)
+        if(next_node.chunk_size == 0 && metaData.ndims > 0)
         {
-            child_key2 = dataDimensions[0];
+            child_key2 = metaData.dimensions[0];
         }
 
         /* Display */
@@ -1121,12 +1118,12 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
             {
                 /* Calculate Chunk Location */
                 uint64_t chunk_offset = 0;
-                for(int i = 0; i < dataNumDimensions; i++)
+                for(int i = 0; i < metaData.ndims; i++)
                 {
-                    uint64_t slice_size = curr_node.slice[i] * dataTypeSize;
-                    for(int j = i + 1; j < dataNumDimensions; j++)
+                    uint64_t slice_size = curr_node.slice[i] * metaData.typesize;
+                    for(int j = i + 1; j < metaData.ndims; j++)
                     {
-                        slice_size *= dataDimensions[j];
+                        slice_size *= metaData.dimensions[j];
                     }
                     chunk_offset += slice_size;
                 }
@@ -1167,19 +1164,19 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 /* Display Info */
                 if(verbose && H5_EXTRA_DEBUG)
                 {
-                    mlog(RAW, "Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/dataTypeSize));
-                    mlog(RAW, "Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/dataTypeSize));
+                    mlog(RAW, "Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
+                    mlog(RAW, "Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
                 }
 
                 /* Read Chunk */
-                if(dataFilter[DEFLATE_FILTER])
+                if(metaData.filter[DEFLATE_FILTER])
                 {
                     /* Read Data into Chunk Buffer */
                     bool cached;
                     uint8_t* chunk_ptr = ioRequest(curr_node.chunk_size, &child_addr, dataSizeHint, &cached);
                     if(cached) dataSizeHint = IO_CACHE_L1_LINESIZE;
 
-                    if((chunk_bytes == dataChunkBufferSize) && (!dataFilter[SHUFFLE_FILTER]))
+                    if((chunk_bytes == dataChunkBufferSize) && (!metaData.filter[SHUFFLE_FILTER]))
                     {
                         /* Inflate Directly into Data Buffer */
                         inflateChunk(chunk_ptr, curr_node.chunk_size, &buffer[buffer_index], chunk_bytes);
@@ -1189,10 +1186,10 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                         /* Inflate into Data Chunk Buffer */
                         inflateChunk(chunk_ptr, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
 
-                        if(dataFilter[SHUFFLE_FILTER])
+                        if(metaData.filter[SHUFFLE_FILTER])
                         {
                             /* Shuffle Data Chunk Buffer into Data Buffer */
-                            shuffleChunk(dataChunkBuffer, dataChunkBufferSize, &buffer[buffer_index], chunk_index, chunk_bytes, dataTypeSize);
+                            shuffleChunk(dataChunkBuffer, dataChunkBufferSize, &buffer[buffer_index], chunk_index, chunk_bytes, metaData.typesize);
                         }
                         else
                         {
@@ -1205,7 +1202,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 {
                     if(errorChecking)
                     {
-                        if(dataFilter[SHUFFLE_FILTER])
+                        if(metaData.filter[SHUFFLE_FILTER])
                         {
                             throw RunTimeException("shuffle filter unsupported on uncompressed chunk");
                         }
@@ -1250,7 +1247,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
     uint64_t trailing_zero = readField(8, pos);
     if(errorChecking)
     {
-        if(trailing_zero % dataTypeSize != 0)
+        if(trailing_zero % metaData.typesize != 0)
         {
             throw RunTimeException("key did not include a trailing zero: %d", trailing_zero);
         }
@@ -1727,24 +1724,24 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read and Populate Data Dimensions */
     uint64_t num_elements = 0;
-    dataNumDimensions = MIN(dimensionality, MAX_NDIMS);
-    if(dataNumDimensions > 0)
+    metaData.ndims = MIN(dimensionality, MAX_NDIMS);
+    if(metaData.ndims > 0)
     {
         num_elements = 1;
-        for(int d = 0; d < dataNumDimensions; d++)
+        for(int d = 0; d < metaData.ndims; d++)
         {
-            dataDimensions[d] = readField(lengthSize, &pos);
-            num_elements *= dataDimensions[d];
+            metaData.dimensions[d] = readField(lengthSize, &pos);
+            num_elements *= metaData.dimensions[d];
             if(verbose)
             {
-                mlog(RAW, "Dimension %d:                                                     %lu\n", (int)dataNumDimensions, (unsigned long)dataDimensions[d]);
+                mlog(RAW, "Dimension %d:                                                     %lu\n", (int)metaData.ndims, (unsigned long)metaData.dimensions[d]);
             }
         }
 
         /* Skip Over Maximum Dimensions */
         if(flags & MAX_DIM_PRESENT)
         {
-            pos += dataNumDimensions * lengthSize;
+            pos += metaData.ndims * lengthSize;
         }
     }
 
@@ -1836,7 +1833,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Message Info */
     uint64_t version_class = readField(4, &pos);
-    dataTypeSize = (int)readField(4, &pos);
+    metaData.typesize = (int)readField(4, &pos);
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
@@ -1849,19 +1846,19 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Set Data Type */
-    dataType = (data_type_t)(version_class & 0x0F);
+    metaData.type = (data_type_t)(version_class & 0x0F);
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
         mlog(RAW, "Datatype Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
         mlog(RAW, "Version:                                                         %d\n", (int)version);
-        mlog(RAW, "Data Class:                                                      %d, %s\n", (int)dataType, type2str(dataType));
-        mlog(RAW, "Data Size:                                                       %d\n", dataTypeSize);
+        mlog(RAW, "Data Class:                                                      %d, %s\n", (int)metaData.type, type2str(metaData.type));
+        mlog(RAW, "Data Size:                                                       %d\n", metaData.typesize);
     }
 
     /* Read Data Class Properties */
-    switch(dataType)
+    switch(metaData.type)
     {
         case FIXED_POINT_TYPE:
         {
@@ -1927,7 +1924,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             if(errorChecking)
             {
-                throw RunTimeException("unsupported datatype: %d", (int)dataType);
+                throw RunTimeException("unsupported datatype: %d", (int)metaData.type);
             }
             break;
         }
@@ -1976,16 +1973,16 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
     if(fill_value_defined)
     {
-        dataFillSize = (int)readField(4, &pos);
+        metaData.fillsize = (int)readField(4, &pos);
         if(verbose)
         {
-            mlog(RAW, "Fill Value Size:                                                 %d\n", dataFillSize);
+            mlog(RAW, "Fill Value Size:                                                 %d\n", metaData.fillsize);
         }
 
-        if(dataFillSize > 0)
+        if(metaData.fillsize > 0)
         {
-            uint64_t fill_value = readField(dataFillSize, &pos);
-            dataFill.fill_ll = fill_value;
+            uint64_t fill_value = readField(metaData.fillsize, &pos);
+            metaData.fill.fill_ll = fill_value;
             if(verbose)
             {
                 mlog(RAW, "Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
@@ -2143,7 +2140,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Message Info */
     uint64_t version = readField(1, &pos);
-    dataLayout = (layout_t)readField(1, &pos);
+    metaData.layout = (layout_t)readField(1, &pos);
 
     if(errorChecking)
     {
@@ -2159,24 +2156,24 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         mlog(RAW, "Data Layout Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         mlog(RAW, "----------------\n");
         mlog(RAW, "Version:                                                         %d\n", (int)version);
-        mlog(RAW, "Layout:                                                          %d, %s\n", (int)dataLayout, layout2str(dataLayout));
+        mlog(RAW, "Layout:                                                          %d, %s\n", (int)metaData.layout, layout2str(metaData.layout));
     }
 
     /* Read Layout Classes */
-    switch(dataLayout)
+    switch(metaData.layout)
     {
         case COMPACT_LAYOUT:
         {
-            dataSize = (uint16_t)readField(2, &pos);
-            dataAddress = pos;
-            pos += dataSize;
+            metaData.size = (uint16_t)readField(2, &pos);
+            metaData.address = pos;
+            pos += metaData.size;
             break;
         }
 
         case CONTIGUOUS_LAYOUT:
         {
-            dataAddress = readField(offsetSize, &pos);
-            dataSize = readField(lengthSize, &pos);
+            metaData.address = readField(offsetSize, &pos);
+            metaData.size = readField(lengthSize, &pos);
             break;
         }
 
@@ -2187,36 +2184,36 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             chunk_num_dim = MIN(chunk_num_dim, MAX_NDIMS);
             if(errorChecking)
             {
-                if(chunk_num_dim != dataNumDimensions)
+                if(chunk_num_dim != metaData.ndims)
                 {
-                    throw RunTimeException("number of chunk dimensions does not match data dimensions: %d != %d", chunk_num_dim, dataNumDimensions);
+                    throw RunTimeException("number of chunk dimensions does not match data dimensions: %d != %d", chunk_num_dim, metaData.ndims);
                 }
             }
 
             /* Read Address of B-Tree */
-            dataAddress = readField(offsetSize, &pos);
+            metaData.address = readField(offsetSize, &pos);
 
             /* Read Dimensions */
             uint64_t chunk_dim[MAX_NDIMS];
             if(chunk_num_dim > 0)
             {
-                dataChunkElements = 1;
+                metaData.chunkelements = 1;
                 for(int d = 0; d < chunk_num_dim; d++)
                 {
                     chunk_dim[d] = (uint32_t)readField(4, &pos);
-                    dataChunkElements *= chunk_dim[d];
+                    metaData.chunkelements *= chunk_dim[d];
                 }
             }
 
             /* Read Size of Data Element */
-            dataChunkElementSize = (int)readField(4, &pos);
+            metaData.elementsize = (int)readField(4, &pos);
 
             /* Display Data Attributes */
             if(verbose)
             {
-                mlog(RAW, "Chunk Element Size:                                              %d\n", (int)dataChunkElementSize);
+                mlog(RAW, "Chunk Element Size:                                              %d\n", (int)metaData.elementsize);
                 mlog(RAW, "Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
-                for(int d = 0; d < dataNumDimensions; d++)
+                for(int d = 0; d < metaData.ndims; d++)
                 {
                     mlog(RAW, "Chunk Dimension %d:                                               %d\n", d, (int)chunk_dim[d]);
                 }
@@ -2229,7 +2226,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             if(errorChecking)
             {
-                throw RunTimeException("invalid data layout: %d", (int)dataLayout);
+                throw RunTimeException("invalid data layout: %d", (int)metaData.layout);
             }
         }
     }
@@ -2296,7 +2293,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Set Filter */
         if(filter < NUM_FILTERS)
         {
-            dataFilter[filter] = true;
+            metaData.filter[filter] = true;
         }
         else
         {

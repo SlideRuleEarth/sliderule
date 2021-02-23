@@ -200,7 +200,22 @@ class H5FileBuffer
             uint8_t                 fill_b;
         } fill_t;
 
-        /*--------------------------------------------------------------------
+        typedef struct {
+            data_type_t             type;
+            int                     typesize;
+            fill_t                  fill;
+            int                     fillsize;
+            uint64_t                dimensions[MAX_NDIMS];
+            int                     ndims;
+            bool                    filter[NUM_FILTERS]; // true if enabled for dataset
+            uint64_t                chunkelements; // number of data elements per chunk
+            int                     elementsize; // size of the data element in the chunk; should be equal to the typesize
+            layout_t                layout;
+            uint64_t                address;
+            int64_t                 size;
+        } meta_t;
+        
+       /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
         
@@ -252,7 +267,7 @@ class H5FileBuffer
         * Data
         *--------------------------------------------------------------------*/
 
-        /* Dataset Info and Attributes */
+        /* Class Data */
         const char*         dataset;
         const char*         datasetPrint;
         List<const char*>   datasetPath;
@@ -266,34 +281,17 @@ class H5FileBuffer
         io_context_t*       ioContext;
         bool                ioContextLocal;
 
-        /* File Meta Attributes */
+        /* File Info */
         int                 offsetSize;
         int                 lengthSize;
         uint64_t            rootGroupOffset;
-
-        /* Data Meta Attributes */                
-        data_type_t         dataType;
-        int                 dataTypeSize;
-
-        fill_t              dataFill;
-        int                 dataFillSize;
-
-        uint64_t            dataDimensions[MAX_NDIMS];
-        int                 dataNumDimensions;
-
-        bool                dataFilter[NUM_FILTERS]; // true if enabled for dataset
-
-        layout_t            dataLayout;
-        uint64_t            dataAddress;
-        int64_t             dataSize;
-
-        uint64_t            dataChunkElements; // number of data elements per chunk
-        int                 dataChunkElementSize; // size of the data element in the chunk; should be equal to the typesize
         uint8_t*            dataChunkBuffer; // buffer for reading uncompressed chunk
         int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
-
         int                 highestDataLevel; // high water mark for traversing dataset path
         int64_t             dataSizeHint;
+
+        /* Meta Info */
+        meta_t              metaData;
 };
 
 /******************************************************************************
