@@ -224,6 +224,8 @@ class H5FileBuffer
             int                     fillsize;
             int                     ndims;
             int                     elementsize; // size of the data element in the chunk; should be equal to the typesize
+            int                     offsetsize; // size of "offset" fields in h5 files
+            int                     lengthsize; // size of "length" fields in h5 files
             uint64_t                dimensions[MAX_NDIMS];
             uint64_t                chunkelements; // number of data elements per chunk
             uint64_t                address;
@@ -249,7 +251,7 @@ class H5FileBuffer
         uint64_t            readField           (int64_t size, uint64_t* pos);
         void                readDataset         (dataset_info_t* _data_info);
 
-        int                 readSuperblock      (void);        
+        uint64_t            readSuperblock      (void);        
         int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readDirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readIndirectBlock   (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
@@ -280,8 +282,8 @@ class H5FileBuffer
         int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
         int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
 
-        static uint64_t     metaHash            (const char* url);
-        static void         metaUrl             (char* url, const char* filename, const char* _dataset);
+        static uint64_t     metaGetKey          (const char* url);
+        static void         metaGetUrl          (char* url, const char* filename, const char* _dataset);
 
         /*--------------------------------------------------------------------
         * Data
@@ -306,9 +308,6 @@ class H5FileBuffer
         bool                ioContextLocal;
 
         /* File Info */
-        int                 offsetSize;
-        int                 lengthSize;
-        uint64_t            rootGroupOffset;
         uint8_t*            dataChunkBuffer; // buffer for reading uncompressed chunk
         int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
         int                 highestDataLevel; // high water mark for traversing dataset path

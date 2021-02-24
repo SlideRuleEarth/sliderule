@@ -61,7 +61,7 @@
 /*----------------------------------------------------------------------------
  * Static Data
  *----------------------------------------------------------------------------*/
-H5FileBuffer::meta_repo_t H5FileBuffer::metaRepo;
+H5FileBuffer::meta_repo_t H5FileBuffer::metaRepo(MAX_META_STORE);
 Mutex H5FileBuffer::metaMutex;
 
 /*----------------------------------------------------------------------------
@@ -120,9 +120,6 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     datasetNumRows          = numrows;
     errorChecking           = _error_checking;
     verbose                 = _verbose;
-    offsetSize              = 0;
-    lengthSize              = 0;
-    rootGroupOffset         = 0;
     dataChunkBuffer         = NULL;
     dataChunkBufferSize     = 0;
     highestDataLevel        = 0;
@@ -145,13 +142,13 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
 
     /* Check Meta Repository */
     char meta_url[MAX_META_FILENAME];
-    metaUrl(meta_url, filename, _dataset);
-    uint64_t meta_key = metaHash(meta_url);
+    metaGetUrl(meta_url, filename, _dataset);
+    uint64_t meta_key = metaGetKey(meta_url);
     bool meta_found = false;
     metaMutex.lock();
     {
         if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData))
-        {
+        {            
             meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
         }
     }
@@ -171,6 +168,8 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
             metaData.ndims          = 0;
             metaData.chunkelements  = 0;
             metaData.elementsize    = 0;
+            metaData.offsetsize     = 0;
+            metaData.lengthsize     = 0;
             metaData.layout         = UNKNOWN_LAYOUT;
             metaData.address        = 0;
             metaData.size           = 0;
@@ -183,10 +182,10 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
             parseDataset();
 
             /* Read Superblock */
-            readSuperblock();
+            uint64_t root_group_offset = readSuperblock();
 
             /* Read Data Attributes (Start at Root Group) */
-            readObjHdr(rootGroupOffset, 0);
+            readObjHdr(root_group_offset, 0);
         }
 
         /* Read Dataset */
@@ -592,7 +591,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                  *  If reading all of the data from the start of the data segment in the file
                  *  past where the desired subset is consistutes only a 2x increase in the 
                  *  overall data that would be read, then prefetch the entire block from the
-                 *  beginning.
+                 *  beginning and set the size hint to the L1 cache line size.
                  */ 
                 dataSizeHint = buffer_size;
                 if(buffer_offset < (uint64_t)buffer_size)
@@ -621,7 +620,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
 /*----------------------------------------------------------------------------
  * readSuperblock
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::readSuperblock (void)
+uint64_t H5FileBuffer::readSuperblock (void)
 {
     uint64_t pos = 0;
 
@@ -661,29 +660,29 @@ int H5FileBuffer::readSuperblock (void)
 
     /* Read Sizes */
     pos = 13;
-    offsetSize          = readField(1, &pos);
-    lengthSize          = readField(1, &pos);
+    metaData.offsetsize = readField(1, &pos);
+    metaData.lengthsize = readField(1, &pos);
     uint16_t leaf_k     = (uint16_t)readField(2, &pos);
     uint16_t internal_k = (uint16_t)readField(2, &pos);
 
     /* Read Group Offset */
     pos = 64;
-    rootGroupOffset     = readField(offsetSize, &pos);
+    uint64_t root_group_offset = readField(metaData.offsetsize, &pos);
 
     if(verbose)
     {
         mlog(RAW, "\n----------------\n");
         mlog(RAW, "File Information\n");
         mlog(RAW, "----------------\n");
-        mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)offsetSize);
-        mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)lengthSize);
+        mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)metaData.offsetsize);
+        mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)metaData.lengthsize);
         mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)leaf_k);
         mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)internal_k);
-        mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)rootGroupOffset);
+        mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)root_group_offset);
     }
 
-    /* Return Bytes Read */
-    return pos;
+    /* Return Root Group Offset */
+    return root_group_offset;
 }
 
 /*----------------------------------------------------------------------------
@@ -726,24 +725,24 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint16_t    io_filter_len       = (uint16_t)readField(2, &pos); // I/O Filters' Encoded Length
     uint8_t     flags               =  (uint8_t)readField(1, &pos); // Flags
     uint32_t    max_size_mg_obj     = (uint32_t)readField(4, &pos); // Maximum Size of Managed Objects
-    uint64_t    next_huge_obj_id    = (uint64_t)readField(lengthSize, &pos); // Next Huge Object ID
-    uint64_t    btree_addr_huge_obj = (uint64_t)readField(offsetSize, &pos); // v2 B-tree Address of Huge Objects
-    uint64_t    free_space_mg_blks  = (uint64_t)readField(lengthSize, &pos); // Amount of Free Space in Managed Blocks
-    uint64_t    addr_free_space_mg  = (uint64_t)readField(offsetSize, &pos); // Address of Managed Block Free Space Manager
-    uint64_t    mg_space            = (uint64_t)readField(lengthSize, &pos); // Amount of Manged Space in Heap
-    uint64_t    alloc_mg_space      = (uint64_t)readField(lengthSize, &pos); // Amount of Allocated Managed Space in Heap
-    uint64_t    dblk_alloc_iter     = (uint64_t)readField(lengthSize, &pos); // Offset of Direct Block Allocation Iterator in Managed Space
-    uint64_t    mg_objs             = (uint64_t)readField(lengthSize, &pos); // Number of Managed Objects in Heap
-    uint64_t    huge_obj_size       = (uint64_t)readField(lengthSize, &pos); // Size of Huge Objects in Heap
-    uint64_t    huge_objs           = (uint64_t)readField(lengthSize, &pos); // Number of Huge Objects in Heap
-    uint64_t    tiny_obj_size       = (uint64_t)readField(lengthSize, &pos); // Size of Tiny Objects in Heap
-    uint64_t    tiny_objs           = (uint64_t)readField(lengthSize, &pos); // Number of Timing Objects in Heap
+    uint64_t    next_huge_obj_id    = (uint64_t)readField(metaData.lengthsize, &pos); // Next Huge Object ID
+    uint64_t    btree_addr_huge_obj = (uint64_t)readField(metaData.offsetsize, &pos); // v2 B-tree Address of Huge Objects
+    uint64_t    free_space_mg_blks  = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Free Space in Managed Blocks
+    uint64_t    addr_free_space_mg  = (uint64_t)readField(metaData.offsetsize, &pos); // Address of Managed Block Free Space Manager
+    uint64_t    mg_space            = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Manged Space in Heap
+    uint64_t    alloc_mg_space      = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Allocated Managed Space in Heap
+    uint64_t    dblk_alloc_iter     = (uint64_t)readField(metaData.lengthsize, &pos); // Offset of Direct Block Allocation Iterator in Managed Space
+    uint64_t    mg_objs             = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Managed Objects in Heap
+    uint64_t    huge_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Huge Objects in Heap
+    uint64_t    huge_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Huge Objects in Heap
+    uint64_t    tiny_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Tiny Objects in Heap
+    uint64_t    tiny_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Timing Objects in Heap
     uint16_t    table_width         = (uint16_t)readField(2, &pos); // Table Width
-    uint64_t    starting_blk_size   = (uint64_t)readField(lengthSize, &pos); // Starting Block Size
-    uint64_t    max_dblk_size       = (uint64_t)readField(lengthSize, &pos); // Maximum Direct Block Size
+    uint64_t    starting_blk_size   = (uint64_t)readField(metaData.lengthsize, &pos); // Starting Block Size
+    uint64_t    max_dblk_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Maximum Direct Block Size
     uint16_t    max_heap_size       = (uint16_t)readField(2, &pos); // Maximum Heap Size
     uint16_t    start_num_rows      = (uint16_t)readField(2, &pos); // Starting # of Rows in Root Indirect Block
-    uint64_t    root_blk_addr       = (uint64_t)readField(offsetSize, &pos); // Address of Root Block
+    uint64_t    root_blk_addr       = (uint64_t)readField(metaData.offsetsize, &pos); // Address of Root Block
     uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
     if(verbose)
     {
@@ -775,7 +774,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     /* Read Filter Information */
     if(io_filter_len > 0)
     {
-        uint64_t filter_root_dblk   = (uint64_t)readField(lengthSize, &pos); // Size of Filtered Root Direct Block
+        uint64_t filter_root_dblk   = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Filtered Root Direct Block
         uint32_t filter_mask        = (uint32_t)readField(4, &pos); // I/O Filter Mask
         mlog(RAW, "Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
         mlog(RAW, "I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
@@ -867,11 +866,11 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     /* Read Block Header */
     if(!verbose)
     {
-        pos += offsetSize + heap_info->blk_offset_size;
+        pos += metaData.offsetsize + heap_info->blk_offset_size;
     }
     else
     {
-        uint64_t heap_hdr_addr = readField(offsetSize, &pos); // Heap Header Address
+        uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
         mlog(RAW, "Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
         mlog(RAW, "Block Offset:                                                    0x%lx\n", blk_offset);
@@ -887,7 +886,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     }
 
     /* Read Block Data */
-    int data_left = block_size - (5 + offsetSize + heap_info->blk_offset_size + ((int)heap_info->dblk_checksum * 4));
+    int data_left = block_size - (5 + metaData.offsetsize + heap_info->blk_offset_size + ((int)heap_info->dblk_checksum * 4));
     while(data_left > 0)
     {
         /* Peak if More Messages */
@@ -974,11 +973,11 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     /* Read Block Header */
     if(!verbose)
     {
-        pos += offsetSize + heap_info->blk_offset_size;
+        pos += metaData.offsetsize + heap_info->blk_offset_size;
     }
     else
     {
-        uint64_t heap_hdr_addr = readField(offsetSize, &pos); // Heap Header Address
+        uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
         mlog(RAW, "Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
         mlog(RAW, "Block Offset:                                                    0x%lx\n", blk_offset);
@@ -1022,7 +1021,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 }
 
                 /* Read Direct Block Address */
-                uint64_t direct_block_addr = readField(offsetSize, &pos);
+                uint64_t direct_block_addr = readField(metaData.offsetsize, &pos);
                 // note: filters are unsupported, but if present would be read here
                 if(!H5_INVALID(direct_block_addr) && (dlvl <= highestDataLevel))
                 {
@@ -1045,7 +1044,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 }
 
                 /* Read Indirect Block Address */
-                uint64_t indirect_block_addr = readField(offsetSize, &pos);
+                uint64_t indirect_block_addr = readField(metaData.offsetsize, &pos);
                 if(!H5_INVALID(indirect_block_addr) && (dlvl <= highestDataLevel))
                 {
                     /* Read Direct Block */
@@ -1114,7 +1113,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
     }
 
     /* Skip Sibling Addresses */
-    pos += offsetSize * 2;
+    pos += metaData.offsetsize * 2;
 
     /* Read First Key */
     btree_node_t curr_node = readBTreeNodeV1(metaData.ndims, &pos);
@@ -1123,7 +1122,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
     for(int e = 0; e < entries_used; e++)
     {
         /* Read Child Address */
-        uint64_t child_addr = readField(offsetSize, &pos);
+        uint64_t child_addr = readField(metaData.offsetsize, &pos);
 
         /* Read Next Key */
         btree_node_t next_node = readBTreeNodeV1(metaData.ndims, &pos);
@@ -1346,8 +1345,8 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
     for(int s = 0; s < num_symbols; s++)
     {
         /* Read Symbol Entry */
-        uint64_t link_name_offset = readField(offsetSize, &pos);
-        uint64_t obj_hdr_addr = readField(offsetSize, &pos);
+        uint64_t link_name_offset = readField(metaData.offsetsize, &pos);
+        uint64_t obj_hdr_addr = readField(metaData.offsetsize, &pos);
         uint32_t cache_type = (uint32_t)readField(4, &pos);
         pos += 20; // reserved + scratch pad
         if(errorChecking)
@@ -1608,7 +1607,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
 
     /* Read Object Header Size */
-    uint64_t obj_hdr_size = readField(lengthSize, &pos);
+    uint64_t obj_hdr_size = readField(metaData.lengthsize, &pos);
     uint64_t end_of_hdr = pos + obj_hdr_size;
     if(verbose)
     {
@@ -1774,7 +1773,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         num_elements = 1;
         for(int d = 0; d < metaData.ndims; d++)
         {
-            metaData.dimensions[d] = readField(lengthSize, &pos);
+            metaData.dimensions[d] = readField(metaData.lengthsize, &pos);
             num_elements *= metaData.dimensions[d];
             if(verbose)
             {
@@ -1785,7 +1784,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Skip Over Maximum Dimensions */
         if(flags & MAX_DIM_PRESENT)
         {
-            pos += metaData.ndims * lengthSize;
+            pos += metaData.ndims * metaData.lengthsize;
         }
     }
 
@@ -1838,8 +1837,8 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Read Heap and Name Offsets */
-    uint64_t heap_address = readField(offsetSize, &pos);
-    uint64_t name_index = readField(offsetSize, &pos);
+    uint64_t heap_address = readField(metaData.offsetsize, &pos);
+    uint64_t name_index = readField(metaData.offsetsize, &pos);
     if(verbose)
     {
         mlog(RAW, "Heap Address:                                                    %lX\n", (unsigned long)heap_address);
@@ -2126,7 +2125,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Process Link Type */
     if(link_type == 0) // hard link
     {
-        uint64_t object_header_addr = readField(offsetSize, &pos);
+        uint64_t object_header_addr = readField(metaData.offsetsize, &pos);
         if(verbose)
         {
             mlog(RAW, "Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
@@ -2216,8 +2215,8 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case CONTIGUOUS_LAYOUT:
         {
-            metaData.address = readField(offsetSize, &pos);
-            metaData.size = readField(lengthSize, &pos);
+            metaData.address = readField(metaData.offsetsize, &pos);
+            metaData.size = readField(metaData.lengthsize, &pos);
             break;
         }
 
@@ -2235,7 +2234,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             }
 
             /* Read Address of B-Tree */
-            metaData.address = readField(offsetSize, &pos);
+            metaData.address = readField(metaData.offsetsize, &pos);
 
             /* Read Dimensions */
             uint64_t chunk_dim[MAX_NDIMS];
@@ -2367,8 +2366,8 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t starting_position = pos;
 
     /* Continuation Info */
-    uint64_t hc_offset = readField(offsetSize, &pos);
-    uint64_t hc_length = readField(lengthSize, &pos);
+    uint64_t hc_offset = readField(metaData.offsetsize, &pos);
+    uint64_t hc_length = readField(metaData.lengthsize, &pos);
 
     if(verbose)
     {
@@ -2411,7 +2410,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    return offsetSize + lengthSize;
+    return metaData.offsetsize + metaData.lengthsize;
 }
 
 /*----------------------------------------------------------------------------
@@ -2424,8 +2423,8 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t starting_position = pos;
 
     /* Symbol Table Info */
-    uint64_t btree_addr = readField(offsetSize, &pos);
-    uint64_t heap_addr = readField(offsetSize, &pos);
+    uint64_t btree_addr = readField(metaData.offsetsize, &pos);
+    uint64_t heap_addr = readField(metaData.offsetsize, &pos);
 
     if(verbose)
     {
@@ -2458,7 +2457,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         pos += 19;
     }
-    uint64_t head_data_addr = readField(offsetSize, &pos);
+    uint64_t head_data_addr = readField(metaData.offsetsize, &pos);
 
     /* Go to Left-Most Node */
     pos = btree_addr;
@@ -2492,8 +2491,8 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
         else
         {
-            pos += 2 + (2 * offsetSize) + lengthSize; // skip entries used, sibling addresses, and first key
-            pos = readField(offsetSize, &pos); // read and go to first child
+            pos += 2 + (2 * metaData.offsetsize) + metaData.lengthsize; // skip entries used, sibling addresses, and first key
+            pos = readField(metaData.offsetsize, &pos); // read and go to first child
         }
     }
 
@@ -2501,9 +2500,9 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     while(true)
     {
         uint16_t entries_used = (uint16_t)readField(2, &pos);
-        uint64_t left_sibling = readField(offsetSize, &pos);
-        uint64_t right_sibling = readField(offsetSize, &pos);
-        uint64_t key0 = readField(lengthSize, &pos);
+        uint64_t left_sibling = readField(metaData.offsetsize, &pos);
+        uint64_t right_sibling = readField(metaData.offsetsize, &pos);
+        uint64_t key0 = readField(metaData.lengthsize, &pos);
         if(verbose && H5_EXTRA_DEBUG)
         {
             mlog(RAW, "Entries Used:                                                    %d\n", (int)entries_used);
@@ -2515,9 +2514,9 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Loop Through Entries in Current Node */
         for(int entry = 0; entry < entries_used; entry++)
         {
-            uint64_t symbol_table_addr = readField(offsetSize, &pos);
+            uint64_t symbol_table_addr = readField(metaData.offsetsize, &pos);
             readSymbolTable(symbol_table_addr, head_data_addr, dlvl);
-            pos += lengthSize; // skip next key;
+            pos += metaData.lengthsize; // skip next key;
             if(highestDataLevel > dlvl) break; // dataset found
         }
 
@@ -2533,7 +2532,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    return offsetSize + offsetSize;
+    return metaData.offsetsize + metaData.offsetsize;
 }
 
 /*----------------------------------------------------------------------------
@@ -2693,24 +2692,24 @@ int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
 }
 
 /*----------------------------------------------------------------------------
- * metaHash
+ * metaGetKey
  *----------------------------------------------------------------------------*/
-uint64_t H5FileBuffer::metaHash (const char* url)
+uint64_t H5FileBuffer::metaGetKey (const char* url)
 {
-    uint64_t hash_value = 0;
+    uint64_t key_value = 0;
     uint64_t* url_ptr = (uint64_t*)url;
     for(int i = 0; i < MAX_META_FILENAME; i+=sizeof(uint64_t))
     {
-        hash_value = *url_ptr;
+        key_value += *url_ptr;
         url_ptr++;
     }
-    return hash_value % MAX_META_STORE;
+    return key_value;
 }
 
 /*----------------------------------------------------------------------------
- * metaUrl
+ * metaGetUrl
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::metaUrl (char* url, const char* filename, const char* _dataset)
+void H5FileBuffer::metaGetUrl (char* url, const char* filename, const char* _dataset)
 {
     /* Prepare File Name */
     const char* filename_ptr = filename;
