@@ -39,7 +39,10 @@
 /******************************************************************************
  * FILE DATA
  ******************************************************************************/
-
+/*
+ * The S3 Client is not a part of the static member data of the S3Lib struct
+ * because that would expose the S3Lib.h header file to the aws header space
+ */ 
 Aws::S3::S3Client* s3Client;
 
 /******************************************************************************
@@ -212,10 +215,12 @@ int64_t S3Lib::rangeGet (uint8_t* data, int64_t size, uint64_t pos, const char* 
     object_request.SetRange(s3_rqst_range.getString());
 
     /* Make Request */
-    auto response = s3Client->GetObject(object_request);
-    if (response.IsSuccess()) 
+    Aws::S3::Model::GetObjectOutcome response = s3Client->GetObject(object_request);
+    if(response.IsSuccess())
     {
-        bytes_read = size; // TODO - must get size of result
+//        Aws::IOStream& response_data = response.GetResultWithOwnership().GetBody();
+//        bytes_read = response_data.read((char*)data, size);
+        bytes_read = (int64_t)response.GetResult().GetContentLength();
         LocalLib::copy(data, response.GetResult().GetBody().rdbuf(), bytes_read);
     }
 
