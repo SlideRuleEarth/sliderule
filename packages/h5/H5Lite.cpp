@@ -104,18 +104,18 @@ H5FileBuffer::io_context_t::~io_context_t (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
+H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, const char* url, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
 {
     assert(data_info);
-    assert(filename);
-    assert(_dataset);    
+    assert(url);
+    assert(dataset);    
 
     /* Clear Data Info */
     LocalLib::set(data_info, 0, sizeof(dataset_info_t));
 
     /* Initialize Class Data */
-    dataset                 = StringLib::duplicate(_dataset);
-    datasetPrint            = StringLib::duplicate(_dataset);
+    datasetName             = StringLib::duplicate(dataset);
+    datasetPrint            = StringLib::duplicate(dataset);
     datasetStartRow         = startrow;
     datasetNumRows          = numrows;
     errorChecking           = _error_checking;
@@ -124,6 +124,14 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     dataChunkBufferSize     = 0;
     highestDataLevel        = 0;
     dataSizeHint            = 0;
+
+    /* Initialize Driver */
+    const char* filename = NULL;
+    ioDriver = parseUrl(url, &filename);    
+    if(ioDriver == UNKNOWN)
+    {
+        throw RunTimeException("Invalid url: %s", url);
+    }
 
     /* Open File */
     ioOpen(filename);
@@ -142,7 +150,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
 
     /* Check Meta Repository */
     char meta_url[MAX_META_FILENAME];
-    metaGetUrl(meta_url, filename, _dataset);
+    metaGetUrl(meta_url, filename, dataset);
     uint64_t meta_key = metaGetKey(meta_url);
     bool meta_found = false;
     metaMutex.lock();
@@ -213,7 +221,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
         data_info->datasize = 0;
 
         /* Rethrow Error */
-        throw RunTimeException("%s (%s)", e.what(), _dataset);
+        throw RunTimeException("%s (%s)", e.what(), dataset);
     }    
 }
 
@@ -232,7 +240,7 @@ H5FileBuffer::~H5FileBuffer (void)
     }
 
     /* Delete Dataset Strings */
-    if(dataset)         delete [] dataset;
+    if(datasetName)     delete [] datasetName;
     if(datasetPrint)    delete [] datasetPrint;
 
     /* Delete Chunk Buffer */
@@ -2540,12 +2548,12 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::parseDataset (void)
 {
-    assert(dataset);
+    assert(datasetName);
 
     /* Get Pointer to First Group in Dataset */
     const char* gptr; // group pointer
-    if(dataset[0] == '/')   gptr = &dataset[1];
-    else                    gptr = &dataset[0];
+    if(datasetName[0] == '/')   gptr = &datasetName[1];
+    else                        gptr = &datasetName[0];
 
     /* Build Path to Dataset */
     while(true)
@@ -2566,6 +2574,39 @@ void H5FileBuffer::parseDataset (void)
             mlog(RAW, "/%s", datasetPath[g]);
         }
         mlog(RAW, "\n----------------\n");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * parseUrl
+ *----------------------------------------------------------------------------*/
+H5FileBuffer::io_driver_t H5FileBuffer::parseUrl (const char* url, const char** resource)
+{
+    /* Sanity Check Input */
+    if(!url) return UNKNOWN;
+
+    /* Set Resource */
+    if(resource) 
+    {
+        const char* rptr = StringLib::find(url, "//");
+        if(rptr)
+        {
+            *resource = rptr + 2;
+        }
+    }
+
+    /* Return Driver */
+    if(StringLib::find(url, "file://"))
+    {
+        return H5FileBuffer::FILE;
+    }
+    else if(StringLib::find(url, "s3://"))
+    {
+        return H5FileBuffer::S3;
+    }
+    else
+    {
+        return H5FileBuffer::UNKNOWN;
     }
 }
 
@@ -2709,7 +2750,7 @@ uint64_t H5FileBuffer::metaGetKey (const char* url)
 /*----------------------------------------------------------------------------
  * metaGetUrl
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::metaGetUrl (char* url, const char* filename, const char* _dataset)
+void H5FileBuffer::metaGetUrl (char* url, const char* filename, const char* dataset)
 {
     /* Prepare File Name */
     const char* filename_ptr = filename;
@@ -2725,8 +2766,8 @@ void H5FileBuffer::metaGetUrl (char* url, const char* filename, const char* _dat
     }
 
     /* Prepare Dataset Name */
-    const char* dataset_name_ptr = _dataset;
-    if(_dataset[0] == '/') dataset_name_ptr++;
+    const char* dataset_name_ptr = dataset;
+    if(dataset[0] == '/') dataset_name_ptr++;
 
     /* Build URL */
     LocalLib::set(url, 0, MAX_META_FILENAME);
@@ -2760,43 +2801,6 @@ void H5Lite::deinit (void)
 }
 
 /*----------------------------------------------------------------------------
- * parseUrl
- *----------------------------------------------------------------------------*/
-H5Lite::driver_t H5Lite::parseUrl (const char* url, const char** resource)
-{
-    /* Sanity Check Input */
-    if(!url) return UNKNOWN;
-
-    /* Set Resource */
-    if(resource) 
-    {
-        const char* rptr = StringLib::find(url, "//");
-        if(rptr)
-        {
-            *resource = rptr + 2;
-        }
-    }
-
-    /* Return Driver */
-    if(StringLib::find(url, "file://"))
-    {
-        return FILE;
-    }
-    else if(StringLib::find(url, "s3://"))
-    {
-        return S3;
-    }
-    else if(StringLib::find(url, "hsds://"))    
-    {
-        return HSDS;
-    }
-    else
-    {
-        return UNKNOWN;
-    }
-}
-
-/*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
 H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
@@ -2806,20 +2810,12 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 
     info_t info;
 
-    /* Initialize Driver */
-    const char* resource = NULL;
-    driver_t driver = H5Lite::parseUrl(url, &resource);    
-    if(driver == UNKNOWN)
-    {
-        throw RunTimeException("Invalid url: %s", url);
-    }
-
     /* Start Trace */
     uint32_t parent_trace_id = TraceLib::grabId();
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, context, resource, datasetname, startrow, numrows, true, H5_VERBOSE);
+    H5FileBuffer h5file(&info, context, url, datasetname, startrow, numrows, true, H5_VERBOSE);
     if(info.data)
     {
         bool data_valid = true;
@@ -3025,21 +3021,12 @@ bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
 
     try
     {
-        /* Initialize Driver */
-        const char* resource = NULL;
-        driver_t driver = H5Lite::parseUrl(url, &resource);
-        if(driver == UNKNOWN)
-        {
-            throw RunTimeException("Invalid url: %s", url);
-        }
-
         /* Open File */
         info_t data_info;
-        H5FileBuffer h5file((H5FileBuffer::dataset_info_t*)&data_info, NULL, resource, start_group, 0, 0, true, true);
+        H5FileBuffer h5file((H5FileBuffer::dataset_info_t*)&data_info, NULL, url, start_group, 0, 0, true, true);
 
         /* Free Data */
         if(data_info.data) delete [] data_info.data;
-
     }
     catch (const std::exception &e)
     {

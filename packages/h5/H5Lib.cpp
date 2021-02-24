@@ -77,11 +77,48 @@ hid_t rest_vol_fapl = H5P_DEFAULT;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * parse_url
+ *----------------------------------------------------------------------------*/
+H5Lib::driver_t parse_url (const char* url, const char** resource)
+{
+    /* Sanity Check Input */
+    if(!url) return H5Lib::UNKNOWN;
+
+    /* Set Resource */
+    if(resource) 
+    {
+        const char* rptr = StringLib::find(url, "//");
+        if(rptr)
+        {
+            *resource = rptr + 2;
+        }
+    }
+
+    /* Return Driver */
+    if(StringLib::find(url, "file://"))
+    {
+        return H5Lib::FILE;
+    }
+    else if(StringLib::find(url, "s3://"))
+    {
+        return H5Lib::S3;
+    }
+    else if(StringLib::find(url, "hsds://"))    
+    {
+        return H5Lib::HSDS;
+    }
+    else
+    {
+        return H5Lib::UNKNOWN;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * url2driver
  *----------------------------------------------------------------------------*/
 H5Lib::driver_t url2driver (const char* url, const char** resource, hid_t* fapl)
 {
-    H5Lib::driver_t driver = H5Lib::parseUrl(url, resource);
+    H5Lib::driver_t driver = H5Lib::parse_url(url, resource);
 
     switch(driver)
     {
@@ -212,43 +249,6 @@ void H5Lib::deinit (void)
         H5Pclose(rest_vol_fapl);
         H5rest_term();
     #endif
-}
-
-/*----------------------------------------------------------------------------
- * parseUrl
- *----------------------------------------------------------------------------*/
-H5Lib::driver_t H5Lib::parseUrl (const char* url, const char** resource)
-{
-    /* Sanity Check Input */
-    if(!url) return UNKNOWN;
-
-    /* Set Resource */
-    if(resource) 
-    {
-        const char* rptr = StringLib::find(url, "//");
-        if(rptr)
-        {
-            *resource = rptr + 2;
-        }
-    }
-
-    /* Return Driver */
-    if(StringLib::find(url, "file://"))
-    {
-        return FILE;
-    }
-    else if(StringLib::find(url, "s3://"))
-    {
-        return S3;
-    }
-    else if(StringLib::find(url, "hsds://"))    
-    {
-        return HSDS;
-    }
-    else
-    {
-        return UNKNOWN;
-    }
 }
 
 /*----------------------------------------------------------------------------

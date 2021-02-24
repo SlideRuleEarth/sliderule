@@ -47,51 +47,6 @@ class H5FileBuffer
         * Typedefs
         *--------------------------------------------------------------------*/
         
-        typedef enum {
-            DATASPACE_MSG           = 0x1,
-            LINK_INFO_MSG           = 0x2,
-            DATATYPE_MSG            = 0x3,
-            FILL_VALUE_MSG          = 0x5,
-            LINK_MSG                = 0x6,
-            DATA_LAYOUT_MSG         = 0x8,
-            FILTER_MSG              = 0xB,
-            HEADER_CONT_MSG         = 0x10,
-            SYMBOL_TABLE_MSG        = 0x11
-        } msg_type_t;
-
-        typedef enum {
-            FIXED_POINT_TYPE        = 0,
-            FLOATING_POINT_TYPE     = 1,
-            TIME_TYPE               = 2,
-            STRING_TYPE             = 3,
-            BIT_FIELD_TYPE          = 4,
-            OPAQUE_TYPE             = 5,
-            COMPOUND_TYPE           = 6,
-            REFERENCE_TYPE          = 7,
-            ENUMERATED_TYPE         = 8,
-            VARIABLE_LENGTH_TYPE    = 9,
-            ARRAY_TYPE              = 10,
-            UNKNOWN_TYPE            = 11
-        } data_type_t;
-
-        typedef enum {
-            COMPACT_LAYOUT          = 0,
-            CONTIGUOUS_LAYOUT       = 1,
-            CHUNKED_LAYOUT          = 2,
-            UNKNOWN_LAYOUT          = 3
-        } layout_t;
-
-        typedef enum {
-            INVALID_FILTER          = 0,
-            DEFLATE_FILTER          = 1,
-            SHUFFLE_FILTER          = 2,
-            FLETCHER32_FILTER       = 3,
-            SZIP_FILTER             = 4,
-            NBIT_FILTER             = 5,
-            SCALEOFFSET_FILTER      = 6,
-            NUM_FILTERS             = 7
-        } filter_t;
-
         typedef struct {
             int                     elements;   // number of elements in dataset
             int                     typesize;   // number of bytes per element
@@ -103,6 +58,10 @@ class H5FileBuffer
             int                     numrows;    // number of rows - includes all dimensions after the first as a single row
         } dataset_info_t;
     
+        /*--------------------------------------------------------------------
+        * I/O Context (subclass)
+        *--------------------------------------------------------------------*/
+
         typedef struct {
             uint8_t*                data;
             int64_t                 size;
@@ -110,10 +69,6 @@ class H5FileBuffer
         } cache_entry_t;
 
         typedef Table<cache_entry_t, uint64_t> cache_t;
-
-        /*--------------------------------------------------------------------
-        * I/O Context (subclass)
-        *--------------------------------------------------------------------*/
 
         struct io_context_t
         {
@@ -129,7 +84,7 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
 
-                            H5FileBuffer        (dataset_info_t* data_info, io_context_t* context, const char* filename, const char* _dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
+                            H5FileBuffer        (dataset_info_t* data_info, io_context_t* context, const char* url, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
         virtual             ~H5FileBuffer       (void);
 
     protected:
@@ -186,6 +141,51 @@ class H5FileBuffer
         * Typedefs
         *--------------------------------------------------------------------*/
 
+        typedef enum {
+            DATASPACE_MSG           = 0x1,
+            LINK_INFO_MSG           = 0x2,
+            DATATYPE_MSG            = 0x3,
+            FILL_VALUE_MSG          = 0x5,
+            LINK_MSG                = 0x6,
+            DATA_LAYOUT_MSG         = 0x8,
+            FILTER_MSG              = 0xB,
+            HEADER_CONT_MSG         = 0x10,
+            SYMBOL_TABLE_MSG        = 0x11
+        } msg_type_t;
+
+        typedef enum {
+            FIXED_POINT_TYPE        = 0,
+            FLOATING_POINT_TYPE     = 1,
+            TIME_TYPE               = 2,
+            STRING_TYPE             = 3,
+            BIT_FIELD_TYPE          = 4,
+            OPAQUE_TYPE             = 5,
+            COMPOUND_TYPE           = 6,
+            REFERENCE_TYPE          = 7,
+            ENUMERATED_TYPE         = 8,
+            VARIABLE_LENGTH_TYPE    = 9,
+            ARRAY_TYPE              = 10,
+            UNKNOWN_TYPE            = 11
+        } data_type_t;
+
+        typedef enum {
+            COMPACT_LAYOUT          = 0,
+            CONTIGUOUS_LAYOUT       = 1,
+            CHUNKED_LAYOUT          = 2,
+            UNKNOWN_LAYOUT          = 3
+        } layout_t;
+
+        typedef enum {
+            INVALID_FILTER          = 0,
+            DEFLATE_FILTER          = 1,
+            SHUFFLE_FILTER          = 2,
+            FLETCHER32_FILTER       = 3,
+            SZIP_FILTER             = 4,
+            NBIT_FILTER             = 5,
+            SCALEOFFSET_FILTER      = 6,
+            NUM_FILTERS             = 7
+        } filter_t;
+
         typedef struct {
             uint32_t                chunk_size;
             uint32_t                filter_mask;
@@ -234,6 +234,12 @@ class H5FileBuffer
 
         typedef Table<meta_entry_t, uint64_t> meta_repo_t;
         
+        typedef enum {
+            FILE,
+            S3,
+            UNKNOWN
+        } io_driver_t;
+
        /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
@@ -276,6 +282,7 @@ class H5FileBuffer
         int                 readSymbolTableMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
 
         void                parseDataset        (void);
+        io_driver_t         parseUrl            (const char* url, const char** resource);
         const char*         type2str            (data_type_t datatype);
         const char*         layout2str          (layout_t layout);
         int                 highestBit          (uint64_t value);
@@ -283,7 +290,7 @@ class H5FileBuffer
         int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
 
         static uint64_t     metaGetKey          (const char* url);
-        static void         metaGetUrl          (char* url, const char* filename, const char* _dataset);
+        static void         metaGetUrl          (char* url, const char* filename, const char* dataset);
 
         /*--------------------------------------------------------------------
         * Data
@@ -294,8 +301,8 @@ class H5FileBuffer
         static Mutex        metaMutex;
 
         /* Class Data */
-        const char*         dataset;
-        const char*         datasetPrint;
+        const char*         datasetName;    // holds buffer of dataset name that datasetPath points back into 
+        const char*         datasetPrint;   // holds untouched dataset name string used for displaying the name
         List<const char*>   datasetPath;
         uint64_t            datasetStartRow;
         int                 datasetNumRows;
@@ -303,6 +310,7 @@ class H5FileBuffer
         bool                verbose;
 
         /* I/O Management */
+        io_driver_t         ioDriver;
         fileptr_t           ioFile;
         io_context_t*       ioContext;
         bool                ioContextLocal;
@@ -329,13 +337,6 @@ struct H5Lite
     
     static const long ALL_ROWS = H5FileBuffer::ALL_ROWS;
 
-    typedef enum {
-        FILE,
-        HSDS,
-        S3,
-        UNKNOWN
-    } driver_t;
-
     typedef H5FileBuffer::dataset_info_t info_t;
 
     typedef H5FileBuffer::io_context_t context_t;
@@ -346,8 +347,6 @@ struct H5Lite
 
     static void         init            (void);
     static void         deinit          (void);
-
-    static driver_t     parseUrl        (const char* url, const char** resource);
     static info_t       read            (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
     static bool         traverse        (const char* url, int max_depth, const char* start_group);
 };

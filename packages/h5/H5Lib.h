@@ -64,8 +64,6 @@ struct H5Lib
 
     static void     init        (void);
     static void     deinit      (void);
-
-    static driver_t parseUrl    (const char* url, const char** resource);
     static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
     static bool     traverse    (const char* url, int max_depth, const char* start_group);
 };
