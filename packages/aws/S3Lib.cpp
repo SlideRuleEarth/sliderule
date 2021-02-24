@@ -187,6 +187,14 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
 }
 
 /*----------------------------------------------------------------------------
+ * rangeGet
+ *----------------------------------------------------------------------------*/
+int64_t S3Lib::rangeGet (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key)
+{
+
+}
+
+/*----------------------------------------------------------------------------
  * luaGet - s3get(<bucket>, <key>) -> filename
  *----------------------------------------------------------------------------*/
 int S3Lib::luaGet(lua_State* L)

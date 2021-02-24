@@ -244,7 +244,7 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
         
-        void                ioOpen              (const char* filename);
+        void                ioOpen              (const char* resource);
         void                ioClose             (void);
         int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
 
@@ -290,7 +290,7 @@ class H5FileBuffer
         int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
 
         static uint64_t     metaGetKey          (const char* url);
-        static void         metaGetUrl          (char* url, const char* filename, const char* dataset);
+        static void         metaGetUrl          (char* url, const char* resource, const char* dataset);
 
         /*--------------------------------------------------------------------
         * Data
@@ -301,8 +301,8 @@ class H5FileBuffer
         static Mutex        metaMutex;
 
         /* Class Data */
-        const char*         datasetName;    // holds buffer of dataset name that datasetPath points back into 
-        const char*         datasetPrint;   // holds untouched dataset name string used for displaying the name
+        const char*         datasetName;            // holds buffer of dataset name that datasetPath points back into 
+        const char*         datasetPrint;           // holds untouched dataset name string used for displaying the name
         List<const char*>   datasetPath;
         uint64_t            datasetStartRow;
         int                 datasetNumRows;
@@ -311,14 +311,16 @@ class H5FileBuffer
 
         /* I/O Management */
         io_driver_t         ioDriver;
-        fileptr_t           ioFile;
+        fileptr_t           ioFile;                 // file driver
+        char*               ioBucket;               // s3 driver
+        char*               ioKey;                  // s3 driver
         io_context_t*       ioContext;
         bool                ioContextLocal;
 
         /* File Info */
-        uint8_t*            dataChunkBuffer; // buffer for reading uncompressed chunk
-        int64_t             dataChunkBufferSize; // dataChunkElements * dataInfo->typesize 
-        int                 highestDataLevel; // high water mark for traversing dataset path
+        uint8_t*            dataChunkBuffer;        // buffer for reading uncompressed chunk
+        int64_t             dataChunkBufferSize;    // dataChunkElements * dataInfo->typesize 
+        int                 highestDataLevel;       // high water mark for traversing dataset path
         int64_t             dataSizeHint;
 
         /* Meta Info */

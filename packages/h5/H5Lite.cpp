@@ -120,21 +120,24 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     datasetNumRows          = numrows;
     errorChecking           = _error_checking;
     verbose                 = _verbose;
+    ioFile                  = NULL;
+    ioBucket                = NULL;
+    ioKey                   = NULL;
     dataChunkBuffer         = NULL;
     dataChunkBufferSize     = 0;
     highestDataLevel        = 0;
     dataSizeHint            = 0;
 
     /* Initialize Driver */
-    const char* filename = NULL;
-    ioDriver = parseUrl(url, &filename);    
+    const char* resource = NULL;
+    ioDriver = parseUrl(url, &resource);    
     if(ioDriver == UNKNOWN)
     {
         throw RunTimeException("Invalid url: %s", url);
     }
 
-    /* Open File */
-    ioOpen(filename);
+    /* Open Resource (file) */
+    ioOpen(resource);
 
     /* Set or Create I/O Context */
     if(context)
@@ -150,7 +153,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
 
     /* Check Meta Repository */
     char meta_url[MAX_META_FILENAME];
-    metaGetUrl(meta_url, filename, dataset);
+    metaGetUrl(meta_url, resource, dataset);
     uint64_t meta_key = metaGetKey(meta_url);
     bool meta_found = false;
     metaMutex.lock();
@@ -250,13 +253,35 @@ H5FileBuffer::~H5FileBuffer (void)
 /*----------------------------------------------------------------------------
  * ioOpen
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::ioOpen (const char* filename)
+void H5FileBuffer::ioOpen (const char* resource)
 {
-    ioFile = fopen(filename, "r");
-    if(ioFile == NULL)
+    if(ioDriver == H5FileBuffer::FILE)
     {
-        throw RunTimeException("Failed to open filename: %s", filename);
+        ioFile = fopen(resource, "r");
+        if(ioFile == NULL)
+        {
+            throw RunTimeException("Failed to open resource: %s", resource);
+        }
     }
+    #ifdef __aws__
+    else if(ioDriver == H5FileBuffer::S3)
+    {
+        /* Allocate Memory */
+        ioBucket = StringLib::duplicate(resource);
+
+        /* 
+         * Differentiate Bucket and Key
+         *  <bucket_name>/<path_to_file>/<filename>
+         *  |             |
+         * ioBucket      ioKey
+         */
+        ioKey = ioBucket;
+        while(*ioKey != '\0' && *ioKey != '/') ioKey++;
+        if(*ioKey == '/') *ioKey = '\0';
+        else throw RunTimeException("invalid S3 url: %s\n", resource);
+        ioKey++;
+    }
+    #endif
 }
 
 /*----------------------------------------------------------------------------
@@ -264,7 +289,21 @@ void H5FileBuffer::ioOpen (const char* filename)
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::ioClose (void)
 {
-    fclose(ioFile);
+    if(ioDriver == H5FileBuffer::FILE)
+    {
+        fclose(ioFile);
+    }
+    #ifdef __aws__
+    else if(ioDriver == H5FileBuffer::S3)
+    {
+        /*
+         * Delete Memory Allocated for ioBucket
+         *  only ioBucket is freed because ioKey only points
+         *  into the memory allocated to ioBucket
+         */
+        if(ioBucket) delete [] ioBucket;
+    }
+    #endif
 }
 
 /*----------------------------------------------------------------------------
@@ -275,14 +314,25 @@ int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     static int io_reads = 0;
     static long io_data = 0;
 
-    /* Seek to New Position */
-    if(fseek(ioFile, pos, SEEK_SET) != 0)
-    {
-        throw RunTimeException("failed to go to I/O position: 0x%lx", pos);
-    }
+    int64_t bytes_read = 0;
 
-    /* Read Data */
-    int64_t bytes_read = fread(data, 1, size, ioFile);
+    if(ioDriver == H5FileBuffer::FILE)
+    {
+        /* Seek to New Position */
+        if(fseek(ioFile, pos, SEEK_SET) != 0)
+        {
+            throw RunTimeException("failed to go to I/O position: 0x%lx", pos);
+        }
+
+        /* Read Data */
+        bytes_read = fread(data, 1, size, ioFile);
+    }
+    #ifdef __aws__
+    else if(ioDriver == H5FileBuffer::S3)
+    {
+        bytes_read = S3Lib::rangeGet(data, size, pos, ioBucket, ioKey);
+    }
+    #endif
 
     /* Characterize Performance */
     if(H5_CHARACTERIZE_IO)
@@ -2750,11 +2800,11 @@ uint64_t H5FileBuffer::metaGetKey (const char* url)
 /*----------------------------------------------------------------------------
  * metaGetUrl
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::metaGetUrl (char* url, const char* filename, const char* dataset)
+void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* dataset)
 {
     /* Prepare File Name */
-    const char* filename_ptr = filename;
-    const char* char_ptr = filename;
+    const char* filename_ptr = resource;
+    const char* char_ptr = resource;
     while(*char_ptr)
     {
         if(*char_ptr == '/')

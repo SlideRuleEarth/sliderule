@@ -51,15 +51,16 @@ class S3Lib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void init            (void);
-        static void deinit          (void);
+        static void     init            (void);
+        static void     deinit          (void);
 
-        static bool get             (const char* bucket, const char* key, const char** file);
+        static bool     get             (const char* bucket, const char* key, const char** file);
+        static int64_t  rangeGet        (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key);
 
-        static int  luaGet          (lua_State* L);
-        static int  luaConfig       (lua_State* L);
-        static int  luaCreateCache  (lua_State* L);
-        static int  luaFlushCache   (lua_State* L);
+        static int      luaGet          (lua_State* L);
+        static int      luaConfig       (lua_State* L);
+        static int      luaCreateCache  (lua_State* L);
+        static int      luaFlushCache   (lua_State* L);
 
     private:
         
