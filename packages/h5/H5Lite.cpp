@@ -110,6 +110,8 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     LocalLib::set(data_info, 0, sizeof(dataset_info_t));
 
     /* Initialize Class Data */
+    dataset                 = StringLib::duplicate(_dataset);
+    datasetPrint            = StringLib::duplicate(_dataset);
     datasetStartRow         = startrow;
     datasetNumRows          = numrows;
     errorChecking           = _error_checking;
@@ -121,7 +123,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     dataChunkBufferSize     = 0;
     highestDataLevel        = 0;
     dataSizeHint            = 0;
-    
+
     /* Open File */
     ioOpen(filename);
 
@@ -174,7 +176,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
             }
 
             /* Get Dataset Path */
-            parseDataset(_dataset);
+            parseDataset();
 
             /* Read Superblock */
             readSuperblock();
@@ -2533,12 +2535,10 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 /*----------------------------------------------------------------------------
  * parseDataset
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::parseDataset (const char* _dataset)
+void H5FileBuffer::parseDataset (void)
 {
-    /* Create Copy of Dataset */
-    dataset = StringLib::duplicate(_dataset);
-    datasetPrint = StringLib::duplicate(_dataset);
-
+    assert(dataset);
+    
     /* Get Pointer to First Group in Dataset */
     const char* gptr; // group pointer
     if(dataset[0] == '/')   gptr = &dataset[1];

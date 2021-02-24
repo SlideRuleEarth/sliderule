@@ -273,7 +273,7 @@ class H5FileBuffer
         int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readSymbolTableMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
 
-        void                parseDataset        (const char* _dataset);
+        void                parseDataset        (void);
         const char*         type2str            (data_type_t datatype);
         const char*         layout2str          (layout_t layout);
         int                 highestBit          (uint64_t value);
