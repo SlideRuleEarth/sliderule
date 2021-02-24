@@ -37,6 +37,12 @@
 #include <dirent.h>
 
 /******************************************************************************
+ * FILE DATA
+ ******************************************************************************/
+
+Aws::S3::S3Client* s3Client;
+
+/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -71,6 +77,14 @@ void S3Lib::init (void)
     /* Set Cache Attributes */
     cacheRoot = StringLib::duplicate(DEFAULT_CACHE_ROOT);
     cacheMaxSize = DEFAULT_MAX_CACHE_FILES;
+
+    /* Create S3 Client Configuration */
+    Aws::Client::ClientConfiguration client_config;
+    client_config.endpointOverride = endpoint;
+    client_config.region = region;
+
+    /* Create S3 Client */
+    s3Client = new Aws::S3::S3Client(client_config);
 }
 
 /*----------------------------------------------------------------------------
@@ -78,6 +92,8 @@ void S3Lib::init (void)
  *----------------------------------------------------------------------------*/
 void S3Lib::deinit (void)
 {
+    delete s3Client;
+
     delete [] endpoint;
     delete [] region;
 
@@ -126,18 +142,11 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
     const Aws::String key_name = key;
     const Aws::String file_name = cache_filepath.getString();
 
-    /* Create S3 Client Configuration */
-    Aws::Client::ClientConfiguration client_config;
-    client_config.endpointOverride = endpoint;
-    client_config.region = region;
-
-    /* Create S3 Client */
-    auto s3_client = Aws::MakeShared<Aws::S3::S3Client>(ALLOC_TAG, client_config);
-
     /* Create Transfer Configuration */
     auto thread_executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(ALLOC_TAG, 4);
     Aws::Transfer::TransferManagerConfiguration transfer_config(thread_executor.get());
-    transfer_config.s3Client = s3_client;
+    std::shared_ptr<Aws::S3::S3Client> transfer_client(s3Client);
+    transfer_config.s3Client = transfer_client;
 
     /* Create Transfer Manager */
     auto transfer_manager = Aws::Transfer::TransferManager::Create(transfer_config);
@@ -191,7 +200,26 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
  *----------------------------------------------------------------------------*/
 int64_t S3Lib::rangeGet (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key)
 {
+    int64_t bytes_read = 0;
+    Aws::S3::Model::GetObjectRequest object_request;
+    
+    /* Set Bucket and Key */
+    object_request.SetBucket(bucket);
+    object_request.SetKey(key);
 
+    /* Set Range */
+    SafeString s3_rqst_range("bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size));
+    object_request.SetRange(s3_rqst_range.getString());
+
+    /* Make Request */
+    auto response = s3Client->GetObject(object_request);
+    if (response.IsSuccess()) 
+    {
+        bytes_read = size; // TODO - must get size of result
+        LocalLib::copy(data, response.GetResult().GetBody().rdbuf(), bytes_read);
+    }
+
+    return bytes_read;
 }
 
 /*----------------------------------------------------------------------------
