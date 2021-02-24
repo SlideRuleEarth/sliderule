@@ -57,7 +57,7 @@
 /*----------------------------------------------------------------------------
  * Static Data
  *----------------------------------------------------------------------------*/
-Table<H5FileBuffer::meta_t> H5FileBuffer::metaRepo;
+H5FileBuffer::meta_repo_t H5FileBuffer::metaRepo;
 Mutex H5FileBuffer::metaMutex;
 
 /*----------------------------------------------------------------------------
@@ -122,23 +122,6 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     highestDataLevel        = 0;
     dataSizeHint            = 0;
     
-    /* Check Meta Repository */
-    const char* dataset_name_ptr = _dataset;
-    if(_dataset[0] == '/') dataset_name_ptr++;
-    char meta_url[MAX_META_FILENAME];
-    LocalLib::set(meta_url, 0, MAX_META_FILENAME);
-    StringLib::format(meta_url, MAX_META_FILENAME, "%s/%s", filename, dataset_name_ptr)
-    uint32_t meta_key = metaHash(meta_url);
-    bool meta_found = false;
-    metaMutex.lock();
-    {
-        if(metaRepo.find(meta_key, Table<meta_t, uint32_t>::MATCH_EXACTLY, &metaData))
-        {
-            meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
-        }
-    }
-    metaMutex.unlock();
-
     /* Open File */
     ioOpen(filename);
 
@@ -153,6 +136,20 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
         ioContext = new io_context_t;
         ioContextLocal = true;
     }
+
+    /* Check Meta Repository */
+    char meta_url[MAX_META_FILENAME];
+    metaUrl(meta_url, filename, _dataset);
+    uint64_t meta_key = metaHash(meta_url);
+    bool meta_found = false;
+    metaMutex.lock();
+    {
+        if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData))
+        {
+            meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
+        }
+    }
+    metaMutex.unlock();
 
     /* Process File */
     try
@@ -190,11 +187,18 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
         readDataset(data_info);
 
         /* Add to Meta Repository */
-        //....
-        // look into updating the entry if it was found so that it becomes the newest
-        // that way we can remove the oldest when the table is full
-        //
-        // if not found, it can just be added, though we will need to check if table is full or not
+        metaMutex.lock();
+        {
+            /* Remove Oldest Entry if Repository is Full */
+            if(metaRepo.isfull())
+            {
+                metaRepo.remove(metaRepo.first(NULL));
+            }
+
+            /* Add Entry to Repository */
+            metaRepo.add(meta_key, metaData, true);
+        }
+        metaMutex.unlock();
     }
     catch(const RunTimeException& e)
     {
@@ -2687,16 +2691,27 @@ int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
 /*----------------------------------------------------------------------------
  * metaHash
  *----------------------------------------------------------------------------*/
-uint32_t H5FileBuffer::metaHash (const char* url)
+uint64_t H5FileBuffer::metaHash (const char* url)
 {
-    uint32_t hash_value = 0;
-    uint32_t* url_ptr = (uint32_t*)url;
-    for(int i = 0; i < MAX_META_FILENAME; i+=4)
+    uint64_t hash_value = 0;
+    uint64_t* url_ptr = (uint64_t*)url;
+    for(int i = 0; i < MAX_META_FILENAME; i+=sizeof(uint64_t))
     {
         hash_value = *url_ptr;
         url_ptr++;
     }
     return hash_value % MAX_META_STORE;
+}
+
+/*----------------------------------------------------------------------------
+ * metaUrl
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::metaUrl (char* url, const char* filename, const char* _dataset)
+{
+    const char* dataset_name_ptr = _dataset;
+    if(_dataset[0] == '/') dataset_name_ptr++;
+    LocalLib::set(url, 0, MAX_META_FILENAME);
+    StringLib::format(url, MAX_META_FILENAME, "%s/%s", filename, dataset_name_ptr);
 }
 
 /******************************************************************************

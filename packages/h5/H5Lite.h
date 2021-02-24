@@ -150,7 +150,7 @@ class H5FileBuffer
          */ 
 
         static const long       MAX_META_STORE          = 150000;
-        static const long       MAX_META_FILENAME       = 84; // must be multiple of 4
+        static const long       MAX_META_FILENAME       = 88; // must be multiple of 8
 
         /*
          * Assuming:
@@ -215,7 +215,7 @@ class H5FileBuffer
         } fill_t;
 
         typedef struct {
-            char                    url[MAX_META_FILENAME]
+            char                    url[MAX_META_FILENAME];
             data_type_t             type;
             layout_t                layout;
             fill_t                  fill;
@@ -228,7 +228,9 @@ class H5FileBuffer
             uint64_t                chunkelements; // number of data elements per chunk
             uint64_t                address;
             int64_t                 size;
-        } meta_t;
+        } meta_entry_t;
+
+        typedef Table<meta_entry_t, uint64_t> meta_repo_t;
         
        /*--------------------------------------------------------------------
         * Methods
@@ -277,15 +279,17 @@ class H5FileBuffer
         int                 highestBit          (uint64_t value);
         int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
         int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
-        static uint32_t     metaHash            (const char* url);
+
+        static uint64_t     metaHash            (const char* url);
+        static void         metaUrl             (char* url, const char* filename, const char* _dataset);
 
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
         /* Meta Repository */
-        static Table<meta_t, uint32_t> metaRepo;
-        static Mutex metaMutex;
+        static meta_repo_t  metaRepo;
+        static Mutex        metaMutex;
 
         /* Class Data */
         const char*         dataset;
@@ -311,7 +315,7 @@ class H5FileBuffer
         int64_t             dataSizeHint;
 
         /* Meta Info */
-        meta_t              metaData;
+        meta_entry_t        metaData;
 };
 
 /******************************************************************************
