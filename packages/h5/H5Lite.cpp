@@ -36,6 +36,10 @@
  * DEFINES
  ******************************************************************************/
 
+#ifndef H5_VERBOSE
+#define H5_VERBOSE false
+#endif
+
 #ifndef H5_EXTRA_DEBUG
 #define H5_EXTRA_DEBUG false
 #endif
@@ -2538,7 +2542,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 void H5FileBuffer::parseDataset (void)
 {
     assert(dataset);
-    
+
     /* Get Pointer to First Group in Dataset */
     const char* gptr; // group pointer
     if(dataset[0] == '/')   gptr = &dataset[1];
@@ -2708,10 +2712,32 @@ uint64_t H5FileBuffer::metaHash (const char* url)
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::metaUrl (char* url, const char* filename, const char* _dataset)
 {
+    /* Prepare File Name */
+    const char* filename_ptr = filename;
+    const char* char_ptr = filename;
+    while(*char_ptr)
+    {
+        if(*char_ptr == '/')
+        {
+            filename_ptr = char_ptr + 1;
+        }
+
+        char_ptr++;
+    }
+
+    /* Prepare Dataset Name */
     const char* dataset_name_ptr = _dataset;
     if(_dataset[0] == '/') dataset_name_ptr++;
+
+    /* Build URL */
     LocalLib::set(url, 0, MAX_META_FILENAME);
-    StringLib::format(url, MAX_META_FILENAME, "%s/%s", filename, dataset_name_ptr);
+    StringLib::format(url, MAX_META_FILENAME, "%s/%s", filename_ptr, dataset_name_ptr);
+
+    /* Check URL Fits (at least 2 null terminators) */
+    if(url[MAX_META_FILENAME - 2] != '\0')
+    {
+        throw RunTimeException("truncated meta repository url: %s\n", url);
+    }
 }
 
 /******************************************************************************
@@ -2794,7 +2820,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
     uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, context, resource, datasetname, startrow, numrows, true, false);
+    H5FileBuffer h5file(&info, context, resource, datasetname, startrow, numrows, true, H5_VERBOSE);
     if(info.data)
     {
         bool data_valid = true;

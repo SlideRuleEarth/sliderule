@@ -220,6 +220,7 @@ void* Atl03Indexer::indexerThread (void* parm)
             /* Index Resource */
             if(resource_name)
             {
+                /* Create Context */
                 H5Api::context_t* context = new H5Api::context_t;
 
                 /* Read Data from HDF5 File */
@@ -232,6 +233,9 @@ void* Atl03Indexer::indexerThread (void* parm)
                 H5Array<double>     gt3r_lon            (url, "/gt3r/geolocation/reference_photon_lon", context, 0, 0, 1);
                 H5Array<double>     gt1l_lat            (url, "/gt1l/geolocation/reference_photon_lat", context);
                 H5Array<double>     gt1l_lon            (url, "/gt1l/geolocation/reference_photon_lon", context);
+
+                /* Delete Context */
+                delete context;
 
                 /* Allocate Record */
                 RecordObject* record = new RecordObject(recType);
