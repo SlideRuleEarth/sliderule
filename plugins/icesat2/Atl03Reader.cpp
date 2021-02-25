@@ -345,6 +345,7 @@ void* Atl03Reader::atl06Thread (void* parm)
         GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate", context);
 
         /* Tear Down Context */
+        mlog(INFO, "I/O context for %s: %lu reads, %lu bytes\n", url, (unsigned long)context->read_rqsts, (unsigned long)context->bytes_read);
         delete context;
 
         /* Initialize Dataset Scope Variables */

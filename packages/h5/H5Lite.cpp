@@ -71,6 +71,8 @@ H5FileBuffer::io_context_t::io_context_t (void):
     l1(IO_CACHE_L1_ENTRIES, ioHashL1),
     l2(IO_CACHE_L2_ENTRIES, ioHashL2)
 {
+    read_rqsts = 0;
+    bytes_read = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -399,13 +401,17 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
             {
                 cache_entry_t oldest_entry;
                 uint64_t oldest_pos = cache->first(&oldest_entry);
-                delete [] oldest_entry.data;
+                if(oldest_pos != (uint64_t)INVALID_KEY) delete [] oldest_entry.data;
                 cache->remove(oldest_pos);
             }
 
             /* Add Cache Entry */
             cache->add(file_position, entry);
             if(cached) *cached = true;
+
+            /* Increment Stats */
+            ioContext->read_rqsts++;
+            ioContext->bytes_read += entry.size;
         }
         ioContext->mut.unlock();
 

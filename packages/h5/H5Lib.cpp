@@ -387,6 +387,10 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             /* Set Success */
             status = true;
 
+            /* Increment Stats */
+            context->bytes_read += datasize;
+            context->read_rqsts++;
+
             /* Set Info Return Structure */
             info.elements = elements;
             info.typesize = typesize;

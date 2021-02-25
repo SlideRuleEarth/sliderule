@@ -56,7 +56,17 @@ struct H5Lib
         uint8_t* data;  // point to allocated data buffer
     } info_t;
 
-    typedef int context_t;
+    struct context_t
+    {
+        uint64_t    read_rqsts;
+        uint64_t    bytes_read;
+
+        context_t(void)
+        {
+            read_rqsts = 0;
+            bytes_read = 0;
+        }
+    };
     
     /*--------------------------------------------------------------------
      * Methods

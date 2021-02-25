@@ -76,6 +76,9 @@ class H5FileBuffer
             cache_t     l2; // level 2 cache
             Mutex       mut; // cache mutex
 
+            uint64_t    read_rqsts;
+            uint64_t    bytes_read;
+
             io_context_t    (void);
             ~io_context_t   (void);
         };
