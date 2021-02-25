@@ -211,7 +211,7 @@ int64_t S3Lib::rangeGet (uint8_t* data, int64_t size, uint64_t pos, const char* 
     object_request.SetKey(key);
 
     /* Set Range */
-    SafeString s3_rqst_range("bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size));
+    SafeString s3_rqst_range("bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size - 1));
     object_request.SetRange(s3_rqst_range.getString());
 
     /* Make Request */
