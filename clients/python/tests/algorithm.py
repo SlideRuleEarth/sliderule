@@ -73,11 +73,17 @@ def algoexec(resource, asset):
     # Build Dataframe of SlideRule Responses
     df = pd.DataFrame(data=list(zip(rsps["h_mean"], distances, rsps["lat"], rsps["lon"], rsps["spot"])), index=rsps["segment_id"], columns=["h_mean", "distance", "latitude", "longitude", "spot"])
 
+    # Check Results #
+    if len(rsps["h_mean"]) != 626157:
+        print("Failed atl06-sr algorithm test - insufficient points returned")
+    else:
+        print("Passed atl06-sr algorithm test")
+
     # Return DataFrame
     print("Completed in {:.3f} seconds of wall-clock time, and {:.3f} seconds of processing time". format(perf_duration, process_duration))
     print("Reference Ground Tracks: {} to {}".format(min(rsps["rgt"]), max(rsps["rgt"])))
     print("Cycle: {} to {}".format(min(rsps["cycle"]), max(rsps["cycle"])))
-    print("Retrieved {} points from SlideRule".format(len(rsps["h_mean"])))
+    print("Retrieved {} points from SlideRule".format(len(rsps["h_mean"])))    
     return df
 
 #
@@ -101,6 +107,12 @@ def expread(resource, asset):
     df = df[df["h_mean"] < 25000.0]
     df = df[df["h_mean"] > -25000.0]
     df = df[df["distance"] < 4000.0]
+
+    # Check Results #
+    if len(df.values) != 114149:
+        print("Failed h5 retrieval test - insufficient points returned")
+    else:
+        print("Passed h5 retrieval test")
 
     # Return DataFrame
     print("Retrieved {} points from ATL06, returning {} points".format(len(heights), len(df.values)))
