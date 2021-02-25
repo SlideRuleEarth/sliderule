@@ -68,10 +68,15 @@ int aws_open (lua_State *L)
 extern "C" {
 void initaws (void)
 {
-    /* Initialize AWS SDK */
+    /* Configure AWS Logging */
     #ifdef ENABLE_AWS_LOGGING
     options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
     #endif
+
+    /* Configure AWS to Handle Broken Pipes */
+    options.httpOptions.installSigPipeHandler = true;
+
+    /* Initialize AWS SDK */
     Aws::InitAPI(options);
 
     /* Initialize Modules */
