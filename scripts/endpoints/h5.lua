@@ -26,9 +26,12 @@ local asset_name = parm["asset"]
 local resource = parm["resource"]
 local dataset = parm["dataset"]
 local datatype = parm["datatype"] or core.DYNAMIC
+local col = parm["col"] or 0
+local startrow = parm["startrow"] or 0
+local numrows = parm["numrows"] or h5.ALL_ROWS
 local id = parm["id"] or 0
 
-f = h5.dataset(core.READER, asset.buildurl(asset_name, resource), dataset, id, false, datatype)
+f = h5.dataset(core.READER, asset.buildurl(asset_name, resource), dataset, id, false, datatype, col, startrow, numrows)
 r = core.reader(f, rspq)
 
 r:waiton() -- waits until reader completes

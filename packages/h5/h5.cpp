@@ -48,6 +48,9 @@ int h5_open (lua_State *L)
     /* Set Library */
     luaL_newlib(L, h5_functions);
 
+    /* Set Globals */
+    LuaEngine::setAttrInt(L, "ALL_ROWS", H5Api::ALL_ROWS);
+
     return 1;
 }
 
