@@ -33,6 +33,7 @@ SRT_OCEAN = 1
 SRT_SEA_ICE = 2
 SRT_LAND_ICE = 3
 SRT_INLAND_WATER = 4
+ALL_ROWS = -1
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -403,7 +404,7 @@ def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=0, bl
 #
 #  H5
 #
-def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["REAL"]):
+def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["REAL"], col=0, startrow=0, numrows=ALL_ROWS):
 
     # Handle Request Datatype Options
     rqst_datatype = sliderule.datatypes["DYNAMIC"]
@@ -416,6 +417,9 @@ def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["RE
         "resource": resource,
         "dataset": dataset,
         "datatype": rqst_datatype,
+        "col": col,
+        "startrow": startrow,
+        "numrows": numrows,
         "id": 0
     }
 
