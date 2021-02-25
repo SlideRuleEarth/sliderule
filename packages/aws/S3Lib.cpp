@@ -218,10 +218,14 @@ int64_t S3Lib::rangeGet (uint8_t* data, int64_t size, uint64_t pos, const char* 
     Aws::S3::Model::GetObjectOutcome response = s3Client->GetObject(object_request);
     if(response.IsSuccess())
     {
-//        Aws::IOStream& response_data = response.GetResultWithOwnership().GetBody();
-//        bytes_read = response_data.read((char*)data, size);
         bytes_read = (int64_t)response.GetResult().GetContentLength();
-        LocalLib::copy(data, response.GetResult().GetBody().rdbuf(), bytes_read);
+        std::streambuf* sbuf = response.GetResult().GetBody().rdbuf();
+        std::istream reader(sbuf);
+        reader.read((char*)data, bytes_read);
+    }
+    else
+    {
+        throw RunTimeException("failed to read S3 data");
     }
 
     return bytes_read;
