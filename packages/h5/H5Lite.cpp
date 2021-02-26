@@ -262,7 +262,7 @@ void H5FileBuffer::ioOpen (const char* resource)
         ioFile = fopen(resource, "r");
         if(ioFile == NULL)
         {
-            throw RunTimeException("Failed to open resource: %s", resource);
+            throw RunTimeException("failed to open resource");
         }
     }
     #ifdef __aws__
@@ -3061,6 +3061,12 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 
     /* Log Info Message */
     mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
+SafeString filename("%s.h5lite", datasetname);
+filename.replace("/", "_");
+filename = "test/" + filename;
+fileptr_t fp = fopen(filename.getString(), "wb");
+fwrite(info.data, 1, info.datasize, fp);
+fclose(fp);
 
     /* Return Info */
     return info;

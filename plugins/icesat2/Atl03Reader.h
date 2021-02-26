@@ -73,13 +73,6 @@ class Atl03Reader: public LuaObject
 
         /* Statistics */
         typedef struct {
-            /* TODO: thread safe version requires additional performance analysis
-            std::atomic<uint32_t>   segments_read;
-            std::atomic<uint32_t>   extents_filtered;
-            std::atomic<uint32_t>   extents_sent;
-            std::atomic<uint32_t>   extents_dropped;
-            std::atomic<uint32_t>   extents_retried;
-            */
             uint32_t segments_read;
             uint32_t extents_filtered;
             uint32_t extents_sent;

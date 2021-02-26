@@ -194,6 +194,10 @@ void* Atl03Indexer::indexerThread (void* parm)
     char prefix[MAX_STR_SIZE];
     StringLib::format(prefix, MAX_STR_SIZE, "%s://%s/", indexer->asset->getFormat(), indexer->asset->getUrl());
 
+    /* Initialize Pointers to Allocated Memory */
+    const char* resource_name = NULL;
+    H5Api::context_t* context = NULL;
+    
     try
     {
         while(!complete)
@@ -201,7 +205,6 @@ void* Atl03Indexer::indexerThread (void* parm)
             char url[MAX_STR_SIZE];
 
             /* Get Next Resource in List */            
-            const char* resource_name = NULL;
             indexer->resourceMut.lock();
             {
                 if(indexer->resourceEntry < indexer->resources->length())
@@ -221,7 +224,7 @@ void* Atl03Indexer::indexerThread (void* parm)
             if(resource_name)
             {
                 /* Create Context */
-                H5Api::context_t* context = new H5Api::context_t;
+                context = new H5Api::context_t;
 
                 /* Read Data from HDF5 File */
                 H5Array<double>     sdp_gps_epoch       (url, "/ancillary_data/atlas_sdp_gps_epoch", context);
@@ -233,9 +236,6 @@ void* Atl03Indexer::indexerThread (void* parm)
                 H5Array<double>     gt3r_lon            (url, "/gt3r/geolocation/reference_photon_lon", context, 0, 0, 1);
                 H5Array<double>     gt1l_lat            (url, "/gt1l/geolocation/reference_photon_lat", context);
                 H5Array<double>     gt1l_lon            (url, "/gt1l/geolocation/reference_photon_lon", context);
-
-                /* Delete Context */
-                delete context;
 
                 /* Allocate Record */
                 RecordObject* record = new RecordObject(recType);
@@ -260,9 +260,6 @@ void* Atl03Indexer::indexerThread (void* parm)
                 {
                     mlog(DEBUG, "Atl03 indexer failed to post to stream %s: %d\n", indexer->outQ->getName(), post_status);
                 }
-
-                /* Free Resource Name */
-                delete [] resource_name;
             }
         }
     }
@@ -270,6 +267,10 @@ void* Atl03Indexer::indexerThread (void* parm)
     {
         mlog(CRITICAL, "Unable to process resources in %s: %s\n", indexer->getName(), e.what());
     }
+
+    /* Free Allocated Memory */
+    if(resource_name) delete [] resource_name;
+    if(context) delete context;
 
     /* Count Completion */
     indexer->threadMut.lock();

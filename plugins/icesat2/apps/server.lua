@@ -24,7 +24,7 @@ local cache_size = cfgtbl["cache_size"]
 console.logger:config(loglvl)
 
 -- Configure Assets --
-assets = asset.loaddir(asset_directory)
+assets = asset.loaddir(asset_directory, true)
 
 timeindex = core.intervalindex(assets["atl03-cloud"], "t0", "t1")
 timeindex:name("timeindex")

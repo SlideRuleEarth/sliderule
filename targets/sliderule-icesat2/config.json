@@ -1,5 +1,5 @@
 {
-    "loglvl": "INFO",
+    "loglvl": "WARNING",
     "server_port": 9081,
     "asset_directory": "/usr/local/etc/sliderule/asset_directory.csv",
     "cache_root": "/data/.cache"

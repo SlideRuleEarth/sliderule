@@ -315,16 +315,17 @@ void* Atl03Reader::atl06Thread (void* parm)
     Atl03Reader* reader = info->reader;
     const char* url = info->url;
     int track = info->track;
+    stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
     uint32_t trace_id = start_trace_ext(reader->traceId, "atl03_reader", "{\"url\":\"%s\", \"track\":%d}", url, track);
     TraceLib::stashId (trace_id); // set thread specific trace id for H5Api
 
+    /* Create H5 Context */
+    H5Api::context_t* context = new H5Api::context_t;
+
     try
     {
-        /* Create H5 Context */
-        H5Api::context_t* context = new H5Api::context_t;
-
         /* Subset to Region of Interest */
         Region region(info, context);
 
@@ -344,9 +345,10 @@ void* Atl03Reader::atl06Thread (void* parm)
         GTArray<double>     bckgrd_delta_time   (url, track, "bckgrd_atlas/delta_time", context);
         GTArray<float>      bckgrd_rate         (url, track, "bckgrd_atlas/bckgrd_rate", context);
 
-        /* Tear Down Context */
+        /* Early Tear Down of Context */
         mlog(INFO, "I/O context for %s: %lu reads, %lu bytes\n", url, (unsigned long)context->read_rqsts, (unsigned long)context->bytes_read);
         delete context;
+        context = NULL;
 
         /* Initialize Dataset Scope Variables */
         int32_t ph_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // photon index
@@ -362,7 +364,7 @@ void* Atl03Reader::atl06Thread (void* parm)
         if(region.num_photons[PRT_RIGHT] == H5Api::ALL_ROWS) region.num_photons[PRT_RIGHT] = dist_ph_along.gt[PRT_RIGHT].size;
 
         /* Increment Read Statistics */
-        reader->stats.segments_read += (region.segment_ph_cnt.gt[PRT_LEFT].size + region.segment_ph_cnt.gt[PRT_RIGHT].size);
+        local_stats.segments_read = (region.segment_ph_cnt.gt[PRT_LEFT].size + region.segment_ph_cnt.gt[PRT_RIGHT].size);
 
         /* Traverse All Photons In Dataset */
         while( reader->active && (!track_complete[PRT_LEFT] || !track_complete[PRT_RIGHT]) )
@@ -473,7 +475,7 @@ void* Atl03Reader::atl06Thread (void* parm)
                 /* Incrment Statistics if Invalid */
                 if(!extent_valid[t])
                 {
-                    reader->stats.extents_filtered++; 
+                    local_stats.extents_filtered++; 
                 }
             }
 
@@ -544,27 +546,45 @@ void* Atl03Reader::atl06Thread (void* parm)
                 int post_status = MsgQ::STATE_ERROR;
                 while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) <= 0)
                 {
-                    reader->stats.extents_retried++; 
+                    local_stats.extents_retried++; 
                     mlog(DEBUG, "Atl03 reader failed to post to stream %s: %d\n", reader->outQ->getName(), post_status);
                 }
 
                 /* Update Statistics */
-                if(post_status > 0) reader->stats.extents_sent++; 
-                else                reader->stats.extents_dropped++;  
+                if(post_status > 0) local_stats.extents_sent++;
+                else                local_stats.extents_dropped++;
 
-                /* Clean Up Record */
+                /* 
+                 * Clean Up Record 
+                 *  It should be safe to delete here because there should be no
+                 *  way an exception is thrown between the code that allocates the record
+                 *  and the code below that deletes it.
+                 */
                 delete record;
             }
         }
+
+        mlog(CRITICAL, "Successfully processed resource %s track %d: %d/%d/%d extents\n", url, info->track, local_stats.extents_sent, local_stats.extents_filtered, local_stats.extents_dropped);
     }
     catch(const std::exception& e)
     {
-        mlog(CRITICAL, "Unable to process resource %s: %s\n", url, e.what());
+        mlog(CRITICAL, "Unable to process resource %s track %d: %s\n", url, track, e.what());
     }
 
-    /* Count Completion */
+    /* Tear Down Context */
+    if(context) delete context;
+
+    /* Handle Global Reader Updates */
     reader->threadMut.lock();
     {        
+        /* Update Statistics */
+        reader->stats.segments_read += local_stats.segments_read;
+        reader->stats.extents_filtered += local_stats.extents_filtered;
+        reader->stats.extents_sent += local_stats.extents_sent;
+        reader->stats.extents_dropped += local_stats.extents_dropped;
+        reader->stats.extents_retried += local_stats.extents_retried;
+
+        /* Count Completion */
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
