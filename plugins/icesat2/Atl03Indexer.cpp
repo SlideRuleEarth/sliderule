@@ -194,8 +194,7 @@ void* Atl03Indexer::indexerThread (void* parm)
     char prefix[MAX_STR_SIZE];
     StringLib::format(prefix, MAX_STR_SIZE, "%s://%s/", indexer->asset->getFormat(), indexer->asset->getUrl());
 
-    /* Initialize Pointers to Allocated Memory */
-    const char* resource_name = NULL;
+    /* Initialize Context */
     H5Api::context_t* context = NULL;
     
     try
@@ -203,6 +202,7 @@ void* Atl03Indexer::indexerThread (void* parm)
         while(!complete)
         {
             char url[MAX_STR_SIZE];
+            const char* resource_name = NULL;
 
             /* Get Next Resource in List */            
             indexer->resourceMut.lock();
@@ -237,6 +237,10 @@ void* Atl03Indexer::indexerThread (void* parm)
                 H5Array<double>     gt1l_lat            (url, "/gt1l/geolocation/reference_photon_lat", context);
                 H5Array<double>     gt1l_lon            (url, "/gt1l/geolocation/reference_photon_lon", context);
 
+                /* Clean Up Context */
+                delete context;
+                context = NULL;
+
                 /* Allocate Record */
                 RecordObject* record = new RecordObject(recType);
                 index_t* index = (index_t*)record->getRecordData();
@@ -268,8 +272,7 @@ void* Atl03Indexer::indexerThread (void* parm)
         mlog(CRITICAL, "Unable to process resources in %s: %s\n", indexer->getName(), e.what());
     }
 
-    /* Free Allocated Memory */
-    if(resource_name) delete [] resource_name;
+    /* Free Context */
     if(context) delete context;
 
     /* Count Completion */
