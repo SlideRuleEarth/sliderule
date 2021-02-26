@@ -130,13 +130,13 @@ void* DeviceReader::readerThread (void* parm)
             /* Handle Non-Timeout Errors */
             if(dr->dieOnDisconnect)
             {
-                if(bytes == SHUTDOWN_RC)    mlog(CRITICAL, "shutting down device and exiting reader\n");
+                if(bytes == SHUTDOWN_RC)    mlog(INFO, "shutting down device and exiting reader\n");
                 else                        mlog(CRITICAL, "failed to read device (%d)... closing connection and exiting reader!\n", bytes);
                 dr->ioActive = false; // breaks out of loop
             }
             else
             {
-                if(bytes == SHUTDOWN_RC)    mlog(CRITICAL, "shutting down device... sleeping and trying again\n");
+                if(bytes == SHUTDOWN_RC)    mlog(INFO, "shutting down device... sleeping and trying again\n");
                 else                        mlog(ERROR, "failed to read device (%d)... sleeping and trying again!\n", bytes);
                 LocalLib::performIOTimeout(); // prevent spinning
             }
