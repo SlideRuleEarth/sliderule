@@ -121,7 +121,7 @@ def expread(resource, asset):
 #
 # Plot Actual vs Expected
 #
-def plotresults(act, exp):
+def plotresults(act, exp, atl06_present):
     # Create Plot
     fig = plt.figure(num=None, figsize=(12, 6))
 
@@ -138,9 +138,10 @@ def plotresults(act, exp):
     ax2 = plt.subplot(122)
     ax2.set_title("Along Track Elevations")
     track1 = act[act["spot"].isin([1, 2])].sort_values(by=['distance'])
-    standard = exp.sort_values(by=['distance'])
     ax2.plot(track1["distance"].values, track1["h_mean"].values, linewidth=1.0, color='b')
-    ax2.plot(standard["distance"].values, standard["h_mean"].values, linewidth=1.0, color='g')
+    if atl06_present:
+        standard = exp.sort_values(by=['distance'])
+        ax2.plot(standard["distance"].values, standard["h_mean"].values, linewidth=1.0, color='g')
 
     # Show Plot
     plt.show()
@@ -170,9 +171,11 @@ if __name__ == '__main__':
         atl06_asset = sys.argv[3]
 
     # Set Resource #
+    atl06_present = True
     resource = "_20181019065445_03150111_003_01.h5"
     if len(sys.argv) > 4:
         resource = sys.argv[4]
+        atl06_present = False
 
     # Initialize Icesat2 Package #
     icesat2.init(url, True)
@@ -181,7 +184,10 @@ if __name__ == '__main__':
     act = algoexec("ATL03"+resource, atl03_asset)
 
     # Read ATL06 Expected Results
-    exp = expread("ATL06"+resource, atl06_asset)
+    if atl06_present:
+        exp = expread("ATL06"+resource, atl06_asset)
+    else:
+        exp = None
 
     # Plot Actual vs. Expected
-    plotresults(act, exp)
+    plotresults(act, exp, atl06_present)
