@@ -1087,7 +1087,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 /* Read Direct Block Address */
                 uint64_t direct_block_addr = readField(metaData.offsetsize, &pos);
                 // note: filters are unsupported, but if present would be read here
-                if(!H5_INVALID(direct_block_addr) && (dlvl <= highestDataLevel))
+                if(!H5_INVALID(direct_block_addr) && (dlvl >= highestDataLevel))
                 {
                     /* Read Direct Block */
                     int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
@@ -1109,7 +1109,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
 
                 /* Read Indirect Block Address */
                 uint64_t indirect_block_addr = readField(metaData.offsetsize, &pos);
-                if(!H5_INVALID(indirect_block_addr) && (dlvl <= highestDataLevel))
+                if(!H5_INVALID(indirect_block_addr) && (dlvl >= highestDataLevel))
                 {
                     /* Read Direct Block */
                     int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
@@ -2776,9 +2776,9 @@ int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
     int64_t shuffle_block_size = input_size / type_size;
     int64_t num_elements = output_size / type_size;
     int64_t start_element = output_offset / type_size;
-    for(int element_index = start_element; element_index < num_elements; element_index++)
+    for(int64_t element_index = start_element; element_index < (start_element + num_elements); element_index++)
     {
-        for(int val_index = 0; val_index < type_size; val_index++)
+        for(int64_t val_index = 0; val_index < type_size; val_index++)
         {
             int64_t src_index = (val_index * shuffle_block_size) + element_index;
             output[dst_index++] = input[src_index];
@@ -3061,12 +3061,6 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 
     /* Log Info Message */
     mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
-//SafeString filename("%s.h5lite", datasetname);
-//filename.replace("/", "_");
-//filename = "test/" + filename;
-//fileptr_t fp = fopen(filename.getString(), "wb");
-//fwrite(info.data, 1, info.datasize, fp);
-//fclose(fp);
 
     /* Return Info */
     return info;

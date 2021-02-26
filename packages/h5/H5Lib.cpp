@@ -415,12 +415,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
     if(dataspace != H5S_ALL) H5Sclose(dataspace);
     if(memspace != H5S_ALL) H5Sclose(memspace);
     if(dataset > 0) H5Dclose(dataset);
-SafeString filename("%s.hdf5", datasetname);
-filename.replace("/", "_");
-filename = "test/" + filename;
-fileptr_t fp = fopen(filename.getString(), "wb");
-fwrite(info.data, 1, info.datasize, fp);
-fclose(fp);
+
     /* Return Info */
     if(status)  return info;
     else        throw RunTimeException("H5Lib failed to read dataset");
