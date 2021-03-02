@@ -3,7 +3,7 @@
 --
 -- INPUT:       rqst
 --              {
---                  "atl03-asset":  "<name of asset to use, defaults to atl03-local>"
+--                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>"
 --                  "resources":    ["<name of hdf5 file or object>", ...]
 --                  "timeout":      <milliseconds to wait for first response>
 --              }
@@ -25,7 +25,7 @@ local userlog = msg.publish(rspq)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local atl03_asset = rqst["atl03-asset"] or "atl03-local"
+local atl03_asset = rqst["atl03-asset"] or "atlas-local"
 local resources = rqst["resources"]
 local timeout = rqst["timeout"] or core.PEND
 

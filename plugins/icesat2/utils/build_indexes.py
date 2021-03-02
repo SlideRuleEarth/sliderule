@@ -4,7 +4,7 @@ import sys
 import json
 import sliderule
 
-atl03_asset = "atl03-local"
+atl03_asset = "atlas-local"
 index = "atl03.index"
 
 ###############################################################################

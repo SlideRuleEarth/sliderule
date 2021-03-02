@@ -57,10 +57,6 @@ set (CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 # Target: SlideRule #
 #####################
 
-# Create Target #
-
-add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/sliderule-linux/SlideRule.cpp)
-
 # Version Information #
 
 file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
@@ -68,6 +64,9 @@ file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
 # Platform #
 
 if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
+
+    # Target Executable #
+    add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/sliderule-linux/SlideRule.cpp)
 
     # Prefer libraries installed in /usr/local
     INCLUDE_DIRECTORIES(/usr/local/include)
@@ -81,18 +80,20 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     set (TOOLCHAIN _GNU_ CACHE STRING "Toolchain used to build code") # need to rework so that compile tool chain is somehow detected
     set (ENDIAN __LE__ CACHE STRING "Endianess of local machine")  # ideally moved to some architecture specific file
 
+    # Include Linux Platform #
     add_subdirectory (platforms/linux)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Windows")
 
     # Set Environment Variables
     set (INSTALLDIR "C:\\Program Files\\SlideRule" CACHE STRING "Installation directory for library and executables")
-    set (CONFDIR ${INSTALLDIR}/etc/sliderule)
-    set (EXECDIR ${INSTALLDIR}/bin)
-    set (INCDIR ${INSTALLDIR}/include/sliderule)
+    set (CONFDIR ${INSTALLDIR}\etc\sliderule)
+    set (EXECDIR ${INSTALLDIR}\bin)
+    set (INCDIR ${INSTALLDIR}\include\sliderule)
     set (TOOLCHAIN _VS_ CACHE STRING "Toolchain used to build code") # need to rework so that compile tool chain is somehow detected
     set (ENDIAN __LE__ CACHE STRING "Endianess of local machine")  # ideally moved to some architecture specific file
 
+    # Include Windows Platform #
     add_subdirectory (platforms/windows)
 
 endif()
@@ -188,12 +189,6 @@ install (TARGETS sliderule DESTINATION ${EXECDIR})
 get_property(PLUGINS GLOBAL PROPERTY plugins)
 file (WRITE ${CMAKE_BINARY_DIR}/plugins.conf ${PLUGINS})
 install (FILES ${CMAKE_BINARY_DIR}/plugins.conf DESTINATION ${CONFDIR})
-
-install (
-    DIRECTORY
-    DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    DESTINATION ${CONFDIR}
-)
 
 # Debian Package #
 
