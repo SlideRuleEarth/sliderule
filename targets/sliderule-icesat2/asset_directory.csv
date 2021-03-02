@@ -6,4 +6,4 @@ atl03-s3,       s3,         icesat2-sliderule/data/ATL03,   atl03.index
 atl06-local,    file,       /data/ATL06,                    atl06.index
 atl06-cloud,    hsds,       /hsds/ATL06,                    atl06.index
 atl06-s3,       s3,         icesat2-sliderule/data/ATL06,   atl06.index
-
+atlas-s3        s3,         icesat2-sliderule/data/ATLAS    atl06.index
