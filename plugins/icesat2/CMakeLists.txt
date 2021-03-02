@@ -1,14 +1,12 @@
 message (STATUS "Including icesat2 plugin")
 
-add_library (icesat2Lib SHARED "")
+add_library (icesat2Lib MODULE "")
 set_property(GLOBAL APPEND PROPERTY plugins "icesat2\n")
 
 set_target_properties (icesat2Lib PROPERTIES OUTPUT_NAME icesat2)
 set_target_properties (icesat2Lib PROPERTIES PREFIX "")
-set_target_properties (icesat2Lib PROPERTIES POSITION_INDEPENDENT_CODE 1) # shared libraries need PIC
 
 target_link_libraries (icesat2Lib PUBLIC sliderule)
-target_include_directories (icesat2Lib PUBLIC ${CMAKE_SOURCE_DIR}/plugins/h5)
 
 target_sources(icesat2Lib
     PRIVATE

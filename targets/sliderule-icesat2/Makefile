@@ -34,7 +34,7 @@ development-config:
 
 production-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ICESAT2CFG) -DENABLE_HDF5_LIB=ON -DENABLE_H5_REST_VOL=ON -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) $(SLIDERULE)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ICESAT2CFG) -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) $(SLIDERULE)
 
 docker-image: distclean production-config default-build
 	# install sliderule #
@@ -85,7 +85,7 @@ install:
 	make -C build install
 	cp asset_directory.csv $(RUNDIR)
 	cp atl03.index $(RUNDIR)
-	cp atl06.index $(RUNDIR)
+	cp empty.index $(RUNDIR)
 
 clean:
 	make -C build clean
