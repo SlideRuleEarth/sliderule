@@ -20,17 +20,17 @@ default-build:
 
 config: development-config
 
+development-config:
+	mkdir -p build
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) $(SLIDERULE)
+
 trace-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_LTTNG_TRACING=ON $(SLIDERULE)
 
 hsds-config:
 	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ICESAT2CFG) -DENABLE_HDF5_LIB=ON -DENABLE_H5_REST_VOL=ON $(SLIDERULE)
-
-development-config:
-	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) $(SLIDERULE)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ICESAT2CFG) -DENABLE_HDF5_LIB=ON -DENABLE_H5_REST_VOL=ON -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) $(SLIDERULE)
 
 production-config:
 	mkdir -p build
