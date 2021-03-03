@@ -3,7 +3,7 @@
 --
 -- INPUT:       rqst
 --              {
---                  "atl03-asset":  "<name of asset to use, defaults to atl03-cloud>"
+--                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>"
 --                  "resource":     "<url of hdf5 file or object>"
 --                  "track":        <track number: 1, 2, 3>
 --                  "parms":        {<table of parameters>}
@@ -27,7 +27,7 @@ local userlog = msg.publish(rspq)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local atl03_asset = rqst["atl03-asset"] or "atl03-cloud"
+local atl03_asset = rqst["atl03-asset"] or "atlas-s3"
 local resource = rqst["resource"]
 local track = rqst["track"] or icesat2.ALL_TRACKS
 local parms = rqst["parms"]
