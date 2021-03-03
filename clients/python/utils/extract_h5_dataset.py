@@ -18,7 +18,7 @@ if __name__ == '__main__':
         url = [sys.argv[1]]
 
     # Set Asset #
-    asset = "atl03-local"
+    asset = "atlas-local"
     if len(sys.argv) > 2:
         asset = sys.argv[2]
 

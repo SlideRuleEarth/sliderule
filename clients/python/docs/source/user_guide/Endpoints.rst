@@ -16,7 +16,7 @@ request
 .. code-block:: python
 
     request = {
-        "atl03-asset" : # asset: atl03-local, atl03-cloud, atl03-s3 (default: atl03-cloud)
+        "atl03-asset" : # asset: atlas-local, atlas-s3
         "resource": # ATL03 HDF5 filename (required)
         "track": # track number: 1, 2, 3, or do not include for all three tracks
         "parms": {
@@ -68,7 +68,7 @@ request
 .. code-block:: python
 
     request = {
-        "asset": # asset: atl03-local, atl03-cloud, atl03-s3 (required)
+        "asset": # asset: atlas-local, atlas-s3 (required)
         "resource": # ATL03 HDF5 filename (required)
         "dataset": # full path to dataset (required, example: "/gt1r/geolocation/segment_ph_cnt")
         "datatype": # datatype: TEXT, INTEGER, REAL, DYNAMIC (default: DYNAMIC, example: sliderule.datatypes["INTEGER"])

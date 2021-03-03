@@ -116,157 +116,6 @@ def test_definition ():
     else:
         logging.error("Failed definition test", d["delta_time"]["offset"])
 
-#
-#  TEST GEOSPATIAL
-#
-def test_geospatial (atl03_asset):
-
-    # Test 1 #
-
-    test1 = {
-        "asset": atl03_asset,
-        "pole": "north",
-        "lat": 40.0,
-        "lon": 60.0,
-        "x": 0.466307658155,
-        "y": 0.80766855588292,
-        "span": {
-            "lat0": 20.0,
-            "lon0": 100.0,
-            "lat1": 15.0,
-            "lon1": 105.0
-        },
-        "span1": {
-            "lat0": 30.0,
-            "lon0": 100.0,
-            "lat1": 35.0,
-            "lon1": 105.0
-        },
-        "span2": {
-            "lat0": 32.0,
-            "lon0": 101.0,
-            "lat1": 45.0,
-            "lon1": 106.0
-        },
-    }
-
-    d = sliderule.source("geo", test1)
-
-    if(d["intersect"] == True):
-        logging.info("Passed intersection test")
-    else:
-        logging.error("Failed intersection test", d["intersect"])
-
-    if(abs(d["combine"]["lat0"] - 44.4015) < 0.001 and abs(d["combine"]["lon0"] - 108.6949) < 0.001 and\
-       d["combine"]["lat1"] == 30.0 and d["combine"]["lon1"] == 100.0):
-        logging.info("Passed combination test")
-    else:
-        logging.error("Failed combination test", d["combine"])
-
-    if(abs(d["split"]["lspan"]["lat0"] - 18.6736) < 0.001 and abs(d["split"]["lspan"]["lon0"] - 106.0666) < .001 and\
-       abs(d["split"]["lspan"]["lat1"] - 15.6558) < 0.001 and abs(d["split"]["lspan"]["lon1"] - 102.1886) < .001 and\
-       abs(d["split"]["rspan"]["lat0"] - 19.4099) < 0.001 and abs(d["split"]["rspan"]["lon0"] - 103.0705) < .001 and\
-       abs(d["split"]["rspan"]["lat1"] - 16.1804) < 0.001 and abs(d["split"]["rspan"]["lon1"] -  99.3163) < .001):
-        logging.info("Passed split test")
-    else:
-        logging.error("Failed split test", d["split"])
-
-    if(d["lat"] == 40.0 and d["lon"] == 60.0):
-        logging.info("Passed sphere test")
-    else:
-        logging.error("Failed sphere test", d["lat"], d["lon"])
-
-    if(d["x"] == 0.466307658155 and d["y"] == 0.80766855588292):
-        logging.info("Passed projection test")
-    else:
-        logging.error("Failed projection test", d["x"], d["y"])
-
-    # Test 2 # 
-
-    test2 = {
-        "asset": atl03_asset,
-        "pole": "north",
-        "lat": 30.0,
-        "lon": 100.0,
-        "x": -0.20051164424058,
-        "y": 1.1371580426033,
-    }
-
-    d = sliderule.source("geo", test2)
-
-    if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0):
-        logging.info("Passed sphere2 test")
-    else:
-        logging.error("Failed sphere2 test", d["lat"], d["lon"])
-
-    # Test 3 # 
-
-    test3 = {
-        "asset": atl03_asset,
-        "pole": "north",
-        "lat": 30.0,
-        "lon": 100.0,
-        "x": -0.20051164424058,
-        "y": -1.1371580426033,
-    }
-
-    d = sliderule.source("geo", test3)
-
-    if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0):
-        logging.info("Passed sphere3 test")
-    else:
-        logging.error("Failed sphere3 test", d["lat"], d["lon"])
-
-    # Test 4 # 
-
-    test4 = {
-        "asset": atl03_asset,
-        "pole": "north",
-        "lat": 30.0,
-        "lon": 100.0,
-        "x": 0.20051164424058,
-        "y": -1.1371580426033,
-    }
-
-    d = sliderule.source("geo", test4)
-
-    if(abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0):
-        logging.info("Passed sphere4 test")
-    else:
-        logging.error("Failed sphere4 test", d["lat"], d["lon"])
-
-#
-#  TEST INDEX
-#
-def test_index ():
-    test1 = {
-        "rgtindex": {"rgt": 295},
-        "timeindex": {"t0": 1239544000, "t1": 1255238200}
-    }
-
-    d = sliderule.source("index", test1)
-
-    if(len(d["resources"]) == 20):
-        logging.info("Passed union index test")
-    else:
-        logging.error("Failed union index test", len(d["resources"]), d)
-
-    test2 = {
-        "and": {
-            "rgtindex": {"rgt": 295},
-            "timeindex": {"t0": 1239544000, "t1": 1255238200}
-        }
-    }
-
-    d = sliderule.source("index", test2)
-
-    if( ("ATL03_20190417134754_02950302_003_01.h5" in d["resources"]) and 
-        ("ATL03_20191016050727_02950502_003_01.h5" in d["resources"]) and 
-        (len(d["resources"]) == 2)):
-        logging.info("Passed intersection index test")
-    else:
-        logging.error("Failed intersection index test", len(d["resources"]), d)
-
 ###############################################################################
 # MAIN
 ###############################################################################
@@ -279,7 +128,7 @@ if __name__ == '__main__':
         url = [sys.argv[1]]
 
     # Override asset from command line
-    atl03_asset = "atl03-local"
+    atl03_asset = "atlas-local"
     if len(sys.argv) > 2:
         atl03_asset = sys.argv[2]
 
@@ -302,5 +151,3 @@ if __name__ == '__main__':
     test_h5_types(atl03_asset, atl06_asset)
     test_variable_length(atl03_asset)
     test_definition()
-    test_geospatial(atl03_asset)
-    test_index()

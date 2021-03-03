@@ -293,7 +293,7 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
 #
 #  ATL06
 #
-def atl06 (parm, resource, asset="atl03-cloud", track=0, as_numpy=False):
+def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
 
     # Build ATL06 Request
     rqst = {
@@ -333,7 +333,7 @@ def atl06 (parm, resource, asset="atl03-cloud", track=0, as_numpy=False):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=0, block=True):
+def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block=True):
 
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
@@ -404,7 +404,7 @@ def atl06p(parm, asset="atl03-cloud", track=0, as_numpy=False, max_workers=0, bl
 #
 #  H5
 #
-def h5 (dataset, resource, asset="atl03-cloud", datatype=sliderule.datatypes["REAL"], col=0, startrow=0, numrows=ALL_ROWS):
+def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"], col=0, startrow=0, numrows=ALL_ROWS):
 
     # Handle Request Datatype Options
     rqst_datatype = sliderule.datatypes["DYNAMIC"]

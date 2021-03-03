@@ -34,7 +34,7 @@ Performs ATL06-SR processing on ATL03 data and returns gridded elevations
 
 .. code-block:: python
 
-    response = icesat2.atl06(parms, resource, asset="atl03-cloud", track=0, as_numpy=False)
+    response = icesat2.atl06(parms, resource, asset="atlas-s3", track=0, as_numpy=False)
 
 Arguments
 ---------
@@ -55,7 +55,7 @@ Arguments
 Keyword Arguments
 -----------------
 
-- `asset` : ``"atl03-local"``, ``"atl03-cloud"``, ``"atl03-s3"``
+- `asset` : ``"atlas-local"``, ``"atlas-s3"``
 - `track`: reference pair track number (1, 2, 3, or None to include for all three)
 - `as_numpy`: return as flattened numpy arrays
 
@@ -81,7 +81,7 @@ Performs ATL06-SR processing in parallel on ATL03 data and returns gridded eleva
 
 .. code-block:: python
 
-    response = icesat2.atl06p(parm, asset="atl03-cloud", track=0,
+    response = icesat2.atl06p(parm, asset="atlas-s3", track=0,
         as_numpy=False, max_workers=4, block=True)
 
 Arguments
@@ -103,7 +103,7 @@ Arguments
 Keyword Arguments
 -----------------
 
-- `asset` : ``"atl03-local"``, ``"atl03-cloud"``, ``"atl03-s3"``
+- `asset` : ``"atlas-local"``, ``"atlas-s3"``
 - `track`: reference pair track number (1, 2, 3, or None to include for all three)
 - `as_numpy`: return as flattened numpy arrays
 - `max_workers`: maximum number of threads in concurrent futures pool
@@ -130,7 +130,7 @@ Reads a dataset from an HDF5 file and return the values of the dataset
 
 .. code-block:: python
 
-    values = icesat2.h5(dataset, resource, asset="atl03-cloud",
+    values = icesat2.h5(dataset, resource, asset="atlas-s3",
         datatype=sliderule.datatypes["REAL"])
 
 Arguments
@@ -142,7 +142,7 @@ Arguments
 Keyword Arguments
 -----------------
 
-- `asset` : ``"atl03-local"``, ``"atl03-cloud"``, ``"atl03-s3"``
+- `asset` : ``"atlas-local"``, ``"atlas-s3"``
 - `datatype`: input variable datatype
 
     * ``sliderule.datatypes["TEXT"]``
