@@ -34,6 +34,7 @@ if (ZLIB_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/h5.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5Api.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Array.h
             ${CMAKE_CURRENT_LIST_DIR}/H5File.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.h

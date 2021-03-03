@@ -123,11 +123,6 @@ if (${ENABLE_CUSTOM_ALLOCATOR})
     target_compile_definitions (sliderule PUBLIC CUSTOM_ALLOCATOR)
 endif ()
 
-if (DEFINED MAX_STR_SIZE)
-    message (STATUS "Setting MAX_STR_SIZE to " ${MAX_STR_SIZE})
-    target_compile_definitions (sliderule PUBLIC MAX_STR_SIZE=${MAX_STR_SIZE})
-endif ()
-
 if (DEFINED MAX_FREE_STACK_SIZE)
     message (STATUS "Setting MAX_FREE_STACK_SIZE to " ${MAX_FREE_STACK_SIZE})
     target_compile_definitions (sliderule PUBLIC MAX_FREE_STACK_SIZE=${MAX_FREE_STACK_SIZE})

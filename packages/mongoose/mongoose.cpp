@@ -64,7 +64,7 @@ void initmongoose (void)
     LuaEngine::indicate(LUA_MONGOOSE_LIBNAME, BINID);
 
     /* Display Status */
-    printf("%s plugin initialized (%s)\n", LUA_MONGOOSE_LIBNAME, BINID);
+    printf("%s package initialized (%s)\n", LUA_MONGOOSE_LIBNAME, BINID);
 }
 
 void deinitmongoose (void)

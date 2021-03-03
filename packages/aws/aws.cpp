@@ -89,7 +89,7 @@ void initaws (void)
     LuaEngine::indicate(LUA_AWS_LIBNAME, BINID);
 
     /* Display Status */
-    printf("%s plugin initialized (%s)\n", LUA_AWS_LIBNAME, BINID);
+    printf("%s package initialized (%s)\n", LUA_AWS_LIBNAME, BINID);
 }
 
 void deinitaws (void)

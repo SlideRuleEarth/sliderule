@@ -72,7 +72,7 @@ void inith5 (void)
     LuaEngine::indicate(LUA_H5_LIBNAME, BINID);
 
     /* Display Status */
-    printf("%s plugin initialized (%s)\n", LUA_H5_LIBNAME, BINID);
+    printf("%s package initialized (%s)\n", LUA_H5_LIBNAME, BINID);
 }
 
 void deinith5 (void)

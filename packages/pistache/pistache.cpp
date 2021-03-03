@@ -75,7 +75,7 @@ void initpistache (void)
     LuaEngine::indicate(LUA_PISTACHE_LIBNAME, BINID);
 
     /* Display Status */
-    printf("%s plugin initialized (%s)\n", LUA_PISTACHE_LIBNAME, BINID);
+    printf("%s package initialized (%s)\n", LUA_PISTACHE_LIBNAME, BINID);
 }
 
 void deinitpistache (void)
