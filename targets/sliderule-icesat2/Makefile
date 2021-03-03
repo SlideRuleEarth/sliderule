@@ -3,7 +3,6 @@ STAGEDIR = stage
 RUNDIR = /usr/local/etc/sliderule
 SLIDERULE = $(ROOT)/../..
 DOCKERTAG ?= icesat2sliderule/sliderule:latest
-HSDS_IP?=$(shell (getent hosts hsds.sliderule.beta | awk '{ print $$1 ; exit }'))
 
 ICESAT2CFG := -DMAX_FREE_STACK_SIZE=1
 ICESAT2CFG += -DUSE_AWS_PACKAGE=ON
@@ -28,10 +27,6 @@ trace-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(ICESAT2CFG) -DENABLE_LTTNG_TRACING=ON $(SLIDERULE)
 
-hsds-config:
-	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ICESAT2CFG) -DENABLE_HDF5_LIB=ON -DENABLE_H5_REST_VOL=ON -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) $(SLIDERULE)
-
 production-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ICESAT2CFG) -DINSTALLDIR=$(ROOT)/$(STAGEDIR) -DRUNTIMEDIR=$(RUNDIR) $(SLIDERULE)
@@ -45,7 +40,6 @@ docker-image: distclean production-config default-build
 	cp build/plugins.conf $(STAGEDIR)/etc/sliderule
 	cp config.json $(STAGEDIR)/etc/sliderule
 	cp asset_directory.csv $(STAGEDIR)/etc/sliderule
-	cp atl03.index $(STAGEDIR)/etc/sliderule
 	cp empty.index $(STAGEDIR)/etc/sliderule
 	# copy over scripts #
 	mkdir $(STAGEDIR)/scripts
@@ -59,24 +53,14 @@ docker-image: distclean production-config default-build
 	# copy over plugin apps #
 	mkdir -p $(STAGEDIR)/plugins/icesat2/apps
 	cp $(SLIDERULE)/plugins/icesat2/apps/* $(STAGEDIR)/plugins/icesat2/apps
-	# copy over library dependencies #
-	mkdir -p $(STAGEDIR)/lib
-	cp /usr/local/lib/libhdf5_vol_rest.so $(STAGEDIR)/lib
-	cp /usr/local/lib/libyajl.so* $(STAGEDIR)/lib
 	# build image #
 	cd $(STAGEDIR); docker build -t $(DOCKERTAG) .
 
 run-docker:
 	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 --entrypoint /usr/local/scripts/apps/docker-entrypoint.sh $(DOCKERTAG)
 
-run-docker-hsds:
-	docker run -it --rm --name=sliderule-app -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 -e HSDS_ENDPOINT=http://$(HSDS_IP) -e HSDS_USERNAME=admin -e HSDS_PASSWORD=0m3g4 --entrypoint /usr/local/scripts/apps/docker-entrypoint.sh $(DOCKERTAG)
-
 run-stand-alone:
 	sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
-
-run-stand-alone-hsds:
-	HSDS_ENDPOINT=http://$(HSDS_IP) HSDS_USERNAME=admin HSDS_PASSWORD=0m3g4 sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
 
 run-memory-test:
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(SLIDERULE)/plugins/icesat2/apps/server.lua config.json
@@ -84,7 +68,6 @@ run-memory-test:
 install:
 	make -C build install
 	cp asset_directory.csv $(RUNDIR)
-	cp atl03.index $(RUNDIR)
 	cp empty.index $(RUNDIR)
 
 clean:
@@ -94,4 +77,3 @@ clean:
 distclean:
 	- rm -Rf build
 	- rm -Rf $(STAGEDIR)
-	- rm -Rf .cache
