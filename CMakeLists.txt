@@ -172,7 +172,7 @@ add_subdirectory (scripts)
 # Executables #
 
 if(${PYTHON_BINDINGS})
-    find_package(pybind11 REQUIRED)  # or add_subdirectory(pybind11)
+    find_package(pybind11 REQUIRED)
     pybind11_add_module(h5lite ${PROJECT_SOURCE_DIR}/targets/h5lite-python/h5lite-python.cpp)
     target_link_libraries (h5lite PUBLIC slideruleLib)
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
