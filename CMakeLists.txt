@@ -31,6 +31,8 @@ endif()
 ###################
 
 option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" OFF)
+option (PYTHON_BINDINGS "Create Python bindings, including h5lite module" OFF)
+
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
@@ -102,6 +104,10 @@ set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
 
+if(${PYTHON_BINDINGS})
+    set_property(TARGET slideruleLib PROPERTY POSITION_INDEPENDENT_CODE ON)
+endif()
+
 # Compile Definitions #
 
 set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and configuration scripts")
@@ -165,7 +171,11 @@ add_subdirectory (scripts)
 
 # Executables #
 
-if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
+if(${PYTHON_BINDINGS})
+    find_package(pybind11 REQUIRED)  # or add_subdirectory(pybind11)
+    pybind11_add_module(h5lite ${PROJECT_SOURCE_DIR}/targets/h5lite-python/h5lite-python.cpp)
+    target_link_libraries (h5lite PUBLIC slideruleLib)
+elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/server-linux/SlideRule.cpp)
     set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
     set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)

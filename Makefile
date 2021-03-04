@@ -9,6 +9,12 @@ FULLCFG += -DUSE_AWS_PACKAGE=ON
 FULLCFG += -DUSE_PISTACHE_PACKAGE=ON
 FULLCFG += -DUSE_MONGOOSE_PACKAGE=ON
 
+PYTHONCFG  = -DPYTHON_BINDINGS=ON
+PYTHONCFG += -DUSE_H5_PACKAGE=ON
+# PYTHONCFG += -DUSE_AWS_PACKAGE=ON
+PYTHONCFG += -DUSE_LEGACY_PACKAGE=OFF
+PYTHONCFG += -DUSE_CCSDS_PACKAGE=OFF
+
 all: default-build
 
 default-build:
@@ -16,21 +22,20 @@ default-build:
 
 config: release-config
 
-release-config:
-	mkdir -p build
+release-config: prep
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON $(ROOT)
 
-development-config:
-	mkdir -p build
+development-config: prep
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) $(ROOT)
 
-scan:
-	mkdir -p build
+python-config: prep
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
+
+scan: prep
 	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) $(ROOT)
 	cd build; scan-build -o scan-results make
 
-asan:
-	mkdir -p build
+asan: prep
 	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd build; make
 
@@ -43,6 +48,9 @@ uninstall:
 package: distclean release-config
 	make -C build package
 	# sudo dpkg -i build/sliderule-X.Y.Z.deb
+
+prep:
+	mkdir -p build
 
 clean:
 	make -C build clean

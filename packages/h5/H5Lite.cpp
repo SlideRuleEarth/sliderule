@@ -2845,7 +2845,7 @@ void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* data
  *----------------------------------------------------------------------------*/
 void H5Lite::init (void)
 {
-
+printf("Hello there\n");
 }
 
 /*----------------------------------------------------------------------------
