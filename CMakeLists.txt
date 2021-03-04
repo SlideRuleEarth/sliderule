@@ -54,6 +54,10 @@ set (CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 # Target: SlideRule #
 #####################
 
+# SlideRule Library #
+
+add_library(slideruleLib STATIC "")
+
 # Version Information #
 
 file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
@@ -61,9 +65,6 @@ file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
 # Platform #
 
 if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
-
-    # Target Executable #
-    add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/server-linux/SlideRule.cpp)
 
     # Prefer libraries installed in /usr/local
     INCLUDE_DIRECTORIES(/usr/local/include)
@@ -97,37 +98,37 @@ endif()
 
 # Target Properties #
 
-set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
-set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
-set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
+set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
+set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
+set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
 
 # Compile Definitions #
 
 set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and configuration scripts")
 
-target_compile_definitions (sliderule PUBLIC BINID="${TGTVER}")
-target_compile_definitions (sliderule PUBLIC CONFIGPATH="${RUNTIMEDIR}")
-target_compile_definitions (sliderule PUBLIC ${TOOLCHAIN})
-target_compile_definitions (sliderule PUBLIC ${ENDIAN})
+target_compile_definitions (slideruleLib PUBLIC BINID="${TGTVER}")
+target_compile_definitions (slideruleLib PUBLIC CONFIGPATH="${RUNTIMEDIR}")
+target_compile_definitions (slideruleLib PUBLIC ${TOOLCHAIN})
+target_compile_definitions (slideruleLib PUBLIC ${ENDIAN})
 
 if (${ENABLE_TIME_HEARTBEAT})
     message (STATUS "Enabling time heartbeat")
-    target_compile_definitions (sliderule PUBLIC TIME_USE_HEARTBEAT)
+    target_compile_definitions (slideruleLib PUBLIC TIME_USE_HEARTBEAT)
 endif ()
 
 if (${ENABLE_CUSTOM_ALLOCATOR})
     message (STATUS "Enabling custom allocator")
-    target_compile_definitions (sliderule PUBLIC CUSTOM_ALLOCATOR)
+    target_compile_definitions (slideruleLib PUBLIC CUSTOM_ALLOCATOR)
 endif ()
 
 if (DEFINED MAX_FREE_STACK_SIZE)
     message (STATUS "Setting MAX_FREE_STACK_SIZE to " ${MAX_FREE_STACK_SIZE})
-    target_compile_definitions (sliderule PUBLIC MAX_FREE_STACK_SIZE=${MAX_FREE_STACK_SIZE})
+    target_compile_definitions (slideruleLib PUBLIC MAX_FREE_STACK_SIZE=${MAX_FREE_STACK_SIZE})
 endif ()
 
 if (DEFINED LIST_BLOCK_SIZE)
     message (STATUS "Setting LIST_BLOCK_SIZE to " ${LIST_BLOCK_SIZE})
-    target_compile_definitions (sliderule PUBLIC LIST_BLOCK_SIZE=${LIST_BLOCK_SIZE})
+    target_compile_definitions (slideruleLib PUBLIC LIST_BLOCK_SIZE=${LIST_BLOCK_SIZE})
 endif ()
 
 # Add Packages #
@@ -162,9 +163,16 @@ endif()
 
 add_subdirectory (scripts)
 
-# Installation #
+# Executables #
 
-install (TARGETS sliderule DESTINATION ${EXECDIR})
+if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
+    add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/server-linux/SlideRule.cpp)
+    set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
+    set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
+    set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
+    target_link_libraries (sliderule PUBLIC slideruleLib)
+    install (TARGETS sliderule DESTINATION ${EXECDIR})
+endif()
 
 # Debian Package #
 

@@ -1,8 +1,8 @@
 message (STATUS "Including ccsds package")
 
-target_compile_definitions (sliderule PUBLIC __ccsds__)
+target_compile_definitions (slideruleLib PUBLIC __ccsds__)
 
-target_sources (sliderule
+target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/ccsds.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsPacket.cpp
@@ -18,7 +18,7 @@ target_sources (sliderule
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsRecordDispatcher.cpp
 )
 
-target_include_directories (sliderule
+target_include_directories (slideruleLib
     PUBLIC
         $<INSTALL_INTERFACE:${INCDIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>

@@ -5,17 +5,17 @@ if (MONGOOSE_LIB)
 
     message (STATUS "Including mongoose package")
 
-    target_compile_definitions (sliderule PUBLIC __mongoose__)
+    target_compile_definitions (slideruleLib PUBLIC __mongoose__)
 
-    target_link_libraries (sliderule PUBLIC ${MONGOOSE_LIB})
+    target_link_libraries (slideruleLib PUBLIC ${MONGOOSE_LIB})
 
-    target_sources(sliderule
+    target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/mongoose.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MongooseServer.cpp
     )
 
-    target_include_directories (sliderule
+    target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>

@@ -1,8 +1,8 @@
 message (STATUS "Including legacy package")
 
-target_compile_definitions (sliderule PUBLIC __legacy__)
+target_compile_definitions (slideruleLib PUBLIC __legacy__)
 
-target_sources (sliderule
+target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/legacy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CcsdsFileWriter.cpp
@@ -24,7 +24,7 @@ target_sources (sliderule
         ${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.cpp
 )
 
-target_include_directories (sliderule
+target_include_directories (slideruleLib
     PUBLIC
         $<INSTALL_INTERFACE:${INCDIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>

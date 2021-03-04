@@ -8,13 +8,13 @@ if (PISTACHE_LIB)
 
     message (STATUS "Including pistache package")
 
-    target_compile_definitions (sliderule PUBLIC __pistache__)
+    target_compile_definitions (slideruleLib PUBLIC __pistache__)
 
-    target_link_libraries (sliderule PUBLIC ${PISTACHE_LIB})
-    target_link_libraries (sliderule PUBLIC ssl)
-    target_link_libraries (sliderule PUBLIC crypto)
+    target_link_libraries (slideruleLib PUBLIC ${PISTACHE_LIB})
+    target_link_libraries (slideruleLib PUBLIC ssl)
+    target_link_libraries (slideruleLib PUBLIC crypto)
 
-    target_sources(sliderule
+    target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/pistache.cpp
             ${CMAKE_CURRENT_LIST_DIR}/PistacheServer.cpp
@@ -23,7 +23,7 @@ if (PISTACHE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/RouteHandler.cpp
     )
 
-    target_include_directories (sliderule
+    target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>

@@ -5,21 +5,21 @@ if (LUA_FOUND AND READLINE_LIB)
 
     message (STATUS "Including core package")
 
-    target_compile_definitions (sliderule PUBLIC __core__)
-    target_compile_definitions (sliderule PRIVATE LUA_USE_READLINE)
+    target_compile_definitions (slideruleLib PUBLIC __core__)
+    target_compile_definitions (slideruleLib PRIVATE LUA_USE_READLINE)
 
-    target_link_libraries (sliderule PRIVATE ${LUA_LIBRARIES})
-    target_include_directories (sliderule PUBLIC ${LUA_INCLUDE_DIR})
+    target_link_libraries (slideruleLib PRIVATE ${LUA_LIBRARIES})
+    target_include_directories (slideruleLib PUBLIC ${LUA_INCLUDE_DIR})
 
     if(${ENABLE_LTTNG_TRACING})
         message (STATUS "LTTng tracing support enabled")
-        target_compile_definitions (sliderule PUBLIC __lttng_tracing__)
-        target_link_libraries (sliderule PRIVATE lttng-ust)
+        target_compile_definitions (slideruleLib PUBLIC __lttng_tracing__)
+        target_link_libraries (slideruleLib PRIVATE lttng-ust)
     endif()
 
-    target_link_libraries (sliderule PUBLIC readline)
+    target_link_libraries (slideruleLib PUBLIC readline)
 
-    target_sources (sliderule
+    target_sources (slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/core.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Asset.cpp
@@ -65,7 +65,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.cpp
     )
 
-    target_include_directories (sliderule
+    target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>

@@ -13,11 +13,11 @@ if (ZLIB_FOUND)
 
     message (STATUS "Including h5 package")
 
-    target_compile_definitions (sliderule PUBLIC __h5__)
+    target_compile_definitions (slideruleLib PUBLIC __h5__)
 
-    target_link_libraries (sliderule PUBLIC ${ZLIB_LIBRARIES})
+    target_link_libraries (slideruleLib PUBLIC ${ZLIB_LIBRARIES})
 
-    target_sources(sliderule
+    target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/h5.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5File.cpp
@@ -25,7 +25,7 @@ if (ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5Lite.cpp
     )
 
-    target_include_directories (sliderule
+    target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
@@ -47,19 +47,19 @@ if (ZLIB_FOUND)
 
         message (STATUS "Using hdf5 library")
 
-        target_compile_definitions (sliderule PUBLIC H5_USE_110_API)
-        target_compile_definitions (sliderule PUBLIC H5_USE_HDF5LIB)
+        target_compile_definitions (slideruleLib PUBLIC H5_USE_110_API)
+        target_compile_definitions (slideruleLib PUBLIC H5_USE_HDF5LIB)
 
         if(${ENABLE_H5_REST_VOL})
-            target_compile_definitions (sliderule PUBLIC H5_USE_REST_VOL)
-            target_link_libraries (sliderule PUBLIC ${REST_VOL_LIB})
-            target_link_libraries (sliderule PUBLIC ${CURL_LIB})
-            target_link_libraries (sliderule PUBLIC ${YAJL_LIB})
+            target_compile_definitions (slideruleLib PUBLIC H5_USE_REST_VOL)
+            target_link_libraries (slideruleLib PUBLIC ${REST_VOL_LIB})
+            target_link_libraries (slideruleLib PUBLIC ${CURL_LIB})
+            target_link_libraries (slideruleLib PUBLIC ${YAJL_LIB})
         endif()
 
-        target_link_libraries (sliderule PUBLIC ${HDF5_LIB})
+        target_link_libraries (slideruleLib PUBLIC ${HDF5_LIB})
 
-        target_sources (sliderule PRIVATE ${CMAKE_CURRENT_LIST_DIR}/H5Lib.cpp)
+        target_sources (slideruleLib PRIVATE ${CMAKE_CURRENT_LIST_DIR}/H5Lib.cpp)
         
         install (FILES ${CMAKE_CURRENT_LIST_DIR}/H5Lib.h DESTINATION ${INCDIR})
 
