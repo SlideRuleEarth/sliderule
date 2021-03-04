@@ -17,7 +17,7 @@ A C++/Lua framework for on-demand science data processing.
 
 ## II. Building with CMake
 
-From the `targets/sliderule-linux` directory:
+From the root directory of the repository:
 1. `make config`
 2. `make`
 3. `sudo make install`
@@ -63,16 +63,10 @@ Options include:
                                        default: OFF
 
    -DUSE_H5_PACKAGE=[ON|OFF]           hdf5 reading/writing
-                                       default: OFF
+                                       default: ON
 
    -DUSE_PISTACHE_PACKAGE=[ON|OFF]     http server and client
                                        default: OFF
-
-   -DUSE_ICESAT2_PLUGIN=[ON|OFF]       ICESat-2 science data processing
-                                       default: OFF
-
-   -DUSE_ATLAS_PLUGIN=[ON|OFF]         ATLAS raw telemetry processing
-                                       default: ON
 ```
 
 
@@ -115,28 +109,13 @@ If you followed the instructions above to install a non-system cmake into /opt, 
 export PATH=$PATH:/opt/cmake/bin
 ```
 
-### 3. Installing Docker
-
-The official Docker installation instructions found at https://docs.docker.com/engine/install/ubuntu/.
-
-For Ubuntu 20.04, Docker can be installed with the following commands:
-```bash
-$ sudo apt install docker.io
-```
-
-In order to run docker without having to be root, use the following commands:
-```bash
-$ sudo usermod -aG docker {username}
-$ newgrp docker # apply group to user
-```
-
-### 4. Install all dependencies
+### 3. Install all dependencies
 
 If additional packages are needed, navigate to the packages readme (the {package}.md file found in each package directory) for instructions on how to build and configure that package.  Once the proper dependencies are installed, the corresponding option must be passed to cmake to ensure the package is built.
 
 For example, if the H5 package was needed, first the installation instructions at `packages/h5/h5.md` need to be followed, and then the `-DUSE_H5_PACKAGE=ON` needs to be passed to cmake when configuring the build.
 
-### 5. Build and install SlideRule
+### 4. Build and install SlideRule
 
 The provided Makefile has targets for typical configurations.  See the [II. Building with CMake](#ii-building-with-cmake) section for more details.
 
@@ -146,50 +125,19 @@ $ make
 $ sudo make install
 ```
 
-### 6. Running SlideRule as a stand-alone application
+### 5. Running SlideRule as a stand-alone application
 
-SlideRule requires a lua script to be passed to it runs in order to establish which components are run. "Using" SlideRule means to develop the lua scripts needed to configure and insgantiate the needed SlideRule components. Two stock lua scripts are provided in the repository and can be used as a starting point for developing a project-specific lua script.
+SlideRule requires a lua script to be passed to it in order to configure which components are run. "Using" SlideRule means to develop the lua scripts needed to configure and instantiate the needed SlideRule components. Two stock lua scripts are provided in the repository and can be used as a starting point for developing a project-specific lua script.
 
 A REST server running at port 9081 can be started via:
 ```bash
 $ sliderule scripts/apps/server.lua <config.json>
 ```
 
-A self-test that dynamically checks which packages and plugins are present and runs their associated unit tests can be started via:
+A self-test that dynamically checks which packages are present and runs their associated unit tests can be started via:
 ```bash
 $ sliderule scripts/apps/test_runner.lua
 ```
-
-## IV. Building and Running with Docker
-
-Assuming you have docker installed and configured in your system, the following steps can be taken to build and run a Docker container that executes the SlideRule application.
-
-### 1. Build the development Docker image
-
-The first step is to build a docker container that has all of the build dependencies needed to build SlideRule and all its packages.
-```bash
-$ make docker-development-image
-```
-
-### 2. Run the development Docker container
-
-Run the development docker container and from there build the SlideRule application.  Note that the command provided below assumes that you want to be able to use this container to build a SlideRule container (i.e. Docker in Docker) and therefore maps into the host docker.sock to the running container.
-```bash
-$ docker run -it --rm --name=sliderule-dev -v /var/run/docker.sock:/var/run/docker.sock -v {abs. path to sliderule}:/sliderule sliderule-development
-```
-
-### 7. Run SlideRule application in a Docker container
-
-The command below runs the server application inside the Docker container and can be configured in the following ways:
-* A script other than `/usr/local/scripts/apps/server.lua` can be passed to the SlideRule executable running inside the Docker container
-* The {config.json} file provided to the server.lua script can be used to change server settings
-* Environment variables can be passed via `-e {parameter=value}` on the command line to docker
-* Different local files and directories can be mapped in via `-v {source abs. path}:{destination abs. path}` on the command line to docker
-
-```bash
-$ docker run -it --rm --name=sliderule-app -v /data:/data -p 9081:9081 sliderule-application /usr/local/scripts/apps/server.lua {config.json}
-```
-
 
 ## V. Directory Structure
 
@@ -207,12 +155,6 @@ By convention, each package contains two files that are named identical to the p
 
 Any target that includes the package should only include the package's h file, and make a call to the package initialization function.
 
-### plugins
-
-In order to build a plugin for sliderule the plugin code must compile down to a shared object that exposes a single function defined as `void init{plugin}(void)` where _{plugin}_ is the name of the plugin.  Note that if developing the plugin in C++ the initialization function must be externed as C in order to prevent the mangling of the exported symbol.
-
-Once the shared library is built, the build system copies the shared object into the sliderule configuration directory (specified by `RUNTIMEDIR` option in the CMakeLists.txt file) with the name _{plugin}.so_.  On startup, the _sliderule_ application reads the _plugins.conf_ file in the configuration directory and loads all plugins listed in that file.  So depending on the target being built, the corresponding source file for the _plugins.conf_ file must also be modified to include the name of the plugin.
-
 ### scripts
 
 Contains Lua and Python scripts that can be used for tests and higher level implementations of functionality.
@@ -222,7 +164,14 @@ Contains Lua and Python scripts that can be used for tests and higher level impl
 Contains the source files to make the various executable targets. By convention, targets are named as follows: {application}-{platform}.
 
 
-## V. Delivering the Code
+## V. Plugins
+
+In order to build a plugin for sliderule the plugin code must compile down to a shared object that exposes a single function defined as `void init{plugin}(void)` where _{plugin}_ is the name of the plugin.  Note that if developing the plugin in C++ the initialization function must be externed as C in order to prevent the mangling of the exported symbol.
+
+Once the shared library is built, the build system must copy the shared object into the sliderule configuration directory (specified by `RUNTIMEDIR` option in the CMakeLists.txt file) with the name _{plugin}.so_.  On startup, the _sliderule_ application reads the _plugins.conf_ file in the configuration directory and loads all plugins listed in that file.
+
+
+## VI. Delivering the Code
 
 Run [RELEASE.sh](RELEASE.sh) to create a tarball that can be distributed: `./RELEASE.sh X.Y.Z`
 
@@ -237,7 +186,7 @@ Using a released version of the code, the following two Makefile targets can be 
    * which can be run via `docker run -it --rm --name sliderule1 sliderule-linux`
 
 
-## VI. Licensing
+## VII. Licensing
 
 Sliderule is licensed under the Apache License, Version 2.0
 to the University of Washington under one or more contributor
