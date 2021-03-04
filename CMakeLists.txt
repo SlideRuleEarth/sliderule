@@ -45,9 +45,6 @@ option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
 option (USE_MONGOOSE_PACKAGE "Include the Mongoose package" OFF)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 
-option (USE_ICESAT2_PLUGIN "Include the ICESat-2 plugin" OFF)
-option (USE_ATLAS_PLUGIN "Include the ATLAS plugin" ON)
-
 set (CMAKE_SKIP_BUILD_RPATH FALSE)
 set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set (CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
@@ -66,7 +63,7 @@ file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
 if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
     # Target Executable #
-    add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/sliderule-linux/SlideRule.cpp)
+    add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/server-linux/SlideRule.cpp)
 
     # Prefer libraries installed in /usr/local
     INCLUDE_DIRECTORIES(/usr/local/include)
@@ -161,18 +158,6 @@ if(${USE_LEGACY_PACKAGE})
     add_subdirectory (packages/legacy)
 endif()
 
-# Add Plugins #
-
-set_property(GLOBAL PROPERTY plugins "")
-
-if(${USE_ICESAT2_PLUGIN})
-    add_subdirectory (plugins/icesat2)
-endif()
-
-if(${USE_ATLAS_PLUGIN})
-    add_subdirectory (plugins/atlas)
-endif()
-
 # Scripts #
 
 add_subdirectory (scripts)
@@ -180,10 +165,6 @@ add_subdirectory (scripts)
 # Installation #
 
 install (TARGETS sliderule DESTINATION ${EXECDIR})
-
-get_property(PLUGINS GLOBAL PROPERTY plugins)
-file (WRITE ${CMAKE_BINARY_DIR}/plugins.conf ${PLUGINS})
-install (FILES ${CMAKE_BINARY_DIR}/plugins.conf DESTINATION ${CONFDIR})
 
 # Debian Package #
 

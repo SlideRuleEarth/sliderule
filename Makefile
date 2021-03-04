@@ -1,4 +1,4 @@
-ROOT = $(shell pwd)/../..
+ROOT = $(shell pwd)
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 RUNDIR = /usr/local/etc/sliderule
 
@@ -8,19 +8,13 @@ FULLCFG += -DUSE_H5_PACKAGE=ON
 FULLCFG += -DUSE_AWS_PACKAGE=ON
 FULLCFG += -DUSE_PISTACHE_PACKAGE=ON
 FULLCFG += -DUSE_MONGOOSE_PACKAGE=ON
-FULLCFG += -DUSE_ICESAT2_PLUGIN=ON
-FULLCFG += -DUSE_ATLAS_PLUGIN=ON
 
 all: default-build
 
 default-build:
 	make -j4 -C build
 
-config: default-config
-
-default-config:
-	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+config: release-config
 
 release-config:
 	mkdir -p build
@@ -29,26 +23,6 @@ release-config:
 development-config:
 	mkdir -p build
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) $(ROOT)
-
-docker-config:
-	mkdir -p build
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/stage -DRUNTIMEDIR=$(RUNDIR) $(ROOT)
-
-docker-application-image: distclean docker-config default-build install
-	cp targets/sliderule-docker/dockerfile.app stage/Dockerfile
-	# copy over scripts #
-	mkdir stage/scripts
-	cp -R scripts/apps stage/scripts/apps
-	cp -R scripts/tests stage/scripts/tests
-	# build image #
-	cd stage; docker build -t sliderule-application:latest .
-	# docker run -it --rm --name=sliderule-app -v /data:/data sliderule-linux /usr/local/scripts/apps/test_runner.lua
-
-docker-development-image:
-	mkdir -p stage
-	cp targets/sliderule-docker/dockerfile.dev stage/Dockerfile
-	cd stage; docker build -t sliderule-development:latest .
-	# docker run -it --rm --name=sliderule-dev -v $(ROOT):/code sliderule-development
 
 scan:
 	mkdir -p build
