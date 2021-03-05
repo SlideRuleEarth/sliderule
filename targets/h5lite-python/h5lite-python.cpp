@@ -24,12 +24,52 @@
 #include <pybind11/pybind11.h>
 
 #include "H5Lite.h"
+#include "RecordObject.h"
+
+/******************************************************************************
+ * NAMESPACES
+ ******************************************************************************/
+
+namespace py = pybind11;
+
+/******************************************************************************
+ * H5Lite Class
+ ******************************************************************************/
+
+struct H5LiteFile
+{
+    H5LiteFile(const std::string &_url): url(_url) { }
+
+    int read(const std::string &datasetname, int valtype, long col, long startrow, long numrows) 
+    { 
+        if(numrows < 0) numrows = H5Lite::ALL_ROWS; // workaround for binding to default argument value
+        H5Lite::info_t info = H5Lite::read(url.c_str(), datasetname.c_str(), (RecordObject::valType_t)valtype, col, startrow, numrows, &context);
+        if(info.data) delete [] info.data;
+        return (int)info.datasize;
+    }
+
+    std::string url;
+    H5Lite::context_t context;
+};
 
 /******************************************************************************
  * BINDINGS
  ******************************************************************************/
 
-PYBIND11_MODULE(h5lite, m) {
+PYBIND11_MODULE(h5lite, m) 
+{
     m.doc() = "H5Lite module for read-only access to *.h5 files";
-    m.def("init", &H5Lite::init, "initializes H5Lite library");
+
+    py::class_<H5LiteFile>(m, "file")
+        .def(py::init<const std::string &>())
+        .def("read", &H5LiteFile::read, "reads dataset from file", 
+            py::arg("dataset"), 
+            py::arg("type"), 
+            py::arg("col") = 0, 
+            py::arg("startrow") = 0, 
+            py::arg("numrows") = -1);
+
+    m.attr("all") = (long)-1;
+    m.attr("float") = (long)RecordObject::REAL;
+    m.attr("int") = (long)RecordObject::INTEGER;
 }
