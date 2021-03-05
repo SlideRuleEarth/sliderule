@@ -56,7 +56,7 @@ struct H5LiteFile
  * BINDINGS
  ******************************************************************************/
 
-PYBIND11_MODULE(h5lite, m) 
+PYBIND11_MODULE(h5coro, m) 
 {
     m.doc() = "H5Lite module for read-only access to *.h5 files";
 
