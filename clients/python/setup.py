@@ -15,7 +15,7 @@ setup(
     version='0.2.0',
     description='Python client for interacting with sliderule server',
     long_description_content_type="text/markdown",
-    url='https://github.com/ICESat2-SlideRule/sliderule/',
+    url='https://github.com/ICESat2-SlideRule/sliderule-python/',
     license='Apache',
     classifiers=[
         'Development Status :: 3 - Alpha',
