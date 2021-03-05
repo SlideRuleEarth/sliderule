@@ -178,10 +178,6 @@ if(${PYTHON_BINDINGS})
     pybind11_add_module(h5coro ${PROJECT_SOURCE_DIR}/targets/h5coro-python/h5coro-python.cpp)
     target_link_libraries (h5coro PUBLIC slideruleLib)
     set_target_properties (h5coro PROPERTIES PREFIX "")
-    set_target_properties (h5coro PROPERTIES LIBRARY_OUTPUT_NAME h5coro)
-    set_target_properties (h5coro PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/h5coro")
-    configure_file (${PROJECT_SOURCE_DIR}/targets/h5coro-python/__init__.py ${CMAKE_CURRENT_BINARY_DIR}/h5coro/__init__.py)
-    configure_file (${PROJECT_SOURCE_DIR}/targets/h5coro-python/setup.py ${CMAKE_CURRENT_BINARY_DIR}/h5coro/setup.py)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     
