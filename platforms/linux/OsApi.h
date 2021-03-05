@@ -55,6 +55,12 @@
 #define VARG_CHECK(f, a, b)
 #endif
 
+#ifdef __BE__
+#define NATIVE_FLAGS 1
+#else
+#define NATIVE_FLAGS 0
+#endif
+
 #define PATH_DELIMETER '/'
 #define PATH_DELIMETER_STR "/"
 

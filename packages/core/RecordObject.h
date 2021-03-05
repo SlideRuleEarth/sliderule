@@ -38,12 +38,6 @@
 #define TOBYTES(bits)   ((bits) >> 3)
 #define TOBITS(bytes)   ((bytes) << 3)
 
-#ifdef __LE__
-#define NATIVE_FLAGS 0
-#else
-#define NATIVE_FLAGS 1
-#endif
-
 /******************************************************************************
  * RECORD OBJECT CLASS
  ******************************************************************************/

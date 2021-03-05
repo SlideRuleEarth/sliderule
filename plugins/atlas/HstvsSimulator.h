@@ -150,7 +150,7 @@ class PedProbabilityEncoder
          * Methods
          *--------------------------------------------------------------------*/
 
-        uint8_t   encodeTargetValue       (unsigned int targetValue, int mode );
+        uint8_t encodeTargetValue       (unsigned int targetValue, int mode );
         void    generateHighestBitSet   (void);
 };
 
@@ -219,12 +219,12 @@ class HstvsSimulator: public CommandableObject
          * 1 channel in 5 ns */
         typedef struct
         {
-                    uint32_t      seed[NUM_RX_CHANNELS];              // start seed for each psuedo-random number generator dedicated to each of the 20 channels
-                    uint16_t      tmet[3];                            // tvs-met of the start of the rx probabilities - 10ns
-                    uint16_t      tx_offset;                          // offset in tvs-met ticks from the tvs-met above of the tx pulse
-                    uint16_t      tx_flags;                           // Bit[9..8] is decode probability mode, Bit[0]: leading pulse; Bit[1]: trailing pulse
-                    uint32_t      ch_enables;                         // Bit[23..16] --> Ch[7..0], Bit[15..8] --> Ch[23..16], Bit[7..0] --> Ch[15..8]
-                    bin_prob_t  rx_prob[NUMBER_BINS_PER_SHOT];      // Bits[15..8]: strong spot probability; Bits[7..0]: weak spot probability
+            uint32_t    seed[NUM_RX_CHANNELS];              // start seed for each psuedo-random number generator dedicated to each of the 20 channels
+            uint16_t    tmet[3];                            // tvs-met of the start of the rx probabilities - 10ns
+            uint16_t    tx_offset;                          // offset in tvs-met ticks from the tvs-met above of the tx pulse
+            uint16_t    tx_flags;                           // Bit[9..8] is decode probability mode, Bit[0]: leading pulse; Bit[1]: trailing pulse
+            uint32_t    ch_enables;                         // Bit[23..16] --> Ch[7..0], Bit[15..8] --> Ch[23..16], Bit[7..0] --> Ch[15..8]
+            bin_prob_t  rx_prob[NUMBER_BINS_PER_SHOT];      // Bits[15..8]: strong spot probability; Bits[7..0]: weak spot probability
         }
 #ifdef _GNU_
         __attribute__ ((packed))

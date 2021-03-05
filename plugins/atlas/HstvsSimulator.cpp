@@ -34,7 +34,10 @@
  ******************************************************************************/
 
 #define _USE_MATH_DEFINES
+
+#ifdef _GNU_
 #include <math.h>
+#endif
 
 #include "AltimetryHistogram.h"
 #include "HstvsSimulator.h"
