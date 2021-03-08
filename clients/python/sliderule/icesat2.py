@@ -463,7 +463,8 @@ def log (level, duration):
 def toregion (geojson, as_file=True):
     # parse geo json #
     if as_file:
-        geo_dict = json.load(geojson)
+        with open(geojson) as shapefile:
+            geo_dict = json.load(shapefile)
     else:
         geo_dict = json.loads(geojson)
     
