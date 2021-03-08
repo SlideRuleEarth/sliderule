@@ -47,11 +47,6 @@ option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
 option (USE_MONGOOSE_PACKAGE "Include the Mongoose package" OFF)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 
-set (CMAKE_SKIP_BUILD_RPATH FALSE)
-set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set (CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
-set (CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
-
 #####################
 # Target: SlideRule #
 #####################
