@@ -15,6 +15,12 @@ PYTHONCFG += -DUSE_AWS_PACKAGE=ON
 PYTHONCFG += -DUSE_LEGACY_PACKAGE=OFF
 PYTHONCFG += -DUSE_CCSDS_PACKAGE=OFF
 
+LIBRARYCFG  = -DSHARED_LIBRARY=ON
+LIBRARYCFG += -DUSE_H5_PACKAGE=ON
+LIBRARYCFG += -DUSE_AWS_PACKAGE=ON
+LIBRARYCFG += -DUSE_LEGACY_PACKAGE=ON
+LIBRARYCFG += -DUSE_CCSDS_PACKAGE=ON
+
 all: default-build
 
 default-build:
@@ -30,6 +36,9 @@ development-config: prep
 
 python-config: prep
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
+
+library-config: prep
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(LIBRARYCFG) $(ROOT)
 
 scan: prep
 	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) $(ROOT)

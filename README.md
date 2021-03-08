@@ -67,6 +67,12 @@ Options include:
 
    -DUSE_PISTACHE_PACKAGE=[ON|OFF]     http server and client
                                        default: OFF
+
+   -DPYTHON_BINDINGS=[ON|OFF]          build python bindings instead of sliderule executable (overrides all other targets)
+                                       default: OFF
+
+   -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets except for PYTHON_BINDINGS)     
+                                       default: OFF
 ```
 
 

@@ -32,6 +32,7 @@ endif()
 
 option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" OFF)
 option (PYTHON_BINDINGS "Create Python bindings, including h5lite module" OFF)
+option (SHARED_LIBRARY "Create shared library instead of sliderule binary" OFF)
 
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
@@ -53,7 +54,11 @@ option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 
 # SlideRule Library #
 
-add_library(slideruleLib STATIC "")
+if(${SHARED_LIBRARY})
+    add_library(slideruleLib SHARED "")
+else()
+    add_library(slideruleLib STATIC "")
+endif()
 
 # Version Information #
 
@@ -70,7 +75,6 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     # Set Environment Variables
     set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
-    set (EXECDIR ${INSTALLDIR}/bin)
     set (INCDIR ${INSTALLDIR}/include/sliderule)
     set (TOOLCHAIN _GNU_ CACHE STRING "Toolchain used to build code") # need to rework so that compile tool chain is somehow detected
     set (ENDIAN __LE__ CACHE STRING "Endianess of local machine")  # ideally moved to some architecture specific file
@@ -83,7 +87,6 @@ elseif(CMAKE_BUILD_PLATFORM MATCHES "Windows")
     # Set Environment Variables
     set (INSTALLDIR "C:\\Program Files\\SlideRule" CACHE STRING "Installation directory for library and executables")
     set (CONFDIR ${INSTALLDIR}\etc\sliderule)
-    set (EXECDIR ${INSTALLDIR}\bin)
     set (INCDIR ${INSTALLDIR}\include\sliderule)
     set (TOOLCHAIN _VS_ CACHE STRING "Toolchain used to build code") # need to rework so that compile tool chain is somehow detected
     set (ENDIAN __LE__ CACHE STRING "Endianess of local machine")  # ideally moved to some architecture specific file
@@ -174,15 +177,20 @@ if(${PYTHON_BINDINGS})
     target_link_libraries (h5coro PUBLIC slideruleLib)
     set_target_properties (h5coro PROPERTIES PREFIX "")
 
+elseif(${SHARED_LIBRARY})
+
+    # libsliderule.so #
+    install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
+
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     
-    # serveri-linux #
+    # server-linux #
     add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/server-linux/SlideRule.cpp)
     set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
     set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
     set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
     target_link_libraries (sliderule PUBLIC slideruleLib)
-    install (TARGETS sliderule DESTINATION ${EXECDIR})
+    install (TARGETS sliderule DESTINATION ${INSTALLDIR}/bin)
 
 endif()
 
