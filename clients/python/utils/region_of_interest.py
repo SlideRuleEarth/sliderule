@@ -64,8 +64,11 @@ if __name__ == '__main__':
     
     # Region of Interest #
     region_filename = sys.argv[1]
-    with open(region_filename) as regionfile:
-        region = json.load(regionfile)["region"]
+    if region_filename.find(".geojson") > 1:
+        region = icesat2.toregion(region_filename)
+    else:
+        with open(region_filename) as regionfile:
+            region = json.load(regionfile)["region"]
         
     # Set URL #
     url = ["127.0.0.1"]
