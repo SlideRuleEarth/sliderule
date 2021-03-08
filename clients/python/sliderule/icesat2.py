@@ -456,3 +456,42 @@ def log (level, duration):
 
     # Initiate Connection for Logging
     rsps = sliderule.source("log", rqst, stream=True)
+
+#
+# TO REGION
+#
+def toregion (geojson, as_file=True):
+    # parse geo json #
+    if as_file:
+        geo_dict = json.load(geojson)
+    else:
+        geo_dict = json.loads(geojson)
+    
+    # pull out coordinates #
+    coordinates = geo_dict["features"][0]["geometry"]["coordinates"][0][0]
+
+    # de-duplicate #
+    nodup_coords = []
+    for i in range(len(coordinates)):
+        duplicate = False
+        for j in range(i + 1, len(coordinates)):
+            c1 = coordinates[i]
+            c2 = coordinates[j]
+            if(c1[0] == c2[0] and c1[1] == c2[1]):
+                duplicate = True
+        if not duplicate:
+            nodup_coords.append(coordinates[i])
+
+    # reverse direction (make counter-clockwise) #
+    ccw_coords = []
+    for i in range(len(nodup_coords), 0, -1):
+        ccw_coords.append(nodup_coords[i - 1])
+    ccw_coords.append(nodup_coords[-1])
+    
+    # build region dictionary #
+    region = []
+    for coord in ccw_coords:
+        point = {"lon": coord[0], "lat": coord[1]}
+        region.append(point)
+
+    return region
