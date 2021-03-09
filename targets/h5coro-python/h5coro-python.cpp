@@ -23,7 +23,7 @@
 
 #include <pybind11/pybind11.h>
 
-#include "H5Lite.h"
+#include "H5Coro.h"
 #include "RecordObject.h"
 
 /******************************************************************************
@@ -33,7 +33,7 @@
 namespace py = pybind11;
 
 /******************************************************************************
- * H5Lite Class
+ * H5Coro Class
  ******************************************************************************/
 
 struct H5LiteFile
@@ -42,14 +42,14 @@ struct H5LiteFile
 
     int read(const std::string &datasetname, int valtype, long col, long startrow, long numrows) 
     { 
-        if(numrows < 0) numrows = H5Lite::ALL_ROWS; // workaround for binding to default argument value
-        H5Lite::info_t info = H5Lite::read(url.c_str(), datasetname.c_str(), (RecordObject::valType_t)valtype, col, startrow, numrows, &context);
+        if(numrows < 0) numrows = H5Coro::ALL_ROWS; // workaround for binding to default argument value
+        H5Coro::info_t info = H5Coro::read(url.c_str(), datasetname.c_str(), (RecordObject::valType_t)valtype, col, startrow, numrows, &context);
         if(info.data) delete [] info.data;
         return (int)info.datasize;
     }
 
     std::string url;
-    H5Lite::context_t context;
+    H5Coro::context_t context;
 };
 
 /******************************************************************************
@@ -58,7 +58,7 @@ struct H5LiteFile
 
 PYBIND11_MODULE(h5coro, m) 
 {
-    m.doc() = "H5Lite module for read-only access to *.h5 files";
+    m.doc() = "H5Coro module for read-only access to *.h5 files";
 
     py::class_<H5LiteFile>(m, "file")
         .def(py::init<const std::string &>())

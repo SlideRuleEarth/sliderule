@@ -24,8 +24,8 @@
     #include "H5Lib.h"
     #define H5Api H5Lib
 #else
-    #include "H5Lite.h"
-    #define H5Api H5Lite
+    #include "H5Coro.h"
+    #define H5Api H5Coro
 #endif
 
 #endif  /* __h5api__ */

@@ -25,7 +25,7 @@
 #include "S3Lib.h"
 #endif
 
-#include "H5Lite.h"
+#include "H5Coro.h"
 #include "core.h"
 
 #include <assert.h>
@@ -2843,21 +2843,21 @@ void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* data
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void H5Lite::init (void)
+void H5Coro::init (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void H5Lite::deinit (void)
+void H5Coro::deinit (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
+H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
 {
     (void)valtype;
     (void)col;
@@ -3067,7 +3067,7 @@ H5Lite::info_t H5Lite::read (const char* url, const char* datasetname, RecordObj
 /*----------------------------------------------------------------------------
  * traverse
  *----------------------------------------------------------------------------*/
-bool H5Lite::traverse (const char* url, int max_depth, const char* start_group)
+bool H5Coro::traverse (const char* url, int max_depth, const char* start_group)
 {
     (void)max_depth;
  

@@ -43,14 +43,6 @@ if __legacy__ then
     runner.script(td .. "limit_dispatch.lua")
 end
 
--- Run ICESat2 Unit Tests --
-
-if __icesat2__ then
-    runner.script(rd .. "../../plugins/icesat2/tests/atl06_elements.lua")
-    runner.script(rd .. "../../plugins/icesat2/tests/atl06_unittest.lua")
-    runner.script(rd .. "../../plugins/icesat2/tests/atl03_indexer.lua")
-end
-
 -- Report Results --
 
 runner.report()
@@ -58,5 +50,3 @@ runner.report()
 -- Cleanup and Exit --
 
 sys.quit()
-
-
