@@ -197,7 +197,8 @@ struct H5LiteFile
             delete readers[i]->pid;
 
             // populate result dictionary
-//            (*result)[readers[i]->dataset] = readers[i]->result;
+            py::str key(readers[i]->dataset);
+            (*result)[key] = readers[i]->result;
 
             // clean up request
             delete readers[i];
