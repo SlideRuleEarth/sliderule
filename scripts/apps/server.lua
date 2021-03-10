@@ -34,10 +34,7 @@ if __aws__ then
 end
 
 -- Configure and Run Server --
-if __mongoose__ then
-    server = mongoose.server(tostring(port), 4)
-    server:name("SlideRuleMongoose")
-elseif __pistache__ then
+if __pistache__ then
     server = pistache.server(port, 4)
     server:name("SlideRulePistache")
 else

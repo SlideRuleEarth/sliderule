@@ -45,7 +45,6 @@ option (USE_AWS_PACKAGE "Include the AWS package" OFF)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
 option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
-option (USE_MONGOOSE_PACKAGE "Include the Mongoose package" OFF)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 
 #####################
@@ -153,10 +152,6 @@ endif()
 
 if(${USE_PISTACHE_PACKAGE})
     add_subdirectory (packages/pistache)
-endif()
-
-if(${USE_MONGOOSE_PACKAGE})
-    add_subdirectory (packages/mongoose)
 endif()
 
 if(${USE_LEGACY_PACKAGE})
