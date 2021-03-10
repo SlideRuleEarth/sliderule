@@ -44,12 +44,11 @@
  ******************************************************************************/
 
 #ifdef _WINDOWS_
-#undef IGNORE
 #undef ERROR
 #endif
 
 typedef enum {
-    IGNORE = -1,
+    INVALID_LOG_LEVEL = -1,
     DEBUG = 0,
     INFO = 1,
     WARNING = 2,

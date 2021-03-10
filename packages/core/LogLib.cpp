@@ -145,7 +145,7 @@ log_lvl_t LogLib::getLevel(okey_t id)
         catch(std::out_of_range& e)
         {
             (void)e;
-            lvl = IGNORE;
+            lvl = INVALID_LOG_LEVEL;
         }
     }
     logMut.unlock();
@@ -174,10 +174,6 @@ bool LogLib::str2lvl(const char* str, log_lvl_t* lvl)
     if( StringLib::match(str, "RAW") || StringLib::match(str, "raw") || StringLib::match(str, "Raw"))
     {
         clvl = RAW;
-    }
-    else if( StringLib::match(str, "IGNORE") || StringLib::match(str, "ignore") || StringLib::match(str, "Ignore"))
-    {
-        clvl = IGNORE;
     }
     else if( StringLib::match(str, "DEBUG") || StringLib::match(str, "debug") || StringLib::match(str, "Debug"))
     {
@@ -266,7 +262,6 @@ void LogLib::logMsg(const char* file_name, unsigned int line_number, log_lvl_t l
     char* lvlstr = (char*)"";
     switch(lvl)
     {
-        case IGNORE:    lvlstr = (char*)"IGNORE";   break;
         case DEBUG:     lvlstr = (char*)"DEBUG";    break;
         case INFO:      lvlstr = (char*)"INFO";     break;
         case WARNING:   lvlstr = (char*)"WARNING";  break;
@@ -277,14 +272,7 @@ void LogLib::logMsg(const char* file_name, unsigned int line_number, log_lvl_t l
 
     if(lvlstr != NULL)
     {
-        if(formatted_string[msglen - 1] == '\n')
-        {
-            StringLib::format(entry_log_msg, MAX_LOG_ENTRY_SIZE, "%s:%s:%d:%s: %s", timestr, file_name_only, line_number, lvlstr, formatted_string);
-        }
-        else
-        {
-            StringLib::format(entry_log_msg, MAX_LOG_ENTRY_SIZE, "%s:%s:%d:%s: %s\n", timestr, file_name_only, line_number, lvlstr, formatted_string);
-        }
+        StringLib::format(entry_log_msg, MAX_LOG_ENTRY_SIZE, "%s:%s:%d:%s: %s\n", timestr, file_name_only, line_number, lvlstr, formatted_string);
     }
     else
     {

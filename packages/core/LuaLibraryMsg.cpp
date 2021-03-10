@@ -423,7 +423,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
 
     /* Get Log Level */
-    log_lvl_t lvl = IGNORE;
+    log_lvl_t lvl = -1;
     if(lua_isinteger(L, 2))
     {
         lvl = (log_lvl_t)lua_tointeger(L, 2);

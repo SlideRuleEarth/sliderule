@@ -101,7 +101,6 @@ int core_open (lua_State *L)
     luaL_newlib(L, core_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrInt   (L, "IGNORE",               IGNORE);
     LuaEngine::setAttrInt   (L, "DEBUG",                DEBUG);
     LuaEngine::setAttrInt   (L, "INFO",                 INFO);
     LuaEngine::setAttrInt   (L, "WARNING",              WARNING);

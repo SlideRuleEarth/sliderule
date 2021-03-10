@@ -194,17 +194,22 @@ Using a released version of the code, the following two Makefile targets can be 
 
 ## VII. Licensing
 
-Sliderule is licensed under the Apache License, Version 2.0
-to the University of Washington under one or more contributor
-license agreements.  See the NOTICE file distributed with this
-work for additional information regarding copyright ownership.
+SlideRule is licensed under the 3-clause BSD license found in the LICENSE file at the root of this source tree.
 
-You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+The following SlideRule software components include code sourced from and/or based off of third party software 
+that is distributed under various open source licenses. The appropriate copyright notices are included in the 
+corresponding source files.
+* `packages/core/LuaEngine.cpp`: partial code sourced from https://www.lua.org/ (MIT license)
+* `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git (MIT license)
+* `scripts/extensions/csv.lua`: code sourced from https://github.com/geoffleyland/lua-csv (MIT license)
+* `packages/core/MathLib.cpp`: point inclusion code based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html (BSD-style license)
 
-The following sliderule software components include code sourced from and/or
-based off of third party software that has been released as open source to the
-public under various open source agreements:
-* `packages/core/LuaEngine.cpp`: partial code sourced from https://www.lua.org/
-* `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git
-* `scripts/extensions/csv.lua`: code sourced from https://github.com/geoffleyland/lua-csv
-* `packages/core/MathLib.cpp`: point inclusion code based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+The following third-party libraries can be linked to by SlideRule:
+* __Lua__: https://www.lua.org/ (MIT license)
+* __AWS SDK for C++__: https://aws.amazon.com/sdk-for-cpp/ (Apache 2.0 license)
+* __HDF5 Library__: https://www.hdfgroup.org (BSD-style license)
+* __HDF5 REST VOL Plugin__: https://www.hdfgroup.org (BSD-style license)
+
+The following third-party libraries are linked to indirectly by libraries used by SlideRule:
+* __curl__: https://curl.se/docs/copyright.html (open source license - see website for license information)
+* __yajl__: https://github.com/lloyd/yajl (open source license - similar to MIT)
