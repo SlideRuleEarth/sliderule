@@ -156,11 +156,11 @@ void initcore (void)
 {
     /* Initialize Libraries */
     LocalLib::init();
+    MsgQ::init();
     SockLib::init();
     TTYLib::init();
     TimeLib::init();
     EventLib::init(MONITORQ);
-    MsgQ::init();
 
     /* Attach OsApi Print Function */
     LocalLib::setPrint(os_print);
@@ -192,11 +192,11 @@ void deinitcore (void)
 {
     /* Clean up libraries initialized in initcore() */
     printf("Exiting...\n");
-    MsgQ::deinit();     printf("Message Queues Uninitialized\n");
     EventLib::deinit(); printf("Event Library Uninitialized\n");
     TimeLib::deinit();  printf("Time Library Uninitialized\n");
     TTYLib::deinit();   printf("TTY Library Uninitialized\n");
     SockLib::deinit();  printf("Socket Library Uninitialized\n");
+    MsgQ::deinit();     printf("Message Queues Uninitialized\n");
     LocalLib::deinit(); printf("Local Library Uninitialized\n");
     printf("Cleanup Complete\n");
 }
