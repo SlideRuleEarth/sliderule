@@ -485,7 +485,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
 
     /* Parse Command into Tokens */
     char(*toks)[MAX_CMD_SIZE] = new (char[MAX_CMD_PARAMETERS + 1][MAX_CMD_SIZE]);
-    mlog(INFO, "Received command: %s", cmdstr);
+    mlog(INFO, "Received command: %s\n", cmdstr);
     int totaltoks = StringLib::tokenizeLine(cmdstr, cmdlen, ' ', MAX_CMD_PARAMETERS + 1, toks);
     if(totaltoks > MAX_CMD_PARAMETERS) // unable to determine in more parameters supplied
     {

@@ -126,16 +126,16 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
     /* Check if Formatting Output */
     if(event->level != RAW)
     {
-        /* Populate Time Stamp */
+        /* Populate Prefix */
         TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
-        msg += StringLib::formats(msg, MAX_EVENT_ENTRY_SIZE - (msg - event_entry), "%d:%d:%d:%d:%d:", timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-
-        /* Populate Level */
-        msg += StringLib::formats(msg, MAX_EVENT_ENTRY_SIZE - (msg - event_entry), "%s:", EventLib::lvl2str((event_level_t)event->level));
+        msg += StringLib::formats(msg, MAX_EVENT_ENTRY_SIZE - (msg - event_entry), "%d:%d:%d:%d:%d:%s:%s ", 
+                                    timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second,
+                                    EventLib::lvl2str((event_level_t)event->level),
+                                    event->name);
     }
 
     /* Populate Message */
-    msg += StringLib::formats(msg, MAX_EVENT_ENTRY_SIZE - (msg - event_entry), "%s %s", event->name, event->attr);
+    msg += StringLib::formats(msg, MAX_EVENT_ENTRY_SIZE - (msg - event_entry), "%s", event->attr);
 
     /* Print Entry */
     if(outQ)
