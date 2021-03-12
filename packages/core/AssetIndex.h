@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "Asset.h"
-#include "LogLib.h"
+#include "EventLib.h"
 #include "Dictionary.h"
 #include "List.h"
 #include "Ordering.h"

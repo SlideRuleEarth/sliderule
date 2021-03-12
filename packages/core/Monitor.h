@@ -29,24 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __logger__
-#define __logger__
+#ifndef __monitor__
+#define __monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "MsgQ.h"
-#include "LuaObject.h"
+#include "DispatchObject.h"
 #include "RecordObject.h"
 #include "OsApi.h"
-#include "LogLib.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * LOGGER CLASS
+ * Monitor CLASS
  ******************************************************************************/
 
-class Logger: public LuaObject
+class Monitor: public DispatchObject
 {
     public:
 
@@ -54,50 +54,36 @@ class Logger: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* recType;
-        static RecordObject::fieldDef_t recDef[];
+        static const int MAX_EVENT_ENTRY_SIZE = 512;
 
-        static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            int32_t level;
-            char    message[LogLib::MAX_LOG_ENTRY_SIZE];
-        } log_message_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void init        (void);
         static int  luaCreate   (lua_State* L);
-        static int  logHandler  (const char* msg, int size, void* parm);
-        static int  recHandler  (const char* msg, int size, void* parm);
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                    Monitor         (lua_State* L, uint8_t type_mask, const char* outq_name);
+                    ~Monitor        (void);
+
+        bool        processRecord   (RecordObject* record, okey_t key) override;
+
+        static int  luaConfig       (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        okey_t          logid;
-        Publisher*      outq;
-        RecordObject*   record;
-        log_message_t*  logmsg;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                    Logger      (lua_State* L, log_lvl_t _level, const char* outq_name, int qdepth, bool as_record);
-                    ~Logger     (void);
-
-        static int  luaConfig   (lua_State* L);
+        uint8_t         eventTypeMask;
+        Publisher*      outQ;
 };
 
-#endif  /* __logger__ */
+#endif  /* __monitor__ */

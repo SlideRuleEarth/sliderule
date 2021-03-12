@@ -58,10 +58,14 @@ class SockLib
         static void         sockclose           (int fd);
         static int          startserver         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm);
         static int          startclient         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm);
+        static const char*  sockhost            (void);
+        static uint32_t     sockipv4            (void);
 
     private:
 
         static bool         signal_exit;
+        static char         local_host_name[HOST_STR_LEN];
+        static uint32_t     ipv4;
 
         static int          sockcreate          (int type, const char* ip_addr, int port, bool is_server, bool* block);
         static int          sockoptions         (int socket_fd, bool reuse, bool tcp);

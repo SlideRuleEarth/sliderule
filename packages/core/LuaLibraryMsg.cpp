@@ -422,21 +422,21 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     /* Get Publisher */
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
 
-    /* Get Log Level */
-    log_lvl_t lvl = -1;
+    /* Get Event Level */
+    event_level_t lvl = INVALID_EVENT_LEVEL;
     if(lua_isinteger(L, 2))
     {
-        lvl = (log_lvl_t)lua_tointeger(L, 2);
+        lvl = (event_level_t)lua_tointeger(L, 2);
     }
-    else if(lua_isstring(L, 2)) // check log level parameter
+    else if(lua_isstring(L, 2)) // check event level parameter
     {
-        LogLib::str2lvl(lua_tostring(L, 2), &lvl);
+        EventLib::str2lvl(lua_tostring(L, 2), &lvl);
     }
 
-    /* Check Log Level */
-    if(lvl < 0)
+    /* Check Event Level */
+    if(lvl == INVALID_EVENT_LEVEL)
     {
-        mlog(CRITICAL, "Invalid log level: %d\n", lvl);
+        mlog(CRITICAL, "Invalid event level: %d\n", lvl);
         return 0;        
     }
 
@@ -450,10 +450,18 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     }
 
     /* Construct Log Record */
-    RecordObject* record = new RecordObject(Logger::recType);
-    Logger::log_message_t* logmsg = (Logger::log_message_t*)record->getRecordData();
-    logmsg->level = lvl;
-    StringLib::copy(logmsg->message, str, len + 1);
+    RecordObject* record = new RecordObject(EventLib::rec_type);
+    EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
+    event->systime  = TimeLib::gettimems();
+    event->ipv4     = SockLib::sockipv4();
+    event->flags    = 0;
+    event->type     = EventLib::LOG;
+    event->level    = lvl;
+    event->tid      = Thread::getId();
+    event->id       = ORIGIN;
+    event->parent   = ORIGIN;
+    StringLib::copy(event->name, "sendlog", EventLib::MAX_NAME_SIZE);
+    StringLib::copy(event->attr, str, len + 1);
 
     /* Post Record */
     uint8_t* rec_buf = NULL;

@@ -38,7 +38,7 @@
 #include "OsApi.h"
 #include "File.h"
 #include "StringLib.h"
-#include "LogLib.h"
+#include "EventLib.h"
 #include "DeviceObject.h"
 
 /******************************************************************************

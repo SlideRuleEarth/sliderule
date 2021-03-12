@@ -109,8 +109,8 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     DeviceObject(L, _role)
 {
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", filename, dataset_name);
-    TraceLib::stashId (trace_id); // set thread specific trace id for H5Api
+    uint32_t trace_id = start_trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", filename, dataset_name);
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Api
 
     /* Set Record */
     recObj = new RecordObject(recType);
@@ -153,7 +153,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     }
 
     /* Stop Trace */
-    stop_trace(trace_id);
+    stop_trace(INFO, trace_id);
 }
 
 /*----------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 --
 -- INPUT:       arg[1] -
 --              {
---                  "level":    "<log level string>" -OR- <log level number>
+--                  "level":    "<event level string>" -OR- <event level number>
 --                  "duration": <seconds to hold connection open | 0 for indefinite>
 --              }
 --
@@ -18,8 +18,8 @@ local parm = json.decode(arg[1])
 local level = parm["level"] or core.CRITICAL
 local duration = parm["duration"] or 0
 
--- Attach logger to response queue --
-local userlog = core.logger(rspq, level, true)
+-- Attach monitor to response queue --
+local userlog = core.monitor(rspq, level, true)
 
 -- Pend for duration (in 1 second intervals to allow hooks to execute) --
 local seconds = 0

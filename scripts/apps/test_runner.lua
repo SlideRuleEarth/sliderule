@@ -5,7 +5,7 @@ local console = require("console")
 
 -- Initial Configuration --
 
-console.logger:config(core.INFO)
+console.monitor:config(core.INFO)
 
 -- Run Core Unit Tests --
 

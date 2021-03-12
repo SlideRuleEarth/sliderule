@@ -35,7 +35,7 @@
 
 #include "DeviceReader.h"
 #include "DeviceIO.h"
-#include "LogLib.h"
+#include "EventLib.h"
 #include "MsgQ.h"
 
 /******************************************************************************

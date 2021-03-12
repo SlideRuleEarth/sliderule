@@ -36,7 +36,7 @@
 #include "UdpSocket.h"
 #include "OsApi.h"
 #include "StringLib.h"
-#include "LogLib.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * PUBLIC METHODS

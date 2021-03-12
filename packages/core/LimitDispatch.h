@@ -42,7 +42,7 @@
 #include "DispatchObject.h"
 #include "Dictionary.h"
 #include "OsApi.h"
-#include "LogLib.h"
+#include "EventLib.h"
 #include "LimitRecord.h"
 
 /******************************************************************************
@@ -73,7 +73,7 @@ class LimitDispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         LimitRecord::limit_t    limit;
-        log_lvl_t               logLevel;
+        event_level_t           logLevel;
         bool                    inError;
         Publisher*              limitQ;
         Publisher*              deepQ;

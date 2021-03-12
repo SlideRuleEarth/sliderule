@@ -390,8 +390,8 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
 
         /* Start Trace */
         mlog(INFO, "Reading %d elements (%ld bytes) from %s %s\n", elements, datasize, url, datasetname);
-        uint32_t parent_trace_id = TraceLib::grabId();
-        uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+        uint32_t parent_trace_id = EventLib::grabId();
+        uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
         /* Read Dataset */
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
@@ -417,7 +417,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         }
 
         /* Stop Trace */
-        stop_trace(trace_id);
+        stop_trace(INFO, trace_id);
     }
     while(false);
 

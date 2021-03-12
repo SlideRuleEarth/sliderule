@@ -211,8 +211,8 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
         const char* lvl_str = getLuaString(L, 2);
 
         /* Convert String to Level */
-        log_lvl_t lvl;
-        if(LogLib::str2lvl(lvl_str, &lvl) == false)
+        event_level_t lvl;
+        if(EventLib::str2lvl(lvl_str, &lvl) == false)
         {
             throw RunTimeException("invalid level");
         }

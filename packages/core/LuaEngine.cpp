@@ -68,7 +68,7 @@ LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG
     /* Initialize Parameters */
     engineName      = StringLib::duplicate(name);
     mode            = PROTECTED_MODE;
-    traceId         = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\"}", name);
+    traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"name\":\"%s\"}", name);
     dInfo           = NULL;
     L               = createState(hook);
 
@@ -106,7 +106,7 @@ LuaEngine::LuaEngine(const char* name, const char* script, const char* arg, uint
     /* Initialize Parameters */
     engineName      = StringLib::duplicate(name);
     mode            = DIRECT_MODE;
-    traceId         = start_trace_ext(trace_id, "lua_engine", "{\"name\":\"%s\", \"script\":\"%s\"}", name, script);
+    traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"name\":\"%s\", \"script\":\"%s\"}", name, script);
     pInfo           = NULL;
     L               = createState(hook);
 
@@ -157,7 +157,7 @@ LuaEngine::~LuaEngine(void)
     }
 
     /* Stop Trace */
-    stop_trace(traceId);
+    stop_trace(CRITICAL, traceId);
 }
 
 /*----------------------------------------------------------------------------

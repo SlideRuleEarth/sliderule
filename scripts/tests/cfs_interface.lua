@@ -2,7 +2,7 @@ local runner = require("test_executive")
 local packet = require("packet")
 
 --local console = require("console")
---console.logger:config(core.INFO)
+--console.monitor:config(core.INFO)
 
 -- Cfs Interface Unit Test Start --
 

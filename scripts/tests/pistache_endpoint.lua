@@ -18,7 +18,7 @@ json_object = '{ \
 
 tmpfile = os.tmpname()
 
-console.logger:config(core.INFO)
+console.monitor:config(core.INFO)
 
 -- Unit Test --
 

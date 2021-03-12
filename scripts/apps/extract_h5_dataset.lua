@@ -1,5 +1,5 @@
 local console = require("console")
-console.logger:config(core.INFO)
+console.monitor:config(core.INFO)
 
 resource = arg[1] or "/data/ATL03/ATL03_20181017222812_02950102_003_01.h5"
 dataset = arg[2] or "/gt2l/heights/h_ph"

@@ -153,15 +153,15 @@ int LuaLibrarySys::lsys_log (lua_State* L)
 {
     bool status = false;
 
-    log_lvl_t lvl;
+    event_level_t lvl;
     if(lua_isinteger(L, 1))
     {
-        lvl = (log_lvl_t)lua_tointeger(L, 1);
+        lvl = (event_level_t)lua_tointeger(L, 1);
         status = true;
     }
-    else if(lua_isstring(L, 1)) // check log level parameter
+    else if(lua_isstring(L, 1)) // check event level parameter
     {
-        if(LogLib::str2lvl(lua_tostring(L, 1), &lvl))
+        if(EventLib::str2lvl(lua_tostring(L, 1), &lvl))
         {
             status = true;
         }
@@ -214,7 +214,7 @@ int LuaLibrarySys::lsys_type (lua_State* L)
 {
     const char* obj_type = NULL;
 
-    if(lua_isstring(L, 1)) // check log level parameter
+    if(lua_isstring(L, 1)) // check event level parameter
     {
         const char* obj_name = lua_tostring(L, 1);
         if(MsgQ::existQ(obj_name))

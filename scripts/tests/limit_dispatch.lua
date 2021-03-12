@@ -1,7 +1,7 @@
 local runner = require("test_executive")
 local console = require("console")
 
-console.logger:config(core.INFO)
+console.monitor:config(core.INFO)
 
 -- Limit Dispatch Unit Test Setup --
 

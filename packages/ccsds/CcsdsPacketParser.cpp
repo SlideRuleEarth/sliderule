@@ -251,8 +251,8 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
 
         /* Get Parameters */
-        long        apid    = getLuaInteger(L, 2);
-        log_lvl_t   lvl     = (log_lvl_t)getLuaInteger(L, 3, true);
+        long            apid    = getLuaInteger(L, 2);
+        event_level_t   lvl     = (event_level_t)getLuaInteger(L, 3, true);
 
         /* Check APID */
         if(apid < 0 && apid > CCSDS_NUM_APIDS)

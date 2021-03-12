@@ -98,6 +98,7 @@ class StringLib
         static char*    concat          (const char* str1, const char* str2, const char* str3=NULL);
         static void     concat          (char* str1, const char* str2, int size);
         static char*    format          (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
+        static int      formats         (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
         static char*    copy            (char* dst, const char* src, int _size);
         static char*    find            (const char* big, const char* little, int len=MAX_STR_SIZE);
         static char*    find            (const char* str, const char c, bool first=true);

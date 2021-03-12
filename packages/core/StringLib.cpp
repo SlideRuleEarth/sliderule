@@ -443,7 +443,8 @@ void StringLib::concat(char* str1, const char* str2, int size)
 /*----------------------------------------------------------------------------
  * format
  *
- *  no memory allocated, returns dststr for syntax convenience
+ *  no memory allocated
+ *  returns dststr for syntax convenience
  *----------------------------------------------------------------------------*/
 char* StringLib::format(char* dststr, int size, const char* _format, ...)
 {
@@ -456,6 +457,25 @@ char* StringLib::format(char* dststr, int size, const char* _format, ...)
     if (slen < 1) return NULL;
     dststr[slen] = '\0';
     return dststr;
+}
+
+/*----------------------------------------------------------------------------
+ * format
+ *
+ *  no memory allocated
+ *  returns size of formatted string (not including null terminator)
+ *----------------------------------------------------------------------------*/
+int StringLib::formats(char* dststr, int size, const char* _format, ...)
+{
+    if (dststr == NULL) return 0;
+    va_list args;
+    va_start(args, _format);
+    int vlen = vsnprintf(dststr, size - 1, _format, args);
+    int slen = MIN(vlen, size - 1);
+    va_end(args);
+    if (slen < 1) return 0;
+    dststr[slen] = '\0';
+    return slen;
 }
 
 /*----------------------------------------------------------------------------

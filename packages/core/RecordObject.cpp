@@ -1085,6 +1085,25 @@ int RecordObject::parseSerial(unsigned char* buffer, int size, const char** rec_
 }
 
 /*----------------------------------------------------------------------------
+ * postSerial
+ *----------------------------------------------------------------------------*/
+int RecordObject::postSerial (Publisher* outq, int timeout, const char* rec_type, int rec_type_size, unsigned char* buffer, int size)
+{
+#ifdef RECORD_ARCHITECTURE
+    const int MAX_REC_TYPE_SIZE = 128;
+    if(rec_type_size < MAX_REC_TYPE_SIZE) return 0;
+    char rec_type_buf[MAX_REC_TYPE_SIZE];
+    const char* data1 = buildRecType(rec_type, rec_type_buf, MAX_REC_TYPE_SIZE);
+    int data1_size = StringLib::size(data1) + 1;
+#else
+    const char* data1 = rec_type;
+    int data1_size = rec_type_size;
+#endif
+
+    return outq->postCopy(data1, data1_size, buffer, size, timeout);
+}
+
+/*----------------------------------------------------------------------------
  * str2flags
  *----------------------------------------------------------------------------*/
 unsigned int RecordObject::str2flags (const char* str)

@@ -45,6 +45,10 @@
 
 #define LUA_CORE_LIBNAME    "core"
 
+#ifndef MONITORQ
+#define MONITORQ "monitorq"
+#endif
+
 /******************************************************************************
  * LOCAL DATA
  ******************************************************************************/
@@ -62,7 +66,7 @@ bool appActive = true;
  *----------------------------------------------------------------------------*/
 void os_print (const char* file_name, unsigned int line_number, const char* message)
 {
-    LogLib::logMsg(file_name, line_number, CRITICAL, "%s", message);
+    EventLib::logMsg(file_name, line_number, CRITICAL, "%s", message);
 }
 
 /*----------------------------------------------------------------------------
@@ -72,7 +76,7 @@ int core_open (lua_State *L)
 {
     static const struct luaL_Reg core_functions[] = {
         {"getbyname",       LuaObject::luaGetByName},
-        {"logger",          Logger::luaCreate},
+        {"monitor",         Monitor::luaCreate},
         {"cluster",         ClusterSocket::luaCreate},
         {"file",            File::luaCreate},
         {"tcp",             TcpSocket::luaCreate},
@@ -151,9 +155,7 @@ void initcore (void)
     SockLib::init();
     TTYLib::init();
     TimeLib::init();
-    TraceLib::init();
-    LogLib::init();
-    Logger::init();
+    EventLib::init(MONITORQ);
     MsgQ::init();
 
     /* Attach OsApi Print Function */
@@ -187,8 +189,7 @@ void deinitcore (void)
     /* Clean up libraries initialized in initcore() */
     printf("Exiting...\n");
     MsgQ::deinit();     printf("Message Queues Uninitialized\n");
-    LogLib::deinit();   printf("Logging Library Uninitialized\n");
-    TraceLib::deinit(); printf("Tracing Library Unitialized\n");
+    EventLib::deinit(); printf("Event Library Uninitialized\n");
     TimeLib::deinit();  printf("Time Library Uninitialized\n");
     TTYLib::deinit();   printf("TTY Library Uninitialized\n");
     SockLib::deinit();  printf("Socket Library Uninitialized\n");

@@ -175,7 +175,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     getUniqueId(id_str);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(traceId, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
+    uint32_t trace_id = start_trace(CRITICAL, traceId, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -188,7 +188,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     response.send(Http::Code::Ok, request.body().c_str());
 
     /* Stop Trace */
-    stop_trace(trace_id);
+    stop_trace(CRITICAL, trace_id);
 }
 
 /*----------------------------------------------------------------------------
@@ -200,7 +200,7 @@ void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWr
     getUniqueId(id_str);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(traceId, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
+    uint32_t trace_id = start_trace(CRITICAL, traceId, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -216,7 +216,7 @@ void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWr
     response.send(Http::Code::Ok, rsp.getString());
 
     /* Stop Trace */
-    stop_trace(trace_id);
+    stop_trace(CRITICAL, trace_id);
 }
 
 /*----------------------------------------------------------------------------
@@ -231,7 +231,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     std::string script_name = request.param(":name").as<std::string>();
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(traceId, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
+    uint32_t trace_id = start_trace(CRITICAL, traceId, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -268,7 +268,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     delete [] script_pathname;
 
     /* Stop Trace */
-    stop_trace(trace_id);
+    stop_trace(CRITICAL, trace_id);
 }
 
 /*----------------------------------------------------------------------------
@@ -283,7 +283,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     std::string script_name = request.param(":name").as<std::string>();
 
     /* Start Trace */
-    uint32_t trace_id = start_trace_ext(traceId, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
+    uint32_t trace_id = start_trace(CRITICAL, traceId, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
     mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
@@ -343,7 +343,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     delete [] script_pathname;
 
     /* Stop Trace */
-    stop_trace(trace_id);
+    stop_trace(CRITICAL, trace_id);
 }
 
 /*----------------------------------------------------------------------------

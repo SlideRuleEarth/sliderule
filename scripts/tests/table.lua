@@ -2,7 +2,7 @@ local runner = require("test_executive")
 local console = require("console")
 local td = runner.rootdir(arg[0]) .. "../tests"
 
-console.logger:config(core.INFO)
+console.monitor:config(core.INFO)
 
 -- Table Unit Test --
 

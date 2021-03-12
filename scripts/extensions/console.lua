@@ -1,7 +1,7 @@
 local console_queue = "consoleq"
 
-local console_logger = core.logger(console_queue, core.CRITICAL)
-console_logger:name("console.logger")
+local console_monitor = core.monitor(console_queue, core.CRITICAL)
+console_monitor:name("console.monitor")
 
 local console_file = core.file(core.WRITER, core.TEXT, "STDOUT")
 console_file:name("console.file")
@@ -11,7 +11,7 @@ console_writer:name("console.writer")
 
 local package = {
     q = console_queue,
-    logger = console_logger,
+    monitor = console_monitor,
     file = console_file,
     writer = console_writer
 }

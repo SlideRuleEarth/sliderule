@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "List.h"
-#include "LogLib.h"
+#include "EventLib.h"
 #include "LuaEngine.h"
 
 /******************************************************************************
@@ -94,7 +94,7 @@ DeviceIO::~DeviceIO(void)
 }
 
 /*----------------------------------------------------------------------------
- * luaLogPktStats - :stats([<log level>])
+ * luaLogPktStats - :stats([<event level>])
  *----------------------------------------------------------------------------*/
 int DeviceIO::luaLogPktStats(lua_State* L)
 {
@@ -106,8 +106,8 @@ int DeviceIO::luaLogPktStats(lua_State* L)
         /* Get Self */
         DeviceIO* lua_obj = (DeviceIO*)getLuaSelf(L, 1);
 
-        /* Get Log Level */
-        log_lvl_t lvl = (log_lvl_t)getLuaInteger(L, 2, true, IINVALID_LOG_LEVEL);
+        /* Get Event Level */
+        event_level_t lvl = (event_level_t)getLuaInteger(L, 2, true, INVALID_EVENT_LEVEL);
 
         /* Create Statistics Table */
         lua_newtable(L);

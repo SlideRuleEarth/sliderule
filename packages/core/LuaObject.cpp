@@ -35,8 +35,7 @@
 
 #include "LuaObject.h"
 #include "LuaEngine.h"
-#include "LogLib.h"
-#include "TraceLib.h"
+#include "EventLib.h"
 #include "StringLib.h"
 #include "OsApi.h"
 
@@ -275,8 +274,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     }
 
     /* Start Trace */
-    traceId = start_trace_ext(engine_trace_id, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
-
+    traceId = start_trace(DEBUG, engine_trace_id, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
 }
 
 /*----------------------------------------------------------------------------
@@ -284,7 +282,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
  *----------------------------------------------------------------------------*/
 LuaObject::~LuaObject (void)
 {
-    stop_trace(traceId);
+    stop_trace(DEBUG, traceId);
     mlog(DEBUG, "Deleting %s/%s\n", getType(), getName());
 
     /* Remove Name from Global Objects */

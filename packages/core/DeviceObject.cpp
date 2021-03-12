@@ -35,7 +35,7 @@
 
 #include "DeviceObject.h"
 #include "Ordering.h"
-#include "LogLib.h"
+#include "EventLib.h"
 #include "OsApi.h"
 #include "StringLib.h"
 

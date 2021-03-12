@@ -2877,8 +2877,8 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
     info_t info;
 
     /* Start Trace */
-    uint32_t parent_trace_id = TraceLib::grabId();
-    uint32_t trace_id = start_trace_ext(parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+    uint32_t parent_trace_id = EventLib::grabId();
+    uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
     /* Open Resource and Read Dataset */
     H5FileBuffer h5file(&info, context, url, datasetname, startrow, numrows, true, H5_VERBOSE);
@@ -3067,7 +3067,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
     }
 
     /* Stop Trace */
-    stop_trace(trace_id);
+    stop_trace(INFO, trace_id);
 
     /* Log Info Message */
     mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);

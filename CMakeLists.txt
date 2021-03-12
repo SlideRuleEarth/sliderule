@@ -39,7 +39,7 @@ option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer t
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
 option (ENABLE_HDF5_LIB "Use the standard HDF5 library instead of the internal implementation" OFF)
 option (ENABLE_H5_REST_VOL "Install and use the REST VOL plugin with the HDF5 library" OFF)
-option (ENABLE_LTTNG_TRACING "Instantiate LTTng trace points" OFF)
+option (ENABLE_TRACING "Instantiate trace points" OFF)
 
 option (USE_AWS_PACKAGE "Include the AWS package" OFF)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
@@ -123,6 +123,11 @@ if (${ENABLE_CUSTOM_ALLOCATOR})
     message (STATUS "Enabling custom allocator")
     target_compile_definitions (slideruleLib PUBLIC CUSTOM_ALLOCATOR)
 endif ()
+
+if(${ENABLE_TRACING})
+    message (STATUS "Enabling trace points")
+    target_compile_definitions (slideruleLib PUBLIC __tracing__)
+endif()
 
 if (DEFINED MAX_FREE_STACK_SIZE)
     message (STATUS "Setting MAX_FREE_STACK_SIZE to " ${MAX_FREE_STACK_SIZE})

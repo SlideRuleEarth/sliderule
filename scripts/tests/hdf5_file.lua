@@ -3,7 +3,7 @@ local console = require("console")
 
 -- Setup --
 
-console.logger:config(core.INFO)
+console.monitor:config(core.INFO)
 
 -- Unit Test --
 

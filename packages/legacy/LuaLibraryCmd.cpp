@@ -154,12 +154,12 @@ int LuaLibraryCmd::lcmd_log (lua_State* L)
 {
     bool status = false;
 
-    if(lua_isstring(L, 1)) // check log level parameter
+    if(lua_isstring(L, 1)) // check event level parameter
     {
         if(lua_isstring(L, 2)) // check message to log
         {
-            log_lvl_t lvl;
-            if(LogLib::str2lvl(lua_tostring(L, 1), &lvl))
+            event_level_t lvl;
+            if(EventLib::str2lvl(lua_tostring(L, 1), &lvl))
             {
                 mlog(lvl, "%s", lua_tostring(L, 2));
                 status = true;
@@ -179,7 +179,7 @@ int LuaLibraryCmd::lcmd_type (lua_State* L)
 {
     const char* obj_type = NULL;
 
-    if(lua_isstring(L, 1)) // check log level parameter
+    if(lua_isstring(L, 1)) // check event level parameter
     {
         const char* obj_name = lua_tostring(L, 1);
         if(MsgQ::existQ(obj_name))

@@ -11,12 +11,6 @@ if (LUA_FOUND AND READLINE_LIB)
     target_link_libraries (slideruleLib PRIVATE ${LUA_LIBRARIES})
     target_include_directories (slideruleLib PUBLIC ${LUA_INCLUDE_DIR})
 
-    if(${ENABLE_LTTNG_TRACING})
-        message (STATUS "LTTng tracing support enabled")
-        target_compile_definitions (slideruleLib PUBLIC __lttng_tracing__)
-        target_link_libraries (slideruleLib PRIVATE lttng-ust)
-    endif()
-
     target_link_libraries (slideruleLib PUBLIC readline)
 
     target_sources (slideruleLib
@@ -32,13 +26,12 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.cpp
             ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/EventLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/File.cpp
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/Logger.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/LogLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.cpp
@@ -48,6 +41,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/MathLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/Monitor.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.cpp
             ${CMAKE_CURRENT_LIST_DIR}/MsgQ.cpp
@@ -60,7 +54,6 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.cpp
             ${CMAKE_CURRENT_LIST_DIR}/IntervalIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/TraceLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/Uart.cpp
             ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.cpp
     )
@@ -92,9 +85,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.h
             ${CMAKE_CURRENT_LIST_DIR}/List.h
-            ${CMAKE_CURRENT_LIST_DIR}/Logger.h
-            ${CMAKE_CURRENT_LIST_DIR}/LogLib.h
-            ${CMAKE_CURRENT_LIST_DIR}/lttng-core.h
+            ${CMAKE_CURRENT_LIST_DIR}/EventLib.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.h
             ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.h
@@ -104,6 +95,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/MathLib.h
             ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.h
+            ${CMAKE_CURRENT_LIST_DIR}/Monitor.h
             ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.h
             ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.h
             ${CMAKE_CURRENT_LIST_DIR}/MsgQ.h
@@ -118,7 +110,6 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.h
             ${CMAKE_CURRENT_LIST_DIR}/IntervalIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/TimeLib.h
-            ${CMAKE_CURRENT_LIST_DIR}/TraceLib.h
             ${CMAKE_CURRENT_LIST_DIR}/Uart.h
             ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.h
         DESTINATION

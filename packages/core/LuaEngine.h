@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "StringLib.h"
-#include "TraceLib.h"
+#include "EventLib.h"
 #include "MsgQ.h"
 #include "List.h"
 #include "Ordering.h"

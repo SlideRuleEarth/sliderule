@@ -38,6 +38,7 @@
 
 #include "Dictionary.h"
 #include "StringLib.h"
+#include "MsgQ.h"
 #include "OsApi.h"
 
 #include <exception>
@@ -222,6 +223,7 @@ class RecordObject
         static int              getRecordMaxFields  (const char* rec_type);
         static int              getRecordFields     (const char* rec_type, char*** field_names, field_t*** fields);
         static int              parseSerial         (unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data);
+        static int              postSerial          (Publisher* outq, int timeout, const char* rec_type, int rec_type_size, unsigned char* buffer, int size);
         static unsigned int     str2flags           (const char* str);
         static const char*      flags2str           (unsigned int flags);
         static fieldType_t      str2ft              (const char* str);

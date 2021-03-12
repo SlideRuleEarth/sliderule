@@ -81,6 +81,8 @@ typedef struct sockaddr     client_address_t;
  ******************************************************************************/
 
 bool SockLib::signal_exit = false;
+char SockLib::local_host_name[SockLib::HOST_STR_LEN];
+uint32_t SockLib::ipv4 = 0;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -91,6 +93,19 @@ bool SockLib::signal_exit = false;
  *----------------------------------------------------------------------------*/
 void SockLib::init()
 {
+    /* Initialize to Defaults */
+    snprintf(local_host_name, HOST_STR_LEN, "%s", "unknown_host");
+    ipv4 = 0;
+
+    /* Get Host Information */
+    if(gethostname(local_host_name, HOST_STR_LEN) != -1)
+    {    
+        struct hostent* host = gethostbyname(local_host_name);
+        if(host != NULL)
+        {
+            ipv4 = ((struct in_addr*)host->h_addr_list[0])->s_addr;
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -694,6 +709,22 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * sockhost
+ *----------------------------------------------------------------------------*/
+const char* SockLib::sockhost (void)
+{
+    return local_host_name;
+}
+
+/*----------------------------------------------------------------------------
+ * sockipv4
+ *----------------------------------------------------------------------------*/
+uint32_t SockLib::sockipv4 (void)
+{
+    return ipv4;
 }
 
 /*----------------------------------------------------------------------------
