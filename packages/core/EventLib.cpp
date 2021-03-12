@@ -56,7 +56,7 @@ RecordObject::fieldDef_t EventLib::rec_def[] =
     {"id",      RecordObject::UINT32,   offsetof(event_t, id),      1,              NULL, NATIVE_FLAGS},
     {"parent",  RecordObject::UINT32,   offsetof(event_t, parent),  1,              NULL, NATIVE_FLAGS},
     {"name",    RecordObject::STRING,   offsetof(event_t, name),    MAX_NAME_SIZE,  NULL, NATIVE_FLAGS},
-    {"attr",    RecordObject::STRING,   offsetof(event_t, attr),    MAX_ATTR_SIZE,  NULL, NATIVE_FLAGS}
+    {"attr",    RecordObject::STRING,   offsetof(event_t, attr),    0,              NULL, NATIVE_FLAGS}
 };
 
 int EventLib::rec_type_size;
@@ -85,7 +85,7 @@ void EventLib::init (const char* monitorq)
     {
         throw RunTimeException("Fatal error: failed to register event record");
     }
-    
+
     /* Calculate Size of Record Type */
     rec_type_size = StringLib::size(rec_type) + 1;
 
@@ -222,13 +222,12 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
     va_list args;
     va_start(args, fmt);
     int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, fmt, args);
-    int msglen = MIN(vlen, MAX_ATTR_SIZE - 1);
+    int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
+    event.attr[attr_size - 1] = '\0';
     va_end(args);
-    if (msglen < 0) msglen = 0;
-    event.attr[msglen] = '\0';
 
     /* Send Event */
-    sendEvent(&event);
+    sendEvent(&event, attr_size);
 
     /* Return Trace ID */
     return event.id;
@@ -257,7 +256,7 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
     event.attr[0]   = '\0';
 
     /* Send Event */
-    sendEvent(&event);
+    sendEvent(&event, 1);
 }
 
 /*----------------------------------------------------------------------------
@@ -306,18 +305,18 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
     va_list args;
     va_start(args, fmt);
     int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, fmt, args);
-    int msglen = MIN(vlen, MAX_ATTR_SIZE - 1);
+    int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
+    event.attr[attr_size - 1] = '\0';
     va_end(args);
-    if (msglen >= 0) event.attr[msglen] = '\0';
 
     /* Post Log Message */
-    sendEvent(&event);
+    sendEvent(&event, attr_size);
 }
 
 /*----------------------------------------------------------------------------
  * sendEvent
  *----------------------------------------------------------------------------*/
-int EventLib::sendEvent (event_t* event)
+int EventLib::sendEvent (event_t* event, int attr_size)
 {
-    return RecordObject::postSerial(outq, IO_CHECK, rec_type, rec_type_size, (unsigned char*)event, sizeof(event_t));
+    return RecordObject::postSerial(outq, IO_CHECK, rec_type, rec_type_size, (unsigned char*)event, offsetof(event_t, attr) + attr_size);
 }

@@ -88,8 +88,8 @@ class EventLib
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_NAME_SIZE  = 32;
-        static const int MAX_ATTR_SIZE  = 128;
+        static const int MAX_NAME_SIZE = 32;
+        static const int MAX_ATTR_SIZE = 512;
 
         static const char* rec_type;
         static RecordObject::fieldDef_t rec_def[];
@@ -99,16 +99,16 @@ class EventLib
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            int64_t     systime;                // time of trace
+            int64_t     systime;                // time of event
             uint32_t    ipv4;                   // ip address of local host            
             uint16_t    flags;                  // flags_t
             uint8_t     type;                   // type_t
             uint8_t     level;                  // event_level_t
             int64_t     tid;                    // task id
-            uint32_t    id;                     // trace id
-            uint32_t    parent;                 // parent trace id
-            char        name[MAX_NAME_SIZE];    // name of trace point
-            char        attr[MAX_ATTR_SIZE];    // attributes associated with trace
+            uint32_t    id;                     // event id
+            uint32_t    parent;                 // parent event id
+            char        name[MAX_NAME_SIZE];    // name of event
+            char        attr[MAX_ATTR_SIZE];    // attributes associated with event
         } event_t;
 
         typedef enum {
@@ -147,7 +147,7 @@ class EventLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int              sendEvent   (event_t* event);
+        static int              sendEvent   (event_t* event, int attr_size);
 
         /*--------------------------------------------------------------------
          * Data
