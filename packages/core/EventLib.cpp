@@ -85,6 +85,7 @@ void EventLib::init (const char* monitorq)
     {
         throw RunTimeException("Fatal error: failed to register event record");
     }
+    
     /* Calculate Size of Record Type */
     rec_type_size = StringLib::size(rec_type) + 1;
 
@@ -106,7 +107,90 @@ void EventLib::init (const char* monitorq)
  *----------------------------------------------------------------------------*/
 void EventLib::deinit (void)
 {
-    delete outq;
+// TODO    delete outq;
+}
+
+/*----------------------------------------------------------------------------
+ * str2lvl
+ *----------------------------------------------------------------------------*/
+bool EventLib::setLvl (type_t type, event_level_t lvl)
+{
+    switch(type)
+    {
+        case LOG:       log_level = lvl;    return true;
+        case TRACE:     trace_level = lvl;  return true;
+        case METRIC:    metric_level = lvl; return true;
+        default:                            return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * str2lvl
+ *----------------------------------------------------------------------------*/
+event_level_t EventLib::getLvl (type_t type)
+{
+    switch(type)
+    {
+        case LOG:       return log_level;
+        case TRACE:     return trace_level;
+        case METRIC:    return metric_level;
+        default:        return INVALID_EVENT_LEVEL;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * str2lvl
+ *----------------------------------------------------------------------------*/
+bool EventLib::str2lvl(const char* str, event_level_t* lvl)
+{
+    event_level_t clvl;
+    if( StringLib::match(str, "RAW") || StringLib::match(str, "raw") || StringLib::match(str, "Raw"))
+    {
+        clvl = RAW;
+    }
+    else if( StringLib::match(str, "DEBUG") || StringLib::match(str, "debug") || StringLib::match(str, "Debug"))
+    {
+        clvl = DEBUG;
+    }
+    else if( StringLib::match(str, "INFO") || StringLib::match(str, "info") || StringLib::match(str, "Info"))
+    {
+        clvl = INFO;
+    }
+    else if( StringLib::match(str, "WARNING") || StringLib::match(str, "warning") || StringLib::match(str, "Warning"))
+    {
+        clvl = WARNING;
+    }
+    else if( StringLib::match(str, "ERROR") || StringLib::match(str, "error") || StringLib::match(str, "Error"))
+    {
+        clvl = ERROR;
+    }
+    else if( StringLib::match(str, "CRITICAL") || StringLib::match(str, "critical") || StringLib::match(str, "Critical"))
+    {
+        clvl = CRITICAL;
+    }
+    else
+    {
+        return false;
+    }
+
+    *lvl = clvl;
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * lvl2str
+ *----------------------------------------------------------------------------*/
+const char* EventLib::lvl2str (event_level_t lvl)
+{
+    switch(lvl)
+    {
+        case DEBUG:     return "DEBUG";
+        case INFO:      return "INFO"; 
+        case WARNING:   return "WARNING";
+        case ERROR:     return "ERROR";
+        case CRITICAL:  return "CRITICAL";
+        default:        return NULL;
+    }    
 }
 
 /*----------------------------------------------------------------------------
@@ -228,89 +312,6 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 
     /* Post Log Message */
     sendEvent(&event);
-}
-
-/*----------------------------------------------------------------------------
- * str2lvl
- *----------------------------------------------------------------------------*/
-bool EventLib::setLvl (type_t type, event_level_t lvl)
-{
-    switch(type)
-    {
-        case LOG:       log_level = lvl;    return true;
-        case TRACE:     trace_level = lvl;  return true;
-        case METRIC:    metric_level = lvl; return true;
-        default:                            return false;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * str2lvl
- *----------------------------------------------------------------------------*/
-event_level_t EventLib::getLvl (type_t type)
-{
-    switch(type)
-    {
-        case LOG:       return log_level;
-        case TRACE:     return trace_level;
-        case METRIC:    return metric_level;
-        default:        return INVALID_EVENT_LEVEL;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * str2lvl
- *----------------------------------------------------------------------------*/
-bool EventLib::str2lvl(const char* str, event_level_t* lvl)
-{
-    event_level_t clvl;
-    if( StringLib::match(str, "RAW") || StringLib::match(str, "raw") || StringLib::match(str, "Raw"))
-    {
-        clvl = RAW;
-    }
-    else if( StringLib::match(str, "DEBUG") || StringLib::match(str, "debug") || StringLib::match(str, "Debug"))
-    {
-        clvl = DEBUG;
-    }
-    else if( StringLib::match(str, "INFO") || StringLib::match(str, "info") || StringLib::match(str, "Info"))
-    {
-        clvl = INFO;
-    }
-    else if( StringLib::match(str, "WARNING") || StringLib::match(str, "warning") || StringLib::match(str, "Warning"))
-    {
-        clvl = WARNING;
-    }
-    else if( StringLib::match(str, "ERROR") || StringLib::match(str, "error") || StringLib::match(str, "Error"))
-    {
-        clvl = ERROR;
-    }
-    else if( StringLib::match(str, "CRITICAL") || StringLib::match(str, "critical") || StringLib::match(str, "Critical"))
-    {
-        clvl = CRITICAL;
-    }
-    else
-    {
-        return false;
-    }
-
-    *lvl = clvl;
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * lvl2str
- *----------------------------------------------------------------------------*/
-const char* EventLib::lvl2str (event_level_t lvl)
-{
-    switch(lvl)
-    {
-        case DEBUG:     return "DEBUG";
-        case INFO:      return "INFO"; 
-        case WARNING:   return "WARNING";
-        case ERROR:     return "ERROR";
-        case CRITICAL:  return "CRITICAL";
-        default:        return NULL;
-    }    
 }
 
 /*----------------------------------------------------------------------------
