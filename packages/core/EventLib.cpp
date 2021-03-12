@@ -80,7 +80,7 @@ Publisher* EventLib::outq;
 void EventLib::init (const char* monitorq)
 {
     /* Define Event Record */
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, sizeof(event_t), rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t), 16);
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, offsetof(event_t, attr) + 1, rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t), 16);
     if(rc != RecordObject::SUCCESS_DEF)
     {
         throw RunTimeException("Fatal error: failed to register event record");

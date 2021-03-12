@@ -65,19 +65,15 @@ typedef enum {
 #define mlog(lvl,...) EventLib::logMsg(__FILE__,__LINE__,lvl,__VA_ARGS__)
 
 #ifdef __tracing__
-
 #define start_trace(lvl, parent, name, fmt, ...) EventLib::startTrace(parent, name, lvl, fmt, __VA_ARGS__)
 #define stop_trace(lvl, id) EventLib::stopTrace(id, lvl)
-
-#else /* no __tracing__ */
-
+#else
 #define start_trace(lvl,parent,...) {ORIGIN}; (void)lvl; (void)parent;
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
-
 #endif
 
 /******************************************************************************
- * TRACING LIBRARY CLASS
+ * EVENT LIBRARY CLASS
  ******************************************************************************/
 
 class EventLib
