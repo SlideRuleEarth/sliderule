@@ -5,7 +5,7 @@ local console = require("console")
 
 -- Initial Configuration --
 
-console.monitor:config(core.INFO)
+sys.setlvl(core.LOG, core.INFO)
 
 -- Run Core Unit Tests --
 

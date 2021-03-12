@@ -16,8 +16,6 @@ json_object = '{ \
 
 tmpfile = os.tmpname()
 
-console.monitor:config(core.INFO)
-
 -- Unit Test --
 
 server = core.httpd(9081)

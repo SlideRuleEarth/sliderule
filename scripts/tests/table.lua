@@ -2,8 +2,6 @@ local runner = require("test_executive")
 local console = require("console")
 local td = runner.rootdir(arg[0]) .. "../tests"
 
-console.monitor:config(core.INFO)
-
 -- Table Unit Test --
 
 runner.command("NEW UT_TABLE ut_table")

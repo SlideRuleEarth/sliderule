@@ -57,6 +57,8 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"setiosz",     LuaLibrarySys::lsys_setiosize},
     {"getiosz",     LuaLibrarySys::lsys_getiosize},
+    {"setlvl",      LuaLibrarySys::lsys_seteventlvl},
+    {"getlvl",      LuaLibrarySys::lsys_geteventlvl},
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
     {"lsdev",       DeviceObject::luaList},
     {NULL,          NULL}
@@ -302,6 +304,51 @@ int LuaLibrarySys::lsys_getiosize (lua_State* L)
 {
     lua_pushnumber(L, LocalLib::getIOMaxsize());
     return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_seteventlvl
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
+{
+    bool status = false;
+    int type_mask = 0;
+
+    if(lua_isnumber(L, 1))
+    {
+        type_mask = lua_tonumber(L, 1);
+        if(lua_isnumber(L, 2))
+        {
+            event_level_t lvl = (event_level_t)lua_tonumber(L, 2);
+            if(type_mask & EventLib::LOG) EventLib::setLvl(EventLib::LOG, lvl);
+            if(type_mask & EventLib::TRACE) EventLib::setLvl(EventLib::TRACE, lvl);
+            if(type_mask & EventLib::METRIC) EventLib::setLvl(EventLib::METRIC, lvl);
+            status = true;
+        }
+        else
+        {
+            mlog(CRITICAL, "event level must be a number");
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "type mask must be a number\n");
+    }
+
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_geteventlvl
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_geteventlvl (lua_State* L)
+{
+    lua_pushnumber(L, EventLib::getLvl(EventLib::LOG));
+    lua_pushnumber(L, EventLib::getLvl(EventLib::TRACE));
+    lua_pushnumber(L, EventLib::getLvl(EventLib::METRIC));
+    return 3;
 }
 
 /*----------------------------------------------------------------------------

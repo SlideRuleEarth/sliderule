@@ -111,6 +111,9 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "ERROR",                ERROR);
     LuaEngine::setAttrInt   (L, "CRITICAL",             CRITICAL);
     LuaEngine::setAttrInt   (L, "RAW",                  RAW);
+    LuaEngine::setAttrInt   (L, "LOG",                  EventLib::LOG);
+    LuaEngine::setAttrInt   (L, "TRACE",                EventLib::TRACE);
+    LuaEngine::setAttrInt   (L, "METRIC",               EventLib::METRIC);
     LuaEngine::setAttrInt   (L, "STRING",               RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                 RecordObject::REAL);
     LuaEngine::setAttrInt   (L, "INTEGER",              RecordObject::INTEGER);

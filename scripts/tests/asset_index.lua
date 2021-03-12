@@ -5,7 +5,6 @@ local td = runner.rootdir(arg[0]) .. "../tests"
 
 -- Setup --
 
-console.monitor:config(core.INFO)
 assets = asset.loaddir(td.."/asset_directory.csv")
 
 expected = {

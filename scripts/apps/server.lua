@@ -21,7 +21,7 @@ local cache_root = cfgtbl["cache_root"]
 local cache_size = cfgtbl["cache_size"]
 
 -- Configure Logging --
-console.monitor:config(loglvl)
+sys.setlvl(core.LOG, loglvl)
 
 -- Configure Assets --
 assets = asset.loaddir(asset_directory)

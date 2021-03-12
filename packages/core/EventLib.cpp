@@ -93,7 +93,7 @@ void EventLib::init (const char* monitorq)
     Thread::setGlobal(trace_key, (void*)ORIGIN);
     
     /* Set Default Event Level */
-    log_level = CRITICAL;
+    log_level = INFO;
     trace_level = CRITICAL;
     metric_level = CRITICAL;
 

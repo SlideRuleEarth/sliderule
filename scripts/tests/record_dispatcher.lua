@@ -1,8 +1,6 @@
 local runner = require("test_executive")
 local console = require("console")
 
-console.monitor:config(core.INFO)
-
 -- Record Dispatcher Unit Test Setup --
 
 runner.command("DEFINE test.rec id 8")

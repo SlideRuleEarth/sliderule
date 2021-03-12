@@ -1,6 +1,5 @@
 local runner = require("test_executive")
 local console = require("console")
-console.monitor:config(core.INFO)
 
 -- Cluster Socket Unit Test --
 

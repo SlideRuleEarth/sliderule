@@ -81,6 +81,8 @@ class LuaLibrarySys
         static int      lsys_setstddepth    (lua_State* L);
         static int      lsys_setiosize      (lua_State* L);
         static int      lsys_getiosize      (lua_State* L);
+        static int      lsys_seteventlvl    (lua_State* L);
+        static int      lsys_geteventlvl    (lua_State* L);
         static int      lsys_lsrec          (lua_State* L);
 };
 

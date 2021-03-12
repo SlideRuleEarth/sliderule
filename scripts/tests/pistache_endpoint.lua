@@ -18,8 +18,6 @@ json_object = '{ \
 
 tmpfile = os.tmpname()
 
-console.monitor:config(core.INFO)
-
 -- Unit Test --
 
 server = pistache.server(9082)

@@ -1,8 +1,6 @@
 local runner = require("test_executive")
 local console = require("console")
 
-console.monitor:config(core.INFO)
-
 -- UdpSocket/Multicast/DeviceWriter Unit Test --
 
 -- create writer

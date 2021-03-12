@@ -1,6 +1,6 @@
 local console_queue = "consoleq"
 
-local console_monitor = core.monitor(console_queue, core.CRITICAL)
+local console_monitor = core.monitor(core.LOG, console_queue)
 console_monitor:name("console.monitor")
 
 local console_file = core.file(core.WRITER, core.TEXT, "STDOUT")

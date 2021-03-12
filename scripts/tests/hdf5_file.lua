@@ -1,10 +1,6 @@
 local runner = require("test_executive")
 local console = require("console")
 
--- Setup --
-
-console.monitor:config(core.INFO)
-
 -- Unit Test --
 
 print('\n------------------\nTest01: Traverse\n------------------')
