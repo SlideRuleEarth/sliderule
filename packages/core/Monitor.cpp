@@ -53,23 +53,19 @@ const struct luaL_Reg Monitor::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create([<type mask>], [<outputq>])
+ * luaCreate - create([<type mask>], [<output format>], [<outputq>])
  *----------------------------------------------------------------------------*/
 int Monitor::luaCreate (lua_State* L)
 {
-    int type_index = 1;
-    int outq_index = 2;
-
     try
     {
-        /* Get Type Mask */
-        uint8_t type_mask = (uint8_t)getLuaInteger(L, type_index, true, (long)EventLib::LOG);
-
-        /* Get Output Queue */
-        const char* outq_name = getLuaString(L, outq_index, true, NULL);
+        /* Get Parmeters */
+        uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
+        format_t format = (format_t)getLuaInteger(L, 2, true, TEXT);
+        const char* outq_name = getLuaString(L, 3, true, NULL);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Monitor(L, type_mask, outq_name));
+        return createLuaObject(L, new Monitor(L, type_mask, format, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -85,11 +81,12 @@ int Monitor::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Monitor::Monitor(lua_State* L, uint8_t type_mask, const char* outq_name):
+Monitor::Monitor(lua_State* L, uint8_t type_mask, format_t format, const char* outq_name):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     /* Initialize Event Monitor */
     eventTypeMask = type_mask;
+    outputFormat = format;
 
     /* Initialize Output Q */
     if(outq_name)   outQ = new Publisher(outq_name);
@@ -111,8 +108,8 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
-    char event_entry[MAX_EVENT_ENTRY_SIZE];
-    char* msg = event_entry;
+    int event_size;
+    char event_buffer[MAX_EVENT_SIZE];    
 
     /* Pull Out Log Message */
     EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
@@ -123,33 +120,62 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
         return true;
     }
 
+    /* Populate Event */
+    switch(outputFormat)
+    {
+        case TEXT: event_size = textOutput(event, event_buffer); break;
+        case JSON: event_size = jsonOutput(event, event_buffer); break;
+        default:   return false;
+    }
+
+    /* Print Event */
+    if(outQ) outQ->postCopy(event_buffer, event_size, IO_CHECK);
+    else     printf("%s", event_buffer);
+
+    /* Return Success */
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * textOutput
+ *----------------------------------------------------------------------------*/
+int Monitor::textOutput (EventLib::event_t* event, char* event_buffer)
+{
+    char* msg = event_buffer;
+
     /* Check if Formatting Output */
     if(event->level != RAW)
     {
         /* Populate Prefix */
         TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
-        msg += StringLib::formats(msg, MAX_EVENT_ENTRY_SIZE - (msg - event_entry), "%d:%d:%d:%d:%d:%s:%s ", 
-                                    timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second,
-                                    EventLib::lvl2str((event_level_t)event->level),
-                                    event->name);
+        msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%d:%d:%d:%d:%d:%s:%s ", 
+            timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second,
+            EventLib::lvl2str((event_level_t)event->level), event->name);
     }
 
     /* Populate Message */
-    msg += StringLib::formats(msg, MAX_EVENT_ENTRY_SIZE - (msg - event_entry), "%s", event->attr);
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE - (msg - event_buffer), "%s", event->attr);
 
-    /* Print Entry */
-    if(outQ)
-    {
-        int event_entry_size = msg - event_entry + 1;
-        outQ->postCopy(event_entry, event_entry_size, IO_CHECK);
-    }
-    else
-    {
-        printf("%s", event_entry);
-    }
+    /* Return Size of Message */
+    return msg - event_buffer + 1;;
+}
 
-    /* Return Success */
-    return true;
+/*----------------------------------------------------------------------------
+ * jsonOutput
+ *----------------------------------------------------------------------------*/
+int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
+{
+    char* msg = event_buffer;
+
+    /* Populate Message */
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE,
+        "{\"systime\":%ld,\"ipv4\":%ld,\"flags\":%d,\"type\":%s,\"level:%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":%s,\"attr\":%s}",
+        event->systime, (long)event->ipv4, event->flags, 
+        EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level), 
+        event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
+
+    /* Return Size of Message */
+    return msg - event_buffer + 1;;
 }
 
 /*----------------------------------------------------------------------------

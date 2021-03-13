@@ -194,6 +194,20 @@ const char* EventLib::lvl2str (event_level_t lvl)
 }
 
 /*----------------------------------------------------------------------------
+ * type2str
+ *----------------------------------------------------------------------------*/
+const char* EventLib::type2str (type_t type)
+{
+    switch(type)
+    {
+        case LOG:       return "LOG";
+        case TRACE:     return "TRACE"; 
+        case METRIC:    return "METRIC";
+        default:        return NULL;
+    }    
+}
+
+/*----------------------------------------------------------------------------
  * startTrace
  *----------------------------------------------------------------------------*/
 uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t lvl, const char* fmt, ...)

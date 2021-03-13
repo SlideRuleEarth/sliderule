@@ -54,10 +54,17 @@ class Monitor: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_EVENT_ENTRY_SIZE = 512;
-
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+        
+        typedef enum {
+            TEXT,
+            JSON
+        } format_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -68,13 +75,22 @@ class Monitor: public DispatchObject
     private:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int MAX_EVENT_SIZE = 512;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Monitor         (lua_State* L, uint8_t type_mask, const char* outq_name);
+                    Monitor         (lua_State* L, uint8_t type_mask, format_t format, const char* outq_name);
                     ~Monitor        (void);
 
         bool        processRecord   (RecordObject* record, okey_t key) override;
+
+        int         textOutput      (EventLib::event_t* event, char* event_buffer);
+        int         jsonOutput      (EventLib::event_t* event, char* event_buffer);
 
         static int  luaConfig       (lua_State* L);
 
@@ -83,6 +99,7 @@ class Monitor: public DispatchObject
          *--------------------------------------------------------------------*/
 
         uint8_t         eventTypeMask;
+        format_t        outputFormat;
         Publisher*      outQ;
 };
 
