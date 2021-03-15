@@ -5,6 +5,7 @@
 
 import sys
 import logging
+from sliderule import sliderule
 from sliderule import icesat2
 
 ###############################################################################

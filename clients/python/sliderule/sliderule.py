@@ -421,12 +421,12 @@ def set_max_errors(max_errors):
 def tail (event_type, event_level, output_format, duration):
     # Build Logging Request
     rqst = {
-        "type": sliderule.eventtypes[event_type], 
-        "level" : sliderule.eventlevels[event_level],
-        "format": sliderule.eventformats[output_format],
+        "type": eventtypes[event_type], 
+        "level" : eventlevels[event_level],
+        "format": eventformats[output_format],
         "duration": duration
     }
 
     # Initiate Connection for Logging
-    rsps = sliderule.source("event", rqst, stream=True)
+    rsps = source("event", rqst, stream=True)
     return rsps
