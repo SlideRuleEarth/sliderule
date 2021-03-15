@@ -18,11 +18,11 @@ local json = require("json")
 local parm = json.decode(arg[1])
 
 local type = parm["type"] or core.LOG
-local level = parm["level"] or nil
-local format = parm["format"] or core.FMT_TEXT
+local level = parm["level"] or core.INFO
+local format = parm["format"] or nil
 local duration = parm["duration"] or 0
 
--- Attach monitor to response queue --
+-- Attach monitor to post event to response queue --
 local userevents = core.dispatcher(core.MONITORQ)
 userevents:attach(core.monitor(type, level, format, rspq), "eventrec")
 userevents:run()

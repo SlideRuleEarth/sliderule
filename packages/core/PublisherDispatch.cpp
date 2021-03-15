@@ -50,7 +50,7 @@ const struct luaL_Reg PublisherDispatch::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate
+ * luaCreate: publish(<outq_name>)
  *----------------------------------------------------------------------------*/
 int PublisherDispatch::luaCreate (lua_State* L)
 {

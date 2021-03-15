@@ -62,7 +62,7 @@ int Monitor::luaCreate (lua_State* L)
         /* Get Parmeters */
         uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
         event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
-        format_t format = (format_t)getLuaInteger(L, 3, true, TEXT);
+        format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return Dispatch Object */
@@ -123,17 +123,30 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
         return true;
     }
 
-    /* Populate Event */
-    switch(outputFormat)
+    /* Process Event */
+    if(outputFormat == RECORD)
     {
-        case TEXT: event_size = textOutput(event, event_buffer); break;
-        case JSON: event_size = jsonOutput(event, event_buffer); break;
-        default:   return false;
+        /* Post Event as Record */
+        unsigned char* buffer; // reference to serial buffer
+        int size = record->serialize(&buffer, RecordObject::REFERENCE);
+        if(outQ) outQ->postCopy(buffer, size, IO_CHECK);
     }
+    else
+    {
+        /* Format Event */
+        if(outputFormat == TEXT)
+        {
+            event_size = textOutput(event, event_buffer); 
+        }
+        else if(outputFormat == JSON)
+        {
+            event_size = jsonOutput(event, event_buffer); 
+        }
 
-    /* Print Event */
-    if(outQ) outQ->postCopy(event_buffer, event_size, IO_CHECK);
-    else     printf("%s", event_buffer);
+        /* Post Event */
+        if(outQ) outQ->postCopy(event_buffer, event_size, IO_CHECK);
+        else     printf("%s", event_buffer);
+    }
 
     /* Return Success */
     return true;

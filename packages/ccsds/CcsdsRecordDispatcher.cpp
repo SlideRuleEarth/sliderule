@@ -101,7 +101,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsRecordDispatcher::CcsdsRecordDispatcher(lua_State* L, const char* inputq_name, keyMode_t key_mode, const char* key_field, calcFunc_t key_func, int num_threads):
-    RecordDispatcher(L, inputq_name, key_mode, key_field, key_func, num_threads)
+    RecordDispatcher(L, inputq_name, key_mode, key_field, key_func, num_threads, MsgQ::SUBSCRIBER_OF_CONFIDENCE)
 {
 }
 

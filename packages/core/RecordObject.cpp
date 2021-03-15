@@ -209,6 +209,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
         }
 
         /* Allocate Record Memory */
+        memoryOwner = true;
         recordMemory = new char[memoryAllocated];
 
         /* Copy In Record Type */
@@ -238,6 +239,7 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
         if (size >= recordDefinition->record_size)
         {
             /* Set Record Memory */
+            memoryOwner = true;
             memoryAllocated = size;
             recordMemory = new char[memoryAllocated];
             LocalLib::copy(recordMemory, buffer, memoryAllocated);
@@ -261,7 +263,7 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
  *----------------------------------------------------------------------------*/
 RecordObject::~RecordObject(void)
 {
-    if(memoryAllocated > 0) delete [] recordMemory;
+    if(memoryOwner) delete [] recordMemory;
 }
 
 /*----------------------------------------------------------------------------
@@ -303,9 +305,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     assert(buffer);
 
     /* Determine Buffer Size */
-    int bufsize;
-    if(memoryAllocated > 0) bufsize = memoryAllocated;
-    else                    bufsize = recordDefinition->record_size;
+    int bufsize = memoryAllocated;
 
     /* Allocate or Copy Buffer */
     if (mode == ALLOCATE)
@@ -465,26 +465,6 @@ void RecordObject::setIdField (const char* id_field)
         recordDefinition->id_field = StringLib::duplicate(id_field);
     }
     defMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * getNumFields
- *----------------------------------------------------------------------------*/
-bool RecordObject::resizeData (int new_size)
-{
-    bool status = false;
-
-    if(recordDefinition->data_size > new_size)
-    {
-        int new_memory_allocated = recordDefinition->type_size + new_size;
-        if(memoryAllocated >= new_memory_allocated)
-        {
-            memoryAllocated = new_memory_allocated;
-            status = true;
-        }
-    }
-
-    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -1450,6 +1430,7 @@ RecordObject::RecordObject(void)
     recordMemory = NULL;
     recordData = NULL;
     memoryAllocated = 0;
+    memoryOwner = false;
 }
 
 /*----------------------------------------------------------------------------
@@ -1474,16 +1455,8 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         // Handle String Pointers
         if(f.type == STRING)
         {
-            if(memoryAllocated == 0)
-            {
-                // best effort to bound size of pointed to string
-                f.elements = MAX_VAL_STR_SIZE;
-            }
-            else
-            {
-                // string cannot extend past end of record
-                f.elements = memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset);
-            }
+            // string cannot extend past end of record
+            f.elements = memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset);
         }
 
         // Check Offset
@@ -1491,7 +1464,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         {
             throw RunTimeException("Attempted to dereference null pointer field!\n");
         }
-        else if((memoryAllocated > 0) && (f.offset > ((memoryAllocated - recordDefinition->type_size) * 8)))
+        else if(f.offset > ((memoryAllocated - recordDefinition->type_size) * 8))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
@@ -1777,7 +1750,8 @@ RecordInterface::RecordInterface(unsigned char* buffer, int size): RecordObject(
         {
             if(parseSerial(buffer, size, (const char**)&recordMemory, (const unsigned char**)&recordData) > 0)
             {
-                /* no additional initialization needed */
+                memoryOwner = false;
+                memoryAllocated = size;
             }
             else throw RunTimeException("Unable to differentiate the record type from record data");
         }

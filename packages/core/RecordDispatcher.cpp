@@ -56,7 +56,7 @@ const struct luaL_Reg RecordDispatcher::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - dispatcher(<input stream name>, [<num threads>], [<key mode>, <key parm>])
+ * luaCreate - dispatcher(<input stream name>, [<num threads>], [<key mode>, <key parm>], [<subscriber type>])
  *----------------------------------------------------------------------------*/
 int RecordDispatcher::luaCreate (lua_State* L)
 {
@@ -91,8 +91,11 @@ int RecordDispatcher::luaCreate (lua_State* L)
             key_func = keyCalcFunctions[key_func_str];
         }
 
+        /* Set Subscriber Type */
+        MsgQ::subscriber_type_t type = (MsgQ::subscriber_type_t)getLuaInteger(L, 5, true, MsgQ::SUBSCRIBER_OF_CONFIDENCE);
+
         /* Create Record Dispatcher */
-        return createLuaObject(L, new RecordDispatcher(L, qname, key_mode, key_field, key_func, num_threads));
+        return createLuaObject(L, new RecordDispatcher(L, qname, key_mode, key_field, key_func, num_threads, type));
     }
     catch(const RunTimeException& e)
     {
@@ -147,7 +150,9 @@ bool RecordDispatcher::addKeyCalcFunc(const char* calc_name, calcFunc_t func)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RecordDispatcher::RecordDispatcher(lua_State* L, const char* inputq_name, keyMode_t key_mode, const char* key_field, calcFunc_t key_func, int num_threads):
+RecordDispatcher::RecordDispatcher( lua_State* L, const char* inputq_name, 
+                                    keyMode_t key_mode, const char* key_field, calcFunc_t key_func, 
+                                    int num_threads, MsgQ::subscriber_type_t type):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(inputq_name);
@@ -163,7 +168,7 @@ RecordDispatcher::RecordDispatcher(lua_State* L, const char* inputq_name, keyMod
     recError        = false;
 
     /* Create Subscriber */
-    inQ = new Subscriber(inputq_name);
+    inQ = new Subscriber(inputq_name, type);
 
     /* Create Thread Pool */
     dispatcherActive = false;

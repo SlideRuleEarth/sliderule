@@ -196,7 +196,6 @@ class RecordObject
         /* Get/Set Methods */
         bool                    populate            (const char* populate_string); // field_name=value, ...
         void                    setIdField          (const char* id_field);
-        bool                    resizeData          (int new_size);
         int                     getNumFields        (void);
         int                     getFieldNames       (char*** names);
         field_t                 getField            (const char* field_name);
@@ -279,6 +278,7 @@ class RecordObject
         char*           recordMemory;       // block of allocated memory <record type as null terminated string><record data as binary>
         unsigned char*  recordData;         // pointer to binary data in recordMemory
         int             memoryAllocated;    // number of bytes allocated by object and pointed to by recordMemory
+        bool            memoryOwner;        // true if object owns (and therefore must free) memory allocated
 
         /*--------------------------------------------------------------------
          * Methods

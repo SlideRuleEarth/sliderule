@@ -63,7 +63,8 @@ class Monitor: public DispatchObject
         
         typedef enum {
             TEXT,
-            JSON
+            JSON,
+            RECORD
         } format_t;
 
         /*--------------------------------------------------------------------
