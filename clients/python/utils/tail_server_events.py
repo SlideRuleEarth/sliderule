@@ -49,4 +49,4 @@ if __name__ == '__main__':
     icesat2.init(url, True)
 
     # Retrieve logs
-    icesat2.log(event_type, event_level, output_format, duration)
+    icesat2.event(event_type, event_level, output_format, duration)

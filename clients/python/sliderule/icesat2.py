@@ -472,7 +472,7 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"
     return values
 
 #
-#  LOG
+#  EVENT
 #
 def event (event_type, event_level, output_format, duration):
     # Build Logging Request
