@@ -52,6 +52,27 @@ logger = logging.getLogger(__name__)
 recdef_lock = threading.Lock()
 recdef_table = {}
 
+eventtypes = {
+    "LOG":      0x01,
+    "TRACE":    0x02,
+    "METRIC":   0x04,
+    "ALL":      0x07
+}
+
+eventlevels = {
+    "DEBUG":    0,
+    "INFO":     1,
+    "WARNING":  2,
+    "ERROR":    3,
+    "CRITICAL": 4,
+    "RAW":      5
+}
+
+eventformats = {
+    "TEXT":     0,
+    "JSON":     1
+}
+
 datatypes = {
     "TEXT":     0,
     "REAL":     1,
@@ -326,12 +347,12 @@ def __parse(stream):
                     rawdata = rawbits[len(rectype) + 1:]
                     rec     = __decode(rectype, rawdata)
                     # Print Verbose Progress
-                    if rectype == "logrec":
+                    if rectype == "eventrec":
                          if verbose:
-                            if rec["message"][-1] == '\n':
-                                 logger.critical(rec["message"][:-1])
+                            if rec["attr"][-1] == '\n':
+                                 logger.critical(rec["attr"][:-1])
                             else:
-                                 logger.critical(rec["message"])
+                                 logger.critical(rec["attr"])
                     else:
                         # Append Record
                         recs.append(rec)

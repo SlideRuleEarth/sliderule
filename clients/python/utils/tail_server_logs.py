@@ -30,13 +30,23 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         duration = int(sys.argv[2])
 
-    # Override log level
-    lvl = "INFO"
+    # Override event level
+    event_level = "INFO"
     if len(sys.argv) > 3:
-        lvl = sys.argv[3]
+        event_level = sys.argv[3]
+
+    # Override event type
+    event_type = "LOG"
+    if len(sys.argv) > 4:
+        event_type = sys.argv[4]
+
+    # Override output format
+    output_format = "TEXT"
+    if len(sys.argv) > 5:
+        output_format = sys.argv[5]
 
     # Initialize ICESat2/SlideRule Package
     icesat2.init(url, True)
 
     # Retrieve logs
-    icesat2.log(lvl, duration)
+    icesat2.log(event_type, event_level, output_format, duration)

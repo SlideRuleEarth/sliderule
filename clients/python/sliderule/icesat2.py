@@ -474,15 +474,17 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"
 #
 #  LOG
 #
-def log (level, duration):
+def event (event_type, event_level, output_format, duration):
     # Build Logging Request
     rqst = {
-        "level" : level,
+        "type": sliderule.eventtypes[event_type], 
+        "level" : sliderule.eventlevels[event_level],
+        "format": sliderule.eventformats[output_format],
         "duration": duration
     }
 
     # Initiate Connection for Logging
-    rsps = sliderule.source("log", rqst, stream=True)
+    rsps = sliderule.source("event", rqst, stream=True)
 
 #
 # TO REGION
