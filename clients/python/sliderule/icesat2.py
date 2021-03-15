@@ -472,21 +472,6 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"
     return values
 
 #
-#  EVENT
-#
-def event (event_type, event_level, output_format, duration):
-    # Build Logging Request
-    rqst = {
-        "type": sliderule.eventtypes[event_type], 
-        "level" : sliderule.eventlevels[event_level],
-        "format": sliderule.eventformats[output_format],
-        "duration": duration
-    }
-
-    # Initiate Connection for Logging
-    rsps = sliderule.source("event", rqst, stream=True)
-
-#
 # TO REGION
 #
 def toregion (geojson, as_file=True):
