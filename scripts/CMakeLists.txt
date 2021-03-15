@@ -8,7 +8,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/log.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
     DESTINATION
         ${CONFDIR}
