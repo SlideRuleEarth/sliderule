@@ -61,9 +61,9 @@ int Monitor::luaCreate (lua_State* L)
     {
         /* Get Parmeters */
         uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
-        format_t format = (format_t)getLuaInteger(L, 2, true, TEXT);
-        const char* outq_name = getLuaString(L, 3, true, NULL);
-        event_level_t level = (event_level_t)getLuaInteger(L, 4, true, CRITICAL);
+        event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
+        format_t format = (format_t)getLuaInteger(L, 3, true, TEXT);
+        const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return Dispatch Object */
         return createLuaObject(L, new Monitor(L, type_mask, level, format, outq_name));
