@@ -153,20 +153,16 @@ int LuaLibrarySys::lsys_wait (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_log (lua_State* L)
 {
-    bool status = false;
+    bool status = true;
 
     event_level_t lvl;
     if(lua_isinteger(L, 1))
     {
         lvl = (event_level_t)lua_tointeger(L, 1);
-        status = true;
     }
-    else if(lua_isstring(L, 1)) // check event level parameter
+    else
     {
-        if(EventLib::str2lvl(lua_tostring(L, 1), &lvl))
-        {
-            status = true;
-        }
+        status = false;
     }
 
     if(status && lua_isstring(L, 2))

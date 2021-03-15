@@ -49,7 +49,6 @@ const char* LuaLibraryCmd::LUA_CMDLIBNAME = "cmd";
 const struct luaL_Reg LuaLibraryCmd::cmdLibs [] = {
     {"exec",        LuaLibraryCmd::lcmd_exec},
     {"script",      LuaLibraryCmd::lcmd_script},
-    {"log",         LuaLibraryCmd::lcmd_log},
     {"type",        LuaLibraryCmd::lcmd_type},
     {"stopuntil",   LuaLibraryCmd::lcmd_stopuntil},
     {NULL, NULL}
@@ -140,31 +139,6 @@ int LuaLibraryCmd::lcmd_script (lua_State* L)
     if(cmdProc->executeScript(str))
     {
         status = true; // set success
-    }
-
-    /* Return Status to Lua */
-    lua_pushboolean(L, status); /* push result status */
-    return 1;                   /* number of results */
-}
-
-/*----------------------------------------------------------------------------
- * lcmd_log
- *----------------------------------------------------------------------------*/
-int LuaLibraryCmd::lcmd_log (lua_State* L)
-{
-    bool status = false;
-
-    if(lua_isstring(L, 1)) // check event level parameter
-    {
-        if(lua_isstring(L, 2)) // check message to log
-        {
-            event_level_t lvl;
-            if(EventLib::str2lvl(lua_tostring(L, 1), &lvl))
-            {
-                mlog(lvl, "%s", lua_tostring(L, 2));
-                status = true;
-            }
-        }
     }
 
     /* Return Status to Lua */

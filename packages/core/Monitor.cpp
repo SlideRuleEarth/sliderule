@@ -53,7 +53,7 @@ const struct luaL_Reg Monitor::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create([<type mask>], [<output format>], [<outputq>])
+ * luaCreate - create([<type mask>], [<level>], [<output format>], [<outputq>])
  *----------------------------------------------------------------------------*/
 int Monitor::luaCreate (lua_State* L)
 {
@@ -63,9 +63,10 @@ int Monitor::luaCreate (lua_State* L)
         uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
         format_t format = (format_t)getLuaInteger(L, 2, true, TEXT);
         const char* outq_name = getLuaString(L, 3, true, NULL);
+        event_level_t level = (event_level_t)getLuaInteger(L, 4, true, CRITICAL);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Monitor(L, type_mask, format, outq_name));
+        return createLuaObject(L, new Monitor(L, type_mask, level, format, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -81,11 +82,12 @@ int Monitor::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Monitor::Monitor(lua_State* L, uint8_t type_mask, format_t format, const char* outq_name):
+Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     /* Initialize Event Monitor */
     eventTypeMask = type_mask;
+    eventLevel = level;
     outputFormat = format;
 
     /* Initialize Output Q */
@@ -115,7 +117,8 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
     EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
 
     /* Filter Events */
-    if((event->type & eventTypeMask) == 0)
+    if( ((event->type & eventTypeMask) == 0) ||
+        (event->level < eventLevel) )
     {
         return true;
     }

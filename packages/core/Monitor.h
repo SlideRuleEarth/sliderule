@@ -84,7 +84,7 @@ class Monitor: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Monitor         (lua_State* L, uint8_t type_mask, format_t format, const char* outq_name);
+                    Monitor         (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
                     ~Monitor        (void);
 
         bool        processRecord   (RecordObject* record, okey_t key) override;
@@ -99,6 +99,7 @@ class Monitor: public DispatchObject
          *--------------------------------------------------------------------*/
 
         uint8_t         eventTypeMask;
+        event_level_t   eventLevel;
         format_t        outputFormat;
         Publisher*      outQ;
 };

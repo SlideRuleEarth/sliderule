@@ -196,7 +196,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key)
 }
 
 /*----------------------------------------------------------------------------
- * setLogLevelCmd - :setloglvl("RAW"|"DEBUG"|"INFO"|"WARNING"|"ERROR"|"CRITICAL")
+ * setLogLevelCmd - :setloglvl(RAW|DEBUG|INFO|WARNING|ERROR|CRITICAL)
  *----------------------------------------------------------------------------*/
 int LimitDispatch::luaSetLogLevel(lua_State* L)
 {
@@ -208,14 +208,7 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
         LimitDispatch* lua_obj = (LimitDispatch*)getLuaSelf(L, 1);
 
         /* Get Parameters */
-        const char* lvl_str = getLuaString(L, 2);
-
-        /* Convert String to Level */
-        event_level_t lvl;
-        if(EventLib::str2lvl(lvl_str, &lvl) == false)
-        {
-            throw RunTimeException("invalid level");
-        }
+        event_level_t lvl = (event_level_t)getLuaInteger(L, 2);
 
         /* Set Level */
         lua_obj->logLevel = lvl;

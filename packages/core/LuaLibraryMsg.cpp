@@ -428,10 +428,6 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     {
         lvl = (event_level_t)lua_tointeger(L, 2);
     }
-    else if(lua_isstring(L, 2)) // check event level parameter
-    {
-        EventLib::str2lvl(lua_tostring(L, 2), &lvl);
-    }
 
     /* Check Event Level */
     if(lvl == INVALID_EVENT_LEVEL)

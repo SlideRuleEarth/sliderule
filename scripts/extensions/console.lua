@@ -1,4 +1,4 @@
-local console_monitor = core.monitor(core.LOG, core.FMT_TEXT)
+local console_monitor = core.monitor(core.LOG, core.INFO, core.FMT_TEXT)
 console_monitor:name("console.monitor")
 
 local console_dispatcher = core.dispatcher(core.MONITORQ)

@@ -127,7 +127,6 @@ class EventLib
 
         static  bool            setLvl      (type_t type, event_level_t lvl);
         static  event_level_t   getLvl      (type_t type);
-        static  bool            str2lvl     (const char* str, event_level_t* lvl);
         static  const char*     lvl2str     (event_level_t lvl);
         static  const char*     type2str    (type_t type);
 
