@@ -350,9 +350,9 @@ def __parse(stream):
                     if rectype == "eventrec":
                          if verbose:
                             if rec["attr"][-1] == '\n':
-                                 logger.critical(rec["attr"][:-1])
+                                 logger.critical('%s:%s' % (rec["name"], rec["attr"][:-1]))
                             else:
-                                 logger.critical(rec["attr"])
+                                 logger.critical('%s:%s' % (rec["name"], rec["attr"]))
                     else:
                         # Append Record
                         recs.append(rec)
@@ -394,36 +394,35 @@ def source (api, parm, stream=False):
 #
 #  SET_URL
 #
-def set_url(urls):
+def set_url (urls):
     __setserv(urls)
 
 #
 #  UPDATE_AVAIABLE_SERVERS
 #
-def update_available_servers():
+def update_available_servers ():
     return __upserv()
 
 #
 #  SET_VERBOSE
 #
-def set_verbose(enable):
+def set_verbose (enable):
     __setverb(enable)
 
 #
 #  SET_MAX_ERRORS
 #
-def set_max_errors(max_errors):
+def set_max_errors (max_errors):
     __setmaxerr(max_errors)
 
 #
 #  TAIL
 #
-def tail (event_type, event_level, output_format, duration):
+def tail (event_type, event_level, duration):
     # Build Logging Request
     rqst = {
         "type": eventtypes[event_type], 
         "level" : eventlevels[event_level],
-        "format": eventformats[output_format],
         "duration": duration
     }
 
