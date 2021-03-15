@@ -34,13 +34,8 @@ if __aws__ then
 end
 
 -- Configure and Run Server --
-if __pistache__ then
-    server = pistache.server(port, 4)
-    server:name("SlideRulePistache")
-else
-    server = core.httpd(9081)
-    server:name("HttpServer")
-    endpoint = core.endpoint()
-    endpoint:name("LuaEndpoint")
-    server:attach(endpoint, "/source")
-end
+server = core.httpd(9081)
+server:name("HttpServer")
+endpoint = core.endpoint()
+endpoint:name("LuaEndpoint")
+server:attach(endpoint, "/source")

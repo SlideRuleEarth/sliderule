@@ -23,7 +23,9 @@ local format = parm["format"] or core.FMT_TEXT
 local duration = parm["duration"] or 0
 
 -- Attach monitor to response queue --
-local userevents = core.monitor(type, level, format, rspq)
+local userevents = core.dispatcher(core.MONITORQ)
+userevents:attach(core.monitor(type, level, format, rspq), "eventrec")
+userevents:run()
 
 -- Pend for duration (in 1 second intervals to allow hooks to execute) --
 local seconds = 0
