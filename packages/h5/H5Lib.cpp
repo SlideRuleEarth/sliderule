@@ -181,7 +181,7 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char* name, const H5L_info_t* info
     herr_t      retval = 0;
     rdepth_t    recurse = { .data = (uint64_t)operator_data };
 
-    for(unsigned i = 0; i < recurse.curr.depth; i++) mlog(RAW, "  ");
+    for(unsigned i = 0; i < recurse.curr.depth; i++) print2term("  ");
 
     H5O_info_t object_info;
     H5Oget_info_by_name(loc_id, name, &object_info, H5P_DEFAULT);
@@ -193,39 +193,39 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char* name, const H5L_info_t* info
             H5Lget_info(loc_id, name, &link_info, H5P_DEFAULT);
             if(link_info.type == H5L_TYPE_HARD)
             {
-                mlog(RAW, "%s: {", name);
+                print2term("%s: {", name);
                 recurse.curr.depth++;
                 if(recurse.curr.depth < recurse.curr.max)
                 {
-                    mlog(RAW, "\n");
+                    print2term("\n");
                     retval = H5Literate_by_name(loc_id, name, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, hdf5_iter_op_func, (void*)recurse.data, H5P_DEFAULT);
-                    for(unsigned i = 0; i < recurse.curr.depth - 1; i++) mlog(RAW, "  ");
-                    mlog(RAW, "}\n");
+                    for(unsigned i = 0; i < recurse.curr.depth - 1; i++) print2term("  ");
+                    print2term("}\n");
                 }
                 else
                 {
-                    mlog(RAW, " }\n");
+                    print2term(" }\n");
                 }
             }
             else
             {
-                mlog(RAW, "*%s\n", name);
+                print2term("*%s\n", name);
             }
             break;
         }
         case H5O_TYPE_DATASET:
         {
-            mlog(RAW, "%s\n", name);
+            print2term("%s\n", name);
             break;
         }
         case H5O_TYPE_NAMED_DATATYPE:
         {
-            mlog(RAW, "%s (type)\n", name);
+            print2term("%s (type)\n", name);
             break;
         }
         default:
         {
-            mlog(RAW, "%s (unknown)\n", name);
+            print2term("%s (unknown)\n", name);
         }
     }
 

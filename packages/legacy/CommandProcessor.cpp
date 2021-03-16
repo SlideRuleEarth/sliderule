@@ -668,64 +668,64 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Display Help*/
-    mlog(RAW, "HELP [<OPTIONS> ...]\n");
-    mlog(RAW, "\tALL: all available help\n");
-    mlog(RAW, "\tBI: built-in commands\n");
-    mlog(RAW, "\tRH: registered handlers\n");
-    mlog(RAW, "\tRO: registered objects\n");
-    mlog(RAW, "\tRR: registered records\n");
-    mlog(RAW, "\tRS: registered streams\n");
-    mlog(RAW, "\tO <object name>: object information\n");
-    mlog(RAW, "\tR <record type>: record information\n");
-    mlog(RAW, "\tS <stream name>: stream information\n");
+    print2term("HELP [<OPTIONS> ...]\n");
+    print2term("\tALL: all available help\n");
+    print2term("\tBI: built-in commands\n");
+    print2term("\tRH: registered handlers\n");
+    print2term("\tRO: registered objects\n");
+    print2term("\tRR: registered records\n");
+    print2term("\tRS: registered streams\n");
+    print2term("\tO <object name>: object information\n");
+    print2term("\tR <record type>: record information\n");
+    print2term("\tS <stream name>: stream information\n");
 
     if(built_in_commands)
     {
-        mlog(RAW, "\n-------------- Built-In Commands ---------------\n");
+        print2term("\n-------------- Built-In Commands ---------------\n");
         try
         {
             obj_cmd_entry_t* cmd = NULL;
             const char* cmd_name = commands.first(&cmd);
             while(cmd_name)
             {
-                mlog(RAW, "%-32s %s\n", cmd_name, cmd->desc);
+                print2term("%-32s %s\n", cmd_name, cmd->desc);
                 cmd_name = commands.next(&cmd);
             }
         }
         catch(...)
         {
-            mlog(RAW, "!!! Failed to display entire list of commands !!!\n");
+            print2term("!!! Failed to display entire list of commands !!!\n");
         }
     }
 
     if(registered_handlers)
     {
-        mlog(RAW, "\n-------------- Registered Handlers ---------------\n");
+        print2term("\n-------------- Registered Handlers ---------------\n");
         try
         {
             handle_entry_t* handle = NULL;
             const char* handle_name = handlers.first(&handle);
             while(handle_name)
             {
-                mlog(RAW, "%-32s %s\n", handle->name, handle->desc);
+                print2term("%-32s %s\n", handle->name, handle->desc);
                 handle_name = handlers.next(&handle);
             }
         }
         catch(...)
         {
-            mlog(RAW, "!!! Failed to display entire list of handlers !!!\n");
+            print2term("!!! Failed to display entire list of handlers !!!\n");
         }
     }
 
     if(registered_objects)
     {
-        mlog(RAW, "\n-------------- Registered Objects ---------------\n");
+        print2term("\n-------------- Registered Objects ---------------\n");
         char** objnames = NULL;
         int numobjs = objects.getKeys(&objnames);
         for(int i = 0; i < numobjs; i++)
         {
             obj_entry_t entry = objects[objnames[i]];
-            mlog(RAW, "%s %s (%s)\n", objnames[i], entry.permanent ? "*" : "", entry.obj->getType());
+            print2term("%s %s (%s)\n", objnames[i], entry.permanent ? "*" : "", entry.obj->getType());
             delete [] objnames[i];
         }
         delete [] objnames;
@@ -733,12 +733,12 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     if(registered_records)
     {
-        mlog(RAW, "\n-------------- Registered Records ---------------\n");
+        print2term("\n-------------- Registered Records ---------------\n");
         char** rectypes = NULL;
         int numrecs = RecordObject::getRecords(&rectypes);
         for(int i = 0; i < numrecs; i++)
         {
-            mlog(RAW, "%s\n", rectypes[i]);
+            print2term("%s\n", rectypes[i]);
             delete [] rectypes[i];
         }
         delete [] rectypes;
@@ -746,7 +746,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     if(registered_streams)
     {
-        mlog(RAW, "\n-------------- Registered Streams ---------------\n");
+        print2term("\n-------------- Registered Streams ---------------\n");
         int num_msgqs = MsgQ::numQ();
         if(num_msgqs > 0)
         {
@@ -754,7 +754,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             int numq = MsgQ::listQ(msgQs, num_msgqs);
             for(int i = 0; i < numq; i++)
             {
-                mlog(RAW,"%-40s %8d %9s %d\n",
+                print2term("%-40s %8d %9s %d\n",
                     msgQs[i].name, msgQs[i].len, msgQs[i].state,
                     msgQs[i].subscriptions);
             }
@@ -767,13 +767,13 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         try
         {
             obj_entry_t entry = objects[obj_name];
-            mlog(RAW, "\n-------------- %s %s (%s) ---------------\n", obj_name, entry.permanent ? "*" : "", entry.obj->getType());
+            print2term("\n-------------- %s %s (%s) ---------------\n", obj_name, entry.permanent ? "*" : "", entry.obj->getType());
             char** cmdnames = NULL;
             char** cmddescs = NULL;
             int numcmds = entry.obj->getCommands(&cmdnames, &cmddescs);
             for(int j = 0; j < numcmds; j++)
             {
-                mlog(RAW, "%-32s %s\n", cmdnames[j], cmddescs[j]);
+                print2term("%-32s %s\n", cmdnames[j], cmddescs[j]);
                 delete [] cmdnames[j];
                 delete [] cmddescs[j];
             }
@@ -783,13 +783,13 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         catch(std::out_of_range& e)
         {
             (void)e;
-            mlog(RAW, "Object %s not found\n", obj_name);
+            print2term("Object %s not found\n", obj_name);
         }
     }
 
     if(rec_name != NULL)
     {
-        mlog(RAW, "\n-------------- %s ---------------\n", rec_name);
+        print2term("\n-------------- %s ---------------\n", rec_name);
         if(RecordObject::isRecord(rec_name))
         {
             RecordObject* rec = new RecordObject(rec_name);
@@ -798,7 +798,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             for(int i = 0; i < numfields; i++)
             {
                 RecordObject::field_t field = rec->getField(fieldnames[i]);
-                mlog(RAW, "%-32s %-16s %-8d %-8d   %02X\n", fieldnames[i], RecordObject::vt2str(rec->getValueType(field)), (int)field.offset, (int)field.elements, field.flags);
+                print2term("%-32s %-16s %-8d %-8d   %02X\n", fieldnames[i], RecordObject::vt2str(rec->getValueType(field)), (int)field.offset, (int)field.elements, field.flags);
                 delete [] fieldnames[i];
             }
             delete [] fieldnames;
@@ -807,7 +807,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     if(str_name != NULL)
     {
-        mlog(RAW, "\n-------------- %s ---------------\n", str_name);
+        print2term("\n-------------- %s ---------------\n", str_name);
         int num_msgqs = MsgQ::numQ();
         if(num_msgqs > 0)
         {
@@ -817,7 +817,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             {
                 if(StringLib::match(str_name, msgQs[i].name))
                 {
-                    mlog(RAW, "%8d %9s %d\n",
+                    print2term("%8d %9s %d\n",
                         msgQs[i].len, msgQs[i].state,
                         msgQs[i].subscriptions);
                 }
@@ -826,7 +826,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
     }
 
-    mlog(RAW, "\n\n");
+    print2term("\n\n");
 
     return 0;
 }
@@ -839,7 +839,7 @@ int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
     (void)argc;
 
-    mlog(RAW, "SlideRule Application Version: %s\n\n", BINID);
+    print2term("SlideRule Application Version: %s\n\n", BINID);
 
     return 0;
 }
@@ -1023,7 +1023,7 @@ int CommandProcessor::typeCmd (int argc, char argv[][MAX_CMD_SIZE])
     try
     {
         CommandableObject* cmd_obj = objects[obj_name].obj;
-        mlog(RAW, "%s: %s\n", obj_name, cmd_obj->getType());
+        print2term("%s: %s\n", obj_name, cmd_obj->getType());
     }
     catch(std::out_of_range& e)
     {
@@ -1436,8 +1436,8 @@ int CommandProcessor::logCmdStatsCmd (int argc, char argv[][MAX_CMD_SIZE])
     (void)argc;
     (void)argv;
 
-    mlog(RAW, "Total Commands Executed: %ld\n", executed_commands);
-    mlog(RAW, "Total Commands Rejected: %ld\n", rejected_commands);
+    print2term("Total Commands Executed: %ld\n", executed_commands);
+    print2term("Total Commands Rejected: %ld\n", rejected_commands);
 
     return 0;
 }
@@ -1464,7 +1464,7 @@ int CommandProcessor::listDevicesCmd (int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     const char* device_list_str = DeviceObject::getDeviceList();
-    mlog(RAW, "%s", device_list_str);
+    print2term("%s", device_list_str);
     delete [] device_list_str;
 
     return 0;
@@ -1483,14 +1483,14 @@ int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[num_msgqs];
         int numq = MsgQ::listQ(msgQs, num_msgqs);
-        mlog(RAW, "\n");
+        print2term("\n");
         for(int i = 0; i < numq; i++)
         {
-            mlog(RAW,"MSGQ: %40s %8d %9s %d\n",
+            print2term("MSGQ: %40s %8d %9s %d\n",
                 msgQs[i].name, msgQs[i].len, msgQs[i].state,
                 msgQs[i].subscriptions);
         }
-        mlog(RAW, "\n");
+        print2term("\n");
         delete [] msgQs;
     }
 

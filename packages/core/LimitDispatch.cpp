@@ -196,7 +196,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key)
 }
 
 /*----------------------------------------------------------------------------
- * setLogLevelCmd - :setloglvl(RAW|DEBUG|INFO|WARNING|ERROR|CRITICAL)
+ * setLogLevelCmd - :setloglvl(DEBUG|INFO|WARNING|ERROR|CRITICAL)
  *----------------------------------------------------------------------------*/
 int LimitDispatch::luaSetLogLevel(lua_State* L)
 {

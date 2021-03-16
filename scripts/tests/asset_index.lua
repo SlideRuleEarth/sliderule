@@ -27,7 +27,7 @@ end
 
 -- Unit Test --
 
-sys.log(core.RAW, '\n------------------\nTest01: Print Info\n------------------\n')
+print('\n------------------\nTest01: Print Info\n------------------\n')
 for _,v in pairs(assets) do
     name, format, url, index_filename, status = v:info()
     runner.compare(format, expected[name]["format"])
@@ -35,24 +35,24 @@ for _,v in pairs(assets) do
     runner.check(status)
 end
 
-sys.log(core.RAW, '\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
+print('\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
 local a2 = core.getbyname("dataset1")
 name, format, url, index_filename, status = a2:info()
 runner.compare(name, "dataset1")
 runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])
 
-sys.log(core.RAW, '\n------------------\nTest03: Display Time Tree for Dataset1\n------------------\n')
+print('\n------------------\nTest03: Display Time Tree for Dataset1\n------------------\n')
 local i3 = core.intervalindex(a2, "t0", "t1")
 i3:name("intervalindex")
 i3:display()
 
-sys.log(core.RAW, '\n------------------\nTest04: Query Dataset1\n------------------\n')
+print('\n------------------\nTest04: Query Dataset1\n------------------\n')
 local r4 = i3:query({t0=5.0, t1=17.0})
 local e4 = { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} 
 check_query(r4, e4)
 
-sys.log(core.RAW, '\n------------------\nTest05: Query Dataset1 with Field Index\n------------------\n')
+print('\n------------------\nTest05: Query Dataset1 with Field Index\n------------------\n')
 local f5 = core.pointindex(a2, "foot")
 local new_resource = {name="46",t0=46,t1=46,lat0=-83.2,lat1=-80.1,lon0=45.0,lon1=46.0,hand=255.4,foot=15}
 a2:load(new_resource["name"], new_resource)
@@ -63,7 +63,7 @@ local r5 = f5:query({foot=15})
 local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46} 
 check_query(r5, e5)
 
-sys.log(core.RAW, '\n------------------\nTest06: Query Overlapping Dataset\n------------------\n')
+print('\n------------------\nTest06: Query Overlapping Dataset\n------------------\n')
 local a6 = core.getbyname("dataset2")
 name, format, url, index_filename, status = a6:info()
 runner.compare(name, "dataset2")
@@ -76,7 +76,7 @@ local r6 = i6:query({t0=6.0, t1=10.0})
 local e6 = {"B", "C", "D", "E", "F", "G", "H", "I", "J"} 
 check_query(r6, e6)
 
-sys.log(core.RAW, '\n------------------\nTest07: Test Sptial Index\n------------------\n')
+print('\n------------------\nTest07: Test Sptial Index\n------------------\n')
 local a7 = core.getbyname("dataset3")
 local i7 = core.spatialindex(a7, core.SOUTH_POLAR)
 
@@ -101,7 +101,7 @@ while lon < 170.0 do
     lon = lon + 10.0
 end
 
-sys.log(core.RAW, '\n------------------\nTest08: Query Dataset1 with Spatial Index\n------------------\n')
+print('\n------------------\nTest08: Query Dataset1 with Spatial Index\n------------------\n')
 local a8 = core.getbyname("dataset1")
 local i8 = core.spatialindex(a8, core.SOUTH_POLAR)
 i8:name("spatialindex")

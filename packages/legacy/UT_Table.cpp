@@ -122,7 +122,7 @@ bool UT_Table::_ut_assert(bool e, const char* file, int line, const char* fmt, .
         }
 
         /* Display Log Message */
-        mlog(RAW, "%s", log_message);
+        print2term("%s", log_message);
 
         /* Count Error */
         failures++;

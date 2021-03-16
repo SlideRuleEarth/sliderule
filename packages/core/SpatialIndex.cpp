@@ -334,7 +334,7 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
 void SpatialIndex::displayspan (const spatialspan_t& span)
 {
     projspan_t proj = project(span);
-    mlog(RAW, "[%d,%d x %d,%d]", (int)(proj.p0.x*100), (int)(proj.p0.y*100), (int)(proj.p1.x*100), (int)(proj.p1.y*100));
+    print2term("[%d,%d x %d,%d]", (int)(proj.p0.x*100), (int)(proj.p0.y*100), (int)(proj.p1.x*100), (int)(proj.p1.y*100));
 }
 
 /******************************************************************************

@@ -159,18 +159,14 @@ int Monitor::textOutput (EventLib::event_t* event, char* event_buffer)
 {
     char* msg = event_buffer;
 
-    /* Check if Formatting Output */
-    if(event->level != RAW)
-    {
-        /* Populate Prefix */
-        TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
-        msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%d:%d:%d:%d:%d:%s:%s ", 
-            timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second,
-            EventLib::lvl2str((event_level_t)event->level), event->name);
-    }
+    /* Populate Prefix */
+    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%d:%d:%d:%d:%d:%s:%s ", 
+        timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second,
+        EventLib::lvl2str((event_level_t)event->level), event->name);
 
     /* Populate Message */
-    msg += StringLib::formats(msg, MAX_EVENT_SIZE - (msg - event_buffer), "%s", event->attr);
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE - (msg - event_buffer), "%s\n", event->attr);
 
     /* Return Size of Message */
     return msg - event_buffer + 1;;
@@ -185,7 +181,7 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
 
     /* Populate Message */
     msg += StringLib::formats(msg, MAX_EVENT_SIZE,
-        "{\"systime\":%ld,\"ipv4\":%ld,\"flags\":%d,\"type\":%s,\"level:%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":%s,\"attr\":%s}",
+        "{\"systime\":%ld,\"ipv4\":%ld,\"flags\":%d,\"type\":%s,\"level:%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":%s,\"attr\":%s}\n",
         event->systime, (long)event->ipv4, event->flags, 
         EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level), 
         event->tid, (long)event->id, (long)event->parent, event->name, event->attr);

@@ -351,7 +351,7 @@ int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     /* Characterize Performance */
     if(H5_CHARACTERIZE_IO)
     {
-        mlog(RAW, "ioRead - 0x%08lx [%ld] (%d, %ld) - %s\n", pos, bytes_read, ++io_reads, io_data += bytes_read, datasetPrint);
+        print2term("ioRead - 0x%08lx [%ld] (%d, %ld) - %s\n", pos, bytes_read, ++io_reads, io_data += bytes_read, datasetPrint);
     }
 
     /* Return Bytes Read */
@@ -747,14 +747,14 @@ uint64_t H5FileBuffer::readSuperblock (void)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "File Information\n");
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Size of Offsets:                                                 %lu\n",     (unsigned long)metaData.offsetsize);
-        mlog(RAW, "Size of Lengths:                                                 %lu\n",     (unsigned long)metaData.lengthsize);
-        mlog(RAW, "Group Leaf Node K:                                               %lu\n",     (unsigned long)leaf_k);
-        mlog(RAW, "Group Internal Node K:                                           %lu\n",     (unsigned long)internal_k);
-        mlog(RAW, "Root Object Header Address:                                      0x%lX\n",   (long unsigned)root_group_offset);
+        print2term("\n----------------\n");
+        print2term("File Information\n");
+        print2term("----------------\n");
+        print2term("Size of Offsets:                                                 %lu\n",     (unsigned long)metaData.offsetsize);
+        print2term("Size of Lengths:                                                 %lu\n",     (unsigned long)metaData.lengthsize);
+        print2term("Group Leaf Node K:                                               %lu\n",     (unsigned long)leaf_k);
+        print2term("Group Internal Node K:                                           %lu\n",     (unsigned long)internal_k);
+        print2term("Root Object Header Address:                                      0x%lX\n",   (long unsigned)root_group_offset);
     }
 
     /* Return Root Group Offset */
@@ -791,9 +791,9 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Fractal Heap [%d]: %d, 0x%lx\n", dlvl, (int)msg_type, starting_position);
-        mlog(RAW, "----------------\n");
+        print2term("\n----------------\n");
+        print2term("Fractal Heap [%d]: %d, 0x%lx\n", dlvl, (int)msg_type, starting_position);
+        print2term("----------------\n");
     }
 
     /*  Read Fractal Heap Header */
@@ -822,29 +822,29 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
     if(verbose)
     {
-        mlog(RAW, "Heap ID Length:                                                  %lu\n", (unsigned long)heap_obj_id_len);
-        mlog(RAW, "I/O Filters' Encoded Length:                                     %lu\n", (unsigned long)io_filter_len);
-        mlog(RAW, "Flags:                                                           0x%lx\n", (unsigned long)flags);
-        mlog(RAW, "Maximum Size of Managed Objects:                                 %lu\n", (unsigned long)max_size_mg_obj);
-        mlog(RAW, "Next Huge Object ID:                                             %lu\n", (unsigned long)next_huge_obj_id);
-        mlog(RAW, "v2 B-tree Address of Huge Objects:                               0x%lx\n", (unsigned long)btree_addr_huge_obj);
-        mlog(RAW, "Amount of Free Space in Managed Blocks:                          %lu\n", (unsigned long)free_space_mg_blks);
-        mlog(RAW, "Address of Managed Block Free Space Manager:                     0x%lx\n", (unsigned long)addr_free_space_mg);
-        mlog(RAW, "Amount of Manged Space in Heap:                                  %lu\n", (unsigned long)mg_space);
-        mlog(RAW, "Amount of Allocated Managed Space in Heap:                       %lu\n", (unsigned long)alloc_mg_space);
-        mlog(RAW, "Offset of Direct Block Allocation Iterator in Managed Space:     %lu\n", (unsigned long)dblk_alloc_iter);
-        mlog(RAW, "Number of Managed Objects in Heap:                               %lu\n", (unsigned long)mg_objs);
-        mlog(RAW, "Size of Huge Objects in Heap:                                    %lu\n", (unsigned long)huge_obj_size);
-        mlog(RAW, "Number of Huge Objects in Heap:                                  %lu\n", (unsigned long)huge_objs);
-        mlog(RAW, "Size of Tiny Objects in Heap:                                    %lu\n", (unsigned long)tiny_obj_size);
-        mlog(RAW, "Number of Timing Objects in Heap:                                %lu\n", (unsigned long)tiny_objs);
-        mlog(RAW, "Table Width:                                                     %lu\n", (unsigned long)table_width);
-        mlog(RAW, "Starting Block Size:                                             %lu\n", (unsigned long)starting_blk_size);
-        mlog(RAW, "Maximum Direct Block Size:                                       %lu\n", (unsigned long)max_dblk_size);
-        mlog(RAW, "Maximum Heap Size:                                               %lu\n", (unsigned long)max_heap_size);
-        mlog(RAW, "Starting # of Rows in Root Indirect Block:                       %lu\n", (unsigned long)start_num_rows);
-        mlog(RAW, "Address of Root Block:                                           0x%lx\n", (unsigned long)root_blk_addr);
-        mlog(RAW, "Current # of Rows in Root Indirect Block:                        %lu\n", (unsigned long)curr_num_rows);
+        print2term("Heap ID Length:                                                  %lu\n", (unsigned long)heap_obj_id_len);
+        print2term("I/O Filters' Encoded Length:                                     %lu\n", (unsigned long)io_filter_len);
+        print2term("Flags:                                                           0x%lx\n", (unsigned long)flags);
+        print2term("Maximum Size of Managed Objects:                                 %lu\n", (unsigned long)max_size_mg_obj);
+        print2term("Next Huge Object ID:                                             %lu\n", (unsigned long)next_huge_obj_id);
+        print2term("v2 B-tree Address of Huge Objects:                               0x%lx\n", (unsigned long)btree_addr_huge_obj);
+        print2term("Amount of Free Space in Managed Blocks:                          %lu\n", (unsigned long)free_space_mg_blks);
+        print2term("Address of Managed Block Free Space Manager:                     0x%lx\n", (unsigned long)addr_free_space_mg);
+        print2term("Amount of Manged Space in Heap:                                  %lu\n", (unsigned long)mg_space);
+        print2term("Amount of Allocated Managed Space in Heap:                       %lu\n", (unsigned long)alloc_mg_space);
+        print2term("Offset of Direct Block Allocation Iterator in Managed Space:     %lu\n", (unsigned long)dblk_alloc_iter);
+        print2term("Number of Managed Objects in Heap:                               %lu\n", (unsigned long)mg_objs);
+        print2term("Size of Huge Objects in Heap:                                    %lu\n", (unsigned long)huge_obj_size);
+        print2term("Number of Huge Objects in Heap:                                  %lu\n", (unsigned long)huge_objs);
+        print2term("Size of Tiny Objects in Heap:                                    %lu\n", (unsigned long)tiny_obj_size);
+        print2term("Number of Timing Objects in Heap:                                %lu\n", (unsigned long)tiny_objs);
+        print2term("Table Width:                                                     %lu\n", (unsigned long)table_width);
+        print2term("Starting Block Size:                                             %lu\n", (unsigned long)starting_blk_size);
+        print2term("Maximum Direct Block Size:                                       %lu\n", (unsigned long)max_dblk_size);
+        print2term("Maximum Heap Size:                                               %lu\n", (unsigned long)max_heap_size);
+        print2term("Starting # of Rows in Root Indirect Block:                       %lu\n", (unsigned long)start_num_rows);
+        print2term("Address of Root Block:                                           0x%lx\n", (unsigned long)root_blk_addr);
+        print2term("Current # of Rows in Root Indirect Block:                        %lu\n", (unsigned long)curr_num_rows);
     }
 
     /* Read Filter Information */
@@ -852,8 +852,8 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     {
         uint64_t filter_root_dblk   = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Filtered Root Direct Block
         uint32_t filter_mask        = (uint32_t)readField(4, &pos); // I/O Filter Mask
-        mlog(RAW, "Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
-        mlog(RAW, "I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
+        print2term("Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
+        print2term("I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
 
         throw RunTimeException("Filtering unsupported on fractal heap: %d", io_filter_len);
         // readMessage(FILTER_MSG, io_filter_len, pos, hdr_flags, dlvl); // this currently populates filter for dataset
@@ -934,9 +934,9 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Direct Block [%d,%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, block_size, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
+        print2term("\n----------------\n");
+        print2term("Direct Block [%d,%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, block_size, (unsigned long)starting_position);
+        print2term("----------------\n");
     }
     
     /* Read Block Header */
@@ -948,8 +948,8 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     {
         uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
-        mlog(RAW, "Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
-        mlog(RAW, "Block Offset:                                                    0x%lx\n", blk_offset);
+        print2term("Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
+        print2term("Block Offset:                                                    0x%lx\n", blk_offset);
     }
 
     if(heap_info->dblk_checksum)
@@ -972,7 +972,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         {
             if(verbose)
             {
-                mlog(RAW, "\nExiting direct block 0x%lx early at 0x%lx\n", starting_position, pos);
+                print2term("\nExiting direct block 0x%lx early at 0x%lx\n", starting_position, pos);
             }
             break;
         }
@@ -1041,9 +1041,9 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Indirect Block [%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
+        print2term("\n----------------\n");
+        print2term("Indirect Block [%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, (unsigned long)starting_position);
+        print2term("----------------\n");
     }
     
     /* Read Block Header */
@@ -1055,8 +1055,8 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     {
         uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
-        mlog(RAW, "Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
-        mlog(RAW, "Block Offset:                                                    0x%lx\n", blk_offset);
+        print2term("Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
+        print2term("Block Offset:                                                    0x%lx\n", blk_offset);
     }
 
     /* Calculate Number of Direct and Indirect Blocks (see III.G. Disk Format: Level 1G - Fractal Heap) */
@@ -1067,10 +1067,10 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     int N = K - (max_dblock_rows * heap_info->table_width);
     if(verbose)
     {
-        mlog(RAW, "Number of Rows:                                                  %d\n", nrows);
-        mlog(RAW, "Maximum Direct Block Rows:                                       %d\n", max_dblock_rows);
-        mlog(RAW, "Number of Direct Blocks (K):                                     %d\n", K);
-        mlog(RAW, "Number of Indirect Blocks (N):                                   %d\n", N);
+        print2term("Number of Rows:                                                  %d\n", nrows);
+        print2term("Maximum Direct Block Rows:                                       %d\n", max_dblock_rows);
+        print2term("Number of Direct Blocks (K):                                     %d\n", K);
+        print2term("Number of Indirect Blocks (N):                                   %d\n", N);
     }
 
     /* Read Direct Child Blocks */
@@ -1181,11 +1181,11 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "B-Tree Node: 0x%lx\n", (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Node Level:                                                      %d\n", (int)node_level);
-        mlog(RAW, "Entries Used:                                                    %d\n", (int)entries_used);
+        print2term("\n----------------\n");
+        print2term("B-Tree Node: 0x%lx\n", (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Node Level:                                                      %d\n", (int)node_level);
+        print2term("Entries Used:                                                    %d\n", (int)entries_used);
     }
 
     /* Skip Sibling Addresses */
@@ -1214,12 +1214,12 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
         /* Display */
         if(verbose && H5_EXTRA_DEBUG)
         {
-            mlog(RAW, "\nEntry:                                                           %d[%d]\n", (int)node_level, e);
-            mlog(RAW, "Chunk Size:                                                      %u | %u\n", (unsigned int)curr_node.chunk_size, (unsigned int)next_node.chunk_size);
-            mlog(RAW, "Filter Mask:                                                     0x%x | 0x%x\n", (unsigned int)curr_node.filter_mask, (unsigned int)next_node.filter_mask);
-            mlog(RAW, "Chunk Key:                                                       %lu | %lu\n", (unsigned long)child_key1, (unsigned long)child_key2);
-            mlog(RAW, "Data Key:                                                        %lu | %lu\n", (unsigned long)data_key1, (unsigned long)data_key2);
-            mlog(RAW, "Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
+            print2term("\nEntry:                                                           %d[%d]\n", (int)node_level, e);
+            print2term("Chunk Size:                                                      %u | %u\n", (unsigned int)curr_node.chunk_size, (unsigned int)next_node.chunk_size);
+            print2term("Filter Mask:                                                     0x%x | 0x%x\n", (unsigned int)curr_node.filter_mask, (unsigned int)next_node.filter_mask);
+            print2term("Chunk Key:                                                       %lu | %lu\n", (unsigned long)child_key1, (unsigned long)child_key2);
+            print2term("Data Key:                                                        %lu | %lu\n", (unsigned long)data_key1, (unsigned long)data_key2);
+            print2term("Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
         }
 
         /* Check Inclusion */
@@ -1283,8 +1283,8 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 /* Display Info */
                 if(verbose && H5_EXTRA_DEBUG)
                 {
-                    mlog(RAW, "Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
-                    mlog(RAW, "Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
+                    print2term("Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
+                    print2term("Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
                 }
 
                 /* Read Chunk */
@@ -1372,7 +1372,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
         }
         else if(verbose && H5_EXTRA_DEBUG)
         {
-            mlog(RAW, "Trailing Zero:                                                   %d\n", (int)trailing_zero);
+            print2term("Trailing Zero:                                                   %d\n", (int)trailing_zero);
         }
     }
 
@@ -1455,8 +1455,8 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         link_name[i] = '\0';
         if(verbose)
         {
-            mlog(RAW, "Link Name:                                                       %s\n", link_name);
-            mlog(RAW, "Object Header Address:                                           0x%lx\n", obj_hdr_addr);
+            print2term("Link Name:                                                       %s\n", link_name);
+            print2term("Object Header Address:                                           0x%lx\n", obj_hdr_addr);
         }
 
         /* Process Link */
@@ -1527,21 +1527,21 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
             uint64_t change_time         = readField(4, &pos);
             uint64_t birth_time          = readField(4, &pos);
 
-            mlog(RAW, "\n----------------\n");
-            mlog(RAW, "Object Information [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-            mlog(RAW, "----------------\n");
+            print2term("\n----------------\n");
+            print2term("Object Information [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+            print2term("----------------\n");
 
             TimeLib::gmt_time_t access_gmt = TimeLib::gettime(access_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Access Time:                                                     %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.day, access_gmt.hour, access_gmt.minute, access_gmt.second);
+            print2term("Access Time:                                                     %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.day, access_gmt.hour, access_gmt.minute, access_gmt.second);
 
             TimeLib::gmt_time_t modification_gmt = TimeLib::gettime(modification_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Modification Time:                                               %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.day, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
+            print2term("Modification Time:                                               %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.day, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
 
             TimeLib::gmt_time_t change_gmt = TimeLib::gettime(change_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Change Time:                                                     %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.day, change_gmt.hour, change_gmt.minute, change_gmt.second);
+            print2term("Change Time:                                                     %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.day, change_gmt.hour, change_gmt.minute, change_gmt.second);
 
             TimeLib::gmt_time_t birth_gmt = TimeLib::gettime(birth_time * TIME_MILLISECS_IN_A_SECOND);
-            mlog(RAW, "Birth Time:                                                      %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.day, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
+            print2term("Birth Time:                                                      %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.day, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
         }
     }
 
@@ -1663,12 +1663,12 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
     else
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Object Information V1 [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
+        print2term("\n----------------\n");
+        print2term("Object Information V1 [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
 
         uint16_t num_hdr_msgs = (uint16_t)readField(2, &pos);
-        mlog(RAW, "Number of Header Messages:                                       %d\n", (int)num_hdr_msgs);
+        print2term("Number of Header Messages:                                       %d\n", (int)num_hdr_msgs);
     }
 
     /* Read Object Reference Count */
@@ -1679,7 +1679,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     else
     {
         uint32_t obj_ref_count = (uint32_t)readField(4, &pos);
-        mlog(RAW, "Object Reference Count:                                          %d\n", (int)obj_ref_count);
+        print2term("Object Reference Count:                                          %d\n", (int)obj_ref_count);
     }
 
     /* Read Object Header Size */
@@ -1687,8 +1687,8 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     uint64_t end_of_hdr = pos + obj_hdr_size;
     if(verbose)
     {
-        mlog(RAW, "Object Header Size:                                              %d\n", (int)obj_hdr_size);
-        mlog(RAW, "End of Header:                                                   0x%lx\n", (unsigned long)end_of_hdr);
+        print2term("Object Header Size:                                              %d\n", (int)obj_hdr_size);
+        print2term("End of Header:                                                   0x%lx\n", (unsigned long)end_of_hdr);
     }
 
     /* Read Header Messages */
@@ -1788,7 +1788,7 @@ int H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos,
         {
             if(verbose)
             {
-                mlog(RAW, "Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)msg_type, (int)size, (unsigned long)pos);
+                print2term("Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)msg_type, (int)size, (unsigned long)pos);
             }
             
             return size;
@@ -1833,12 +1833,12 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Dataspace Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Version:                                                         %d\n", (int)version);
-        mlog(RAW, "Dimensionality:                                                  %d\n", (int)dimensionality);
-        mlog(RAW, "Flags:                                                           0x%x\n", (int)flags);
+        print2term("\n----------------\n");
+        print2term("Dataspace Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Version:                                                         %d\n", (int)version);
+        print2term("Dimensionality:                                                  %d\n", (int)dimensionality);
+        print2term("Flags:                                                           0x%x\n", (int)flags);
     }
 
     /* Read and Populate Data Dimensions */
@@ -1853,7 +1853,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             num_elements *= metaData.dimensions[d];
             if(verbose)
             {
-                mlog(RAW, "Dimension %d:                                                     %lu\n", (int)metaData.ndims, (unsigned long)metaData.dimensions[d]);
+                print2term("Dimension %d:                                                     %lu\n", (int)metaData.ndims, (unsigned long)metaData.dimensions[d]);
             }
         }
 
@@ -1866,7 +1866,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "Number of Elements:                                              %lu\n", (unsigned long)num_elements);
+        print2term("Number of Elements:                                              %lu\n", (unsigned long)num_elements);
     }
 
     /* Return Bytes Read */
@@ -1897,9 +1897,9 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Link Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
+        print2term("\n----------------\n");
+        print2term("Link Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
     }
 
     /* Read Maximum Creation Index (number of elements in group) */
@@ -1908,7 +1908,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t max_create_index = readField(8, &pos);
         if(verbose)
         {
-            mlog(RAW, "Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
+            print2term("Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
         }
     }
 
@@ -1917,8 +1917,8 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t name_index = readField(metaData.offsetsize, &pos);
     if(verbose)
     {
-        mlog(RAW, "Heap Address:                                                    %lX\n", (unsigned long)heap_address);
-        mlog(RAW, "Name Index:                                                      %lX\n", (unsigned long)name_index);
+        print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
+        print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
@@ -1926,7 +1926,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t create_order_index = readField(8, &pos);
         if(verbose)
         {
-            mlog(RAW, "Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+            print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
         }
     }
 
@@ -1968,12 +1968,12 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     metaData.type = (data_type_t)(version_class & 0x0F);
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Datatype Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Version:                                                         %d\n", (int)version);
-        mlog(RAW, "Data Class:                                                      %d, %s\n", (int)metaData.type, type2str(metaData.type));
-        mlog(RAW, "Data Size:                                                       %d\n", metaData.typesize);
+        print2term("\n----------------\n");
+        print2term("Datatype Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Version:                                                         %d\n", (int)version);
+        print2term("Data Class:                                                      %d, %s\n", (int)metaData.type, type2str(metaData.type));
+        print2term("Data Size:                                                       %d\n", metaData.typesize);
     }
 
     /* Read Data Class Properties */
@@ -1994,11 +1994,11 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 uint16_t bit_offset     = (uint16_t)readField(2, &pos);
                 uint16_t bit_precision  = (uint16_t)readField(2, &pos);
 
-                mlog(RAW, "Byte Order:                                                      %d\n", (int)byte_order);
-                mlog(RAW, "Pading Type:                                                     %d\n", (int)pad_type);
-                mlog(RAW, "Sign Location:                                                   %d\n", (int)sign_loc);
-                mlog(RAW, "Bit Offset:                                                      %d\n", (int)bit_offset);
-                mlog(RAW, "Bit Precision:                                                   %d\n", (int)bit_precision);
+                print2term("Byte Order:                                                      %d\n", (int)byte_order);
+                print2term("Pading Type:                                                     %d\n", (int)pad_type);
+                print2term("Sign Location:                                                   %d\n", (int)sign_loc);
+                print2term("Bit Offset:                                                      %d\n", (int)bit_offset);
+                print2term("Bit Precision:                                                   %d\n", (int)bit_precision);
             }
             break;
         }
@@ -2024,17 +2024,17 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 uint8_t  mant_size      =  (uint8_t)readField(1, &pos);
                 uint32_t exp_bias       = (uint32_t)readField(4, &pos);
 
-                mlog(RAW, "Byte Order:                                                      %d\n", (int)byte_order);
-                mlog(RAW, "Pading Type:                                                     %d\n", (int)pad_type);
-                mlog(RAW, "Mantissa Normalization:                                          %d\n", (int)mant_norm);
-                mlog(RAW, "Sign Location:                                                   %d\n", (int)sign_loc);
-                mlog(RAW, "Bit Offset:                                                      %d\n", (int)bit_offset);
-                mlog(RAW, "Bit Precision:                                                   %d\n", (int)bit_precision);
-                mlog(RAW, "Exponent Location:                                               %d\n", (int)exp_location);
-                mlog(RAW, "Exponent Size:                                                   %d\n", (int)exp_size);
-                mlog(RAW, "Mantissa Location:                                               %d\n", (int)mant_location);
-                mlog(RAW, "Mantissa Size:                                                   %d\n", (int)mant_size);
-                mlog(RAW, "Exponent Bias:                                                   %d\n", (int)exp_bias);
+                print2term("Byte Order:                                                      %d\n", (int)byte_order);
+                print2term("Pading Type:                                                     %d\n", (int)pad_type);
+                print2term("Mantissa Normalization:                                          %d\n", (int)mant_norm);
+                print2term("Sign Location:                                                   %d\n", (int)sign_loc);
+                print2term("Bit Offset:                                                      %d\n", (int)bit_offset);
+                print2term("Bit Precision:                                                   %d\n", (int)bit_precision);
+                print2term("Exponent Location:                                               %d\n", (int)exp_location);
+                print2term("Exponent Size:                                                   %d\n", (int)exp_size);
+                print2term("Mantissa Location:                                               %d\n", (int)mant_location);
+                print2term("Mantissa Size:                                                   %d\n", (int)mant_size);
+                print2term("Exponent Bias:                                                   %d\n", (int)exp_bias);
             }
             break;
         }
@@ -2082,11 +2082,11 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint8_t space_allocation_time = (uint8_t)readField(1, &pos);
         uint8_t fill_value_write_time = (uint8_t)readField(1, &pos);
 
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Fill Value Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Space Allocation Time:                                           %d\n", (int)space_allocation_time);
-        mlog(RAW, "Fill Value Write Time:                                           %d\n", (int)fill_value_write_time);
+        print2term("\n----------------\n");
+        print2term("Fill Value Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Space Allocation Time:                                           %d\n", (int)space_allocation_time);
+        print2term("Fill Value Write Time:                                           %d\n", (int)fill_value_write_time);
     }
 
     uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
@@ -2095,7 +2095,7 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         metaData.fillsize = (int)readField(4, &pos);
         if(verbose)
         {
-            mlog(RAW, "Fill Value Size:                                                 %d\n", metaData.fillsize);
+            print2term("Fill Value Size:                                                 %d\n", metaData.fillsize);
         }
 
         if(metaData.fillsize > 0)
@@ -2104,7 +2104,7 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             metaData.fill.fill_ll = fill_value;
             if(verbose)
             {
-                mlog(RAW, "Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
+                print2term("Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
             }
         }
     }
@@ -2141,9 +2141,9 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Link Message [%d]: 0x%x, 0x%lx\n", dlvl, (unsigned)flags, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
+        print2term("\n----------------\n");
+        print2term("Link Message [%d]: 0x%x, 0x%lx\n", dlvl, (unsigned)flags, (unsigned long)starting_position);
+        print2term("----------------\n");
     }
 
     /* Read Link Type */
@@ -2153,7 +2153,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         link_type = readField(1, &pos);
         if(verbose)
         {
-            mlog(RAW, "Link Type:                                                       %lu\n", (unsigned long)link_type);
+            print2term("Link Type:                                                       %lu\n", (unsigned long)link_type);
         }
     }
 
@@ -2163,7 +2163,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t create_order = readField(8, &pos);
         if(verbose)
         {
-            mlog(RAW, "Creation Order:                                                  %lX\n", (unsigned long)create_order);
+            print2term("Creation Order:                                                  %lX\n", (unsigned long)create_order);
         }
     }
 
@@ -2173,7 +2173,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint8_t char_set = readField(1, &pos);
         if(verbose)
         {
-            mlog(RAW, "Character Set:                                                   %lu\n", (unsigned long)char_set);
+            print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);
         }
     }
 
@@ -2187,7 +2187,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t link_name_len = readField(link_name_len_of_len, &pos);
     if(verbose)
     {
-        mlog(RAW, "Link Name Length:                                                %lu\n", (unsigned long)link_name_len);
+        print2term("Link Name Length:                                                %lu\n", (unsigned long)link_name_len);
     }
 
     uint8_t link_name[STR_BUFF_SIZE];
@@ -2195,7 +2195,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     link_name[link_name_len] = '\0';
     if(verbose)
     {
-        mlog(RAW, "Link Name:                                                       %s\n", link_name);
+        print2term("Link Name:                                                       %s\n", link_name);
     }
 
     /* Process Link Type */
@@ -2204,7 +2204,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t object_header_addr = readField(metaData.offsetsize, &pos);
         if(verbose)
         {
-            mlog(RAW, "Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
+            print2term("Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
         }
 
         if(dlvl < datasetPath.length())
@@ -2224,7 +2224,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         soft_link[soft_link_len] = '\0';
         if(verbose)
         {
-            mlog(RAW, "Soft Link:                                                       %s\n", soft_link);
+            print2term("Soft Link:                                                       %s\n", soft_link);
         }
     }
     else if(link_type == 64) // external link
@@ -2235,7 +2235,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         ext_link[ext_link_len] = '\0';
         if(verbose)
         {
-            mlog(RAW, "External Link:                                                   %s\n", ext_link);
+            print2term("External Link:                                                   %s\n", ext_link);
         }
     }
     else if(errorChecking)
@@ -2271,11 +2271,11 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Data Layout Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Version:                                                         %d\n", (int)version);
-        mlog(RAW, "Layout:                                                          %d, %s\n", (int)metaData.layout, layout2str(metaData.layout));
+        print2term("\n----------------\n");
+        print2term("Data Layout Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Version:                                                         %d\n", (int)version);
+        print2term("Layout:                                                          %d, %s\n", (int)metaData.layout, layout2str(metaData.layout));
     }
 
     /* Read Layout Classes */
@@ -2330,11 +2330,11 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             /* Display Data Attributes */
             if(verbose)
             {
-                mlog(RAW, "Chunk Element Size:                                              %d\n", (int)metaData.elementsize);
-                mlog(RAW, "Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
+                print2term("Chunk Element Size:                                              %d\n", (int)metaData.elementsize);
+                print2term("Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
                 for(int d = 0; d < metaData.ndims; d++)
                 {
-                    mlog(RAW, "Chunk Dimension %d:                                               %d\n", d, (int)chunk_dim[d]);
+                    print2term("Chunk Dimension %d:                                               %d\n", d, (int)chunk_dim[d]);
                 }
             }
 
@@ -2379,11 +2379,11 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Filter Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Version:                                                         %d\n", (int)version);
-        mlog(RAW, "Number of Filters:                                               %d\n", (int)num_filters);
+        print2term("\n----------------\n");
+        print2term("Filter Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Version:                                                         %d\n", (int)version);
+        print2term("Number of Filters:                                               %d\n", (int)num_filters);
     }
 
     /* Read Filters */
@@ -2403,10 +2403,10 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Display */
         if(verbose)
         {
-            mlog(RAW, "Filter Identification Value:                                     %d\n", (int)filter);
-            mlog(RAW, "Flags:                                                           0x%x\n", (int)flags);
-            mlog(RAW, "Number Client Data Values:                                       %d\n", (int)num_parms);
-            mlog(RAW, "Filter Name:                                                     %s\n", filter_name);
+            print2term("Filter Identification Value:                                     %d\n", (int)filter);
+            print2term("Flags:                                                           0x%x\n", (int)flags);
+            print2term("Number Client Data Values:                                       %d\n", (int)num_parms);
+            print2term("Filter Name:                                                     %s\n", filter_name);
         }
 
         /* Set Filter */
@@ -2447,11 +2447,11 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Header Continuation Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "Offset:                                                          0x%lx\n", (unsigned long)hc_offset);
-        mlog(RAW, "Length:                                                          %lu\n", (unsigned long)hc_length);
+        print2term("\n----------------\n");
+        print2term("Header Continuation Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Offset:                                                          0x%lx\n", (unsigned long)hc_offset);
+        print2term("Length:                                                          %lu\n", (unsigned long)hc_length);
     }
 
     /* Read Continuation Block */
@@ -2504,11 +2504,11 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Symbol Table Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
-        mlog(RAW, "----------------\n");
-        mlog(RAW, "B-Tree Address:                                                  0x%lx\n", (unsigned long)btree_addr);
-        mlog(RAW, "Heap Address:                                                    0x%lx\n", (unsigned long)heap_addr);
+        print2term("\n----------------\n");
+        print2term("Symbol Table Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("B-Tree Address:                                                  0x%lx\n", (unsigned long)btree_addr);
+        print2term("Heap Address:                                                    0x%lx\n", (unsigned long)heap_addr);
     }
 
     /* Read Heap Info */
@@ -2581,10 +2581,10 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t key0 = readField(metaData.lengthsize, &pos);
         if(verbose && H5_EXTRA_DEBUG)
         {
-            mlog(RAW, "Entries Used:                                                    %d\n", (int)entries_used);
-            mlog(RAW, "Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
-            mlog(RAW, "Right Sibling:                                                   0x%lx\n", (unsigned long)right_sibling);
-            mlog(RAW, "First Key:                                                       %ld\n", (unsigned long)key0);
+            print2term("Entries Used:                                                    %d\n", (int)entries_used);
+            print2term("Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
+            print2term("Right Sibling:                                                   0x%lx\n", (unsigned long)right_sibling);
+            print2term("First Key:                                                       %ld\n", (unsigned long)key0);
         }
 
         /* Loop Through Entries in Current Node */
@@ -2635,13 +2635,13 @@ void H5FileBuffer::parseDataset (void)
 
     if(verbose)
     {
-        mlog(RAW, "\n----------------\n");
-        mlog(RAW, "Dataset: ");
+        print2term("\n----------------\n");
+        print2term("Dataset: ");
         for(int g = 0; g < datasetPath.length(); g++)
         {
-            mlog(RAW, "/%s", datasetPath[g]);
+            print2term("/%s", datasetPath[g]);
         }
-        mlog(RAW, "\n----------------\n");
+        print2term("\n----------------\n");
     }
 }
 

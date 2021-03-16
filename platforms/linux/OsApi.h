@@ -125,6 +125,7 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 
 /* Debug Logging */
 #define dlog(...)                   LocalLib::print(__FILE__,__LINE__,__VA_ARGS__)
+#define print2term(...)             printf(__VA_ARGS__) 
 
 /******************************************************************************
  * INCLUDES

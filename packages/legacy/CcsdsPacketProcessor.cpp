@@ -415,9 +415,9 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
                     CcsdsPacket* seg = worker->segments->get(s);
                     int seglen = seg->getLEN();
                     unsigned char* segbuf = seg->getBuffer();
-                    mlog(RAW, "[%d]: ", seglen);
-                    for(int i = 0; i < seglen; i++) mlog(RAW, "%02X", segbuf[i]);
-                    mlog(RAW, "\n");
+                    print2term("[%d]: ", seglen);
+                    for(int i = 0; i < seglen; i++) print2term("%02X", segbuf[i]);
+                    print2term("\n");
                 }
             }
         }

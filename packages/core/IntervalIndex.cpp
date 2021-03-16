@@ -248,5 +248,5 @@ intervalspan_t IntervalIndex::luatable2span (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 void IntervalIndex::displayspan (const intervalspan_t& span)
 {
-    mlog(RAW, "[%.3lf, %.3lf]", span.t0, span.t1);
+    print2term("[%.3lf, %.3lf]", span.t0, span.t1);
 }

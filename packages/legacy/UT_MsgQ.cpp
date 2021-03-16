@@ -115,7 +115,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         int status1 = pubq->postCopy((void*)&data, sizeof(long));
         if(status1 <= 0)
         {
-            mlog(RAW, "[%d] ERROR: post %ld error %d\n", __LINE__, data, status1);
+            print2term("[%d] ERROR: post %ld error %d\n", __LINE__, data, status1);
             unit_test_parms.errorcnt++;
             break;
         }
@@ -126,7 +126,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     int status2 = pubq->postCopy((void*)&data, sizeof(long), SYS_TIMEOUT);
     if(status2 != MsgQ::STATE_TIMEOUT)
     {
-        mlog(RAW, "[%d] ERROR: post %ld did not timeout: %d\n", __LINE__, data, status2);
+        print2term("[%d] ERROR: post %ld did not timeout: %d\n", __LINE__, data, status2);
         unit_test_parms.errorcnt++;
     }
 
@@ -138,12 +138,12 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         int status3 = subq->receiveCopy((void*)&value, sizeof(long), SYS_TIMEOUT);
         if(status3 != sizeof(long))
         {
-            mlog(RAW, "[%d] ERROR: receive failed with status %d\n", __LINE__, status3);
+            print2term("[%d] ERROR: receive failed with status %d\n", __LINE__, status3);
             unit_test_parms.errorcnt++;
         }
         else if(value != data)
         {
-            mlog(RAW, "[%d] ERROR: receive got the wrong value %ld != %ld\n", __LINE__, value, data);
+            print2term("[%d] ERROR: receive got the wrong value %ld != %ld\n", __LINE__, value, data);
             unit_test_parms.errorcnt++;            
         }
         data++;
@@ -153,7 +153,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     int status4 = subq->receiveCopy((void*)&value, sizeof(long), SYS_TIMEOUT);
     if(status4 != MsgQ::STATE_TIMEOUT)
     {
-        mlog(RAW, "[%d] ERROR: receive %ld did not timeout: %d\n", __LINE__, data, status4);
+        print2term("[%d] ERROR: receive %ld did not timeout: %d\n", __LINE__, data, status4);
         unit_test_parms.errorcnt++;
     }
 
@@ -228,7 +228,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
         if(subparms[s]->errorcnt != 0)
         {
             test_status = false;
-            mlog(RAW, "[%d] ERROR: SUB %d error count is %d\n", __LINE__, s, subparms[s]->errorcnt);
+            print2term("[%d] ERROR: SUB %d error count is %d\n", __LINE__, s, subparms[s]->errorcnt);
         }
         for(int p = 0; p < unit_test_parms.numpubs; p++)
         {
@@ -237,7 +237,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
                 if(subparms[s]->lastvalue[p] != ((p << 16) | unit_test_parms.loopcnt))
                 {
                     test_status = false;
-                    mlog(RAW, "[%d] ERROR: sub %d last value %d of %lX is not %X\n", __LINE__, s, p, subparms[s]->lastvalue[p], (p << 16) | unit_test_parms.loopcnt);
+                    print2term("[%d] ERROR: sub %d last value %d of %lX is not %X\n", __LINE__, s, p, subparms[s]->lastvalue[p], (p << 16) | unit_test_parms.loopcnt);
                 }
             }
         }
@@ -258,7 +258,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
                 if(msgQs[i].subscriptions != 0)
                 {
                     test_status = false;
-                    mlog(RAW, "[%d] ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers\n", __LINE__, msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
+                    print2term("[%d] ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers\n", __LINE__, msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
                 }
             }
         }
@@ -294,18 +294,18 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         const char* size_str = argv[1];
         if(StringLib::str2long(depth_str, &depth) == false)
         {
-            mlog(RAW, "[%d] ERROR: unable to parse depth\n", __LINE__);
+            print2term("[%d] ERROR: unable to parse depth\n", __LINE__);
             return -1;
         }
         else if(StringLib::str2long(size_str, &size) == false)
         {
-            mlog(RAW, "[%d] ERROR: unable to parse size\n", __LINE__);
+            print2term("[%d] ERROR: unable to parse size\n", __LINE__);
             return -1;
         }
     }
     else if(argc != 0)
     {
-        mlog(RAW, "Invalid number of parameters passed to command: %d\n", argc);
+        print2term("Invalid number of parameters passed to command: %d\n", argc);
         return -1;
     }
 
@@ -314,7 +314,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     unsigned long sequence = 0;
 
     /* Iterate Over Number of Subscribers */
-    mlog(RAW, "Depth, Size, Subscribers, Publishing, Subscribing, Total\n");
+    print2term("Depth, Size, Subscribers, Publishing, Subscribing, Total\n");
     for(int numsubs = 1; numsubs < MAX_SUBSCRIBERS; numsubs++)
     {
         perf_thread_t* RAW = new perf_thread_t[numsubs];
@@ -346,7 +346,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             int status = p->postCopy(pkt, size);
             if(status <= 0)
             {
-                mlog(RAW, "[%d] ERROR: unable to post pkt %d with error %d\n", __LINE__, i, status);
+                print2term("[%d] ERROR: unable to post pkt %d with error %d\n", __LINE__, i, status);
                 failure = true;
             }
         }
@@ -375,7 +375,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         total_time = ((double) (total_end - total_start)) / CLOCKS_PER_SEC;
 
         /* Print Results */
-        mlog(RAW, "%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);
+        print2term("%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);
 
         /* Delete RAW */
         for(int i = 0; i < numsubs; i++)
@@ -454,7 +454,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
         if(subparms[s]->errorcnt != 0)
         {
             test_status = false;
-            mlog(RAW, "[%d] ERROR: SUB %d error count is %d\n", __LINE__, s, subparms[s]->errorcnt);
+            print2term("[%d] ERROR: SUB %d error count is %d\n", __LINE__, s, subparms[s]->errorcnt);
         }
         delete [] subparms[s]->lastvalue;
         delete subparms[s];
@@ -473,7 +473,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
                 if(msgQs[i].subscriptions != 0)
                 {
                     test_status = false;
-                    mlog(RAW, "[%d] ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers\n", __LINE__, msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
+                    print2term("[%d] ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers\n", __LINE__, msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
                 }
             }
         }
@@ -506,7 +506,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
     /* Create Queue */
     randomDelay(100);
     Subscriber* q = new Subscriber(unit_test_parms->qname, MsgQ::SUBSCRIBER_OF_CONFIDENCE, unit_test_parms->qdepth);
-    mlog(RAW, "Subscriber thread %d created on queue %s\n", unit_test_parms->threadid, unit_test_parms->qname);
+    print2term("Subscriber thread %d created on queue %s\n", unit_test_parms->threadid, unit_test_parms->qname);
 
     /* Loop */
     long data;
@@ -520,7 +520,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
             int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
-                mlog(RAW, "[%d] ERROR: out of bounds threadid in %d: %d", __LINE__, unit_test_parms->threadid, threadid);
+                print2term("[%d] ERROR: out of bounds threadid in %d: %d", __LINE__, unit_test_parms->threadid, threadid);
                 unit_test_parms->errorcnt++;
                 break;
             }
@@ -530,25 +530,25 @@ void* UT_MsgQ::subscriberThread(void* parm)
             }
             else if(data != unit_test_parms->lastvalue[threadid] + 1)
             {
-                mlog(RAW, "[%d] ERROR: read %d sequence error %ld != %ld + 1\n", __LINE__, unit_test_parms->threadid, data, unit_test_parms->lastvalue[threadid]);
+                print2term("[%d] ERROR: read %d sequence error %ld != %ld + 1\n", __LINE__, unit_test_parms->threadid, data, unit_test_parms->lastvalue[threadid]);
                 unit_test_parms->errorcnt++;
             }
             unit_test_parms->lastvalue[threadid] = data;
         }
         else if(status == MsgQ::STATE_TIMEOUT)
         {
-            mlog(RAW, "Subscriber thread %d encountered timeout\n", unit_test_parms->threadid);
+            print2term("Subscriber thread %d encountered timeout\n", unit_test_parms->threadid);
             break;
         }
         else
         {
-            mlog(RAW, "[%d] ERROR: %d error %d\n", __LINE__, unit_test_parms->threadid, status);
+            print2term("[%d] ERROR: %d error %d\n", __LINE__, unit_test_parms->threadid, status);
             unit_test_parms->errorcnt++;
             break;
         }
     }
 
-    mlog(RAW, "Subscriber thread %d exited with %d loops to go\n", unit_test_parms->threadid, loops + 1);
+    print2term("Subscriber thread %d exited with %d loops to go\n", unit_test_parms->threadid, loops + 1);
     
     /* Clean Up */
     delete [] first_read;
@@ -570,7 +570,7 @@ void* UT_MsgQ::publisherThread(void* parm)
     /* Create Queue */
     randomDelay(100);
     Publisher* q = new Publisher(unit_test_parms->qname, NULL, unit_test_parms->qdepth);
-    mlog(RAW, "Publisher thread %d created on queue %s\n", unit_test_parms->threadid, unit_test_parms->qname);
+    print2term("Publisher thread %d created on queue %s\n", unit_test_parms->threadid, unit_test_parms->qname);
 
     /* Loop */
     int timeout_cnt = 0;
@@ -590,13 +590,13 @@ void* UT_MsgQ::publisherThread(void* parm)
         }
         else
         {
-            mlog(RAW, "[%d] ERROR: post %d error %d\n", __LINE__, unit_test_parms->threadid, status);
+            print2term("[%d] ERROR: post %d error %d\n", __LINE__, unit_test_parms->threadid, status);
             unit_test_parms->errorcnt++;
             break;
         }
     }
 
-    mlog(RAW, "Publisher thread %d encountered %d timeouts at data %ld\n", unit_test_parms->threadid, timeout_cnt, data & 0xFFFF);
+    print2term("Publisher thread %d encountered %d timeouts at data %ld\n", unit_test_parms->threadid, timeout_cnt, data & 0xFFFF);
     
     /* Clean Up */
     delete q;
@@ -624,7 +624,7 @@ void* UT_MsgQ::performanceThread(void* parm)
         {
             if(ref.size != RAW->size)
             {
-                mlog(RAW, "[%d] ERROR:  mismatched size of receive: %d != %d\n", __LINE__, ref.size, RAW->size);
+                print2term("[%d] ERROR:  mismatched size of receive: %d != %d\n", __LINE__, ref.size, RAW->size);
                 RAW->f = true;
             }
             else
@@ -634,7 +634,7 @@ void* UT_MsgQ::performanceThread(void* parm)
                 {
                     if(pkt[i] != (unsigned char)sequence++)
                     {
-                        mlog(RAW, "[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], (unsigned char)(sequence - 1));
+                        print2term("[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], (unsigned char)(sequence - 1));
                         RAW->f = true;
                     }
                 }
@@ -644,12 +644,12 @@ void* UT_MsgQ::performanceThread(void* parm)
         }
         else if(status == MsgQ::STATE_TIMEOUT)
         {
-            mlog(RAW, "[%d] ERROR:  unexpected timeout on receive at pkt %d!\n", __LINE__, pktnum);
+            print2term("[%d] ERROR:  unexpected timeout on receive at pkt %d!\n", __LINE__, pktnum);
             RAW->f = true;
         }
         else
         {
-            mlog(RAW, "[%d] ERROR:  failed to receive message, error %d\n", __LINE__, status);
+            print2term("[%d] ERROR:  failed to receive message, error %d\n", __LINE__, status);
             RAW->f = true;
         }
     }
@@ -659,7 +659,7 @@ void* UT_MsgQ::performanceThread(void* parm)
     int status = RAW->s->receiveRef(ref, IO_CHECK);
     if(status != MsgQ::STATE_EMPTY)
     {
-        mlog(RAW, "[%d] ERROR: queue unexpectedly not empty, return status %d\n", __LINE__, status);
+        print2term("[%d] ERROR: queue unexpectedly not empty, return status %d\n", __LINE__, status);
         RAW->f = true;
     }
 
@@ -697,7 +697,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
             int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
-                mlog(RAW, "[%d] ERROR: out of bounds threadid in %d: %d\n", __LINE__, unit_test_parms->threadid, threadid);
+                print2term("[%d] ERROR: out of bounds threadid in %d: %d\n", __LINE__, unit_test_parms->threadid, threadid);
                 unit_test_parms->errorcnt++;
                 break;
             }
@@ -714,7 +714,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
         }
         else if(status != MsgQ::STATE_TIMEOUT)
         {
-            mlog(RAW, "[%d] ERROR: %d error %d\n", __LINE__, unit_test_parms->threadid, status);
+            print2term("[%d] ERROR: %d error %d\n", __LINE__, unit_test_parms->threadid, status);
             unit_test_parms->errorcnt++;
             break;
         }
@@ -725,7 +725,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
     }
 
     /* Display Drop Count */
-    mlog(RAW, "Exiting subscriber of opportunity %d test loop at count %d with %d drops\n", unit_test_parms->threadid, loops, drops);
+    print2term("Exiting subscriber of opportunity %d test loop at count %d with %d drops\n", unit_test_parms->threadid, loops, drops);
 
     /* Clean Up */
     delete [] first_read;

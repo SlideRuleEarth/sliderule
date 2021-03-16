@@ -55,8 +55,7 @@ typedef enum {
     WARNING             = 2,
     ERROR               = 3,
     CRITICAL            = 4,
-    RAW                 = 5,
-    INVALID_EVENT_LEVEL = 6
+    INVALID_EVENT_LEVEL = 5
 } event_level_t;
 
 #define mlog(lvl,...) EventLib::logMsg(__FILE__,__LINE__,lvl,__VA_ARGS__)

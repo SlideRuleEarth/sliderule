@@ -124,13 +124,13 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         wordlist_ptr = (List<SafeString*>*)wordsets[wordset_name];
         if(wordlist_ptr->length() <= 0)
         {
-            mlog(RAW, "[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
+            print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
             return -1;
         }
     }
     catch(std::out_of_range& e)
     {
-        mlog(RAW, "[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
+        print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
         return -1;
     }
 
@@ -144,7 +144,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         seq = i;
         if(!d1.add(wordset[i]->getString(), seq))
         {
-            mlog(RAW, "[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
             failure = true;
         }
         else
@@ -158,7 +158,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         if(!d1.find(wordset[i]->getString()))
         {
-            mlog(RAW, "[%d] ERROR: failed to find %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i]->getString());
             failure = true;
         }
         else
@@ -175,7 +175,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             long data = d1.get(wordset[i]->getString());
             if(data != i)
             {
-                mlog(RAW, "[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i]->getString());
+                print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i]->getString());
                 failure = true;
             }
             else
@@ -185,7 +185,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
         catch(std::out_of_range& e)
         {
-            mlog(RAW, "[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i]->getString(), e.what());
+            print2term("[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i]->getString(), e.what());
             failure = true;
         }
     }
@@ -194,10 +194,10 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     hash_size = d1.getHashSize();
     max_chain = d1.getMaxChain();
     num_entries = d1.length();
-    mlog(RAW, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
+    print2term("Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != numwords)
     {
-        mlog(RAW, "[%d] ERROR: incorrect number of entries %d != %d\n", __LINE__, num_entries, numwords);
+        print2term("[%d] ERROR: incorrect number of entries %d != %d\n", __LINE__, num_entries, numwords);
         failure = true;
     }
 
@@ -208,7 +208,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         int num_keys = d1.getKeys(&key_list);
         if(num_keys != numwords)
         {
-            mlog(RAW, "[%d] ERROR: retrieved the wrong number of keys %d != %d\n", __LINE__, num_keys, numwords);
+            print2term("[%d] ERROR: retrieved the wrong number of keys %d != %d\n", __LINE__, num_keys, numwords);
             failure = true;
         }
 
@@ -238,7 +238,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
                 }
                 if(!found)
                 {
-                    mlog(RAW, "[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i]->getString());
+                    print2term("[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i]->getString());
                     failure = true;
                 }
 
@@ -254,7 +254,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         if(d1.remove(wordset[i]->getString()) != true)
         {
-            mlog(RAW, "[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i]->getString(), i);
+            print2term("[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i]->getString(), i);
             failure = true;
         }
         else
@@ -267,10 +267,10 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     hash_size = d1.getHashSize();
     max_chain = d1.getMaxChain();
     num_entries = d1.length();
-    mlog(RAW, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
+    print2term("Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != 0)
     {
-        mlog(RAW, "[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
+        print2term("[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
         failure = true;
     }
 
@@ -280,7 +280,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         seq = i;
         if(!d1.add(wordset[i]->getString(), seq))
         {
-            mlog(RAW, "[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
             failure = true;
         }
         else
@@ -297,7 +297,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         if(d1.find(wordset[i]->getString()))
         {
-            mlog(RAW, "[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i]->getString());
             failure = true;
         }
         else
@@ -310,17 +310,17 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     hash_size = d1.getHashSize();
     max_chain = d1.getMaxChain();
     num_entries = d1.length();
-    mlog(RAW, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
+    print2term("Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != 0)
     {
-        mlog(RAW, "[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
+        print2term("[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
         failure = true;
     }
 
     /* Start Timer */
     int64_t stop_time = TimeLib::gettimems();
     double elapsed_time = (double)(stop_time - start_time) / 1000.0;
-    mlog(RAW, "Time to complete: %lf seconds\n", elapsed_time);
+    print2term("Time to complete: %lf seconds\n", elapsed_time);
 
     /* Return Status */
     if(failure) return -1;
@@ -346,13 +346,13 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         wordlist_ptr = (List<SafeString*>*)wordsets[wordset_name];
         if(wordlist_ptr->length() <= 0)
         {
-            mlog(RAW, "[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
+            print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
             return -1;
         }
     }
     catch(std::out_of_range& e)
     {
-        mlog(RAW, "[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
+        print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
         return -1;
     }
 
@@ -368,7 +368,7 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         sum += i;
         if(!d1.add(wordset[i]->getString(), seq))
         {
-            mlog(RAW, "[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
             failure = true;
         }
         else
@@ -395,7 +395,7 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Check Forward Iteration Results */
     if(tsum != sum)
     {
-        mlog(RAW, "[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
+        print2term("[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
         failure = true;
     }
 
@@ -413,7 +413,7 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Check Backward Iteration Results */
     if(tsum != sum)
     {
-        mlog(RAW, "[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
+        print2term("[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
         failure = true;
     }
 
@@ -448,7 +448,7 @@ int UT_Dictionary::createWordSet (const char* name, const char* filename)
     FILE* wordfile = fopen(filename, "r");
     if(wordfile == NULL)
     {
-       mlog(RAW, "[%d] ERROR: Unable to open word list file: %s\n", __LINE__, filename);
+       print2term("[%d] ERROR: Unable to open word list file: %s\n", __LINE__, filename);
        delete wordlist;
        return -1;
     }

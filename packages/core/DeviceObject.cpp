@@ -129,7 +129,7 @@ int DeviceObject::luaList(lua_State* L)
 {
     (void)L;
     const char* device_list_str = DeviceObject::getDeviceList();
-    mlog(RAW, "%s", device_list_str);
+    print2term("%s", device_list_str);
     delete [] device_list_str;
     return 0;
 }

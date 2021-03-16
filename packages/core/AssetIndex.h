@@ -746,23 +746,23 @@ void AssetIndex<T>::displaynode (node_t* curr)
 
     /* Display */
     displayspan(curr->span);
-    mlog(RAW, " <%d>\n", curr->depth);
+    print2term(" <%d>\n", curr->depth);
     if(curr->ril)
     {
         for(int i = 0; i < curr->ril->length(); i++)
         {
             int resource_index = curr->ril->get(i);
-            mlog(RAW, "%s ", asset[resource_index].name);
+            print2term("%s ", asset[resource_index].name);
         }
     }
     else
     {
-        mlog(RAW, "L");
+        print2term("L");
         if(curr->left) displayspan(curr->left->span);
-        mlog(RAW, ", R");
+        print2term(", R");
         if(curr->right) displayspan(curr->right->span);
     }
-    mlog(RAW, "\n\n");
+    print2term("\n\n");
     
     /* Recurse */
     displaynode(curr->left);

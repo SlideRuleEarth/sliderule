@@ -89,8 +89,8 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
-    mlog(RAW, "SlideRule Version: %s\n", BINID);
-    mlog(RAW, "Build Information: %s\n", BUILDINFO);
+    print2term("SlideRule Version: %s\n", BINID);
+    print2term("Build Information: %s\n", BUILDINFO);
 
     /* Return Version String to Lua */
     lua_pushstring(L, BINID);
@@ -191,14 +191,14 @@ int LuaLibrarySys::lsys_lsmsgq (lua_State* L)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[num_msgqs];
         int numq = MsgQ::listQ(msgQs, num_msgqs);
-        mlog(RAW, "\n");
+        print2term("\n");
         for(int i = 0; i < numq; i++)
         {
-            mlog(RAW,"MSGQ: %40s %8d %9s %d\n",
+            print2term("MSGQ: %40s %8d %9s %d\n",
                 msgQs[i].name, msgQs[i].len, msgQs[i].state,
                 msgQs[i].subscriptions);
         }
-        mlog(RAW, "\n");
+        print2term("\n");
         delete [] msgQs;
     }
 
@@ -355,7 +355,7 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
     const char* pattern = NULL;
     if(lua_isstring(L, 1)) pattern = lua_tostring(L, 1);
 
-    mlog(RAW, "\n%50s %24s %s\n", "Type", "Id", "Size");
+    print2term("\n%50s %24s %s\n", "Type", "Id", "Size");
     char** rectypes = NULL;
     int numrecs = RecordObject::getRecords(&rectypes);
     for(int i = 0; i < numrecs; i++)
@@ -364,7 +364,7 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
         {
             const char* id_field = RecordObject::getRecordIdField(rectypes[i]);
             int data_size = RecordObject::getRecordDataSize(rectypes[i]);
-            mlog(RAW, "%50s %24s %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size);
+            print2term("%50s %24s %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size);
         }
         delete [] rectypes[i];
     }

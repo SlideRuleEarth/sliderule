@@ -220,5 +220,5 @@ pointspan_t PointIndex::luatable2span (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 void PointIndex::displayspan (const pointspan_t& span)
 {
-    mlog(RAW, "[%.3lf, %.3lf]", span.minval, span.maxval);
+    print2term("[%.3lf, %.3lf]", span.minval, span.maxval);
 }

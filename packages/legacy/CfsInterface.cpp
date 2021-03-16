@@ -396,23 +396,23 @@ int CfsInterface::logPktStatsCmd (int argc, char argv[][MAX_CMD_SIZE])
         /* Display Statistics */
         if(apidStats[apid])
         {
-            mlog(RAW, "--------------------------\n");
-            if(apid == CMD_APIDS) mlog(RAW, "COMMANDS\n");
-            else if(apid == TLM_APIDS) mlog(RAW, "TELEMETRY\n");
-            else mlog(RAW, "APID:            %04X\n", apidStats[apid]->rec->apid);
-            mlog(RAW, "--------------------------\n");
-            mlog(RAW, "SEGS READ:       %d\n",     apidStats[apid]->rec->segs_read);
-            mlog(RAW, "SEGS ERRORS:     %d\n",     apidStats[apid]->rec->segs_errors);
-            mlog(RAW, "SEGS FORWARDED:  %d\n",     apidStats[apid]->rec->segs_forwarded);
-            mlog(RAW, "SEGS DROPPED:    %d\n",     apidStats[apid]->rec->segs_dropped);
-            mlog(RAW, "TOTAL BYTES:     %d\n",     apidStats[apid]->rec->total_bytes);
-            mlog(RAW, "TOTAL PKTS:      %d\n",     apidStats[apid]->rec->total_pkts);
-            mlog(RAW, "SEQ ERRORS:      %d\n",     apidStats[apid]->rec->seq_errors);
-            mlog(RAW, "SEG ERRORS:      %d\n",     apidStats[apid]->rec->seg_errors);
-            mlog(RAW, "LEN ERRORS:      %d\n",     apidStats[apid]->rec->len_errors);
-            mlog(RAW, "CKS ERRORS:      %d\n",     apidStats[apid]->rec->chksum_errors);
-            mlog(RAW, "FILTER:          %d\n",     apidStats[apid]->rec->filter_factor);
-            mlog(RAW, "AVG BITS/SEC:    %lf\n",    apidStats[apid]->rec->avg_bps);
+            print2term("--------------------------\n");
+            if(apid == CMD_APIDS) print2term("COMMANDS\n");
+            else if(apid == TLM_APIDS) print2term("TELEMETRY\n");
+            else print2term("APID:            %04X\n", apidStats[apid]->rec->apid);
+            print2term("--------------------------\n");
+            print2term("SEGS READ:       %d\n",     apidStats[apid]->rec->segs_read);
+            print2term("SEGS ERRORS:     %d\n",     apidStats[apid]->rec->segs_errors);
+            print2term("SEGS FORWARDED:  %d\n",     apidStats[apid]->rec->segs_forwarded);
+            print2term("SEGS DROPPED:    %d\n",     apidStats[apid]->rec->segs_dropped);
+            print2term("TOTAL BYTES:     %d\n",     apidStats[apid]->rec->total_bytes);
+            print2term("TOTAL PKTS:      %d\n",     apidStats[apid]->rec->total_pkts);
+            print2term("SEQ ERRORS:      %d\n",     apidStats[apid]->rec->seq_errors);
+            print2term("SEG ERRORS:      %d\n",     apidStats[apid]->rec->seg_errors);
+            print2term("LEN ERRORS:      %d\n",     apidStats[apid]->rec->len_errors);
+            print2term("CKS ERRORS:      %d\n",     apidStats[apid]->rec->chksum_errors);
+            print2term("FILTER:          %d\n",     apidStats[apid]->rec->filter_factor);
+            print2term("AVG BITS/SEC:    %lf\n",    apidStats[apid]->rec->avg_bps);
         }
     }
 

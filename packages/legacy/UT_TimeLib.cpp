@@ -139,8 +139,8 @@ int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE])
     leap_mseconds = TIME_UNIX_TO_GPS(leap_mseconds);
     if (leap_mseconds != Truth_Times[i][1])
     {
-      mlog(RAW, "Calculated: %lld\n", (long long)leap_mseconds);
-      mlog(RAW, "Truth Time: %lld\n", (long long)Truth_Times[i][1]);
+      print2term("Calculated: %lld\n", (long long)leap_mseconds);
+      print2term("Truth Time: %lld\n", (long long)Truth_Times[i][1]);
       return -1;
     }
   }
@@ -169,8 +169,8 @@ int UT_TimeLib::CheckGps2GmtCmd(int argc, char argv[][MAX_CMD_SIZE])
 
     if (!success)
     {
-      mlog(RAW, "Calculated - Year: %d, Day: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
-      mlog(RAW, "Truth      - Year: %d, Day: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", Truth_GMT[i].year, Truth_GMT[i].day, Truth_GMT[i].hour, Truth_GMT[i].minute, Truth_GMT[i].second, Truth_GMT[i].millisecond);
+      print2term("Calculated - Year: %d, Day: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
+      print2term("Truth      - Year: %d, Day: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", Truth_GMT[i].year, Truth_GMT[i].day, Truth_GMT[i].hour, Truth_GMT[i].minute, Truth_GMT[i].second, Truth_GMT[i].millisecond);
       return -1;
     }
   }
@@ -192,8 +192,8 @@ int UT_TimeLib::CheckGmt2GpsCmd(int argc, char argv[][MAX_CMD_SIZE])
 
     if (gps_time != Truth_Times[i][1])
     {
-      mlog(RAW, "Calculated: %lld\n", (long long)gps_time);
-      mlog(RAW, "Truth:      %lld\n", (long long)Truth_Times[i][1]);
+      print2term("Calculated: %lld\n", (long long)gps_time);
+      print2term("Truth:      %lld\n", (long long)Truth_Times[i][1]);
       return -1;
     }
   }
