@@ -153,30 +153,16 @@ int LuaLibrarySys::lsys_wait (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_log (lua_State* L)
 {
-    bool status = true;
-
-    event_level_t lvl;
     if(lua_isinteger(L, 1))
     {
-        lvl = (event_level_t)lua_tointeger(L, 1);
-    }
-    else
-    {
-        status = false;
-    }
-
-    if(status && lua_isstring(L, 2))
-    {
-        mlog(lvl, "%s", lua_tostring(L, 2));
-    }
-    else
-    {
-        status = false;
+        event_level_t lvl = (event_level_t)lua_tointeger(L, 1);
+        if(lua_isstring(L, 2))
+        {
+            mlog(lvl, "%s", lua_tostring(L, 2));
+        }
     }
 
-    /* Return Status to Lua */
-    lua_pushboolean(L, status);
-    return 1;
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
