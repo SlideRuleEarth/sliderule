@@ -437,35 +437,34 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     }
 
     /* Get Message */
-    size_t len = 0;    
-    const char* str = lua_tolstring(L, 3, &len);
-    if(len <= 0)
+    size_t attr_size = 0;    
+    const char* attr = lua_tolstring(L, 3, &attr_size);
+    if(attr_size <= 0)
     {
-        mlog(CRITICAL, "Invalid length of message: %ld", len);
+        mlog(CRITICAL, "Invalid length of message: %ld", attr_size);
         return 0;
     }
 
     /* Construct Log Record */
-    RecordObject* record = new RecordObject(EventLib::rec_type);
-    EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
-    event->systime  = TimeLib::gettimems();
-    event->ipv4     = SockLib::sockipv4();
-    event->flags    = 0;
-    event->type     = EventLib::LOG;
-    event->level    = lvl;
-    event->tid      = Thread::getId();
-    event->id       = ORIGIN;
-    event->parent   = ORIGIN;
-    StringLib::copy(event->name, "sendlog", EventLib::MAX_NAME_SIZE);
-    StringLib::copy(event->attr, str, len + 1);
+    EventLib::event_t event;
+    event.systime = TimeLib::gettimems();
+    event.ipv4    = SockLib::sockipv4();
+    event.flags   = 0;
+    event.type    = EventLib::LOG;
+    event.level   = lvl;
+    event.tid     = Thread::getId();
+    event.id      = ORIGIN;
+    event.parent  = ORIGIN;
+    StringLib::copy(event.name, "sendlog", EventLib::MAX_NAME_SIZE);
+    StringLib::copy(event.attr, attr, attr_size + 1);
 
     /* Post Record */
+    int rec_size = offsetof(EventLib::event_t, attr) + attr_size + 1;
+    RecordObject record(EventLib::rec_type, rec_size);
+    LocalLib::copy(record.getRecordData(), &event, rec_size);
     uint8_t* rec_buf = NULL;
-    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
     int bytes_sent = msg_data->pub->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);
-
-    /* Clean Up */
-    delete record;
 
     /* Return Results */    
     lua_pushboolean(L, bytes_sent > 0);
