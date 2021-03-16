@@ -142,6 +142,10 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
         {
             event_size = jsonOutput(event, event_buffer); 
         }
+        else
+        {
+            return false;
+        }
 
         /* Post Event */
         if(outQ) outQ->postCopy(event_buffer, event_size, IO_CHECK);
