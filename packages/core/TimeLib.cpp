@@ -35,6 +35,7 @@
 
 #include "TimeLib.h"
 #include "StringLib.h"
+#include "EventLib.h"
 #include "List.h"
 #include "OsApi.h"
 
@@ -104,7 +105,7 @@ void TimeLib::init(void)
     }
     catch(RunTimeException& e)
     {
-        dlog("Fatal error: unable to start heart beat timer: %s\n", e.what());
+        mlog(CRITICAL, "Fatal error: unable to start heart beat timer: %s", e.what());
         assert(false);
     }
 }
@@ -294,7 +295,7 @@ int64_t TimeLib::gmt2gpstime (gmt_time_t gmt_time)
         (gmt_time.millisecond < 0 || gmt_time.millisecond > 1000) ||
         (gmt_time.year == 1980 && gmt_time.day < 6) )
     {
-        dlog("Invalid time supplied in GMT structure: %d:%d:%d:%d:%d:%d\n",
+        mlog(CRITICAL, "Invalid time supplied in GMT structure: %d:%d:%d:%d:%d:%d",
                 gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
         return 0;
     }
@@ -417,7 +418,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     /* Check Success and Return GMT Structure */
     if(status == false)
     {
-        dlog("Unable to parse supplied time string: %s\n", time_str);
+        mlog(CRITICAL, "Unable to parse supplied time string: %s", time_str);
         return 0;
     }
     else
@@ -515,7 +516,7 @@ void TimeLib::heartbeat(void)
             /* Detect Gross Adjustment */
 #ifdef _LINUX_
             // currently windows is not supporting the necessary stability in the timer implementation
-            dlog("Gross adjustment detected in step time: %lld\n", (long long)usec_per_sec);
+            mlog(CRITICAL, "Gross adjustment detected in step time: %lld", (long long)usec_per_sec);
 #endif
             baseTimeMs = now / 1000;
             baseTimeMs += getleapms(baseTimeMs);
@@ -567,7 +568,7 @@ void TimeLib::parsenistfile(void)
                     }
                     else
                     {
-                        dlog("Failed to parse leap second: %s\n", leap_second_str[0]);
+                        mlog(CRITICAL, "Failed to parse leap second: %s", leap_second_str[0]);
                     }
                 }
             }
@@ -577,7 +578,7 @@ void TimeLib::parsenistfile(void)
     }
     else
     {
-        dlog("Fatal error: Unable to open leap-seconds.list\n");
+        mlog(CRITICAL, "Fatal error: Unable to open leap-seconds.list");
     }
 
     /* Allocate Leap Second Array */

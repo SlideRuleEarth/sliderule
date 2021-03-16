@@ -289,7 +289,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         driver_t driver = url2driver(url, &resource, &fapl);
         if(driver == UNKNOWN)
         {
-            mlog(CRITICAL, "Invalid url: %s\n", url);
+            mlog(CRITICAL, "Invalid url: %s", url);
             break;
         }
 
@@ -297,7 +297,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         file = H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
-            mlog(CRITICAL, "Failed to open resource: %s\n", url);
+            mlog(CRITICAL, "Failed to open resource: %s", url);
             break;
         }
 
@@ -305,7 +305,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         dataset = H5Dopen(file, datasetname, H5P_DEFAULT);
         if(dataset < 0)
         {
-            mlog(CRITICAL, "Failed to open dataset: %s\n", datasetname);
+            mlog(CRITICAL, "Failed to open dataset: %s", datasetname);
             break;
         }
 
@@ -313,7 +313,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         dataspace = H5Dget_space(dataset);
         if(dataspace < 0)
         {
-            mlog(CRITICAL, "Failed to open dataspace on dataset: %s\n", datasetname);
+            mlog(CRITICAL, "Failed to open dataspace on dataset: %s", datasetname);
             break;
         }
 
@@ -384,12 +384,12 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         }
         catch (const std::bad_alloc& e)
         {
-            mlog(CRITICAL, "Failed to allocate space for dataset: %d\n", elements);
+            mlog(CRITICAL, "Failed to allocate space for dataset: %d", elements);
             break;
         }
 
         /* Start Trace */
-        mlog(INFO, "Reading %d elements (%ld bytes) from %s %s\n", elements, datasize, url, datasetname);
+        mlog(INFO, "Reading %d elements (%ld bytes) from %s %s", elements, datasize, url, datasetname);
         uint32_t parent_trace_id = EventLib::grabId();
         uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
 
@@ -412,7 +412,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
         else
         {
             /* Free Data and Log Error */
-            mlog(CRITICAL, "Failed to read data from %s\n", datasetname);
+            mlog(CRITICAL, "Failed to read data from %s", datasetname);
             delete [] data;
         }
 
@@ -454,7 +454,7 @@ bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
         driver_t driver = url2driver(url, &resource, &fapl);
         if(driver == UNKNOWN)
         {
-            mlog(CRITICAL, "Invalid url: %s\n", url);
+            mlog(CRITICAL, "Invalid url: %s", url);
             break;
         }
 

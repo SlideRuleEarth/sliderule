@@ -37,9 +37,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "MsgQ.h"
-#include "RecordObject.h"
-
 #include <atomic>
 
 /******************************************************************************
@@ -88,7 +85,6 @@ class EventLib
         static const int MAX_ATTR_SIZE = 512;
 
         static const char* rec_type;
-        static RecordObject::fieldDef_t rec_def[];
 
         /*--------------------------------------------------------------------
          * Types
@@ -157,8 +153,6 @@ class EventLib
         static event_level_t log_level;
         static event_level_t trace_level;
         static event_level_t metric_level;
-
-        static Publisher* outq;
 };
 
 #endif  /* __eventlib__ */

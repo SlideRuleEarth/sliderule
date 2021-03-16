@@ -53,7 +53,7 @@ CommandableObject* CcsdsPublisherProcessorModule::createObject(CommandProcessor*
 
     if(pubq_name == NULL)
     {
-        mlog(CRITICAL, "Must supply queue when creating publish processor module\n");
+        mlog(CRITICAL, "Must supply queue when creating publish processor module");
         return NULL;
     }
 
@@ -133,7 +133,7 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
         {
             if(!pkt->isFull())
             {
-                mlog(ERROR, "Incorrect CCSDS packet length detected in %s, dropping packet (APID = x%04X, SEQ = %d, LEN = %d)\n", getName(), apid, seq, len);
+                mlog(ERROR, "Incorrect CCSDS packet length detected in %s, dropping packet (APID = x%04X, SEQ = %d, LEN = %d)", getName(), apid, seq, len);
                 continue;
             }
         }
@@ -146,7 +146,7 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
                 if(!pkt->validChecksum())
                 {
                     int fc = pkt->getFunctionCode();
-                    mlog(ERROR, "Command checksum mismatch detected in %s, dropping packet (APID = x%04X, FC = %d, LEN = %d)\n", getName(), apid, fc, len);
+                    mlog(ERROR, "Command checksum mismatch detected in %s, dropping packet (APID = x%04X, FC = %d, LEN = %d)", getName(), apid, fc, len);
                     continue;
                 }
             }
@@ -180,14 +180,14 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
                     int status = pubQ->postRef(pktbuf, bufsize, SYS_TIMEOUT);
                     if(status <= 0)
                     {
-                        mlog(WARNING, "Failed to post packet in %s: %d\n", getName(), status);
+                        mlog(WARNING, "Failed to post packet in %s: %d", getName(), status);
                         delete [] pktbuf;
                         success = false;
                     }
                 }
                 else
                 {
-                    mlog(ERROR, "Dropping segments in %s due to invalid segmentation\n", getName());
+                    mlog(ERROR, "Dropping segments in %s due to invalid segmentation", getName());
                 }
 
                 /* Reset Buffer Size and Copy Index */
@@ -207,13 +207,13 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
                 int status = pubQ->postCopy(&pktbuf[stripHeaderBytes], len - stripHeaderBytes, SYS_TIMEOUT);
                 if(status <= 0)
                 {
-                    mlog(WARNING, "Failed to post packet in %s: %d\n", getName(), status);
+                    mlog(WARNING, "Failed to post packet in %s: %d", getName(), status);
                     success = false;
                 }
             }
             else
             {
-                mlog(WARNING, "Header strip size exceeds length of packet in %s, dropping packet (APID = x%04X, LEN = %d)\n", getName(), apid, len);
+                mlog(WARNING, "Header strip size exceeds length of packet in %s, dropping packet (APID = x%04X, LEN = %d)", getName(), apid, len);
             }
         }
     }
@@ -231,7 +231,7 @@ int CcsdsPublisherProcessorModule::concatSegmentsCmd(int argc, char argv[][MAX_C
     bool enable;
     if(!StringLib::str2bool(argv[0], &enable))
     {
-        mlog(CRITICAL, "Invalid boolean parameter passed to command: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid boolean parameter passed to command: %s", argv[0]);
         return -1;
     }
     else
@@ -252,7 +252,7 @@ int CcsdsPublisherProcessorModule::checkLengthCmd(int argc, char argv[][MAX_CMD_
     bool enable;
     if(!StringLib::str2bool(argv[0], &enable))
     {
-        mlog(CRITICAL, "Invalid boolean parameter passed to command: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid boolean parameter passed to command: %s", argv[0]);
         return -1;
     }
     else
@@ -273,7 +273,7 @@ int CcsdsPublisherProcessorModule::checkChecksumCmd(int argc, char argv[][MAX_CM
     bool enable;
     if(!StringLib::str2bool(argv[0], &enable))
     {
-        mlog(CRITICAL, "Invalid boolean parameter passed to command: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid boolean parameter passed to command: %s", argv[0]);
         return -1;
     }
     else
@@ -294,12 +294,12 @@ int CcsdsPublisherProcessorModule::stripHeaderCmd(int argc, char argv[][MAX_CMD_
     unsigned long bytes;
     if(!StringLib::str2ulong(argv[0], &bytes))
     {
-        mlog(CRITICAL, "Invalid unsigned long parameter passed to command: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid unsigned long parameter passed to command: %s", argv[0]);
         return -1;
     }
     else if(bytes > CCSDS_MAX_SPACE_PACKET_SIZE)
     {
-        mlog(CRITICAL, "Invalid number of bytes to strip: %lu\n", bytes);
+        mlog(CRITICAL, "Invalid number of bytes to strip: %lu", bytes);
         return -1;
     }
     else

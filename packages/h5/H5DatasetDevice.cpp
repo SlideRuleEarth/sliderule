@@ -75,7 +75,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
         {
-            throw RunTimeException("unrecognized file access specified: %d\n", _role);
+            throw RunTimeException("unrecognized file access specified: %d", _role);
         }
 
         /* Return Dispatch Object */
@@ -83,7 +83,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating H5DatasetDevice: %s\n", e.what());
+        mlog(CRITICAL, "Error creating H5DatasetDevice: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -97,7 +97,7 @@ void H5DatasetDevice::init (void)
     RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, "id", sizeof(h5dataset_t), recDef, def_elements, 8);
     if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d\n", recType, rc);
+        mlog(CRITICAL, "Failed to define %s: %d", recType, rc);
     }
 }
 
@@ -146,7 +146,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     }
     catch (const RunTimeException& e)
     {
-        mlog(CRITICAL, "Failed to create H5DatasetDevice for %s/%s: %s\n", filename, dataset_name, e.what());
+        mlog(CRITICAL, "Failed to create H5DatasetDevice for %s/%s: %s", filename, dataset_name, e.what());
         dataBuffer = NULL;
         dataSize = false;
         connected = false;

@@ -57,7 +57,7 @@ int H5File::luaCreate(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating HDF5 File: %s\n", e.what());
+        mlog(CRITICAL, "Error creating HDF5 File: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -177,7 +177,7 @@ int H5File::luaTraverse (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error traversing hdf5 file: %s\n", e.what());
+        mlog(CRITICAL, "Error traversing hdf5 file: %s", e.what());
     }
 
     /* Return Status */

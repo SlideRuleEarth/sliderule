@@ -82,7 +82,7 @@ int SpatialIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -283,7 +283,7 @@ spatialspan_t SpatialIndex::attr2span (Dictionary<double>* attr, bool* provided)
     }
     catch(std::out_of_range& e)
     {
-        mlog(CRITICAL, "Failed to index asset %s\n", e.what());
+        mlog(CRITICAL, "Failed to index asset %s", e.what());
     }
 
     if(provided)
@@ -401,7 +401,7 @@ int SpatialIndex::luaProject (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error projecting: %s\n", e.what());
+        mlog(CRITICAL, "Error projecting: %s", e.what());
     }
 
     /* Return Failure */
@@ -434,7 +434,7 @@ int SpatialIndex::luaSphere (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error restoring: %s\n", e.what());
+        mlog(CRITICAL, "Error restoring: %s", e.what());
     }
 
     /* Return Failure */
@@ -484,7 +484,7 @@ int SpatialIndex::luaSplit (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error splitting: %s\n", e.what());
+        mlog(CRITICAL, "Error splitting: %s", e.what());
     }
 
     /* Return Failure */
@@ -514,7 +514,7 @@ int SpatialIndex::luaIntersect (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error intersecting: %s\n", e.what());
+        mlog(CRITICAL, "Error intersecting: %s", e.what());
     }
 
     /* Return Failure */
@@ -550,7 +550,7 @@ int SpatialIndex::luaCombine (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error combining: %s\n", e.what());
+        mlog(CRITICAL, "Error combining: %s", e.what());
     }
 
     /* Return Failure */

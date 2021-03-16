@@ -294,18 +294,18 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         const char* size_str = argv[1];
         if(StringLib::str2long(depth_str, &depth) == false)
         {
-            mlog(CRITICAL, "[%d] ERROR: unable to parse depth\n", __LINE__);
+            mlog(RAW, "[%d] ERROR: unable to parse depth\n", __LINE__);
             return -1;
         }
         else if(StringLib::str2long(size_str, &size) == false)
         {
-            mlog(CRITICAL, "[%d] ERROR: unable to parse size\n", __LINE__);
+            mlog(RAW, "[%d] ERROR: unable to parse size\n", __LINE__);
             return -1;
         }
     }
     else if(argc != 0)
     {
-        mlog(CRITICAL, "Invalid number of parameters passed to command: %d\n", argc);
+        mlog(RAW, "Invalid number of parameters passed to command: %d\n", argc);
         return -1;
     }
 
@@ -314,10 +314,10 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     unsigned long sequence = 0;
 
     /* Iterate Over Number of Subscribers */
-    mlog(INFO, "Depth, Size, Subscribers, Publishing, Subscribing, Total\n");
+    mlog(RAW, "Depth, Size, Subscribers, Publishing, Subscribing, Total\n");
     for(int numsubs = 1; numsubs < MAX_SUBSCRIBERS; numsubs++)
     {
-        perf_thread_t* info = new perf_thread_t[numsubs];
+        perf_thread_t* RAW = new perf_thread_t[numsubs];
 
         total_start = clock();
 
@@ -325,12 +325,12 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         Thread** t = new Thread* [numsubs];
         for(int i = 0; i < numsubs; i++)
         {
-            info[i].s = new Subscriber("testq_03");
-            info[i].v = new Sem();
-            info[i].f = false;
-            info[i].depth = depth;
-            info[i].size = size;
-            t[i] = new Thread(performanceThread, &info[i]);
+            RAW[i].s = new Subscriber("testq_03");
+            RAW[i].v = new Sem();
+            RAW[i].f = false;
+            RAW[i].depth = depth;
+            RAW[i].size = size;
+            t[i] = new Thread(performanceThread, &RAW[i]);
         }
 
         /* Publish Packets */
@@ -358,14 +358,14 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         start = clock();
         for(int i = 0; i < numsubs; i++)
         {
-            info[i].v->give();
+            RAW[i].v->give();
         }
 
         /* Join Subscribers */
         for(int i = 0; i < numsubs; i++)
         {
             delete t[i]; // performs a join
-            failure = failure || info[i].f; // checks status
+            failure = failure || RAW[i].f; // checks status
         }
         delete [] t;
         end = clock();
@@ -375,15 +375,15 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         total_time = ((double) (total_end - total_start)) / CLOCKS_PER_SEC;
 
         /* Print Results */
-        mlog(INFO, "%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);
+        mlog(RAW, "%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);
 
-        /* Delete Info */
+        /* Delete RAW */
         for(int i = 0; i < numsubs; i++)
         {
-            delete info[i].s;
-            delete info[i].v;
+            delete RAW[i].s;
+            delete RAW[i].v;
         }
-        delete [] info;
+        delete [] RAW;
     }
 
     /* Delete Test Structures */
@@ -609,58 +609,58 @@ void* UT_MsgQ::publisherThread(void* parm)
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::performanceThread(void* parm)
 {
-    perf_thread_t* info = (perf_thread_t*)parm;
+    perf_thread_t* RAW = (perf_thread_t*)parm;
     unsigned long sequence = 0;
 
     /* Wait to Start */
-    info->v->take();
+    RAW->v->take();
 
     /* Drain Queue */
-    for(int pktnum = 0; pktnum < info->depth; pktnum++)
+    for(int pktnum = 0; pktnum < RAW->depth; pktnum++)
     {
         Subscriber::msgRef_t ref;
-        int status = info->s->receiveRef(ref, SYS_TIMEOUT);
+        int status = RAW->s->receiveRef(ref, SYS_TIMEOUT);
         if(status > 0)
         {
-            if(ref.size != info->size)
+            if(ref.size != RAW->size)
             {
-                mlog(RAW, "[%d] ERROR:  mismatched size of receive: %d != %d\n", __LINE__, ref.size, info->size);
-                info->f = true;
+                mlog(RAW, "[%d] ERROR:  mismatched size of receive: %d != %d\n", __LINE__, ref.size, RAW->size);
+                RAW->f = true;
             }
             else
             {
                 unsigned char* pkt = (unsigned char*)ref.data;
-                for(int i = 0; i < info->size; i++)
+                for(int i = 0; i < RAW->size; i++)
                 {
                     if(pkt[i] != (unsigned char)sequence++)
                     {
                         mlog(RAW, "[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], (unsigned char)(sequence - 1));
-                        info->f = true;
+                        RAW->f = true;
                     }
                 }
             }
 
-            info->s->dereference(ref);
+            RAW->s->dereference(ref);
         }
         else if(status == MsgQ::STATE_TIMEOUT)
         {
             mlog(RAW, "[%d] ERROR:  unexpected timeout on receive at pkt %d!\n", __LINE__, pktnum);
-            info->f = true;
+            RAW->f = true;
         }
         else
         {
             mlog(RAW, "[%d] ERROR:  failed to receive message, error %d\n", __LINE__, status);
-            info->f = true;
+            RAW->f = true;
         }
     }
 
     /* Check Empty */
     Subscriber::msgRef_t ref;
-    int status = info->s->receiveRef(ref, IO_CHECK);
+    int status = RAW->s->receiveRef(ref, IO_CHECK);
     if(status != MsgQ::STATE_EMPTY)
     {
         mlog(RAW, "[%d] ERROR: queue unexpectedly not empty, return status %d\n", __LINE__, status);
-        info->f = true;
+        RAW->f = true;
     }
 
     /* Clean up and exit */
@@ -725,7 +725,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
     }
 
     /* Display Drop Count */
-    mlog(INFO, "Exiting subscriber of opportunity %d test loop at count %d with %d drops\n", unit_test_parms->threadid, loops, drops);
+    mlog(RAW, "Exiting subscriber of opportunity %d test loop at count %d with %d drops\n", unit_test_parms->threadid, loops, drops);
 
     /* Clean Up */
     delete [] first_read;

@@ -61,7 +61,7 @@ CommandableObject::CommandableObject(CommandProcessor* cmd_proc, const char* obj
  *----------------------------------------------------------------------------*/
 CommandableObject::~CommandableObject(void)
 {
-    mlog(CRITICAL, "Object %s deleted\n", objName);
+    mlog(CRITICAL, "Object %s deleted", objName);
 
     /* Delete Name and Type */
     delete [] objName;
@@ -118,22 +118,22 @@ int CommandableObject::executeCommand(const char* cmd_name, int argc, char argv[
 
         if(cmd->func == NULL)
         {
-            mlog(CRITICAL, "No function associated with command %s for object %s\n", cmd_name, objName);
+            mlog(CRITICAL, "No function associated with command %s for object %s", cmd_name, objName);
             return VOID_CMD_ERROR;
         }
         else if(cmd->numparms > 0 && cmd->numparms != argc)
         {
-            mlog(CRITICAL, "Incorrect number of parameters supplied (%d != %d) to command %s for object %s\n", argc, cmd->numparms, cmd_name, objName);
+            mlog(CRITICAL, "Incorrect number of parameters supplied (%d != %d) to command %s for object %s", argc, cmd->numparms, cmd_name, objName);
             return NUM_PARMS_CMD_ERROR;
         }
         else if(abs(cmd->numparms) > argc)
         {
-            mlog(CRITICAL, "Not enough parameters supplied (%d < %d) to command %s for object %s\n", argc, cmd->numparms, cmd_name, objName);
+            mlog(CRITICAL, "Not enough parameters supplied (%d < %d) to command %s for object %s", argc, cmd->numparms, cmd_name, objName);
             return NUM_PARMS_CMD_ERROR;
         }
         else if(argc > 0 && argv == NULL)
         {
-            mlog(CRITICAL, "No parameters supplied when %d parameters expected for command %s for object %s\n", argc, cmd_name, objName);
+            mlog(CRITICAL, "No parameters supplied when %d parameters expected for command %s for object %s", argc, cmd_name, objName);
             return NO_PARMS_CMD_ERROR;
         }
         else
@@ -144,7 +144,7 @@ int CommandableObject::executeCommand(const char* cmd_name, int argc, char argv[
             }
             catch(std::exception &e)
             {
-                mlog(CRITICAL, "While executing command %s caught unhandled exception %s\n", cmd_name, e.what());
+                mlog(CRITICAL, "While executing command %s caught unhandled exception %s", cmd_name, e.what());
                 return STANDARD_CMD_ERROR;
             }
         }
@@ -152,7 +152,7 @@ int CommandableObject::executeCommand(const char* cmd_name, int argc, char argv[
     catch(std::out_of_range& e)
     {
         (void)e;
-        mlog(CRITICAL, "Unable to find command %s for object %s\n", cmd_name, objName);
+        mlog(CRITICAL, "Unable to find command %s for object %s", cmd_name, objName);
         return UNKNOWN_CMD_ERROR;
     }
 }
@@ -173,11 +173,11 @@ bool CommandableObject::registerCommand(const char* name, CommandableObject::cmd
     /* Handle Success/Failure */
     if(status)
     {
-        mlog(INFO, "Object %s registered command: %s\n", objName, name);
+        mlog(INFO, "Object %s registered command: %s", objName, name);
     }
     else
     {
-        mlog(CRITICAL, "Object %s failed to register command: %s\n", objName, name);
+        mlog(CRITICAL, "Object %s failed to register command: %s", objName, name);
         delete cmd;
     }
 

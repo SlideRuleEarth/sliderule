@@ -73,29 +73,29 @@ CommandableObject* CosmosInterface::createObject(CommandProcessor* cmd_proc, con
     /* Check Parameters */
     if(!tlmq_name || !cmdq_name || !tlm_ip || !cmd_ip)
     {
-        mlog(CRITICAL, "No NULL values allowed when creating a %s\n", TYPE);
+        mlog(CRITICAL, "No NULL values allowed when creating a %s", TYPE);
         return NULL;
     }
     else if(!StringLib::str2long(tlm_port_str, &tlm_port))
     {
-        mlog(CRITICAL, "Invalid value provided for telemetry port: %s\n", tlm_port_str);
+        mlog(CRITICAL, "Invalid value provided for telemetry port: %s", tlm_port_str);
         return NULL;
     }
     else if(!StringLib::str2long(cmd_port_str, &cmd_port))
     {
-        mlog(CRITICAL, "Invalid value provided for command port: %s\n", cmd_port_str);
+        mlog(CRITICAL, "Invalid value provided for command port: %s", cmd_port_str);
         return NULL;
     }
 
     /* Check Port Numbers */
     if(tlm_port < 0 || tlm_port > 0xFFFF)
     {
-        mlog(CRITICAL, "Invalid port number for telemetry port: %ld\n", tlm_port);
+        mlog(CRITICAL, "Invalid port number for telemetry port: %ld", tlm_port);
         return NULL;
     }
     else if(cmd_port < 0 || cmd_port > 0xFFFF)
     {
-        mlog(CRITICAL, "Invalid port number for command port: %ld\n", cmd_port);
+        mlog(CRITICAL, "Invalid port number for command port: %ld", cmd_port);
         return NULL;
     }
 
@@ -105,7 +105,7 @@ CommandableObject* CosmosInterface::createObject(CommandProcessor* cmd_proc, con
     {
         if(!StringLib::str2long(argv[6], &max_connections))
         {
-            mlog(CRITICAL, "Invalid value provided for max connections: %s\n", argv[6]);
+            mlog(CRITICAL, "Invalid value provided for max connections: %s", argv[6]);
             return NULL;
         }
     }
@@ -186,7 +186,7 @@ void* CosmosInterface::listenerThread (void* parm)
 
     if(status < 0)
     {
-        mlog(CRITICAL, "Failed to establish server: %s\n", l->ci->getName());
+        mlog(CRITICAL, "Failed to establish server: %s", l->ci->getName());
         l->ci->cmdProc->deleteObject(l->ci->getName());
     }
 
@@ -223,7 +223,7 @@ int CosmosInterface::tlmActiveHandler(int fd, int flags, void* parm)
         rqst->ci = ci;
         rqst->sub = new Subscriber(ci->tlmQName);
         rqst->sock = new TcpSocket(NULL, fd);
-        mlog(CRITICAL, "Establishing new connection to %s:%d in %s\n", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
+        mlog(CRITICAL, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
 
         /* Register and Start Connection */
         ci->tlmConnMut.lock();
@@ -253,7 +253,7 @@ int CosmosInterface::cmdActiveHandler(int fd, int flags, void* parm)
         rqst->ci = ci;
         rqst->pub = new Publisher(ci->cmdQName);
         rqst->sock = new TcpSocket(NULL, fd);
-        mlog(CRITICAL, "Establishing new connection to %s:%d in %s\n", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
+        mlog(CRITICAL, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
 
         /* Register and Start Connection */
         ci->cmdConnMut.lock();
@@ -289,18 +289,18 @@ void* CosmosInterface::telemetryThread (void* parm)
             int bytes_sent = rqst->sock->writeBuffer(buffer, bytes + HEADER_SIZE);
             if(bytes_sent != bytes + HEADER_SIZE)
             {
-                mlog(CRITICAL, "Message of size %d unable to be sent (%d) to remote destination %s\n", bytes, bytes_sent, rqst->sock->getIpAddr());
+                mlog(CRITICAL, "Message of size %d unable to be sent (%d) to remote destination %s", bytes, bytes_sent, rqst->sock->getIpAddr());
                 break;
             }
         }
         else if(bytes != MsgQ::STATE_TIMEOUT)
         {
-            mlog(CRITICAL, "Fatal error (%d) detected trying to read telemetry from %s, exiting telemetry thread in %s\n", bytes, rqst->sub->getName(), ci->getName());
+            mlog(CRITICAL, "Fatal error (%d) detected trying to read telemetry from %s, exiting telemetry thread in %s", bytes, rqst->sub->getName(), ci->getName());
             break;
         }
     }
 
-    mlog(INFO, "Terminating connection to %s in %s\n", rqst->sock->getIpAddr(), ci->getName());
+    mlog(INFO, "Terminating connection to %s in %s", rqst->sock->getIpAddr(), ci->getName());
     ci->tlmConnMut.lock();
     {
         // !!! CANNOT access request values after this call !!!
@@ -362,7 +362,7 @@ void* CosmosInterface::commandThread (void* parm)
                     /* Handle Loss of Synchronization */
                     if(!in_sync)
                     {
-                        mlog(CRITICAL, "Lost synchronization to COSMOS command interface in %s\n", c->ci->getName());
+                        mlog(CRITICAL, "Lost synchronization to COSMOS command interface in %s", c->ci->getName());
                         LocalLib::move(&header_buf[0], &header_buf[1], HEADER_SIZE - 1);
                         header_index--;  // shift down
                     }
@@ -374,7 +374,7 @@ void* CosmosInterface::commandThread (void* parm)
             }
             else if(bytes != TIMEOUT_RC)
             {
-                mlog(CRITICAL, "Failed to read header (%d) on %s command socket... fatal error, exiting command thread\n", bytes, c->ci->getName());
+                mlog(CRITICAL, "Failed to read header (%d) on %s command socket... fatal error, exiting command thread", bytes, c->ci->getName());
                 break;
             }
         }
@@ -394,7 +394,7 @@ void* CosmosInterface::commandThread (void* parm)
                         status = c->pub->postCopy(&packet_buf[0], packet_size, SYS_TIMEOUT);
                         if(status < 0 && status != MsgQ::STATE_TIMEOUT)
                         {
-                            mlog(CRITICAL, "Message of size %d unable to be posted (%d) to output stream %s\n", bytes, status, c->pub->getName());
+                            mlog(CRITICAL, "Message of size %d unable to be posted (%d) to output stream %s", bytes, status, c->pub->getName());
                             break;
                         }
                     }
@@ -411,7 +411,7 @@ void* CosmosInterface::commandThread (void* parm)
             }
             else if(bytes != TIMEOUT_RC)
             {
-                mlog(CRITICAL, "Failed to read packet (%d) on %s command socket... fatal error, exiting command thread\n", bytes, c->ci->getName());
+                mlog(CRITICAL, "Failed to read packet (%d) on %s command socket... fatal error, exiting command thread", bytes, c->ci->getName());
                 break;
             }
         }

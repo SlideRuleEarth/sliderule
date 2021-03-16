@@ -64,7 +64,7 @@ int CcsdsParserZFrameModule::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -110,7 +110,7 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
                     /* Pull Out Size */
                     if(!StringLib::str2long(&frameBuffer[12], &frameSize, 10))
                     {
-                        mlog(CRITICAL, "Unable to read frame size: %s\n", &frameBuffer[12]);
+                        mlog(CRITICAL, "Unable to read frame size: %s", &frameBuffer[12]);
                         return PARSE_ERROR;
                     }
                     else

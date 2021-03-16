@@ -67,7 +67,7 @@ Thread::~Thread()
     if(join)
     {
         int ret = pthread_join(threadId, NULL);
-        if(ret != 0) dlog("Failed to join thread (%d): %s\n", ret, strerror(ret));
+        if(ret != 0) dlog("Failed to join thread (%d): %s", ret, strerror(ret));
     }
 }
 

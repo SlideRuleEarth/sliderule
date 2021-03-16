@@ -194,7 +194,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     hash_size = d1.getHashSize();
     max_chain = d1.getMaxChain();
     num_entries = d1.length();
-    mlog(INFO, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
+    mlog(RAW, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != numwords)
     {
         mlog(RAW, "[%d] ERROR: incorrect number of entries %d != %d\n", __LINE__, num_entries, numwords);
@@ -267,7 +267,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     hash_size = d1.getHashSize();
     max_chain = d1.getMaxChain();
     num_entries = d1.length();
-    mlog(INFO, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
+    mlog(RAW, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != 0)
     {
         mlog(RAW, "[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
@@ -310,7 +310,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     hash_size = d1.getHashSize();
     max_chain = d1.getMaxChain();
     num_entries = d1.length();
-    mlog(INFO, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
+    mlog(RAW, "Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != 0)
     {
         mlog(RAW, "[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
@@ -320,7 +320,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Start Timer */
     int64_t stop_time = TimeLib::gettimems();
     double elapsed_time = (double)(stop_time - start_time) / 1000.0;
-    mlog(INFO, "Time to complete: %lf seconds\n", elapsed_time);
+    mlog(RAW, "Time to complete: %lf seconds\n", elapsed_time);
 
     /* Return Status */
     if(failure) return -1;

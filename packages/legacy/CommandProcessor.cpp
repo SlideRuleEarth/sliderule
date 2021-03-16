@@ -152,7 +152,7 @@ bool CommandProcessor::postCommand(const char* cmdstr, ...)
     /* Get Length of Command */
     if(vlen >= MAX_CMD_SIZE)
     {
-        mlog(CRITICAL, "command string too long: %d, must be less than: %d\n", slen, MAX_CMD_SIZE);
+        mlog(CRITICAL, "command string too long: %d, must be less than: %d", slen, MAX_CMD_SIZE);
         return false;
     }
 
@@ -182,7 +182,7 @@ bool CommandProcessor::postPriority(const char* cmdstr, ...)
     /* Get Length of Command */
     if(slen >= MAX_CMD_SIZE)
     {
-        mlog(CRITICAL, "command string too long: %d, must be less than: %d\n", slen, MAX_CMD_SIZE);
+        mlog(CRITICAL, "command string too long: %d, must be less than: %d", slen, MAX_CMD_SIZE);
         return false;
     }
 
@@ -206,12 +206,12 @@ bool CommandProcessor::executeScript (const char* script_name)
     FILE* script = fopen(script_name, "r");
     if(script == NULL)
     {
-        mlog(CRITICAL, "Unable to open script file: %s\n", script_name);
+        mlog(CRITICAL, "Unable to open script file: %s", script_name);
         return false;
     }
     else
     {
-        mlog(INFO, "Processing file: %s\n", script_name);
+        mlog(INFO, "Processing file: %s", script_name);
     }
 
     /* Build Command List */
@@ -261,7 +261,7 @@ bool CommandProcessor::registerHandler(const char* handle_name, newFunc_t func, 
     handle_entry_t* handle = new handle_entry_t(handle_name, func, numparms, desc, perm);
     handlers.add(handle_name, handle);
 
-    mlog(INFO, "Registered handler: %s\n", handle_name);
+    mlog(INFO, "Registered handler: %s", handle_name);
 
     return true;
 }
@@ -389,14 +389,14 @@ int CommandProcessor::getCurrentValue(const char* obj_name, const char* key, voi
             if(cvt_entry->size > size)
             {
                 /* Error On Buffer Too Small */
-                mlog(CRITICAL, "Buffer too small to hold requested data: %d > %d\n", cvt_entry->size, size);
+                mlog(CRITICAL, "Buffer too small to hold requested data: %d > %d", cvt_entry->size, size);
             }
             else
             {
                 if(cvt_entry->size != size)
                 {
                     /* Warn on Buffer Mismatch */
-                    mlog(WARNING, "Buffer size mismatch when attempting to retrieve global value %s: %d != %d\n", keyname, cvt_entry->size, size);
+                    mlog(WARNING, "Buffer size mismatch when attempting to retrieve global value %s: %d != %d", keyname, cvt_entry->size, size);
                 }
 
                 /* Copy Global Data */
@@ -413,7 +413,7 @@ int CommandProcessor::getCurrentValue(const char* obj_name, const char* key, voi
         catch(std::out_of_range& e)
         {
             /* Error on Dictionary Exception */
-            mlog(WARNING, "Unable to find global data %s: %s\n", keyname, e.what());
+            mlog(WARNING, "Unable to find global data %s: %s", keyname, e.what());
         }
     }
     cvtCond.unlock();
@@ -458,7 +458,7 @@ void* CommandProcessor::cmdProcThread (void* parm)
         /* Handle Queue Error */
         else if(cmdlen != MsgQ::STATE_TIMEOUT)
         {
-            mlog(CRITICAL, "receive failed with status: %d\n", cmdlen);
+            mlog(CRITICAL, "receive failed with status: %d", cmdlen);
         }
     }
 
@@ -479,17 +479,17 @@ bool CommandProcessor::processCommand (const char* cmdstr)
     int cmdlen = StringLib::size(cmdstr) + 1;
     if(cmdlen <= 0)
     {
-        mlog(CRITICAL, "Invalid command string, unable to construct command!\n");
+        mlog(CRITICAL, "Invalid command string, unable to construct command!");
         return false;
     }
 
     /* Parse Command into Tokens */
     char(*toks)[MAX_CMD_SIZE] = new (char[MAX_CMD_PARAMETERS + 1][MAX_CMD_SIZE]);
-    mlog(INFO, "Received command: %s\n", cmdstr);
+    mlog(INFO, "Received command: %s", cmdstr);
     int totaltoks = StringLib::tokenizeLine(cmdstr, cmdlen, ' ', MAX_CMD_PARAMETERS + 1, toks);
     if(totaltoks > MAX_CMD_PARAMETERS) // unable to determine in more parameters supplied
     {
-        mlog(CRITICAL, "Command has too many parameters %d, unable to execute!\n", totaltoks);
+        mlog(CRITICAL, "Command has too many parameters %d, unable to execute!", totaltoks);
         delete [] toks;
         return false;
     }
@@ -560,11 +560,11 @@ bool CommandProcessor::processCommand (const char* cmdstr)
         int cmd_status = obj->executeCommand(cmd, argc, argv);
         if(cmd_status < 0)
         {
-            mlog(CRITICAL, "command %s failed execution with status %d\n", echoed_cmd, cmd_status);
+            mlog(CRITICAL, "command %s failed execution with status %d", echoed_cmd, cmd_status);
         }
         else
         {
-            mlog(INFO, "command %s successfully executed.\n", echoed_cmd);
+            mlog(INFO, "command %s successfully executed.", echoed_cmd);
             status = true;
         }
 
@@ -634,7 +634,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
                 }
                 else
                 {
-                    mlog(CRITICAL, "Must supply object name!\n");
+                    mlog(CRITICAL, "Must supply object name!");
                     return -1;
                 }
             }
@@ -647,7 +647,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
                 }
                 else
                 {
-                    mlog(CRITICAL, "Must supply record name!\n");
+                    mlog(CRITICAL, "Must supply record name!");
                     return -1;
                 }
             }
@@ -660,7 +660,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
                 }
                 else
                 {
-                    mlog(CRITICAL, "Must supply stream name!\n");
+                    mlog(CRITICAL, "Must supply stream name!");
                     return -1;
                 }
             }
@@ -884,7 +884,7 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Check for Existing Object */
     if(objects.find(obj_name))
     {
-        mlog(CRITICAL, "Object called %s already exists\n", obj_name);
+        mlog(CRITICAL, "Object called %s already exists", obj_name);
         return -1;
     }
 
@@ -896,12 +896,12 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
         /* Check Parameters */
         if(handle->numparms > 0 && handle->numparms != argc - minargs)
         {
-            mlog(CRITICAL, "Incorrect number of parameters passed to new command: %d != %d\n", handle->numparms, argc - minargs);
+            mlog(CRITICAL, "Incorrect number of parameters passed to new command: %d != %d", handle->numparms, argc - minargs);
             return -1;
         }
         else if(handle->numparms < 0 && abs(handle->numparms) > argc - minargs)
         {
-            mlog(CRITICAL, "Insufficient number of parameters passed to new command: %d > %d\n", handle->numparms, argc - minargs);
+            mlog(CRITICAL, "Insufficient number of parameters passed to new command: %d > %d", handle->numparms, argc - minargs);
             return -1;
         }
 
@@ -913,24 +913,24 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
             bool registered = objects.add(obj_name, entry, true);
             if(registered)
             {
-                mlog(INFO, "Object %s created and registered\n", obj_name);
+                mlog(INFO, "Object %s created and registered", obj_name);
             }
             else
             {
                 delete obj;
-                mlog(CRITICAL, "Object %s was not able to be registered!\n", obj_name);
+                mlog(CRITICAL, "Object %s was not able to be registered!", obj_name);
                 return -1;
             }
         }
         else
         {
-            mlog(CRITICAL, "Object %s not able to be created!\n", obj_name);
+            mlog(CRITICAL, "Object %s not able to be created!", obj_name);
             return -1;
         }
     }
     catch(std::out_of_range& e)
     {
-        mlog(CRITICAL, "Unable to find registered handler for %s: %s\n", class_name, e.what());
+        mlog(CRITICAL, "Unable to find registered handler for %s: %s", class_name, e.what());
         return -1;
     }
 
@@ -963,17 +963,17 @@ int CommandProcessor::deleteCmd (int argc, char argv[][MAX_CMD_SIZE])
             }
             catch(const std::exception& e)
             {
-                mlog(CRITICAL, "Caught exception during deletion of object %s --> %s\n", obj_name, e.what());
+                mlog(CRITICAL, "Caught exception during deletion of object %s --> %s", obj_name, e.what());
             }
             catch(...)
             {
-                mlog(CRITICAL, "Caught unknown exception during deletion of object %s\n", obj_name);
+                mlog(CRITICAL, "Caught unknown exception during deletion of object %s", obj_name);
             }
         }
         else
         {
             lockedObjects.add(entry);
-            mlog(INFO, "Locking permanent object %s as a result of request to delete!\n", obj_name);
+            mlog(INFO, "Locking permanent object %s as a result of request to delete!", obj_name);
         }
 
         // Remove object from object list
@@ -982,7 +982,7 @@ int CommandProcessor::deleteCmd (int argc, char argv[][MAX_CMD_SIZE])
     catch(std::out_of_range& e)
     {
         (void)e;
-        mlog(CRITICAL, "Attempted to delete non-existent object: %s\n", obj_name);
+        mlog(CRITICAL, "Attempted to delete non-existent object: %s", obj_name);
         return -1;
     }
 
@@ -1005,7 +1005,7 @@ int CommandProcessor::permCmd (int argc, char argv[][MAX_CMD_SIZE])
     catch(std::out_of_range& e)
     {
         (void)e;
-        mlog(CRITICAL, "Failed to make object %s permanent!\n", obj_name);
+        mlog(CRITICAL, "Failed to make object %s permanent!", obj_name);
         return -1;
     }
 
@@ -1028,7 +1028,7 @@ int CommandProcessor::typeCmd (int argc, char argv[][MAX_CMD_SIZE])
     catch(std::out_of_range& e)
     {
         (void)e;
-        mlog(ERROR, "Object %s not registered, unable to provide type!\n", obj_name);
+        mlog(ERROR, "Object %s not registered, unable to provide type!", obj_name);
         return -1;
     }
 
@@ -1051,7 +1051,7 @@ int CommandProcessor::registerCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Check for Existing Object */
     if(objects.find(obj_name))
     {
-        mlog(CRITICAL, "Object called %s already exists\n", obj_name);
+        mlog(CRITICAL, "Object called %s already exists", obj_name);
         return -1;
     }
 
@@ -1059,7 +1059,7 @@ int CommandProcessor::registerCmd (int argc, char argv[][MAX_CMD_SIZE])
     CommandableObject* obj;
     if(getCurrentValue(obj_name, SELF_KEY, &obj, sizeof(obj), IO_CHECK, true) <= 0)
     {
-        mlog(CRITICAL, "Unable to find registry for object %s\n", obj_name);
+        mlog(CRITICAL, "Unable to find registry for object %s", obj_name);
         return -1;
     }
 
@@ -1068,11 +1068,11 @@ int CommandProcessor::registerCmd (int argc, char argv[][MAX_CMD_SIZE])
     bool registered = objects.add(obj_name, entry, true);
     if(registered)
     {
-        mlog(INFO, "Object %s now registered\n", obj_name);
+        mlog(INFO, "Object %s now registered", obj_name);
     }
     else
     {
-        mlog(CRITICAL, "Object %s was not able to be registered!\n", obj_name);
+        mlog(CRITICAL, "Object %s was not able to be registered!", obj_name);
         return -1;
     }
 
@@ -1092,7 +1092,7 @@ int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Check Rec Type */
     if(rec_type == NULL)
     {
-        mlog(CRITICAL, "Must supply a record type\n");
+        mlog(CRITICAL, "Must supply a record type");
         return -1;
     }
 
@@ -1100,12 +1100,12 @@ int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE])
     long size = 0;
     if(!StringLib::str2long(size_str, &size))
     {
-        mlog(CRITICAL, "Invalid size supplied: %s\n", size_str);
+        mlog(CRITICAL, "Invalid size supplied: %s", size_str);
         return -1;
     }
     else if(size <= 0)
     {
-        mlog(CRITICAL, "Invalid size supplied: %ld\n", size);
+        mlog(CRITICAL, "Invalid size supplied: %ld", size);
         return -1;
     }
 
@@ -1116,12 +1116,12 @@ int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE])
         max_str = argv[3];
         if(!StringLib::str2long(max_str, &max_fields))
         {
-            mlog(CRITICAL, "Invalid max fields supplied: %s\n", max_str);
+            mlog(CRITICAL, "Invalid max fields supplied: %s", max_str);
             return -1;
         }
         else if(max_fields <= 0)
         {
-            mlog(CRITICAL, "Invalid max field value supplied: %ld\n", max_fields);
+            mlog(CRITICAL, "Invalid max field value supplied: %ld", max_fields);
             return -1;
         }
     }
@@ -1130,12 +1130,12 @@ int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE])
     RecordObject::recordDefErr_t status = RecordObject::defineRecord(rec_type, id_field, size, NULL, 0, max_fields);
     if(status == RecordObject::DUPLICATE_DEF)
     {
-        mlog(WARNING, "Attempting to define record that is already defined: %s\n", rec_type);
+        mlog(WARNING, "Attempting to define record that is already defined: %s", rec_type);
         return 0; // this may occur as a part of normal operation... if a command needs to know if a record already exists, it should check it directly
     }
     else if(status != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define record %s: %d\n", rec_type, (int)status);
+        mlog(CRITICAL, "Failed to define record %s: %d", rec_type, (int)status);
         return -1;
     }
 
@@ -1161,7 +1161,7 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Check Field Type */
     if(field_type == RecordObject::INVALID_FIELD)
     {
-        mlog(CRITICAL, "Invalid field type supplied\n");
+        mlog(CRITICAL, "Invalid field type supplied");
         return -1;
     }
 
@@ -1169,12 +1169,12 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE])
     long offset = 0;
     if(!StringLib::str2long(offset_str, &offset))
     {
-        mlog(CRITICAL, "Invalid offset supplied: %s\n", offset_str);
+        mlog(CRITICAL, "Invalid offset supplied: %s", offset_str);
         return -1;
     }
     else if(offset < 0)
     {
-        mlog(CRITICAL, "Invalid offset supplied: %ld\n", offset);
+        mlog(CRITICAL, "Invalid offset supplied: %ld", offset);
         return -1;
     }
 
@@ -1182,12 +1182,12 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE])
     long size = 0;
     if(!StringLib::str2long(size_str, &size))
     {
-        mlog(CRITICAL, "Invalid size supplied: %s\n", size_str);
+        mlog(CRITICAL, "Invalid size supplied: %s", size_str);
         return -1;
     }
     else if(size <= 0)
     {
-        mlog(CRITICAL, "Invalid size supplied: %ld\n", size);
+        mlog(CRITICAL, "Invalid size supplied: %ld", size);
         return -1;
     }
 
@@ -1198,17 +1198,17 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE])
     RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, field_name, field_type, offset, size, NULL, flags);
     if(status == RecordObject::DUPLICATE_DEF)
     {
-        mlog(WARNING, "Attempting to define field %s that is already defined for record %s\n", field_name, rec_type);
+        mlog(WARNING, "Attempting to define field %s that is already defined for record %s", field_name, rec_type);
         return 0; // this may occur as a part of normal operation and should not signal an error; directly check if field exists if that is needed
     }
     else if(status == RecordObject::NOTFOUND_DEF)
     {
-        mlog(CRITICAL, "Record type %s not found, unable to define field %s\n", rec_type, field_name);
+        mlog(CRITICAL, "Record type %s not found, unable to define field %s", rec_type, field_name);
         return -1;
     }
     else if(status != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to add field %s to %s: %d\n", field_name, rec_type, (int)status);
+        mlog(CRITICAL, "Failed to add field %s to %s: %d", field_name, rec_type, (int)status);
         return -1;
     }
 
@@ -1229,7 +1229,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     if(qname == NULL)
     {
-        mlog(CRITICAL, "Must supply an output stream!\n");
+        mlog(CRITICAL, "Must supply an output stream!");
         return -1;
     }
 
@@ -1247,7 +1247,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
             post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size, max_fields);
             if(post_status <= 0)
             {
-                mlog(CRITICAL, "Failed to post definition for %s on stream %s\n", rectypes[i], qname);
+                mlog(CRITICAL, "Failed to post definition for %s on stream %s", rectypes[i], qname);
                 status = -1;
             }
             else
@@ -1262,7 +1262,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
                     else                                            post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rectypes[i], fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset / 8, fields[k]->elements, flags_str);
                     if(post_status <= 0)
                     {
-                        mlog(CRITICAL, "Failed to post field definition %s for %s on stream %s... aborting\n", fieldnames[k], rectypes[i], qname);
+                        mlog(CRITICAL, "Failed to post field definition %s for %s on stream %s... aborting", fieldnames[k], rectypes[i], qname);
                         status = -1;
                     }
                     delete [] flags_str;
@@ -1284,7 +1284,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
         post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rec_type, id_field != NULL ? id_field : "NA", data_size, max_fields);
         if(post_status <= 0)
         {
-            mlog(CRITICAL, "Failed to post definition for %s on stream %s\n", rec_type, qname);
+            mlog(CRITICAL, "Failed to post definition for %s on stream %s", rec_type, qname);
             status = -1;
         }
         else
@@ -1299,7 +1299,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
                 else                                            post_status = cmdq_out->postString("ADD_FIELD %s %s %s %d %d %s\n", rec_type, fieldnames[k], RecordObject::ft2str(fields[k]->type), fields[k]->offset / 8, fields[k]->elements, flags_str);
                 if(post_status <= 0)
                 {
-                    mlog(CRITICAL, "Failed to post field definition %s for %s on stream %s... aborting\n", fieldnames[k], rec_type, qname);
+                    mlog(CRITICAL, "Failed to post field definition %s for %s on stream %s... aborting", fieldnames[k], rec_type, qname);
                     status = -1;
                 }
                 delete flags_str;
@@ -1312,7 +1312,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
     else
     {
-        mlog(CRITICAL, "Record type %s not defined\n", rec_type);
+        mlog(CRITICAL, "Record type %s not defined", rec_type);
         status = -1;
     }
 
@@ -1332,12 +1332,12 @@ int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     if(!StringLib::str2long(argv[0], &secs))
     {
-        mlog(CRITICAL, "Invalid wait time supplied, must be a number: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid wait time supplied, must be a number: %s", argv[0]);
         return -1;
     }
     else if(secs <= 0)
     {
-        mlog(CRITICAL, "Invalid wait time supplied, must be a positive number: %ld\n", secs);
+        mlog(CRITICAL, "Invalid wait time supplied, must be a positive number: %ld", secs);
         return -1;
     }
 
@@ -1358,7 +1358,7 @@ int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE])
     long wait = 0;
     if(!StringLib::str2long(wait_str, &wait))
     {
-        mlog(CRITICAL, "Invalid wait supplied: %s\n", wait_str);
+        mlog(CRITICAL, "Invalid wait supplied: %s", wait_str);
         return -1;
     }
 
@@ -1368,14 +1368,14 @@ int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE])
         thresh_str = argv[2];
         if(!StringLib::str2long(thresh_str, &thresh))
         {
-            mlog(CRITICAL, "Invalid threshold supplied: %s\n", thresh_str);
+            mlog(CRITICAL, "Invalid threshold supplied: %s", thresh_str);
             return -1;
         }
     }
 
     if(!MsgQ::existQ(qname))
     {
-        mlog(CRITICAL, "MsgQ %s does not exist\n", qname);
+        mlog(CRITICAL, "MsgQ %s does not exist", qname);
         return -1;
     }
 
@@ -1393,7 +1393,7 @@ int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE])
             break;
         }
 
-        mlog(CRITICAL, "Waiting... %s is %d of %ld seconds empty (%d)\n", qname, q_empty_count, wait, q_count);
+        mlog(CRITICAL, "Waiting... %s is %d of %ld seconds empty (%d)", qname, q_empty_count, wait, q_count);
         LocalLib::sleep(1);
     }
 
@@ -1423,7 +1423,7 @@ int CommandProcessor::displayStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE])
     (void)argc;
     (void)argv;
 
-    mlog(CRITICAL, "STOPWATCH = %.2lf\n", TimeLib::latchtime() - stopwatch_time);
+    mlog(CRITICAL, "STOPWATCH = %.2lf", TimeLib::latchtime() - stopwatch_time);
 
     return 0;
 }
@@ -1509,13 +1509,13 @@ int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE])
     long depth = 0;
     if(!StringLib::str2long(depth_str, &depth))
     {
-        mlog(CRITICAL, "Invalid depth supplied: %s\n", depth_str);
+        mlog(CRITICAL, "Invalid depth supplied: %s", depth_str);
         return -1;
     }
 
     if(!MsgQ::setStdQDepth(depth))
     {
-        mlog(CRITICAL, "Failed to set queue depth to %ld\n", depth);
+        mlog(CRITICAL, "Failed to set queue depth to %ld", depth);
         return -1;
     }
 
@@ -1542,12 +1542,12 @@ int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
     else if(!StringLib::str2long(timeout_str, &timeout))
     {
-        mlog(CRITICAL, "Invalid timeout supplied: %s\n", timeout_str);
+        mlog(CRITICAL, "Invalid timeout supplied: %s", timeout_str);
         return -1;
     }
     else if(timeout < -1)
     {
-        mlog(CRITICAL, "Undefined behavior setting timeout to be less than -1\n");
+        mlog(CRITICAL, "Undefined behavior setting timeout to be less than -1");
         return -1;
     }
 
@@ -1568,12 +1568,12 @@ int CommandProcessor::setIOMaxsizeCmd (int argc, char argv[][MAX_CMD_SIZE])
     long maxsize;
     if(!StringLib::str2long(maxsize_str, &maxsize))
     {
-        mlog(CRITICAL, "Invalid maxsize supplied: %s\n", maxsize_str);
+        mlog(CRITICAL, "Invalid maxsize supplied: %s", maxsize_str);
         return -1;
     }
     else if(maxsize < 1)
     {
-        mlog(CRITICAL, "Undefined behavior setting maxsize to be less than 1\n");
+        mlog(CRITICAL, "Undefined behavior setting maxsize to be less than 1");
         return -1;
     }
 

@@ -80,7 +80,7 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
     /* Check Rec Type */
     if(rec_type == NULL)
     {
-        mlog(CRITICAL, "Must supply a record type\n");
+        mlog(CRITICAL, "Must supply a record type");
         return -1;
     }
 
@@ -88,12 +88,12 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
     long apid = 0;
     if(!StringLib::str2long(apid_str, &apid))
     {
-        mlog(CRITICAL, "Invalid APID supplied: %s\n", apid_str);
+        mlog(CRITICAL, "Invalid APID supplied: %s", apid_str);
         return -1;
     }
     else if(apid < 0 || apid > CCSDS_NUM_APIDS)
     {
-        mlog(CRITICAL, "Invalid APID supplied: %ld\n", apid);
+        mlog(CRITICAL, "Invalid APID supplied: %ld", apid);
         return -1;
     }
 
@@ -101,12 +101,12 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
     long size = 0;
     if(!StringLib::str2long(size_str, &size))
     {
-        mlog(CRITICAL, "Invalid size supplied: %s\n", size_str);
+        mlog(CRITICAL, "Invalid size supplied: %s", size_str);
         return -1;
     }
     else if(size <= 0)
     {
-        mlog(CRITICAL, "Invalid size supplied: %ld\n", size);
+        mlog(CRITICAL, "Invalid size supplied: %ld", size);
         return -1;
     }
 
@@ -114,12 +114,12 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
     long max_fields = 0;
     if(!StringLib::str2long(max_str, &max_fields))
     {
-        mlog(CRITICAL, "Invalid max fields supplied: %s\n", max_str);
+        mlog(CRITICAL, "Invalid max fields supplied: %s", max_str);
         return -1;
     }
     else if(max_fields < 0)
     {
-        mlog(CRITICAL, "Invalid max field value supplied: %ld\n", max_fields);
+        mlog(CRITICAL, "Invalid max field value supplied: %ld", max_fields);
         return -1;
     }
     else if(max_fields == 0)
@@ -131,7 +131,7 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
     RecordObject::recordDefErr_t status = CcsdsRecord::defineTelemetry(rec_type, id_field, (uint16_t)apid, size, NULL, 0, max_fields);
     if(status != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define telemetry packet %s: %d\n", rec_type, (int)status);
+        mlog(CRITICAL, "Failed to define telemetry packet %s: %d", rec_type, (int)status);
         return -1;
     }
 
@@ -155,7 +155,7 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     /* Check Rec Type */
     if(rec_type == NULL)
     {
-        mlog(CRITICAL, "Must supply a record type\n");
+        mlog(CRITICAL, "Must supply a record type");
         return -1;
     }
 
@@ -163,12 +163,12 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     long apid = 0;
     if(!StringLib::str2long(apid_str, &apid))
     {
-        mlog(CRITICAL, "Invalid APID supplied: %s\n", apid_str);
+        mlog(CRITICAL, "Invalid APID supplied: %s", apid_str);
         return -1;
     }
     else if(apid < 0 || apid > CCSDS_NUM_APIDS)
     {
-        mlog(CRITICAL, "Invalid APID supplied: %ld\n", apid);
+        mlog(CRITICAL, "Invalid APID supplied: %ld", apid);
         return -1;
     }
 
@@ -176,12 +176,12 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     long fc = 0;
     if(!StringLib::str2long(fc_str, &fc))
     {
-        mlog(CRITICAL, "Invalid function code supplied: %s\n", fc_str);
+        mlog(CRITICAL, "Invalid function code supplied: %s", fc_str);
         return -1;
     }
     else if((fc & 0x7F) != fc)
     {
-        mlog(CRITICAL, "Invalid function code supplied: %ld\n", fc);
+        mlog(CRITICAL, "Invalid function code supplied: %ld", fc);
         return -1;
     }
 
@@ -189,12 +189,12 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     long size = 0;
     if(!StringLib::str2long(size_str, &size))
     {
-        mlog(CRITICAL, "Invalid size supplied: %s\n", size_str);
+        mlog(CRITICAL, "Invalid size supplied: %s", size_str);
         return -1;
     }
     else if(size <= 0)
     {
-        mlog(CRITICAL, "Invalid size supplied: %ld\n", size);
+        mlog(CRITICAL, "Invalid size supplied: %ld", size);
         return -1;
     }
 
@@ -202,12 +202,12 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     long max_fields = 0;
     if(!StringLib::str2long(max_str, &max_fields))
     {
-        mlog(CRITICAL, "Invalid max fields supplied: %s\n", max_str);
+        mlog(CRITICAL, "Invalid max fields supplied: %s", max_str);
         return -1;
     }
     else if(max_fields < 0)
     {
-        mlog(CRITICAL, "Invalid max field value supplied: %ld\n", max_fields);
+        mlog(CRITICAL, "Invalid max field value supplied: %ld", max_fields);
         return -1;
     }
     else if(max_fields == 0)
@@ -219,7 +219,7 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     RecordObject::recordDefErr_t status = CcsdsRecord::defineCommand(rec_type, id_field, (uint16_t)apid, (uint8_t)fc, size, NULL, 0, max_fields);
     if(status != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define command packet %s: %d\n", rec_type, (int)status);
+        mlog(CRITICAL, "Failed to define command packet %s: %d", rec_type, (int)status);
         return -1;
     }
 

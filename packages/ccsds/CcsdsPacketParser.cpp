@@ -85,7 +85,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -200,7 +200,7 @@ int CcsdsPacketParser::luaPassInvalid (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.what());
+        mlog(CRITICAL, "Error setting pass invalid state: %s", e.what());
     }
 
     /* Return Success */
@@ -230,7 +230,7 @@ int CcsdsPacketParser::luaResetInvalid (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.what());
+        mlog(CRITICAL, "Error setting pass invalid state: %s", e.what());
     }
 
     /* Return Success */
@@ -284,26 +284,26 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         LuaEngine::setAttrInt(L, "pkt index",       lua_obj->pkt->getIndex());
 
         /* Log Stats */
-        mlog(lvl, "apid:            %04X\n",   lua_obj->apidStats[apid].apid);
-        mlog(lvl, "total (pkts):    %u\n",     lua_obj->apidStats[apid].total_pkts);
-        mlog(lvl, "total (bytes):   %u\n",     lua_obj->apidStats[apid].total_bytes);
-        mlog(lvl, "current (pkts):  %u\n",     lua_obj->apidStats[apid].curr_pkts);
-        mlog(lvl, "current (bytes): %u\n",     lua_obj->apidStats[apid].curr_bytes);
-        mlog(lvl, "dropped (pkts):  %u\n",     lua_obj->apidStats[apid].pkts_dropped);
-        mlog(lvl, "filtered (pkts): %u\n",     lua_obj->apidStats[apid].pkts_filtered);
-        mlog(lvl, "seq errors:      %u\n",     lua_obj->apidStats[apid].seq_errors);
-        mlog(lvl, "seg errors:      %u\n",     lua_obj->apidStats[apid].seg_errors);
-        mlog(lvl, "len errors:      %u\n",     lua_obj->apidStats[apid].len_errors);
-        mlog(lvl, "odd errors:      %u\n",     lua_obj->apidStats[apid].odd_errors);
-        mlog(lvl, "cks errors:      %u\n",     lua_obj->apidStats[apid].chksum_errors);
-        mlog(lvl, "filter:          %u\n",     lua_obj->apidStats[apid].filter_factor);
-        mlog(lvl, "max bps:         %lf\n",    lua_obj->apidStats[apid].max_bps);
-        mlog(lvl, "min bps:         %lf\n",    lua_obj->apidStats[apid].min_bps);
-        mlog(lvl, "avg bps:         %lf\n",    lua_obj->apidStats[apid].avg_bps);
-        mlog(lvl, "pass invalid:    %d\n",     lua_obj->passInvalid);
-        mlog(lvl, "reset invalid:   %d\n",     lua_obj->resetInvalid);
-        mlog(lvl, "pkt len:         %d\n",     lua_obj->pkt->getLEN());
-        mlog(lvl, "pkt index:       %d\n",     lua_obj->pkt->getIndex());
+        mlog(lvl, "apid:            %04X",   lua_obj->apidStats[apid].apid);
+        mlog(lvl, "total (pkts):    %u",     lua_obj->apidStats[apid].total_pkts);
+        mlog(lvl, "total (bytes):   %u",     lua_obj->apidStats[apid].total_bytes);
+        mlog(lvl, "current (pkts):  %u",     lua_obj->apidStats[apid].curr_pkts);
+        mlog(lvl, "current (bytes): %u",     lua_obj->apidStats[apid].curr_bytes);
+        mlog(lvl, "dropped (pkts):  %u",     lua_obj->apidStats[apid].pkts_dropped);
+        mlog(lvl, "filtered (pkts): %u",     lua_obj->apidStats[apid].pkts_filtered);
+        mlog(lvl, "seq errors:      %u",     lua_obj->apidStats[apid].seq_errors);
+        mlog(lvl, "seg errors:      %u",     lua_obj->apidStats[apid].seg_errors);
+        mlog(lvl, "len errors:      %u",     lua_obj->apidStats[apid].len_errors);
+        mlog(lvl, "odd errors:      %u",     lua_obj->apidStats[apid].odd_errors);
+        mlog(lvl, "cks errors:      %u",     lua_obj->apidStats[apid].chksum_errors);
+        mlog(lvl, "filter:          %u",     lua_obj->apidStats[apid].filter_factor);
+        mlog(lvl, "max bps:         %lf",    lua_obj->apidStats[apid].max_bps);
+        mlog(lvl, "min bps:         %lf",    lua_obj->apidStats[apid].min_bps);
+        mlog(lvl, "avg bps:         %lf",    lua_obj->apidStats[apid].avg_bps);
+        mlog(lvl, "pass invalid:    %d",     lua_obj->passInvalid);
+        mlog(lvl, "reset invalid:   %d",     lua_obj->resetInvalid);
+        mlog(lvl, "pkt len:         %d",     lua_obj->pkt->getLEN());
+        mlog(lvl, "pkt index:       %d",     lua_obj->pkt->getIndex());
 
         /* Set Success */
         status = true;
@@ -311,7 +311,7 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s\n", e.what());
+        mlog(CRITICAL, "Error setting pass invalid state: %s", e.what());
     }
 
     /* Return Success */
@@ -359,7 +359,7 @@ int CcsdsPacketParser::luaFilterPkt (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting filter: %s\n", e.what());
+        mlog(CRITICAL, "Error setting filter: %s", e.what());
     }
 
     /* Return Success */
@@ -403,7 +403,7 @@ int CcsdsPacketParser::luaClearApidStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting filter: %s\n", e.what());
+        mlog(CRITICAL, "Error setting filter: %s", e.what());
     }
 
     /* Return Success */
@@ -433,7 +433,7 @@ int CcsdsPacketParser::luaStripHdrOnPost (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting strip header on post: %s\n", e.what());
+        mlog(CRITICAL, "Error setting strip header on post: %s", e.what());
     }
 
     /* Return Success */
@@ -448,7 +448,7 @@ bool CcsdsPacketParser::deinitProcessing (void)
     int status = outQ->postCopy("", 0, SYS_TIMEOUT);
     if(status < 0)
     {
-        mlog(CRITICAL, "Failed (%d) to post terminator to %s\n", status, outQ->getName());
+        mlog(CRITICAL, "Failed (%d) to post terminator to %s", status, outQ->getName());
     }
     
     return status > 0;
@@ -476,7 +476,7 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
         int parse_bytes = parser->parseBuffer(&recv_buffer[recv_index], bytes_left, pkt);
         if(parse_bytes >= 0)
         {
-            if(!parserInSync) mlog(CRITICAL, "Parser %s re-established sync at %ld\n", getName(), parserBytes);
+            if(!parserInSync) mlog(CRITICAL, "Parser %s re-established sync at %ld", getName(), parserBytes);
             parserInSync = true;
 
             /* Buffer Successfully Parsed */
@@ -484,7 +484,7 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
         }
         else
         {
-            if(parserInSync) mlog(CRITICAL, "Parser %s out of sync (%d) at %ld\n", getName(), parse_bytes, parserBytes);
+            if(parserInSync) mlog(CRITICAL, "Parser %s out of sync (%d) at %ld", getName(), parse_bytes, parserBytes);
             parserInSync = false;
 
             /* Attempt to Handle Error */
@@ -542,7 +542,7 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
                             /* Check Buffer Size */
                             if(buflen <= 0)
                             {
-                                mlog(CRITICAL, "Packet %04X has invalid size %d\n", pkt->getAPID(), buflen);
+                                mlog(CRITICAL, "Packet %04X has invalid size %d", pkt->getAPID(), buflen);
                                 break;
                             }
 
@@ -550,7 +550,7 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
                             status = outQ->postCopy(bufptr, buflen, SYS_TIMEOUT);
                             if((status != MsgQ::STATE_TIMEOUT) && (status < 0))
                             {
-                                mlog(CRITICAL, "Packet %04X unable to be posted[%d] to output stream %s\n", pkt->getAPID(), status, outQ->getName());
+                                mlog(CRITICAL, "Packet %04X unable to be posted[%d] to output stream %s", pkt->getAPID(), status, outQ->getName());
                                 apidStats[apid].pkts_dropped++;
                                 apidStats[ALL_APIDS].pkts_dropped++;
                                 break;
@@ -560,7 +560,7 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
                 }
                 else
                 {
-                    mlog(WARNING, "Packet %04X dropped\n", pkt->getAPID());
+                    mlog(WARNING, "Packet %04X dropped", pkt->getAPID());
                     apidStats[apid].pkts_dropped++;
                     apidStats[ALL_APIDS].pkts_dropped++;
                 }
@@ -637,7 +637,7 @@ void* CcsdsPacketParser::telemetry_thread (void* parm)
                     int status = parser->statQ->postCopy(&parser->apidStats[apid], sizeof(pktStats_t));
                     if(status <= 0)
                     {
-                        mlog(CRITICAL, "(%d): failed to post apid stats to queue\n", status);
+                        mlog(CRITICAL, "(%d): failed to post apid stats to queue", status);
                     }
                 }
 
@@ -675,7 +675,7 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
                 status = false;
                 apidStats[apid].chksum_errors++;
                 apidStats[ALL_APIDS].chksum_errors++;
-                mlog(ERROR, "incorrect checksum in command packet 0x%04X: EXPECTED 0x%02X, CHECKSUM 0x%02X\n", apid, candidate_packet.computeChecksum(), candidate_packet.getChecksum());
+                mlog(ERROR, "incorrect checksum in command packet 0x%04X: EXPECTED 0x%02X, CHECKSUM 0x%02X", apid, candidate_packet.computeChecksum(), candidate_packet.getChecksum());
             }
         }
 
@@ -690,7 +690,7 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
                     status = false;
                     apidStats[apid].len_errors++;
                     apidStats[ALL_APIDS].len_errors++;
-                    mlog(ERROR, "pkt %04X failed strict length validation, exp: %d, act: %d\n", apid, _len, len);
+                    mlog(ERROR, "pkt %04X failed strict length validation, exp: %d, act: %d", apid, _len, len);
                 }
             }
 
@@ -702,7 +702,7 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
                     status = false;
                     apidStats[apid].seq_errors++;
                     apidStats[ALL_APIDS].seq_errors++;
-                    mlog(WARNING, "%s pkt %04X seq %04X unexpected from previous seq %04X (filter factor of %d)\n", getName(), apid, seq, apidStats[apid].last_seq, apidStats[apid].filter_factor);
+                    mlog(WARNING, "%s pkt %04X seq %04X unexpected from previous seq %04X (filter factor of %d)", getName(), apid, seq, apidStats[apid].last_seq, apidStats[apid].filter_factor);
                 }
             }
 
@@ -721,14 +721,14 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
         /* Segmentation Sequence Validation */
         if((apidStats[apid].last_seg != CcsdsSpacePacket::SEG_STOP) && (seg == CcsdsSpacePacket::SEG_START))
         {
-            mlog(ERROR, "missing \"stop\" segmentation flags for APID %04X SEQ %04X (%02X %02X)\n", apid, seq, apidStats[apid].last_seg, seg);
+            mlog(ERROR, "missing \"stop\" segmentation flags for APID %04X SEQ %04X (%02X %02X)", apid, seq, apidStats[apid].last_seg, seg);
             apidStats[apid].seg_errors++;
             apidStats[ALL_APIDS].seg_errors++;
             status = false;
         }
         else if((apidStats[apid].last_seg == CcsdsSpacePacket::SEG_STOP) && (seg != CcsdsSpacePacket::SEG_START))
         {
-            mlog(ERROR, "missing \"start\" segmentation flags for APID %04X SEQ %04X (%02X %02X)\n", apid, seq, apidStats[apid].last_seg, seg);
+            mlog(ERROR, "missing \"start\" segmentation flags for APID %04X SEQ %04X (%02X %02X)", apid, seq, apidStats[apid].last_seg, seg);
             apidStats[apid].seg_errors++;
             apidStats[ALL_APIDS].seg_errors++;
             status = false;
@@ -737,7 +737,7 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
     }
     catch (std::invalid_argument& e)
     {
-        mlog(ERROR, "Unable to create CCSDS packet in order to validate: %s\n", e.what());
+        mlog(ERROR, "Unable to create CCSDS packet in order to validate: %s", e.what());
         status = false;
     }
 

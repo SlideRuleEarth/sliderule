@@ -75,7 +75,7 @@ int PistacheClient::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -109,7 +109,7 @@ PistacheClient::~PistacheClient(void)
 {
     if(outQ) delete outQ;
 
-    mlog(CRITICAL, "Shutting down HTTP client %s\n", getName());
+    mlog(CRITICAL, "Shutting down HTTP client %s", getName());
     client.shutdown();
 }
 
@@ -157,7 +157,7 @@ int PistacheClient::luaRequest(lua_State* L)
         const char* body = getLuaString(L, 4, true, NULL, &body_provided);
         if(body_provided && action == PistacheServer::GET)
         {
-            mlog(WARNING, "Body ignored for GET requests\n");
+            mlog(WARNING, "Body ignored for GET requests");
         }
 
         /* Get Timeout */
@@ -165,7 +165,7 @@ int PistacheClient::luaRequest(lua_State* L)
         int timeout = getLuaInteger(L, 5, true, SYS_TIMEOUT, &timeout_provided);
         if(timeout_provided && lua_obj->outQ)
         {
-            mlog(WARNING, "Timeout ignored for asynchronous clients\n");
+            mlog(WARNING, "Timeout ignored for asynchronous clients");
         }
 
         /* Make Request */
@@ -190,7 +190,7 @@ int PistacheClient::luaRequest(lua_State* L)
                                 }
                                 else if(response.code() != Http::Code::Ok)
                                 {
-                                    mlog(ERROR, "Failed to get respone on post to %s\n", url);
+                                    mlog(ERROR, "Failed to get respone on post to %s", url);
                                 }
 
                                 /* Assume Success */
@@ -212,7 +212,7 @@ int PistacheClient::luaRequest(lua_State* L)
                             try { std::rethrow_exception(exc); }
                             catch (const std::exception &e)
                             {
-                                mlog(CRITICAL, "Failed to get response on post to %s: %s\n", url, e.what());
+                                mlog(CRITICAL, "Failed to get response on post to %s: %s", url, e.what());
                                 in_error = true;
                             }
                         });
@@ -230,7 +230,7 @@ int PistacheClient::luaRequest(lua_State* L)
                     }
                     else if(!in_error)
                     {
-                        mlog(CRITICAL, "Timeout on response on post to %s\n", url);
+                        mlog(CRITICAL, "Timeout on response on post to %s", url);
                     }
 
                 }
@@ -245,7 +245,7 @@ int PistacheClient::luaRequest(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error making request: %s\n", e.what());
+        mlog(CRITICAL, "Error making request: %s", e.what());
     }
 
     /* Return Status */

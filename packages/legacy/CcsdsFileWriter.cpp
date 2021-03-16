@@ -61,19 +61,19 @@ CommandableObject* CcsdsFileWriter::createObject(CommandProcessor* cmd_proc, con
 
     if(format == INVALID)
     {
-        mlog(CRITICAL, "Error: invalid format specified for file writer %s\n", name);
+        mlog(CRITICAL, "Error: invalid format specified for file writer %s", name);
         return NULL;
     }
 
     if(prefix == NULL)
     {
-        mlog(CRITICAL, "Error: prefix cannot be NULL\n");;
+        mlog(CRITICAL, "Error: prefix cannot be NULL");;
         return NULL;
     }
 
     if(stream == NULL)
     {
-        mlog(CRITICAL, "Error: stream cannot be NULL\n");
+        mlog(CRITICAL, "Error: stream cannot be NULL");
         return NULL;
     }
 
@@ -83,7 +83,7 @@ CommandableObject* CcsdsFileWriter::createObject(CommandProcessor* cmd_proc, con
         maxstr = argv[3];
         if(!StringLib::str2ulong(maxstr, &filesize))
         {
-            mlog(CRITICAL, "Error: invalid max file size: %s\n", maxstr);
+            mlog(CRITICAL, "Error: invalid max file size: %s", maxstr);
             return NULL;
         }
     }
@@ -195,12 +195,12 @@ bool CcsdsFileWriter::openNewFile(void)
     else            outfp = fopen((const char*)filename, "w");
     if(outfp == NULL)
     {
-    	mlog(CRITICAL, "Error opening file: %s, err: %s\n", filename, LocalLib::err2str(errno));
+    	mlog(CRITICAL, "Error opening file: %s, err: %s", filename, LocalLib::err2str(errno));
         return false;
     }
 
     /* Process Open File */
-    mlog(CRITICAL, "Opened new file for writing: %s\n", filename);
+    mlog(CRITICAL, "Opened new file for writing: %s", filename);
 
     /* Return Success */
     return true;
@@ -289,7 +289,7 @@ bool CcsdsFileWriter::processMsg (unsigned char* msg, int bytes)
     /* Error Checking */
     if(bytes_written < 0)
     {
-        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s... killing writer!\n", filename, LocalLib::err2str(errno));
+        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s... killing writer!", filename, LocalLib::err2str(errno));
         return false;
     }
     else

@@ -117,10 +117,10 @@ int DeviceIO::luaLogPktStats(lua_State* L)
         LuaEngine::setAttrInt(L, "dropped (packets)", lua_obj->packetsDropped);
 
         /* Log Stats */
-        mlog(lvl, "processed (bytes):   %d\n", lua_obj->bytesProcessed);
-        mlog(lvl, "dropped (bytes):     %d\n", lua_obj->bytesDropped);
-        mlog(lvl, "processed (packets): %d\n", lua_obj->packetsProcessed);
-        mlog(lvl, "dropped (packets):   %d\n", lua_obj->packetsDropped);
+        mlog(lvl, "processed (bytes):   %d", lua_obj->bytesProcessed);
+        mlog(lvl, "dropped (bytes):     %d", lua_obj->bytesDropped);
+        mlog(lvl, "processed (packets): %d", lua_obj->packetsProcessed);
+        mlog(lvl, "dropped (packets):   %d", lua_obj->packetsDropped);
 
         /* Set Success */
         status = true;
@@ -128,7 +128,7 @@ int DeviceIO::luaLogPktStats(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error logging device I/O statistics: %s\n", e.what());
+        mlog(CRITICAL, "Error logging device I/O statistics: %s", e.what());
     }
 
     /* Return Success */
@@ -175,7 +175,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error waiting on device: %s\n", e.what());
+        mlog(CRITICAL, "Error waiting on device: %s", e.what());
     }
 
     /* Return Success */
@@ -216,7 +216,7 @@ int DeviceIO::luaConfigBlock(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring blocking on device: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring blocking on device: %s", e.what());
     }
 
     /* Return Success */
@@ -244,7 +244,7 @@ int DeviceIO::luaDieOnDisconnect(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring blocking on device: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring blocking on device: %s", e.what());
     }
 
     /* Return Success */

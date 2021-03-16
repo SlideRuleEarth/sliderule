@@ -92,7 +92,7 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating CcsdsPacketInterleaver: %s\n", e.what());
+        mlog(CRITICAL, "Error creating CcsdsPacketInterleaver: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -157,7 +157,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
     int num_inputs = processor->inQs.length();
     if(num_inputs <= 0)
     {
-        mlog(CRITICAL, "Must have at least one input\n");
+        mlog(CRITICAL, "Must have at least one input");
         return NULL;
     }
 
@@ -209,12 +209,12 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                         processor->inQs[i]->dereference(pkt_refs[i]);
                         inq_valid[i] = false;
                         num_valid--;
-                        mlog(CRITICAL, "Terminator received on %s (%d remaining)\n", processor->inQs[i]->getName(), num_valid);
+                        mlog(CRITICAL, "Terminator received on %s (%d remaining)", processor->inQs[i]->getName(), num_valid);
                     }
                 }
                 else if(status != MsgQ::STATE_TIMEOUT)
                 {
-                    mlog(CRITICAL, "Failed to read from input queue %s: %d\n", processor->inQs[i]->getName(), status);
+                    mlog(CRITICAL, "Failed to read from input queue %s: %d", processor->inQs[i]->getName(), status);
                     inq_valid[i] = false;
                     num_valid--;
                 }
@@ -250,11 +250,11 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                 }
                 else if(status == MsgQ::STATE_TIMEOUT)
                 {
-                    mlog(WARNING, "Unexepected timeout in interleaver on %s\n", processor->outQ->getName());
+                    mlog(WARNING, "Unexepected timeout in interleaver on %s", processor->outQ->getName());
                 }
                 else
                 {
-                    mlog(CRITICAL, "Failed to post to %s... exiting interleaver!\n", processor->outQ->getName());
+                    mlog(CRITICAL, "Failed to post to %s... exiting interleaver!", processor->outQ->getName());
                     processor->active = false;
                 }
             }
@@ -307,7 +307,7 @@ int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting start time: %s\n", e.what());
+        mlog(CRITICAL, "Error setting start time: %s", e.what());
     }
 
     /* Return Status */
@@ -341,7 +341,7 @@ int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting stop time: %s\n", e.what());
+        mlog(CRITICAL, "Error setting stop time: %s", e.what());
     }
 
     /* Return Status */

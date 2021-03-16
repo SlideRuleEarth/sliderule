@@ -72,7 +72,7 @@ int ProgressMessager::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating ProgressMessager: %s\n", e.what());
+        mlog(CRITICAL, "Error creating ProgressMessager: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -85,7 +85,7 @@ void ProgressMessager::init (void)
     RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, sizeof(progress_message_t), rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t), 16);
     if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d\n", rec_type, rc);
+        mlog(CRITICAL, "Failed to define %s: %d", rec_type, rc);
     }
 }
 
@@ -143,7 +143,7 @@ int ProgressMessager::luaPost (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error posting message: %s\n", e.what());
+        mlog(CRITICAL, "Error posting message: %s", e.what());
     }
 
     /* Return Status */

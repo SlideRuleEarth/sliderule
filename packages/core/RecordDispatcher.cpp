@@ -79,7 +79,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         calcFunc_t  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
-            throw RunTimeException("Invalid key mode specified: %s\n", key_mode_str);
+            throw RunTimeException("Invalid key mode specified: %s", key_mode_str);
         }
         else if(key_mode == FIELD_KEY_MODE)
         {
@@ -99,13 +99,13 @@ int RecordDispatcher::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
     catch(std::out_of_range& e)
     {
         (void)e;
-        mlog(CRITICAL, "Invalid calculation function provided - no handler installed\n");
+        mlog(CRITICAL, "Invalid calculation function provided - no handler installed");
         return returnLuaStatus(L, false);
     }
 }
@@ -237,7 +237,7 @@ int RecordDispatcher::luaRun(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error starting dispatcher: %s\n", e.what());
+        mlog(CRITICAL, "Error starting dispatcher: %s", e.what());
     }
 
     /* Return Status */
@@ -328,7 +328,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error attaching dispatch: %s\n", e.what());
+        mlog(CRITICAL, "Error attaching dispatch: %s", e.what());
     }
 
     /* Return Status */
@@ -355,7 +355,7 @@ int RecordDispatcher::luaClearError(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error clearing errors: %s\n", e.what());
+        mlog(CRITICAL, "Error clearing errors: %s", e.what());
     }
 
     /* Return Status */
@@ -382,7 +382,7 @@ int RecordDispatcher::luaDrain (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error draining input stream: %s\n", e.what());
+        mlog(CRITICAL, "Error draining input stream: %s", e.what());
     }
 
     /* Return Status */
@@ -427,7 +427,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
                     {
                         int num_newlines = len / 16 + 3;
                         char* msg_str = new char[len * 2 + num_newlines + 1];
-                        mlog(CRITICAL, "%s unable to create record from message: %s\n", dispatcher->ObjectType, e.what());
+                        mlog(CRITICAL, "%s unable to create record from message: %s", dispatcher->ObjectType, e.what());
                         int msg_index = 0;
                         for(int i = 0; i < len; i++)
                         {
@@ -446,7 +446,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
             else
             {
                 /* Terminating Message */
-                mlog(INFO, "Terminator received on %s, exiting dispatcher\n", dispatcher->inQ->getName());
+                mlog(INFO, "Terminator received on %s, exiting dispatcher", dispatcher->inQ->getName());
                 dispatcher->dispatcherActive = false; // breaks out of loop
             }
 
@@ -466,7 +466,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         else
         {
             /* Break Out on Failure */
-            mlog(CRITICAL, "Failed queue receive on %s with error %d\n", dispatcher->inQ->getName(), recv_status);
+            mlog(CRITICAL, "Failed queue receive on %s with error %d", dispatcher->inQ->getName(), recv_status);
             dispatcher->dispatcherActive = false; // breaks out of loop
         }
     }
@@ -486,7 +486,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
                 {
                     if(!dispatch.list[d]->processTermination())
                     {
-                        mlog(ERROR, "Failed to process termination on %s for %s\n", key, dispatch.list[d]->getName());
+                        mlog(ERROR, "Failed to process termination on %s for %s", key, dispatch.list[d]->getName());
                     }
                 }
                 key = dispatcher->dispatchTable.next(&dispatch);

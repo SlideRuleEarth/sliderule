@@ -67,7 +67,7 @@ int CaptureDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -209,7 +209,7 @@ int CaptureDispatch::luaCapture (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error capturing: %s\n", e.what());
+        mlog(CRITICAL, "Error capturing: %s", e.what());
     }
 
     /* Return Status */
@@ -240,7 +240,7 @@ int CaptureDispatch::luaClear (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error removing all captures: %s\n", e.what());
+        mlog(CRITICAL, "Error removing all captures: %s", e.what());
     }
 
     /* Return Status */
@@ -279,7 +279,7 @@ int CaptureDispatch::luaRemove (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error removing capture: %s\n", e.what());
+        mlog(CRITICAL, "Error removing capture: %s", e.what());
     }
 
     /* Return Status */

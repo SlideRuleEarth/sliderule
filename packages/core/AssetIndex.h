@@ -271,7 +271,7 @@ int AssetIndex<T>::luaAdd (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error adding: %s\n", e.what());
+        mlog(CRITICAL, "Error adding: %s", e.what());
     }
 
     /* Return Status */
@@ -316,7 +316,7 @@ int AssetIndex<T>::luaQuery (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error querying: %s\n", e.what());
+        mlog(CRITICAL, "Error querying: %s", e.what());
     }
 
     /* Return Status */
@@ -344,7 +344,7 @@ int AssetIndex<T>::luaDisplay (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error displaying: %s\n", e.what());
+        mlog(CRITICAL, "Error displaying: %s", e.what());
     }
 
     /* Return Status */

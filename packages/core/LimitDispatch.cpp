@@ -76,7 +76,7 @@ int LimitDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -156,14 +156,14 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key)
                 if(gmtDisplay)
                 {
                     TimeLib::gmt_time_t index_time = TimeLib::gps2gmttime(key);
-                    mlog(logLevel, "Limit violation for %s - %s(%ld): %lf violates %s: [%lf, %lf] at %d:%d:%d:%d:%d:%d\n",
+                    mlog(logLevel, "Limit violation for %s - %s(%ld): %lf violates %s: [%lf, %lf] at %d:%d:%d:%d:%d:%d",
                             limit.field_name, violation.limit->record_name, record->getRecordId(),
                             violation.limit->d_val, ObjectType, limit.d_min, limit.d_max,
                             index_time.year, index_time.day, index_time.hour, index_time.minute, index_time.second, index_time.millisecond);
                 }
                 else
                 {
-                    mlog(logLevel, "Limit violation for %s - %s(%ld): %lf violates %s: [%lf, %lf]\n",
+                    mlog(logLevel, "Limit violation for %s - %s(%ld): %lf violates %s: [%lf, %lf]",
                             limit.field_name, violation.limit->record_name, record->getRecordId(),
                             violation.limit->d_val, ObjectType, limit.d_min, limit.d_max);
                 }
@@ -188,7 +188,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key)
         else if(inError == false)
         {
             inError = true;
-            mlog(WARNING, "Failed to find field %s in record %s\n", limit.field_name, record->getRecordType());
+            mlog(WARNING, "Failed to find field %s in record %s", limit.field_name, record->getRecordType());
         }
     }
 
@@ -218,7 +218,7 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting level: %s\n", e.what());
+        mlog(CRITICAL, "Error setting level: %s", e.what());
     }
 
     /* Return Status */
@@ -242,7 +242,7 @@ int LimitDispatch::luaGMTDisplay(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring GMT display: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring GMT display: %s", e.what());
     }
 
     /* Return Status */

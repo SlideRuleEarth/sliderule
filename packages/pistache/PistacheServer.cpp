@@ -78,7 +78,7 @@ int PistacheServer::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -158,7 +158,7 @@ PistacheServer::~PistacheServer(void)
     active = false;
     delete serverPid;
 
-    mlog(CRITICAL, "Shutting down HTTP endpoints on port %s\n", httpEndpoint->getPort().toString().c_str());
+    mlog(CRITICAL, "Shutting down HTTP endpoints on port %s", httpEndpoint->getPort().toString().c_str());
     httpEndpoint->shutdown();
 }
 
@@ -178,7 +178,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     uint32_t trace_id = start_trace(CRITICAL, traceId, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
+    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());
@@ -203,7 +203,7 @@ void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWr
     uint32_t trace_id = start_trace(CRITICAL, traceId, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
+    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());
@@ -234,7 +234,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     uint32_t trace_id = start_trace(CRITICAL, traceId, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
+    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());
@@ -286,7 +286,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     uint32_t trace_id = start_trace(CRITICAL, traceId, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s\n", id_str, request.resource().c_str());
+    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());
@@ -333,7 +333,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
         }
         else
         {
-            mlog(CRITICAL, "%s error streaming data: %d\n", id_str, status);
+            mlog(CRITICAL, "%s error streaming data: %d", id_str, status);
             break;
         }
     }
@@ -360,7 +360,7 @@ void* PistacheServer::serverThread (void* parm)
     }
     catch(const std::exception& e)
     {
-        mlog(CRITICAL, "Failed to start server thread for %s: %s\n", server->getName(), e.what());
+        mlog(CRITICAL, "Failed to start server thread for %s: %s", server->getName(), e.what());
     }
 
     return NULL;
@@ -421,7 +421,7 @@ int PistacheServer::luaRoute(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error binding route: %s\n", e.what());
+        mlog(CRITICAL, "Error binding route: %s", e.what());
     }
 
     /* Return Status */

@@ -69,7 +69,7 @@ int UdpSocket::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating UdpSocket: %s\n", e.what());
+        mlog(CRITICAL, "Error creating UdpSocket: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }

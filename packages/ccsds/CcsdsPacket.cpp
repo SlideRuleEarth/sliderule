@@ -277,7 +277,7 @@ int CcsdsSpacePacket::getLEN(void) const
     int len = (buffer[4] << 8) + (buffer[5] + 7);
     if(max_pkt_len > 0)
     {
-        if(len > max_pkt_len) mlog(WARNING, "out of bounds packet size detected: %d > %d\n", len, max_pkt_len);
+        if(len > max_pkt_len) mlog(WARNING, "out of bounds packet size detected: %d > %d", len, max_pkt_len);
         return MAX(MIN(len, max_pkt_len), 0);
     }
     else
@@ -309,7 +309,7 @@ int CcsdsSpacePacket::getFunctionCode(void) const
     }
     else
     {
-        mlog(ERROR, "function code not present in packet %04X\n", getAPID());
+        mlog(ERROR, "function code not present in packet %04X", getAPID());
         return CCSDS_ERROR;
     }
 }
@@ -328,7 +328,7 @@ bool CcsdsSpacePacket::setFunctionCode(uint8_t value)
     }
     else
     {
-        mlog(ERROR, "function code not present in packet %04X\n", getAPID());
+        mlog(ERROR, "function code not present in packet %04X", getAPID());
         return false;
     }
 }
@@ -346,7 +346,7 @@ int CcsdsSpacePacket::getChecksum(void) const
     }
     else
     {
-        mlog(ERROR, "checksum not present in packet %04X\n", getAPID());
+        mlog(ERROR, "checksum not present in packet %04X", getAPID());
         return CCSDS_ERROR;
     }
 }
@@ -365,7 +365,7 @@ bool CcsdsSpacePacket::setChecksum(uint8_t value)
     }
     else
     {
-        mlog(ERROR, "checksum not present in packet %04X\n", getAPID());
+        mlog(ERROR, "checksum not present in packet %04X", getAPID());
         return false;
     }
 }
@@ -387,7 +387,7 @@ int CcsdsSpacePacket::getCdsDays(void) const
     }
     else
     {
-        mlog(ERROR, "timestamp not present in packet %04X\n", getAPID());
+        mlog(ERROR, "timestamp not present in packet %04X", getAPID());
         return CCSDS_ERROR;
     }
 }
@@ -405,7 +405,7 @@ bool CcsdsSpacePacket::setCdsDays(uint16_t days)
     }
     else
     {
-        mlog(ERROR, "timestamp not present in packet %04X\n", getAPID());
+        mlog(ERROR, "timestamp not present in packet %04X", getAPID());
         return false;
     }
 }
@@ -431,7 +431,7 @@ long CcsdsSpacePacket::getCdsMsecs(void) const
     }
     else
     {
-        mlog(ERROR, "timestamp not present in packet %04X\n", getAPID());
+        mlog(ERROR, "timestamp not present in packet %04X", getAPID());
         return CCSDS_ERROR;
     }
 }
@@ -451,7 +451,7 @@ bool CcsdsSpacePacket::setCdsMsecs(uint32_t msecs)
     }
     else
     {
-        mlog(ERROR, "timestamp not present in packet %04X\n", getAPID());
+        mlog(ERROR, "timestamp not present in packet %04X", getAPID());
         return false;
     }
 }
@@ -653,7 +653,7 @@ int CcsdsSpacePacket::appendStream(unsigned char* bytes, int len)
         }
         else
         {
-            mlog(CRITICAL, "Packet too large! %d\n", stream_left + hdr_bytes_copied);
+            mlog(CRITICAL, "Packet too large! %d", stream_left + hdr_bytes_copied);
             return CCSDS_LEN_ERROR;
         }
     }
@@ -1019,7 +1019,7 @@ int CcsdsEncapPacket::appendStream(unsigned char* bytes, int len)
         }
         else
         {
-            mlog(CRITICAL, "Packet size mismatch! %d\n", stream_left + hdr_bytes_copied + len_bytes_copied);
+            mlog(CRITICAL, "Packet size mismatch! %d", stream_left + hdr_bytes_copied + len_bytes_copied);
             return CCSDS_LEN_ERROR;
         }
     }

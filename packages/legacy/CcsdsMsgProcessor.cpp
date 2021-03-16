@@ -195,7 +195,7 @@ void* CcsdsMsgProcessor::processorThread(void* parm)
         /* Check Status */
         if (!success)
         {
-            mlog(CRITICAL, "Fatal error detected in %s, exiting processor\n", processor->getName());
+            mlog(CRITICAL, "Fatal error detected in %s, exiting processor", processor->getName());
             self_delete = true;
         }
     }

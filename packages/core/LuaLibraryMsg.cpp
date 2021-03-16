@@ -194,7 +194,7 @@ RecordObject* LuaLibraryMsg::populateRecord (const char* population_string)
     catch (const RunTimeException& e)
     {
         if(record) delete record;
-        mlog(ERROR, "could not locate record definition for %s: %s\n", population_string, e.what());
+        mlog(ERROR, "could not locate record definition for %s: %s", population_string, e.what());
     }
 
     return record;
@@ -222,7 +222,7 @@ RecordObject* LuaLibraryMsg::associateRecord (const char* recclass, unsigned cha
     catch (const RunTimeException& e)
     {
         if(record) delete record;
-        mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
+        mlog(ERROR, "could not locate record definition for %s: %s", recclass, e.what());
     }
 
     return record;
@@ -405,7 +405,7 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
     if(size > 0) status = msg_data->pub->postCopy(buffer, size);
     if(status <= 0) // if size check fails above, then status will remain zero
     {
-        mlog(CRITICAL, "Failed to post record %s to %s with error code %d\n", record->getRecordType(), msg_data->pub->getName(), status);
+        mlog(CRITICAL, "Failed to post record %s to %s with error code %d", record->getRecordType(), msg_data->pub->getName(), status);
     }
 
     /* Clean Up and Return Status */
@@ -432,7 +432,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     /* Check Event Level */
     if(lvl == INVALID_EVENT_LEVEL)
     {
-        mlog(CRITICAL, "Invalid event level: %d\n", lvl);
+        mlog(CRITICAL, "Invalid event level: %d", lvl);
         return 0;        
     }
 
@@ -441,7 +441,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     const char* str = lua_tolstring(L, 3, &len);
     if(len <= 0)
     {
-        mlog(CRITICAL, "Invalid length of message: %ld\n", len);
+        mlog(CRITICAL, "Invalid length of message: %ld", len);
         return 0;
     }
 
@@ -551,7 +551,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
             }
             catch (const RunTimeException& e)
             {
-                mlog(ERROR, "could not locate record definition for %s: %s\n", recclass, e.what());
+                mlog(ERROR, "could not locate record definition for %s: %s", recclass, e.what());
             }
         }
         else
@@ -573,7 +573,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
         }
         else
         {
-            mlog(WARNING, "Unable to create record object: %s\n", recclass);
+            mlog(WARNING, "Unable to create record object: %s", recclass);
             lua_pushnil(L); // for record
         }
     }

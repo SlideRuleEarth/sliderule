@@ -87,14 +87,14 @@ int ReportDispatch::luaCreate (lua_State* L)
         format_t file_format = str2format(format_str);
         if(file_format == INVALID_FORMAT)
         {
-            mlog(CRITICAL, "Invalid file format provided: %s\n", format_str);
+            mlog(CRITICAL, "Invalid file format provided: %s", format_str);
             throw RunTimeException("parameter error");
         }
 
         /* Check Buffer Size */
         if(buffer_size < 0)
         {
-            mlog(CRITICAL, "Invalid size provided for buffer: %ld\n", buffer_size);
+            mlog(CRITICAL, "Invalid size provided for buffer: %ld", buffer_size);
             throw RunTimeException("parameter error");
         }
 
@@ -115,7 +115,7 @@ int ReportDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         num_results = returnLuaStatus(L, false);
     }
 
@@ -336,7 +336,7 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key)
     /* Sanity Check */
     if(!StringLib::match(record->getRecordType(), MetricRecord::rec_type))
     {
-        if(reportError) mlog(CRITICAL, "%s incorrect record type provided to report: %s\n", ObjectType, record->getRecordType());
+        if(reportError) mlog(CRITICAL, "%s incorrect record type provided to report: %s", ObjectType, record->getRecordType());
         reportError = false;
         return false;
     }
@@ -352,7 +352,7 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key)
     }
     catch(const RunTimeException& e)
     {
-        if(reportError) mlog(CRITICAL, "%s failed to retrieve fields of record %s: %s\n", ObjectType, MetricRecord::rec_type, e.what());
+        if(reportError) mlog(CRITICAL, "%s failed to retrieve fields of record %s: %s", ObjectType, MetricRecord::rec_type, e.what());
         reportError = false;
         return false;
     }
@@ -436,7 +436,7 @@ bool ReportDispatch::flushRow(void)
         int hdr_written = report.writeFileHeader();
         if(hdr_written < 0)
         {
-            if(reportError) mlog(CRITICAL, "%s failed to write file header\n", ObjectType);
+            if(reportError) mlog(CRITICAL, "%s failed to write file header", ObjectType);
             reportError = false;
             return false;
         }
@@ -446,7 +446,7 @@ bool ReportDispatch::flushRow(void)
     int row_written = report.writeFileData();
     if(row_written < 0)
     {
-        if(reportError) mlog(CRITICAL, "%s failed to write file data\n", ObjectType);
+        if(reportError) mlog(CRITICAL, "%s failed to write file data", ObjectType);
         reportError = false;
         return false;
     }
@@ -474,7 +474,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
         indexDisplay_t display = str2display(display_str);
         if(display == INVALID_DISPLAY)
         {
-            mlog(CRITICAL, "Invalid index display selected: %s\n", display_str);
+            mlog(CRITICAL, "Invalid index display selected: %s", display_str);
             throw RunTimeException("parameter error");
         }
 
@@ -486,7 +486,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring display: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring display: %s", e.what());
     }
 
     /* Return Status */
@@ -530,7 +530,7 @@ int ReportDispatch::luaFlushRow(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring display: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring display: %s", e.what());
     }
 
     /* Return Status */

@@ -65,7 +65,7 @@ int CcsdsPayloadDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -86,7 +86,7 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key)
         {
             if(record->getRecordDataSize() != ccsds_pkt.getLEN())
             {
-                mlog(ERROR, "Incorrect CCSDS packet length detected in %s, dropping packet\n", getName());
+                mlog(ERROR, "Incorrect CCSDS packet length detected in %s, dropping packet", getName());
                 return false;
             }
         }
@@ -98,7 +98,7 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key)
             {
                 if(!ccsds_pkt.validChecksum())
                 {
-                    mlog(ERROR, "Command checksum mismatch detected in %s, dropping packet\n", getName());
+                    mlog(ERROR, "Command checksum mismatch detected in %s, dropping packet", getName());
                     return false;
                 }
             }
@@ -115,7 +115,7 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key)
                 int status = outQ[apid]->postCopy(ccsds_pkt.getPayload(), ccsds_pkt.getLEN() - ccsds_pkt.getHdrSize());
                 if(status <= 0)
                 {
-                    mlog(ERROR, "Dropped payload on post to %s with error %d\n", outQ[apid]->getName(), status);
+                    mlog(ERROR, "Dropped payload on post to %s with error %d", outQ[apid]->getName(), status);
                     return false;
                 }
             }
@@ -124,7 +124,7 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key)
     }
     catch(std::invalid_argument& e)
     {
-        mlog(ERROR, "Unable to create CCSDS packet in %s: %s\n", getName(), e.what());
+        mlog(ERROR, "Unable to create CCSDS packet in %s: %s", getName(), e.what());
         return false;
     }
 
@@ -242,7 +242,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
         }
         else
         {
-            throw RunTimeException("invalid APID specified: %04X\n", (uint16_t)apid);
+            throw RunTimeException("invalid APID specified: %04X", (uint16_t)apid);
         }
 
         /* Set Success */
@@ -250,7 +250,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error forwarding packet: %s\n", e.what());
+        mlog(CRITICAL, "Error forwarding packet: %s", e.what());
     }
 
     /* Return Status */
@@ -280,7 +280,7 @@ int CcsdsPayloadDispatch::luaCheckLength(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring length check: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring length check: %s", e.what());
     }
 
     /* Return Status */
@@ -310,7 +310,7 @@ int CcsdsPayloadDispatch::luaCheckChecksum(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring checsum check: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring checsum check: %s", e.what());
     }
 
     /* Return Status */

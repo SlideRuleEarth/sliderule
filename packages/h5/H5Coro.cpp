@@ -292,7 +292,7 @@ void H5FileBuffer::ioOpen (const char* resource)
         ioKey = ioBucket;
         while(*ioKey != '\0' && *ioKey != '/') ioKey++;
         if(*ioKey == '/') *ioKey = '\0';
-        else throw RunTimeException("invalid S3 url: %s\n", resource);
+        else throw RunTimeException("invalid S3 url: %s", resource);
         ioKey++;
     }
     #endif
@@ -654,7 +654,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                     }
                     else if(metaData.chunkelements <= 0)
                     {
-                        throw RunTimeException("invalid number of chunk elements: %ld\n", (long)metaData.chunkelements);
+                        throw RunTimeException("invalid number of chunk elements: %ld", (long)metaData.chunkelements);
                     }
                 }
 
@@ -2416,7 +2416,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
         else
         {
-            throw RunTimeException("invalid filter specified: %d\n", (int)filter);
+            throw RunTimeException("invalid filter specified: %d", (int)filter);
         }
 
         /* Client Data */
@@ -2780,7 +2780,7 @@ int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
     {
         if(type_size < 0 || type_size > 8)
         {
-            throw RunTimeException("invalid data size to perform shuffle on: %d\n", type_size);
+            throw RunTimeException("invalid data size to perform shuffle on: %d", type_size);
         }
     }
 
@@ -2844,7 +2844,7 @@ void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* data
     /* Check URL Fits (at least 2 null terminators) */
     if(url[MAX_META_FILENAME - 2] != '\0')
     {
-        throw RunTimeException("truncated meta repository url: %s\n", url);
+        throw RunTimeException("truncated meta repository url: %s", url);
     }
 }
 
@@ -3070,7 +3070,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s\n", info.elements, info.datasize, url, datasetname);
+    mlog(INFO, "Lite-read %d elements (%d bytes) from %s %s", info.elements, info.datasize, url, datasetname);
 
     /* Return Info */
     return info;
@@ -3096,7 +3096,7 @@ bool H5Coro::traverse (const char* url, int max_depth, const char* start_group)
     }
     catch (const std::exception &e)
     {
-        mlog(CRITICAL, "Failed to traverse resource: %s\n", e.what());
+        mlog(CRITICAL, "Failed to traverse resource: %s", e.what());
     }
 
     /* Return Status */

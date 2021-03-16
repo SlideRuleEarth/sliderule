@@ -65,7 +65,7 @@ int MsgBridge::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -134,7 +134,7 @@ void* MsgBridge::bridgeThread(void* parm)
                     status = bridge->outQ->postCopy(msg, len, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) bridge from %s to %s... exiting!\n", status, bridge->inQ->getName(), bridge->outQ->getName());
+                        mlog(CRITICAL, "Failed (%d) bridge from %s to %s... exiting!", status, bridge->inQ->getName(), bridge->outQ->getName());
                         bridge->active = false;
                     }
                 }
@@ -142,7 +142,7 @@ void* MsgBridge::bridgeThread(void* parm)
             else
             {
                 /* Terminating Message */
-                mlog(INFO, "Terminator received on %s, exiting bridge\n", bridge->inQ->getName());
+                mlog(INFO, "Terminator received on %s, exiting bridge", bridge->inQ->getName());
                 bridge->active = false; // breaks out of loop
             }
 
@@ -152,7 +152,7 @@ void* MsgBridge::bridgeThread(void* parm)
         else if(recv_status != MsgQ::STATE_TIMEOUT)
         {
             /* Break Out on Failure */
-            mlog(CRITICAL, "Failed queue receive on %s with error %d\n", bridge->inQ->getName(), recv_status);
+            mlog(CRITICAL, "Failed queue receive on %s with error %d", bridge->inQ->getName(), recv_status);
             bridge->active = false; // breaks out of loop
         }
     }

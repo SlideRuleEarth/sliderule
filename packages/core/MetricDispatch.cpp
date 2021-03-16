@@ -84,7 +84,7 @@ int MetricDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -256,14 +256,14 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key)
                         status = outQ->postRef(sb.buffer, sb.size, SYS_TIMEOUT);
                         if(status < 0)
                         {
-                            mlog(CRITICAL, "Data dropped (%d) in post of serial buffer to output queue of %s\n", status, ObjectType);
+                            mlog(CRITICAL, "Data dropped (%d) in post of serial buffer to output queue of %s", status, ObjectType);
                             break;
                         }
                     }
                 }
                 else
                 {
-                    mlog(WARNING, "Unable to index into record %s with field %s\n", record->getRecordType(), dataField);
+                    mlog(WARNING, "Unable to index into record %s with field %s", record->getRecordType(), dataField);
                 }
             }
         }
@@ -289,7 +289,7 @@ int MetricDispatch::luaPlaybackSource(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback source: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring playback source: %s", e.what());
     }
 
     /* Return Status */
@@ -313,7 +313,7 @@ int MetricDispatch::luaPlaybackText(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback test; %s\n", e.what());
+        mlog(CRITICAL, "Error configuring playback test; %s", e.what());
     }
 
     /* Return Status */
@@ -337,7 +337,7 @@ int MetricDispatch::luaPlaybackName(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback name: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring playback name: %s", e.what());
     }
 
     /* Return Status */
@@ -368,17 +368,17 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
         else if(StringLib::find(offset_str, ':'))
         {
             lua_obj->keyOffset = (okey_t)TimeLib::str2gpstime(offset_str);
-            mlog(CRITICAL, "Setting key offset to: %lu\n", lua_obj->keyOffset);
+            mlog(CRITICAL, "Setting key offset to: %lu", lua_obj->keyOffset);
             status = true;
         }
         else if(!StringLib::str2ulong(offset_str, &lua_obj->keyOffset))
         {
-            mlog(CRITICAL, "Unable to set key offset to: %s\n", offset_str);
+            mlog(CRITICAL, "Unable to set key offset to: %s", offset_str);
         }
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting key offset: %s\n", e.what());
+        mlog(CRITICAL, "Error setting key offset: %s", e.what());
     }
 
     /* Return Status */
@@ -410,11 +410,11 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         else if(StringLib::find(min_str, ':'))
         {
             min_key = (okey_t)TimeLib::str2gpstime(min_str);
-            mlog(CRITICAL, "Setting minimum key to: %lu\n", min_key);
+            mlog(CRITICAL, "Setting minimum key to: %lu", min_key);
         }
         else if(!StringLib::str2ulong(min_str, &min_key))
         {
-            mlog(CRITICAL, "Unable to set minimum key to: %s\n", min_str);
+            mlog(CRITICAL, "Unable to set minimum key to: %s", min_str);
             status = false;
         }
 
@@ -427,11 +427,11 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
         else if(StringLib::find(max_str, ':'))
         {
             max_key = (okey_t)TimeLib::str2gpstime(max_str);
-            mlog(CRITICAL, "Setting maximum key to: %lu\n", max_key);
+            mlog(CRITICAL, "Setting maximum key to: %lu", max_key);
         }
         else if(!StringLib::str2ulong(max_str, &max_key))
         {
-            mlog(CRITICAL, "Unable to set maximum key to: %s\n", max_str);
+            mlog(CRITICAL, "Unable to set maximum key to: %s", max_str);
             status = false;
         }
 
@@ -444,7 +444,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting key range: %s\n", e.what());
+        mlog(CRITICAL, "Error setting key range: %s", e.what());
     }
 
     /* Return Status */
@@ -490,7 +490,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
             status = lua_obj->fieldFilter->add(field_name, value);
             if(!status)
             {
-                mlog(CRITICAL, "Failed to add filter on %s to dictionary from %s!\n", field_name, lua_obj->ObjectType);
+                mlog(CRITICAL, "Failed to add filter on %s to dictionary from %s!", field_name, lua_obj->ObjectType);
                 delete value;
             }
         }
@@ -498,7 +498,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error adding filter: %s\n", e.what());
+        mlog(CRITICAL, "Error adding filter: %s", e.what());
     }
 
     /* Return Status */

@@ -65,7 +65,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         calcFunc_t  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
-            throw RunTimeException("Invalid key mode specified: %s\n", key_mode_str);
+            throw RunTimeException("Invalid key mode specified: %s", key_mode_str);
         }
         else if(key_mode == FIELD_KEY_MODE)
         {
@@ -82,13 +82,13 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
     catch(std::out_of_range& e)
     {
         (void)e;
-        mlog(CRITICAL, "Invalid calculation function provided - no handler installed\n");
+        mlog(CRITICAL, "Invalid calculation function provided - no handler installed");
         return returnLuaStatus(L, false);
     }
 }

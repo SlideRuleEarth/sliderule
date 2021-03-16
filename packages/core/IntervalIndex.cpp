@@ -73,7 +73,7 @@ int IntervalIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -200,7 +200,7 @@ intervalspan_t IntervalIndex::attr2span (Dictionary<double>* attr, bool* provide
     }
     catch(std::out_of_range& e)
     {
-        mlog(CRITICAL, "Failed to index asset: %s\n", e.what());
+        mlog(CRITICAL, "Failed to index asset: %s", e.what());
     }
 
     if(provided)

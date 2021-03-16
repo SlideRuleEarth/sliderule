@@ -310,7 +310,7 @@ void* StatisticRecord<T>::telemetryThread(void* parm)
                 bool status = procstat->post();
                 if(status != true)
                 {
-                    mlog(DEBUG, "Unable to post %s telemetry!\n", procstat->getName());
+                    mlog(DEBUG, "Unable to post %s telemetry!", procstat->getName());
                 }
             }
         }
@@ -341,7 +341,7 @@ int StatisticRecord<T>::attachCmd(int argc, char argv[][MAX_CMD_SIZE])
 
     if(outQ != NULL)
     {
-        mlog(CRITICAL, "Statistic output already attached to %s\n", outQ->getName());
+        mlog(CRITICAL, "Statistic output already attached to %s", outQ->getName());
         return -1;
     }
 
@@ -365,7 +365,7 @@ int StatisticRecord<T>::clearCmd(int argc, char argv[][MAX_CMD_SIZE])
     clear_t clear = StatisticRecord<T>::str2clear(argv[0]);
     if(clear == CLEAR_UNKNOWN)
     {
-        mlog(CRITICAL, "Invalid parameter passed to clear command: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid parameter passed to clear command: %s", argv[0]);
         return -1;
     }
 
@@ -389,12 +389,12 @@ int StatisticRecord<T>::setRateCmd(int argc, char argv[][MAX_CMD_SIZE])
     long wait_seconds = 0;
     if(!StringLib::str2long(wait_str, &wait_seconds))
     {
-        mlog(CRITICAL, "Invalid wait time supplied: %s\n", wait_str);
+        mlog(CRITICAL, "Invalid wait time supplied: %s", wait_str);
         return -1;
     }
     else if(wait_seconds <= 0)
     {
-        mlog(CRITICAL, "Wait time must be greater than zero: %ld\n", wait_seconds);
+        mlog(CRITICAL, "Wait time must be greater than zero: %ld", wait_seconds);
         return -1;
     }
     else

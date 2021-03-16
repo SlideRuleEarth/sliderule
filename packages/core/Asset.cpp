@@ -75,7 +75,7 @@ int Asset::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -187,7 +187,7 @@ int Asset::luaInfo (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error retrieving asset: %s\n", e.what());
+        mlog(CRITICAL, "Error retrieving asset: %s", e.what());
     }
 
     /* Return Status */
@@ -230,12 +230,12 @@ int Asset::luaLoad (lua_State* L)
             {
                 if(!resource.attributes.add(key, value, true))
                 {
-                    mlog(CRITICAL, "Failed to populate duplicate attribute %s for resource %s\n", key, resource_name);
+                    mlog(CRITICAL, "Failed to populate duplicate attribute %s for resource %s", key, resource_name);
                 }
             }
             else
             {
-                mlog(DEBUG, "Unable to populate attribute %s for resource %s\n", key, resource_name);
+                mlog(DEBUG, "Unable to populate attribute %s for resource %s", key, resource_name);
             }
 
             lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration
@@ -249,7 +249,7 @@ int Asset::luaLoad (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error loading resource: %s\n", e.what());
+        mlog(CRITICAL, "Error loading resource: %s", e.what());
     }
 
     /* Return Status */

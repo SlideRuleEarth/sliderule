@@ -36,6 +36,7 @@
 #include "RecordObject.h"
 #include "StringLib.h"
 #include "OsApi.h"
+#include "EventLib.h"
 #include "Dictionary.h"
 
 #include <math.h>
@@ -1319,7 +1320,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     char* div = StringLib::find(&pstr[1], '(');
     if(div == NULL)
     {
-        dlog("Missing leading parenthesis in %s\n", str);
+        mlog(CRITICAL, "Missing leading parenthesis in %s", str);
         return retfield;
     }
 
@@ -1329,7 +1330,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     fieldType_t type = str2ft(type_str);
     if(type == INVALID_FIELD)
     {
-        dlog("Invalid field type: %s\n", type_str);
+        mlog(CRITICAL, "Invalid field type: %s", type_str);
         return retfield;
     }
     f.type = type;
@@ -1343,7 +1344,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     div = StringLib::find(offset_str, ',');
     if(div == NULL)
     {
-        dlog("Missing first comma in %s\n", str);
+        mlog(CRITICAL, "Missing first comma in %s", str);
         return retfield;
     }
     *div = '\0';
@@ -1354,7 +1355,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     }
     else
     {
-        dlog("Invalid offset: %s\n", offset_str);
+        mlog(CRITICAL, "Invalid offset: %s", offset_str);
         return retfield;
     }
 
@@ -1363,7 +1364,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     div = StringLib::find(size_str, ',');
     if(div == NULL)
     {
-        dlog("Missing second comma in %s\n", str);
+        mlog(CRITICAL, "Missing second comma in %s", str);
         return retfield;
     }
     *div = '\0';
@@ -1374,7 +1375,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     }
     else
     {
-        dlog("Invalid size: %s\n", size_str);
+        mlog(CRITICAL, "Invalid size: %s", size_str);
         return retfield;
     }
 
@@ -1382,7 +1383,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     div += 2;
     if(*div != ')')
     {
-        dlog("Missing trailing parenthesis in %s (%c)\n", str, *div);
+        mlog(CRITICAL, "Missing trailing parenthesis in %s (%c)", str, *div);
         return retfield;
     }
 
@@ -1462,7 +1463,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         // Check Offset
         if(f.offset == 0 && !allow_null)
         {
-            throw RunTimeException("Attempted to dereference null pointer field!\n");
+            throw RunTimeException("Attempted to dereference null pointer field!");
         }
         else if(f.offset > ((memoryAllocated - recordDefinition->type_size) * 8))
         {
@@ -1562,13 +1563,13 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     }
     catch(const RunTimeException& e)
     {
-        dlog("Failed to parse field %s: %s\n", field_name, e.what());
+        mlog(CRITICAL, "Failed to parse field %s: %s", field_name, e.what());
     }
     catch(const std::out_of_range& e)
     {
         if(field_name)
         {
-            dlog("Failed to find subrecord definition for field %s\n", field_name);
+            mlog(CRITICAL, "Failed to find subrecord definition for field %s", field_name);
         }
     }
 

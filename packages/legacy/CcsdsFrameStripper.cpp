@@ -64,13 +64,13 @@ CommandableObject* CcsdsFrameStripper::createObject(CommandProcessor* cmd_proc, 
 
     if(inq_name == NULL)
     {
-        mlog(CRITICAL, "Must supply a input queue name\n");
+        mlog(CRITICAL, "Must supply a input queue name");
         return NULL;
     }
 
     if(outq_name == NULL)
     {
-        mlog(CRITICAL, "Must supply a output queue name\n");
+        mlog(CRITICAL, "Must supply a output queue name");
         return NULL;
     }
 
@@ -81,12 +81,12 @@ CommandableObject* CcsdsFrameStripper::createObject(CommandProcessor* cmd_proc, 
         sync_size = (int)StringLib::size(sync_str);
         if(sync_size <= 0 || sync_size % 2 != 0)
         {
-            mlog(CRITICAL, "Sync marker is an invalid length: %d\n", sync_size);
+            mlog(CRITICAL, "Sync marker is an invalid length: %d", sync_size);
             return NULL;
         }
         else if(sync_size > MAX_STR_SIZE)
         {
-            mlog(CRITICAL, "Sync marker is too long: %d\n", sync_size);
+            mlog(CRITICAL, "Sync marker is too long: %d", sync_size);
             return NULL;
         }
         sync_size /= 2;
@@ -100,7 +100,7 @@ CommandableObject* CcsdsFrameStripper::createObject(CommandProcessor* cmd_proc, 
             unsigned long val;
             if(!StringLib::str2ulong(numstr, &val))
             {
-                mlog(CRITICAL, "Unable to parse sync marker at %d: %s\n", i, numstr);
+                mlog(CRITICAL, "Unable to parse sync marker at %d: %s", i, numstr);
                 return NULL;
             }
 
@@ -111,14 +111,14 @@ CommandableObject* CcsdsFrameStripper::createObject(CommandProcessor* cmd_proc, 
     unsigned long strip_size;
     if(!StringLib::str2ulong(strip_str, &strip_size))
     {
-        mlog(CRITICAL, "Error: invalid strip size: %s\n", strip_str);
+        mlog(CRITICAL, "Error: invalid strip size: %s", strip_str);
         return NULL;
     }
 
     long fixed_size;
     if(!StringLib::str2long(fixed_str, &fixed_size))
     {
-        mlog(CRITICAL, "Unable to parse fixed frame size: %s\n", fixed_str);
+        mlog(CRITICAL, "Unable to parse fixed frame size: %s", fixed_str);
         return NULL;
     }
 
@@ -216,7 +216,7 @@ bool CcsdsFrameStripper::processMsg (unsigned char* msg, int bytes)
                     syncIndex = 0;
                     if(inSync)
                     {
-                        mlog(CRITICAL, "Lost sync in processing frames in %s\n", getName());
+                        mlog(CRITICAL, "Lost sync in processing frames in %s", getName());
                         inSync = false;
                     }
                 }
@@ -228,7 +228,7 @@ bool CcsdsFrameStripper::processMsg (unsigned char* msg, int bytes)
                         syncIndex = 0;
                         if(!inSync)
                         {
-                            mlog(CRITICAL, "Synchronization of frames acquired in %s\n", getName());
+                            mlog(CRITICAL, "Synchronization of frames acquired in %s", getName());
                             inSync = true;
                         }
 
@@ -265,7 +265,7 @@ bool CcsdsFrameStripper::processMsg (unsigned char* msg, int bytes)
             int status = pubQ->postCopy(frameBuffer, FrameFixedSize, SYS_TIMEOUT);
             if(status <= 0)
             {
-                mlog(CRITICAL, "Frame unable to be posted[%d] to output stream %s\n", status, pubQ->getName());
+                mlog(CRITICAL, "Frame unable to be posted[%d] to output stream %s", status, pubQ->getName());
             }
 
             /* Goto Initial State */

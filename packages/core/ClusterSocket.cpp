@@ -83,7 +83,7 @@ int ClusterSocket::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating ClusterSocket: %s\n", e.what());
+        mlog(CRITICAL, "Error creating ClusterSocket: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -215,7 +215,7 @@ void* ClusterSocket::connectionThread(void* parm)
     if(s->is_server) SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
     else             SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
 
-    if(status < 0)   dlog("Failed to establish cluster %s socket on %s:%d (%d)\n", s->is_server ? "server" : "client", s->getIpAddr(), s->getPort(), status);
+    if(status < 0)   mlog(CRITICAL, "Failed to establish cluster %s socket on %s:%d (%d)", s->is_server ? "server" : "client", s->getIpAddr(), s->getPort(), status);
 
     return NULL;
 }
@@ -245,7 +245,7 @@ int ClusterSocket::pollHandler(int fd, short* events, void* parm)
     /* Check Spinning */
     if(s->spin_block)
     {
-        mlog(WARNING, "Executing spin block for cluster socket<%d> %s:%d\n", s->role, s->getIpAddr(), s->getPort());
+        mlog(WARNING, "Executing spin block for cluster socket<%d> %s:%d", s->role, s->getIpAddr(), s->getPort());
         LocalLib::sleep(1);
     }
     else
@@ -324,7 +324,7 @@ int ClusterSocket::onRead(int fd)
     }
     catch(std::out_of_range& e)
     {
-        dlog("Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s\n", getIpAddr(), getPort(), fd, e.what());
+        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
     }
 
@@ -456,7 +456,7 @@ int ClusterSocket::onWrite(int fd)
     }
     catch(std::out_of_range& e)
     {
-        dlog("Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s\n", getIpAddr(), getPort(), fd, e.what());
+        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
     }
 
@@ -504,7 +504,7 @@ int ClusterSocket::onAlive(int fd)
                         }
                         else
                         {
-                            dlog("Cluster socket on %s:%d attempted to read message of invalid size %u\n", getIpAddr(), getPort(), connection->payload_size);
+                            mlog(CRITICAL, "Cluster socket on %s:%d attempted to read message of invalid size %u", getIpAddr(), getPort(), connection->payload_size);
                             connection->payload_size = 0;
                             return -1; // error... will cause connection to disconnect
                         }
@@ -538,7 +538,7 @@ int ClusterSocket::onAlive(int fd)
                             // If metering is working correctly, then this message should never come out.
                             // A timed out post indicates a full queue.  If the reader is able to send the
                             // meter to the writer, it then would indicate not to send anymore data.
-                            dlog("Cluster socket timed out on post to %s\n", pubsockq->getName());
+                            mlog(CRITICAL, "Cluster socket timed out on post to %s", pubsockq->getName());
                             break; // exit loop to allow other processing to continue
                         }
                     }
@@ -548,7 +548,7 @@ int ClusterSocket::onAlive(int fd)
     }
     catch(std::out_of_range& e)
     {
-        dlog("Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s\n", getIpAddr(), getPort(), fd, e.what());
+        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
     }
 
@@ -574,7 +574,7 @@ int ClusterSocket::onConnect(int fd)
         /* Add to Read Connections */
         if(!read_connections.add(fd, connection, false))
         {
-            dlog("Cluster socket failed to register file descriptor for read connection due to duplicate entry\n");
+            mlog(CRITICAL, "Cluster socket failed to register file descriptor for read connection due to duplicate entry");
             status = -1;
         }
     }
@@ -597,7 +597,7 @@ int ClusterSocket::onConnect(int fd)
         /* Add to Write Connections */
         if(!write_connections.add(fd, connection, false))
         {
-            dlog("Cluster socket failed to register file descriptor for read connection due to duplicate entry\n");
+            mlog(CRITICAL, "Cluster socket failed to register file descriptor for read connection due to duplicate entry");
             if(role == WRITER && protocol == BUS) delete connection->subconnq;
             status = -1;
         }
@@ -628,7 +628,7 @@ int ClusterSocket::onDisconnect(int fd)
             delete connection;
             if(!read_connections.remove(fd))
             {
-                dlog("Cluster socket on %s:%d failed to remove connection information for reader file descriptor %d\n", getIpAddr(), getPort(), fd);
+                mlog(CRITICAL, "Cluster socket on %s:%d failed to remove connection information for reader file descriptor %d", getIpAddr(), getPort(), fd);
                 status = -1;
             }
         }
@@ -639,7 +639,7 @@ int ClusterSocket::onDisconnect(int fd)
             delete connection;
             if(!write_connections.remove(fd))
             {
-                dlog("Cluster socket on %s:%d failed to remove connection information for writer file descriptor %d\n", getIpAddr(), getPort(), fd);
+                mlog(CRITICAL, "Cluster socket on %s:%d failed to remove connection information for writer file descriptor %d", getIpAddr(), getPort(), fd);
                 status = -1;
             }
         }
@@ -647,7 +647,7 @@ int ClusterSocket::onDisconnect(int fd)
     }
     catch(std::out_of_range& e)
     {
-        dlog("Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s\n", getIpAddr(), getPort(), fd, e.what());
+        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         status = -1;
     }
 

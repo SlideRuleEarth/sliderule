@@ -121,7 +121,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
     }
     else
     {
-        dlog("Unable to create timer... exceeded available signals!\n");
+        dlog("Unable to create timer... exceeded available signals!");
         throw RunTimeException("unable to create timer");
     }
 }

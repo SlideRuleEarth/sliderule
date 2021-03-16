@@ -89,8 +89,8 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
-    mlog(RAW, "SlideRule Version: %s\n\n", BINID);
-    mlog(RAW, "Build Information: %s\n\n", BUILDINFO);
+    mlog(RAW, "SlideRule Version: %s\n", BINID);
+    mlog(RAW, "Build Information: %s\n", BUILDINFO);
 
     /* Return Version String to Lua */
     lua_pushstring(L, BINID);
@@ -135,7 +135,7 @@ int LuaLibrarySys::lsys_wait (lua_State* L)
     }
     else
     {
-        mlog(CRITICAL, "Incorrect parameter type for seconds to wait\n");
+        mlog(CRITICAL, "Incorrect parameter type for seconds to wait");
         lua_pushboolean(L, false); /* push result as fail */
         return 1;
     }
@@ -257,7 +257,7 @@ int LuaLibrarySys::lsys_setstddepth (lua_State* L)
     }
     else
     {
-        mlog(CRITICAL, "Standard queue depth must be a number\n");
+        mlog(CRITICAL, "Standard queue depth must be a number");
         lua_pushboolean(L, false); /* push result as fail */
         return 1;
     }
@@ -279,7 +279,7 @@ int LuaLibrarySys::lsys_setiosize (lua_State* L)
 
     if(!lua_isnumber(L, 1))
     {
-        mlog(CRITICAL, "I/O maximum size must be a number\n");
+        mlog(CRITICAL, "I/O maximum size must be a number");
     }
     else
     {
@@ -328,7 +328,7 @@ int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
     }
     else
     {
-        mlog(CRITICAL, "type mask must be a number\n");
+        mlog(CRITICAL, "type mask must be a number");
     }
 
     /* Return Status */

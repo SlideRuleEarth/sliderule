@@ -58,7 +58,7 @@ int DeviceReader::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -122,7 +122,7 @@ void* DeviceReader::readerThread (void* parm)
             int post_status = MsgQ::STATE_ERROR;
             while(dr->ioActive && (post_status = dr->outq->postCopy(buf, bytes, dr->blockCfg)) <= 0)
             {
-                mlog(ERROR, "Device reader unable to post to stream %s: %d\n", dr->outq->getName(), post_status);
+                mlog(ERROR, "Device reader unable to post to stream %s: %d", dr->outq->getName(), post_status);
             }
 
             /* Update Statistics */
@@ -142,14 +142,14 @@ void* DeviceReader::readerThread (void* parm)
             /* Handle Non-Timeout Errors */
             if(dr->dieOnDisconnect)
             {
-                if(bytes == SHUTDOWN_RC)    mlog(INFO, "shutting down device and exiting reader\n");
-                else                        mlog(CRITICAL, "failed to read device (%d)... closing connection and exiting reader!\n", bytes);
+                if(bytes == SHUTDOWN_RC)    mlog(INFO, "shutting down device and exiting reader");
+                else                        mlog(CRITICAL, "failed to read device (%d)... closing connection and exiting reader!", bytes);
                 dr->ioActive = false; // breaks out of loop
             }
             else
             {
-                if(bytes == SHUTDOWN_RC)    mlog(INFO, "shutting down device... sleeping and trying again\n");
-                else                        mlog(ERROR, "failed to read device (%d)... sleeping and trying again!\n", bytes);
+                if(bytes == SHUTDOWN_RC)    mlog(INFO, "shutting down device... sleeping and trying again");
+                else                        mlog(ERROR, "failed to read device (%d)... sleeping and trying again!", bytes);
                 LocalLib::performIOTimeout(); // prevent spinning
             }
         }

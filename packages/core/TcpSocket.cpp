@@ -68,7 +68,7 @@ int TcpSocket::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating TcpSocket: %s\n", e.what());
+        mlog(CRITICAL, "Error creating TcpSocket: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -128,7 +128,7 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
     {
         if(SockLib::sockinfo(sock, NULL, &port, &ip_addr, NULL) < 0)
         {
-            mlog(CRITICAL, "Unable to obtain socket information\n");
+            mlog(CRITICAL, "Unable to obtain socket information");
             ip_addr = NULL;
             port = -1;
         }
@@ -184,7 +184,7 @@ void TcpSocket::closeConnection(void)
 {
     if(sock != INVALID_RC)
     {
-        mlog(CRITICAL, "closing connection on socket: %s %d\n", ip_addr, port);
+        mlog(CRITICAL, "closing connection on socket: %s %d", ip_addr, port);
         SockLib::sockclose(sock);
         sock = INVALID_RC;
     }
@@ -309,7 +309,7 @@ void* TcpSocket::connectionThread(void* parm)
             /* Check Die On Disconnect */
             if(connected_once && socket->die_on_disconnect)
             {
-                mlog(CRITICAL, "Exiting tcp connection thread for %s:%d... dying on disconnect.\n", socket->ip_addr, socket->port);
+                mlog(CRITICAL, "Exiting tcp connection thread for %s:%d... dying on disconnect.", socket->ip_addr, socket->port);
                 break;
             }
 
@@ -319,11 +319,11 @@ void* TcpSocket::connectionThread(void* parm)
             /* Handle Connection Outcome */
             if(socket->sock < 0)
             {
-                mlog(CRITICAL, "Unable to establish tcp connection to %s:%d... retrying\n", socket->ip_addr, socket->port);
+                mlog(CRITICAL, "Unable to establish tcp connection to %s:%d... retrying", socket->ip_addr, socket->port);
             }
             else
             {
-                mlog(CRITICAL, "Connection established to %s:%d\n", socket->ip_addr, socket->port);
+                mlog(CRITICAL, "Connection established to %s:%d", socket->ip_addr, socket->port);
                 connected_once = true;
             }
         }

@@ -110,7 +110,7 @@ int CcsdsParserAOSFrameModule::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -157,7 +157,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
                     syncIndex = 0;
                     if(inSync)
                     {
-                        mlog(CRITICAL, "Lost sync in processing AOS frames in %s\n", getName());
+                        mlog(CRITICAL, "Lost sync in processing AOS frames in %s", getName());
                         inSync = false;
                         mpduOffsetSet = false;
                     }
@@ -170,7 +170,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
                         syncIndex = 0;
                         if(!inSync)
                         {
-                            mlog(CRITICAL, "Synchronization of AOS frames acquired in %s\n", getName());
+                            mlog(CRITICAL, "Synchronization of AOS frames acquired in %s", getName());
                             inSync = true;
                         }
 
@@ -223,7 +223,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
                 {
                     if(curr_frame_counter != ((frameCounter + 1) & 0xFFFFFF))
                     {
-                        mlog(CRITICAL, "Frame counter in %s skipped at %d %d\n", getName(), frameCounter, curr_frame_counter);
+                        mlog(CRITICAL, "Frame counter in %s skipped at %d %d", getName(), frameCounter, curr_frame_counter);
                         mpduOffsetSet = false;
                         pkt->resetPkt();
                     }
@@ -232,7 +232,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
                 /* Check Virtual Channel */
                 if(curr_channel_id != VirtualChannel)
                 {
-                    mlog(CRITICAL, "Virtual channel in %s does not match, exp: %d, act: %d\n", getName(), VirtualChannel, curr_channel_id);
+                    mlog(CRITICAL, "Virtual channel in %s does not match, exp: %d, act: %d", getName(), VirtualChannel, curr_channel_id);
                 }
 
                 /* Set Frame Counter */
@@ -329,7 +329,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
                     trailer_crc |= aosTrailer[1];
                     if(trailer_crc != frameCRC)
                     {
-                        mlog(CRITICAL, "Frame CRC in %s for frame %d does not match, exp: %04X, act: %04X\n", getName(), frameCounter, trailer_crc, frameCRC);
+                        mlog(CRITICAL, "Frame CRC in %s for frame %d does not match, exp: %04X, act: %04X", getName(), frameCounter, trailer_crc, frameCRC);
                         mpduOffsetSet = false;
                         pkt->resetPkt();
                     }

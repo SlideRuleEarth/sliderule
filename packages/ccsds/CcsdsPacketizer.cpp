@@ -69,7 +69,7 @@ int CcsdsPacketizer::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -120,7 +120,7 @@ bool CcsdsPacketizer::processMsg (unsigned char* msg, int bytes)
 
     if(pkt_len > maxLength)
     {
-        mlog(ERROR, "Packet length exceeds maximum length in %s: %d > %d\n", getName(), pkt_len, maxLength);
+        mlog(ERROR, "Packet length exceeds maximum length in %s: %d > %d", getName(), pkt_len, maxLength);
         return false;
     }
 
@@ -143,7 +143,7 @@ bool CcsdsPacketizer::processMsg (unsigned char* msg, int bytes)
         pkt.appendStream(msg, bytes);
         if(pkt.loadChecksum() == false)
         {
-            mlog(WARNING, "unable to load checksum into packetized record %04X:%02X\n", apid, functionCode);
+            mlog(WARNING, "unable to load checksum into packetized record %04X:%02X", apid, functionCode);
         }
     }
 
@@ -151,7 +151,7 @@ bool CcsdsPacketizer::processMsg (unsigned char* msg, int bytes)
     int status = outQ->postCopy(pkt.getBuffer(), pkt.getLEN());
     if(status <= 0)
     {
-        mlog(ERROR, "failed to post packetized record %04X\n", apid);
+        mlog(ERROR, "failed to post packetized record %04X", apid);
     }
 
     return true;

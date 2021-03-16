@@ -78,7 +78,7 @@ int HttpServer::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating HttpServer: %s\n", e.what());
+        mlog(CRITICAL, "Error creating HttpServer: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -154,11 +154,11 @@ void* HttpServer::listenerThread(void* parm)
     try
     {
         int status = SockLib::startserver (s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
-        if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)\n", s->getIpAddr(), s->getPort(), status);
+        if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)", s->getIpAddr(), s->getPort(), status);
     }
     catch(const std::exception& e)
     {
-        mlog(CRITICAL, "Caught fatal exception, aborting http server thread: %s\n", e.what());
+        mlog(CRITICAL, "Caught fatal exception, aborting http server thread: %s", e.what());
     }
 
     return NULL;
@@ -227,7 +227,7 @@ int HttpServer::luaAttach (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error attaching handler: %s\n", e.what());
+        mlog(CRITICAL, "Error attaching handler: %s", e.what());
     }
 
     /* Return Status */
@@ -336,13 +336,13 @@ int HttpServer::onRead(int fd)
                         }
                         catch(const std::out_of_range& e)
                         {
-                            mlog(CRITICAL, "No attached endpoint at %s: %s\n", endpoint, e.what());
+                            mlog(CRITICAL, "No attached endpoint at %s: %s", endpoint, e.what());
                             status = INVALID_RC; // will close socket
                         }
                     }
                     else
                     {
-                        mlog(CRITICAL, "Enable to extract endpoint and url: %s\n", url_str);
+                        mlog(CRITICAL, "Enable to extract endpoint and url: %s", url_str);
                     }
 
                     /* Clean Up Allocated Memory */
@@ -351,7 +351,7 @@ int HttpServer::onRead(int fd)
                 }
                 catch(const std::out_of_range& e)
                 {
-                    mlog(CRITICAL, "Invalid request line: %s: %s\n", (*header_list)[0].getString(), e.what());
+                    mlog(CRITICAL, "Invalid request line: %s: %s", (*header_list)[0].getString(), e.what());
                 }
 
                 /* Parse Headers */
@@ -367,7 +367,7 @@ int HttpServer::onRead(int fd)
                     }
                     catch(const std::out_of_range& e)
                     {
-                        mlog(CRITICAL, "Invalid header in http request: %s: %s\n", (*header_list)[h].getString(), e.what());
+                        mlog(CRITICAL, "Invalid header in http request: %s: %s", (*header_list)[h].getString(), e.what());
                     }
                     delete keyvalue_list;
                 }
@@ -380,13 +380,13 @@ int HttpServer::onRead(int fd)
                 {
                     if(!StringLib::str2long(connection->request.headers->get("Content-Length"), &connection->request.body_length))
                     {
-                        mlog(CRITICAL, "Invalid Content-Length header: %s\n", connection->request.headers->get("Content-Length"));
+                        mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request.headers->get("Content-Length"));
                         status = INVALID_RC; // will close socket
                     }
                 }
                 catch(const std::out_of_range& e)
                 {
-                    mlog(CRITICAL, "Http request must supply Content-Length header: %s\n", e.what());
+                    mlog(CRITICAL, "Http request must supply Content-Length header: %s", e.what());
                     status = INVALID_RC; // will close socket
                 }
             }
@@ -413,7 +413,7 @@ int HttpServer::onRead(int fd)
                 }
                 else
                 {
-                    mlog(CRITICAL, "Unable to handle unattached request\n");
+                    mlog(CRITICAL, "Unable to handle unattached request");
                     status = INVALID_RC; // will close socket
                 }
             }
@@ -463,7 +463,7 @@ int HttpServer::onWrite(int fd)
             {
                 /* Write Chunk Header - HTTP */
                 unsigned long chunk_size = connection->state.ref.size > 0 ? connection->state.ref.size + sizeof(uint32_t) : 0;
-                StringLib::format((char*)connection->state.stream_buf, STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
+                StringLib::format((char*)connection->state.stream_buf, STREAM_OVERHEAD_SIZE, "%lX\r", chunk_size);
                 connection->state.stream_buf_size = StringLib::size((const char*)connection->state.stream_buf, connection->state.stream_mem_size);
 
                 if(connection->state.ref.size > 0)
@@ -483,7 +483,7 @@ int HttpServer::onWrite(int fd)
                 }
 
                 /* Write Chunk Trailer - HTTP */
-                StringLib::format((char*)&connection->state.stream_buf[connection->state.stream_buf_size], STREAM_OVERHEAD_SIZE, "\r\n");
+                StringLib::format((char*)&connection->state.stream_buf[connection->state.stream_buf_size], STREAM_OVERHEAD_SIZE, "\r");
                 connection->state.stream_buf_size += 2;
             }
 
@@ -603,7 +603,7 @@ int HttpServer::onConnect(int fd)
     }
     else
     {
-        mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry\n", connection->request.id);
+        mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry", connection->request.id);
         status = INVALID_RC;
     }
 
@@ -649,7 +649,7 @@ int HttpServer::onDisconnect(int fd)
     }
     else
     {
-        mlog(CRITICAL, "HTTP server at %s failed to release connection\n", connection->request.id);
+        mlog(CRITICAL, "HTTP server at %s failed to release connection", connection->request.id);
         status = INVALID_RC;
     }
 

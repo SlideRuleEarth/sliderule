@@ -143,7 +143,7 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
     SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.getString());
 
     /* Log Operation */
-    mlog(INFO, "S3 %s object %s in bucket %s: %s\n", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.getString());
+    mlog(INFO, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.getString());
 
     /* Quick Exit If Cache Hit */
     if(found_in_cache)
@@ -174,7 +174,7 @@ bool S3Lib::get (const char* bucket, const char* key, const char** file)
     auto transfer_status = transfer_handle->GetStatus();
     if(transfer_status != Aws::Transfer::TransferStatus::COMPLETED)
     {
-        mlog(CRITICAL, "Failed to transfer S3 object: %d\n", (int)transfer_status);
+        mlog(CRITICAL, "Failed to transfer S3 object: %d", (int)transfer_status);
         return false;
     }
 
@@ -272,7 +272,7 @@ int S3Lib::luaGet(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error getting S3 object: %s\n", e.what());
+        mlog(CRITICAL, "Error getting S3 object: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -301,7 +301,7 @@ int S3Lib::luaConfig(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring S3 access: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring S3 access: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -358,7 +358,7 @@ int S3Lib::luaCreateCache(lua_State* L)
                             cacheLookUp.add(key.getString(), cacheIndex);
                             const char* cache_key = StringLib::duplicate(key.getString());
                             cacheFiles.add(cacheIndex, cache_key);
-                            mlog(CRITICAL, "Caching %s for S3 retrieval\n", key.getString());
+                            mlog(CRITICAL, "Caching %s for S3 retrieval", key.getString());
                         }
                     }
                 }
@@ -367,7 +367,7 @@ int S3Lib::luaCreateCache(lua_State* L)
                 /* Log Status */
                 if(file_count > 0)
                 {
-                    mlog(CRITICAL, "Loaded %ld of %d files into S3 cache\n", cacheFiles.length(), file_count);
+                    mlog(CRITICAL, "Loaded %ld of %d files into S3 cache", cacheFiles.length(), file_count);
                 }
             }
         }
@@ -378,7 +378,7 @@ int S3Lib::luaCreateCache(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating S3 cache: %s\n", e.what());
+        mlog(CRITICAL, "Error creating S3 cache: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -393,7 +393,7 @@ int S3Lib::luaFlushCache(lua_State* L)
         /* Flush Cache */
         cacheMut.lock();
         {
-            mlog(CRITICAL, "Flushing %ld files out of S3 cache\n", cacheFiles.length());
+            mlog(CRITICAL, "Flushing %ld files out of S3 cache", cacheFiles.length());
             cacheLookUp.clear();
             cacheFiles.clear();
         }
@@ -404,7 +404,7 @@ int S3Lib::luaFlushCache(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error flushing S3 cache: %s\n", e.what());
+        mlog(CRITICAL, "Error flushing S3 cache: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }

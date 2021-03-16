@@ -54,13 +54,13 @@ CommandableObject* CcsdsRecordFileWriter::createObject(CommandProcessor* cmd_pro
 
     if(prefix == NULL)
     {
-        mlog(CRITICAL, "Error: prefix cannot be NULL\n");;
+        mlog(CRITICAL, "Error: prefix cannot be NULL");;
         return NULL;
     }
 
     if(stream == NULL)
     {
-        mlog(CRITICAL, "Error: stream cannot be NULL\n");
+        mlog(CRITICAL, "Error: stream cannot be NULL");
         return NULL;
     }
 
@@ -70,7 +70,7 @@ CommandableObject* CcsdsRecordFileWriter::createObject(CommandProcessor* cmd_pro
         filesize_str = argv[2];
         if(!StringLib::str2ulong(filesize_str, &filesize))
         {
-            mlog(CRITICAL, "Error: invalid file size: %s\n", filesize_str);
+            mlog(CRITICAL, "Error: invalid file size: %s", filesize_str);
             return NULL;
         }
     }
@@ -131,7 +131,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
     }
     catch (const RunTimeException& e)
     {
-        mlog(ERROR, "Failed to create record in %s: %s\n", getName(), e.what());
+        mlog(ERROR, "Failed to create record in %s: %s", getName(), e.what());
         return 0;
     }
 

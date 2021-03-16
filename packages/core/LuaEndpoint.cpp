@@ -65,7 +65,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -104,7 +104,7 @@ void* LuaEndpoint::requestThread (void* parm)
     uint32_t trace_id = start_trace(CRITICAL, lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
-    mlog(INFO, "%s request at %s to %s\n", verb2str(request->verb), request->id, script_pathname);
+    mlog(INFO, "%s request at %s to %s", verb2str(request->verb), request->id, script_pathname);
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);

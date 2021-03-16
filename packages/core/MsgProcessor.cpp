@@ -187,7 +187,7 @@ void* MsgProcessor::processorThread(void* parm)
             }
             else // terminator
             {
-                mlog(INFO, "Terminator received on %s\n", processor->inQ->getName());
+                mlog(INFO, "Terminator received on %s", processor->inQ->getName());
                 success = true;
                 self_delete = true;
             }
@@ -198,7 +198,7 @@ void* MsgProcessor::processorThread(void* parm)
         if (!success)
         {
             self_delete = true;
-            mlog(CRITICAL, "Fatal error detected in %s, exiting processor\n", processor->getName());
+            mlog(CRITICAL, "Fatal error detected in %s, exiting processor", processor->getName());
         }
     }
 
@@ -229,7 +229,7 @@ int MsgProcessor::luaDrain (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error draining queue: %s\n", e.what());
+        mlog(CRITICAL, "Error draining queue: %s", e.what());
     }
 
     /* Return Success */

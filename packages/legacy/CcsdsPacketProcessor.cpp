@@ -67,12 +67,12 @@ CommandableObject* CcsdsPacketProcessor::createObject(CommandProcessor* cmd_proc
     long num_workers = 0;
     if(!StringLib::str2long(num_workers_str, &num_workers))
     {
-        mlog(CRITICAL, "Invalid value for number of workers supplied: %s\n", num_workers_str);
+        mlog(CRITICAL, "Invalid value for number of workers supplied: %s", num_workers_str);
         return NULL;
     }
     else if(num_workers <= 0)
     {
-        mlog(CRITICAL, "Invalid number of workers supplied: %ld\n", num_workers);
+        mlog(CRITICAL, "Invalid number of workers supplied: %ld", num_workers);
         return NULL;
     }
 
@@ -102,12 +102,12 @@ CcsdsPacketProcessor::CcsdsPacketProcessor(CommandProcessor* cmd_proc, const cha
     /* Initialize Number of Workers */
     if(num_workers <= 0)
     {
-        mlog(CRITICAL, "invalid number of workers specified: %d, setting to 1\n", num_workers);
+        mlog(CRITICAL, "invalid number of workers specified: %d, setting to 1", num_workers);
     	numWorkerThreads = 1;
     }
     else if((unsigned int)num_workers > MAX_WORKERS)
     {
-        mlog(CRITICAL, "invalid number of workers specified: %d, setting to maximum: %d\n", num_workers, MAX_WORKERS);
+        mlog(CRITICAL, "invalid number of workers specified: %d, setting to maximum: %d", num_workers, MAX_WORKERS);
     	numWorkerThreads = MAX_WORKERS;
     }
     else
@@ -223,7 +223,7 @@ int CcsdsPacketProcessor::filterApidCmd(int argc, char argv[][MAX_CMD_SIZE])
     long apid = 0;
     if(!StringLib::str2long(argv[1], &apid))
     {
-        mlog(CRITICAL, "Invalid APID supplied: %s\n", argv[1]);
+        mlog(CRITICAL, "Invalid APID supplied: %s", argv[1]);
         return -1;
     }
 
@@ -231,7 +231,7 @@ int CcsdsPacketProcessor::filterApidCmd(int argc, char argv[][MAX_CMD_SIZE])
     {
         if(enable && !pktProcessor[apid].processor)
         {
-            mlog(CRITICAL, "APID %04X has no registered processor!\n", (uint16_t)apid);
+            mlog(CRITICAL, "APID %04X has no registered processor!", (uint16_t)apid);
             return -1;
         }
 
@@ -243,7 +243,7 @@ int CcsdsPacketProcessor::filterApidCmd(int argc, char argv[][MAX_CMD_SIZE])
         {
             if(enable && !pktProcessor[i].processor)
             {
-                mlog(CRITICAL, "APID %04X has no registered processor!\n", i);
+                mlog(CRITICAL, "APID %04X has no registered processor!", i);
                 return -1;
             }
 
@@ -252,7 +252,7 @@ int CcsdsPacketProcessor::filterApidCmd(int argc, char argv[][MAX_CMD_SIZE])
     }
     else
     {
-        mlog(CRITICAL, "Invalid APID specified: %04X\n", (uint16_t)apid);
+        mlog(CRITICAL, "Invalid APID specified: %04X", (uint16_t)apid);
         return -1;
     }
 
@@ -269,14 +269,14 @@ int CcsdsPacketProcessor::integrateApidCmd (int argc, char argv[][MAX_CMD_SIZE])
     long apid = 0;
     if(!StringLib::str2long(argv[0], &apid))
     {
-        mlog(CRITICAL, "Invalid APID supplied: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid APID supplied: %s", argv[0]);
         return -1;
     }
 
     long int_period = 0;
     if(!StringLib::str2long(argv[1], &int_period))
     {
-        mlog(CRITICAL, "Invalid integration period supplied: %s\n", argv[1]);
+        mlog(CRITICAL, "Invalid integration period supplied: %s", argv[1]);
         return -1;
     }
 
@@ -293,7 +293,7 @@ int CcsdsPacketProcessor::integrateApidCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
     else
     {
-        mlog(CRITICAL, "Invalid APID specified: %04X\n", (uint16_t)apid);
+        mlog(CRITICAL, "Invalid APID specified: %04X", (uint16_t)apid);
         return -1;
     }
 
@@ -341,7 +341,7 @@ int CcsdsPacketProcessor::regApidProcCmd(int argc, char argv[][MAX_CMD_SIZE])
     long apid = 0;
     if(!StringLib::str2long(argv[0], &apid))
     {
-        mlog(CRITICAL, "Invalid APID supplied: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid APID supplied: %s", argv[0]);
         return -1;
     }
 
@@ -352,7 +352,7 @@ int CcsdsPacketProcessor::regApidProcCmd(int argc, char argv[][MAX_CMD_SIZE])
     CcsdsProcessorModule* processor = (CcsdsProcessorModule*)cmdProc->getObject(proc_obj_name, "CcsdsProcessorModule");
     if(processor == NULL)
     {
-        mlog(CRITICAL, "Unable to find processor module %s\n", proc_obj_name);
+        mlog(CRITICAL, "Unable to find processor module %s", proc_obj_name);
         return -1;
     }
     else if(apid >= 0 && apid < CCSDS_NUM_APIDS)
@@ -364,7 +364,7 @@ int CcsdsPacketProcessor::regApidProcCmd(int argc, char argv[][MAX_CMD_SIZE])
         }
         else
         {
-            mlog(ERROR, "Packet processor %s for APID %04X already set!\n", getName(), (uint16_t)apid);
+            mlog(ERROR, "Packet processor %s for APID %04X already set!", getName(), (uint16_t)apid);
         }
     }
     else if(apid == ALL_APIDS)
@@ -378,13 +378,13 @@ int CcsdsPacketProcessor::regApidProcCmd(int argc, char argv[][MAX_CMD_SIZE])
             }
             else
             {
-                mlog(ERROR, "Packet processor %s for APID %04X already set!\n", getName(), i);
+                mlog(ERROR, "Packet processor %s for APID %04X already set!", getName(), i);
             }
         }
     }
     else
     {
-        mlog(CRITICAL, "Invalid APID specified: %04X\n", (uint16_t)apid);
+        mlog(CRITICAL, "Invalid APID specified: %04X", (uint16_t)apid);
         return -1;
     }
 
@@ -407,7 +407,7 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
         /* Process Packet Segments */
         if(worker->processor->processSegments(*(worker->segments), worker->numpkts) == false)
         {
-            mlog(ERROR, "%s failed to process packet, packet dropped\n", worker->processor->getName());
+            mlog(ERROR, "%s failed to process packet, packet dropped", worker->processor->getName());
             if(worker->msgproc->dumpErrors)
             {
                 for(int s = 0; s < worker->segments->length(); s++)
@@ -434,7 +434,7 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
         int status = worker->availq->postRef(worker, sizeof(workerThread_t));
         if(status <= 0)
         {
-            mlog(CRITICAL, "Failed to post available worker ...exiting thread!\n");
+            mlog(CRITICAL, "Failed to post available worker ...exiting thread!");
             break;
         }
     }
@@ -450,12 +450,12 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
     /* Sanity Check Packet */
     if(msg == NULL)
     {
-        mlog(CRITICAL, "Null message passed to %s\n", getName());
+        mlog(CRITICAL, "Null message passed to %s", getName());
         return false; // this is not expected to occur in correct code
     }
     if(bytes < CCSDS_SPACE_HEADER_SIZE)
     {
-        mlog(CRITICAL, "Length too small (%d < %d) on CCSDS packet provided to %s\n", bytes, CCSDS_SPACE_HEADER_SIZE, getName());
+        mlog(CRITICAL, "Length too small (%d < %d) on CCSDS packet provided to %s", bytes, CCSDS_SPACE_HEADER_SIZE, getName());
         return true; // packet still handled, no need to kill self
     }
 
@@ -467,7 +467,7 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
     }
     catch (std::invalid_argument& e)
     {
-        mlog(CRITICAL, "Unable to create CCSDS packet from buffer: %s\n", e.what());
+        mlog(CRITICAL, "Unable to create CCSDS packet from buffer: %s", e.what());
         return false;
     }
 
@@ -482,7 +482,7 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
         /* Check Length */
         if(len != bytes)
         {
-            mlog(CRITICAL, "Length mismatch on CCSDS packet %04X provided to %s: %d != %d\n", apid, getName(), len, bytes);
+            mlog(CRITICAL, "Length mismatch on CCSDS packet %04X provided to %s: %d != %d", apid, getName(), len, bytes);
             return true; // packet still handled, no need to kill self
         }
 
@@ -532,7 +532,7 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
                 }
                 else
                 {
-                    mlog(CRITICAL, "%s failed to get available worker!\n", getName());
+                    mlog(CRITICAL, "%s failed to get available worker!", getName());
                 }
             }
         }
@@ -595,7 +595,7 @@ bool CcsdsPacketProcessor::resetProcessing (void)
     }
     else
     {
-        mlog(CRITICAL, "unable to flush packet queue as all workers did not complete in time allowed: %d of %d\n", subAvailQ->getCount(), numWorkerThreads);
+        mlog(CRITICAL, "unable to flush packet queue as all workers did not complete in time allowed: %d of %d", subAvailQ->getCount(), numWorkerThreads);
         return false;
     }
 

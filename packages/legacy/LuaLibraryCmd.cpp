@@ -111,7 +111,7 @@ int LuaLibraryCmd::lcmd_exec (lua_State* L)
             int ret_size = cmdProc->getCurrentValue(cmdProc->getName(), store_key, &cmd_status, sizeof(cmd_status), cmd_timeout, true);
             if(ret_size <= 0)
             {
-                mlog(CRITICAL, "Command verification timed out\n");
+                mlog(CRITICAL, "Command verification timed out");
                 cmd_status = CommandableObject::CMD_VERIFY_ERROR;
             }
         }
@@ -216,8 +216,8 @@ int LuaLibraryCmd::lcmd_stopuntil (lua_State* L)
     }
 
     /* Return Status to Lua */
-    if(status)  mlog(CRITICAL, "Successfully waited for object %s to %s\n", obj_name, exists ? "be created" : "be closed");
-    else        mlog(CRITICAL, "Failed to wait for object %s to %s\n", obj_name, exists ? "be created" : "be closed");
+    if(status)  mlog(CRITICAL, "Successfully waited for object %s to %s", obj_name, exists ? "be created" : "be closed");
+    else        mlog(CRITICAL, "Failed to wait for object %s to %s", obj_name, exists ? "be created" : "be closed");
     lua_pushboolean(L, status); /* push result status */
     return 1;                   /* number of results */
 }

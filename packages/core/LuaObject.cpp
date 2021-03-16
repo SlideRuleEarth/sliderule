@@ -104,12 +104,12 @@ int LuaObject::luaGetByName(lua_State* L)
     }
     catch(const std::out_of_range& e)
     {
-        mlog(CRITICAL, "Name was not registered\n");
+        mlog(CRITICAL, "Name was not registered");
         lua_pushnil(L);
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error associating object: %s\n", e.what());
+        mlog(CRITICAL, "Error associating object: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -226,12 +226,12 @@ bool LuaObject::releaseLuaObject (void)
     referenceCount--;
     if(referenceCount == 0)
     {
-        mlog(DEBUG, "Delete on release for object %s/%s\n", getType(), getName());
+        mlog(DEBUG, "Delete on release for object %s/%s", getType(), getName());
         is_delete_pending = true;
     }
     else if(referenceCount < 0)
     {
-        mlog(CRITICAL, "Unmatched object release %s of type %s detected\n", getName(), getType());
+        mlog(CRITICAL, "Unmatched object release %s of type %s detected", getName(), getType());
     }
 
     /* Delete THIS Object */
@@ -270,7 +270,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 
         /* Associate Meta Table */
         associateMetaTable(LuaState, meta_name, meta_table);
-        mlog(DEBUG, "Created object of type %s/%s\n", getType(), LuaMetaName);
+        mlog(DEBUG, "Created object of type %s/%s", getType(), LuaMetaName);
     }
 
     /* Start Trace */
@@ -283,7 +283,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 LuaObject::~LuaObject (void)
 {
     stop_trace(DEBUG, traceId);
-    mlog(DEBUG, "Deleting %s/%s\n", getType(), getName());
+    mlog(DEBUG, "Deleting %s/%s", getType(), getName());
 
     /* Remove Name from Global Objects */
     globalMut.lock();
@@ -312,7 +312,7 @@ int LuaObject::luaDelete (lua_State* L)
             if(lua_obj)
             {
                 user_data->luaObj = NULL;
-                mlog(DEBUG, "Garbage collecting object %s/%s\n", lua_obj->getType(), lua_obj->getName());
+                mlog(DEBUG, "Garbage collecting object %s/%s", lua_obj->getType(), lua_obj->getName());
 
                 int count = lua_obj->referenceCount--;
                 if(lua_obj->referenceCount == 0)
@@ -322,7 +322,7 @@ int LuaObject::luaDelete (lua_State* L)
                 }
                 else
                 {
-                    mlog(DEBUG, "Delaying delete on referenced<%d> object %s/%s\n", count, lua_obj->getType(), lua_obj->getName());
+                    mlog(DEBUG, "Delaying delete on referenced<%d> object %s/%s", count, lua_obj->getType(), lua_obj->getName());
                 }
             }
             else
@@ -330,7 +330,7 @@ int LuaObject::luaDelete (lua_State* L)
                 /* This will occurr, for instance, when a device is closed
                  * explicitly, and then also deleted when the lua variable
                  * goes out of scope and is garbage collected */
-                mlog(DEBUG, "Vacuous delete of lua object that has already been deleted\n");
+                mlog(DEBUG, "Vacuous delete of lua object that has already been deleted");
             }
         }
         else
@@ -340,7 +340,7 @@ int LuaObject::luaDelete (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error deleting object: %s\n", e.what());
+        mlog(CRITICAL, "Error deleting object: %s", e.what());
     }
 
     return 0;
@@ -379,14 +379,14 @@ int LuaObject::luaName(lua_State* L)
 
         /* Associate Name */
         lua_obj->ObjectName = StringLib::duplicate(name);
-        mlog(INFO, "Associating %s with object of type %s\n", lua_obj->getName(), lua_obj->getType());
+        mlog(INFO, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
 
         /* Return Name */
         lua_pushstring(L, lua_obj->ObjectName);
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error associating object: %s\n", e.what());
+        mlog(CRITICAL, "Error associating object: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -408,7 +408,7 @@ int LuaObject::luaLock(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error locking object: %s\n", e.what());
+        mlog(CRITICAL, "Error locking object: %s", e.what());
     }
 
     return 0;
@@ -442,7 +442,7 @@ int LuaObject::luaWaitOn(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error locking object: %s\n", e.what());
+        mlog(CRITICAL, "Error locking object: %s", e.what());
     }
 
     /* Return Completion Status */

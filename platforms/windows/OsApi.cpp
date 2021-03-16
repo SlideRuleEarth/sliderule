@@ -287,7 +287,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
     char timerName[128];
     timerMut.lock();
     {
-        snprintf(timerName, 128, "timer_%d\n", timerNum);
+        snprintf(timerName, 128, "timer_%d", timerNum);
         timerNum++;
     }
     timerMut.unlock();
@@ -402,7 +402,7 @@ int SockLib::socksend (int fd, const void* buf, int size, int timeout)
 
         if (iResult == SOCKET_ERROR)
         {
-            dlog("Send failed with error: %d\n", WSAGetLastError());
+            dlog("Send failed with error: %d", WSAGetLastError());
             return INVALID_RC;
         }
         else
@@ -427,7 +427,7 @@ int SockLib::sockrecv (int fd, void* buf, int size, int timeout)
     }
     else
     {
-        dlog("Recv failed with error: %d\n", WSAGetLastError());
+        dlog("Recv failed with error: %d", WSAGetLastError());
     }
 
     return iResult;
@@ -517,7 +517,7 @@ int SockLib::sockclient(const char* ip_addr, int port, int retries)
     iResult = getaddrinfo(ip_addr, portstr, &hints, &result);
     if (iResult != 0)
     {
-        dlog("getaddrinfo failed: %d\n", iResult);
+        dlog("getaddrinfo failed: %d", iResult);
         return INVALID_RC;
     }
 
@@ -531,7 +531,7 @@ int SockLib::sockclient(const char* ip_addr, int port, int retries)
         ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
         if (ConnectSocket == INVALID_SOCKET) 
         {
-            dlog("socket failed with error: %ld\n", WSAGetLastError());
+            dlog("socket failed with error: %ld", WSAGetLastError());
             return INVALID_RC;
         }
 
@@ -551,7 +551,7 @@ int SockLib::sockclient(const char* ip_addr, int port, int retries)
     // Check status of connection
     if (ConnectSocket == INVALID_SOCKET) 
     {
-        dlog("unable to connect to %s:%d!\n", ip_addr, port);
+        dlog("unable to connect to %s:%d!", ip_addr, port);
         return INVALID_RC;
     }
 
@@ -584,7 +584,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
     iResult = getaddrinfo(NULL, portstr, &hints, &result);
     if (iResult != 0)
     {
-        dlog("getaddrinfo failed: %d\n", iResult);
+        dlog("getaddrinfo failed: %d", iResult);
         return INVALID_RC;
     }
 
@@ -592,7 +592,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
     SOCKET ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
     if (ListenSocket == INVALID_SOCKET) 
     {
-        dlog("socket failed with error: %ld\n", WSAGetLastError());
+        dlog("socket failed with error: %ld", WSAGetLastError());
         freeaddrinfo(result);
         return INVALID_RC;
     }
@@ -601,7 +601,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
     iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
     if (iResult == SOCKET_ERROR) 
     {
-        dlog("bind failed with error: %d\n", WSAGetLastError());
+        dlog("bind failed with error: %d", WSAGetLastError());
         freeaddrinfo(result);
         closesocket(ListenSocket);
         return INVALID_RC;
@@ -614,7 +614,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
     iResult = listen(ListenSocket, SOMAXCONN);
     if (iResult == SOCKET_ERROR) 
     {
-        dlog("listen failed with error: %d\n", WSAGetLastError());
+        dlog("listen failed with error: %d", WSAGetLastError());
         closesocket(ListenSocket);
         return INVALID_RC;
     }
@@ -623,7 +623,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
     SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
     if (ClientSocket == INVALID_SOCKET) 
     {
-        dlog("accept failed with error: %d\n", WSAGetLastError());
+        dlog("accept failed with error: %d", WSAGetLastError());
         closesocket(ListenSocket);
         return INVALID_RC;
     }

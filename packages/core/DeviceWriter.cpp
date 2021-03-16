@@ -58,7 +58,7 @@ int DeviceWriter::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -135,17 +135,17 @@ void* DeviceWriter::writerThread (void* parm)
                     {
                         dw->bytesDropped += ref.size;
                         dw->packetsDropped += 1;
-                        mlog(ERROR, "Failed (%d) to write to device with error: %s\n", bytes_sent, LocalLib::err2str(errno));
+                        mlog(ERROR, "Failed (%d) to write to device with error: %s", bytes_sent, LocalLib::err2str(errno));
 
                         /* Handle Non-Timeout Errors */
                         if(dw->dieOnDisconnect)
                         {
-                            mlog(CRITICAL, "... closing connection and exiting writer!\n");
+                            mlog(CRITICAL, "... closing connection and exiting writer!");
                             dw->ioActive = false; // breaks out of loop
                         }
                         else
                         {
-                            mlog(ERROR, "failed to write to device with error... sleeping and going on to next message!\n");
+                            mlog(ERROR, "failed to write to device with error... sleeping and going on to next message!");
                             LocalLib::sleep(1); // prevent spin
                             break; // stop trying to send this message and go to the next one
                         }
@@ -155,7 +155,7 @@ void* DeviceWriter::writerThread (void* parm)
             else
             {
                 /* Received Terminating Message */
-                mlog(INFO, "Terminator received on %s, exiting device writer\n", dw->inq->getName());
+                mlog(INFO, "Terminator received on %s, exiting device writer", dw->inq->getName());
                 dw->ioActive = false; // breaks out of loop
             }
 
@@ -164,7 +164,7 @@ void* DeviceWriter::writerThread (void* parm)
         }
         else if(status != MsgQ::STATE_TIMEOUT)
         {
-            mlog(CRITICAL, "encountered a fatal error (%d) reading from input stream %s, exiting writer!\n", status, dw->inq->getName());
+            mlog(CRITICAL, "encountered a fatal error (%d) reading from input stream %s, exiting writer!", status, dw->inq->getName());
             dw->ioActive = false; // breaks out of loop
         }
         else // TIMEOUT

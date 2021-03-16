@@ -83,7 +83,7 @@ int File::luaCreate(lua_State* L)
         /* Check Access Type */
         if(role != File::READER && role != File::WRITER)
         {
-            throw RunTimeException("unrecognized file access specified: %d\n", role);
+            throw RunTimeException("unrecognized file access specified: %d", role);
         }
 
         /* Return File Device Object */
@@ -91,7 +91,7 @@ int File::luaCreate(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating File: %s\n", e.what());
+        mlog(CRITICAL, "Error creating File: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -132,12 +132,12 @@ File::File (lua_State* L, const char* _filename, type_t _type, role_t _role, io_
             numFiles = createFileListForReading(filename, fileList);
             if(numFiles != num_files)
             {
-                mlog(CRITICAL, "Unable to process initial set of files for %s\n", filename);
+                mlog(CRITICAL, "Unable to process initial set of files for %s", filename);
             }
         }
         else
         {
-            mlog(CRITICAL, "No files found for file %s\n", filename);
+            mlog(CRITICAL, "No files found for file %s", filename);
         }
     }
 
@@ -297,7 +297,7 @@ int File::writeBuffer (const void* buf, int len)
     }
     else
     {
-        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s\n", activeFile, LocalLib::err2str(errno));
+        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s", activeFile, LocalLib::err2str(errno));
     }
 
     return bytes_written;
@@ -335,12 +335,12 @@ int File::readBuffer (void* buf, int len)
         /* Check Error */
         if(fp == NULL)
         {
-            mlog(CRITICAL, "Unable to open file %s: %s\n", fileList[currFile], LocalLib::err2str(errno));
+            mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], LocalLib::err2str(errno));
             return INVALID_RC;
         }
         else
         {
-            mlog(CRITICAL, "Opened file %s\n", fileList[currFile]);
+            mlog(CRITICAL, "Opened file %s", fileList[currFile]);
         }
     }
 
@@ -389,7 +389,7 @@ int File::readBuffer (void* buf, int len)
                     if( (endptr == b) ||
                         ((result == ULONG_MAX || result == 0) && errno == ERANGE) )
                     {
-                        mlog(CRITICAL, "Read invalid data from file designated as an ASCII HEXDUMP: %s\n", b);
+                        mlog(CRITICAL, "Read invalid data from file designated as an ASCII HEXDUMP: %s", b);
                         return INVALID_RC;
                     }
                     pkt_buffer[recv_bytes++] = (unsigned char)result;
@@ -533,12 +533,12 @@ bool File::openNewFileForWriting(void)
     /* Check for Errors */
     if(fp == NULL)
     {
-    	mlog(CRITICAL, "Error opening file: %s, err: %s\n", activeFile, LocalLib::err2str(errno));
+    	mlog(CRITICAL, "Error opening file: %s, err: %s", activeFile, LocalLib::err2str(errno));
         return false;
     }
 
     /* Return Success */
-    mlog(CRITICAL, "Opened new file for writing: %s\n", activeFile);
+    mlog(CRITICAL, "Opened new file for writing: %s", activeFile);
     return true;
 }
 
@@ -570,7 +570,7 @@ int File::createFileListForReading (char* input_string, char** file_list)
                 const char* new_file = glob_buffer.gl_pathv[m];
                 if(file_list)
                 {
-                    mlog(CRITICAL, "Adding %s to file list\n", new_file);
+                    mlog(CRITICAL, "Adding %s to file list", new_file);
                     file_list[num_files] = StringLib::duplicate(new_file);
                 }
                 num_files++;

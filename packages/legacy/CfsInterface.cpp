@@ -101,12 +101,12 @@ CommandableObject* CfsInterface::createObject(CommandProcessor* cmd_proc, const 
     {
         if(!StringLib::str2long(tlm_port_str, &tlm_port))
         {
-            mlog(CRITICAL, "Invalid value provided for telemetry port: %s\n", tlm_port_str);
+            mlog(CRITICAL, "Invalid value provided for telemetry port: %s", tlm_port_str);
             return NULL;
         }
         else if(tlm_port < 0 || tlm_port > 0xFFFF)
         {
-            mlog(CRITICAL, "Invalid port number for telemetry port: %ld\n", tlm_port);
+            mlog(CRITICAL, "Invalid port number for telemetry port: %ld", tlm_port);
             return NULL;
         }
     }
@@ -115,12 +115,12 @@ CommandableObject* CfsInterface::createObject(CommandProcessor* cmd_proc, const 
     {
         if(!StringLib::str2long(cmd_port_str, &cmd_port))
         {
-            mlog(CRITICAL, "Invalid value provided for command port: %s\n", cmd_port_str);
+            mlog(CRITICAL, "Invalid value provided for command port: %s", cmd_port_str);
             return NULL;
         }
         else if(cmd_port < 0 || cmd_port > 0xFFFF)
         {
-            mlog(CRITICAL, "Invalid port number for command port: %ld\n", cmd_port);
+            mlog(CRITICAL, "Invalid port number for command port: %ld", cmd_port);
             return NULL;
         }
     }
@@ -238,7 +238,7 @@ void* CfsInterface::telemetryThread (void* parm)
             }
             else
             {
-                mlog(WARNING, "Invalid packet (unknown) detected in %s telemetry\n", interface->getName());
+                mlog(WARNING, "Invalid packet (unknown) detected in %s telemetry", interface->getName());
                 interface->apidStats[apid]->rec->segs_errors++;
                 interface->apidStats[TLM_APIDS]->rec->segs_errors++;
             }
@@ -258,7 +258,7 @@ void* CfsInterface::telemetryThread (void* parm)
                     }
                     else if(status != MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(CRITICAL, "Packet (SID = 0x%04X) unable to be posted (%d) to output stream %s\n", CCSDS_GET_SID(buffer), status, interface->tlmQ->getName());
+                        mlog(CRITICAL, "Packet (SID = 0x%04X) unable to be posted (%d) to output stream %s", CCSDS_GET_SID(buffer), status, interface->tlmQ->getName());
                         interface->apidStats[apid]->rec->segs_dropped++;
                         interface->apidStats[TLM_APIDS]->rec->segs_dropped++;
                         break;
@@ -268,7 +268,7 @@ void* CfsInterface::telemetryThread (void* parm)
         }
         else if(bytes != TIMEOUT_RC)
         {
-            mlog(CRITICAL, "Failed to read packet (%d) on %s telemetry socket... fatal error, exiting telemetry thread\n", bytes, interface->getName());
+            mlog(CRITICAL, "Failed to read packet (%d) on %s telemetry socket... fatal error, exiting telemetry thread", bytes, interface->getName());
             break;
         }
     }
@@ -308,7 +308,7 @@ void* CfsInterface::commandThread (void* parm)
             }
             else
             {
-                mlog(CRITICAL, "Invalid packet %0X4 detected in %s commands\n", apid, interface->getName());
+                mlog(CRITICAL, "Invalid packet %0X4 detected in %s commands", apid, interface->getName());
                 interface->apidStats[apid]->rec->segs_errors++;
                 interface->apidStats[CMD_APIDS]->rec->segs_errors++;
             }
@@ -325,7 +325,7 @@ void* CfsInterface::commandThread (void* parm)
                 }
                 else
                 {
-                    mlog(CRITICAL, "Packet (SID = 0x%04X) unable to be sent (%d) to remote destination %s\n", CCSDS_GET_SID(buffer), bytes_sent, interface->cmdSock->getIpAddr());
+                    mlog(CRITICAL, "Packet (SID = 0x%04X) unable to be sent (%d) to remote destination %s", CCSDS_GET_SID(buffer), bytes_sent, interface->cmdSock->getIpAddr());
                     interface->apidStats[apid]->rec->segs_dropped++;
                     interface->apidStats[CMD_APIDS]->rec->segs_dropped++;
                 }
@@ -333,12 +333,12 @@ void* CfsInterface::commandThread (void* parm)
         }
         else if(bytes < 0)
         {
-            mlog(CRITICAL, "Fatal error (%d) detected trying to read commands from %s, exiting command thread in %s\n", bytes, interface->cmdQ->getName(), interface->getName());
+            mlog(CRITICAL, "Fatal error (%d) detected trying to read commands from %s, exiting command thread in %s", bytes, interface->cmdQ->getName(), interface->getName());
             return NULL;
         }
         else if(bytes != MsgQ::STATE_TIMEOUT)
         {
-            mlog(CRITICAL, "Invalid packet length of %d detected in %s commands\n", bytes, interface->getName());
+            mlog(CRITICAL, "Invalid packet length of %d detected in %s commands", bytes, interface->getName());
         }
     }
 
@@ -355,7 +355,7 @@ int CfsInterface::dropInvalidCmd (int argc, char argv[][MAX_CMD_SIZE])
     bool drop_invalid;
     if(!StringLib::str2bool(argv[0], &drop_invalid))
     {
-        mlog(CRITICAL, "Invalid boolean passed to command: %s\n", argv[0]);
+        mlog(CRITICAL, "Invalid boolean passed to command: %s", argv[0]);
         return -1;
     }
 
@@ -384,12 +384,12 @@ int CfsInterface::logPktStatsCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
         else if(!StringLib::str2long(apid_str, &apid))
         {
-            mlog(CRITICAL, "Invalid APID string supplied: %s\n", apid_str);
+            mlog(CRITICAL, "Invalid APID string supplied: %s", apid_str);
             return -1;
         }
         else if(apid < 0 || apid >= CCSDS_NUM_APIDS)
         {
-            mlog(CRITICAL, "APID out of range: %ld\n", apid);
+            mlog(CRITICAL, "APID out of range: %ld", apid);
             return -1;
         }
 
@@ -475,7 +475,7 @@ bool CfsInterface::validatePkt (unsigned char* pktbuf, int bytes)
                 status = false;
                 stat->chksum_errors++;
                 all->chksum_errors++;
-                mlog(ERROR, "incorrect checksum in command packet 0x%04X: EXPECTED 0x%02X, CHECKSUM 0x%02X\n", apid, pkt.computeChecksum(), pkt.getChecksum());
+                mlog(ERROR, "incorrect checksum in command packet 0x%04X: EXPECTED 0x%02X, CHECKSUM 0x%02X", apid, pkt.computeChecksum(), pkt.getChecksum());
             }
         }
 
@@ -490,7 +490,7 @@ bool CfsInterface::validatePkt (unsigned char* pktbuf, int bytes)
                     status = false;
                     stat->seq_errors++;
                     all->seq_errors++;
-                    mlog(WARNING, "packet %04X seq %04X unexpected from previous seq %04X (filter factor of %d)\n", apid, seq, stat->last_seq, stat->filter_factor);
+                    mlog(WARNING, "packet %04X seq %04X unexpected from previous seq %04X (filter factor of %d)", apid, seq, stat->last_seq, stat->filter_factor);
                 }
             }
 
@@ -512,20 +512,20 @@ bool CfsInterface::validatePkt (unsigned char* pktbuf, int bytes)
             status = false;
             stat->len_errors++;
             all->len_errors++;
-            mlog(ERROR, "packet %04X failed length validation, exp: %d, act: %d\n", apid, bytes, len);
+            mlog(ERROR, "packet %04X failed length validation, exp: %d, act: %d", apid, bytes, len);
         }
 
         /* Segmentation Sequence Validation */
         if((stat->last_seg != CcsdsSpacePacket::SEG_STOP) && (seg == CcsdsSpacePacket::SEG_START))
         {
-            mlog(ERROR, "missing \"stop\" segmentation flags for APID %04X SEQ %04X (%02X %02X)\n", apid, seq, stat->last_seg, seg);
+            mlog(ERROR, "missing \"stop\" segmentation flags for APID %04X SEQ %04X (%02X %02X)", apid, seq, stat->last_seg, seg);
             stat->seg_errors++;
             all->seg_errors++;
             status = false;
         }
         else if((stat->last_seg == CcsdsSpacePacket::SEG_STOP) && (seg != CcsdsSpacePacket::SEG_START))
         {
-            mlog(ERROR, "missing \"start\" segmentation flags for APID %04X SEQ %04X (%02X %02X)\n", apid, seq, stat->last_seg, seg);
+            mlog(ERROR, "missing \"start\" segmentation flags for APID %04X SEQ %04X (%02X %02X)", apid, seq, stat->last_seg, seg);
             stat->seg_errors++;
             all->seg_errors++;
             status = false;
@@ -534,7 +534,7 @@ bool CfsInterface::validatePkt (unsigned char* pktbuf, int bytes)
     }
     catch (const std::invalid_argument& e)
     {
-        mlog(CRITICAL, "Unable to create or validate CCSDS packet: %s\n", e.what());
+        mlog(CRITICAL, "Unable to create or validate CCSDS packet: %s", e.what());
         status = false;
     }
 

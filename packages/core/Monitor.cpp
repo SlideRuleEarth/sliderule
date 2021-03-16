@@ -70,7 +70,7 @@ int Monitor::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s\n", LuaMetaName, e.what());
+        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -217,7 +217,7 @@ int Monitor::luaConfig (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring monitor: %s\n", e.what());
+        mlog(CRITICAL, "Error configuring monitor: %s", e.what());
     }
 
     /* Return Status */
