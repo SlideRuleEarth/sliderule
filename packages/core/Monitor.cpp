@@ -149,7 +149,7 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
 
         /* Post Event */
         if(outQ) outQ->postCopy(event_buffer, event_size, IO_CHECK);
-        else     printf("%s", event_buffer);
+        else     print2term("%s", event_buffer);
     }
 
     /* Return Success */

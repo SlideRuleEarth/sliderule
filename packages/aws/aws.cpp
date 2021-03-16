@@ -101,7 +101,7 @@ void initaws (void)
     LuaEngine::indicate(LUA_AWS_LIBNAME, BINID);
 
     /* Display Status */
-    printf("%s package initialized (%s)\n", LUA_AWS_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_AWS_LIBNAME, BINID);
 }
 
 void deinitaws (void)

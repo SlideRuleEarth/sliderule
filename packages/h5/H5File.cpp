@@ -204,37 +204,37 @@ int H5File::luaInspect (lua_State* L)
         if(StringLib::match("double", datatype_name))
         {
             H5Array<double> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%lf\n", values[i]);
+            for(int i = 0; i < values.size; i++) print2term("%lf\n", values[i]);
         }
         else if(StringLib::match("float", datatype_name))
         {
             H5Array<float> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%f\n", values[i]);
+            for(int i = 0; i < values.size; i++) print2term("%f\n", values[i]);
         }
         else if(StringLib::match("long", datatype_name))
         {
             H5Array<long> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%ld\n", values[i]);
+            for(int i = 0; i < values.size; i++) print2term("%ld\n", values[i]);
         }
         else if(StringLib::match("int", datatype_name))
         {
             H5Array<int> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%d\n", values[i]);
+            for(int i = 0; i < values.size; i++) print2term("%d\n", values[i]);
         }
         else if(StringLib::match("short", datatype_name))
         {
             H5Array<short> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%d\n", values[i]);
+            for(int i = 0; i < values.size; i++) print2term("%d\n", values[i]);
         }
         else if(StringLib::match("char", datatype_name))
         {
             H5Array<char> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%c\n", values[i]);
+            for(int i = 0; i < values.size; i++) print2term("%c\n", values[i]);
         }
         else if(StringLib::match("byte", datatype_name))
         {
             H5Array<unsigned char> values(lua_obj->filename, dataset_name);
-            for(int i = 0; i < values.size; i++) printf("%02X\n", values[i]);
+            for(int i = 0; i < values.size; i++) print2term("%02X\n", values[i]);
         }
     }
     catch(const RunTimeException& e)

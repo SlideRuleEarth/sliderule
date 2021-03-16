@@ -113,7 +113,7 @@ void operator delete(void* ptr, size_t size)
 
 void displayCount(void)
 {
-    printf("ALLOCATED: %ld\n", (long)allocCount);
+    print2term("ALLOCATED: %ld\n", (long)allocCount);
 }
 #endif
 
@@ -128,7 +128,7 @@ static void console_quick_exit(int parm)
 {
     (void)parm;
     if(app_immediate_abort) quick_exit(0);
-    printf("\n...Shutting down command line interface!\n");
+    print2term("\n...Shutting down command line interface!\n");
     setinactive(); // tells core package that application is no longer active
     app_immediate_abort = true; // multiple control-c will exit immediately
 }
@@ -146,7 +146,7 @@ static void* signal_thread (void* parm)
         int status = sigwait(signal_set, &sig);
         if (status != 0)
         {
-            printf("Fatal error (%d) ...failed to wait for signal: %s\n", status, strerror(errno));
+            print2term("Fatal error (%d) ...failed to wait for signal: %s\n", status, strerror(errno));
             signal(SIGINT, console_quick_exit);
             break;
         }
@@ -195,7 +195,7 @@ static void ldplugins(void)
             StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFIGPATH, PATH_DELIMETER, plugin_name);
 
             /* Attempt to load plugin */
-            printf("Loading plug-in %s ... ", plugin_name);
+            print2term("Loading plug-in %s ... ", plugin_name);
             void* plugin = dlopen(plugin_path, RTLD_NOW);
             if(plugin)
             {
@@ -209,12 +209,12 @@ static void ldplugins(void)
                 }
                 else
                 {
-                    printf("cannot find initialization function %s: %s\n", init_func, dlerror());
+                    print2term("cannot find initialization function %s: %s\n", init_func, dlerror());
                 }
             }
             else
             {
-                printf("cannot load %s: %s\n", plugin_name, dlerror());
+                print2term("cannot load %s: %s\n", plugin_name, dlerror());
             }
         }
 
@@ -223,7 +223,7 @@ static void ldplugins(void)
     }
     else
     {
-        printf("cannot open plugin file: %s\n", conf_path);
+        print2term("cannot open plugin file: %s\n", conf_path);
     }
 }
 

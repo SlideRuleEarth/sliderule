@@ -136,7 +136,7 @@ void initccsds (void)
     LuaEngine::indicate(LUA_CCSDS_LIBNAME, BINID);
 
     /* Print Status */
-    printf("%s package initialized (%s)\n", LUA_CCSDS_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_CCSDS_LIBNAME, BINID);
 }
 
 void deinitccsds (void)

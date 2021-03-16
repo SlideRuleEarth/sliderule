@@ -264,7 +264,7 @@ void initlegacy (void)
     LuaEngine::indicate("legacy", BINID);
 
     /* Print Status */
-    printf("legacy package initialized (%s)\n", BINID);
+    print2term("legacy package initialized (%s)\n", BINID);
 }
 
 /*----------------------------------------------------------------------------

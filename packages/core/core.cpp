@@ -184,7 +184,7 @@ void initcore (void)
     LuaEngine::indicate(LUA_CORE_LIBNAME, BINID);
 
     /* Print Status */
-    printf("%s package initialized (%s)\n", LUA_CORE_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_CORE_LIBNAME, BINID);
 }
 
 /*----------------------------------------------------------------------------
@@ -195,14 +195,14 @@ void initcore (void)
 void deinitcore (void)
 {
     /* Clean up libraries initialized in initcore() */
-    printf("Exiting...\n");
-    EventLib::deinit(); printf("Event Library Uninitialized\n");
-    TimeLib::deinit();  printf("Time Library Uninitialized\n");
-    TTYLib::deinit();   printf("TTY Library Uninitialized\n");
-    SockLib::deinit();  printf("Socket Library Uninitialized\n");
-    MsgQ::deinit();     printf("Message Queues Uninitialized\n");
-    LocalLib::deinit(); printf("Local Library Uninitialized\n");
-    printf("Cleanup Complete\n");
+    print2term("Exiting...\n");
+    EventLib::deinit(); print2term("Event Library Uninitialized\n");
+    TimeLib::deinit();  print2term("Time Library Uninitialized\n");
+    TTYLib::deinit();   print2term("TTY Library Uninitialized\n");
+    SockLib::deinit();  print2term("Socket Library Uninitialized\n");
+    MsgQ::deinit();     print2term("Message Queues Uninitialized\n");
+    LocalLib::deinit(); print2term("Local Library Uninitialized\n");
+    print2term("Cleanup Complete\n");
 }
 
 /*----------------------------------------------------------------------------

@@ -84,7 +84,7 @@ void inith5 (void)
     LuaEngine::indicate(LUA_H5_LIBNAME, BINID);
 
     /* Display Status */
-    printf("%s package initialized (%s)\n", LUA_H5_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_H5_LIBNAME, BINID);
 }
 
 void deinith5 (void)
