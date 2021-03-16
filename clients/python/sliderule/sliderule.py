@@ -64,8 +64,7 @@ eventlevels = {
     "INFO":     1,
     "WARNING":  2,
     "ERROR":    3,
-    "CRITICAL": 4,
-    "RAW":      5
+    "CRITICAL": 4
 }
 
 eventformats = {
@@ -348,11 +347,8 @@ def __parse(stream):
                     rec     = __decode(rectype, rawdata)
                     # Print Verbose Progress
                     if rectype == "eventrec":
-                         if verbose:
-                            if rec["attr"][-1] == '\n':
-                                 logger.critical('%s:%s' % (rec["name"], rec["attr"][:-1]))
-                            else:
-                                 logger.critical('%s:%s' % (rec["name"], rec["attr"]))
+                        if verbose:
+                            logger.critical('%s:%s' % (rec["name"], rec["attr"]))
                     else:
                         # Append Record
                         recs.append(rec)
