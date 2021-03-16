@@ -14,7 +14,7 @@ if json_input and string.match(json_input, ".json") then
 end
 
 -- Pull Out Parameters --
-local loglvl = cfgtbl["loglvl"] or core.ERROR
+local loglvl = sys.level(cfgtbl["loglvl"]) or core.ERROR
 local port = cfgtbl["port"] or 9081
 local asset_directory = cfgtbl["asset_directory"] or nil
 local cache_root = cfgtbl["cache_root"]

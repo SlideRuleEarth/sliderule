@@ -52,6 +52,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"abort",       LuaLibrarySys::lsys_abort},
     {"wait",        LuaLibrarySys::lsys_wait},
     {"log",         LuaLibrarySys::lsys_log},
+    {"level",       LuaLibrarySys::lsys_level},
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
@@ -163,6 +164,32 @@ int LuaLibrarySys::lsys_log (lua_State* L)
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_level - .level(<level string or number>) --> level number
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_level (lua_State* L)
+{
+    event_level_t level = INVALID_EVENT_LEVEL;
+
+    if(lua_isinteger(L, 1))
+    {
+        level = (event_level_t)lua_tointeger(L, 1);
+    }
+    else if(lua_isstring(L, 1))
+    {
+        const char* lvlstr = lua_tostring(L, 1);
+        if      (StringLib::match(lvlstr, "DEBUG"))     level = DEBUG;
+        else if (StringLib::match(lvlstr, "INFO"))      level = INFO;
+        else if (StringLib::match(lvlstr, "WARNING"))   level = WARNING;
+        else if (StringLib::match(lvlstr, "ERROR"))     level = ERROR;
+        else if (StringLib::match(lvlstr, "CRITICAL"))  level = CRITICAL;
+    }
+
+    /* Return Level */
+    lua_pushinteger(L, level);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

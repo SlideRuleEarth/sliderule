@@ -76,6 +76,7 @@ class LuaLibrarySys
         static int      lsys_abort          (lua_State* L);
         static int      lsys_wait           (lua_State* L);
         static int      lsys_log            (lua_State* L);
+        static int      lsys_level          (lua_State* L);
         static int      lsys_lsmsgq         (lua_State* L);
         static int      lsys_type           (lua_State* L);
         static int      lsys_setstddepth    (lua_State* L);
