@@ -177,6 +177,11 @@ if __name__ == '__main__':
         resource = sys.argv[4]
         atl06_present = False
 
+    # Check for use of service discovery
+    if len(sys.argv) > 5:
+        if sys.argv[5] == "service":
+            url = url[0]
+
     # Initialize Icesat2 Package #
     icesat2.init(url, True)
 
