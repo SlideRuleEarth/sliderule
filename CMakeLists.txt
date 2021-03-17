@@ -40,6 +40,7 @@ option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for 
 option (ENABLE_HDF5_LIB "Use the standard HDF5 library instead of the internal implementation" OFF)
 option (ENABLE_H5_REST_VOL "Install and use the REST VOL plugin with the HDF5 library" OFF)
 option (ENABLE_TRACING "Instantiate trace points" OFF)
+option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
 
 option (USE_AWS_PACKAGE "Include the AWS package" OFF)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
@@ -127,6 +128,11 @@ endif ()
 if(${ENABLE_TRACING})
     message (STATUS "Enabling trace points")
     target_compile_definitions (slideruleLib PUBLIC __tracing__)
+endif()
+
+if(${ENABLE_TERMINAL})
+    message (STATUS "Enabling terminal messages")
+    target_compile_definitions (slideruleLib PUBLIC __terminal__)
 endif()
 
 if (DEFINED MAX_FREE_STACK_SIZE)
