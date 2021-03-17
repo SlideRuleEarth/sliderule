@@ -20,6 +20,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/asset.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/console.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/csv.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/global.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/json.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/packet.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/test_executive.lua

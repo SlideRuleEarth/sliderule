@@ -1,3 +1,4 @@
+local global = require("global")
 local console = require("console")
 local asset = require("asset")
 local json = require("json")
@@ -14,7 +15,7 @@ if json_input and string.match(json_input, ".json") then
 end
 
 -- Pull Out Parameters --
-local loglvl = sys.level(cfgtbl["loglvl"]) or core.ERROR
+local loglvl = global.eval(cfgtbl["loglvl"]) or core.ERROR
 local port = cfgtbl["port"] or 9081
 local asset_directory = cfgtbl["asset_directory"] or nil
 local cache_root = cfgtbl["cache_root"]
@@ -34,7 +35,7 @@ if __aws__ then
 end
 
 -- Configure and Run Server --
-server = core.httpd(9081)
+server = core.httpd(port)
 server:name("HttpServer")
 endpoint = core.endpoint()
 endpoint:name("LuaEndpoint")
