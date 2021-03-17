@@ -85,6 +85,11 @@ if __name__ == '__main__':
     if len(sys.argv) > 4:
         max_workers = int(sys.argv[4])
 
+    # Check for use of service discovery
+    if len(sys.argv) > 5:
+        if sys.argv[5] == "service":
+            url = url[0]
+
     # Configure SlideRule #
     icesat2.init(url, False)
 
