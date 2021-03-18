@@ -14,12 +14,13 @@
 -- OUTPUT:      application event messages
 --
 
+local global = require("global")
 local json = require("json")
 local parm = json.decode(arg[1])
 
-local type = parm["type"] or core.LOG
-local level = parm["level"] or core.INFO
-local format = parm["format"] or nil
+local type = global.eval(parm["type"]) or core.LOG
+local level = global.eval(parm["level"]) or core.INFO
+local format = global.eval(parm["format"]) or nil
 local duration = parm["duration"] or 0
 
 -- Attach monitor to post event to response queue --
