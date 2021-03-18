@@ -52,21 +52,6 @@ logger = logging.getLogger(__name__)
 recdef_lock = threading.Lock()
 recdef_table = {}
 
-eventtypes = {
-    "LOG":      0x01,
-    "TRACE":    0x02,
-    "METRIC":   0x04,
-    "ALL":      0x07
-}
-
-eventlevels = {
-    "DEBUG":    0,
-    "INFO":     1,
-    "WARNING":  2,
-    "ERROR":    3,
-    "CRITICAL": 4
-}
-
 eventformats = {
     "TEXT":     0,
     "JSON":     1
@@ -417,8 +402,8 @@ def set_max_errors (max_errors):
 def tail (event_type, event_level, duration):
     # Build Logging Request
     rqst = {
-        "type": eventtypes[event_type], 
-        "level" : eventlevels[event_level],
+        "type": event_type, 
+        "level" : event_level,
         "duration": duration
     }
 

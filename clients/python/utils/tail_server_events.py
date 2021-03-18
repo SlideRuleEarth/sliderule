@@ -27,7 +27,7 @@ if __name__ == '__main__':
         url = [sys.argv[1]]
 
     # Override duration to maintain connection
-    duration = 3 # seconds
+    duration = 0 # seconds
     if len(sys.argv) > 2:
         duration = int(sys.argv[2])
 
