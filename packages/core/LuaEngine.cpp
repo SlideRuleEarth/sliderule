@@ -534,7 +534,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_setglobal(l, LUA_TRACEID);
 
     /* Set Starting Lua Path */
-    SafeString lpath(CONFIGPATH);
+    SafeString lpath(CONFDIR);
     lpath += "/?.lua";
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)

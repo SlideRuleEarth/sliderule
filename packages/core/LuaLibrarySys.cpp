@@ -89,11 +89,11 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
-    print2term("SlideRule Version: %s\n", BINID);
+    print2term("SlideRule Version: %s\n", LIBID);
     print2term("Build Information: %s\n", BUILDINFO);
 
     /* Return Version String to Lua */
-    lua_pushstring(L, BINID);
+    lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
     return 2;
 }

@@ -839,7 +839,7 @@ int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
     (void)argc;
 
-    print2term("SlideRule Application Version: %s\n\n", BINID);
+    print2term("SlideRule Application Version: %s\n\n", LIBID);
 
     return 0;
 }

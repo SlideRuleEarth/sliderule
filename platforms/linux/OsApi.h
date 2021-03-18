@@ -42,6 +42,20 @@
 #include <assert.h>
 
 /******************************************************************************
+ * PLATFORM DEFINES
+ ******************************************************************************/
+
+#include "platform.h"
+
+#ifndef LIBID
+#define LIBID "local"
+#endif
+
+#ifndef CONFDIR
+#define CONFDIR "."
+#endif
+
+/******************************************************************************
  * MACROS
  ******************************************************************************/
 
@@ -61,13 +75,9 @@
 #define CompileTimeAssert(Condition, Message) typedef char Message[(Condition) ? 1 : -1]
 #endif
 
-#ifdef _GNU_
 #define VARG_CHECK(f, a, b) __attribute__((format(f, a, b)))
-#else
-#define VARG_CHECK(f, a, b)
-#endif
 
-#ifdef __BE__
+#ifdef __be__
 #define NATIVE_FLAGS 1
 #else
 #define NATIVE_FLAGS 0
@@ -125,7 +135,7 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 
 /* Debug Logging */
 #define dlog(...)                   LocalLib::print(__FILE__,__LINE__,__VA_ARGS__)
-#if __terminal__
+#ifdef __terminal__
 #define print2term(...)             printf(__VA_ARGS__) 
 #else
 #define print2term(...)             do { if (0) printf(__VA_ARGS__); } while (0)

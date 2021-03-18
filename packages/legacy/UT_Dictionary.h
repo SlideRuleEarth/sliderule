@@ -65,13 +65,12 @@ class UT_Dictionary: public CommandableObject
          *--------------------------------------------------------------------*/
 
         Dictionary<List<SafeString*>*> wordsets;
-        FILE* testlog;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        UT_Dictionary (CommandProcessor* cmd_proc, const char* obj_name, const char* logfile);
+        UT_Dictionary (CommandProcessor* cmd_proc, const char* obj_name);
         ~UT_Dictionary (void);
 
         int functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);

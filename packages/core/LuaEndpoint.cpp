@@ -45,7 +45,7 @@ const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-SafeString LuaEndpoint::ServerHeader("sliderule/%s", BINID);
+SafeString LuaEndpoint::ServerHeader("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
 
@@ -221,6 +221,6 @@ const char* LuaEndpoint::sanitize (const char* filename)
     SafeString delimeter("%c", PATH_DELIMETER);
     SafeString safe_filename("%s", filename);
     safe_filename.replace(delimeter.getString(), "_");
-    SafeString safe_pathname("%s%c%s.lua", CONFIGPATH, PATH_DELIMETER, safe_filename.getString());
+    SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.getString());
     return safe_pathname.getString(true);
 }

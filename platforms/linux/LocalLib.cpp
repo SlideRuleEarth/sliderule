@@ -112,12 +112,12 @@ void LocalLib::print (const char* file_name, unsigned int line_number, const cha
 /*----------------------------------------------------------------------------
  * sleep
  *----------------------------------------------------------------------------*/
-void LocalLib::sleep(int secs)
+void LocalLib::sleep(double secs)
 {
     struct timespec waittime;
 
-    waittime.tv_sec  = secs;
-    waittime.tv_nsec = 0;
+    waittime.tv_sec  = (time_t)secs;
+    waittime.tv_nsec = (long)((secs - (long)secs) * 1000000000L);
 
     while( nanosleep(&waittime, &waittime) == -1 ) continue;
 }

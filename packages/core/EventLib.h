@@ -45,10 +45,6 @@
 
 #define ORIGIN  0
 
-#ifdef _WINDOWS_
-#undef ERROR
-#endif
-
 typedef enum {
     DEBUG               = 0,
     INFO                = 1,

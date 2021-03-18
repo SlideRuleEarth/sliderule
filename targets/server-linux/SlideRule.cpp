@@ -170,7 +170,7 @@ static void ldplugins(void)
 {
     /* Get path to plugin config file */
     char conf_path[MAX_STR_SIZE];
-    StringLib::format(conf_path, MAX_STR_SIZE, "%s%cplugins.conf", CONFIGPATH, PATH_DELIMETER);
+    StringLib::format(conf_path, MAX_STR_SIZE, "%s%cplugins.conf", CONFDIR, PATH_DELIMETER);
 
     /* Open file */
     FILE* fp = fopen(conf_path, "r");
@@ -192,7 +192,7 @@ static void ldplugins(void)
 
             /* Build full path to plugin */
             char plugin_path[MAX_STR_SIZE];
-            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFIGPATH, PATH_DELIMETER, plugin_name);
+            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFDIR, PATH_DELIMETER, plugin_name);
 
             /* Attempt to load plugin */
             print2term("Loading plug-in %s ... ", plugin_name);

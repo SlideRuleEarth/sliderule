@@ -469,7 +469,7 @@ int HttpServer::onWrite(int fd)
                 if(connection->state.ref.size > 0)
                 {
                     /* Write Message Size */
-                    #ifdef __BE__
+                    #ifdef __be__
                     uint32_t rec_size = LocalLib::swapl(rec_size);
                     #else
                     uint32_t rec_size = connection->state.ref.size;

@@ -85,30 +85,6 @@
 #include "UdpSocket.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#ifndef CONFIGPATH
-#define CONFIGPATH "."
-#endif
-
-#ifndef EXECPATH
-#define EXECPATH "."
-#endif
-
-#ifndef LIBPATH
-#define LIBPATH "."
-#endif
-
-#ifndef INCPATH
-#define INCPATH "."
-#endif
-
-#ifndef BINID
-#define BINID "local"
-#endif
-
-/******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 

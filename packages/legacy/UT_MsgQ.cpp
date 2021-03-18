@@ -740,15 +740,5 @@ void* UT_MsgQ::opportunityThread(void* parm)
 void UT_MsgQ::randomDelay(long max_milliseconds)
 {
     long us = rand() % (max_milliseconds * 1000);
-
-#ifdef _LINUX_
-    struct timespec waittime;
-    waittime.tv_sec  = us / 1000000;
-    waittime.tv_nsec = (us % 1000000) * 1000;
-    while( nanosleep(&waittime, &waittime) == -1 ) continue;
-#else 
-#ifdef _WINDOWS_
-    Sleep(us / 1000);
-#endif
-#endif
+    LocalLib::sleep((double)us / 1000000.0);
 }

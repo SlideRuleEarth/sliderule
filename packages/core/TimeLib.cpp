@@ -514,10 +514,7 @@ void TimeLib::heartbeat(void)
         else
         {
             /* Detect Gross Adjustment */
-#ifdef _LINUX_
-            // currently windows is not supporting the necessary stability in the timer implementation
             mlog(CRITICAL, "Gross adjustment detected in step time: %lld", (long long)usec_per_sec);
-#endif
             baseTimeMs = now / 1000;
             baseTimeMs += getleapms(baseTimeMs);
             baseTimeMs -= LocalGpsEpochMs; // moves time up to GPS epoch
@@ -542,7 +539,7 @@ void TimeLib::parsenistfile(void)
 
     /* Read contents of file and store in temporary array */
     SafeString leap_second_file_name;
-    leap_second_file_name += CONFIGPATH;
+    leap_second_file_name += CONFDIR;
     leap_second_file_name.appendChar(PATH_DELIMETER);
     leap_second_file_name += TIME_NIST_LIST_FILENAME;
     FILE* fd = fopen( leap_second_file_name.getString(), "r" );

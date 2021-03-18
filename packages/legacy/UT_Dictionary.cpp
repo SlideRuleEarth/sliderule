@@ -51,39 +51,18 @@ const char* UT_Dictionary::TYPE = "UT_Dictionary";
  *----------------------------------------------------------------------------*/
 CommandableObject* UT_Dictionary::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
 {
-    const char* logfile = NULL;
-    if(argc > 0) logfile = StringLib::checkNullStr(argv[0]);
-    return new UT_Dictionary(cmd_proc, name, logfile);
+    (void)argc;
+    (void)argv;
+    
+    return new UT_Dictionary(cmd_proc, name);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name, const char* logfile):
+UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name):
     CommandableObject(cmd_proc, obj_name, TYPE)
 {
-    if(logfile)
-    {
-        if(StringLib::match(logfile, "STDOUT"))
-        {
-            testlog = stdout;
-        }
-        else
-        {
-            testlog = fopen(logfile, "w");
-        }
-    }
-    else
-    {
-        #ifdef _LINUX_
-            testlog = fopen("/dev/null", "w");
-        #else
-        #ifdef _WINDOWS_
-            testlog = fopen("NUL", "w");
-        #endif
-        #endif
-    }
-
     /* Register Commands */
     registerCommand("FUNCTIONAL_TEST", (cmdFunc_t)&UT_Dictionary::functionalUnitTestCmd, 1, "<set name>");
     registerCommand("ITERATOR_TEST", (cmdFunc_t)&UT_Dictionary::iteratorUnitTestCmd, 1, "<set name>");
@@ -147,10 +126,6 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
             failure = true;
         }
-        else
-        {
-            fprintf(testlog, "Added entry: (%s, %ld) --> %d\n", wordset[i]->getString(), seq, d1.length());
-        }
     }
 
     /* Find Entries */
@@ -160,10 +135,6 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         {
             print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i]->getString());
             failure = true;
-        }
-        else
-        {
-            fprintf(testlog, "Found entry: (%s)\n", wordset[i]->getString());
         }
     }
 
@@ -177,10 +148,6 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             {
                 print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i]->getString());
                 failure = true;
-            }
-            else
-            {
-                fprintf(testlog, "Got entry: (%s, %ld)\n", wordset[i]->getString(), data);
             }
         }
         catch(std::out_of_range& e)
@@ -229,7 +196,6 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
                     {
                         if(StringLib::match(true_list[j], key_list[i]))
                         {
-                            fprintf(testlog, "Found key: (%s)\n", key_list[i]);
                             found = true;
                             true_list[j] = NULL;
                             break;
@@ -257,10 +223,6 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             print2term("[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i]->getString(), i);
             failure = true;
         }
-        else
-        {
-            fprintf(testlog, "Removed entry: (%s)\n", wordset[i]->getString());
-        }
     }
 
     /* Re-Check Attributes */
@@ -283,10 +245,6 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
             failure = true;
         }
-        else
-        {
-            fprintf(testlog, "Re-added entry: (%s, %ld) --> %d\n", wordset[i]->getString(), seq, d1.length());
-        }
     }
 
     /* Clear Entries */
@@ -299,10 +257,6 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         {
             print2term("[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i]->getString());
             failure = true;
-        }
-        else
-        {
-            fprintf(testlog, "Correctly did not find entry: (%s)\n", wordset[i]->getString());
         }
     }
 
@@ -370,10 +324,6 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         {
             print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
             failure = true;
-        }
-        else
-        {
-            fprintf(testlog, "Added entry: (%s, %ld) --> %d\n", wordset[i]->getString(), seq, d1.length());
         }
     }
 

@@ -133,10 +133,10 @@ void initccsds (void)
     LuaLibraryMsg::lmsg_addtype(CCSDS_RECORD_CLASS, CCSDS_RECORD_PREFIX, createCcsdsRec, associateCcsdsRec);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_CCSDS_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_CCSDS_LIBNAME, LIBID);
 
     /* Print Status */
-    print2term("%s package initialized (%s)\n", LUA_CCSDS_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_CCSDS_LIBNAME, LIBID);
 }
 
 void deinitccsds (void)

@@ -84,10 +84,10 @@ void initpistache (void)
     LuaEngine::extend(LUA_PISTACHE_LIBNAME, pistache_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_PISTACHE_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_PISTACHE_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_PISTACHE_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_PISTACHE_LIBNAME, LIBID);
 }
 
 void deinitpistache (void)

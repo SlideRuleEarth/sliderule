@@ -1,16 +1,5 @@
 message (STATUS "Using windows platform")
 
-target_compile_definitions (slideruleLib PUBLIC _WINDOWS_)
-
-# Version Information #
-
-execute_process(COMMAND type ${PROJECT_SOURCE_DIR}\version.txt OUTPUT_VARIABLE TGTVER)
-string(REGEX REPLACE "\n$" "" TGTVER "${TGTVER}")
-
-target_compile_definitions (slideruleLib PUBLIC BINID="${TGTVER}")
-
-set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
-
 # Compiler Options #
 
 # Linker Options #

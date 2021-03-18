@@ -81,10 +81,10 @@ void inith5 (void)
     LuaEngine::extend(LUA_H5_LIBNAME, h5_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_H5_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_H5_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_H5_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_H5_LIBNAME, LIBID);
 }
 
 void deinith5 (void)

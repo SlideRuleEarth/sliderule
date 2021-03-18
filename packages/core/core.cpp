@@ -181,10 +181,10 @@ void initcore (void)
     LuaEngine::extend(LUA_CORE_LIBNAME, core_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_CORE_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_CORE_LIBNAME, LIBID);
 
     /* Print Status */
-    print2term("%s package initialized (%s)\n", LUA_CORE_LIBNAME, BINID);
+    print2term("%s package initialized (%s)\n", LUA_CORE_LIBNAME, LIBID);
 }
 
 /*----------------------------------------------------------------------------

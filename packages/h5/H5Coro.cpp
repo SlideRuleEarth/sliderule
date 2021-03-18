@@ -503,7 +503,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
         case 8:     
         {
             value = *(uint64_t*)data_ptr;
-            #ifdef __BE__
+            #ifdef __be__
                 value = LocalLib::swapll(value);
             #endif
             break;
@@ -512,7 +512,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
         case 4:     
         {
             value = *(uint32_t*)data_ptr;
-            #ifdef __BE__
+            #ifdef __be__
                 value = LocalLib::swapl(value);
             #endif
             break;
@@ -521,7 +521,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
         case 2:
         {
             value = *(uint16_t*)data_ptr;
-            #ifdef __BE__
+            #ifdef __be__
                 value = LocalLib::swaps(value);
             #endif
             break;

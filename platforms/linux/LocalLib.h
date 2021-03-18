@@ -58,7 +58,7 @@ class LocalLib
         static void         deinit              (void); // de-initializes library
         static void         setPrint            (print_func_t _print_func);
         static void         print               (const char* file_name, unsigned int line_number, const char* format_string, ...)  __attribute__((format(printf, 3, 4)));
-        static void         sleep               (int secs);
+        static void         sleep               (double secs); // sleep at highest resolution available on system
         static void*        copy                (void* dst, const void* src, int len);
         static void*        move                (void* dst, const void* src, int len);
         static void*        set                 (void* buf, int val, int len);

@@ -4,8 +4,6 @@ message (STATUS "Using linux platform")
 # Target: sliderule #
 ###################
 
-target_compile_definitions (slideruleLib PUBLIC _LINUX_)
-
 # Additional Build Information #
 
 execute_process (COMMAND git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)

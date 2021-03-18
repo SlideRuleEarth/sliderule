@@ -30,23 +30,33 @@ endif()
 # Project Options #
 ###################
 
+# Project Options #
+
 option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" OFF)
 option (PYTHON_BINDINGS "Create Python bindings, including h5lite module" OFF)
 option (SHARED_LIBRARY "Create shared library instead of sliderule binary" OFF)
+
+# Library Options #
 
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
 option (ENABLE_HDF5_LIB "Use the standard HDF5 library instead of the internal implementation" OFF)
 option (ENABLE_H5_REST_VOL "Install and use the REST VOL plugin with the HDF5 library" OFF)
-option (ENABLE_TRACING "Instantiate trace points" OFF)
-option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
+
+# Package Options #
 
 option (USE_AWS_PACKAGE "Include the AWS package" OFF)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
 option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
+
+# Platform Options #
+
+option (ENABLE_TRACING "Instantiate trace points" OFF)
+option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
+option (ENABLE_BIG_ENDIAN "Compile code for big endian machine" OFF)
 
 #####################
 # Target: SlideRule #
@@ -66,6 +76,8 @@ file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
 
 # Platform #
 
+set_property(GLOBAL PROPERTY platform "")
+
 if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
     # Prefer libraries installed in /usr/local
@@ -76,8 +88,6 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
     set (INCDIR ${INSTALLDIR}/include/sliderule)
-    set (TOOLCHAIN _GNU_ CACHE STRING "Toolchain used to build code") # need to rework so that compile tool chain is somehow detected
-    set (ENDIAN __LE__ CACHE STRING "Endianess of local machine")  # ideally moved to some architecture specific file
 
     # Include Linux Platform #
     add_subdirectory (platforms/linux)
@@ -88,8 +98,6 @@ elseif(CMAKE_BUILD_PLATFORM MATCHES "Windows")
     set (INSTALLDIR "C:\\Program Files\\SlideRule" CACHE STRING "Installation directory for library and executables")
     set (CONFDIR ${INSTALLDIR}\etc\sliderule)
     set (INCDIR ${INSTALLDIR}\include\sliderule)
-    set (TOOLCHAIN _VS_ CACHE STRING "Toolchain used to build code") # need to rework so that compile tool chain is somehow detected
-    set (ENDIAN __LE__ CACHE STRING "Endianess of local machine")  # ideally moved to some architecture specific file
 
     # Include Windows Platform #
     add_subdirectory (platforms/windows)
@@ -110,11 +118,6 @@ endif()
 
 set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and configuration scripts")
 
-target_compile_definitions (slideruleLib PUBLIC BINID="${TGTVER}")
-target_compile_definitions (slideruleLib PUBLIC CONFIGPATH="${RUNTIMEDIR}")
-target_compile_definitions (slideruleLib PUBLIC ${TOOLCHAIN})
-target_compile_definitions (slideruleLib PUBLIC ${ENDIAN})
-
 if (${ENABLE_TIME_HEARTBEAT})
     message (STATUS "Enabling time heartbeat")
     target_compile_definitions (slideruleLib PUBLIC TIME_USE_HEARTBEAT)
@@ -125,16 +128,6 @@ if (${ENABLE_CUSTOM_ALLOCATOR})
     target_compile_definitions (slideruleLib PUBLIC CUSTOM_ALLOCATOR)
 endif ()
 
-if(${ENABLE_TRACING})
-    message (STATUS "Enabling trace points")
-    target_compile_definitions (slideruleLib PUBLIC __tracing__)
-endif()
-
-if(${ENABLE_TERMINAL})
-    message (STATUS "Enabling terminal messages")
-    target_compile_definitions (slideruleLib PUBLIC __terminal__)
-endif()
-
 if (DEFINED MAX_FREE_STACK_SIZE)
     message (STATUS "Setting MAX_FREE_STACK_SIZE to " ${MAX_FREE_STACK_SIZE})
     target_compile_definitions (slideruleLib PUBLIC MAX_FREE_STACK_SIZE=${MAX_FREE_STACK_SIZE})
@@ -144,6 +137,33 @@ if (DEFINED LIST_BLOCK_SIZE)
     message (STATUS "Setting LIST_BLOCK_SIZE to " ${LIST_BLOCK_SIZE})
     target_compile_definitions (slideruleLib PUBLIC LIST_BLOCK_SIZE=${LIST_BLOCK_SIZE})
 endif ()
+
+# Platform File #
+
+set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")
+set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${RUNTIMEDIR}\"\n")
+
+if(${ENABLE_TRACING})
+    message (STATUS "Enabling trace points")
+    set_property(GLOBAL APPEND PROPERTY platform "#define __tracing__\n")
+endif()
+
+if(${ENABLE_TERMINAL})
+    message (STATUS "Enabling terminal messages")
+    set_property(GLOBAL APPEND PROPERTY platform "#define __terminal__\n")
+endif()
+
+if(${ENABLE_BIG_ENDIAN})
+    message (STATUS "Enabling code compilation for big endian machine")
+    set_property(GLOBAL APPEND PROPERTY platform "#define __be__\n")
+endif()
+
+get_property(PLATFORM GLOBAL PROPERTY platform)
+file (WRITE ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h ${PLATFORM})
+
+target_include_directories (slideruleLib PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/auto)
+
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h DESTINATION ${INCDIR})
 
 # Add Packages #
 
@@ -203,18 +223,18 @@ endif()
 # Debian Package #
 
 if(${PACKAGE_FOR_DEBIAN})
-	set (CPACK_GENERATOR "DEB")
-	set (CPACK_DEBIAN_PACKAGE_MAINTAINER "JP Swinski") # required
-	set (CPACK_DEBIAN_PACKAGE_DESCRIPTION "a framework for on-demand science data processing")
-	set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set (CPACK_GENERATOR "DEB")
+    set (CPACK_DEBIAN_PACKAGE_MAINTAINER "JP Swinski") # required
+    set (CPACK_DEBIAN_PACKAGE_DESCRIPTION "a framework for on-demand science data processing")
+    set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     string (REGEX MATCHALL "[0123456789]+" SLIDERULE_VERSION_NUMBERS "${TGTVER}")
-	list (GET SLIDERULE_VERSION_NUMBERS 0 CPACK_PACKAGE_VERSION_MAJOR)
-	list (GET SLIDERULE_VERSION_NUMBERS 1 CPACK_PACKAGE_VERSION_MINOR)
-	list (GET SLIDERULE_VERSION_NUMBERS 2 CPACK_PACKAGE_VERSION_PATCH)
-	set (SLIDERULE_PACKAGE_VERSION "sliderule-VERSION.deb")
-	string (REGEX REPLACE "VERSION" "${TGTVER}" SLIDERULE_PACKAGE_VERSION "${SLIDERULE_PACKAGE_VERSION}")
-	set (CPACK_DEBIAN_FILE_NAME ${SLIDERULE_PACKAGE_VERSION})
-	include (CPack)
+    list (GET SLIDERULE_VERSION_NUMBERS 0 CPACK_PACKAGE_VERSION_MAJOR)
+    list (GET SLIDERULE_VERSION_NUMBERS 1 CPACK_PACKAGE_VERSION_MINOR)
+    list (GET SLIDERULE_VERSION_NUMBERS 2 CPACK_PACKAGE_VERSION_PATCH)
+    set (SLIDERULE_PACKAGE_VERSION "sliderule-VERSION.deb")
+    string (REGEX REPLACE "VERSION" "${TGTVER}" SLIDERULE_PACKAGE_VERSION "${SLIDERULE_PACKAGE_VERSION}")
+    set (CPACK_DEBIAN_FILE_NAME ${SLIDERULE_PACKAGE_VERSION})
+    include (CPack)
 endif()
 
 
