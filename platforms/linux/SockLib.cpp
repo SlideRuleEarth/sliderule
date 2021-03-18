@@ -74,9 +74,11 @@ typedef struct sockaddr     client_address_t;
  * STATIC DATA
  ******************************************************************************/
 
+const char* SockLib::IPV4_ENV_VAR_NAME = "IPV4";
+
 bool SockLib::signal_exit = false;
-char SockLib::local_host_name[SockLib::HOST_STR_LEN];
-uint32_t SockLib::ipv4 = 0;
+char SockLib::local_host_name[HOST_STR_LEN];
+char SockLib::ipv4[IPV4_STR_LEN];
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -89,16 +91,27 @@ void SockLib::init()
 {
     /* Initialize to Defaults */
     snprintf(local_host_name, HOST_STR_LEN, "%s", "unknown_host");
-    ipv4 = 0;
+    snprintf(ipv4, IPV4_STR_LEN, "%s", "127.0.0.1");
 
-    /* Get Host Information */
+    /* Attempt to Get Host Information */
+    struct hostent* host = NULL;
     if(gethostname(local_host_name, HOST_STR_LEN) != -1)
     {    
-        struct hostent* host = gethostbyname(local_host_name);
-        if(host != NULL)
-        {
-            ipv4 = ((struct in_addr*)host->h_addr_list[0])->s_addr;
-        }
+        host = gethostbyname(local_host_name);
+    }
+
+    /* Attempt to Get IP Address from Environment */
+    const char* ip_from_env = getenv(IPV4_ENV_VAR_NAME);
+
+    /* Get IP Address */
+    if(ip_from_env)
+    {
+        snprintf(ipv4, IPV4_STR_LEN, "%s", ip_from_env);
+    }
+    else if(host != NULL)
+    {
+        uint32_t addr = ((struct in_addr*)host->h_addr_list[0])->s_addr;
+        snprintf(ipv4, IPV4_STR_LEN, "%d.%d.%d.%d", addr & 0xFF, (addr >> 8) & 0xFF, (addr >> 16) & 0xFF, (addr >> 24) & 0xFF);
     }
 }
 
@@ -716,7 +729,7 @@ const char* SockLib::sockhost (void)
 /*----------------------------------------------------------------------------
  * sockipv4
  *----------------------------------------------------------------------------*/
-uint32_t SockLib::sockipv4 (void)
+const char* SockLib::sockipv4 (void)
 {
     return ipv4;
 }

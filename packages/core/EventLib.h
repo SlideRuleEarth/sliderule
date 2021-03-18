@@ -90,16 +90,16 @@ class EventLib
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            int64_t     systime;                // time of event
-            uint32_t    ipv4;                   // ip address of local host            
-            uint16_t    flags;                  // flags_t
-            uint8_t     type;                   // type_t
-            uint8_t     level;                  // event_level_t
-            int64_t     tid;                    // task id
-            uint32_t    id;                     // event id
-            uint32_t    parent;                 // parent event id
-            char        name[MAX_NAME_SIZE];    // name of event
-            char        attr[MAX_ATTR_SIZE];    // attributes associated with event
+            int64_t     systime;                    // time of event
+            int64_t     tid;                        // task id
+            uint32_t    id;                         // event id
+            uint32_t    parent;                     // parent event id
+            uint16_t    flags;                      // flags_t
+            uint8_t     type;                       // type_t
+            uint8_t     level;                      // event_level_t
+            char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host            
+            char        name[MAX_NAME_SIZE];        // name of event
+            char        attr[MAX_ATTR_SIZE];        // attributes associated with event
         } event_t;
 
         typedef enum {

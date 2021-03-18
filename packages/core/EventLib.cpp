@@ -192,15 +192,17 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
 
     /* Initialize Trace */
     event.systime   = TimeLib::gettimems();
-    event.ipv4      = SockLib::sockipv4();
-    event.flags     = START;
-    event.type      = TRACE;
-    event.level     = lvl;
     event.tid       = Thread::getId();
     event.id        = unique_id++;;
     event.parent    = parent;
+    event.flags     = START;
+    event.type      = TRACE;
+    event.level     = lvl;
     event.name[0]   = '\0';
     event.attr[0]   = '\0';
+
+    /* Copy IP Address */
+    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
 
     /* Copy Name */
     StringLib::copy(event.name, name, MAX_NAME_SIZE);
@@ -232,15 +234,18 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
 
     /* Initialize Trace */
     event.systime   = TimeLib::gettimems();
-    event.ipv4      = SockLib::sockipv4();
-    event.flags     = STOP;
-    event.type      = TRACE;
-    event.level     = lvl;
     event.tid       = 0;
     event.id        = id;
     event.parent    = ORIGIN;
+    event.flags     = STOP;
+    event.type      = TRACE;
+    event.level     = lvl;
     event.name[0]   = '\0';
     event.attr[0]   = '\0';
+
+    /* Copy IP Address */
+    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
+
 
     /* Send Event */
     sendEvent(&event, 1);
@@ -275,13 +280,15 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 
     /* Initialize Log Message */
     event.systime   = TimeLib::gettimems();
-    event.ipv4      = SockLib::sockipv4();
-    event.flags     = 0;
-    event.type      = LOG;
-    event.level     = lvl;
     event.tid       = Thread::getId();
     event.id        = ORIGIN;
     event.parent    = ORIGIN;
+    event.flags     = 0;
+    event.type      = LOG;
+    event.level     = lvl;
+
+    /* Copy IP Address */
+    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
 
     /* Build Name - <Filename>:<Line Number> */
     const char* last_path_delimeter = StringLib::find(file_name, PATH_DELIMETER, false);

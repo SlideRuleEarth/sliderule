@@ -43,6 +43,9 @@ class SockLib
         typedef int     (*onPollHandler_t)      (int sock, short* events, void* parm); // configure R/W flags
         typedef int     (*onActiveHandler_t)    (int sock, int flags, void* parm);
 
+        static const char* IPV4_ENV_VAR_NAME;
+
+        static const int IPV4_STR_LEN = 16;
         static const int PORT_STR_LEN = 16;
         static const int HOST_STR_LEN = 64;
         static const int SERV_STR_LEN = 64;
@@ -59,13 +62,13 @@ class SockLib
         static int          startserver         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm);
         static int          startclient         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm);
         static const char*  sockhost            (void);
-        static uint32_t     sockipv4            (void);
+        static const char*  sockipv4            (void);
 
     private:
 
         static bool         signal_exit;
         static char         local_host_name[HOST_STR_LEN];
-        static uint32_t     ipv4;
+        static char         ipv4[IPV4_STR_LEN];
 
         static int          sockcreate          (int type, const char* ip_addr, int port, bool is_server, bool* block);
         static int          sockoptions         (int socket_fd, bool reuse, bool tcp);

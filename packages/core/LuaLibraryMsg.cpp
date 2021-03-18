@@ -448,13 +448,13 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     /* Construct Log Record */
     EventLib::event_t event;
     event.systime = TimeLib::gettimems();
-    event.ipv4    = SockLib::sockipv4();
-    event.flags   = 0;
-    event.type    = EventLib::LOG;
-    event.level   = lvl;
     event.tid     = Thread::getId();
     event.id      = ORIGIN;
     event.parent  = ORIGIN;
+    event.flags   = 0;
+    event.type    = EventLib::LOG;
+    event.level   = lvl;
+    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
     StringLib::copy(event.name, "sendlog", EventLib::MAX_NAME_SIZE);
     StringLib::copy(event.attr, attr, attr_size + 1);
 
