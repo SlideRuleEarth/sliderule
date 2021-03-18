@@ -61,6 +61,9 @@ Aws::S3::S3Client* s3Client;
  * STATIC DATA
  ******************************************************************************/
 
+const char* S3Lib::AWS_S3_ENDPOINT_ENV_VAR_NAME = "SLIDERULE_S3_ENDPOINT";
+const char* S3Lib::AWS_S3_REGION_ENV_VAR_NAME = "SLIDERULE_S3_REGION";
+
 const char* S3Lib::DEFAULT_ENDPOINT = "https://s3.us-west-2.amazonaws.com";
 const char* S3Lib::DEFAULT_REGION = "us-west-2";
 
@@ -85,9 +88,13 @@ MgOrdering<const char*, okey_t, true> S3Lib::cacheFiles;
  *----------------------------------------------------------------------------*/
 void S3Lib::init (void)
 {
+    /* Attempt to AWS S3 Information from Environment */
+    const char* endpoint_from_env = getenv(AWS_S3_ENDPOINT_ENV_VAR_NAME);
+    const char* region_from_env = getenv(AWS_S3_REGION_ENV_VAR_NAME);
+
     /* Set AWS Attributes */
-    endpoint = StringLib::duplicate(DEFAULT_ENDPOINT);
-    region = StringLib::duplicate(DEFAULT_REGION);
+    endpoint = endpoint_from_env ? StringLib::duplicate(endpoint_from_env) : StringLib::duplicate(DEFAULT_ENDPOINT);
+    region = region_from_env ? StringLib::duplicate(region_from_env) : StringLib::duplicate(DEFAULT_REGION);
 
     /* Set Cache Attributes */
     cacheRoot = StringLib::duplicate(DEFAULT_CACHE_ROOT);

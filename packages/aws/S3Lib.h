@@ -53,6 +53,9 @@ class S3Lib
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* AWS_S3_ENDPOINT_ENV_VAR_NAME;
+        static const char* AWS_S3_REGION_ENV_VAR_NAME;
+
         static const char* DEFAULT_ENDPOINT;
         static const char* DEFAULT_REGION;
 
