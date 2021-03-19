@@ -41,13 +41,19 @@ import sliderule
 # GLOBALS
 ###############################################################################
 
+# configuration
+SERVER_SCALE_FACTOR = 6
+
 # create logger
 logger = logging.getLogger(__name__)
+
 # output dictionary keys
 keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
+
 # output variable data types
 dtypes = ['i','u1','f','f','f','f','f','f','f','u2','u2']
-# parameters
+
+# icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
 CNF_BACKGROUND = 0
@@ -386,7 +392,7 @@ def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block
     # Update Available Servers #
     num_servers = sliderule.update_available_servers()
     if max_workers <= 0:
-        max_workers = num_servers
+        max_workers = num_servers * SERVER_SCALE_FACTOR
 
     # Check if Servers are Available #
     if max_workers <= 0:
