@@ -101,6 +101,7 @@ class MsgQ
                 int     getCount        (void);
                 int     getDepth        (void);
          const  char*   getName         (void);
+                int     getSubCnt       (void);
                 int     getState        (void);
                 bool    isFull          (void);
 

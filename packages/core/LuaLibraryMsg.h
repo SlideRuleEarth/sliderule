@@ -133,6 +133,7 @@ class LuaLibraryMsg
         static int      lmsg_sendstring     (lua_State* L);
         static int      lmsg_sendrecord     (lua_State* L);
         static int      lmsg_sendlog        (lua_State* L);
+        static int      lmsg_numsubs        (lua_State* L);
         static int      lmsg_deletepub      (lua_State* L);
 
         /* subscriber meta functions */

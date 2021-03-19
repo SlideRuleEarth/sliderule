@@ -28,9 +28,17 @@ local userevents = core.dispatcher(core.MONITORQ)
 userevents:attach(core.monitor(type, level, format, rspq), "eventrec")
 userevents:run()
 
+-- Bounds check duration
+if duration > 300 then
+    duration = 300
+end
+
+-- Watch response queue
+local watchq = msg.publish(rspq)
+
 -- Pend for duration (in 1 second intervals to allow hooks to execute) --
 local seconds = 0
-while duration == 0 or seconds < duration do
+while (watchq:numsubs() > 0) and (seconds < duration) do
     seconds = seconds + 1
     sys.wait(1)
 end

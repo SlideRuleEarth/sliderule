@@ -61,6 +61,7 @@ const struct luaL_Reg LuaLibraryMsg::pubLibsM [] = {
     {"sendstring",    LuaLibraryMsg::lmsg_sendstring},
     {"sendrecord",    LuaLibraryMsg::lmsg_sendrecord},
     {"sendlog",       LuaLibraryMsg::lmsg_sendlog},
+    {"numsubs",       LuaLibraryMsg::lmsg_numsubs},
     {"destroy",       LuaLibraryMsg::lmsg_deletepub},
     {"__gc",          LuaLibraryMsg::lmsg_deletepub},
     {NULL, NULL}
@@ -468,6 +469,22 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
 
     /* Return Results */    
     lua_pushboolean(L, bytes_sent > 0);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lmsg_numsubs- .numsubs() --> number of subscribers on message queue
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_numsubs (lua_State* L)
+{
+    /* Get Publisher */
+    msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+
+    /* Get Number of Subscriptions */
+    int subscriptions = msg_data->pub->getSubCnt();
+
+    /* Return Results */    
+    lua_pushinteger(L, subscriptions);
     return 1;
 }
 
