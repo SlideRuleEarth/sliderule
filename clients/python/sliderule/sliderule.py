@@ -33,6 +33,7 @@ import struct
 import ctypes
 import logging
 import threading
+from datetime import datetime, timedelta
 
 ###############################################################################
 # GLOBALS
@@ -51,6 +52,9 @@ logger = logging.getLogger(__name__)
 
 recdef_lock = threading.Lock()
 recdef_table = {}
+
+gps_epoch = datetime(1980, 1, 6) 
+tai_epoch = datetime(1970, 1, 1, 0, 0, 10)
 
 eventformats = {
     "TEXT":     0,
@@ -285,7 +289,7 @@ def __decode(rectype, rawdata):
 #
 #  __parse
 #
-def __parse(stream):
+def __parse(stream, callbacks):
     """
     stream: request response stream
     """
@@ -330,10 +334,9 @@ def __parse(stream):
                     rectype = ctypes.create_string_buffer(rawbits).value.decode('ascii')
                     rawdata = rawbits[len(rectype) + 1:]
                     rec     = __decode(rectype, rawdata)
-                    # Print Verbose Progress
-                    if rectype == "eventrec":
-                        if verbose:
-                            logger.critical('%s:%s' % (rec["name"], rec["attr"]))
+                    if callbacks != None and rectype in callbacks:
+                        # Execute Call-Back on Record
+                        callbacks[rectype](rec)
                     else:
                         # Append Record
                         recs.append(rec)
@@ -346,6 +349,13 @@ def __parse(stream):
 
     return recs
 
+#
+#  __logeventrec
+#
+def __logeventrec(rec):
+    if verbose:
+        logger.critical('%s' % (rec["attr"]))
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -353,7 +363,7 @@ def __parse(stream):
 #
 #  SOURCE
 #
-def source (api, parm, stream=False):
+def source (api, parm, stream=False, callbacks={'eventrec': __logeventrec}):
     rqst = json.dumps(parm)
     complete = False
     while not complete:
@@ -364,7 +374,7 @@ def source (api, parm, stream=False):
                 rsps = requests.get(url, data=rqst).json()
             else:
                 data = requests.post(url, data=rqst, stream=True)
-                rsps = __parse(data)
+                rsps = __parse(data, callbacks)
             __clrserv(serv)
             complete = True
         except Exception as e:
@@ -410,3 +420,16 @@ def tail (event_type, event_level, duration):
     # Initiate Connection for Logging
     rsps = source("event", rqst, stream=True)
     return rsps
+
+#
+# GPS2UTC
+#
+def gps2utc (gps_time, as_str=True):
+    gps_time = gps_epoch + timedelta(seconds=gps_time) 
+    tai_time = gps_time + timedelta(seconds=19)
+    tai_timestamp = (tai_time - tai_epoch).total_seconds() 
+    utc_timestamp = datetime.utcfromtimestamp(tai_timestamp)
+    if as_str:
+        return str(utc_timestamp)
+    else:
+        return utc_timestamp
