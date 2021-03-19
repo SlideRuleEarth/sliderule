@@ -4,52 +4,71 @@ Getting Started
 
 This documentation is intended to explain how to use `SlideRule`, a C++/Lua framework for on-demand data processing.
 `SlideRule` is a science data processing service that runs in the cloud and responds to REST API calls to process and return science results.
-This software was initially developed with the goal of supporting science applications for `NASA's Ice Cloud and land Elevation Satellite-2 (ICESat-2)`__, and demonstrates a new paradigm of data processing from NASA.
+This software was initially developed with the goal of supporting science applications for `NASA's Ice Cloud and land Elevation Satellite-2 (ICESat-2)`__, and demonstrates a new paradigm for distributing science data.
 
 .. __: https://icesat-2.gsfc.nasa.gov/
 
 While `SlideRule` can be accessed by any http client (e.g. curl) by making GET and POST requests to the `SlideRule` service.
 The python packages in this repository provide higher level access by hiding the GET and POST requests inside python function calls that accept and return basic python variable types (e.g. dictionaries, lists, numbers).
-The `SlideRule` python client also provides some examples and high-level plotting programs through the use of `Jupyter Notebooks <./Examples.html>`_.
+The `SlideRule-Python` repository also provides some examples and high-level plotting programs through the use of `Jupyter Notebooks <./Examples.html>`_.
 
 Basic Usage
 ###########
 
-The `SlideRule` ``icesat2.atl06p`` function allows a user to process all available ICESat-2 data globally or within a provided polygon.
-`SlideRule` can accept polygons as a string, list or dictionary that contain longitudes and latitudes in counter-clockwise order with the first and last point matching.
+`SlideRule` provides a number of APIs which allow a user to process ICESat-2 and HDF5 data. For example, the ``icesat2.atl06p`` Python function makes a request to the ``atl06`` API and returns calculated segment elevations from ATL03 data within geospatial region.
 
 .. code-block:: bash
 
-    # import
+    # import (1)
     import pandas as pd
     from sliderule import icesat2
 
-    # initialize
+    # region of interest (2)
+    grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+                   {"lon": -107.7677425431139, "lat": 38.90611184543033}, 
+                   {"lon": -107.7818591266989, "lat": 39.26613714985466},
+                   {"lon": -108.3605610678553, "lat": 39.25086131372244},
+                   {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+    
+    # initialize (3)
     icesat2.init("http://127.0.0.1", verbose=True, max_errors=3)
 
-    # make request
+    # processing parameters (4)
     parms = {
+        "poly": grand_mesa,
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_HIGH,
         "len": 40.0,
         "res": 20.0,
         "maxi": 1
     }
+
+    # make request (5)
     rsps = icesat2.atl06p(parms)
 
-    # analyze response
+    # analyze response (6)
     df = pd.DataFrame(rsps)
 
-SlideRule atl06p Parameters
----------------------------
+This code snippet performs the following functions with respect to SlideRule:
+1. Imports the ``icesat2`` module from the SlideRule Python packages
+2. Defines a polygon that captures the Grand Mesa region
+3. Initializes the ``icesat2`` module with the address of the SlideRule server, along with some configuration parameters
+4. Builds an ``atl06`` API request structure that specifies the region of interest along with some processing parameters
+5. Issues the request to SlideRule service which then returns the results in a Python dictionary
+6. Builds a pandas DataFrame from the results for further analysis
 
-- ``"poly"``: polygon defining region of interest
-- ``"srt"``: surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
-- ``"len"``: length of the segment in meters
-- ``"res"``: step distance for successive segments in meters
-- ``"cnf"``: confidence level for PE selection
-- ``"maxi"``: maximum number of iterations, not including initial least-squares-fit selection
-- ``"ats"``: minimum required along track spread of photon events in a segment
-- ``"cnt"``: minimum number of photon events in a segment
-- ``"H_min_win"``: minimum height of fit window in meters
-- ``"sigma_r_max"``: maximum robust dispersion in meters
+Python API Reference
+####################
+
+`SlideRule ICESat-2 Python API <../user_guide/ICESat-2.html>`_:
+
+- ``init``: Initialize the icesat2 package with the URL to the SlideRule service
+- ``cmr``: Query the NASA Common Metadata Repository (CMR) for a list of data within temporal and spatial parameters `(doc) <../user_guide/ICESat-2.html#cmr>`_
+- ``atl06``: Perform ATL06-SR processing on a single ATL03 granule and return gridded elevations `(doc) <../user_guide/ICESat-2.html#atl06>`_
+- ``atl06p``: Perform ATL06-SR processing in parallel on ATL03 data and return gridded elevations `(doc) <../user_guide/ICESat-2.html#atl06p>`_
+- ``h5``: Read a dataset from an HDF5 file and return the values of the dataset `(doc) <../user_guide/ICESat-2.html#h5>`_
+- ``toregion``: Convert a GeoJSON formatted polygon into the format accepted by SlideRule
+
+`SlideRule Python API <../user_guide/SlideRule.html>`_:
+
+

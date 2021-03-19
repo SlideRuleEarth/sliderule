@@ -1,10 +1,31 @@
-==================
-SlideRule ICESat-2
-==================
+===================
+ICESat-2 Python API
+===================
+
+The ICESat-2 Python API is used to access the services provided by the ``sliderule-icesat2`` plugin.  
+
+From Python, the module can be imported via:
+.. code-block:: python
+    from sliderule import icesat2
+
+polygons
+########
+
+All polygons provided to the ICESat-2 module functions must be provided as a list of dictionaries containing longitudes and latitudes in counter-clockwise order with the first and last point matching.
+
+For example:
+.. code-block:: python
+    region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+               {"lon": -107.7677425431139, "lat": 38.90611184543033}, 
+               {"lon": -107.7818591266989, "lat": 39.26613714985466},
+               {"lon": -108.3605610678553, "lat": 39.25086131372244},
+               {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+
+In order to facilitate other formats, the ``icesat2.toregion`` function can be used to convert polygons in the GeoJSON format to the format accepted by `SlideRule`.
 
 
-cmr
-###
+icesat2.cmr(...)
+################
 
 Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters
 
@@ -27,6 +48,7 @@ Returns
 
 - ``url_list``: list of files for the dataset fitting the spatial and temporal parameters
 
+
 atl06
 #####
 
@@ -41,6 +63,7 @@ Arguments
 
 - `parms`: Parameters for the ATL06-SR processing
 
+    * ``"poly"``: polygon defining region of interest
     * ``"srt"``: surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
     * ``"cnf"``: confidence level for PE selection
     * ``"ats"``: minimum along track spread

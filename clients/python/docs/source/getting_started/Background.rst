@@ -76,23 +76,10 @@ More information about ATL03 can be found in the Algorithm Theoretical Basis Doc
 SlideRule
 #########
 
-`SlideRule` is a cloud-based API for calculating average segment heights from the ATL03 geolocated photon height data.
-`SlideRule` uses an iterative linear model to calculate the average segment heights following the
+`SlideRule` is an on-demand science data processing framework that can be used to process large amounts of science data in the cloud and return high-level products to users via REST API calls.  It has a plugin-based architecture to support various science processing algorithms, and has a Python client which simplifies access to the services.
+
+The ICESat2 deployment of `SlideRule` in AWS us-west-2 includes the `sliderule-icesat2` plugin, which exposes APIs to calculate the average segment heights from the ATL03 geolocated photon height data. The `sliderule-icesat` plugin uses an iterative linear model to calculate the average segment heights following the
 `protocols <https://nsidc.org/sites/nsidc.org/files/technical-references/ICESat2_ATL06_ATBD_r003.pdf>`_ of the
 `ATL06 land ice elevation product <https://nsidc.org/data/atl06>`_.
 The length (``"len"``) of each segment and the distance between each successive segment (``"res"``) are adjustable to increase or decrease the horizontal sampling.
 Other parameters that define what determines a valid segment, the number of iterations to perform, and the vertical requirements of the fit are also adjustable.
-
-`SlideRule Endpoints <../user_guide/Endpoints.html>`_:
-
-- ``atl06``: Perform `ATL06-SR processing <../user_guide/Endpoints.html#atl06>`_ on ATL03 data and returns gridded elevations
-- ``h5``: Read a dataset from an `HDF5 file <../user_guide/Endpoints.html#h5>`_ and return the values of the dataset
-- ``definition``: Get the `binary record definition  <../user_guide/Endpoints.html#definition>`_ of a record type
-- ``time``: `Convert times <../user_guide/Endpoints.html#time>`_ from one format to another
-
-`SlideRule ICESat-2 <../user_guide/ICESat-2.html>`_:
-
-- ``cmr``: Query the `NASA Common Metadata Repository (CMR) <../user_guide/ICESat-2.html#cmr>`_ for a list of data within temporal and spatial parameters
-- ``atl06``: Perform `ATL06-SR processing <../user_guide/ICESat-2.html#atl06>`_ on ATL03 data and returns gridded elevations
-- ``atl06p``: Perform `ATL06-SR processing in parallel <../user_guide/ICESat-2.html#atl06p>`_ on ATL03 data and returns gridded elevations
-- ``h5``: Read a dataset from an `HDF5 file <../user_guide/ICESat-2.html#h5>`_ and return the values of the dataset

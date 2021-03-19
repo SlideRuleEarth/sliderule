@@ -27,6 +27,12 @@ Alternatively can install the `sliderule` utilities directly from GitHub with `p
 
     python3 -m pip install --user git+https://github.com/ICESat2-SlideRule/sliderule-python.git
 
+For developer installs, you can use the provided environment file to create an initial conda environment that has sliderule installed:
+
+.. code-block:: bash
+
+    conda env create -f environment.yml
+
 Executable versions of this repository can also be tested using
 `Binder <https://mybinder.org/v2/gh/ICESat2-SlideRule/sliderule-python/main>`_ or
 `Pangeo <https://binder.pangeo.io/v2/gh/ICESat2-SlideRule/sliderule-python/main>`_.

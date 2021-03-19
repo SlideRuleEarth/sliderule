@@ -1,6 +1,14 @@
-===================
-SlideRule Endpoints
-===================
+====================
+SlideRule Python API
+====================
+
+
+- ``atl06``: Perform `ATL06-SR processing <../user_guide/SlideRule.html#atl06>`_ on ATL03 data and returns gridded elevations
+- ``h5``: Read a dataset from an `HDF5 file <../user_guide/SlideRule.html#h5>`_ and return the values of the dataset
+- ``definition``: Get the `binary record definition  <../user_guide/SlideRule.html#definition>`_ of a record type
+- ``time``: `Convert times <../user_guide/SlideRule.html#time>`_ from one format to another
+
+
 
 
 atl06
