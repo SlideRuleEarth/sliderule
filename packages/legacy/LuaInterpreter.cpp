@@ -82,7 +82,7 @@ CommandableObject* LuaInterpreter::createUnsafeObject(CommandProcessor* cmd_proc
  * abortHook
  *
  *    Notes:  this hook currently only aborts the interpreter, but it could be extended
- --             with much more functionality like stepping through a script
+ *            with much more functionality like stepping through a script
  *----------------------------------------------------------------------------*/
 void LuaInterpreter::abortHook (lua_State *L, lua_Debug *ar)
 {

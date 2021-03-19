@@ -91,12 +91,12 @@ class LuaEngine
         static void         indicate        (const char* pkg_name, const char* pkg_version);
         static mode_t       str2mode        (const char* str);
         static const char*  mode2str        (mode_t _mode);
-        static void         setErrno        (lua_State* L, int val);
-        static void         setAttrBool     (lua_State* L, const char* name, bool val);
-        static void         setAttrInt      (lua_State* L, const char* name, int val);
-        static void         setAttrNum      (lua_State* L, const char* name, double val);
-        static void         setAttrStr      (lua_State* L, const char* name, const char* val, int size=0);
-        static void         setAttrFunc     (lua_State* L, const char* name, lua_CFunction val);
+        static void         setErrno        (lua_State* l, int val);
+        static void         setAttrBool     (lua_State* l, const char* name, bool val);
+        static void         setAttrInt      (lua_State* l, const char* name, int val);
+        static void         setAttrNum      (lua_State* l, const char* name, double val);
+        static void         setAttrStr      (lua_State* l, const char* name, const char* val, int size=0);
+        static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);
 
         const char*         getName         (void);
         bool                executeEngine   (int timeout_ms);
@@ -153,7 +153,6 @@ class LuaEngine
         static Mutex                    pkgInitTableMutex;
 
         lua_State*                      L;      // lua state variable
-        Mutex                           mutL;   // mutex to lua state
     
         const char*                     engineName;
         bool                            engineActive;

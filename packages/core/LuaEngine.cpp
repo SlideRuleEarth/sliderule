@@ -217,61 +217,61 @@ const char* LuaEngine::mode2str(mode_t _mode)
 /*----------------------------------------------------------------------------
  * setErrno
  *----------------------------------------------------------------------------*/
-void LuaEngine::setErrno(lua_State* L, int val)
+void LuaEngine::setErrno(lua_State* l, int val)
 {
-    lua_pushnumber(L, val);
-    lua_setglobal(L, LUA_ERRNO);
+    lua_pushnumber(l, val);
+    lua_setglobal(l, LUA_ERRNO);
 }
 
 /*----------------------------------------------------------------------------
  * setAttrBool
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrBool (lua_State* L, const char* name, bool val)
+void LuaEngine::setAttrBool (lua_State* l, const char* name, bool val)
 {
-    lua_pushstring(L, name);
-    lua_pushboolean(L, val);
-    lua_settable(L, -3);
+    lua_pushstring(l, name);
+    lua_pushboolean(l, val);
+    lua_settable(l, -3);
 }
 
 /*----------------------------------------------------------------------------
  * setAttrInt
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrInt (lua_State* L, const char* name, int val)
+void LuaEngine::setAttrInt (lua_State* l, const char* name, int val)
 {
-    lua_pushstring(L, name);
-    lua_pushinteger(L, val);
-    lua_settable(L, -3);
+    lua_pushstring(l, name);
+    lua_pushinteger(l, val);
+    lua_settable(l, -3);
 }
 
 /*----------------------------------------------------------------------------
  * setAttrNum
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrNum (lua_State* L, const char* name, double val)
+void LuaEngine::setAttrNum (lua_State* l, const char* name, double val)
 {
-    lua_pushstring(L, name);
-    lua_pushnumber(L, val);
-    lua_settable(L, -3);
+    lua_pushstring(l, name);
+    lua_pushnumber(l, val);
+    lua_settable(l, -3);
 }
 
 /*----------------------------------------------------------------------------
  * setAttrStr
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrStr (lua_State* L, const char* name, const char* val, int size)
+void LuaEngine::setAttrStr (lua_State* l, const char* name, const char* val, int size)
 {
-    lua_pushstring(L, name);
-    if(size > 0)    lua_pushlstring(L, val, size);
-    else            lua_pushstring(L, val);
-    lua_settable(L, -3);
+    lua_pushstring(l, name);
+    if(size > 0)    lua_pushlstring(l, val, size);
+    else            lua_pushstring(l, val);
+    lua_settable(l, -3);
 }
 
 /*----------------------------------------------------------------------------
  * setAttrFunc
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrFunc (lua_State* L, const char* name, lua_CFunction val)
+void LuaEngine::setAttrFunc (lua_State* l, const char* name, lua_CFunction val)
 {
-    lua_pushstring(L, name);
-    lua_pushcfunction(L, val);
-    lua_settable(L, -3);
+    lua_pushstring(l, name);
+    lua_pushcfunction(l, val);
+    lua_settable(l, -3);
 }
 
 /*----------------------------------------------------------------------------
@@ -653,22 +653,22 @@ int LuaEngine::readlinecb(void)
  *
  *  Message handler used to run all chunks
  *----------------------------------------------------------------------------*/
-int LuaEngine::msghandler (lua_State* L)
+int LuaEngine::msghandler (lua_State* l)
 {
-    const char *msg = lua_tostring(L, 1);
+    const char *msg = lua_tostring(l, 1);
     if (msg == NULL)
     {
         /* does it have a metamethod that produces a string? */
-        if (luaL_callmeta(L, 1, "__tostring") && lua_type(L, -1) == LUA_TSTRING)
+        if (luaL_callmeta(l, 1, "__tostring") && lua_type(l, -1) == LUA_TSTRING)
         {
             return 1;  /* that is the message */
         }
         else
         {
-            msg = lua_pushfstring(L, "(error object is a %s value)", luaL_typename(L, 1));
+            msg = lua_pushfstring(l, "(error object is a %s value)", luaL_typename(l, 1));
         }
     }
-    luaL_traceback(L, L, msg, 1);  /* append a standard traceback */
+    luaL_traceback(l, l, msg, 1);  /* append a standard traceback */
     return 1;  /* return the traceback */
 }
 

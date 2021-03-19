@@ -56,13 +56,13 @@ static Publisher* outq;
 static RecordObject::fieldDef_t rec_def[] =
 {
     {"time",    RecordObject::INT64,    offsetof(EventLib::event_t, systime), 1,                        NULL, NATIVE_FLAGS},
-    {"ipv4",    RecordObject::UINT32,   offsetof(EventLib::event_t, ipv4),    1,                        NULL, NATIVE_FLAGS},
-    {"flags",   RecordObject::UINT16,   offsetof(EventLib::event_t, flags),   1,                        NULL, NATIVE_FLAGS},
-    {"type",    RecordObject::UINT8,    offsetof(EventLib::event_t, type),    1,                        NULL, NATIVE_FLAGS},
-    {"level",   RecordObject::UINT8,    offsetof(EventLib::event_t, level),   1,                        NULL, NATIVE_FLAGS},
     {"tid",     RecordObject::INT64,    offsetof(EventLib::event_t, tid),     1,                        NULL, NATIVE_FLAGS},
     {"id",      RecordObject::UINT32,   offsetof(EventLib::event_t, id),      1,                        NULL, NATIVE_FLAGS},
     {"parent",  RecordObject::UINT32,   offsetof(EventLib::event_t, parent),  1,                        NULL, NATIVE_FLAGS},
+    {"flags",   RecordObject::UINT16,   offsetof(EventLib::event_t, flags),   1,                        NULL, NATIVE_FLAGS},
+    {"type",    RecordObject::UINT8,    offsetof(EventLib::event_t, type),    1,                        NULL, NATIVE_FLAGS},
+    {"level",   RecordObject::UINT8,    offsetof(EventLib::event_t, level),   1,                        NULL, NATIVE_FLAGS},
+    {"ipv4",    RecordObject::STRING,   offsetof(EventLib::event_t, ipv4),    SockLib::IPV4_STR_LEN,    NULL, NATIVE_FLAGS},
     {"name",    RecordObject::STRING,   offsetof(EventLib::event_t, name),    EventLib::MAX_NAME_SIZE,  NULL, NATIVE_FLAGS},
     {"attr",    RecordObject::STRING,   offsetof(EventLib::event_t, attr),    0,                        NULL, NATIVE_FLAGS}
 };
