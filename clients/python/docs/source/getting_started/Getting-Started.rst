@@ -50,25 +50,31 @@ Basic Usage
     df = pd.DataFrame(rsps)
 
 This code snippet performs the following functions with respect to SlideRule:
-1. Imports the ``icesat2`` module from the SlideRule Python packages
-2. Defines a polygon that captures the Grand Mesa region
-3. Initializes the ``icesat2`` module with the address of the SlideRule server, along with some configuration parameters
-4. Builds an ``atl06`` API request structure that specifies the region of interest along with some processing parameters
-5. Issues the request to SlideRule service which then returns the results in a Python dictionary
-6. Builds a pandas DataFrame from the results for further analysis
+
+#. Imports the ``icesat2`` module from the SlideRule Python packages  
+#. Defines a polygon that captures the Grand Mesa region  
+#. Initializes the ``icesat2`` module with the address of the SlideRule server, along with some configuration parameters  
+#. Builds an ``atl06`` API request structure that specifies the region of interest along with some processing parameters  
+#. Issues the request to SlideRule service which then returns the results in a Python dictionary  
+#. Builds a pandas DataFrame from the results for further analysis  
 
 Python API Reference
 ####################
 
 `SlideRule ICESat-2 Python API <../user_guide/ICESat-2.html>`_:
 
-- ``init``: Initialize the icesat2 package with the URL to the SlideRule service
-- ``cmr``: Query the NASA Common Metadata Repository (CMR) for a list of data within temporal and spatial parameters `(doc) <../user_guide/ICESat-2.html#cmr>`_
-- ``atl06``: Perform ATL06-SR processing on a single ATL03 granule and return gridded elevations `(doc) <../user_guide/ICESat-2.html#atl06>`_
-- ``atl06p``: Perform ATL06-SR processing in parallel on ATL03 data and return gridded elevations `(doc) <../user_guide/ICESat-2.html#atl06p>`_
-- ``h5``: Read a dataset from an HDF5 file and return the values of the dataset `(doc) <../user_guide/ICESat-2.html#h5>`_
-- ``toregion``: Convert a GeoJSON formatted polygon into the format accepted by SlideRule
+- ``init``: Initialize the icesat2 package with the URL to the SlideRule service `(init-api) <../user_guide/ICESat-2.html#init>`_
+- ``cmr``: Query the NASA Common Metadata Repository (CMR) for a list of data within temporal and spatial parameters `(cmr-api) <../user_guide/ICESat-2.html#cmr>`_
+- ``atl06``: Perform ATL06-SR processing on a single ATL03 granule and return gridded elevations `(atl06-api) <../user_guide/ICESat-2.html#atl06>`_
+- ``atl06p``: Perform ATL06-SR processing in parallel on ATL03 data and return gridded elevations `(atl06p-api) <../user_guide/ICESat-2.html#atl06p>`_
+- ``h5``: Read a dataset from an HDF5 file and return the values of the dataset `(h5-api) <../user_guide/ICESat-2.html#h5>`_
+- ``toregion``: Convert a GeoJSON formatted polygon into the format accepted by SlideRule `(toregion-api) <../user_guide/ICESat-2.html#toregion>`_
 
 `SlideRule Python API <../user_guide/SlideRule.html>`_:
 
-
+- ``source``: Perform API call to SlideRule service `(source-api) <../user_guide/SlideRule.html#source>`_
+- ``set_url``: Configure the URL of the SlideRule service `(set_url-api) <../user_guide/SlideRule.html#set_url>`_
+- ``update_available_servers``: Cause local client to update the list of available SlideRule servers `(update_available_servers-api) <../user_guide/SlideRule.html#update_available_servers>`_
+- ``set_verbose``: Configure the verbose setting in the SlideRule client `(set_verbose-api) <../user_guide/SlideRule.html#set_verbose>`_
+- ``set_max_errors``: Configure the maximum number of errors a given server can return before being removed from the list `(set_max_errors-api) <../user_guide/SlideRule.html#set_max_errors>`_
+- ``gps2utc``: Convert a GPS based time returned from SlideRule into a UTC time `(gps2utc-api) <../user_guide/SlideRule.html#gps2utc>`_
