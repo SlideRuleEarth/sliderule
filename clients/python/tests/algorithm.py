@@ -43,23 +43,17 @@ def geodist(lat1, lon1, lat2, lon2):
 def algoexec(resource, asset):
 
     # Build ATL06 Request
-    parms = {
-#       "poly": [{"lat": -80.0, "lon": -70.0},
-#                {"lat": -82.5, "lon": -70.0},
-#                {"lat": -82.5, "lon": -65.0},
-#                {"lat": -80.0, "lon": -65.0}],
-        "cnf": 4,
-        "ats": 20.0,
-        "cnt": 10,
-        "len": 40.0,
-        "res": 20.0,
-        "maxi": 1
-    }
+    parms = { "cnf": 4,
+              "ats": 20.0,
+              "cnt": 10,
+              "len": 40.0,
+              "res": 20.0,
+              "maxi": 1 }
 
     # Request ATL06 Data
     perf_start = time.perf_counter()
     process_start = time.process_time()
-    rsps  = icesat2.atl06(parms, resource, asset, as_numpy=False)
+    rsps = icesat2.atl06(parms, resource, asset, as_numpy=False)
     perf_stop = time.perf_counter()
     process_stop = time.process_time()
     perf_duration = perf_stop - perf_start

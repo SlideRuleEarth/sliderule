@@ -407,21 +407,6 @@ def set_max_errors (max_errors):
     __setmaxerr(max_errors)
 
 #
-#  TAIL
-#
-def tail (event_type, event_level, duration):
-    # Build Logging Request
-    rqst = {
-        "type": event_type, 
-        "level" : event_level,
-        "duration": duration
-    }
-
-    # Initiate Connection for Logging
-    rsps = source("event", rqst, stream=True)
-    return rsps
-
-#
 # GPS2UTC
 #
 def gps2utc (gps_time, as_str=True):
