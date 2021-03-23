@@ -26,7 +26,7 @@ For example:
 In order to facilitate other formats, the ``icesat2.toregion`` function can be used to convert polygons from the GeoJSON format to the format accepted by `SlideRule`.
 
 Parameters
-###################
+##########
 
 When making a request to SlideRule to perform the ATL06-SR algorithm on segmented ATL03 data, there is a set of configurable parameters used by the algorithm to customize the processing performed and the results returned.
 Not all parameters need to be defined when making a request; there are reasonable defaults used for each parameter so that only those parameters that want to be specifically customized need to be specified.
@@ -222,7 +222,7 @@ h5
 
 .. py:function:: icesat2.h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"], col=0, startrow=0, numrows=ALL_ROWS)
 
-    Reads a dataset from an HDF5 file and return the values of the dataset in a list
+    Reads a dataset from an HDF5 file and returns the values of the dataset in a list
 
     This function provides an easy way for locally run scripts to get direct access to HDF5 data stored in a cloud environment.
     But it should be noted that this method is not the most efficient way to access remote H5 data, as the data is accessed one dataset at a time.
@@ -245,8 +245,8 @@ h5
     :keyword str asset: data source asset (see `Assets <#assets>`_)
     :keyword int datatypes: the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
     :keyword int col: the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned.
-    :keyword int startrow: the first row to start reading from in a multi-dimensional dataset
-    :keyword int numrows: the number of rows to read when reading from a multi-dimensional dataset; if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
+    :keyword int startrow: the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
+    :keyword int numrows: the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
     :return: numpy array of dataset values
 
     Example: 
@@ -301,3 +301,145 @@ toregion
 
         # Get ATL06 Elevations
         atl06 = process_atl06_algorithm(parms, "atlas-s3")
+
+
+
+Endpoints
+#########
+
+atl06
+-----
+
+""""""""""""""""
+
+``POST /source/atl06 <request payload>``
+
+    Perform ATL06-SR processing on ATL03 data and return gridded elevations
+
+**Request Payload** *(application/json)*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - parameter
+     - description
+     - default
+   * - **atl03-asset**
+     - data source (see `Assets <#assets>`_)
+     - atlas-local
+   * - **resource**
+     - ATL03 HDF5 filename
+     - *required*     
+   * - **track**
+     - track number: 1, 2, 3, or 0 for all three tracks
+     - 0
+   * - **parms**
+     - ATL06-SR algorithm processing configuration (see `Parameters <#parameters>`_)
+     - *required*
+   * - **timeout**
+     - number of seconds to wait for first response
+     - wait forever
+
+
+**HTTP Example**
+
+.. code-block:: http
+
+    POST /source/atl06 HTTP/1.1
+    Host: my-sliderule-server:9081
+    Content-Length: 179
+
+    {"atl03-asset": "atlas-local", "resource": "ATL03_20181019065445_03150111_003_01.h5", "track": 0, "parms": {"cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1}}
+
+**Python Example**
+
+.. code-block:: python
+
+    # Build ATL06 Parameters
+    parms = { 
+        "cnf": 4,
+        "ats": 20.0,
+        "cnt": 10,
+        "len": 40.0,
+        "res": 20.0,
+        "maxi": 1 
+    }
+
+    # Build ATL06 Request
+    rqst = {
+        "atl03-asset" : "atlas-local",
+        "resource": "ATL03_20181019065445_03150111_003_01.h5",
+        "track": 0,
+        "parms": parms
+    }
+
+    # Execute ATL06 Algorithm
+    rsps = sliderule.source("atl06", rqst, stream=True)
+
+**Response Payload** *(application/octet-stream)*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Serialized stream of gridded elevations of type ``atl06rec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
+
+
+indexer
+-------
+
+""""""""""""""""
+
+``POST /source/indexer <request payload>``
+
+    Return a set of meta-data index records for each ATL03 resource (i.e. H5 file) listed in the request.  
+    Index records are used to create local indexes of the resources available to be processed,
+    which in turn support spatial and temporal queries.
+    Note, while SlideRule supports native meta-data indexing, this feature is typically not used in favor of accessing the
+    NASA CMR system directly.
+
+**Request Payload** *(application/json)*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - parameter
+     - description
+     - default
+   * - **atl03-asset**
+     - data source (see `Assets <#assets>`_)
+     - atlas-local
+   * - **resources**
+     - List of ATL03 HDF5 filenames
+     - *required*     
+   * - **timeout**
+     - number of seconds to wait for first response
+     - wait forever
+
+
+**HTTP Example**
+
+.. code-block:: http
+
+    POST /source/indexer HTTP/1.1
+    Host: my-sliderule-server:9081
+    Content-Length: 131
+
+    {"atl03-asset": "atlas-local", "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"]}
+
+**Python Example**
+
+.. code-block:: python
+
+    # Build Indexer Request
+    rqst = {
+        "atl03-asset" : "atlas-local",
+        "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"],
+    }
+
+    # Execute ATL06 Algorithm
+    rsps = sliderule.source("indexer", rqst, stream=True)
+
+**Response Payload** *(application/octet-stream)*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Serialized stream of ATL03 meta-data index records of type ``atl03rec.index``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.

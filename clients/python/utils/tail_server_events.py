@@ -52,4 +52,4 @@ if __name__ == '__main__':
     }
 
     # Retrieve logs
-    rsps = source("event", rqst, stream=True)
+    rsps = sliderule.source("event", rqst, stream=True)
