@@ -279,7 +279,7 @@ int AssetIndex<T>::luaAdd (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaQuery - :query(<resource table>)
+ * luaQuery - :query(<index span>)
  *----------------------------------------------------------------------------*/
 template <class T>
 int AssetIndex<T>::luaQuery (lua_State* L)
