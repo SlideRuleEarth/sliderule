@@ -2,6 +2,8 @@
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
+Detailed documentation on installing and using this client is at [Read The Docs](https://icesat2-sliderule.readthedocs.io).
+
 ## I. Installing the SlideRule Python Client
 ```
 pip install https://github.com/ICESat2-SlideRule/sliderule-python
@@ -27,17 +29,27 @@ import pandas as pd
 from sliderule import icesat2
 
 # initialize
-icesat2.init("127.0.0.1", verbose=True, max_errors=3)
+icesat2.init("127.0.0.1", verbose=True)
 
-# make request
+# region of interest 
+region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},
+           {"lon":-105.30742121965137, "lat": 39.81983728534918},
+           {"lon":-105.30742121965137, "lat": 40.164048017973755},
+           {"lon":-105.82971551223244, "lat": 40.164048017973755},
+           {"lon":-105.82971551223244, "lat": 39.81983728534918} ]
+
+# request parameters
 parms = {
-    "srt": icesat2.SRT_LAND,
+    "poly": region,
+    "srt": icesat2.SRT_LAND, 
     "cnf": icesat2.CNF_SURFACE_HIGH,
     "len": 40.0,
     "res": 20.0,
     "maxi": 1
 }
-rsps = icesat2.atl06p(parms)
+
+# make request
+rsps = icesat2.atl06p(parms, "atlas-local")
 
 # analyze response
 df = pd.DataFrame(rsps)
@@ -45,7 +57,11 @@ df = pd.DataFrame(rsps)
 
 More extensive examples in the form of Jupyter Notebooks can be found in the [examples](examples/) folder.
 
-## III. Licensing
+## III. Reference and User's Guide
+
+Please see our [Read The Docs](https://icesat2-sliderule.readthedocs.io) page for reference and user's guide material.
+
+## IV. Licensing
 
 SlideRule is licensed under the 3-clause BSD license found in the LICENSE file at the root of this source tree.
 
