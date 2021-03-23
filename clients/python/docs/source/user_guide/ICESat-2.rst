@@ -317,70 +317,68 @@ atl06
     Perform ATL06-SR processing on ATL03 data and return gridded elevations
 
 **Request Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
+    .. list-table::
+       :header-rows: 1
+    
+       * - parameter
+         - description
+         - default
+       * - **atl03-asset**
+         - data source (see `Assets <#assets>`_)
+         - atlas-local
+       * - **resource**
+         - ATL03 HDF5 filename
+         - *required*     
+       * - **track**
+         - track number: 1, 2, 3, or 0 for all three tracks
+         - 0
+       * - **parms**
+         - ATL06-SR algorithm processing configuration (see `Parameters <#parameters>`_)
+         - *required*
+       * - **timeout**
+         - number of seconds to wait for first response
+         - wait forever
 
-   * - parameter
-     - description
-     - default
-   * - **atl03-asset**
-     - data source (see `Assets <#assets>`_)
-     - atlas-local
-   * - **resource**
-     - ATL03 HDF5 filename
-     - *required*     
-   * - **track**
-     - track number: 1, 2, 3, or 0 for all three tracks
-     - 0
-   * - **parms**
-     - ATL06-SR algorithm processing configuration (see `Parameters <#parameters>`_)
-     - *required*
-   * - **timeout**
-     - number of seconds to wait for first response
-     - wait forever
+    **HTTP Example**
 
+    .. code-block:: http
 
-**HTTP Example**
+        POST /source/atl06 HTTP/1.1
+        Host: my-sliderule-server:9081
+        Content-Length: 179
 
-.. code-block:: http
+        {"atl03-asset": "atlas-local", "resource": "ATL03_20181019065445_03150111_003_01.h5", "track": 0, "parms": {"cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1}}
 
-    POST /source/atl06 HTTP/1.1
-    Host: my-sliderule-server:9081
-    Content-Length: 179
+    **Python Example**
 
-    {"atl03-asset": "atlas-local", "resource": "ATL03_20181019065445_03150111_003_01.h5", "track": 0, "parms": {"cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1}}
+    .. code-block:: python
 
-**Python Example**
+        # Build ATL06 Parameters
+        parms = { 
+            "cnf": 4,
+            "ats": 20.0,
+            "cnt": 10,
+            "len": 40.0,
+            "res": 20.0,
+            "maxi": 1 
+        }
 
-.. code-block:: python
+        # Build ATL06 Request
+        rqst = {
+            "atl03-asset" : "atlas-local",
+            "resource": "ATL03_20181019065445_03150111_003_01.h5",
+            "track": 0,
+            "parms": parms
+        }
 
-    # Build ATL06 Parameters
-    parms = { 
-        "cnf": 4,
-        "ats": 20.0,
-        "cnt": 10,
-        "len": 40.0,
-        "res": 20.0,
-        "maxi": 1 
-    }
-
-    # Build ATL06 Request
-    rqst = {
-        "atl03-asset" : "atlas-local",
-        "resource": "ATL03_20181019065445_03150111_003_01.h5",
-        "track": 0,
-        "parms": parms
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("atl06", rqst, stream=True)
+        # Execute ATL06 Algorithm
+        rsps = sliderule.source("atl06", rqst, stream=True)
 
 **Response Payload** *(application/octet-stream)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Serialized stream of gridded elevations of type ``atl06rec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
+    Serialized stream of gridded elevations of type ``atl06rec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
+
 
 
 indexer
@@ -397,49 +395,46 @@ indexer
     NASA CMR system directly.
 
 **Request Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
+    .. list-table::
+       :header-rows: 1
+    
+       * - parameter
+         - description
+         - default
+       * - **atl03-asset**
+         - data source (see `Assets <#assets>`_)
+         - atlas-local
+       * - **resources**
+         - List of ATL03 HDF5 filenames
+         - *required*     
+       * - **timeout**
+         - number of seconds to wait for first response
+         - wait forever
+    
+    **HTTP Example**
 
-   * - parameter
-     - description
-     - default
-   * - **atl03-asset**
-     - data source (see `Assets <#assets>`_)
-     - atlas-local
-   * - **resources**
-     - List of ATL03 HDF5 filenames
-     - *required*     
-   * - **timeout**
-     - number of seconds to wait for first response
-     - wait forever
+    .. code-block:: http
 
+        POST /source/indexer HTTP/1.1
+        Host: my-sliderule-server:9081
+        Content-Length: 131
 
-**HTTP Example**
+        {"atl03-asset": "atlas-local", "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"]}
 
-.. code-block:: http
+    **Python Example**
 
-    POST /source/indexer HTTP/1.1
-    Host: my-sliderule-server:9081
-    Content-Length: 131
+    .. code-block:: python
 
-    {"atl03-asset": "atlas-local", "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"]}
+        # Build Indexer Request
+        rqst = {
+            "atl03-asset" : "atlas-local",
+            "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"],
+        }
 
-**Python Example**
-
-.. code-block:: python
-
-    # Build Indexer Request
-    rqst = {
-        "atl03-asset" : "atlas-local",
-        "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"],
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("indexer", rqst, stream=True)
+        # Execute ATL06 Algorithm
+        rsps = sliderule.source("indexer", rqst, stream=True)
 
 **Response Payload** *(application/octet-stream)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Serialized stream of ATL03 meta-data index records of type ``atl03rec.index``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
+    Serialized stream of ATL03 meta-data index records of type ``atl03rec.index``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.

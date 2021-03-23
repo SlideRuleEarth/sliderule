@@ -215,42 +215,40 @@ definition
     Gets the record definition of a record type; used to parse binary record data
 
 **Request Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-
-   * - parameter
-     - description
-     - default
-   * - **record-type**
-     - the name of the record type
-     - *required*
-
-**HTTP Example**
-
-.. code-block:: http
     
-    GET /source/definition HTTP/1.1
-    Host: my-sliderule-server:9081
-    Content-Length: 23
+    .. list-table::
+       :header-rows: 1
+    
+       * - parameter
+         - description
+         - default
+       * - **record-type**
+         - the name of the record type
+         - *required*
+
+    **HTTP Example**
+
+    .. code-block:: http
+        
+        GET /source/definition HTTP/1.1
+        Host: my-sliderule-server:9081
+        Content-Length: 23
 
 
-    {"rectype": "atl03rec"}
+        {"rectype": "atl03rec"}
 
-**Python Example**
+    **Python Example**
 
-.. code-block:: python
+    .. code-block:: python
 
-    # Request Record Definition
-    rsps = sliderule.source("definition", {"rectype": "atl03rec"}, stream=False)
+        # Request Record Definition
+        rsps = sliderule.source("definition", {"rectype": "atl03rec"}, stream=False)
 
 **Response Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-JSON object defining the on-the-wire binary format of the record data contained in the specified record type.
+    JSON object defining the on-the-wire binary format of the record data contained in the specified record type.
 
-See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to use the record definitions.
+    See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to use the record definitions.
 
 
 
@@ -264,56 +262,53 @@ event
     Return event messages (logs, traces, and metrics) in real-time that have occurred during the time the request is active
 
 **Request Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
-
-   * - parameter
-     - description
-     - default
-   * - **type**
-     - type of event message to monitor: "LOG", "TRACE", "METRIC"
-     - "LOG"
-   * - **level**
-     - minimum event level to monitor: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
-     - "INFO"
-   * - **format**
-     - the format of the event message: "FMT_TEXT", "FMT_JSON"; empty for binary record representation
-     - *optional*
-   * - **duration**
-     - seconds to hold connection open
-     - 0
-
-**HTTP Example**
-
-.. code-block:: http
+    .. list-table::
+       :header-rows: 1
     
-    POST /source/event HTTP/1.1
-    Host: my-sliderule-server:9081
-    Content-Length: 48
+       * - parameter
+         - description
+         - default
+       * - **type**
+         - type of event message to monitor: "LOG", "TRACE", "METRIC"
+         - "LOG"
+       * - **level**
+         - minimum event level to monitor: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+         - "INFO"
+       * - **format**
+         - the format of the event message: "FMT_TEXT", "FMT_JSON"; empty for binary record representation
+         - *optional*
+       * - **duration**
+         - seconds to hold connection open
+         - 0
 
-    {"type": "LOG", "level": "INFO", "duration": 30}
+    **HTTP Example**
 
-**Python Example**
+    .. code-block:: http
+        
+        POST /source/event HTTP/1.1
+        Host: my-sliderule-server:9081
+        Content-Length: 48
 
-.. code-block:: python
+        {"type": "LOG", "level": "INFO", "duration": 30}
 
-    # Build Logging Request
-    rqst = {
-        "type": "LOG", 
-        "level" : "INFO",
-        "duration": 30
-    }
+    **Python Example**
 
-    # Retrieve logs
-    rsps = sliderule.source("event", rqst, stream=True)
+    .. code-block:: python
+
+        # Build Logging Request
+        rqst = {
+            "type": "LOG", 
+            "level" : "INFO",
+            "duration": 30
+        }
+
+        # Retrieve logs
+        rsps = sliderule.source("event", rqst, stream=True)
 
 **Response Payload** *(application/octet-stream)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Serialized stream of event records of the type ``eventrec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
-
+    Serialized stream of event records of the type ``eventrec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
 
 
 
@@ -327,132 +322,130 @@ geo
     Perform geospatial operations on spherical and polar coordinates
 
 **Request Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
-
-   * - parameter
-     - description
-     - default
-   * - **asset**
-     - data source (see `Assets <#assets>`_)
-     - *required*
-   * - **pole**
-     - polar orientation of indexing operations: "north", "south"
-     - "north"
-   * - **lat**
-     - spherical latitude coordinate to project onto a polar coordinate system, -90.0 to 90.0
-     - *optional*
-   * - **lon**
-     - spherical longitude coordinate to project onto a polar coordinate system, -180.0 to 180.0
-     - *optional*
-   * - **x**
-     - polar x coordinate to project onto a spherical coordinate system
-     - *optional*
-   * - **y**
-     - polar y coordinate to project onto a spherical coordinate system
-     - *optional*
-   * - **span**
-     - a box defined by a lower left latitude/longitude pair, and an upper right lattitude/longitude pair
-     - *optional*
-   * - **span1**
-     - a span used for intersection with the span2
-     - *optional*
-   * - **span2**
-     - a span used for intersection with the span1
-     - *optional*
-
-.. list-table:: span definition
-   :header-rows: 1
-
-   * - parameter
-     - description
-     - default
-   * - **lat0**
-     - smallest latitude (starting at -90.0)
-     - *required*
-   * - **lon0**
-     - smallest longitude (starting at -180.0)
-     - *required*
-   * - **lat1**
-     - largest latitude (ending at 90.0)
-     - *required*
-   * - **lon1**
-     - largest longitude (ending at 180.0)
-     - *required*
-
-**HTTP Example**
-
-.. code-block:: http
+    .. list-table::
+       :header-rows: 1
     
-    GET /source/geo HTTP/1.1
-    Host: my-sliderule-server:9081
-    Content-Length: 115
+       * - parameter
+         - description
+         - default
+       * - **asset**
+         - data source (see `Assets <#assets>`_)
+         - *required*
+       * - **pole**
+         - polar orientation of indexing operations: "north", "south"
+         - "north"
+       * - **lat**
+         - spherical latitude coordinate to project onto a polar coordinate system, -90.0 to 90.0
+         - *optional*
+       * - **lon**
+         - spherical longitude coordinate to project onto a polar coordinate system, -180.0 to 180.0
+         - *optional*
+       * - **x**
+         - polar x coordinate to project onto a spherical coordinate system
+         - *optional*
+       * - **y**
+         - polar y coordinate to project onto a spherical coordinate system
+         - *optional*
+       * - **span**
+         - a box defined by a lower left latitude/longitude pair, and an upper right lattitude/longitude pair
+         - *optional*
+       * - **span1**
+         - a span used for intersection with the span2
+         - *optional*
+       * - **span2**
+         - a span used for intersection with the span1
+         - *optional*
+    
+    .. list-table:: span definition
+       :header-rows: 1
+    
+       * - parameter
+         - description
+         - default
+       * - **lat0**
+         - smallest latitude (starting at -90.0)
+         - *required*
+       * - **lon0**
+         - smallest longitude (starting at -180.0)
+         - *required*
+       * - **lat1**
+         - largest latitude (ending at 90.0)
+         - *required*
+       * - **lon1**
+         - largest longitude (ending at 180.0)
+         - *required*
+    
+    **HTTP Example**
+
+    .. code-block:: http
+        
+        GET /source/geo HTTP/1.1
+        Host: my-sliderule-server:9081
+        Content-Length: 115
 
 
-    {"asset": "atlas-local", "pole": "north", "lat": 30.0, "lon": 100.0, "x": -0.20051164424058, "y": -1.1371580426033}
+        {"asset": "atlas-local", "pole": "north", "lat": 30.0, "lon": 100.0, "x": -0.20051164424058, "y": -1.1371580426033}
 
-**Python Example**
+    **Python Example**
 
-.. code-block:: python
+    .. code-block:: python
 
-    rqst = {
-        "asset": "atlas-local",
-        "pole": "north",
-        "lat": 30.0,
-        "lon": 100.0,
-        "x": -0.20051164424058,
-        "y": -1.1371580426033,
-    }
+        rqst = {
+            "asset": "atlas-local",
+            "pole": "north",
+            "lat": 30.0,
+            "lon": 100.0,
+            "x": -0.20051164424058,
+            "y": -1.1371580426033,
+        }
 
-    rsps = sliderule.source("geo", rqst)
+        rsps = sliderule.source("geo", rqst)
 
 
 **Response Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-JSON object with elements populated by the inferred operations being requested
+    JSON object with elements populated by the inferred operations being requested
 
-.. list-table::
-   :header-rows: 1
-
-   * - parameter
-     - description
-     - default
-   * - **intersect**
-     - true if span1 and span2 intersect, false otherwise
-     - *optional*
-   * - **combine**
-     - the combined span of span1 and span 2
-     - *optional*
-   * - **split**
-     - the split of span
-     - *optional*
-   * - **lat**
-     - spherical latitude coordinate projected from the polar coordinate system, -90.0 to 90.0
-     - *optional*
-   * - **lon**
-     - spherical longitude coordinate projected from the polar coordinate system, -180.0 to 180.0
-     - *optional*
-   * - **x**
-     - polar x coordinate projected from the spherical coordinate system
-     - *optional*
-   * - **y**
-     - polar y coordinate projected from the spherical coordinate system
-     - *optional*
-
-**HTTP Example**
-
-.. code-block:: http
+    .. list-table::
+       :header-rows: 1
     
-    HTTP/1.1 200 OK
-    Server: sliderule/0.5.0
-    Content-Type: text/plain
-    Content-Length: 76
+       * - parameter
+         - description
+         - default
+       * - **intersect**
+         - true if span1 and span2 intersect, false otherwise
+         - *optional*
+       * - **combine**
+         - the combined span of span1 and span 2
+         - *optional*
+       * - **split**
+         - the split of span
+         - *optional*
+       * - **lat**
+         - spherical latitude coordinate projected from the polar coordinate system, -90.0 to 90.0
+         - *optional*
+       * - **lon**
+         - spherical longitude coordinate projected from the polar coordinate system, -180.0 to 180.0
+         - *optional*
+       * - **x**
+         - polar x coordinate projected from the spherical coordinate system
+         - *optional*
+       * - **y**
+         - polar y coordinate projected from the spherical coordinate system
+         - *optional*
+
+    **HTTP Example**
+
+    .. code-block:: http
+        
+        HTTP/1.1 200 OK
+        Server: sliderule/0.5.0
+        Content-Type: text/plain
+        Content-Length: 76
 
 
-    {"y":1.1371580426033,"x":-0.20051164424058,"lat":29.999999999998,"lon":-100}
+        {"y":1.1371580426033,"x":-0.20051164424058,"lat":29.999999999998,"lon":-100}
 
 
 
@@ -468,78 +461,76 @@ h5
     See `icesat2.h5 <./ICESat-2.html#h5>`_ function for a convient method for accessing HDF5 datasets.
 
 **Request Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
-
-   * - parameter
-     - description
-     - default
-   * - **asset**
-     - data source asset (see `Assets <#assets>`_)
-     - *required*
-   * - **resource**
-     - HDF5 filename
-     - *required*
-   * - **dataset**
-     - full path to dataset variable
-     - *required*
-   * - **datatype**
-     - the type of data the returned dataset values should be in
-     - "DYNAMIC"
-   * - **col**
-     - the column to read from the dataset for a multi-dimensional dataset
-     - 0
-   * - **startrow**
-     - the first row to start reading from in a multi-dimensional dataset
-     - 0
-   * - **numrows**
-     - the number of rows to read when reading from a multi-dimensional dataset
-     - -1 (all rows)
-   * - **id**
-     - value to echo back in the records being returned
-     - 0
-
-**HTTP Example**
-
-.. code-block:: http
+    .. list-table::
+       :header-rows: 1
     
-    POST /source/h5 HTTP/1.1
-    Host: my-sliderule-server:9081
-    Content-Length: 189
+       * - parameter
+         - description
+         - default
+       * - **asset**
+         - data source asset (see `Assets <#assets>`_)
+         - *required*
+       * - **resource**
+         - HDF5 filename
+         - *required*
+       * - **dataset**
+         - full path to dataset variable
+         - *required*
+       * - **datatype**
+         - the type of data the returned dataset values should be in
+         - "DYNAMIC"
+       * - **col**
+         - the column to read from the dataset for a multi-dimensional dataset
+         - 0
+       * - **startrow**
+         - the first row to start reading from in a multi-dimensional dataset
+         - 0
+       * - **numrows**
+         - the number of rows to read when reading from a multi-dimensional dataset
+         - -1 (all rows)
+       * - **id**
+         - value to echo back in the records being returned
+         - 0
+
+    **HTTP Example**
+
+    .. code-block:: http
+        
+        POST /source/h5 HTTP/1.1
+        Host: my-sliderule-server:9081
+        Content-Length: 189
 
 
-    {"asset": "atlas-local", "resource": "ATL03_20181019065445_03150111_003_01.h5", "dataset": "/gt1r/geolocation/segment_ph_cnt", "datatype": 2, "col": 0, "startrow": 0, "numrows": 5, "id": 0}
+        {"asset": "atlas-local", "resource": "ATL03_20181019065445_03150111_003_01.h5", "dataset": "/gt1r/geolocation/segment_ph_cnt", "datatype": 2, "col": 0, "startrow": 0, "numrows": 5, "id": 0}
 
 
-**Python Example**
+    **Python Example**
 
-.. code-block:: python
+    .. code-block:: python
 
-    >>> import sliderule
-    >>> sliderule.set_url(["127.0.0.1"])
-    >>> asset = "atlas-local"
-    >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
-    >>> dataset = "/gt1r/geolocation/segment_ph_cnt"
-    >>> rqst = {
-    ...         "asset" : asset,
-    ...         "resource": resource,
-    ...         "dataset": dataset,
-    ...         "datatype": sliderule.datatypes["INTEGER"],
-    ...         "col": 0,
-    ...         "startrow": 0,
-    ...         "numrows": 5,
-    ...         "id": 0
-    ...     }
-    >>> rsps = sliderule.source("h5", rqst, stream=True)
-    >>> print(rsps)
-    [{'@rectype': 'h5dataset', 'datatype': 2, 'data': (245, 0, 0, 0, 7, 1, 0, 0, 17, 1, 0, 0, 1, 1, 0, 0, 4, 1, 0, 0), 'size': 20, 'offset': 0, 'id': 0}]
+        >>> import sliderule
+        >>> sliderule.set_url(["127.0.0.1"])
+        >>> asset = "atlas-local"
+        >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
+        >>> dataset = "/gt1r/geolocation/segment_ph_cnt"
+        >>> rqst = {
+        ...         "asset" : asset,
+        ...         "resource": resource,
+        ...         "dataset": dataset,
+        ...         "datatype": sliderule.datatypes["INTEGER"],
+        ...         "col": 0,
+        ...         "startrow": 0,
+        ...         "numrows": 5,
+        ...         "id": 0
+        ...     }
+        >>> rsps = sliderule.source("h5", rqst, stream=True)
+        >>> print(rsps)
+        [{'@rectype': 'h5dataset', 'datatype': 2, 'data': (245, 0, 0, 0, 7, 1, 0, 0, 17, 1, 0, 0, 1, 1, 0, 0, 4, 1, 0, 0), 'size': 20, 'offset': 0, 'id': 0}]
 
 **Response Payload** *(application/octet-stream)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Serialized stream of H5 dataset records of the type ``h5dataset``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
+    Serialized stream of H5 dataset records of the type ``h5dataset``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
 
 
 
@@ -558,42 +549,40 @@ index
     that take advantage of this endpoint and provide a more meaning interface.
 
 **Request Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: python
+    .. code-block:: python
 
-        {
-            "or"|"and": 
             {
-                "<index name>": { <index parameters>... } 
-                ...
+                "or"|"and": 
+                {
+                    "<index name>": { <index parameters>... } 
+                    ...
+                }
             }
-        }
 
-.. list-table::
-   :header-rows: 1
+    .. list-table::
+       :header-rows: 1
 
-   * - parameter
-     - description
-     - default
-   * - **index name**
-     - name of server-side index to use (deployment specific)
-     - *required*
-   * - **index parameters**
-     - an index span represented in the format native to the index selected
-     - *required*
+       * - parameter
+         - description
+         - default
+       * - **index name**
+         - name of server-side index to use (deployment specific)
+         - *required*
+       * - **index parameters**
+         - an index span represented in the format native to the index selected
+         - *required*
 
 
 **Response Payload** *(application/json)*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-JSON object containing a list of the resources available to the SlideRule deployment that match the query criteria.
+    JSON object containing a list of the resources available to the SlideRule deployment that match the query criteria.
 
-.. code-block:: python
+    .. code-block:: python
 
-    {
-        "resources": ["<resource name>", ...]
-    }
+        {
+            "resources": ["<resource name>", ...]
+        }
 
 
 
