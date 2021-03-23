@@ -1,4 +1,6 @@
-# python
+#
+# Query the consul server and display the available services
+#
 
 import sys
 import requests
@@ -37,29 +39,29 @@ def query_services (url, service, list_only=False, passing_only=False):
 if __name__ == '__main__':
 
     # Set URL #
-    url = "http://34.222.95.172:8500"
+    ipaddr = "127.0.0.1"
     if len(sys.argv) > 1:
-        url = sys.argv[1]
+        ipaddr = sys.argv[1]
 
-    # Set Service #
-    service = "srds"
-    if len(sys.argv) > 2:
-        service = sys.argv[2]
-    
     # Set Listing Options #
     list_only = False
-    if len(sys.argv) > 3:
-        if sys.argv[3] == "True":
+    if len(sys.argv) > 2:
+        if sys.argv[2] == "List":
             list_only = True
 
     # Set Query Options #
     passing_only = False
-    if len(sys.argv) > 4:
-        if sys.argv[4] == "Passing":
+    if len(sys.argv) > 3:
+        if sys.argv[3] == "Passing":
             passing_only = True
 
+    # Set Service #
+    service = "srds"
+    if len(sys.argv) > 4:
+        service = sys.argv[4]
+
     # Query Services #
-    services = query_services(url, service, list_only, passing_only)
+    services = query_services("http://"+ipaddr+":8500", service, list_only, passing_only)
 
     # Display Services #
     print(json.dumps(services, indent=2))
