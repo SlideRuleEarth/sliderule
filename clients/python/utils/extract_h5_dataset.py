@@ -1,3 +1,7 @@
+#
+# Uses the icesat2.h5 api to read a dataset from an H5 file and write the contents to a file
+#
+
 import sys
 import logging
 from sliderule import sliderule

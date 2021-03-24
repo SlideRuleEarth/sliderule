@@ -44,5 +44,12 @@ if __name__ == '__main__':
     # Initialize ICESat2/SlideRule Package
     icesat2.init(url, True)
 
+    # Build Logging Request
+    rqst = {
+        "type": event_type, 
+        "level" : event_level,
+        "duration": duration
+    }
+
     # Retrieve logs
-    sliderule.tail(event_type, event_level, duration)
+    rsps = sliderule.source("event", rqst, stream=True)

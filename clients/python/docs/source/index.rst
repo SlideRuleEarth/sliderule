@@ -19,5 +19,5 @@ Python client to interact with `SlideRule`, a C++/Lua framework for on-demand da
    :maxdepth: 1
    :caption: Users Guide
 
-   user_guide/Endpoints.rst
+   user_guide/SlideRule.rst
    user_guide/ICESat-2.rst

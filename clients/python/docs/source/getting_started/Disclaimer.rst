@@ -2,9 +2,7 @@
 Disclaimer
 ==========
 
-`SlideRule` is licensed under the Apache License, Version 2.0 to the University of Washington under one or more contributor license agreements.
-
-You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+`SlideRule` is licensed by the University of Washington under the 3-clause BSD license found in the LICENSE file at the root of `slideRule-python repository <https://github.com/ICESat2-SlideRule/sliderule-python.git>`_.
 
 This product includes software developed at:
 

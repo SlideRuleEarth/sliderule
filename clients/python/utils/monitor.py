@@ -1,11 +1,6 @@
 #
-#   Purpose: process trace outputs from lttng to produce human readable results
-#
-#   Example creation of Software Timing Analyzer files:
-#       /usr/bin/python3 trace.py --fmt sta --ids 22 23 24 25 /tmp/sliderule-session
-#
-#   Example simple console output:
-#       /usr/bin/python3 trace.py /tmp/sliderule-session
+#   Uses the "event" endpoint to capture a set of traces 
+#   and produce human readable results
 #
 
 import sys
