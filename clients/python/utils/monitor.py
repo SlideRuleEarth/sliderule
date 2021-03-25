@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
     # Default Parameters
     parms = {
-        "url": "127.0.0.1",
+        "ipaddr": "127.0.0.1",
         "fmt": "console",
         "depth": 1,
         "ids": []
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     rqst = parse_command_line(sys.argv, rqst)
 
     # Set URL 
-    sliderule.set_url([parms["url"]])
+    sliderule.set_url([parms["ipaddr"]])
     
     # Connect to SlideRule
     rsps = sliderule.source("event", rqst, stream=True, callbacks={'eventrec': process_event})
