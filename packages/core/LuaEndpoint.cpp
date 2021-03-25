@@ -101,7 +101,7 @@ void* LuaEndpoint::requestThread (void* parm)
     const char* script_pathname = sanitize(request->url);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(CRITICAL, lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
+    uint32_t trace_id = start_trace(INFO, lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
     mlog(INFO, "%s request at %s to %s", verb2str(request->verb), request->id, script_pathname);
@@ -122,7 +122,7 @@ void* LuaEndpoint::requestThread (void* parm)
     delete [] script_pathname;
 
     /* Stop Trace */
-    stop_trace(CRITICAL, trace_id);
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

@@ -115,6 +115,7 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "METRIC",                   EventLib::METRIC);
     LuaEngine::setAttrInt   (L, "FMT_TEXT",                 Monitor::TEXT);
     LuaEngine::setAttrInt   (L, "FMT_JSON",                 Monitor::JSON);
+    LuaEngine::setAttrInt   (L, "FMT_LOKI",                 Monitor::LOKI);
     LuaEngine::setAttrInt   (L, "FMT_RECORD",               Monitor::RECORD);
     LuaEngine::setAttrStr   (L, "MONITORQ",                 MONITORQ);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::TEXT);

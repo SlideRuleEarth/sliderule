@@ -188,7 +188,7 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
     event_t event;
     
     /* Return Here If Nothing to Do */
-    if(lvl < trace_level) return ORIGIN;
+    if(lvl < trace_level) return parent;
 
     /* Initialize Trace */
     event.systime   = TimeLib::gettimems();

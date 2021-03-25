@@ -134,7 +134,11 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
     else
     {
         /* Format Event */
-        if(outputFormat == TEXT)
+        if(outputFormat == LOKI)
+        {
+            event_size = lokiOutput(event, event_buffer); 
+        }
+        else if(outputFormat == TEXT)
         {
             event_size = textOutput(event, event_buffer); 
         }
@@ -184,22 +188,50 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
     char* msg = event_buffer;
 
     /* Populate Message */
-    msg += StringLib::formats(msg, MAX_EVENT_SIZE,
-        "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"type\":\"%s\",\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":\"%s\"}\n",
-        event->systime, event->ipv4, event->flags, 
-        EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level), 
-        event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
+    if(event->attr && event->attr[0] == '{')
+    {
+        /* Attribute String with No Quotes */
+        msg += StringLib::formats(msg, MAX_EVENT_SIZE,
+            "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"type\":\"%s\",\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":%s}\n",
+            event->systime, event->ipv4, event->flags, 
+            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level), 
+            event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
+    }
+    else
+    {
+        /* Attribute String Quoted */
+        msg += StringLib::formats(msg, MAX_EVENT_SIZE,
+            "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"type\":\"%s\",\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":\"%s\"}\n",
+            event->systime, event->ipv4, event->flags, 
+            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level), 
+            event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
+    }
 
     /* Return Size of Message */
     return msg - event_buffer + 1;;
 }
 
 /*----------------------------------------------------------------------------
- * luaConfig - :config([<type mask>]) --> type mask, status
+ * lokiOutput
+ *----------------------------------------------------------------------------*/
+int Monitor::lokiOutput (EventLib::event_t* event, char* event_buffer)
+{
+    /* Populate Message */
+    int msg_len = StringLib::formats(event_buffer, MAX_EVENT_SIZE, "%s:%s %s\n", 
+                                    EventLib::lvl2str((event_level_t)event->level), event->name, event->attr);
+
+    /* Return Size of Message */
+    return msg_len + 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaConfig - :config([<type mask>], [<level>]) --> type mask, level, status
  *----------------------------------------------------------------------------*/
 int Monitor::luaConfig (lua_State* L)
 {
     bool status = false;
+    int num_ret = 1;
+    bool provided = false;
 
     try
     {
@@ -207,12 +239,20 @@ int Monitor::luaConfig (lua_State* L)
         Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
 
         /* Set Type Mask */
-        bool provided = false;
         uint8_t type_mask = getLuaInteger(L, 2, true, 0, &provided);
         if(provided) lua_obj->eventTypeMask = type_mask;
 
+        /* Set Level */
+        event_level_t level = (event_level_t)getLuaInteger(L, 3, true, 0, &provided);
+        if(provided) lua_obj->eventLevel = level;
+
         /* Set Return Values */
         lua_pushinteger(L, (int)lua_obj->eventTypeMask);
+        num_ret++;
+        lua_pushinteger(L, (int)lua_obj->eventLevel);
+        num_ret++;
+
+        /* Set return Status */
         status = true;
     }
     catch(const RunTimeException& e)
@@ -221,5 +261,5 @@ int Monitor::luaConfig (lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, 2);
+    return returnLuaStatus(L, status, num_ret);
 }
