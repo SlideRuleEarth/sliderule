@@ -134,9 +134,9 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
     else
     {
         /* Format Event */
-        if(outputFormat == LOKI)
+        if(outputFormat == CLOUD)
         {
-            event_size = lokiOutput(event, event_buffer); 
+            event_size = cloudOutput(event, event_buffer); 
         }
         else if(outputFormat == TEXT)
         {
@@ -169,9 +169,9 @@ int Monitor::textOutput (EventLib::event_t* event, char* event_buffer)
 
     /* Populate Prefix */
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
-    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%d:%d:%d:%d:%d:%s:%s ", 
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%d:%d:%d:%d:%d:%s:%s:%s ", 
         timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second,
-        EventLib::lvl2str((event_level_t)event->level), event->name);
+        event->ipv4, EventLib::lvl2str((event_level_t)event->level), event->name);
 
     /* Populate Message */
     msg += StringLib::formats(msg, MAX_EVENT_SIZE - (msg - event_buffer), "%s\n", event->attr);
@@ -212,9 +212,9 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
 }
 
 /*----------------------------------------------------------------------------
- * lokiOutput
+ * cloudOutput
  *----------------------------------------------------------------------------*/
-int Monitor::lokiOutput (EventLib::event_t* event, char* event_buffer)
+int Monitor::cloudOutput (EventLib::event_t* event, char* event_buffer)
 {
     /* Populate Message */
     int msg_len = StringLib::formats(event_buffer, MAX_EVENT_SIZE, "%s:%s %s\n", 

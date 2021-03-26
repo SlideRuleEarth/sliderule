@@ -64,7 +64,7 @@ class Monitor: public DispatchObject
         typedef enum {
             TEXT,
             JSON,
-            LOKI,
+            CLOUD,
             RECORD
         } format_t;
 
@@ -93,7 +93,7 @@ class Monitor: public DispatchObject
 
         int         textOutput      (EventLib::event_t* event, char* event_buffer);
         int         jsonOutput      (EventLib::event_t* event, char* event_buffer);
-        int         lokiOutput      (EventLib::event_t* event, char* event_buffer);
+        int         cloudOutput     (EventLib::event_t* event, char* event_buffer);
 
         static int  luaConfig       (lua_State* L);
 
