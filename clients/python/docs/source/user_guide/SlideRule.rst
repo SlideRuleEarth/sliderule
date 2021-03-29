@@ -147,6 +147,8 @@ update_available_servers
     
     This function does nothing if the client has been initialized with a hardcoded list of servers.
 
+    :return: the number of available processing nodes
+
     Example: 
 
     .. code-block:: python
