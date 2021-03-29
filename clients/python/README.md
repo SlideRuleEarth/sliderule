@@ -9,12 +9,23 @@ Detailed documentation on installing and using this client is at [Read the Docs]
 pip install https://github.com/ICESat2-SlideRule/sliderule-python
 ```
 
-development install:
+Development install:
 ```
 git clone https://github.com/ICESat2-SlideRule/sliderule-python.git
 cd sliderule-python
 conda env create -f environment.yml
 ```
+
+Manual install or update:
+```
+git clone https://github.com/ICESat2-SlideRule/sliderule-python.git
+cd sliderule-python
+python3 setup.py install
+```
+
+### Dependencies
+
+To use SlideRule's Python client, the only non-standard packages it depends on are `requests` and `numpy`.  But if you intend on running the example notebooks, please refer to the package requirements listed in `environment.yml` for a full list of dependencies needed by those notebooks.
 
 ## II. Getting Started Using SlideRule
 
