@@ -314,7 +314,7 @@ int LuaLibraryMsg::lmsg_definition(lua_State* L)
     if(numfields > 0)
     {
         lua_newtable(L);
-        LuaEngine::setAttrNum(L, "@datasize", RecordObject::getRecordDataSize(rectype));
+        LuaEngine::setAttrNum(L, "__datasize", RecordObject::getRecordDataSize(rectype));
         for(int i = 0; i < numfields; i++)
         {
             const char* flagstr = RecordObject::flags2str(fields[i]->flags);

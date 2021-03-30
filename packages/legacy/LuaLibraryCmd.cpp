@@ -106,7 +106,7 @@ int LuaLibraryCmd::lcmd_exec (lua_State* L)
         if(comment_ptr) *comment_ptr = '\0'; // discards comments
 
         /* Execute String */
-        if(cmdProc->postCommand("%s @%s", str, store_key))
+        if(cmdProc->postCommand("%s %s%s", str, CommandProcessor::STORE, store_key))
         {
             int ret_size = cmdProc->getCurrentValue(cmdProc->getName(), store_key, &cmd_status, sizeof(cmd_status), cmd_timeout, true);
             if(ret_size <= 0)

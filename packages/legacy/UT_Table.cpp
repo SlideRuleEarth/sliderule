@@ -115,7 +115,7 @@ bool UT_Table::_ut_assert(bool e, const char* file, int line, const char* fmt, .
         else pathptr = (char*)file;
 
         /* Create Log Message */
-        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure @ %s:%d:%s", pathptr, line, formatted_string);
+        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
         if(msglen > (UT_MAX_ASSERT - 1))
         {
             log_message[UT_MAX_ASSERT - 1] = '#';
