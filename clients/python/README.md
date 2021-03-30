@@ -6,7 +6,7 @@ Detailed documentation on installing and using this client is at [Read the Docs]
 
 ## I. Installing the SlideRule Python Client
 ```
-pip install https://github.com/ICESat2-SlideRule/sliderule-python
+pip install git+https://github.com/ICESat2-SlideRule/sliderule-python
 ```
 
 Development install:
