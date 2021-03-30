@@ -199,7 +199,7 @@ def __decode(rectype, rawdata):
     global recdef_table
 
     # initialize record
-    rec = { "@rectype": rectype }
+    rec = { "__rectype": rectype }
 
     # populate record definition (if needed) #
     __populate(rectype)
@@ -211,8 +211,8 @@ def __decode(rectype, rawdata):
     # iterate through each field in definition
     for fieldname in recdef.keys():
 
-        # @ indicates meta data
-        if "@" in fieldname:
+        # double underline (__) as prefix indicates meta data
+        if fieldname.find("__") == 0:
             continue
 
         # get field properties
@@ -272,14 +272,14 @@ def __decode(rectype, rawdata):
 
             # get number of elements
             if elems <= 0:
-                elems = int((len(rawdata) - offset) / subrecdef["@datasize"])
+                elems = int((len(rawdata) - offset) / subrecdef["__datasize"])
 
             # return parsed data
             if is_array:
                 rec[fieldname] = []
                 for e in range(elems):
                     rec[fieldname].append(__decode(ftype, rawdata[offset:]))
-                    offset += subrecdef["@datasize"]
+                    offset += subrecdef["__datasize"]
             else:
                 rec[fieldname] = __decode(ftype, rawdata[offset:])
 

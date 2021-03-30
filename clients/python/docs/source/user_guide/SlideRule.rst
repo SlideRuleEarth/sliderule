@@ -66,7 +66,7 @@ Stream
     .. code-block:: python
     
         {   
-            "@datasize": # minimum size of record
+            "__datasize": # minimum size of record
             "field_1":          
             {
                 "type": # data type (see sliderule.basictypes for full definition), or record type if a nested structure
@@ -528,7 +528,7 @@ h5
         ...     }
         >>> rsps = sliderule.source("h5", rqst, stream=True)
         >>> print(rsps)
-        [{'@rectype': 'h5dataset', 'datatype': 2, 'data': (245, 0, 0, 0, 7, 1, 0, 0, 17, 1, 0, 0, 1, 1, 0, 0, 4, 1, 0, 0), 'size': 20, 'offset': 0, 'id': 0}]
+        [{'__rectype': 'h5dataset', 'datatype': 2, 'data': (245, 0, 0, 0, 7, 1, 0, 0, 17, 1, 0, 0, 1, 1, 0, 0, 4, 1, 0, 0), 'size': 20, 'offset': 0, 'id': 0}]
 
 **Response Payload** *(application/octet-stream)*
 
