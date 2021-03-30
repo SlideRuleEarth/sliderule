@@ -2,7 +2,7 @@
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
-Detailed documentation on installing and using this client is at [Read the Docs](https://icesat2-sliderule.readthedocs.io).
+Detailed documentation on installing and using this client is at [Read the Docs](https://sliderule-python.readthedocs.io).
 
 ## I. Installing the SlideRule Python Client
 ```
@@ -70,7 +70,7 @@ More extensive examples in the form of Jupyter Notebooks can be found in the [ex
 
 ## III. Reference and User's Guide
 
-Please see our [Read the Docs](https://icesat2-sliderule.readthedocs.io) page for reference and user's guide material.
+Please see our [Read the Docs](https://sliderule-python.readthedocs.io) page for reference and user's guide material.
 
 ## IV. Licensing
 
