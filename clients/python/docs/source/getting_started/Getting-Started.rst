@@ -73,8 +73,8 @@ Python API Reference
 `SlideRule Python API <../user_guide/SlideRule.html>`_:
 
 - ``source``: Perform API call to SlideRule service `(ref) <../user_guide/SlideRule.html#source>`_
-- ``set_url``: Configure the URL of the SlideRule service `(ref) <../user_guide/SlideRule.html#set_url>`_
-- ``update_available_servers``: Cause local client to update the list of available SlideRule servers `(ref) <../user_guide/SlideRule.html#update_available_servers>`_
-- ``set_verbose``: Configure the verbose setting in the SlideRule client `(ref) <../user_guide/SlideRule.html#set_verbose>`_
-- ``set_max_errors``: Configure the maximum number of errors a given server can return before being removed from the list `(ref) <../user_guide/SlideRule.html#set_max_errors>`_
+- ``set_url``: Configure the URL of the SlideRule service `(ref) <../user_guide/SlideRule.html#set-url>`_
+- ``update_available_servers``: Cause local client to update the list of available SlideRule servers `(ref) <../user_guide/SlideRule.html#update-available-servers>`_
+- ``set_verbose``: Configure the verbose setting in the SlideRule client `(ref) <../user_guide/SlideRule.html#set-verbose>`_
+- ``set_max_errors``: Configure the maximum number of errors a given server can return before being removed from the list `(ref) <../user_guide/SlideRule.html#set-max_errors>`_
 - ``gps2utc``: Convert a GPS based time returned from SlideRule into a UTC time `(ref) <../user_guide/SlideRule.html#gps2utc>`_

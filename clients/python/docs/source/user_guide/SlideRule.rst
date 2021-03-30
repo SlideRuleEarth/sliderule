@@ -157,6 +157,43 @@ update_available_servers
         >>> sliderule.update_available_servers()
 
 
+set_verbose
+-----------
+
+""""""""""""""""
+
+.. py:function:: sliderule.set_verbose(enable):
+
+    Configure sliderule package for verbose logging 
+
+    :param bool enable: whether or not user level log messages received from SlideRule generate a Python log message
+
+    Example: 
+
+    .. code-block:: python
+
+        >>> import sliderule
+        >>> sliderule.set_verbose(True)
+
+    The default behavior of Python log messages is for them to be displayed to standard output.  
+    If you want more control over the behavior of the log messages being display, create and configure a Python log handler as shown below:
+
+    .. code-block:: python
+
+      # import packages
+      import logging
+      from sliderule import sliderule
+
+      # Configure Logging
+      sliderule_logger = logging.getLogger("sliderule.sliderule")
+      sliderule_logger.setLevel(logging.INFO)
+
+      # Create Console Output
+      ch = logging.StreamHandler()
+      ch.setLevel(logging.INFO)
+      sliderule_logger.addHandler(ch)
+
+
 set_max_errors
 --------------
 
