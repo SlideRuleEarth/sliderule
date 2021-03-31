@@ -2,8 +2,9 @@
 
 A C++/Lua framework for on-demand science data processing.
 
-If you are a science user interested in processing ICESat-2 data with SlideRule, please see the [sliderule-python client](https://github.com/ICESat2-SlideRule/sliderule-python).
+This repository is for SlideRule developers and contains the source code for the SlideRule server application. The server is intended to be deployed alongside plugins containing project specific algorithms for processing science data.  If you are a developer interested in the ICESat-2 plugin for SlideRule, please see the [sliderule-icesat2 plugin](https://github.com/ICESat2-SlideRule/sliderule-icesat2).
 
+If you are a science user interested in processing ICESat-2 data with SlideRule, please see the [sliderule-python client](https://github.com/ICESat2-SlideRule/sliderule-python).
 
 ## I. Prerequisites
 
@@ -27,7 +28,7 @@ From the root directory of the repository:
 This will build the following binaries:
 * `sliderule`: console application
 
-And perform the following installations:
+and perform the following installations:
 * `/usr/local/bin`: applications
 * `/usr/local/include/sliderule`: class header files for plugin development
 * `/usr/local/etc/sliderule`: plugins, configuration files, and scripts
@@ -119,9 +120,9 @@ export PATH=$PATH:/opt/cmake/bin
 
 ### 3. Install all dependencies
 
-If additional packages are needed, navigate to the packages readme (the {package}.md file found in each package directory) for instructions on how to build and configure that package.  Once the proper dependencies are installed, the corresponding option must be passed to cmake to ensure the package is built.
+If additional packages are needed, navigate to the package's readme (the {package}.md file found in each package directory) for instructions on how to build and configure that package.  Once the proper dependencies are installed, the corresponding option must be passed to cmake to ensure the package is built.
 
-For example, if the H5 package was needed, first the installation instructions at `packages/h5/h5.md` need to be followed, and then the `-DUSE_H5_PACKAGE=ON` needs to be passed to cmake when configuring the build.
+For example, if the AWS package was needed, the installation instructions at `packages/aws/aws.md` need to be followed, and then the `-DUSE_AWS_PACKAGE=ON` needs to be passed to cmake when configuring the build.
 
 ### 4. Build and install SlideRule
 
@@ -135,7 +136,7 @@ $ sudo make install
 
 ### 5. Running SlideRule as a stand-alone application
 
-SlideRule requires a lua script to be passed to it in order to configure which components are run. "Using" SlideRule means to develop the lua scripts needed to configure and instantiate the needed SlideRule components. Two stock lua scripts are provided in the repository and can be used as a starting point for developing a project-specific lua script.
+SlideRule requires a lua script to be passed to it at startup in order to configure which components are run. "Using" SlideRule means developing the lua scripts needed to configure and instantiate the needed SlideRule components. Two stock lua scripts are provided in the repository and can be used as a starting point for developing a project-specific lua script.
 
 A REST server running at port 9081 can be started via:
 ```bash
@@ -165,7 +166,7 @@ Any target that includes the package should only include the package's h file, a
 
 ### scripts
 
-Contains Lua and Python scripts that can be used for tests and higher level implementations of functionality.
+Contains Lua and other scripts that can be used for tests and higher level implementations of functionality.
 
 ### targets
 
@@ -176,7 +177,12 @@ Contains the source files to make the various executable targets. By convention,
 
 In order to build a plugin for SlideRule, the plugin code must compile down to a shared object that exposes a single function defined as `void init{plugin}(void)` where _{plugin}_ is the name of the plugin.  Note that if developing the plugin in C++ the initialization function must be externed as C in order to prevent the mangling of the exported symbol.
 
-Once the shared object is built, the build system must copy the shared object into the SlideRule configuration directory (specified by `RUNTIMEDIR` option in the CMakeLists.txt file) with the name _{plugin}.so_.  On startup, the _sliderule_ application reads the _plugins.conf_ file in the configuration directory and loads all plugins listed in that file.
+Once the shared object is built, the build system must copy the shared object into the SlideRule configuration directory (specified by the `RUNTIMEDIR` option in the CMakeLists.txt file) with the name _{plugin}.so_.  On startup, the _sliderule_ application reads the _plugins.conf_ file in the configuration directory and loads all plugins listed in that file.  It is the responsibility of the admin deploying the _sliderule_ application to make sure there is a _plugins.conf_ file present and that it contains the names of the plugins that need to be loaded.
+
+For example, to load only the icesat2.so plugin, the _plugins.conf_ file would contain:
+```
+icesat2
+```
 
 
 ## VI. Delivering the Code
