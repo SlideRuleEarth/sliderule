@@ -11,7 +11,7 @@ but also has the goal of demonstrating a new paradigm for providing science data
 
 While `SlideRule` can be accessed by any http client (e.g. curl) by making GET and POST requests to the `SlideRule` service,
 the python packages in this repository provide higher level access by hiding the GET and POST requests inside python function calls that accept and return basic python variable types (e.g. dictionaries, lists, numbers).
-The `SlideRule-Python` repository also provides some examples and high-level plotting programs through the use of `Jupyter Notebooks <./Examples.html>`_.
+The `SlideRule-Python <https://github.com/ICESat2-SlideRule/sliderule-python>`_ repository also provides some examples and high-level plotting programs through the use of `Jupyter Notebooks <./Examples.html>`_.
 
 Basic Usage
 ###########
