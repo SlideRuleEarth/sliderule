@@ -37,6 +37,28 @@
 #include "core.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* H5File::ObjectType = "H5File";
+const char* H5File::LuaMetaName = "H5File";
+const struct luaL_Reg H5File::LuaMetaTable[] = {
+    {"read",        luaRead},
+    {"dir",         luaTraverse},
+    {"inspect",     luaInspect},
+    {NULL,          NULL}
+};
+
+const char* H5File::recType = "h5file";
+const RecordObject::fieldDef_t H5File::recDef[] = {
+    {"dataset", RecordObject::STRING,   offsetof(h5file_t, dataset), MAX_NAME_STR,  NULL, NATIVE_FLAGS},
+    {"datatype",RecordObject::UINT32,   offsetof(h5file_t, datatype),1,             NULL, NATIVE_FLAGS},
+    {"elements",RecordObject::UINT32,   offsetof(h5file_t, elements),1,             NULL, NATIVE_FLAGS},
+    {"size",    RecordObject::UINT32,   offsetof(h5file_t, size),    1,             NULL, NATIVE_FLAGS},
+    {"data",    RecordObject::UINT8,    sizeof(h5file_t),            0,             NULL, NATIVE_FLAGS}
+};
+
+/******************************************************************************
  * HDF5 FILE CLASS
  ******************************************************************************/
 
@@ -63,23 +85,25 @@ int H5File::luaCreate(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void H5File::init (void)
+{
+    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, NULL, sizeof(h5file_t), recDef, def_elements, 8);
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", recType, rc);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 H5File::H5File (lua_State* L, const char* _filename):
-    DeviceObject(L, READER),
-    connected(false),
-    filename(StringLib::duplicate(_filename))
+    LuaObject(L, ObjectType, LuaMetaName, LuaMetaTable)
 {
-    assert(_filename);
-
-    /* Add Additional Meta Functions */
-    LuaEngine::setAttrFunc(L, "dir", luaTraverse);
-    LuaEngine::setAttrFunc(L, "inspect", luaInspect);
-
-    /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s (%s)", filename, role == READER ? "READER" : "WRITER") + 1;
-    config = new char[cfglen];
-    sprintf(config, "%s (%s)", filename, role == READER ? "READER" : "WRITER");
+    filename = StringLib::duplicate(_filename);
 }
 
 /*----------------------------------------------------------------------------
@@ -87,73 +111,174 @@ H5File::H5File (lua_State* L, const char* _filename):
  *----------------------------------------------------------------------------*/
 H5File::~H5File (void)
 {
-    closeConnection();
     if(filename) delete [] filename;
-    if(config) delete [] config;
 }
 
 /*----------------------------------------------------------------------------
- * isConnected
+ * readThread
  *----------------------------------------------------------------------------*/
-bool H5File::isConnected (int num_open)
+void* H5File::readThread (void* parm)
 {
-    (void)num_open;
+    dataset_info_t* info = (dataset_info_t*)parm;
 
-    return connected;
+    /* Declare and Initialize Results */
+    H5Api::info_t results;
+    results.data = NULL;
+
+    try
+    {
+        /* Read Dataset */
+        results = H5Api::read(info->h5file->filename, info->dataset, info->valtype, info->col, info->startrow, info->numrows, &(info->h5file->context));
+    }
+    catch (const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to read dataset %s/%s: %s", info->h5file->filename, info->dataset, e.what());
+    }
+
+    /* Post Results to Output Queue */
+    if(results.data)
+    {
+        /* Create Output Queue Publisher */
+        Publisher outq(info->outqname);
+
+        /* Create Record Object */
+        RecordObject rec_obj(recType);
+        h5file_t* rec_data = (h5file_t*)rec_obj.getRecordData();
+        StringLib::copy(rec_data->dataset, info->dataset, MAX_NAME_STR);
+        rec_data->datatype = (uint32_t)results.datatype;
+        rec_data->elements = results.elements;
+        rec_data->size = results.datasize;
+
+        /* Post Record */
+        unsigned char* rec_buf;
+        int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, 0);
+        int status = outq.postCopy(rec_buf, rec_size, results.data, results.datasize, SYS_TIMEOUT);
+        if(status <= 0)
+        {
+            mlog(CRITICAL, "Failed (%d) to post h5 dataset: %s/%s", status, info->h5file->filename, info->dataset);
+        }
+
+        /* Clean Up Result Data */
+        delete [] results.data;
+    }
+
+    /* Clean Up Thread Info */
+    delete [] info->dataset;
+    delete [] info->outqname;
+    delete info;
+
+    /* Exit Thread */
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
- * closeConnection
+ * luaRead - :read(<table of datasets>, <output q>)
  *----------------------------------------------------------------------------*/
-void H5File::closeConnection (void)
+int H5File::luaRead (lua_State* L)
 {
-    connected = false;
-}
+    bool status = true;
 
-/*----------------------------------------------------------------------------
- * writeBuffer
- *----------------------------------------------------------------------------*/
-int H5File::writeBuffer (const void* buf, int len)
-{
-    (void)buf;
-    (void)len;
+    int self_index = 1;
+    int tbl_index = 2;
+    int outq_index = 3;
 
-    return TIMEOUT_RC;
-}
+    List<Thread*> pids;
+    const char* outq_name = NULL;
+    H5File* lua_obj = NULL;
 
-/*----------------------------------------------------------------------------
- * readBuffer
- *----------------------------------------------------------------------------*/
-int H5File::readBuffer (void* buf, int len)
-{
-    (void)buf;
-    (void)len;
+    try
+    {
+        /* Get Self */
+        lua_obj = (H5File*)getLuaSelf(L, self_index);
 
-    return TIMEOUT_RC;
-}
+        /* Get Output Queue */
+        outq_name = getLuaString(L, outq_index);
 
-/*----------------------------------------------------------------------------
- * getUniqueId
- *----------------------------------------------------------------------------*/
-int H5File::getUniqueId (void)
-{
-    return 0;
-}
+        /* Process Table of Datasets */
+        int num_datasets = lua_rawlen(L, tbl_index);
+        if(lua_istable(L, tbl_index) && num_datasets > 0)
+        {
+            for(int i = 0; i < num_datasets; i++)
+            {
+                const char* dataset;
+                long col, startrow, numrows;
+                RecordObject::valType_t valtype;
 
-/*----------------------------------------------------------------------------
- * getConfig
- *----------------------------------------------------------------------------*/
-const char* H5File::getConfig (void)
-{
-    return config;
-}
+                /* Get Dataset Entry */
+                lua_rawgeti(L, tbl_index, i+1);
+                if(lua_istable(L, -1))
+                {
+                    lua_getfield(L, -1, "dataset");
+                    dataset = getLuaString(L, -1);
+                    lua_pop(L, 1);
 
-/*----------------------------------------------------------------------------
- * getFilename
- *----------------------------------------------------------------------------*/
-const char* H5File::getFilename (void)
-{
-    return filename;
+                    lua_getfield(L, -1, "valtype");
+                    valtype = (RecordObject::valType_t)getLuaInteger(L, -1, true, RecordObject::DYNAMIC);
+                    lua_pop(L, 1);
+
+                    lua_getfield(L, -1, "col");
+                    col = getLuaInteger(L, -1, true, 0);
+                    lua_pop(L, 1);
+
+                    lua_getfield(L, -1, "startrow");
+                    startrow = getLuaInteger(L, -1, true, 0);
+                    lua_pop(L, 1);
+
+                    lua_getfield(L, -1, "numrows");
+                    numrows = getLuaInteger(L, -1, true, H5Api::ALL_ROWS);
+                    lua_pop(L, 1);
+                }
+                else
+                {
+                    throw RunTimeException("expecting dataset entry");
+                }
+
+                /* Start Thread */
+                dataset_info_t* info = new dataset_info_t;
+                info->dataset = StringLib::duplicate(dataset);
+                info->valtype = valtype;
+                info->col = col;
+                info->startrow = startrow;
+                info->numrows = numrows;
+                info->outqname = StringLib::duplicate(outq_name);
+                info->h5file = lua_obj;
+                Thread* pid = new Thread(readThread, info);
+                pids.add(pid);
+
+                /* Clean up stack */
+                lua_pop(L, 1);
+            }
+        }
+        else
+        {
+            throw RunTimeException("expecting list of datasets");
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to read resource: %s", e.what());
+        status = false;
+    }
+
+    /* Clean Up and Terminate */
+    if(lua_obj && outq_name)
+    {
+        /* Wait for Threads to Complete */
+        for(int i = 0; i < pids.length(); i++)
+        {
+            delete pids[i]; // performs join
+        }
+
+        /* Status Complete */
+        mlog(CRITICAL, "Finished reading %d datasets from %s", pids.length(), lua_obj->filename);
+
+        /* Terminate Data */
+        Publisher outQ(outq_name);
+        outQ.postCopy("", 0);
+    }   
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------

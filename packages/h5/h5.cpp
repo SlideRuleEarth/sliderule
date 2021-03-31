@@ -76,6 +76,7 @@ void inith5 (void)
     /* Initialize Modules */
     H5Api::init();
     H5DatasetDevice::init();
+    H5File::init();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_H5_LIBNAME, h5_open);

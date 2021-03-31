@@ -450,7 +450,7 @@ int LuaObject::luaWaitOn(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * associateMetaTable
+ * signalComplete
  *----------------------------------------------------------------------------*/
 void LuaObject::signalComplete (void)
 {

@@ -37,46 +37,84 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "DeviceObject.h"
+#include "LuaObject.h"
+#include "RecordObject.h"
+#include "H5Api.h"
 
 /******************************************************************************
  * HDF5 FILE CLASS
  ******************************************************************************/
 
-class H5File: public DeviceObject
+class H5File: public LuaObject
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int MAX_NAME_STR = 128;
+
+        static const char* ObjectType;
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+        
+        static const char* recType;
+        static const RecordObject::fieldDef_t recDef[];
+        
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            char        dataset[MAX_NAME_STR];
+            uint32_t    datatype; // RecordObject::valType_t
+            uint32_t    elements; // number of values
+            uint32_t    size; // total size in bytes
+        } h5file_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
+        static void         init                (void);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            const char*             dataset;
+            RecordObject::valType_t valtype;
+            long                    col;
+            long                    startrow; 
+            long                    numrows;
+            const char*             outqname;
+            H5File*                 h5file;
+        } dataset_info_t;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
                             H5File              (lua_State* L, const char* _filename);
         virtual             ~H5File             ();
 
-        virtual bool        isConnected         (int num_open=0);   // is the file open
-        virtual void        closeConnection     (void);             // close the file
-        virtual int         writeBuffer         (const void* buf, int len);
-        virtual int         readBuffer          (void* buf, int len);
-        virtual int         getUniqueId         (void);             // returns file descriptor
-        virtual const char* getConfig           (void);             // returns filename with attribute list
+        static void*        readThread          (void* parm);
 
-        const char*         getFilename         (void);
-
+        static int          luaRead             (lua_State* L);
         static int          luaTraverse         (lua_State* L);
         static int          luaInspect          (lua_State* L);
-
-    protected:
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            connected;
-        char*           filename; // user supplied prefix
-        char*           config; // <filename>(<type>,<access>,<io>)
+        char*               filename;
+        H5Api::context_t    context;
 };
 
 #endif  /* __h5_file__ */

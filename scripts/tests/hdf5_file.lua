@@ -3,10 +3,20 @@ local console = require("console")
 
 -- Unit Test --
 
-print('\n------------------\nTest01: Traverse\n------------------')
+print('\n------------------\nTest01: File\n------------------')
 
 f1 = h5.file("file:///data/ATLAS/ATL03_20200304065203_10470605_003_01.h5")
-runner.check(f1:dir(2, "gt2l"), "failed to traverse hdf5 file")
+--runner.check(f1:dir(2, "gt2l"), "failed to traverse hdf5 file")
+
+rsps1 = msg.subscribe("h5testq")
+f1:read({{dataset="ancillary_data/atlas_sdp_gps_epoch", valtype=core.REAL}}, "h5testq")
+recdata = rsps1:recvrecord(3000)
+epoch = recdata:getvalue("data[0]")
+
+runner.check(epoch == 1198800018.0, "failed to read correct epoch")
+
+rsps1:destroy()
+f1:destroy()
 
 
 print('\n------------------\nTest02: Read Dataset\n------------------')
