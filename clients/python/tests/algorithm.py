@@ -152,7 +152,7 @@ if __name__ == '__main__':
     # Set URL #
     url = ["127.0.0.1"]
     if len(sys.argv) > 1:
-        url = [sys.argv[1]]
+        url = sys.argv[1]
 
     # Set ATL03 Asset #
     atl03_asset = "atlas-local"
@@ -160,7 +160,7 @@ if __name__ == '__main__':
         atl03_asset = sys.argv[2]
 
     # Set ATL06 Asset #
-    atl06_asset = "atl06-local"
+    atl06_asset = "atlas-local"
     if len(sys.argv) > 3:
         atl06_asset = sys.argv[3]
 
@@ -171,10 +171,10 @@ if __name__ == '__main__':
         resource = sys.argv[4]
         atl06_present = False
 
-    # Check for use of service discovery
+    # Bypass service discovery if url supplied
     if len(sys.argv) > 5:
-        if sys.argv[5] == "service":
-            url = url[0]
+        if sys.argv[5] == "bypass":
+            url = [url]
 
     # Initialize Icesat2 Package #
     icesat2.init(url, True)

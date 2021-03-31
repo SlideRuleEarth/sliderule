@@ -190,7 +190,7 @@ if __name__ == '__main__':
     # Override Request
     rqst = parse_command_line(sys.argv, rqst)
 
-    # Set URL 
+    # Set URL (bypass service discovery)
     sliderule.set_url([parms["ipaddr"]])
     
     # Connect to SlideRule

@@ -244,7 +244,7 @@ if __name__ == '__main__':
     # Override server URL from command line
     url = ["127.0.0.1"]
     if len(sys.argv) > 1:
-        url = [sys.argv[1]]
+        url = sys.argv[1]
 
     # Override asset from command line
     atl03_asset = "atlas-local"
@@ -252,14 +252,14 @@ if __name__ == '__main__':
         atl03_asset = sys.argv[2]
 
     # Override asset from command line
-    atl06_asset = "atl06-local"
+    atl06_asset = "atlas-local"
     if len(sys.argv) > 3:
         atl06_asset = sys.argv[3]
 
-    # Check for use of service discovery
+    # Bypass service discovery
     if len(sys.argv) > 4:
-        if sys.argv[4] == "service":
-            url = url[0]
+        if sys.argv[4] == "bypass":
+            url = [url]
 
     # Initialize ICESat2/SlideRule Package
     icesat2.init(url, False)

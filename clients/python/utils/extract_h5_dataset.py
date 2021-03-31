@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # Set URL #
     url = ["127.0.0.1"]
     if len(sys.argv) > 1:
-        url = [sys.argv[1]]
+        url = sys.argv[1]
 
     # Set Asset #
     asset = "atlas-local"
@@ -35,6 +35,11 @@ if __name__ == '__main__':
     resource = "ATL03_20181017222812_02950102_003_01.h5"
     if len(sys.argv) > 4:
         resource = sys.argv[4]
+
+    # Bypass service discovery if url supplied
+    if len(sys.argv) > 5:
+        if sys.argv[5] == "bypass":
+            url = [url]
 
     # Set Subset #
     col         = 0

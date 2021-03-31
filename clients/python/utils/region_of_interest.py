@@ -73,7 +73,7 @@ if __name__ == '__main__':
     # Set URL #
     url = ["127.0.0.1"]
     if len(sys.argv) > 2:
-        url = [sys.argv[2]]
+        url = sys.argv[2]
 
     # Set Asset #
     asset = "atlas-local"
@@ -85,10 +85,10 @@ if __name__ == '__main__':
     if len(sys.argv) > 4:
         max_workers = int(sys.argv[4])
 
-    # Check for use of service discovery
+    # Bypass service discovery if url supplied
     if len(sys.argv) > 5:
-        if sys.argv[5] == "service":
-            url = url[0]
+        if sys.argv[5] == "bypass":
+            url = [url]
 
     # Configure SlideRule #
     icesat2.init(url, False)

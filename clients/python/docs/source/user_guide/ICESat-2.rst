@@ -178,7 +178,7 @@ atl06
     .. code-block:: python
 
         >>> from sliderule import icesat2
-        >>> icesat2.init(["127.0.0.1"], True)
+        >>> icesat2.init("icesat2sliderule.org", True)
         >>> parms = { "cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1 }
         >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
         >>> atl03_asset = "atlas-local"
@@ -286,7 +286,7 @@ toregion
         region = icesat2.toregion(region_filename)
 
         # Configure SlideRule #
-        icesat2.init(["127.0.0.1"], False)
+        icesat2.init("icesat2sliderule.org", False)
 
         # Build ATL06 Request #
         parms = {

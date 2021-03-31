@@ -3,8 +3,9 @@ Getting Started
 ===============
 
 This documentation is intended to explain how to use `SlideRule`, a C++/Lua framework for on-demand data processing, and its accompanying Python client. 
-`SlideRule` is a science data processing service that runs in the cloud and responds to REST API calls to process and return science results.
-This software was developed to support science applications for `NASA's Ice Cloud and land Elevation Satellite-2 (ICESat-2)`__, but also has the goal of demonstrating a new paradigm for providing science data products to researchers.
+`SlideRule` is a science data processing service at ``icesat2sliderule.org`` that responds to REST API calls to process and return science results.
+This software was developed to support science applications for `NASA's Ice Cloud and land Elevation Satellite-2 (ICESat-2)`__, 
+but also has the goal of demonstrating a new paradigm for providing science data products to researchers.
 
 .. __: https://icesat-2.gsfc.nasa.gov/
 
@@ -31,7 +32,7 @@ Basic Usage
                    {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
     
     # initialize (3)
-    icesat2.init("http://127.0.0.1", verbose=True, max_errors=3)
+    icesat2.init("icesat2sliderule.org", verbose=True, max_errors=3)
 
     # processing parameters (4)
     parms = {

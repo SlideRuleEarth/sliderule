@@ -39,7 +39,7 @@ def query_services (url, service, list_only=False, passing_only=False):
 if __name__ == '__main__':
 
     # Set URL #
-    ipaddr = "127.0.0.1"
+    ipaddr = "icesat2sliderule.org"
     if len(sys.argv) > 1:
         ipaddr = sys.argv[1]
 

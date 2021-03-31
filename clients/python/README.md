@@ -40,7 +40,7 @@ import pandas as pd
 from sliderule import icesat2
 
 # initialize
-icesat2.init("127.0.0.1", verbose=True)
+icesat2.init("icesat2sliderule.org", verbose=True)
 
 # region of interest 
 region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},

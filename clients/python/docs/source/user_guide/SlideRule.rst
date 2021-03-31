@@ -106,7 +106,7 @@ source
     .. code-block:: python
 
         >>> import sliderule
-        >>> sliderule.set_url(["127.0.0.1"])
+        >>> sliderule.set_url("icesat2sliderule.org")
         >>> rqst = {
         ...     "time": "NOW",
         ...     "input": "NOW",
@@ -549,7 +549,7 @@ h5
     .. code-block:: python
 
         >>> import sliderule
-        >>> sliderule.set_url(["127.0.0.1"])
+        >>> sliderule.set_url("icesat2sliderule.org")
         >>> asset = "atlas-local"
         >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
         >>> dataset = "/gt1r/geolocation/segment_ph_cnt"
