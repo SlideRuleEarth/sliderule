@@ -21,3 +21,11 @@ Python client to interact with `SlideRule`, a C++/Lua framework for on-demand da
 
    user_guide/SlideRule.rst
    user_guide/ICESat-2.rst
+
+Additional Resources
+====================
+
+* SlideRule `Python Client <https://github.com/ICESat2-SlideRule/sliderule-python>`_ Git Repository.
+* SlideRule `Server <https://github.com/ICESat2-SlideRule/sliderule>`_ Git Repository.
+* SlideRule ICESat-2 `Plugin <https://github.com/ICESat2-SlideRule/sliderule-icesat2>`_ Git Repository.
+* SlideRule ICESat-2 `Docker <https://hub.docker.com/repository/docker/icesat2sliderule/sliderule>`_ Repository

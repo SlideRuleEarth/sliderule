@@ -65,11 +65,7 @@ The asset name tells SlideRule where to get the data, and what format the data s
     :header: asset, format, url, index
 
     atlas-s3,    s3,   icesat2-sliderule/data/ATLAS, empty.index
-    atl03-s3,    s3,   icesat2-sliderule/data/ATL03, empty.index
-    atl06-s3,    s3,   icesat2-sliderule/data/ATL06, empty.index
     atlas-local, file, /data/ATLAS,                  empty.index
-    atl03-local, file, /data/ATL03,                  empty.index
-    atl06-local, file, /data/ATL06,                  empty.index
 
 
 Elevations
