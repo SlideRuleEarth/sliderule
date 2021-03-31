@@ -6,13 +6,20 @@ local console = require("console")
 print('\n------------------\nTest01: File\n------------------')
 
 f1 = h5.file("file:///data/ATLAS/ATL03_20200304065203_10470605_003_01.h5")
---runner.check(f1:dir(2, "gt2l"), "failed to traverse hdf5 file")
+runner.check(f1:dir(2, "gt2l"), "failed to traverse hdf5 file")
 
 rsps1 = msg.subscribe("h5testq")
 f1:read({{dataset="ancillary_data/atlas_sdp_gps_epoch", valtype=core.REAL}}, "h5testq")
 recdata = rsps1:recvrecord(3000)
-epoch = recdata:getvalue("data[0]")
-
+data = string.char( recdata:getvalue("data[0]"),
+                    recdata:getvalue("data[1]"),
+                    recdata:getvalue("data[2]"),
+                    recdata:getvalue("data[3]"),
+                    recdata:getvalue("data[4]"),
+                    recdata:getvalue("data[5]"),
+                    recdata:getvalue("data[6]"),
+                    recdata:getvalue("data[7]") )
+epoch = string.unpack("d", data)
 runner.check(epoch == 1198800018.0, "failed to read correct epoch")
 
 rsps1:destroy()
