@@ -59,6 +59,10 @@ def process_atl06_algorithm(parms, asset, max_workers):
 
 if __name__ == '__main__':
 
+    url = ["127.0.0.1"]
+    asset = "atlas-local"
+    max_workers = 0
+
     # Configure Logging #
     logging.basicConfig(level=logging.INFO)
     
@@ -71,17 +75,15 @@ if __name__ == '__main__':
             region = json.load(regionfile)["region"]
         
     # Set URL #
-    url = ["127.0.0.1"]
     if len(sys.argv) > 2:
         url = sys.argv[2]
+        asset = "atlas-s3"
 
     # Set Asset #
-    asset = "atlas-local"
     if len(sys.argv) > 3:
         asset = sys.argv[3]
 
     # Set Maximum Workers #
-    max_workers = 0
     if len(sys.argv) > 4:
         max_workers = int(sys.argv[4])
 

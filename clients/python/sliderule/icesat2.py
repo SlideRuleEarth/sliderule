@@ -388,6 +388,7 @@ def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block
 
     # Make CMR Request #
     resources = cmr(polygon, time_start, time_end)
+    logger.info("Identified %d resources to processing", len(resources))
 
     # Update Available Servers #
     num_servers = sliderule.update_available_servers()
@@ -398,6 +399,8 @@ def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block
     if max_workers <= 0:
         logger.error("There are no servers available to fulfill this request")
         return
+    else:
+        logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
 
     # For Blocking Calls
     if block:
