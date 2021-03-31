@@ -2,6 +2,8 @@
 
 A C++/Lua framework for on-demand science data processing.
 
+If you are a science user interested in processing ICESat-2 data with SlideRule, please see the [sliderule-python client](https://github.com/ICESat2-SlideRule/sliderule-python).
+
 
 ## I. Prerequisites
 
