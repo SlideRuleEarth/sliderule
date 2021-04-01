@@ -229,18 +229,23 @@ h5
 
     One of the difficulties in reading HDF5 data directly from a Python script is converting format of the data as it is stored in the HDF5 to a data
     format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the 
-    returned data bia the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.  The possible
-    data types are:
+    returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.  
+    
+    There two possible ways to supply the data types: as a ``sliderule.datatypes`` enumeration, or as a hardcoded string. When the data type is supplied using the enumeration, the data type conversion occurs on the server side (unless the "DYNAMIC" value is supplied).  The possible enumeration values are:
 
     - ``sliderule.datatypes["TEXT"]``: return the data as a string of unconverted bytes
     - ``sliderule.datatypes["INTEGER"]``: return the data as an array of integers
     - ``sliderule.datatypes["REAL"]``: return the data as an array of double precision floating point numbers
     - ``sliderule.datatypes["DYNAMIC"]``: return the data in the numpy data type that is the closest match to the data as it is stored in the HDF5 file
 
+    When the data type is supplied using a hardcoded string, the server reads the data as "DYNAMIC", meaning just the binary data is returned, and then inside the client, prior to return the results to the calling application, the data is converted using numpy on the binary string.  The possible hardcoded values are:
+
+    - "INT8", "INT16", "INT32" ,"INT64" ,"UINT8" ,"UINT16" ,"UINT32" ,"UINT64" ,"BITFIELD" ,"FLOAT" ,"DOUBLE" ,"TIME8" ,"STRING"
+
     :param str dataset: full path to dataset variable (e.g. ``/gt1r/geolocation/segment_ph_cnt``)
     :param str resource: HDF5 filename
     :keyword str asset: data source asset (see `Assets <#assets>`_)
-    :keyword int datatypes: the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
+    :keyword int datatype: the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
     :keyword int col: the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned.
     :keyword int startrow: the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
     :keyword int numrows: the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
@@ -256,6 +261,57 @@ h5
         longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
 
         df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
+
+
+h5p
+---
+
+""""""""""""""""
+
+.. py:function:: icesat2.h5p (datasets, resource, asset="atlas-s3")
+
+    Reads a list of datasets from an HDF5 file and returns the values of the dataset in a dictionary of lists. 
+
+    This function is considerably faster than the ``icesat2.h5`` function in that it not only reads the datasets in 
+    parallel on the server side, but also shares a file context between the reads so that portions of the file that 
+    need to be read multiple times do not result in multiple requests to S3.
+
+    For a full discussion of the data type conversion options, see `h5 <ICESat-2.html#h5>`_.
+
+    :param dict datasets: list of full paths to dataset variable (e.g. ``/gt1r/geolocation/segment_ph_cnt``); see below for additional parameters that can be added to each dataset
+    :param str resource: HDF5 filename
+    :keyword str asset: data source asset (see `Assets <#assets>`_)
+    :return: dictionary of numpy arrays of dataset values, where the keys are the dataset names
+
+    The ``datasets`` dictionary can optionally contain the following elements per entry:
+
+    :keyword int valtype: the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
+    :keyword int col: the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned.
+    :keyword int startrow: the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
+    :keyword int numrows: the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
+
+    Example: 
+
+    .. code-block:: python
+
+        >>> from sliderule import icesat2
+        >>> icesat2.init(["127.0.0.1"], False)
+        >>> datasets = [
+        ...         {"dataset": "/gt1l/land_ice_segments/h_li", "numrows": 5},
+        ...         {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},
+        ...         {"dataset": "/gt2l/land_ice_segments/h_li", "numrows": 5},
+        ...         {"dataset": "/gt2r/land_ice_segments/h_li", "numrows": 5},
+        ...         {"dataset": "/gt3l/land_ice_segments/h_li", "numrows": 5},
+        ...         {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5}
+        ...     ]
+        >>> rsps = icesat2.h5p(datasets, "ATL06_20181019065445_03150111_003_01.h5", "atlas-local")
+        >>> print(rsps)
+        {'/gt2r/land_ice_segments/h_li': array([45.3146427 , 45.27640582, 45.23608027, 45.21131015, 45.15692304]), 
+         '/gt2l/land_ice_segments/h_li': array([45.35118977, 45.33535027, 45.27195617, 45.21816889, 45.18534204]), 
+         '/gt1l/land_ice_segments/h_li': array([45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465]), 
+         '/gt3l/land_ice_segments/h_li': array([45.29602321, 45.34764226, 45.31430979, 45.31471701, 45.30034622]), 
+         '/gt1r/land_ice_segments/h_li': array([45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948]), 
+         '/gt3r/land_ice_segments/h_li': array([45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806])}
 
 
 toregion
