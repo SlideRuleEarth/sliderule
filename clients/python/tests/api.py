@@ -102,6 +102,44 @@ def test_variable_length (atl03_asset):
         logging.error("Failed variable length test: ", v)
 
 #
+#  TEST H5P
+#
+def test_h5p (atl06_asset):
+
+    datasets = [
+        {"dataset": "/gt1l/land_ice_segments/h_li", "numrows": 5},
+        {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},
+        {"dataset": "/gt2l/land_ice_segments/h_li", "numrows": 5},
+        {"dataset": "/gt2r/land_ice_segments/h_li", "numrows": 5},
+        {"dataset": "/gt3l/land_ice_segments/h_li", "numrows": 5},
+        {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5}
+    ]
+
+    rsps = icesat2.h5p(datasets, "ATL06_20181019065445_03150111_003_01.h5", atl06_asset)
+
+    expected = {'/gt1l/land_ice_segments/h_li': [45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465],
+                '/gt1r/land_ice_segments/h_li': [45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948], 
+                '/gt2r/land_ice_segments/h_li': [45.3146427 , 45.27640582, 45.23608027, 45.21131015, 45.15692304],
+                '/gt2l/land_ice_segments/h_li': [45.35118977, 45.33535027, 45.27195617, 45.21816889, 45.18534204],
+                '/gt3r/land_ice_segments/h_li': [45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806],
+                '/gt3l/land_ice_segments/h_li': [45.29602321, 45.34764226, 45.31430979, 45.31471701, 45.30034622]}
+
+    cmp_error = False
+    last_fail = ""
+    for dataset in expected.keys():
+        for index in range(len(expected[dataset])):
+            if round(rsps[dataset][index]) != round(expected[dataset][index]):
+                print(dataset, index, rsps[dataset][index], expected[dataset][index])
+                cmp_error = True
+                last_fail = dataset
+
+    if(not cmp_error):
+        logging.info("Passed h5p test")
+    else:
+        logging.error("Failed h5p test: %s %s", last_fail, str(rsps[last_fail]))
+
+
+#
 #  TEST GEOSPATIAL
 #
 def test_geospatial (asset):
@@ -269,5 +307,6 @@ if __name__ == '__main__':
     test_h5(atl03_asset)
     test_h5_types(atl03_asset, atl06_asset)
     test_variable_length(atl03_asset)
+    test_h5p(atl06_asset)
     test_geospatial(atl03_asset)
     test_definition()

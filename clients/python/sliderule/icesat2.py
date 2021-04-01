@@ -443,6 +443,11 @@ def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block
 def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"], col=0, startrow=0, numrows=ALL_ROWS):
 
     # Handle Request Datatype Options
+    #   This allows the user to supply a string designating
+    #   the exact type that they data is in.  When they do that
+    #   the read occurs with the dynamic type (letting the data)
+    #   come back in binary form; and then the __get_values call
+    #   below converts the binary into the exact type requested.
     rqst_datatype = sliderule.datatypes["DYNAMIC"]
     if type(datatype) == int:
         rqst_datatype = datatype
@@ -479,6 +484,29 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"
 
     # Return Response
     return values
+
+#
+#  H5P
+#
+def h5p (datasets, resource, asset="atlas-s3"):
+
+    # Baseline Request
+    rqst = {
+        "asset" : asset,
+        "resource": resource,
+        "datasets": datasets,
+    }
+
+    # Read H5 File
+    rsps = sliderule.source("h5p", rqst, stream=True)
+
+    # Build Record Data
+    results = {}
+    for result in rsps:
+        results[result["dataset"]] = __get_values(result["data"], result["datatype"], result["size"])
+
+    # Return Results
+    return results
 
 #
 # TO REGION

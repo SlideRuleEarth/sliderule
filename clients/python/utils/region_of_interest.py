@@ -77,7 +77,7 @@ if __name__ == '__main__':
     # Set URL #
     if len(sys.argv) > 2:
         url = sys.argv[2]
-        asset = "atlas-s3"
+        asset = "atlas-s3" # unlikely to use local if overriding url
 
     # Set Asset #
     if len(sys.argv) > 3:
