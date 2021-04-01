@@ -257,7 +257,7 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         /* Check APID */
         if(apid < 0 && apid > CCSDS_NUM_APIDS)
         {
-            throw RunTimeException("invalid apid: %04X", apid);
+            throw RunTimeException("invalid apid: %04X", (unsigned int)apid);
         }
 
         /* Create Statistics Table */
