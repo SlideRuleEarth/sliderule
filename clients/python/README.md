@@ -1,4 +1,5 @@
 # sliderule-python
+[![DOI](https://zenodo.org/badge/311384982.svg)](https://zenodo.org/badge/latestdoi/311384982)
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
