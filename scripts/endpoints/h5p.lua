@@ -7,8 +7,8 @@
 --                  "datasets": 
 --                  [
 --                      {
---                          "name":     "<name of dataset>",
---                          "datatype": <RecordObject::valType_t>,
+--                          "dataset":  "<name of dataset>",
+--                          "valtype":  <RecordObject::valType_t>,
 --                          "col":      [<column number>],
 --                          "startrow": [<row number>],
 --                          "numrows":  [<total number of rows to read>]
@@ -19,7 +19,7 @@
 --
 --              rspq - output queue to stream results
 --
--- OUTPUT:      Array of integers containing the values in the dataset
+-- OUTPUT:      h5file records containing values in datasets
 --
 -- NOTES:       1. The arg[1] input is a json object provided by caller
 --              2. The rspq is the system provided output queue name string
@@ -32,17 +32,9 @@ local parm = json.decode(arg[1])
 
 local asset_name = parm["asset"]
 local resource = parm["resource"]
-local datasets = parm["dataset"] 
+local datasets = parm["datasets"] 
 
-local dataset = parm["dataset"]
-local datatype = parm["datatype"] or core.DYNAMIC
-local col = parm["col"] or 0
-local startrow = parm["startrow"] or 0
-local numrows = parm["numrows"] or h5.ALL_ROWS
-
-
-f = h5.file(core.READER, asset.buildurl(asset_name, resource), dataset, id, false, datatype, col, startrow, numrows)
-
-r:waiton() -- waits until reader completes
+f = h5.file(asset.buildurl(asset_name, resource))
+f:read(datasets, rspq)
 
 return
