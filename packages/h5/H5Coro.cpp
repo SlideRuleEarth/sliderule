@@ -535,7 +535,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         default:
         {
-            throw RunTimeException("invalid field size: %d", size);
+            throw RunTimeException("invalid field size: %ld", (long)size);
         }
     }
 
@@ -621,7 +621,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
         }
         else if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
         {
-            throw RunTimeException("read exceeds available data: %d != %d", metaData.size, buffer_size);
+            throw RunTimeException("read exceeds available data: %ld != %ld", (long)metaData.size, (long)buffer_size);
         }
         if((metaData.filter[DEFLATE_FILTER] || metaData.filter[SHUFFLE_FILTER]) && ((metaData.layout == COMPACT_LAYOUT) || (metaData.layout == CONTIGUOUS_LAYOUT)))
         {
@@ -994,7 +994,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         {
             if(data_left < 0)
             {
-                throw RunTimeException("reading message exceeded end of direct block: 0x%x", starting_position);
+                throw RunTimeException("reading message exceeded end of direct block: 0x%lx", starting_position);
             }
         }
 
@@ -1061,7 +1061,8 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
 
     /* Calculate Number of Direct and Indirect Blocks (see III.G. Disk Format: Level 1G - Fractal Heap) */
     int nrows = heap_info->curr_num_rows; // used for "root" indirect block only
-    if(block_size > 0) nrows = (highestBit(block_size) - highestBit(heap_info->starting_blk_size * heap_info->table_width)) + 1;
+    int curr_size = heap_info->starting_blk_size * heap_info->table_width;
+    if(block_size > 0) nrows = (highestBit(block_size) - highestBit(curr_size)) + 1;
     int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
     int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
     int N = K - (max_dblock_rows * heap_info->table_width);
@@ -1368,7 +1369,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
     {
         if(trailing_zero % metaData.typesize != 0)
         {
-            throw RunTimeException("key did not include a trailing zero: %d", trailing_zero);
+            throw RunTimeException("key did not include a trailing zero: %lu", trailing_zero);
         }
         else if(verbose && H5_EXTRA_DEBUG)
         {
@@ -1860,7 +1861,8 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Skip Over Maximum Dimensions */
         if(flags & MAX_DIM_PRESENT)
         {
-            pos += metaData.ndims * metaData.lengthsize;
+            int skip_bytes = metaData.ndims * metaData.lengthsize;
+            pos += skip_bytes;
         }
     }
 
