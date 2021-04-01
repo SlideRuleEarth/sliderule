@@ -9,10 +9,17 @@ with open("README.md", "r") as fh:
 with open('requirements.txt') as fh:
     install_requires = fh.read().splitlines()
 
+# semantic version configuration for setuptools-scm
+setup_requires = ["setuptools_scm"]
+use_scm_version = {
+    "relative_to": __file__,
+    "local_scheme": "node-and-date",
+    "tag_regex":r'^(?:[\\w-]+-)?(?P<version>[vV]?\d+\.\d+\.\d+)',
+}
+
 setup(
     name='sliderule',
     author='SlideRule Developers',
-    version='0.2.0',
     description='Python client for interacting with sliderule server',
     long_description_content_type="text/markdown",
     url='https://github.com/ICESat2-SlideRule/sliderule-python/',
@@ -27,4 +34,6 @@ setup(
     ],
     packages=find_packages(),
     install_requires=install_requires,
+    setup_requires=setup_requires,
+    use_scm_version=use_scm_version,
 )

@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.8
+  - setuptools_scm
   - cartopy
   - ipykernel
   - ipywidgets
