@@ -54,6 +54,9 @@ struct H5Lib
      * Types
      *--------------------------------------------------------------------*/
 
+    typedef RecordObject::fieldType_t datatype_t;
+    typedef RecordObject::valType_t valtype_t;
+
     typedef enum {
         FILE,
         HSDS,
@@ -62,10 +65,11 @@ struct H5Lib
     } driver_t;
 
     typedef struct {
-        int elements;   // number of elements in dataset
-        int typesize;   // number of bytes per element
-        int datasize;   // total number of bytes in dataset
-        uint8_t* data;  // point to allocated data buffer
+        int         elements;   // number of elements in dataset
+        int         typesize;   // number of bytes per element
+        int         datasize;   // total number of bytes in dataset
+        datatype_t  datatype;   // data type of elements
+        uint8_t*    data;       // point to allocated data buffer
     } info_t;
 
     struct context_t
@@ -84,10 +88,11 @@ struct H5Lib
      * Methods
      *--------------------------------------------------------------------*/
 
-    static void     init        (void);
-    static void     deinit      (void);
-    static info_t   read        (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
-    static bool     traverse    (const char* url, int max_depth, const char* start_group);
+    static void         init            (void);
+    static void         deinit          (void);
+    static info_t       read            (const char* url, const char* datasetname, valtype_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
+    static bool         traverse        (const char* url, int max_depth, const char* start_group);
+    static datatype_t   h5type2datatype (int h5type, int typesize);
 };
 
 #endif  /* __h5_lib__ */

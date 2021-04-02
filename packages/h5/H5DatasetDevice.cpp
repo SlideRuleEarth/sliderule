@@ -43,7 +43,6 @@
 const char* H5DatasetDevice::recType = "h5dataset";
 const RecordObject::fieldDef_t H5DatasetDevice::recDef[] = {
     {"id",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS},
-    {"dataset", RecordObject::STRING,   offsetof(h5dataset_t, dataset), 1,  NULL, NATIVE_FLAGS | RecordObject::POINTER},
     {"datatype",RecordObject::UINT32,   offsetof(h5dataset_t, datatype),1,  NULL, NATIVE_FLAGS},
     {"offset",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NULL, NATIVE_FLAGS},
     {"size",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS},
@@ -115,8 +114,6 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     /* Set Record */
     recObj = new RecordObject(recType);
     recData = (h5dataset_t*)recObj->getRecordData();
-    recData->dataset = sizeof(h5dataset_t);
-    recData->datatype = (uint32_t)datatype;
 
     /* Initialize Attributes to Zero */
     dataBuffer = NULL;
@@ -140,6 +137,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, const char* filena
     try
     {
         H5Api::info_t info = H5Api::read(fileName, dataName, datatype, col, startrow, numrows);
+        recData->datatype = (uint32_t)info.datatype;
         dataBuffer = info.data;
         dataSize = info.datasize;
         connected = true;

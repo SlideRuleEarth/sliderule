@@ -64,22 +64,22 @@ class RecordObject
          *--------------------------------------------------------------------*/
 
         typedef enum {
-            INT8,
-            INT16,
-            INT32,
-            INT64,
-            UINT8,
-            UINT16,
-            UINT32,
-            UINT64,
-            BITFIELD,
-            FLOAT,
-            DOUBLE,
-            TIME8,
-            STRING,
-            USER,
-            INVALID_FIELD,
-            NUM_FIELD_TYPES
+            INT8            = 0,
+            INT16           = 1,
+            INT32           = 2,
+            INT64           = 3,
+            UINT8           = 4,
+            UINT16          = 5,
+            UINT32          = 6,
+            UINT64          = 7,
+            BITFIELD        = 8,
+            FLOAT           = 9,
+            DOUBLE          = 10,
+            TIME8           = 11,
+            STRING          = 12,
+            USER            = 13,
+            INVALID_FIELD   = 14,
+            NUM_FIELD_TYPES = 15
         } fieldType_t;
 
         typedef enum {

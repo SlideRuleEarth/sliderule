@@ -266,7 +266,7 @@ void H5Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
+H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, valtype_t valtype, long col, long startrow, long numrows, context_t* context)
 {
     (void)context;
     
@@ -407,6 +407,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, RecordObjec
             info.elements = elements;
             info.typesize = typesize;
             info.datasize = datasize;
+            info.datatype = h5type2datatype(datatype, typesize);
             info.data = data;
         }
         else
@@ -491,4 +492,25 @@ bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
 
     /* Return Status */
     return status;
+}
+
+/*----------------------------------------------------------------------------
+ * h5type2datatype
+ *----------------------------------------------------------------------------*/
+H5Lib::datatype_t H5Lib::h5type2datatype (int h5type, int typesize)
+{
+    if(h5type == FIXED_POINT_TYPE || h5type == H5T_NATIVE_INT)
+    {
+        if      (typesize == 1) return RecordObject::UINT8;
+        else if (typesize == 2) return RecordObject::UINT16;
+        else if (typesize == 4) return RecordObject::UINT32;
+        else if (typesize == 8) return RecordObject::UINT64;
+    }
+    else if(h5type == FLOATING_POINT_TYPE || h5type == H5T_NATIVE_DOUBLE)
+    {
+        if      (typesize == 4) return RecordObject::FLOAT;
+        else if (typesize == 8) return RecordObject::DOUBLE;
+    }
+
+    return RecordObject::INVALID_FIELD;
 }

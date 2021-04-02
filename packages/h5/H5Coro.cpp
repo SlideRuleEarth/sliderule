@@ -553,7 +553,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     data_info->elements = 0;
     data_info->datasize = 0;
     data_info->data     = NULL;
-    data_info->datatype = RecordObject::DYNAMIC;
+    data_info->datatype = RecordObject::INVALID_FIELD;
     data_info->numrows  = 0;
     data_info->numcols  = 0;
 
@@ -605,9 +605,35 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     else if (metaData.ndims == 1)   data_info->numcols = 1;
     else if (metaData.ndims >= 2)   data_info->numcols = metaData.dimensions[1];
 
-    if      (metaData.type == FIXED_POINT_TYPE)      data_info->datatype = RecordObject::INTEGER;
-    else if (metaData.type == FLOATING_POINT_TYPE)   data_info->datatype = RecordObject::REAL;
-    else if (metaData.type == STRING_TYPE)           data_info->datatype = RecordObject::TEXT;
+    if(metaData.type == FIXED_POINT_TYPE)
+    {
+        if(metaData.signedval)
+        {
+            if      (metaData.typesize == 1) data_info->datatype = RecordObject::INT8;
+            else if (metaData.typesize == 2) data_info->datatype = RecordObject::INT16;
+            else if (metaData.typesize == 4) data_info->datatype = RecordObject::INT32;
+            else if (metaData.typesize == 8) data_info->datatype = RecordObject::INT64;
+            else throw RunTimeException("invalid type size for signed integer: %d", metaData.typesize);
+        }
+        else
+        {
+            if      (metaData.typesize == 1) data_info->datatype = RecordObject::UINT8;
+            else if (metaData.typesize == 2) data_info->datatype = RecordObject::UINT16;
+            else if (metaData.typesize == 4) data_info->datatype = RecordObject::UINT32;
+            else if (metaData.typesize == 8) data_info->datatype = RecordObject::UINT64;
+            else throw RunTimeException("invalid type size for unsigned integer: %d", metaData.typesize);
+        }
+    }
+    else if(metaData.type == FLOATING_POINT_TYPE)
+    {
+        if      (metaData.typesize == 4) data_info->datatype = RecordObject::FLOAT;
+        else if (metaData.typesize == 8) data_info->datatype = RecordObject::DOUBLE;
+        else throw RunTimeException("invalid type size for floating point number: %d", metaData.typesize);
+    }
+    else if(metaData.type == STRING_TYPE)
+    {
+        data_info->datatype = RecordObject::STRING;
+    }
     
     /* Calculate Buffer Start */
     uint64_t buffer_offset = row_size * datasetStartRow;
@@ -1988,15 +2014,15 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             else
             {
                 unsigned int byte_order = databits & 0x1;
-                unsigned int pad_type = (databits & 0x06) >> 1;
-                unsigned int sign_loc = (databits & 0x08) >> 3;
+                unsigned int pad_type   = (databits & 0x06) >> 1;
+                metaData.signedval      = ((databits & 0x08) >> 3) == 1;
 
                 uint16_t bit_offset     = (uint16_t)readField(2, &pos);
                 uint16_t bit_precision  = (uint16_t)readField(2, &pos);
 
                 print2term("Byte Order:                                                      %d\n", (int)byte_order);
                 print2term("Pading Type:                                                     %d\n", (int)pad_type);
-                print2term("Sign Location:                                                   %d\n", (int)sign_loc);
+                print2term("Signed Value:                                                    %d\n", (int)metaData.signedval);
                 print2term("Bit Offset:                                                      %d\n", (int)bit_offset);
                 print2term("Bit Precision:                                                   %d\n", (int)bit_precision);
             }
@@ -2871,9 +2897,6 @@ void H5Coro::deinit (void)
  *----------------------------------------------------------------------------*/
 H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
 {
-    (void)valtype;
-    (void)col;
-
     info_t info;
 
     /* Start Trace */
@@ -2917,7 +2940,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
             int* tbuf = new int [info.elements];
 
             /* Float to Int */
-            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
+            if(info.datatype == RecordObject::FLOAT)
             {
                 float* dptr = (float*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -2926,7 +2949,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Double to Int */
-            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
+            else if(info.datatype == RecordObject::DOUBLE)
             {
                 double* dptr = (double*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -2935,7 +2958,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Char to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
+            else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
             {
                 uint8_t* dptr = (uint8_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -2944,7 +2967,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Short to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
+            else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
                 uint16_t* dptr = (uint16_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -2953,7 +2976,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Int to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
+            else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
             {
                 uint32_t* dptr = (uint32_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -2962,7 +2985,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Long to Int */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
+            else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
             {
                 uint64_t* dptr = (uint64_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -2988,7 +3011,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
             double* tbuf = new double [info.elements];
 
             /* Float to Double */
-            if(info.datatype == RecordObject::REAL && info.typesize == sizeof(float))
+            if(info.datatype == RecordObject::FLOAT)
             {
                 float* dptr = (float*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -2997,7 +3020,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Double to Double */
-            else if(info.datatype == RecordObject::REAL && info.typesize == sizeof(double))
+            else if(info.datatype == RecordObject::DOUBLE)
             {
                 double* dptr = (double*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -3006,7 +3029,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Char to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint8_t))
+            else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
             {
                 uint8_t* dptr = (uint8_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -3015,7 +3038,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Short to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint16_t))
+            else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
                 uint16_t* dptr = (uint16_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -3024,7 +3047,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Int to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint32_t))
+            else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
             {
                 uint32_t* dptr = (uint32_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
@@ -3033,7 +3056,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
                 }
             }
             /* Long to Double */
-            else if(info.datatype == RecordObject::INTEGER && info.typesize == sizeof(uint64_t))
+            else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
             {
                 uint64_t* dptr = (uint64_t*)info.data;
                 for(int i = 0; i < info.elements; i++)
