@@ -231,16 +231,12 @@ h5
     format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the 
     returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.  
     
-    There two possible ways to supply the data types: as a ``sliderule.datatypes`` enumeration, or as a hardcoded string. When the data type is supplied using the enumeration, the data type conversion occurs on the server side (unless the "DYNAMIC" value is supplied).  The possible enumeration values are:
-
+    The data type is supplied as a ``sliderule.datatypes`` enumeration:
+    
     - ``sliderule.datatypes["TEXT"]``: return the data as a string of unconverted bytes
     - ``sliderule.datatypes["INTEGER"]``: return the data as an array of integers
     - ``sliderule.datatypes["REAL"]``: return the data as an array of double precision floating point numbers
     - ``sliderule.datatypes["DYNAMIC"]``: return the data in the numpy data type that is the closest match to the data as it is stored in the HDF5 file
-
-    When the data type is supplied using a hardcoded string, the server reads the data as "DYNAMIC", meaning just the binary data is returned, and then inside the client, prior to return the results to the calling application, the data is converted using numpy on the binary string.  The possible hardcoded values are:
-
-    - "INT8", "INT16", "INT32" ,"INT64" ,"UINT8" ,"UINT16" ,"UINT32" ,"UINT64" ,"BITFIELD" ,"FLOAT" ,"DOUBLE" ,"TIME8" ,"STRING"
 
     :param str dataset: full path to dataset variable (e.g. ``/gt1r/geolocation/segment_ph_cnt``)
     :param str resource: HDF5 filename

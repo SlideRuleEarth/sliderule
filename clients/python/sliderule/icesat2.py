@@ -220,39 +220,28 @@ def __flatten_atl06(rsps):
 def __get_values(data, dtype, size):
     """
     data:   tuple of bytes
-    dtype:  element of datatypes OR basictypes
+    dtype:  element of codedtype
     size:   bytes in data
     """
 
-    datatype2nptype = {
-        sliderule.datatypes["TEXT"]:      numpy.byte,
-        sliderule.datatypes["REAL"]:      numpy.double,
-        sliderule.datatypes["INTEGER"]:   numpy.int32,
-        sliderule.datatypes["DYNAMIC"]:   numpy.byte
+    codedtype2nptype = {
+        0:  numpy.int8,     # INT8  
+        1:  numpy.int16,    # INT16
+        2:  numpy.int32,    # INT32
+        3:  numpy.int64,    # INT64
+        4:  numpy.uint8,    # UINT8
+        5:  numpy.uint16,   # UINT16
+        6:  numpy.uint32,   # UINT32
+        7:  numpy.uint64,   # UINT64
+        8:  numpy.byte,     # BITFIELD
+        9:  numpy.single,   # FLOAT  
+        10: numpy.double,   # DOUBLE  
+        11: numpy.byte,     # TIME8  
+        12: numpy.byte      # STRING 
     }
-
-    basictype2nptype = {
-        "INT8":     numpy.int8,
-        "INT16":    numpy.int16,
-        "INT32":    numpy.int32,
-        "INT64":    numpy.int64,
-        "UINT8":    numpy.uint8,
-        "UINT16":   numpy.uint16,
-        "UINT32":   numpy.uint32,
-        "UINT64":   numpy.uint64,
-        "BITFIELD": numpy.byte,
-        "FLOAT":    numpy.single,
-        "DOUBLE":   numpy.double,
-        "TIME8":    numpy.byte,
-        "STRING":   numpy.byte
-    }
-
-    if type(dtype) == int:
-        datatype = datatype2nptype[dtype]
-    else:
-        datatype = basictype2nptype[dtype]
-
+  
     raw = bytes(data)
+    datatype = codedtype2nptype[dtype]
     num_elements = int(size / numpy.dtype(datatype).itemsize)
     slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
@@ -440,24 +429,14 @@ def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block
 #
 #  H5
 #
-def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"], col=0, startrow=0, numrows=ALL_ROWS):
-
-    # Handle Request Datatype Options
-    #   This allows the user to supply a string designating
-    #   the exact type that they data is in.  When they do that
-    #   the read occurs with the dynamic type (letting the data)
-    #   come back in binary form; and then the __get_values call
-    #   below converts the binary into the exact type requested.
-    rqst_datatype = sliderule.datatypes["DYNAMIC"]
-    if type(datatype) == int:
-        rqst_datatype = datatype
+def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
 
     # Baseline Request
     rqst = {
         "asset" : asset,
         "resource": resource,
         "dataset": dataset,
-        "datatype": rqst_datatype,
+        "datatype": datatype,
         "col": col,
         "startrow": startrow,
         "numrows": numrows,
@@ -469,18 +448,14 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["REAL"
 
     # Build Record Data
     rsps_datatype = rsps[0]["datatype"]
-    data = ()
-    size = 0
+    rsps_data = ()
+    rsps_size = 0
     for d in rsps:
-        data = data + d["data"]
-        size = size + d["size"]
-
-    # Handle Response Datatype Options
-    if rsps_datatype == sliderule.datatypes["DYNAMIC"]:
-        rsps_datatype = datatype
+        rsps_data = rsps_data + d["data"]
+        rsps_size = rsps_size + d["size"]
 
     # Get Values
-    values = __get_values(data, rsps_datatype, size)
+    values = __get_values(rsps_data, rsps_datatype, rsps_size)
 
     # Return Response
     return values
