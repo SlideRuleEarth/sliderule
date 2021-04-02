@@ -187,17 +187,14 @@ icesat2
 
 ## VI. Delivering the Code
 
-Run [RELEASE.sh](RELEASE.sh) to create a tarball that can be distributed: `./RELEASE.sh X.Y.Z`
+Run [RELEASE.sh](RELEASE.sh) to tag the repository and create a tarball that can be distributed: `./RELEASE.sh X.Y.Z`
 
 The three number version identifier X.Y.Z has the following convention: Incrementing X indicates an interface change and does not guarantee the preservation of backward compatibility.  Incrementing Y indicates additional or modified functionality that maintains compile-time compatibility but may change a run-time behavior.  Incrementing Z indicates a bug fix or code cleanup and maintains both compile-time and run-time compatibility.
 
-Using a released version of the code, the following two Makefile targets can be used to build easily distributable packages:
-1. On Ubuntu systems: `make package`
+Using a released version of the code, the following Makefile target can be used to build an easily distributable Ubuntu package:
+   * `make package`
    * will build a debian package `build/sliderule-X.Y.Z.deb`
    * which can be distributed and then installed via `sudo dpkg -i sliderule-X.Y.Z.deb`
-2. On systems with Docker installed: `make docker-image`
-   * will build a docker image `sliderule-linux`
-   * which can be run via `docker run -it --rm --name sliderule1 sliderule-linux`
 
 
 ## VII. Licensing
