@@ -6,13 +6,13 @@
 -- OUTPUT:      {
 --                  "server":
 --                  {
---                      "version": "1.0.1",
---                      "commit": "v1.0.1-4-g34f2782",
---                      "launch date": "2021:92:20:14:33"
+--                      "version": "1.0.1",                             # version
+--                      "commit": "v1.0.1-4-g34f2782",                  # git commit description
+--                      "launch": "2021:92:20:14:33",                   # YYYY:DOY:HH:DD:SS
+--                      "duration": 304233,                             # ms since launch
+--                      "packages": ["core", "aws", h5", "icesat2"],    # packages (and plugins) loaded
 --                  },
---                  "docker": "icesat2sliderule/sliderule:v1.0.2",
---                  "plugins": ["icesat2"],
---                  "icesat2":
+--                  "icesat2":                                          # package/plugin version information when available
 --                  {
 --                      "version": "1.0.1",
 --                      "commit": "v1.0.1-15-ga52359e",
