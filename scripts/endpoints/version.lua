@@ -25,8 +25,8 @@
 local json = require("json")
 local parm = json.decode(arg[1])
 
-version, commit = sys.version()
+version, commit, launch, duration = sys.version()
 
-rsps = {server={version=version, commit=commit}}
+rsps = {server={version=version, commit=commit, launch=launch, duration=duration}}
 
 return json.encode(rsps)

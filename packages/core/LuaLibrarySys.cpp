@@ -64,6 +64,8 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {NULL,          NULL}
 };
 
+int64_t LuaLibrarySys::launch_time = 0;
+
 /******************************************************************************
  * SYSTEM LIBRARY EXTENSION METHODS
  ******************************************************************************/
@@ -73,6 +75,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
  *----------------------------------------------------------------------------*/
 void LuaLibrarySys::lsys_init (void)
 {
+    launch_time = TimeLib::gettimems();
 }
 
 /*----------------------------------------------------------------------------
@@ -89,13 +92,22 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
+    int64_t duration = TimeLib::gettimems() - launch_time;
+    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time);
+    SafeString timestr("%d:%d:%d:%d:%d", timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+
     print2term("SlideRule Version: %s\n", LIBID);
     print2term("Build Information: %s\n", BUILDINFO);
+    print2term("Launch Time: %s\n", timestr.getString());
+    print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
 
     /* Return Version String to Lua */
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
-    return 2;
+    lua_pushstring(L, timestr.getString());
+    lua_pushinteger(L, duration);
+
+    return 4;
 }
 
 /*----------------------------------------------------------------------------
