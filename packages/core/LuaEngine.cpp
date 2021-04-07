@@ -44,9 +44,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* LuaEngine::LUA_SELFKEY = "_this";
-const char* LuaEngine::LUA_ERRNO = "errno";
-const char* LuaEngine::LUA_TRACEID = "_traceid";
+const char* LuaEngine::LUA_SELFKEY = "__this";
+const char* LuaEngine::LUA_TRACEID = "__traceid";
+const char* LuaEngine::LUA_CONFDIR = "__confdir";
 
 List<LuaEngine::libInitEntry_t> LuaEngine::libInitTable;
 Mutex LuaEngine::libInitTableMutex;
@@ -209,18 +209,9 @@ const char* LuaEngine::mode2str(mode_t _mode)
     switch(_mode)
     {
         case PROTECTED_MODE:    return "PROTECTED";
-        case DIRECT_MODE:       return "DIERCT";
+        case DIRECT_MODE:       return "DIRECT";
         default:                return "INVALID";
     }
-}
-
-/*----------------------------------------------------------------------------
- * setErrno
- *----------------------------------------------------------------------------*/
-void LuaEngine::setErrno(lua_State* l, int val)
-{
-    lua_pushnumber(l, val);
-    lua_setglobal(l, LUA_ERRNO);
 }
 
 /*----------------------------------------------------------------------------
@@ -525,13 +516,13 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_setfield(l, LUA_REGISTRYINDEX, "LUA_NOENV");
     luaL_openlibs(l);  /* open standard libraries */
 
-    /* Set Errno */
-    lua_pushnumber(l, 0);
-    lua_setglobal(l, LUA_ERRNO);
-
     /* Set Trace ID */
     lua_pushnumber(l, traceId);
     lua_setglobal(l, LUA_TRACEID);
+
+    /* Set Configuration Directory */
+    lua_pushstring(l, CONFDIR);
+    lua_setglobal(l, LUA_CONFDIR);
 
     /* Set Starting Lua Path */
     SafeString lpath(CONFDIR);
