@@ -6,7 +6,7 @@ message (STATUS "Using linux platform")
 
 # Additional Build Information #
 
-execute_process (COMMAND git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
+execute_process (COMMAND cd ${CMAKE_CURRENT_LIST_DIR}; git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
 string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
 target_compile_definitions (slideruleLib PUBLIC BUILDINFO="${BUILDINFO}")
 
