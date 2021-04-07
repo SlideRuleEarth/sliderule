@@ -92,22 +92,52 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
+    /* Display Version Information on Terminal */
+    print2term("SlideRule Version: %s\n", LIBID);
+    print2term("Build Information: %s\n", BUILDINFO);
+
+    /* Display Timing Information on Terminal */
     int64_t duration = TimeLib::gettimems() - launch_time;
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time);
     SafeString timestr("%d:%d:%d:%d:%d", timeinfo.year, timeinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-
-    print2term("SlideRule Version: %s\n", LIBID);
-    print2term("Build Information: %s\n", BUILDINFO);
     print2term("Launch Time: %s\n", timestr.getString());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
 
-    /* Return Version String to Lua */
+    /* Display Package Information on Terminal */
+    const char** pkg_list = LuaEngine::getPkgList();
+    print2term("Packages: [ ");
+    if(pkg_list)
+    {
+        int index = 0;
+        while(pkg_list[index])
+        {
+            print2term("%s", pkg_list[index]);
+            index++;
+            if(pkg_list[index]) print2term(", ");
+        }
+    }
+    print2term(" ]\n");
+    
+    /* Return Information to Lua (and clean up package list) */
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
     lua_pushstring(L, timestr.getString());
     lua_pushinteger(L, duration);
+    lua_newtable(L);
+    if(pkg_list)
+    {
+        int index = 0;
+        while(pkg_list[index])
+        {
+            lua_pushstring(L, pkg_list[index]);
+            lua_rawseti(L, -2, index+1);
+            delete [] pkg_list[index];
+            index++;
+        }
+        delete [] pkg_list;
+    }
 
-    return 4;
+    return 5;
 }
 
 /*----------------------------------------------------------------------------

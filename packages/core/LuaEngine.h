@@ -89,6 +89,7 @@ class LuaEngine
 
         static void         extend          (const char* lib_name, luaOpenLibFunc lib_func);
         static void         indicate        (const char* pkg_name, const char* pkg_version);
+        static const char** getPkgList      (void);
         static mode_t       str2mode        (const char* str);
         static const char*  mode2str        (mode_t _mode);
         static void         setAttrBool     (lua_State* l, const char* name, bool val);

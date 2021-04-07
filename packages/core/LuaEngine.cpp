@@ -191,6 +191,31 @@ void LuaEngine::indicate(const char* pkg_name, const char* pkg_version)
 }
 
 /*----------------------------------------------------------------------------
+ * getPkgList
+ *----------------------------------------------------------------------------*/
+const char** LuaEngine::getPkgList(void)
+{
+    const char** pkg_list = NULL;
+
+    pkgInitTableMutex.lock();
+    {
+        int num_pkgs = pkgInitTable.length();
+        if(num_pkgs > 0)
+        {
+            pkg_list = new const char* [num_pkgs + 1];
+            for(int i = 0; i < num_pkgs; i++)
+            {
+                pkg_list[i] = StringLib::duplicate(pkgInitTable[i].pkg_name);
+            }
+            pkg_list[num_pkgs] = NULL; // null terminate list
+        }
+    }
+    pkgInitTableMutex.unlock();
+
+    return pkg_list;
+}
+
+/*----------------------------------------------------------------------------
  * str2mode
  *----------------------------------------------------------------------------*/
 LuaEngine::mode_t LuaEngine::str2mode(const char* str)
