@@ -363,7 +363,7 @@ def __logeventrec(rec):
 #
 #  SOURCE
 #
-def source (api, parm, stream=False, callbacks={'eventrec': __logeventrec}):
+def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
     rqst = json.dumps(parm)
     complete = False
     while not complete:

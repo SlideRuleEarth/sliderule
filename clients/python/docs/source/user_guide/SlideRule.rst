@@ -91,7 +91,7 @@ source
 
 """"""""""""""""
 
-.. py:function:: sliderule.source(api, parm, stream=False, callbacks={'eventrec': __logeventrec})
+.. py:function:: sliderule.source(api, parm={}, stream=False, callbacks={'eventrec': __logeventrec})
 
     Perform API call to SlideRule service
 

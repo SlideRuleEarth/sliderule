@@ -273,6 +273,27 @@ def test_definition ():
     else:
         logging.error("Failed definition test", d["delta_time"]["offset"])
 
+#
+#  TEST VERSION
+#
+def test_version ():
+
+    rsps = sliderule.source("version", {})
+
+    success = True
+    success = success and ('server' in rsps)
+    success = success and ('version' in rsps['server'])
+    success = success and ('commit' in rsps['server'])
+    success = success and ('.' in rsps['server']['version'])
+    success = success and ('v' in rsps['server']['commit'])
+    success = success and ('-g' in rsps['server']['commit'])
+
+    if success:
+        logging.info("Passed version test")
+    else:
+        logging.error("Failed version test: {}".format(str(rsps)))
+
+
 ###############################################################################
 # MAIN
 ###############################################################################
@@ -310,3 +331,4 @@ if __name__ == '__main__':
     test_h5p(atl06_asset)
     test_geospatial(atl03_asset)
     test_definition()
+    test_version()
