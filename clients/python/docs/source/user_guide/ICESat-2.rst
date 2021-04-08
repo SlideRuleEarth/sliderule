@@ -74,7 +74,8 @@ Elevations
 The primary result returned by SlideRule for ICESat-2 processing requests is a set of gridden elevations corresponding to a geolocated ATL03 along-track segment.
 
 The elevations are contained in a Python dictionary where each element in the dicitionary is a list of values.  
-The values across all elements that occur at the same offset within their list go together.  This structure mimics a DataFrame and more naturally fits column-based analysis.
+The values across all elements that occur at the same offset within their list go together.  
+This structure mimics a DataFrame and more naturally fits column-based analysis.
 
 The result dictionary has the following elements:
 
@@ -94,6 +95,35 @@ The result dictionary has the following elements:
     >>> rsps = icesat2.atl06(parms, resource, asset, as_numpy=False)
     >>> print(rsps["cycle"])
     [1, 1, 1, ... 1]
+
+
+Photon Segments
+###############
+
+The primary input data processed by SlideRule for ICESat-2 processing requests is segmented ATL03 photon data.
+The photon data is stored as along-track segments inside the ATL03 granules, which is then broken apart of SlideRule and re-segmented according to processing
+parameters supplied at the time of the request.
+
+Most of the time, the photon segments are kept internal to SlideRule and not returned to the user.  But there are some APIs that do return raw photon segments for the user to process on their own.
+Even though this offloads processing on the server, the API calls can take longer since more data needs to be returned to the user.
+
+Photon segments are returned as Python dictionaries where each element in the dictionary is a list of values.
+The values across all elements that occur at the same offset within their list go together. 
+Which beam a photon comes from (i.e. right or left) is not preserved, but can be inferred by the ordering of the values in each list.
+Values at even offsets (starting at 0) are from the left beam, and values at odd offsets (starting at 1) are from the right beam.
+
+The photon segments dictionary has the following elements:
+
+- ``"track"``: reference pair track number (1, 2, 3)
+- ``"rgt"``: reference ground track
+- ``"cycle"``: cycle
+- ``"seg_size"``: along-track length in meters of the segment
+- ``"segment_id"``: segment ID of first ATL03 segment in result
+- ``"delta_time"``: seconds from GPS epoch (Jan 6, 1980)
+- ``"lat"``: latitude (-90.0 to 90.0)
+- ``"lon"``: longitude (-180.0 to 180.0)
+- ``"count"``: the number of photons in the segment
+- ``"photons"``: list of {"x": distance, "y": height} dictionaries
 
 
 Functions
@@ -210,6 +240,46 @@ atl06p
     :keyword int max_workers: the number of threads to use when making concurrent requests to SlideRule (when set to 0, the number of threads is automatically and optimally determined based on the number of SlideRule server nodes available)
     :keyword bool block: wait for results to finish before returning; if set to false, instead of returning elevations, this function returns a list of concurrent futures)
     :return: list of gridded elevations (see `Elevations <#elevations>`_)
+
+
+atl03s
+------
+
+""""""""""""""""
+
+.. py:function:: icesat2.atl03s (parm, resource, asset="atlas-s3", track=0)
+
+    Subsets ATL03 data given the polygon and time range provided and returns segments of photons
+
+    :param dict parms: parameters used to configure ATL03 subsetting (see `Parameters <#parameters>`_)
+    :param str resource: ATL03 HDF5 filename
+    :keyword str asset: data source asset (see `Assets <#assets>`_)
+    :keyword int track: reference pair track number (1, 2, 3, or 0 to include for all three)
+    :return: list of ATL03 segments (see `Photon Segments <#photon-segments>`_)
+
+
+atl03sp
+-------
+
+""""""""""""""""
+
+.. py:function:: icesat2.atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, block=True)
+
+    Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function, 
+    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
+    is used to fetch all available resources from the CMR system automatically.
+
+    Note, it is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
+    do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
+    for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement to that effect;
+    this can be ignored and indicates no issue with the data processing.
+
+    :param dict parms: parameters used to configure ATL03 subsetting (see `Parameters <#parameters>`_)
+    :keyword str asset: data source asset (see `Assets <#assets>`_)
+    :keyword int track: reference pair track number (1, 2, 3, or 0 to include for all three)
+    :keyword int max_workers: the number of threads to use when making concurrent requests to SlideRule (when set to 0, the number of threads is automatically and optimally determined based on the number of SlideRule server nodes available)
+    :keyword bool block: wait for results to finish before returning; if set to false, instead of returning photon segment data, this function returns a list of concurrent futures)
+    :return: list of ATL03 segments (see `Photon Segments <#photon-segments>`_)
 
 
 h5

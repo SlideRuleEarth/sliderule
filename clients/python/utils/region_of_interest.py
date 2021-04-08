@@ -29,13 +29,16 @@ from sliderule import icesat2
 # LOCAL FUNCTIONS
 ###############################################################################
 
-def process_atl06_algorithm(parms, asset, max_workers):
+def process_atl06_algorithm(parms, asset, max_workers, subset=False):
 
     # Latch Start Time
     perf_start = time.perf_counter()
 
     # Request ATL06 Data
-    rsps = icesat2.atl06p(parms, asset, 0, False, max_workers)
+    if not subset:
+        rsps = icesat2.atl06p(parms, asset, 0, False, max_workers)
+    else:
+        rsps = icesat2.atl03sp(parms, asset, 0, max_workers)
 
     # Latch Stop Time
     perf_stop = time.perf_counter()
@@ -111,8 +114,7 @@ if __name__ == '__main__':
     atl06 = process_atl06_algorithm(parms, asset, max_workers)
 
     # Get ATL03 Subsetted Segments
-    parms["stages"] = ['SUB']
-    atl03 = process_atl06_algorithm(parms, asset, max_workers)
+    atl03 = process_atl06_algorithm(parms, asset, max_workers, subset=True)
 
     # Calculate Extent
     lons = [p["lon"] for p in region]

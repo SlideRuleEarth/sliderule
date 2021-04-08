@@ -68,6 +68,8 @@ Python API Reference
 - ``cmr``: Query the NASA Common Metadata Repository (CMR) for a list of data within temporal and spatial parameters `(ref) <../user_guide/ICESat-2.html#cmr>`_
 - ``atl06``: Perform ATL06-SR processing on a single ATL03 granule and return gridded elevations `(ref) <../user_guide/ICESat-2.html#atl06>`_
 - ``atl06p``: Perform ATL06-SR processing in parallel on ATL03 data and return gridded elevations `(ref) <../user_guide/ICESat-2.html#atl06p>`_
+- ``atl03s``: Subset a single ATL03 granule and return the photon data `(ref) <../user_guide/ICESat-2.html#atl03s>`_
+- ``atl03sp``: Subset ATL03 granuels in parallel and return the photon data `(ref) <../user_guide/ICESat-2.html#atl03sp>`_
 - ``h5``: Read a dataset from an HDF5 file and return the values of the dataset `(ref) <../user_guide/ICESat-2.html#h5>`_
 - ``h5p``: Read a list of datasets in parallel from an HDF5 file and return the values of the datasets `(ref) <../user_guide/ICESat-2.html#h5p>`_
 - ``toregion``: Convert a GeoJSON formatted polygon into the format accepted by SlideRule `(ref) <../user_guide/ICESat-2.html#toregion>`_

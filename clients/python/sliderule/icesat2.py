@@ -248,6 +248,96 @@ def __get_values(data, dtype, size):
 
     return values
 
+#
+#  __query_resources
+#
+def __query_resources(parm):
+
+    # Check Parameters are Valid
+    if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
+        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
+        return []
+
+    # Pull Out Polygon #
+    polygon = None
+    if "poly" in parm:
+        polygon = parm["poly"]
+
+    # Pull Out Time Period #
+    time_start = None
+    time_end = None
+    if "t0" in parm:
+        time_start = parm["t0"]
+    if "t1" in parm:
+        time_start = parm["t1"]
+
+    # Make CMR Request #
+    resources = cmr(polygon, time_start, time_end)
+    logger.info("Identified %d resources to processing", len(resources))
+
+    # Return Resources #
+    return resources
+
+#
+#  __query_servers
+#
+def __query_servers(max_workers):
+
+    # Update Available Servers #
+    num_servers = sliderule.update_available_servers()
+    if max_workers <= 0:
+        max_workers = num_servers * SERVER_SCALE_FACTOR
+
+    # Check if Servers are Available #
+    if max_workers <= 0:
+        logger.error("There are no servers available to fulfill this request")
+        return
+    else:
+        logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
+    
+    # Return Number of Workers #
+    return max_workers
+
+#
+#  __parallelize
+#
+def __parallelize(function, parm, resources, max_workers, block, *args):
+
+    # For Blocking Calls
+    if block:
+
+        # Make Parallel Processing Requests
+        results = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(function, parm, resource, *args) for resource in resources]
+
+            # Wait for Results
+            result_cnt = 0
+            for future in concurrent.futures.as_completed(futures):
+                result_cnt += 1
+                logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
+                if len(results) == 0:
+                    results = future.result()
+                else:
+                    result = future.result()
+                    for element in result:
+                        if element not in results:
+                            logger.error("Unable to construct results with element: %s", element)
+                            continue
+                        results[element] += result[element]
+
+        # Return Results
+        return results
+
+    # For Non-Blocking Calls
+    else:
+
+        # Create Thread Pool
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+
+        # Return List of Futures for Parallel Processing Request
+        return [executor.submit(function, parm, resource, *args) for resource in resources]
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -333,19 +423,10 @@ def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
         rsps = __flatten_atl06(rsps)
     else:
         flattened = {}
-        if (len(rsps) > 0) and ("elevation" in rsps[0]) and (len(rsps[0]["elevation"]) > 0):
-            # atl06rec
+        if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl06rec'):
             for element in rsps[0]["elevation"][0].keys():
                 flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-        elif (len(rsps) > 0) and ("track" in rsps[0]) and ("segment_id" in rsps[0]):
-            # atl03rec
-            for element in rsps[0].keys():
-                if type(rsps[0][element]) == tuple:
-                    flattened[element] = [rsps[r][element][i] for r in range(len(rsps)) for i in range(2)]                    
-                elif type(rsps[0][element]) == int:
-                    flattened[element] = [rsps[r][element] for r in range(len(rsps)) for i in range(2)]
-        else:
-            # Unrecognized
+        else: # Unrecognized
             logger.warning("unable to process resource %s: no elements", resource)
         rsps = flattened
 
@@ -357,74 +438,49 @@ def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
 #
 def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block=True):
 
-    # Check Parameters are Valid
-    if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
-        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
-        return
+    # Query System #
+    resources = __query_resources(parm)
+    max_workers = __query_servers(max_workers)
+    return __parallelize(atl06, parm, resources, max_workers, block, asset, track, as_numpy)
 
-    # Pull Out Polygon #
-    polygon = None
-    if "poly" in parm:
-        polygon = parm["poly"]
+#
+#  Subsetted ATL03
+#
+def atl03s (parm, resource, asset="atlas-s3", track=0):
 
-    # Pull Out Time Period #
-    time_start = None
-    time_end = None
-    if "t0" in parm:
-        time_start = parm["t0"]
-    if "t1" in parm:
-        time_start = parm["t1"]
+    # Build ATL06 Request
+    rqst = {
+        "atl03-asset" : asset,
+        "resource": resource,
+        "track": track,
+        "parms": parm
+    }
 
-    # Make CMR Request #
-    resources = cmr(polygon, time_start, time_end)
-    logger.info("Identified %d resources to processing", len(resources))
+    # Execute ATL06 Algorithm
+    rsps = sliderule.source("atl03s", rqst, stream=True)
 
-    # Update Available Servers #
-    num_servers = sliderule.update_available_servers()
-    if max_workers <= 0:
-        max_workers = num_servers * SERVER_SCALE_FACTOR
+    # Flatten Responses
+    flattened = {}
+    if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl03rec'):
+        for element in rsps[0].keys():
+            if type(rsps[0][element]) == tuple:
+                flattened[element] = [rsps[r][element][i] for r in range(len(rsps)) for i in range(2)]
+            elif type(rsps[0][element]) == int:
+                flattened[element] = [rsps[r][element] for r in range(len(rsps)) for i in range(2)]
+    else: # Unrecognized
+        logger.warning("unable to process resource %s: no elements", resource)
 
-    # Check if Servers are Available #
-    if max_workers <= 0:
-        logger.error("There are no servers available to fulfill this request")
-        return
-    else:
-        logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
+    # Return Responses
+    return flattened
 
-    # For Blocking Calls
-    if block:
+#
+#  PARALLEL SUBSETTED ATL03
+#
+def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, block=True):
 
-        # Make Parallel Processing Requests
-        results = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(atl06, parm, resource, asset, track, as_numpy) for resource in resources]
-
-            # Wait for Results
-            result_cnt = 0
-            for future in concurrent.futures.as_completed(futures):
-                result_cnt += 1
-                logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
-                if len(results) == 0:
-                    results = future.result()
-                else:
-                    result = future.result()
-                    for element in result:
-                        if element not in results:
-                            logger.error("Unable to construct results with element: %s", element)
-                            continue
-                        results[element] += result[element]
-
-        # Return Results
-        return results
-
-    # For Non-Blocking Calls
-    else:
-
-        # Create Thread Pool
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-
-        # Return List of Futures for Parallel Processing Request
-        return [executor.submit(atl06, parm, resource, asset, track, as_numpy) for resource in resources]
+    resources = __query_resources(parm)
+    max_workers = __query_servers(max_workers)
+    return __parallelize(atl03s, parm, resources, max_workers, block, asset, track)
 
 #
 #  H5
