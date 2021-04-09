@@ -128,27 +128,44 @@ if __name__ == '__main__':
     box_lon = [e["lon"] for e in region]
     box_lat = [e["lat"] for e in region]
 
-    # Plot SlideRule ATL06 Ground Tracks
-    ax1 = plt.subplot(131,projection=cartopy.crs.PlateCarree())
-    ax1.set_title("SlideRule Zoomed ATL06 Ground Tracks")
+    # Plot ATL06 Ground Tracks
+    ax1 = plt.subplot(231,projection=cartopy.crs.PlateCarree())
+    ax1.set_title("Zoomed ATL06 Ground Tracks")
     ax1.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, c=atl06["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax1.set_extent(extent,crs=cartopy.crs.PlateCarree())
     ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
-    # Plot SlideRule ATL03 Ground Tracks
-    ax2 = plt.subplot(132,projection=cartopy.crs.PlateCarree())
-    ax2.set_title("SlideRule Subsetted ATL03 Ground Tracks")
+    # Plot ATL03 Ground Tracks
+    ax2 = plt.subplot(232,projection=cartopy.crs.PlateCarree())
+    ax2.set_title("Subsetted ATL03 Ground Tracks")
     ax2.scatter(atl03["lon"].values, atl03["lat"].values, s=2.5, c=atl03["count"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax2.set_extent(extent,crs=cartopy.crs.PlateCarree())
     ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
-    # Plot SlideRule Global View
-    ax3 = plt.subplot(133,projection=cartopy.crs.PlateCarree())
-    ax3.set_title("SlideRule Global Reference")
+    # Plot Global View
+    ax3 = plt.subplot(233,projection=cartopy.crs.PlateCarree())
+    ax3.set_title("Global Reference")
     ax3.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax3.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
     ax3.add_feature(cartopy.feature.LAKES)
     ax3.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
+
+    # Plot Number of Fit Photons per ATL06 Ground Tracks
+    ax4 = plt.subplot(234)
+    atl06.hist("n_fit_photons", bins=100, ax=ax4)
+    ax4.set_title("Number of Fit Photons")
+
+    # Plot Final Window Size per ATL06 Ground Tracks
+    ax5 = plt.subplot(235)
+    atl06.hist("w_surface_window_final", bins=100, ax=ax5)
+    ax5.set_title("Final Window Size")
+
+    # Plot Time of Measurement per ATL06 Ground Tracks
+    ax6 = plt.subplot(236,projection=cartopy.crs.PlateCarree())
+    ax6.set_title("Time of Measurement")
+    ax6.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, c=atl06["delta_time"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax6.set_extent(extent,crs=cartopy.crs.PlateCarree())
+    ax6.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
     # Show Plot
     plt.show()
