@@ -260,6 +260,8 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
         
+        void                tearDown            (void);
+
         void                ioOpen              (const char* resource);
         void                ioClose             (void);
         int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);

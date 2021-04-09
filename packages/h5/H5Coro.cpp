@@ -128,60 +128,62 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     LocalLib::set(data_info, 0, sizeof(dataset_info_t));
 
     /* Initialize Class Data */
-    datasetName             = StringLib::duplicate(dataset);
-    datasetPrint            = StringLib::duplicate(dataset);
-    datasetStartRow         = startrow;
-    datasetNumRows          = numrows;
-    errorChecking           = _error_checking;
-    verbose                 = _verbose;
-    ioFile                  = NULL;
-    ioBucket                = NULL;
-    ioKey                   = NULL;
-    dataChunkBuffer         = NULL;
-    dataChunkBufferSize     = 0;
-    highestDataLevel        = 0;
-    dataSizeHint            = 0;
-
-    /* Initialize Driver */
-    const char* resource = NULL;
-    ioDriver = parseUrl(url, &resource);    
-    if(ioDriver == UNKNOWN)
-    {
-        throw RunTimeException("Invalid url: %s", url);
-    }
-
-    /* Open Resource (file) */
-    ioOpen(resource);
-
-    /* Set or Create I/O Context */
-    if(context)
-    {
-        ioContext = context;
-        ioContextLocal = false;
-    }
-    else
-    {
-        ioContext = new io_context_t;
-        ioContextLocal = true;
-    }
-
-    /* Check Meta Repository */
-    char meta_url[MAX_META_FILENAME];
-    metaGetUrl(meta_url, resource, dataset);
-    uint64_t meta_key = metaGetKey(meta_url);
-    bool meta_found = false;
-    metaMutex.lock();
-    {
-        if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData))
-        {            
-            meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
-        }
-    }
-    metaMutex.unlock();
+    ioContextLocal      = true;
+    ioContext           = NULL;
+    ioFile              = NULL;
+    ioBucket            = NULL;
+    dataChunkBuffer     = NULL;
+    datasetName         = StringLib::duplicate(dataset);
+    datasetPrint        = StringLib::duplicate(dataset);
+    datasetStartRow     = startrow;
+    datasetNumRows      = numrows;
+    errorChecking       = _error_checking;
+    verbose             = _verbose;
+    ioKey               = NULL;
+    dataChunkBufferSize = 0;
+    highestDataLevel    = 0;
+    dataSizeHint        = 0;
 
     /* Process File */
     try
     {
+        /* Initialize Driver */
+        const char* resource = NULL;
+        ioDriver = parseUrl(url, &resource);    
+        if(ioDriver == UNKNOWN)
+        {
+            throw RunTimeException("Invalid url: %s", url);
+        }
+
+        /* Open Resource (file) */
+        ioOpen(resource);
+
+        /* Set or Create I/O Context */
+        if(context)
+        {
+            ioContext = context;
+            ioContextLocal = false;
+        }
+        else
+        {
+            ioContext = new io_context_t;
+            ioContextLocal = true;
+        }
+
+        /* Check Meta Repository */
+        char meta_url[MAX_META_FILENAME];
+        metaGetUrl(meta_url, resource, dataset);
+        uint64_t meta_key = metaGetKey(meta_url);
+        bool meta_found = false;
+        metaMutex.lock();
+        {
+            if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData))
+            {            
+                meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
+            }
+        }
+        metaMutex.unlock();
+
         if(!meta_found)
         {
             /* Initialize Meta Data */
@@ -232,10 +234,13 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     }
     catch(const RunTimeException& e)
     {
-        /* Clean Up Allocations */
+        /* Clean Up Data Allocations */
         if(data_info->data) delete [] data_info->data;
         data_info->data = NULL;
         data_info->datasize = 0;
+
+        /* Clean Up Class Allocations */
+        tearDown();
 
         /* Rethrow Error */
         throw RunTimeException("%s (%s)", e.what(), dataset);
@@ -247,6 +252,14 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
  *----------------------------------------------------------------------------*/
 H5FileBuffer::~H5FileBuffer (void)
 {
+    tearDown();
+}
+
+/*----------------------------------------------------------------------------
+ * tearDown
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::tearDown (void)
+{
     /* Close I/O Resources */
     ioClose();
 
@@ -257,8 +270,8 @@ H5FileBuffer::~H5FileBuffer (void)
     }
 
     /* Delete Dataset Strings */
-    if(datasetName)     delete [] datasetName;
-    if(datasetPrint)    delete [] datasetPrint;
+    delete [] datasetName;
+    delete [] datasetPrint;
 
     /* Delete Chunk Buffer */
     if(dataChunkBuffer) delete [] dataChunkBuffer;
@@ -305,7 +318,7 @@ void H5FileBuffer::ioClose (void)
 {
     if(ioDriver == H5FileBuffer::FILE)
     {
-        fclose(ioFile);
+        if(ioFile) fclose(ioFile);
     }
     #ifdef __aws__
     else if(ioDriver == H5FileBuffer::S3)

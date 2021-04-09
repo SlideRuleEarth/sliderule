@@ -76,12 +76,20 @@ class H5Array
 
 /*----------------------------------------------------------------------------
  * Constructor
+ * 
+ *  Note that the "name" class member (along with everthing else) is initialized
+ *  after the call to H5Api::read(...).  This is on purpose because the H5Api::read
+ *  can throw an exception.  It will clean up all memory it uses, but any memory
+ *  allocated by H5Array will not get cleaned up.  If any memory is allocated
+ *  before the H5Api::read call, then the call would need to be in a try-except
+ *  block and would have to handle cleaning up that memory and rethrowing the 
+ *  exception; the ordering of the statements below is preferred over that. 
  *----------------------------------------------------------------------------*/
 template <class T>
 H5Array<T>::H5Array(const char* url, const char* dataset, H5Api::context_t* context, long col, long startrow, long numrows)
 {
-    name = StringLib::duplicate(dataset);
     H5Api::info_t info = H5Api::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
+    name = StringLib::duplicate(dataset);
     data = (T*)info.data;
     size = info.elements;
     pointer = data;
