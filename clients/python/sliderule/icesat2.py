@@ -423,7 +423,7 @@ def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
         rsps = __flatten_atl06(rsps)
     else:
         flattened = {}
-        if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl06rec'):
+        if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl06rec' or rsps[0]['__rectype'] == 'atl06rec-compact'):
             for element in rsps[0]["elevation"][0].keys():
                 flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
         else: # Unrecognized
