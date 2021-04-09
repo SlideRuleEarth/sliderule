@@ -2007,6 +2007,8 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         case FIXED_POINT_TYPE:
         {
+            metaData.signedval = ((databits & 0x08) >> 3) == 1;
+            
             if(!verbose)
             {
                 pos += 4;
@@ -2015,7 +2017,6 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             {
                 unsigned int byte_order = databits & 0x1;
                 unsigned int pad_type   = (databits & 0x06) >> 1;
-                metaData.signedval      = ((databits & 0x08) >> 3) == 1;
 
                 uint16_t bit_offset     = (uint16_t)readField(2, &pos);
                 uint16_t bit_precision  = (uint16_t)readField(2, &pos);

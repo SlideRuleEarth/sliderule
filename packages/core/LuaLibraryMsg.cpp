@@ -902,7 +902,7 @@ int LuaLibraryMsg::lmsg_detabulate(lua_State* L)
     }
     catch (const RunTimeException& e)
     {
-        return luaL_error(L, "could not locate record definition");
+        return luaL_error(L, "could not locate record definition %s", rec_type);
     }
 
     /* Populate Fields from Table */

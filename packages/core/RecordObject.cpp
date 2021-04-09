@@ -222,7 +222,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
     }
     else
     {
-        throw RunTimeException("could not locate record definition");
+        throw RunTimeException("could not locate record definition %s", rec_type);
     }
 }
 
