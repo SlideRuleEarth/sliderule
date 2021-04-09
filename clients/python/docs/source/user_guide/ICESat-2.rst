@@ -41,6 +41,7 @@ Not all parameters need to be defined when making a request; there are reasonabl
 * ``"maxi"``: maximum iterations, not including initial least-squares-fit selection
 * ``"H_min_win"``: minimum height of PE window in meters
 * ``"sigma_r_max"``: maximum robust dispersion in meters
+* ``"compact"``: return compact version of results (leaves out most metadata)
 
 .. code-block:: python
 
@@ -77,18 +78,22 @@ The elevations are contained in a Python dictionary where each element in the di
 The values across all elements that occur at the same offset within their list go together.  
 This structure mimics a DataFrame and more naturally fits column-based analysis.
 
+Elements that are present in the **compact** version of the results are noted
+
 The result dictionary has the following elements:
 
 - ``"segment_id"``: segment ID of first ATL03 segment in result
+- ``"n_fit_photons"``: number of photons used in final calculation
 - ``"rgt"``: reference ground track
 - ``"cycle"``: cycle
 - ``"spot"``: laser spot 1 to 6
-- ``"delta_time"``: seconds from GPS epoch (Jan 6, 1980)
-- ``"lat"``: latitude (-90.0 to 90.0)
-- ``"lon"``: longitude (-180.0 to 180.0)
-- ``"h_mean"``: elevation in meters from ellipsoid
+- ``"delta_time"``: seconds from GPS epoch (Jan 6, 1980) [*in compact*]
+- ``"lat"``: latitude (-90.0 to 90.0) [*in compact*]
+- ``"lon"``: longitude (-180.0 to 180.0) [*in compact*]
+- ``"h_mean"``: elevation in meters from ellipsoid [*in compact*]
 - ``"dh_fit_dx"``: along-track slope
 - ``"dh_fit_dy"``: across-track slope
+- ``"w_surface_window_final"``: width of the window used to select the final set of photons used in the calculation
 
 .. code-block:: python
 
