@@ -53,6 +53,10 @@ keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fi
 # output variable data types
 dtypes = ['i','u1','f','f','f','f','f','f','f','u2','u2']
 
+# default maximum number of resources to process in one request
+DEFAULT_MAX_REQUESTED_RESOURCES = 300
+max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
+
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
@@ -273,7 +277,11 @@ def __query_resources(parm):
 
     # Make CMR Request #
     resources = cmr(polygon, time_start, time_end)
-    logger.info("Identified %d resources to processing", len(resources))
+    if(len(resources) > max_requested_resources):
+        logger.info("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
+        resources = []
+    else:
+        logger.info("Identified %d resources to process", len(resources))
 
     # Return Resources #
     return resources
@@ -345,10 +353,18 @@ def __parallelize(function, parm, resources, max_workers, block, *args):
 #
 #  INIT
 #
-def init (url, verbose=False, max_errors=3):
+def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max_errors=3):
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
     sliderule.set_max_errors(max_errors)
+    set_max_resources(max_resources)
+
+#
+#  SET MAX RESOURCES
+#
+def set_max_resources (max_resources):
+    global max_requested_resources
+    max_requested_resources = max_resources
 
 #
 #  COMMON METADATA REPOSITORY

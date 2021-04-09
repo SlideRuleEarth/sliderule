@@ -65,6 +65,7 @@ Python API Reference
 `SlideRule ICESat-2 Python API <../user_guide/ICESat-2.html>`_:
 
 - ``init``: Initialize the icesat2 package with the URL to the SlideRule service `(ref) <../user_guide/ICESat-2.html#init>`_
+- ``set_max_resources``: Sets maximum allowed resources to process in one request `(ref) <../user_guide/ICESat-2.html#set-max-resources>`_
 - ``cmr``: Query the NASA Common Metadata Repository (CMR) for a list of data within temporal and spatial parameters `(ref) <../user_guide/ICESat-2.html#cmr>`_
 - ``atl06``: Perform ATL06-SR processing on a single ATL03 granule and return gridded elevations `(ref) <../user_guide/ICESat-2.html#atl06>`_
 - ``atl06p``: Perform ATL06-SR processing in parallel on ATL03 data and return gridded elevations `(ref) <../user_guide/ICESat-2.html#atl06p>`_
