@@ -279,6 +279,7 @@ def __query_resources(parm):
     resources = cmr(polygon, time_start, time_end)
     if(len(resources) > max_requested_resources):
         logger.info("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
+        logger.info("Consider using icesat2.set_max_resources to set a higher limit")
         resources = []
     else:
         logger.info("Identified %d resources to process", len(resources))
