@@ -146,21 +146,24 @@ def plotresults(act, exp, atl06_present):
 
 if __name__ == '__main__':
 
+    url = ["127.0.0.1"]
+    atl03_asset = "atlas-local"
+    atl06_asset = "atlas-local"
+
     # configure logging
     logging.basicConfig(level=logging.INFO)
 
     # Set URL #
-    url = ["127.0.0.1"]
     if len(sys.argv) > 1:
         url = sys.argv[1]
+        atl03_asset = "atlas-s3"
+        atl06_asset = "atlas-s3"
 
     # Set ATL03 Asset #
-    atl03_asset = "atlas-local"
     if len(sys.argv) > 2:
         atl03_asset = sys.argv[2]
 
     # Set ATL06 Asset #
-    atl06_asset = "atlas-local"
     if len(sys.argv) > 3:
         atl06_asset = sys.argv[3]
 

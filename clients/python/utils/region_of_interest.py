@@ -160,12 +160,17 @@ if __name__ == '__main__':
     atl06.hist("w_surface_window_final", bins=100, ax=ax5)
     ax5.set_title("Final Window Size")
 
+    # Plot Number of Fit Photons per ATL06 Ground Tracks
+    ax6 = plt.subplot(236)
+    atl06.hist("rms_misfit", bins=100, ax=ax6)
+    ax6.set_title("RMS of Fit")
+
     # Plot Time of Measurement per ATL06 Ground Tracks
-    ax6 = plt.subplot(236,projection=cartopy.crs.PlateCarree())
-    ax6.set_title("Time of Measurement")
-    ax6.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, c=atl06["delta_time"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
-    ax6.set_extent(extent,crs=cartopy.crs.PlateCarree())
-    ax6.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
+    #ax6 = plt.subplot(236,projection=cartopy.crs.PlateCarree())
+    #ax6.set_title("Time of Measurement")
+    #ax6.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, c=atl06["delta_time"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
+    #ax6.set_extent(extent,crs=cartopy.crs.PlateCarree())
+    #ax6.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
     # Show Plot
     plt.show()

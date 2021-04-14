@@ -311,18 +311,21 @@ def test_version ():
 
 if __name__ == '__main__':
 
-    # Override server URL from command line
     url = ["127.0.0.1"]
+    atl03_asset = "atlas-local"
+    atl06_asset = "atlas-local"
+
+    # Override server URL from command line
     if len(sys.argv) > 1:
         url = sys.argv[1]
+        atl03_asset = "atlas-s3"
+        atl06_asset = "atlas-s3"
 
     # Override asset from command line
-    atl03_asset = "atlas-local"
     if len(sys.argv) > 2:
         atl03_asset = sys.argv[2]
 
     # Override asset from command line
-    atl06_asset = "atlas-local"
     if len(sys.argv) > 3:
         atl06_asset = sys.argv[3]
 
