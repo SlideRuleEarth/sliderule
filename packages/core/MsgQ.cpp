@@ -370,12 +370,14 @@ int Publisher::postCopy(const void* data, int size, int timeout)
  *
  *  Notes:
  *  1. wraps the post call with a copy in setting
- *  2. size is checked for being positive and not causing rollover
+ *  2. size is checked for being positive
+ *  3. Rollover check for size + secondary_size is not needed because both
+ *     are promoted to unsigned in the post() call, which can hold the sum
+ *     of two max signed-int values
  *----------------------------------------------------------------------------*/
 int Publisher::postCopy(const void* data, int size, const void* secondary_data, int secondary_size, int timeout)
 {
     if(size < 0 || secondary_size < 0) return STATE_SIZE_ERROR;
-    else if(size + secondary_size < size || size + secondary_size < secondary_size) return STATE_SIZE_ERROR;
 
     int status = post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, (void*)secondary_data, secondary_size, timeout);
 
