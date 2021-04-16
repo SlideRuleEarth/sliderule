@@ -151,6 +151,8 @@ class H5FileBuffer
         static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
         
         static const uint8_t    H5LITE_CUSTOM_V1_FLAG   = 0x80; // used to indicate version 1 object header (reserved)
+
+        static const int64_t    UNKNOWN_VALUE           = -1; // initial setting for variables prior to being set
         
         /*--------------------------------------------------------------------
         * Typedefs

@@ -189,10 +189,10 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
             /* Initialize Meta Data */
             LocalLib::copy(metaData.url, meta_url, MAX_META_FILENAME);
             metaData.type           = UNKNOWN_TYPE;
-            metaData.typesize       = 0;
+            metaData.typesize       = UNKNOWN_VALUE;
             metaData.fill.fill_ll   = 0LL;
             metaData.fillsize       = 0;
-            metaData.ndims          = 0;
+            metaData.ndims          = UNKNOWN_VALUE;
             metaData.chunkelements  = 0;
             metaData.elementsize    = 0;
             metaData.offsetsize     = 0;
@@ -574,6 +574,10 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     if(metaData.typesize <= 0)
     {
         throw RunTimeException("missing data type information");
+    }
+    else if(metaData.ndims < 0)
+    {
+        throw RunTimeException("missing data dimension information");
     }
     
     /* Calculate Size of Data Row (note dimension starts at 1) */
@@ -2345,7 +2349,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             chunk_num_dim = MIN(chunk_num_dim, MAX_NDIMS);
             if(errorChecking)
             {
-                if(chunk_num_dim != metaData.ndims)
+                if((metaData.ndims != UNKNOWN_VALUE) && (chunk_num_dim != metaData.ndims))
                 {
                     throw RunTimeException("number of chunk dimensions does not match data dimensions: %d != %d", chunk_num_dim, metaData.ndims);
                 }
@@ -2374,7 +2378,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             {
                 print2term("Chunk Element Size:                                              %d\n", (int)metaData.elementsize);
                 print2term("Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
-                for(int d = 0; d < metaData.ndims; d++)
+                for(int d = 0; d < chunk_num_dim; d++)
                 {
                     print2term("Chunk Dimension %d:                                               %d\n", d, (int)chunk_dim[d]);
                 }
