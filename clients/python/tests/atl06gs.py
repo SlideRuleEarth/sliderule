@@ -190,10 +190,10 @@ if __name__ == '__main__':
     # Display Status of Differencing #
     print("\nErrors")
     print("------")
-    print("Number of Estimated Segments Missing: {}".format(len(orphans["segment_id"]) / 6)) # one for each spot
-    print("Number of Gross Errors in Heights: {}".format(len(orphans["h_mean"])))
-    print("Number of Gross Errors in Latitudes: {}".format(len(orphans["lat"])))
-    print("Number of Gross Errors in Longitudes: {}".format(len(orphans["lon"])))
+    print("Estimated Segments Missing: {}".format(len(orphans["segment_id"]) / 6)) # one for each spot
+    print("Gross Errors in Heights: {}".format(len(orphans["h_mean"])))
+    print("Gross Errors in Latitudes: {}".format(len(orphans["lat"])))
+    print("Gross Errors in Longitudes: {}".format(len(orphans["lon"])))
 
     # Create Plots
     fig = plt.figure(num=None, figsize=(12, 8))
