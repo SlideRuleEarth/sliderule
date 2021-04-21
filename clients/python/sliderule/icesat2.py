@@ -572,16 +572,15 @@ def toregion (filename):
             regions.append(region)
 
     # geojson format #
-    elif filename.find(".geojson") > 1:
-        with open(filename) as shapefile:
-            polygons = geopandas.read_file(shapefile)
-            polygons = polygons.buffer(0)   
-            for polygon in polygons.geometry:
-                region = []
-                for coord in list(polygon.exterior.coords):
-                    point = {"lon": coord[0], "lat": coord[1]}
-                    region.append(point)
-                regions.append(region)
+    elif (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
+        polygons = geopandas.read_file(filename)
+        polygons = polygons.buffer(0)
+        for polygon in polygons.geometry:
+            region = []
+            for coord in list(polygon.exterior.coords):
+                point = {"lon": coord[0], "lat": coord[1]}
+                region.append(point)
+            regions.append(region)
     
     # determine winding of polygons #
     for r in range(len(regions)):
