@@ -94,6 +94,7 @@ The result dictionary has the following elements:
 - ``"dh_fit_dx"``: along-track slope
 - ``"dh_fit_dy"``: across-track slope
 - ``"w_surface_window_final"``: width of the window used to select the final set of photons used in the calculation
+- ``"h_sigma"``: error estimate for the least squares fit model
 
 .. code-block:: python
 
