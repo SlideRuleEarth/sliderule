@@ -525,6 +525,77 @@ atl06
 
 
 
+atl03s
+------
+
+""""""""""""""""
+
+
+``POST /source/atl03s <request payload>``
+
+    Subset ATL03 data and return segments of photons
+
+**Request Payload** *(application/json)*
+
+    .. list-table::
+       :header-rows: 1
+
+       * - parameter
+         - description
+         - default
+       * - **atl03-asset**
+         - data source (see `Assets <#assets>`_)
+         - atlas-local
+       * - **resource**
+         - ATL03 HDF5 filename
+         - *required*
+       * - **track**
+         - track number: 1, 2, 3, or 0 for all three tracks
+         - 0
+       * - **parms**
+         - ATL06-SR algorithm processing configuration (see `Parameters <#parameters>`_)
+         - *required*
+       * - **timeout**
+         - number of seconds to wait for first response
+         - wait forever
+
+    **HTTP Example**
+
+    .. code-block:: http
+
+        POST /source/atl03s HTTP/1.1
+        Host: my-sliderule-server:9081
+        Content-Length: 134
+
+        {"atl03-asset": "atlas-local", "resource": "ATL03_20181019065445_03150111_003_01.h5", "track": 0, "parms": {"len": 40.0, "res": 20.0}}
+
+    **Python Example**
+
+    .. code-block:: python
+
+        # Build ATL06 Parameters
+        parms = {
+            "len": 40.0,
+            "res": 20.0,
+        }
+
+        # Build ATL06 Request
+        rqst = {
+            "atl03-asset" : "atlas-local",
+            "resource": "ATL03_20181019065445_03150111_003_01.h5",
+            "track": 0,
+            "parms": parms
+        }
+
+        # Execute ATL06 Algorithm
+        rsps = sliderule.source("atl03s", rqst, stream=True)
+
+**Response Payload** *(application/octet-stream)*
+
+    Serialized stream of photon segments of type ``atl03rec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
+
+
+
 indexer
 -------
 
