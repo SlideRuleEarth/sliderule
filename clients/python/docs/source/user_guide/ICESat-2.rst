@@ -411,13 +411,12 @@ toregion
 
 """"""""""""""""
 
-.. py:function:: icesat2.toregion (geojson, as_file=True)
+.. py:function:: icesat2.toregion (filename)
 
-    Convert a GeoJSON representation of a geospatial region into a lat,lon list recognized by SlideRule
+    Convert a GeoJSON representation of a set of geospatial regions into a set of lat,lon lists recognized by SlideRule
 
-    :param str geojson: GeoJSON formatted region of interest
-    :param bool as_file: when true the **geojson** parameter is treated as a filename; when false the geojson parameter is treated as a string containing the GeoJSON specification
-    :return: list structure containing the region of interest that can be used for the **poly** parameter in a processing request to SlideRule
+    :param str filename: file name of GeoJSON formatted regions of interest, file **must** have named with the .geojson suffix
+    :return: a list of lists containing the regions of interest that can be used for the **poly** parameter in a processing request to SlideRule
 
     Example: 
 
@@ -427,14 +426,14 @@ toregion
 
         # Region of Interest #
         region_filename = sys.argv[1]
-        region = icesat2.toregion(region_filename)
+        regions = icesat2.toregion(region_filename)
 
         # Configure SlideRule #
         icesat2.init("icesat2sliderule.org", False)
 
         # Build ATL06 Request #
         parms = {
-            "poly": region,
+            "poly": regions[0],
             "srt": icesat2.SRT_LAND,
             "cnf": icesat2.CNF_SURFACE_HIGH,
             "ats": 10.0,

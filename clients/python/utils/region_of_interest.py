@@ -71,12 +71,14 @@ if __name__ == '__main__':
     
     # Region of Interest #
     region_filename = sys.argv[1]
-    if region_filename.find(".geojson") > 1:
-        region = icesat2.toregion(region_filename)
-    else:
-        with open(region_filename) as regionfile:
-            region = json.load(regionfile)["region"]
-        
+    regions = icesat2.toregion(region_filename)
+    if(len(regions) > 1):
+        print("Warning - {} regions detected, only first region supplied will be processed".format(len(regions)))
+    elif(len(regions) < 1):
+        print("Error - no valid regions supplied")
+        exit()
+    region = regions[0]
+
     # Set URL #
     if len(sys.argv) > 2:
         url = sys.argv[2]

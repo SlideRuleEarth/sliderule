@@ -32,9 +32,10 @@ import json
 import ssl
 import urllib.request
 import datetime
-import numpy
 import logging
 import concurrent.futures
+import numpy
+import geopandas
 import sliderule
 
 ###############################################################################
@@ -559,39 +560,41 @@ def h5p (datasets, resource, asset="atlas-s3"):
 #
 # TO REGION
 #
-def toregion (geojson, as_file=True):
-    # parse geo json #
-    if as_file:
-        with open(geojson) as shapefile:
-            geo_dict = json.load(shapefile)
-    else:
-        geo_dict = json.loads(geojson)
+def toregion (filename):
+
+    # initialize regions #
+    regions = []
+
+    # native format #
+    if filename.find(".json") > 1:
+        with open(filename) as regionfile:
+            region = json.load(regionfile)["region"]
+            regions.append(region)
+
+    # geojson format #
+    elif filename.find(".geojson") > 1:
+        with open(filename) as shapefile:
+            polygons = geopandas.read_file(shapefile)
+            polygons = polygons.buffer(0)   
+            for polygon in polygons.geometry:
+                region = []
+                for coord in list(polygon.exterior.coords):
+                    point = {"lon": coord[0], "lat": coord[1]}
+                    region.append(point)
+                regions.append(region)
     
-    # pull out coordinates #
-    coordinates = geo_dict["features"][0]["geometry"]["coordinates"][0][0]
+    # determine winding of polygons #
+    for r in range(len(regions)):
+        region = regions[r]
+        #              (x2          -        x1)        *        (y2          +        y1)
+        wind = sum([(region[i+1]["lon"] - region[i]["lon"]) * (region[i+1]["lat"] + region[i]["lat"]) for i in range(len(region) - 1)])
+        if wind > 0:
+            # reverse direction (make counter-clockwise) #
+            ccw_region = []
+            for i in range(len(region), 0, -1):
+                ccw_region.append(region[i - 1])
+            # replace region with counter-clockwise version #
+            regions[r] = ccw_region               
 
-    # de-duplicate #
-    nodup_coords = []
-    for i in range(len(coordinates)):
-        duplicate = False
-        for j in range(i + 1, len(coordinates)):
-            c1 = coordinates[i]
-            c2 = coordinates[j]
-            if(c1[0] == c2[0] and c1[1] == c2[1]):
-                duplicate = True
-        if not duplicate:
-            nodup_coords.append(coordinates[i])
-
-    # reverse direction (make counter-clockwise) #
-    ccw_coords = []
-    for i in range(len(nodup_coords), 0, -1):
-        ccw_coords.append(nodup_coords[i - 1])
-    ccw_coords.append(nodup_coords[-1])
-    
-    # build region dictionary #
-    region = []
-    for coord in ccw_coords:
-        point = {"lon": coord[0], "lat": coord[1]}
-        region.append(point)
-
-    return region
+    # return region #
+    return regions
