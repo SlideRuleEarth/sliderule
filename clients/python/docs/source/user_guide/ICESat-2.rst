@@ -23,7 +23,9 @@ For example:
                {"lon": -108.3605610678553, "lat": 39.25086131372244},
                {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
 
-In order to facilitate other formats, the ``icesat2.toregion`` function can be used to convert polygons from the GeoJSON format to the format accepted by `SlideRule`.
+In order to facilitate other formats, the ``icesat2.toregion`` function can be used to convert polygons from the GeoJSON and Shapefile formats to the format accepted by `SlideRule`.
+
+Note that the maximum number of points in a polygon supported by SlideRule is 32.  Use the ``icesat2.toregion`` function's tolerance parameter to reduce the number of points in a provided shape.
 
 Parameters
 ##########
@@ -404,6 +406,7 @@ h5p
          '/gt3l/land_ice_segments/h_li': array([45.29602321, 45.34764226, 45.31430979, 45.31471701, 45.30034622]), 
          '/gt1r/land_ice_segments/h_li': array([45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948]), 
          '/gt3r/land_ice_segments/h_li': array([45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806])}
+        
 
 
 toregion
@@ -411,11 +414,12 @@ toregion
 
 """"""""""""""""
 
-.. py:function:: icesat2.toregion (filename)
+.. py:function:: icesat2.toregion (filename, tolerance=0.0)
 
     Convert a GeoJSON representation of a set of geospatial regions into a set of lat,lon lists recognized by SlideRule
 
     :param str filename: file name of GeoJSON formatted regions of interest, file **must** have named with the .geojson suffix
+    :param float tolerance: tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
     :return: a list of lists containing the regions of interest that can be used for the **poly** parameter in a processing request to SlideRule
 
     Example: 
