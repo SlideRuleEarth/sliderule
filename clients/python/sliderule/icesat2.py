@@ -72,6 +72,7 @@ SRT_SEA_ICE = 2
 SRT_LAND_ICE = 3
 SRT_INLAND_WATER = 4
 ALL_ROWS = -1
+MAX_COORDS_IN_POLYGON = 32
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -560,7 +561,7 @@ def h5p (datasets, resource, asset="atlas-s3"):
 #
 # TO REGION
 #
-def toregion (filename):
+def toregion (filename, tolerance=0.0):
 
     # initialize regions #
     regions = []
@@ -575,12 +576,16 @@ def toregion (filename):
     elif (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
         polygons = geopandas.read_file(filename)
         polygons = polygons.buffer(0)
+        polygons = polygons.simplify(tolerance)
         for polygon in polygons.geometry:
             region = []
             for coord in list(polygon.exterior.coords):
                 point = {"lon": coord[0], "lat": coord[1]}
                 region.append(point)
-            regions.append(region)
+            if len(region) > 0 and len(region) <= MAX_COORDS_IN_POLYGON:       
+                regions.append(region)
+            else:
+                logger.warning("dropping polygon with invalid length: %d", len(region))
     
     # determine winding of polygons #
     for r in range(len(regions)):
