@@ -1,3 +1,4 @@
 requests
 setuptools_scm
 numpy
+geopandas

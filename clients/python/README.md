@@ -2,12 +2,11 @@
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://gke.mybinder.org/v2/gh/ICESat2-SlideRule/sliderule-python/main?urlpath=lab)
 [![badge](https://img.shields.io/static/v1.svg?logo=Jupyter&label=PangeoBinderAWS&message=us-west-2&color=orange)](https://aws-uswest2-binder.pangeo.io/v2/gh/ICESat2-SlideRule/sliderule-python/main?urlpath=lab)
-[![Documentation Status](https://readthedocs.org/projects/sliderule-python/badge/?version=latest)](https://sliderule-python.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/311384982.svg)](https://zenodo.org/badge/latestdoi/311384982)
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
-Detailed documentation on installing and using this client is at [Read the Docs](https://sliderule-python.readthedocs.io).
+Detailed [documentation](http://icesat2sliderule.org/rtd/) on installing and using this client can be found at [icesat2sliderule.org](http://icesat2sliderule.org).
 
 ## I. Installing the SlideRule Python Client
 ```
@@ -75,7 +74,7 @@ More extensive examples in the form of Jupyter Notebooks can be found in the [ex
 
 ## III. Reference and User's Guide
 
-Please see our [Read the Docs](https://sliderule-python.readthedocs.io) page for reference and user's guide material.
+Please see our [documentation](http://icesat2sliderule.org/rtd/) page for reference and user's guide material.
 
 ## IV. Licensing
 
