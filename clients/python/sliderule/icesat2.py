@@ -523,11 +523,11 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["DYNAM
 
     # Build Record Data
     rsps_datatype = rsps[0]["datatype"]
-    rsps_data = ()
+    rsps_data = bytearray()
     rsps_size = 0
     for d in rsps:
-        rsps_data = rsps_data + d["data"]
-        rsps_size = rsps_size + d["size"]
+        rsps_data += bytearray(d["data"])
+        rsps_size += d["size"]
 
     # Get Values
     values = __get_values(rsps_data, rsps_datatype, rsps_size)
