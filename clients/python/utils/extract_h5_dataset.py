@@ -53,11 +53,12 @@ if __name__ == '__main__':
     # Configure SlideRule #
     icesat2.init(url, True)
 
-    # Request Data #
-    rawdata = icesat2.h5(dataset, resource, asset, sliderule.datatypes["DYNAMIC"], col, startrow, numrows)
+    # Read Dataset #
+    datasets = [ {"dataset": dataset, "col": col, "startrow": startrow, "numrows": numrows} ]
+    rawdata = icesat2.h5p(datasets, resource, asset)
 
-    # Write Data to File #
+    # Write Dataset to File #
     filename = dataset[dataset.rfind("/")+1:]
     f = open(filename + ".bin", 'w+b')
-    f.write(bytearray(rawdata))
+    f.write(bytearray(rawdata[dataset]))
     f.close()
