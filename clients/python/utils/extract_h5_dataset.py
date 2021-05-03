@@ -46,9 +46,9 @@ if __name__ == '__main__':
     startrow    = 13665185
     numrows     = 89624
     if len(sys.argv) > 7:
-        col         = int(sys.argv[5])
-        startrow    = int(sys.argv[6])
-        numrows     = int(sys.argv[7])
+        col         = int(sys.argv[6])
+        startrow    = int(sys.argv[7])
+        numrows     = int(sys.argv[8])
 
     # Configure SlideRule #
     icesat2.init(url, True)
