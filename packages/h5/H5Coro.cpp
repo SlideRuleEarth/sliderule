@@ -1645,7 +1645,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
         int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
         if(errorChecking && (bytes_read != msg_size))
         {
-            throw RunTimeException("header continuation message different size than specified: %d != %d", bytes_read, msg_size);            
+            throw RunTimeException("header message different size than specified: %d != %d", bytes_read, msg_size);            
         }
 
         /* Check if Dataset Found */
@@ -2643,7 +2643,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
 
         /* Exit Loop or Go to Next Node */
-        if(H5_INVALID(right_sibling))
+        if(H5_INVALID(right_sibling) || (highestDataLevel > dlvl))
         {
             break;
         }
