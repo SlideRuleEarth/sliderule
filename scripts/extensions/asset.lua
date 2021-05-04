@@ -151,6 +151,11 @@ end
 -- buildurl
 --------------------------------------------------------------------------------------
 local function buildurl(name, resource)
+    
+    if resource:find("/") then
+        -- sanitize resource name
+        resource = resource:sub(resource:match(".*/()"))
+    end
 
     if name then
         local index = core.getbyname(name)
