@@ -27,22 +27,28 @@ default-build:
 
 config: release-config
 
+# release version of sliderule binary
 release-config: prep
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON $(ROOT)
 
+# debug version of sliderule binary
 development-config: prep
 	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) $(ROOT)
 
+# python bindings
 python-config: prep
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
 
+# shared library libsliderule.so
 library-config: prep
 	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(LIBRARYCFG) $(ROOT)
 
+# static analysis
 scan: prep
 	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) $(ROOT)
 	cd build; scan-build -o scan-results make
 
+# address sanitizer debug build of sliderule binary
 asan: prep
 	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd build; make
