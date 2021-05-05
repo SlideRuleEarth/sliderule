@@ -1,6 +1,6 @@
 # python
 import sys
-import h5coro
+import sliderule
 
 ###############################################################################
 # DATA
@@ -45,7 +45,7 @@ def check_results(act, exp):
 if __name__ == '__main__':
 
     # Open H5Coro File #
-    h5file = h5coro.file(resource)
+    h5file = sliderule.h5coro(resource)
 
     # Perform Single Read #
     h_li_1 = h5file.read("/gt1l/land_ice_segments/h_li", 0, 19, 5)
