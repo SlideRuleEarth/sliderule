@@ -51,8 +51,17 @@
 #include "legacy.h"
 #endif
 
+#include <pybind11/pybind11.h>
+#include "pyH5Coro.h"
+
 /******************************************************************************
- Initialization Class
+ * Namespaces
+ ******************************************************************************/
+
+namespace py = pybind11;
+
+/******************************************************************************
+ Global Initialization Class
  ******************************************************************************/
 
 struct PyInit
@@ -79,8 +88,27 @@ struct PyInit
     }
 };
 
+PyInit init;
+
 /******************************************************************************
- Global Initialization Member
+ * Bindings
  ******************************************************************************/
 
-PyInit init;
+PYBIND11_MODULE(sliderule, m) 
+{
+    m.doc() = "Python bindings for SlideRule on-demand data processing framework";
+
+    py::class_<pyH5Coro>(m, "h5coro")
+        
+        .def(py::init<const std::string &>())
+        
+        .def("read", &pyH5Coro::read, "reads dataset from file", 
+            py::arg("dataset"), 
+            py::arg("col") = 0, 
+            py::arg("startrow") = 0, 
+            py::arg("numrows") = -1)
+
+        .def("readp", &pyH5Coro::readp, "parallel read of datasets from file");
+
+    m.attr("all") = (long)-1;
+}

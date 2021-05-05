@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_lite__
-#define __h5_lite__
+#ifndef __h5coro__
+#define __h5coro__
 
 /******************************************************************************
  * INCLUDES
@@ -373,4 +373,4 @@ struct H5Coro
     static bool         traverse        (const char* url, int max_depth, const char* start_group);
 };
 
-#endif  /* __h5_lite__ */
+#endif  /* __h5coro__ */

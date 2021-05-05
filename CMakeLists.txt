@@ -195,14 +195,15 @@ install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
 
 if(${PYTHON_BINDINGS})
 
-    # h5coro-python #
+    # binding-python #
     find_package(pybind11 REQUIRED)
-    pybind11_add_module(h5coro 
-        ${PROJECT_SOURCE_DIR}/targets/h5coro-python/h5coro-python.cpp
-        ${PROJECT_SOURCE_DIR}/targets/h5coro-python/init.cpp)
-    target_link_libraries (h5coro PUBLIC slideruleLib)
-    set_target_properties (h5coro PROPERTIES PREFIX "")
-    install (TARGETS h5coro DESTINATION ${INSTALLDIR}/lib)
+    pybind11_add_module(sliderule 
+        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyH5Coro.cpp
+        ${PROJECT_SOURCE_DIR}/targets/binding-python/init.cpp)
+    target_include_directories (sliderule PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)
+    target_link_libraries (sliderule PUBLIC slideruleLib)
+    set_target_properties (sliderule PROPERTIES PREFIX "")
+    install (TARGETS sliderule DESTINATION ${INSTALLDIR}/lib)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     
