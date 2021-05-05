@@ -11,14 +11,8 @@ FULLCFG += -DUSE_PISTACHE_PACKAGE=ON
 PYTHONCFG  = -DPYTHON_BINDINGS=ON
 PYTHONCFG += -DUSE_H5_PACKAGE=ON
 PYTHONCFG += -DUSE_AWS_PACKAGE=ON
-PYTHONCFG += -DUSE_LEGACY_PACKAGE=OFF
-PYTHONCFG += -DUSE_CCSDS_PACKAGE=OFF
-
-LIBRARYCFG  = -DSHARED_LIBRARY=ON
-LIBRARYCFG += -DUSE_H5_PACKAGE=ON
-LIBRARYCFG += -DUSE_AWS_PACKAGE=ON
-LIBRARYCFG += -DUSE_LEGACY_PACKAGE=ON
-LIBRARYCFG += -DUSE_CCSDS_PACKAGE=ON
+PYTHONCFG += -DUSE_LEGACY_PACKAGE=ON
+PYTHONCFG += -DUSE_CCSDS_PACKAGE=ON
 
 all: default-build
 
@@ -41,7 +35,7 @@ python-config: prep
 
 # shared library libsliderule.so
 library-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(LIBRARYCFG) $(ROOT)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
 
 # static analysis
 scan: prep
@@ -71,7 +65,6 @@ clean:
 
 distclean:
 	- rm -Rf build
-	- rm -Rf stage
 
 testcase=
 testmem:

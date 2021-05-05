@@ -76,58 +76,52 @@ struct H5LiteFile
     {
         py::list* result = new py::list;
 
-        if(info->datatype == RecordObject::REAL)
+        if(info->datatype == RecordObject::DOUBLE)
         {
-            if(info->typesize == sizeof(double))
+            double* data_ptr = (double*)info->data;
+            for(int i = 0; i < info->elements; i++)
             {
-                double* data_ptr = (double*)info->data;
-                for(int i = 0; i < info->elements; i++)
-                {
-                    result->append(data_ptr[i]);
-                }
-            }
-            else if(info->typesize == sizeof(float))
-            {
-                float* data_ptr = (float*)info->data;
-                for(int i = 0; i < info->elements; i++)
-                {
-                    result->append(data_ptr[i]);
-                }
+                result->append(data_ptr[i]);
             }
         }
-        else if(info->datatype == RecordObject::INTEGER)
+        else if(info->datatype == RecordObject::FLOAT)
         {
-            if(info->typesize == sizeof(long))
+            float* data_ptr = (float*)info->data;
+            for(int i = 0; i < info->elements; i++)
             {
-                long* data_ptr = (long*)info->data;
-                for(int i = 0; i < info->elements; i++)
-                {
-                    result->append(data_ptr[i]);
-                }
+                result->append(data_ptr[i]);
             }
-            else if(info->typesize == sizeof(int))
+        }
+        else if(info->datatype == RecordObject::INT64 || info->datatype == RecordObject::UINT64)
+        {
+            uint64_t* data_ptr = (uint64_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
             {
-                int* data_ptr = (int*)info->data;
-                for(int i = 0; i < info->elements; i++)
-                {
-                    result->append(data_ptr[i]);
-                }
+                result->append(data_ptr[i]);
             }
-            else if(info->typesize == sizeof(short))
+        }
+        else if(info->datatype == RecordObject::INT32 || info->datatype == RecordObject::UINT32)
+        {
+            uint32_t* data_ptr = (uint32_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
             {
-                short* data_ptr = (short*)info->data;
-                for(int i = 0; i < info->elements; i++)
-                {
-                    result->append(data_ptr[i]);
-                }
+                result->append(data_ptr[i]);
             }
-            else if(info->typesize == sizeof(unsigned char))
+        }
+        else if(info->datatype == RecordObject::INT16 || info->datatype == RecordObject::UINT16)
+        {
+            uint16_t* data_ptr = (uint16_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
             {
-                unsigned char* data_ptr = (unsigned char*)info->data;
-                for(int i = 0; i < info->elements; i++)
-                {
-                    result->append(data_ptr[i]);
-                }
+                result->append(data_ptr[i]);
+            }
+        }
+        else if(info->datatype == RecordObject::INT8 || info->datatype == RecordObject::UINT8)
+        {
+            uint8_t* data_ptr = (uint8_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
             }
         }
 
@@ -158,18 +152,24 @@ struct H5LiteFile
      * read
      *--------------------------------------------------------------------*/
     py::list* read(const std::string &datasetname, long col, long startrow, long numrows) 
-    { 
+    {
+        py::list* result;
+
         // workaround for binding to default argument value
         if(numrows < 0) numrows = H5Coro::ALL_ROWS;
 
-        // perform read of dataset
-        H5Coro::info_t info = H5Coro::read(url.c_str(), datasetname.c_str(), RecordObject::DYNAMIC, col, startrow, numrows, &context);
+//        Py_BEGIN_ALLOW_THREADS;
+        {
+            // perform read of dataset
+            H5Coro::info_t info = H5Coro::read(url.c_str(), datasetname.c_str(), RecordObject::DYNAMIC, col, startrow, numrows, &context);
+        
+            // build dataset array
+            result = tolist(&info);
 
-        // build dataset array
-        py::list* result = tolist(&info);
-
-        // clean up data
-        if(info.data) delete [] info.data;
+            // clean up data
+            if(info.data) delete [] info.data;
+        }
+//        Py_END_ALLOW_THREADS;
 
         // return list
         return result;
@@ -203,18 +203,22 @@ struct H5LiteFile
 
         // process results
         py::dict* result = new py::dict;
-        for(int i = 0; i < readers.length(); i++)
+//        Py_BEGIN_ALLOW_THREADS;
         {
-            // wait for read to complete
-            delete readers[i]->pid;
+            for(int i = 0; i < readers.length(); i++)
+            {
+                // wait for read to complete
+                delete readers[i]->pid;
 
-            // populate result dictionary
-            py::str key(readers[i]->dataset);
-            (*result)[key] = readers[i]->result;
+                // populate result dictionary
+                py::str key(readers[i]->dataset);
+                (*result)[key] = readers[i]->result;
 
-            // clean up request
-            delete readers[i];
+                // clean up request
+                delete readers[i];
+            }
         }
+//        Py_END_ALLOW_THREADS;
 
         // return result dictionary
         return result;

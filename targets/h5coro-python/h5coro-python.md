@@ -14,7 +14,7 @@ Note: make sure you are aware of where you are running `pip` from and which pyth
 
 #### 2. AWS S3 Library Dependencies
 
-When the library is compiled for use with S3, the Python environment in which the module is imported must have the `zlib` and `openssl` libraries installed. When using the system Python, on Ubuntu run:
+When the library is compiled for use with S3, the Python environment in which the module is imported must have the `zlib` and `openssl` libraries installed. When using the default system Python, on Ubuntu run:
 
 ```bash
 $ sudo apt install libcurl4-openssl libssl zlib1g

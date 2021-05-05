@@ -64,7 +64,7 @@ option (ENABLE_BIG_ENDIAN "Compile code for big endian machine" OFF)
 
 # SlideRule Library #
 
-if(${SHARED_LIBRARY})
+if(${SHARED_LIBRARY} OR ${PYTHON_BINDINGS})
     add_library(slideruleLib SHARED "")
 else()
     add_library(slideruleLib STATIC "")
@@ -109,10 +109,6 @@ endif()
 set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
-
-if(${PYTHON_BINDINGS})
-    set_property(TARGET slideruleLib PROPERTY POSITION_INDEPENDENT_CODE ON)
-endif()
 
 # Compile Definitions #
 
@@ -195,18 +191,18 @@ add_subdirectory (scripts)
 
 # Executables #
 
+install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
+
 if(${PYTHON_BINDINGS})
 
     # h5coro-python #
     find_package(pybind11 REQUIRED)
-    pybind11_add_module(h5coro ${PROJECT_SOURCE_DIR}/targets/h5coro-python/h5coro-python.cpp)
+    pybind11_add_module(h5coro 
+        ${PROJECT_SOURCE_DIR}/targets/h5coro-python/h5coro-python.cpp
+        ${PROJECT_SOURCE_DIR}/targets/h5coro-python/init.cpp)
     target_link_libraries (h5coro PUBLIC slideruleLib)
     set_target_properties (h5coro PROPERTIES PREFIX "")
-
-elseif(${SHARED_LIBRARY})
-
-    # libsliderule.so #
-    install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
+    install (TARGETS h5coro DESTINATION ${INSTALLDIR}/lib)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     

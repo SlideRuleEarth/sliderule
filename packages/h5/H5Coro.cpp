@@ -3113,7 +3113,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    mlog(INFO, "Lite-read %d elements (%d bytes) from %s/%s", info.elements, info.datasize, url, datasetname);
+    mlog(INFO, "Read %d elements (%d bytes) from %s/%s", info.elements, info.datasize, url, datasetname);
 
     /* Return Info */
     return info;
