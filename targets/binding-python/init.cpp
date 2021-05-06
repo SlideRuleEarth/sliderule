@@ -61,41 +61,29 @@
 namespace py = pybind11;
 
 /******************************************************************************
- Global Initialization Class
- ******************************************************************************/
-
-struct PyInit
-{
-    PyInit(void)
-    {
-        initcore();
-        
-        #ifdef __aws__
-            initaws();
-        #endif
-
-        #ifdef __ccsds__
-            initccsds();
-        #endif
-
-        #ifdef __h5__
-            inith5();
-        #endif
-
-        #ifdef __legacy__
-            initlegacy();
-        #endif
-    }
-};
-
-PyInit init;
-
-/******************************************************************************
  * Bindings
  ******************************************************************************/
 
 PYBIND11_MODULE(sliderule, m) 
 {
+    initcore();
+    
+    #ifdef __aws__
+        initaws();
+    #endif
+
+    #ifdef __ccsds__
+        initccsds();
+    #endif
+
+    #ifdef __h5__
+        inith5();
+    #endif
+
+    #ifdef __legacy__
+        initlegacy();
+    #endif
+
     m.doc() = "Python bindings for SlideRule on-demand data processing framework";
 
     py::class_<pyH5Coro>(m, "h5coro")
