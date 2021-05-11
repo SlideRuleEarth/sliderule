@@ -2,8 +2,6 @@
 # Imports
 #
 import sys
-import json
-import geopandas
 from sliderule import icesat2
 
 ###############################################################################

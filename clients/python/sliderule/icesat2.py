@@ -72,7 +72,7 @@ SRT_SEA_ICE = 2
 SRT_LAND_ICE = 3
 SRT_INLAND_WATER = 4
 ALL_ROWS = -1
-MAX_COORDS_IN_POLYGON = 32
+MAX_COORDS_IN_POLYGON = 16384
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -572,10 +572,10 @@ def toregion (filename, tolerance=0.0):
             region = json.load(regionfile)["region"]
             regions.append(region)
 
-    # geojson format #
+    # geojson or shapefile format #
     elif (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
         polygons = geopandas.read_file(filename)
-        polygons = polygons.buffer(0)
+        polygons = polygons.buffer(tolerance)
         polygons = polygons.simplify(tolerance)
         for polygon in polygons.geometry:
             region = []
@@ -585,7 +585,7 @@ def toregion (filename, tolerance=0.0):
             if len(region) > 0 and len(region) <= MAX_COORDS_IN_POLYGON:       
                 regions.append(region)
             else:
-                logger.warning("dropping polygon with invalid length: %d", len(region))
+                logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region), MAX_COORDS_IN_POLYGON)
     
     # determine winding of polygons #
     for r in range(len(regions)):

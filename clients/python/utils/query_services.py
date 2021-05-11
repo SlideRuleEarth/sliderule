@@ -65,3 +65,4 @@ if __name__ == '__main__':
 
     # Display Services #
     print(json.dumps(services, indent=2))
+    print("Number of Nodes: {}".format(len(services)))
