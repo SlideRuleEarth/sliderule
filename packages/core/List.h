@@ -63,6 +63,7 @@ class List
          *--------------------------------------------------------------------*/
 
                 List        (void);
+                List        (const List& l1);
         virtual ~List       (void);
 
         int     add         (const T& data);
@@ -74,6 +75,7 @@ class List
         void    sort        (void);
 
         T&      operator[]  (int index);
+        List&   operator=   (const List& l1);
 
     protected:
 
@@ -101,6 +103,8 @@ class List
          * Methods
          *--------------------------------------------------------------------*/
 
+        void            initialize          (void);
+        void            copy                (const List& l1);
         list_node_t*    newNode             (void);
         virtual void    freeNode            (typename List<T>::list_node_t* node, int index);
         void            quicksort           (T* array, int start, int end);
@@ -131,12 +135,17 @@ class MgList: public List<T>
 template <class T>
 List<T>::List(void)
 {
-    head.offset = 0;
-    head.next = NULL;
-    tail = &head;
-    len = 0;
-    prevnode = &head;
-    prevblock = 0;
+    initialize();
+}
+
+/*----------------------------------------------------------------------------
+ * Copy Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+List<T>::List(const List<T>& l1)
+{
+    initialize();
+    copy(l1);
 }
 
 /*----------------------------------------------------------------------------
@@ -416,6 +425,48 @@ template <class T>
 T& List<T>::operator[](int index)
 {
     return get(index);
+}
+
+/*----------------------------------------------------------------------------
+ * =
+ *----------------------------------------------------------------------------*/
+template <class T>
+List<T>& List<T>::operator= (const List<T>& l1)
+{
+    clear();
+    copy(l1);
+    return *this;
+}
+
+/*----------------------------------------------------------------------------
+ * initialize
+ *----------------------------------------------------------------------------*/
+template <class T>
+void List<T>::initialize(void)
+{
+    head.offset = 0;
+    head.next = NULL;
+    tail = &head;
+    len = 0;
+    prevnode = &head;
+    prevblock = 0;
+}
+
+/*----------------------------------------------------------------------------
+ * =
+ *----------------------------------------------------------------------------*/
+template <class T>
+void List<T>::copy(const List<T>& l1)
+{
+    const list_node_t* curr = &l1.head;
+    while(curr)
+    {
+        for(int i = 0; i < curr->offset; i++)
+        {
+            add(curr->data[i]);
+        }
+        curr = curr->next;
+    }
 }
 
 /*----------------------------------------------------------------------------

@@ -98,8 +98,10 @@ double MathLib::FFT(double result[], int input[], unsigned long size)
 /*----------------------------------------------------------------------------
  * coord2point
  *----------------------------------------------------------------------------*/
-void MathLib::coord2point (const coord_t c, point_t& p, proj_t projection)
+MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
 {
+    point_t p;
+
     /* Convert to Radians */
     double lonrad = c.lon * M_PI / 180.0;
     double latrad = c.lat * M_PI / 180.0;
@@ -140,13 +142,17 @@ void MathLib::coord2point (const coord_t c, point_t& p, proj_t projection)
         p.x = EARTHRADIUS * lonrad;
         p.y = EARTHRADIUS * latrad;
     }
+
+    return p;
 }
 
 /*----------------------------------------------------------------------------
  * point2coord
  *----------------------------------------------------------------------------*/
-void MathLib::point2coord (coord_t& c, const point_t p, proj_t projection)
+MathLib::coord_t MathLib::point2coord (const point_t p, proj_t projection)
 {
+    coord_t c;
+
     double latrad = 90.0, lonrad = 0.0;
 
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
@@ -202,6 +208,8 @@ void MathLib::point2coord (coord_t& c, const point_t p, proj_t projection)
     /* Convert to Degress */
     c.lat = latrad * (180.0 / M_PI);
     c.lon = lonrad * (180.0 / M_PI);
+
+    return c;
 }
 
 /*----------------------------------------------------------------------------
@@ -263,14 +271,12 @@ bool MathLib::ingeopoly (List<coord_t>& poly, coord_t coord, proj_t projection)
     List<point_t> ppoly;
     for(int i = 0; i < poly.length(); i++)
     {
-        point_t polar_point;
-        coord2point(poly[i], polar_point, projection);
+        point_t polar_point = coord2point(poly[i], projection);
         ppoly.add(polar_point);
     }
 
     /* Project Coordinate */
-    point_t pcoord;
-    coord2point(coord, pcoord, projection);
+    point_t pcoord = coord2point(coord, projection);
 
     /* Return Inclusion Test */
     return inpoly(ppoly, pcoord);

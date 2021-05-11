@@ -348,8 +348,8 @@ SpatialIndex::projspan_t SpatialIndex::project (spatialspan_t span)
 {
     projspan_t proj;
     
-    MathLib::coord2point(span.c0, proj.p0, projection);
-    MathLib::coord2point(span.c1, proj.p1, projection);
+    proj.p0 = MathLib::coord2point(span.c0, projection);
+    proj.p1 = MathLib::coord2point(span.c1, projection);
 
     double xmin = MIN(proj.p0.x, proj.p1.x);
     double ymin = MIN(proj.p0.y, proj.p1.y);
@@ -370,8 +370,8 @@ SpatialIndex::projspan_t SpatialIndex::project (spatialspan_t span)
 spatialspan_t SpatialIndex::restore (projspan_t proj)
 {
     spatialspan_t span;
-    MathLib::point2coord(span.c0, proj.p0, projection);
-    MathLib::point2coord(span.c1, proj.p1, projection);
+    span.c0 = MathLib::point2coord(proj.p0, projection);
+    span.c1 = MathLib::point2coord(proj.p1, projection);
     return span;
 }
 
@@ -391,8 +391,7 @@ int SpatialIndex::luaProject (lua_State* L)
         c.lon = getLuaFloat(L, 3);
 
         /* Convert Coordinates */
-        MathLib::point_t p;       
-        MathLib::coord2point(c, p, lua_obj->projection);
+        MathLib::point_t p = MathLib::coord2point(c, lua_obj->projection);
         lua_pushnumber(L, p.x);
         lua_pushnumber(L, p.y);
 
@@ -424,8 +423,7 @@ int SpatialIndex::luaSphere (lua_State* L)
         p.y = getLuaFloat(L, 3);
 
         /* Convert Coordinates */
-        MathLib::coord_t c;
-        MathLib::point2coord(c, p, lua_obj->projection);
+        MathLib::coord_t c = MathLib::point2coord(p, lua_obj->projection);
         lua_pushnumber(L, c.lat);
         lua_pushnumber(L, c.lon);
 
