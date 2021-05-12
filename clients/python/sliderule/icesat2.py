@@ -37,6 +37,7 @@ import concurrent.futures
 import warnings
 import numpy
 import geopandas
+from shapely.geometry.multipolygon import MultiPolygon
 import sliderule
 
 ###############################################################################
@@ -376,17 +377,17 @@ def set_max_resources (max_resources):
 def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name='ATL03'):
     """
     polygon: list of longitude,latitude in counter-clockwise order with first and last point matching;
-             three formats are supported:
-             1. string - e.g. '-115.43,37.40,-109.55,37.58,-109.38,43.28,-115.29,43.05,-115.43,37.40'
-             1. list - e.g. [-115.43,37.40,-109.55,37.58,-109.38,43.28,-115.29,43.05,-115.43,37.40]
-             1. dictionary - e.g. [ {"lon": -115.43, "lat": 37.40},
-                                    {"lon": -109.55, "lat": 37.58},
-                                    {"lon": -109.38, "lat": 43.28},
-                                    {"lon": -115.29, "lat": 43.05},
-                                    {"lon": -115.43, "lat": 37.40} ]
+             - e.g. [ {"lon": -115.43, "lat": 37.40},
+                      {"lon": -109.55, "lat": 37.58},
+                      {"lon": -109.38, "lat": 43.28},
+                      {"lon": -115.29, "lat": 43.05},
+                      {"lon": -115.43, "lat": 37.40} ]
     time_*: UTC time (i.e. "zulu" or "gmt");
             expressed in the following format: <year>-<month>-<day>T<hour>:<minute>:<second>Z
     """
+
+    url_list = []
+
     # set default start time to start of ICESat-2 mission
     if not time_start:
         time_start = '2018-10-13T00:00:00Z'
@@ -394,31 +395,44 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
     if not time_end:
         now = datetime.datetime.utcnow()
         time_end = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    # flatten polygon if structure list of lat/lon provided
-    if polygon:
-        if type(polygon) == list:
-            # if polygon list of dictionaries ("lat", "lon"), then flatten
-            if type(polygon[0]) == dict:
-                flatpoly = []
-                for p in polygon:
-                    flatpoly.append(p["lon"])
-                    flatpoly.append(p["lat"])
-                polygon = flatpoly
-            # convert list into string
-            polygon = str(polygon)[1:-1]
 
-        # remove all spaces as this will be embedded in a url
-        polygon = polygon.replace(" ", "")
+    # issue CMR request
+    for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
 
-    # call into NSIDC routines to make CMR request
-    try:
-        url_list = __cmr_search(short_name, version, time_start, time_end, polygon)
-    except urllib.error.HTTPError as e:
-        url_list = []
-        logger.error("HTTP Request Error:", e)
-    except RuntimeError as e:
-        url_list = []
-        logger.error("Runtime Error:", e)
+        # convert polygon list into string
+        polystr = None
+        if polygon:
+            flatpoly = []
+            for p in polygon:
+                flatpoly.append(p["lon"])
+                flatpoly.append(p["lat"])
+            polystr = str(flatpoly)[1:-1]
+            polystr = polystr.replace(" ", "") # remove all spaces as this will be embedded in a url
+
+        # call into NSIDC routines to make CMR request
+        try:
+            url_list = __cmr_search(short_name, version, time_start, time_end, polystr)
+            break # exit loop because cmr search was successful
+        except urllib.error.HTTPError as e:
+            logger.error('HTTP Request Error: {}'.format(e.reason))
+        except RuntimeError as e:
+            logger.error("Runtime Error:", e)
+
+        # simplify polygon
+        if polygon and tolerance:
+            raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
+            shape = MultiPolygon(*raw_multi_polygon)
+            buffered_shape = shape.buffer(tolerance)
+            simplified_shape = buffered_shape.simplify(tolerance)
+            simplified_coords = list(simplified_shape.exterior.coords)
+            logger.warning('Simplified polygon from {} points to {} points using tolerance of {}'.format(len(polygon), len(simplified_coords), tolerance))
+            region = []
+            for coord in simplified_coords:
+                point = {"lon": coord[0], "lat": coord[1]}
+                region.insert(0,point)
+            polygon = region
+        else:
+            break # exit here because nothing can be done
 
     return url_list
 

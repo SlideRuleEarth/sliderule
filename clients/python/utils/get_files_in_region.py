@@ -30,6 +30,6 @@ if __name__ == '__main__':
     for i in range(len(regions)):
         region = regions[i]
         resources = icesat2.cmr(region, short_name=dataset)
-        print("\nRegion {}: {} points, {} files".format(i, len(region), len(resources)))
+        print("Region {}: {} points, {} files".format(i, len(region), len(resources)))
         for resource in resources:
             print(resource)
