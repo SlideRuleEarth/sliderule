@@ -56,7 +56,34 @@
 template <class T>
 class List
 {
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct list_block_t {
+            T                       data[LIST_BLOCK_SIZE];
+            int                     offset;
+            struct list_block_t*    next;
+        } list_node_t;
+
     public:
+
+        /*--------------------------------------------------------------------
+         * Iterator Subclass
+         *--------------------------------------------------------------------*/
+
+        class Iterator
+        {
+            public:
+                                    Iterator    (const List& l);
+                                    ~Iterator   (void);
+                const T&            operator[]  (int index) const;
+            private:
+                int                 len;
+                const list_node_t** blocks;
+        };
 
         /*--------------------------------------------------------------------
          * Methods
@@ -78,16 +105,6 @@ class List
         List&   operator=   (const List& l1);
 
     protected:
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct list_block_t {
-            T                       data[LIST_BLOCK_SIZE];
-            int                     offset;
-            struct list_block_t*    next;
-        } list_node_t;
 
         /*--------------------------------------------------------------------
          * Data
@@ -124,6 +141,58 @@ class MgList: public List<T>
     private:
         void freeNode (typename List<T>::list_node_t* node, int index);
 };
+
+/******************************************************************************
+ * ITERATOR METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+List<T>::Iterator::Iterator(const List& l)
+{
+    len = l.len;
+    int num_blocks = (len + (LIST_BLOCK_SIZE - 1)) / LIST_BLOCK_SIZE;
+    blocks = new const List<T>::list_node_t* [num_blocks];
+
+    const List<T>::list_node_t* curr_block = &l.head;
+    for(int b = 0; b < num_blocks; b++)
+    {
+        assert(curr_block);
+        blocks[b] = curr_block;
+        curr_block = curr_block->next;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+List<T>::Iterator::~Iterator(void)
+{
+    delete [] blocks;
+}
+
+/*----------------------------------------------------------------------------
+ * []
+ *----------------------------------------------------------------------------*/
+template <class T>
+const T& List<T>::Iterator::operator[](int index) const
+{
+    if( (index < len) && (index >= 0) )
+    {
+        int node_block = index / LIST_BLOCK_SIZE;
+        int node_offset = index % LIST_BLOCK_SIZE;
+        const List<T>::list_node_t* block = blocks[node_block];
+        return block->data[node_offset];
+    }
+    else
+    {
+        throw std::out_of_range("List::Iterator index out of range");
+    }
+}
+
 
 /******************************************************************************
  * LIST METHODS

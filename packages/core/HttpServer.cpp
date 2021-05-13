@@ -56,7 +56,7 @@ std::atomic<uint64_t> HttpServer::requestId{0};
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - server(<ip_addr>, <port>)
+ * luaCreate - server(<ip_addr>, <port>, [<max connections>])
  *----------------------------------------------------------------------------*/
 int HttpServer::luaCreate (lua_State* L)
 {

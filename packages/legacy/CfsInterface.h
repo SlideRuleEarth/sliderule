@@ -67,22 +67,22 @@ class CfsInterface: public CommandableObject
         typedef CcsdsSpacePacket::seg_flags_t seg_t;
 
         typedef struct {
-            uint32_t      apid;
-            uint32_t      segs_read;
-            uint32_t      segs_errors;
-            uint32_t      segs_forwarded;
-            uint32_t      segs_dropped;
-            uint32_t      total_bytes;
-            uint32_t      total_pkts;
-            uint32_t      seq_errors;
-            uint32_t      seg_errors;
-            uint32_t      len_errors;
-            uint32_t      chksum_errors;
-            uint32_t      filter_factor;
-            uint32_t      last_seq;
+            uint32_t    apid;
+            uint32_t    segs_read;
+            uint32_t    segs_errors;
+            uint32_t    segs_forwarded;
+            uint32_t    segs_dropped;
+            uint32_t    total_bytes;
+            uint32_t    total_pkts;
+            uint32_t    seq_errors;
+            uint32_t    seg_errors;
+            uint32_t    len_errors;
+            uint32_t    chksum_errors;
+            uint32_t    filter_factor;
+            uint32_t    last_seq;
             seg_t       last_seg;
-            int64_t       first_pkt_time; // time first packet arrived after clear
-            int64_t       total_pkt_time; // total amount time packet since last clear
+            int64_t     first_pkt_time; // time first packet arrived after clear
+            int64_t     total_pkt_time; // total amount time packet since last clear
             double      avg_bps;
         } pktStats_t;
 
