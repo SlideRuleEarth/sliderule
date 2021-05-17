@@ -29,6 +29,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/EventLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/File.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/HttpClient.cpp
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.cpp
@@ -81,6 +82,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
             ${CMAKE_CURRENT_LIST_DIR}/PointIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/File.h
+            ${CMAKE_CURRENT_LIST_DIR}/HttpClient.h
             ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.h
             ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.h
