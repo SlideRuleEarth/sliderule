@@ -425,7 +425,7 @@ def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name
             buffered_shape = shape.buffer(tolerance)
             simplified_shape = buffered_shape.simplify(tolerance)
             simplified_coords = list(simplified_shape.exterior.coords)
-            logger.warning('Simplified polygon from {} points to {} points using tolerance of {}'.format(len(polygon), len(simplified_coords), tolerance))
+            logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
             region = []
             for coord in simplified_coords:
                 point = {"lon": coord[0], "lat": coord[1]}
