@@ -18,6 +18,7 @@ If you are a science user interested in processing ICESat-2 data with SlideRule,
 
    * For CentOS 7:
    ```bash
+   $ sudo yum group install "Development Tools"
    $ sudo yum install readline readline-devel
    $ wget http://www.lua.org/ftp/lua-5.3.6.tar.gz
    $ tar -xvzf lua-5.3.6.tar.gz
