@@ -83,6 +83,7 @@ class LuaLibrarySys
         static int      lsys_seteventlvl    (lua_State* L);
         static int      lsys_geteventlvl    (lua_State* L);
         static int      lsys_lsrec          (lua_State* L);
+        static int      lsys_cwd            (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

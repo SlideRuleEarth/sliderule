@@ -37,6 +37,8 @@
 #include "LuaEngine.h"
 #include "core.h"
 
+#include <unistd.h>
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -56,6 +58,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"setlvl",      LuaLibrarySys::lsys_seteventlvl},
     {"getlvl",      LuaLibrarySys::lsys_geteventlvl},
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
+    {"cwd",         LuaLibrarySys::lsys_cwd},
     {"lsdev",       DeviceObject::luaList},
     {NULL,          NULL}
 };
@@ -394,4 +397,23 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
     }
     delete [] rectypes;
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_cwd - current working directory
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_cwd (lua_State* L)
+{
+    char cwd[MAX_STR_SIZE];
+    char* cwd_ptr = getcwd(cwd, MAX_STR_SIZE);
+    
+    if(cwd_ptr != NULL)
+    {
+        lua_pushstring(L, cwd);
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
