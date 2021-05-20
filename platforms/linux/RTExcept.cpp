@@ -57,3 +57,11 @@ RunTimeException::RunTimeException(const char* _errmsg, ...):
 
     if (msglen >= 0) errmsg[msglen] = '\0';
 }
+
+/*----------------------------------------------------------------------------
+ * what
+ *----------------------------------------------------------------------------*/
+char const* RunTimeException::what() const throw()
+{ 
+    return errmsg; 
+};

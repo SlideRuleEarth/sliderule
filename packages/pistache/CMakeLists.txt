@@ -42,6 +42,6 @@ if (PISTACHE_LIB)
 
 else ()
 
-    message (STATUS "Unable to include pistache package... library not found")
+    message (FATAL_ERROR "Unable to include pistache package... library not found")
 
 endif ()

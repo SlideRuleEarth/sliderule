@@ -109,6 +109,7 @@ endif()
 set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
+set_target_properties (slideruleLib PROPERTIES CXX_STANDARD 11)
 
 # Compile Definitions #
 
@@ -203,6 +204,7 @@ if(${PYTHON_BINDINGS})
     target_include_directories (sliderule PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)
     target_link_libraries (sliderule PUBLIC slideruleLib)
     set_target_properties (sliderule PROPERTIES PREFIX "")
+    set_target_properties (sliderule PROPERTIES CXX_STANDARD 11)
     install (TARGETS sliderule DESTINATION ${INSTALLDIR}/lib)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
@@ -212,6 +214,7 @@ elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
     set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
     set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
+    set_target_properties (sliderule PROPERTIES CXX_STANDARD 11)
     target_link_libraries (sliderule PUBLIC slideruleLib)
     install (TARGETS sliderule DESTINATION ${INSTALLDIR}/bin)
 

@@ -38,6 +38,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <poll.h>
 #include <assert.h>
 

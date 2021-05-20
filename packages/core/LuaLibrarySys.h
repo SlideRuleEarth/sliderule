@@ -38,8 +38,7 @@
 
 #include "MsgQ.h"
 #include "Ordering.h"
-
-#include <lua.h>
+#include "LuaEngine.h"
 
 /******************************************************************************
  * LUA LIBRARY SYS CLASS

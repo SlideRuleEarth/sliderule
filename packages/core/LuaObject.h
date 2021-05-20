@@ -52,13 +52,9 @@
 
 #include "OsApi.h"
 #include "Dictionary.h"
+#include "LuaEngine.h"
 
 #include <atomic>
-
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
-
 
 /******************************************************************************
  * LUA OBJECT CLASS

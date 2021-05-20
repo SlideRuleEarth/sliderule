@@ -36,7 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <lua.h>
 #include "OsApi.h"
 #include "Dictionary.h"
 #include "Ordering.h"

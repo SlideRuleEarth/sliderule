@@ -39,6 +39,6 @@ if (AWSSDK_LINK_LIBRARIES)
 
 else ()
 
-    message (STATUS "Unable to include aws package... required libraries not found")
+    message (FATAL_ERROR "Unable to include aws package... required libraries not found")
 
 endif ()

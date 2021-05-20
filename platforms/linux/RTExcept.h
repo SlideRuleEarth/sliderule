@@ -51,7 +51,7 @@ class RunTimeException : public std::runtime_error
         char errmsg[ERROR_MSG_LEN];
 
         RunTimeException(const char* _errmsg, ...); VARG_CHECK(printf, 1, 2);
-        char const * what() const noexcept override { return errmsg; };
+        char const* what() const throw();
 };
 
 #endif // __runtime_exception__
