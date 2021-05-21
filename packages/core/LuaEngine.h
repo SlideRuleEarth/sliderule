@@ -37,16 +37,16 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "StringLib.h"
 #include "EventLib.h"
-#include "MsgQ.h"
+#include "StringLib.h"
 #include "List.h"
-#include "Ordering.h"
-#include "LuaObject.h"
 
+extern "C"
+{
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+}
 
 /******************************************************************************
  * LUA ENGINE CLASS

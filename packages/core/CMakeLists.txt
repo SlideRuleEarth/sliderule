@@ -6,9 +6,9 @@ if (LUA_FOUND AND READLINE_LIB)
     message (STATUS "Including core package")
 
     target_compile_definitions (slideruleLib PUBLIC __core__)
-    target_compile_definitions (slideruleLib PRIVATE LUA_USE_READLINE)
+    target_compile_definitions (slideruleLib PUBLIC LUA_USE_READLINE)
 
-    target_link_libraries (slideruleLib PRIVATE ${LUA_LIBRARIES})
+    target_link_libraries (slideruleLib PUBLIC ${LUA_LIBRARIES})
     target_include_directories (slideruleLib PUBLIC ${LUA_INCLUDE_DIR})
 
     target_link_libraries (slideruleLib PUBLIC readline)
@@ -127,6 +127,6 @@ if (LUA_FOUND AND READLINE_LIB)
 
 else ()
 
-    message (STATUS "Unable to compile core package... Lua library not found")
+    message (FATAL_ERROR "Unable to compile core package... Lua library not found")
 
 endif ()

@@ -39,8 +39,7 @@
 #include "MsgQ.h"
 #include "RecordObject.h"
 #include "Dictionary.h"
-
-#include <lua.h>
+#include "LuaEngine.h"
 
 /******************************************************************************
  * LUA LIBRARY MSG CLASS

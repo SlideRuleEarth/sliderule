@@ -9,11 +9,24 @@ If you are a science user interested in processing ICESat-2 data with SlideRule,
 
 ## I. Prerequisites
 
-1. Basic build environment (Ubuntu 20.04):
-   * build-essential
-   * libreadline-dev
-   * liblua5.3-dev
+1. Basic build environment
 
+   * For Ubuntu 20.04:
+   ```bash
+   $ sudo apt install build-essential libreadline-dev liblua5.3-dev
+   ```
+
+   * For CentOS 7:
+   ```bash
+   $ sudo yum group install "Development Tools"
+   $ sudo yum install readline readline-devel
+   $ wget http://www.lua.org/ftp/lua-5.3.6.tar.gz
+   $ tar -xvzf lua-5.3.6.tar.gz
+   $ cd lua-5.3.6
+   $ make linux
+   $ sudo make install
+   ```
+   
 2. CMake (3.13.0 or greater)
 
 3. For dependencies associated with a specific package, see the package readme at `packages/{package}/{package}.md` for additional installation instructions.

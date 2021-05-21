@@ -67,6 +67,6 @@ if (ZLIB_FOUND)
 
 else ()
 
-    message (STATUS "Unable to include h5 package... required libraries not found")
+    message (FATAL_ERROR "Unable to include h5 package... required libraries not found")
 
 endif ()

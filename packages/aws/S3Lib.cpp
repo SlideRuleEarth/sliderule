@@ -42,7 +42,6 @@
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/GetObjectRequest.h>
 
-#include <lua.h>
 #include <assert.h>
 #include <sys/stat.h>
 #include <stdio.h>

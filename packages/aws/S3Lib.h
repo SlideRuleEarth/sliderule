@@ -36,10 +36,10 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <lua.h>
 #include "OsApi.h"
 #include "Dictionary.h"
 #include "Ordering.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
  * AWS S3 LIBRARY CLASS
