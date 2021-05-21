@@ -81,6 +81,7 @@ int core_open (lua_State *L)
         {"reader",          DeviceReader::luaCreate},
         {"writer",          DeviceWriter::luaCreate},
         {"httpd",           HttpServer::luaCreate},
+        {"http",            HttpClient::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"dispatcher",      RecordDispatcher::luaCreate},
         {"capture",         CaptureDispatch::luaCreate},

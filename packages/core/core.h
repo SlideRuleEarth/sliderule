@@ -52,6 +52,7 @@
 #include "EndpointObject.h"
 #include "PointIndex.h"
 #include "File.h"
+#include "HttpClient.h"
 #include "HttpServer.h"
 #include "LimitDispatch.h"
 #include "List.h"
