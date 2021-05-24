@@ -57,7 +57,6 @@ class ClusterSocket: public TcpSocket
         static const int CONNECTION_TIMEOUT     = 5; // seconds
         static const int INITIAL_POLL_SIZE      = 16;
         static const int METER_PERIOD_MS        = 1000; // milliseconds
-        static const int IP_ADDR_STR_SIZE       = 64;
         static const int METER_SEND_THRESH      = 128; // 50%
         static const int METER_BUF_SIZE         = 256;
         static const int MSG_HDR_SIZE           = 4;

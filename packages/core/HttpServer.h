@@ -61,7 +61,6 @@ class HttpServer: public LuaObject
         static const int REQUEST_ID_LEN             = 128;
         static const int CONNECTION_TIMEOUT         = 5; // seconds
         static const int INITIAL_POLL_SIZE          = 16;
-        static const int IP_ADDR_STR_SIZE           = 64;
         static const int DEFAULT_MAX_CONNECTIONS    = 256;
         static const int STREAM_OVERHEAD_SIZE       = 128; // chunk size, record size, and line breaks
 

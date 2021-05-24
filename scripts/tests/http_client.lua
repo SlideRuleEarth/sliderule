@@ -25,7 +25,9 @@ server:attach(endpoint, "/source")
 client = core.http("127.0.0.1", 9081)
 
 print('\n------------------\nTest01: Stream\n------------------')
-client.request("")
+rsps = client:request("GET", "/source/version", "{}")
+print(rsps)
+
 --[[
 os.execute(string.format("curl -sS -X POST -d '%s' http://127.0.0.1:9081/source/example_engine_endpoint > %s", json_object, tmpfile))
 f = io.open(tmpfile)

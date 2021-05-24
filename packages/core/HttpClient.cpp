@@ -36,6 +36,8 @@
 #include <atomic>
 
 #include "HttpClient.h"
+#include "EndpointObject.h"
+#include "LuaEngine.h"
 #include "core.h"
 
 /******************************************************************************
@@ -134,69 +136,164 @@ void* HttpClient::requestThread(void* parm)
 {
     connection_t* connection = (connection_t*)parm;
 
-// GET / HTTP/1.1
-// Host: 
-// User-Agent: sliderule/x.y.z
-// Accept: */*
-// Content-Length:
+    /* Calculate Content Length */
+    int content_length = StringLib::size(connection->data, MAX_RQST_DATA_LEN);
+    if(content_length == MAX_RQST_DATA_LEN)
+    {
+        mlog(ERROR, "Http request data exceeds maximum allowed size: %d > %d\n", content_length, MAX_RQST_DATA_LEN);
+    }
+    else
+    {
+        /* Set Keep Alive Header */
+        const char* keep_alive_header = "";
+        if(connection->keep_alive) keep_alive_header = "Connection: keep-alive\r\n";
 
-    delete connection->outq;
+        /* Build Request Header */
+        SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n", 
+                            EndpointObject::verb2str(connection->verb), 
+                            connection->resource,
+                            connection->client->ipAddr,
+                            LIBID,
+                            keep_alive_header,
+                            content_length);
+        
+        /* Build Request */
+        int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
+        int rqst_len = content_length + hdr_len;
+        unsigned char* rqst = new unsigned char [rqst_len];
+        LocalLib::copy(rqst, rqst_hdr.getString(), hdr_len);
+        LocalLib::copy(&rqst[hdr_len], connection->data, content_length);
+
+        /* Establish Connection */
+        bool block = false; // only try to connect once
+        bool die_on_disconnect = false; // only used for non-blocking/threaded connections
+        TcpSocket sock(NULL, connection->client->getIpAddr(), connection->client->getPort(), false, &block, die_on_disconnect);
+
+        /* Issue Request */
+        int bytes_written = sock.writeBuffer(rqst, rqst_len);
+        if(bytes_written != rqst_len)
+        {
+            mlog(CRITICAL, "Http request failed to send request: act=%d, exp=%d\n", bytes_written, rqst_len);
+        }
+        else
+        {
+            /* Allocate Response Buffer */
+            unsigned char* rsps = new unsigned char [RSPS_READ_BUF_LEN];
+
+            /* Read Response */
+            int attempts = 0;
+            bool done = false;
+            while(!done)
+            {
+                int bytes_read = sock.readBuffer(rsps, RSPS_READ_BUF_LEN);
+                if(bytes_read > 0)
+                {
+                    int post_status = connection->outq->postCopy(rsps, bytes_read);
+                    if(post_status <= 0)
+                    {
+                        mlog(CRITICAL, "Failed to post response: %d\n", post_status);
+                        done = true;
+                    }
+                }
+                else if(bytes_read == TIMEOUT_RC)
+                {
+                    attempts++;
+                    if(attempts >= MAX_TIMEOUTS)
+                    {
+                        mlog(CRITICAL, "Maximum number of attempts to read response reached\n");
+                        done = true;
+                    }
+                }
+                else
+                {
+                    mlog(CRITICAL, "Failed to read socket for response: %d\n", bytes_read);
+                    done = true;
+                }
+            }
+
+            /* Clean Up Response Buffer */
+            delete [] rsps;
+        }
+
+        /* Clean Up Request Buffer */
+        delete [] rqst;
+    }
+
+    /* Clean Up Connection */
+    delete connection->outq;    
+    delete connection->data;
+    delete connection->resource;
 
     return NULL;
 }
 
-
 /*----------------------------------------------------------------------------
- * luaAttach - :request(<verb>, <data>, [<outq>])
+ * luaRequest - :request(<verb>, <resource>, <data>, [<outq>])
  *----------------------------------------------------------------------------*/
 int HttpClient::luaRequest (lua_State* L)
 {
-    bool status = false;
-
     try
     {
         /* Get Self */
         HttpClient* lua_obj = (HttpClient*)getLuaSelf(L, 1);
 
         /* Get Parameters */
-        const char* verb        = getLuaString(L, 2);
-        const char* data        = getLuaString(L, 3);
-        const char* outq_name   = getLuaString(L, 4, true, NULL);
+        const char* verb_str    = getLuaString(L, 2);
+        const char* resource    = getLuaString(L, 3);
+        const char* data        = getLuaString(L, 4);
+        const char* outq_name   = getLuaString(L, 5, true, NULL);
+
+        /* Error Check Verb */
+        EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
+        if(verb == EndpointObject::UNRECOGNIZED)
+        {
+            throw RunTimeException("Invalid verb: %s", verb_str);
+        }
 
         /* Allocate Connection Structure */
         connection_t* connection = new connection_t;
 
-        /* Create Output Queue */
+        /* Initialize Connection */
+        connection->active = true;
+        connection->keep_alive = true;
+        connection->verb = verb;
+        connection->resource = StringLib::duplicate(resource);
+        connection->data = StringLib::duplicate(data);
         connection->outq = new Publisher(outq_name);
+        connection->client = lua_obj;
 
-        /* Check if Non-Blocking */
-        if(outq_name)
+        /* Check if Blocking */
+        Subscriber* inq = NULL;
+        if(outq_name == NULL)
         {
-            /* Start Connection Thread */
-            lua_obj->connMutex.lock();
-            {
-                connection->active = true;
-                connection->pid = new Thread(requestThread, connection);
-                lua_obj->connections.add(connection);
-            }
-            lua_obj->connMutex.unlock();
+            /* Create Subscriber */
+            inq = new Subscriber(*(connection->outq));
         }
-        else
+
+        /* Start Connection Thread */
+        lua_obj->connMutex.lock();
         {
-            /* Setup Subscriber and Make Request */
-            Subscriber inq(*(connection->outq));
-            requestThread((void*)connection);
+            connection->pid = new Thread(requestThread, connection);
+            lua_obj->connections.add(connection);
+        }
+        lua_obj->connMutex.unlock();
+
+        /* Check if Blocking */
+        if(outq_name == NULL)
+        {
+            bool status = false;
 
             /* Setup Response Variables */
             int total_response_length = 0;
             List<in_place_rsps_t> responses;
 
             /* Read Responses */
+            int attempts = 0;
             bool done = false;
             while(!done)
             {
                 Subscriber::msgRef_t ref;
-                int recv_status = inq.receiveRef(ref, SYS_TIMEOUT);
+                int recv_status = inq->receiveRef(ref, SYS_TIMEOUT);
                 if(recv_status > 0)
                 {
                     if(ref.size > 0)
@@ -205,23 +302,33 @@ int HttpClient::luaRequest (lua_State* L)
                         in_place_rsps_t rsps = {(const char*)ref.data, ref.size};
                         responses.add(rsps);
                     }
-                    else
+                    else // terminator
                     {
                         done = true;
+                        status = true;
                     }
 
                     /* Dereference Message */
-                    inq.dereference(ref);
+                    inq->dereference(ref);
+                }
+                else if(recv_status == TIMEOUT_RC)
+                {
+                    attempts++;
+                    if(attempts >= MAX_TIMEOUTS)
+                    {
+                        mlog(CRITICAL, "Maximum number of attempts to read queue reached\n");
+                        done = true;
+                    }
                 }
                 else
                 {
-                    /* Given that this code is executing after the requestThread function completes,
-                     * there is no valid reason to timeout or have any other error on the queue; the
-                     * queue should have the termination message which is the valid exit from this loop. */
                     mlog(CRITICAL, "Failed queue receive on %s with error %d", lua_obj->getName(), recv_status);
-                    done = false;
+                    done = true;
                 }
             }
+
+            /* Delete Subscriber */
+            if(inq) delete inq;
 
             /* Allocate and Build Response Array */
             char* response = new char [total_response_length + 1];
@@ -234,11 +341,14 @@ int HttpClient::luaRequest (lua_State* L)
             }
             response[index] = '\0';
         
-            /* Return String */
+            /* Return Respnonse String */
             lua_pushlstring(L, response, total_response_length + 1);
             delete [] response;
-            return returnLuaStatus(L, false, 2);
+            return returnLuaStatus(L, status, 2);
         }
+
+        /* Return */
+        return returnLuaStatus(L, true);
     }
     catch(const RunTimeException& e)
     {

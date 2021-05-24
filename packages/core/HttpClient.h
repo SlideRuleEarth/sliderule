@@ -42,7 +42,9 @@
 #include "OsApi.h"
 #include "List.h"
 #include "StringLib.h"
+#include "LuaEngine.h"
 #include "LuaObject.h"
+#include "EndpointObject.h"
 
 /******************************************************************************
  * HTTP SERVER CLASS
@@ -56,10 +58,9 @@ class HttpClient: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int REQUEST_MSG_BUF_LEN        = MAX_STR_SIZE;
-        static const int REQUEST_ID_LEN             = 128;
-        static const int CONNECTION_TIMEOUT         = 5; // seconds
-        static const int IP_ADDR_STR_SIZE           = 64;
+        static const int MAX_RQST_DATA_LEN  = 65536;
+        static const int RSPS_READ_BUF_LEN  = 65536;
+        static const int MAX_TIMEOUTS       = 5;
 
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
@@ -84,25 +85,14 @@ class HttpClient: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            int                         header_index;
-            bool                        header_complete;
-            bool                        header_sent;
-            bool                        response_complete;
-            Subscriber::msgRef_t        ref;
-            int                         ref_status;
-            int                         ref_index;
-            Subscriber*                 rspq;
-            uint8_t*                    stream_buf;
-            int                         stream_buf_index;
-            int                         stream_buf_size;
-            int                         stream_mem_size;
-        } state_t;
-
-        typedef struct {
             bool                        active;
+            bool                        keep_alive;
             Thread*                     pid;
+            EndpointObject::verb_t      verb;
+            const char*                 resource;
+            const char*                 data;
             Publisher*                  outq;
-            state_t                     state;
+            HttpClient*                 client;
         } connection_t;
 
         typedef struct {
