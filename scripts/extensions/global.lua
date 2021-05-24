@@ -9,9 +9,19 @@ local function eval (attribute, package)
     end
 end
 
+local function check (expression)
+    if type(expression) == "string" then
+        local f = assert(load("return " .. expression))
+        result = f() -- execute expression
+    else
+        result = expression
+    end
+    return result
+end
 
 local package = {
-    eval = eval
+    eval = eval,
+    check = check
 }
 
 return package
