@@ -33,39 +33,102 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "pistache.h"
 #include "core.h"
+#include "security.h"
+
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
-#define LUA_PISTACHE_LIBNAME    "pistache"
+#define LUA_SECURITY_LIBNAME  "security"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * pistache_open
- *----------------------------------------------------------------------------*/
-int pistache_open (lua_State *L)
+
+#include <string.h>
+
+int example1(const char* connect_str)
 {
-    static const struct luaL_Reg pistache_functions[] = {
-        {"client",      PistacheClient::luaCreate},
-        {"server",      PistacheServer::luaCreate},
-        {"messager",    ProgressMessager::luaCreate},
+    BIO *sbio = NULL, *out = NULL;
+   
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CONF_CTX* cctx = SSL_CONF_CTX_new();
+    SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_CLIENT);
+    SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+
+    do
+    {
+        if (!SSL_CONF_CTX_finish(cctx)) {
+            fprintf(stderr, "Finish error\n");
+            ERR_print_errors_fp(stderr);
+            break;
+        }
+
+        sbio = BIO_new_ssl_connect(ctx);
+
+        SSL *ssl = NULL;
+        BIO_get_ssl(sbio, &ssl);
+
+        if (!ssl) {
+            fprintf(stderr, "Can't locate SSL pointer\n");
+            break;
+        }
+
+        BIO_set_conn_hostname(sbio, connect_str);
+
+        out = BIO_new_fp(stdout, BIO_NOCLOSE);
+        if (BIO_do_connect(sbio) <= 0) {
+            fprintf(stderr, "Error connecting to server\n");
+            ERR_print_errors_fp(stderr);
+            break;
+        }
+
+        BIO_puts(sbio, "GET / HTTP/1.0\n\n");
+        char tmpbuf[1024];
+        for (;;) {
+            int len = BIO_read(sbio, tmpbuf, 1024);
+            if (len <= 0)
+                break;
+            BIO_write(out, tmpbuf, len);
+        }
+    } while(false);
+
+    SSL_CONF_CTX_free(cctx);
+    BIO_free_all(sbio);
+    BIO_free(out);
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * security_test
+ *----------------------------------------------------------------------------*/
+int security_test (lua_State* L)
+{
+    (void)L;
+
+    example1("www.google.com:443");
+
+  return 0;
+
+}
+
+/*----------------------------------------------------------------------------
+ * security_open
+ *----------------------------------------------------------------------------*/
+int security_open (lua_State* L)
+{
+    static const struct luaL_Reg security_functions[] = {
+        {"test",        security_test},
         {NULL,          NULL}
     };
 
     /* Set Library */
-    luaL_newlib(L, pistache_functions);
-
-    /* Set Globals */
-    LuaEngine::setAttrInt   (L, "GET",      PistacheServer::GET);
-    LuaEngine::setAttrInt   (L, "OPTIONS",  PistacheServer::OPTIONS);
-    LuaEngine::setAttrInt   (L, "POST",     PistacheServer::POST);
-    LuaEngine::setAttrInt   (L, "PUT",      PistacheServer::PUT);
+    luaL_newlib(L, security_functions);
 
     return 1;
 }
@@ -75,22 +138,21 @@ int pistache_open (lua_State *L)
  ******************************************************************************/
 
 extern "C" {
-void initpistache (void)
+void initsecurity (void)
 {
-    /* Initialize Libraries */
-    ProgressMessager::init();
+    /* Initialize Modules */
 
-    /* Install Pistache Package into Lua */
-    LuaEngine::extend(LUA_PISTACHE_LIBNAME, pistache_open);
+    /* Extend Lua */
+    LuaEngine::extend(LUA_SECURITY_LIBNAME, security_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_PISTACHE_LIBNAME, LIBID);
+    LuaEngine::indicate(LUA_SECURITY_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_PISTACHE_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_SECURITY_LIBNAME, LIBID);
 }
 
-void deinitpistache (void)
+void deinitsecurity (void)
 {
 }
 }

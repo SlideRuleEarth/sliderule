@@ -1,29 +1,25 @@
-## Install Pistache Library
+See https://github.com/pistacheio/pistache for the latest instructions on how to install.
 
-See https://github.com/oktal/pistache for the latest instructions on how to install.
-
-To download the latest available release, clone the repository over github.
-```bash
-$ git clone https://github.com/oktal/pistache.git
-```
-
-Then, init the submodules:
-```bash
-$ cd pistache
-$ git submodule update --init
-```
+## Dependencies
 
 Update system packages needed to build the code:
 ```bash
-$ sudo apt install libssl-dev
+$ sudo apt install libssl-dev meson
 ```
 
-Now, compile and install the library:
+## Install Pistache Library from Repository (Ubuntu Only)
+
 ```bash
-$ mkdir -p build
-$ cd build
-$ cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DPISTACHE_USE_SSL=true ..
-$ make
-$ sudo make install
-$ sudo ldconfig
+$ sudo add-apt-repository ppa:pistache+team/unstable
+$ sudo apt update
+$ sudo apt install libpistache-dev
+```
+
+## Install Pistache Library from Source
+
+```bash
+$ git clone https://github.com/pistacheio/pistache.git
+$ cd pistache
+$ meson setup build
+$ meson install -C build
 ```

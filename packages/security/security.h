@@ -29,82 +29,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/******************************************************************************
- INCLUDES
- ******************************************************************************/
-
-#include "core.h"
-
-#ifdef __aws__
-#include "aws.h"
-#endif
-
-#ifdef __ccsds__
-#include "ccsds.h"
-#endif
-
-#ifdef __h5__
-#include "h5.h"
-#endif
-
-#ifdef __legacy__
-#include "legacy.h"
-#endif
-
-#ifdef __security__
-#include "security.h"
-#endif
-
-#include <pybind11/pybind11.h>
-#include "pyH5Coro.h"
+#ifndef __securitypkg__
+#define __securitypkg__
 
 /******************************************************************************
- * Namespaces
+ * INCLUDES
  ******************************************************************************/
 
-namespace py = pybind11;
 
 /******************************************************************************
- * Bindings
+ * PROTOTYPES
  ******************************************************************************/
 
-PYBIND11_MODULE(sliderule, m) 
-{
-    initcore();
-    
-    #ifdef __aws__
-        initaws();
-    #endif
-
-    #ifdef __ccsds__
-        initccsds();
-    #endif
-
-    #ifdef __h5__
-        inith5();
-    #endif
-
-    #ifdef __legacy__
-        initlegacy();
-    #endif
-
-    #ifdef __security__
-        initsecurity();
-    #endif
-
-    m.doc() = "Python bindings for SlideRule on-demand data processing framework";
-
-    py::class_<pyH5Coro>(m, "h5coro")
-        
-        .def(py::init<const std::string &>())
-        
-        .def("read", &pyH5Coro::read, "reads dataset from file", 
-            py::arg("dataset"), 
-            py::arg("col") = 0, 
-            py::arg("startrow") = 0, 
-            py::arg("numrows") = -1)
-
-        .def("readp", &pyH5Coro::readp, "parallel read of datasets from file");
-
-    m.attr("all") = (long)-1;
+extern "C" {
+void initsecurity (void);
+void deinitsecurity (void);
 }
+
+#endif  /* __securitypkg__ */
+
+

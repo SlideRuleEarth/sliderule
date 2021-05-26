@@ -55,6 +55,10 @@
 #include "legacy.h"
 #endif
 
+#ifdef __security__
+#include "security.h"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
@@ -279,6 +283,10 @@ int main (int argc, char* argv[])
         initlegacy();
     #endif
 
+    #ifdef __security__
+        initsecurity();
+    #endif
+
     /* Load Plug-ins */
     ldplugins();
 
@@ -309,6 +317,10 @@ int main (int argc, char* argv[])
     delete [] lua_argv;
 
     /* Full Clean Up */
+    #ifdef __security__
+        deinitsecurity();
+    #endif
+
     #ifdef __legacy__
         deinitlegacy();
     #endif

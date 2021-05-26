@@ -36,13 +36,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "pistache.h"
-
 #include <pistache/http.h>
 #include <pistache/router.h>
 #include <pistache/description.h>
 #include <pistache/endpoint.h>
+
+#include "core.h"
 
 using namespace Pistache;
 

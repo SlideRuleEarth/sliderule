@@ -38,6 +38,7 @@ option (SHARED_LIBRARY "Create shared library instead of sliderule binary" OFF)
 
 # Library Options #
 
+option (ENABLE_COMPAT "Use C++11 for compatibility with older compilers" OFF)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
@@ -51,6 +52,7 @@ option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
 option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
+option (USE_SECURITY_PACKAGE "Include the Security package" OFF)
 
 # Platform Options #
 
@@ -73,6 +75,14 @@ endif()
 # Version Information #
 
 file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
+
+# C++ Version #
+
+if(${ENABLE_COMPAT})
+    set(CXX_VERSION 11)
+else()
+    set(CXX_VERSION 17) # required if using pistache package
+endif()
 
 # Platform #
 
@@ -109,7 +119,7 @@ endif()
 set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
-set_target_properties (slideruleLib PROPERTIES CXX_STANDARD 11)
+set_target_properties (slideruleLib PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Compile Definitions #
 
@@ -186,6 +196,10 @@ if(${USE_LEGACY_PACKAGE})
     add_subdirectory (packages/legacy)
 endif()
 
+if(${USE_SECURITY_PACKAGE})
+    add_subdirectory (packages/security)
+endif()
+
 # Scripts #
 
 add_subdirectory (scripts)
@@ -204,7 +218,7 @@ if(${PYTHON_BINDINGS})
     target_include_directories (sliderule PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)
     target_link_libraries (sliderule PUBLIC slideruleLib)
     set_target_properties (sliderule PROPERTIES PREFIX "")
-    set_target_properties (sliderule PROPERTIES CXX_STANDARD 11)
+    set_target_properties (sliderule PROPERTIES CXX_STANDARD ${CXX_VERSION})
     install (TARGETS sliderule DESTINATION ${INSTALLDIR}/lib)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
@@ -214,7 +228,7 @@ elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
     set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
     set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
-    set_target_properties (sliderule PROPERTIES CXX_STANDARD 11)
+    set_target_properties (sliderule PROPERTIES CXX_STANDARD ${CXX_VERSION})
     target_link_libraries (sliderule PUBLIC slideruleLib)
     install (TARGETS sliderule DESTINATION ${INSTALLDIR}/bin)
 
