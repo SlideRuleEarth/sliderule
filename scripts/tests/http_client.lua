@@ -1,7 +1,23 @@
 local runner = require("test_executive")
 local console = require("console")
+local json = require("json")
 
--- Setup --
+-- Unit Test --
+
+server = core.httpd(9081)
+endpoint = core.endpoint()
+server:attach(endpoint, "/source")
+
+client = core.http("127.0.0.1", 9081)
+
+print('\n------------------\nTest01: Return\n------------------')
+
+rsps = client:request("GET", "/source/version", "{}")
+print(rsps)
+rsps_table = json.decode(rsps)
+runner.check(rsps_table["server"]["packages"][1] == "core")
+
+print('\n------------------\nTest02: Return\n------------------')
 
 json_object = '{ \
     \"var1\": false, \
@@ -14,43 +30,10 @@ json_object = '{ \
     } \
 }'
 
-tmpfile = os.tmpname()
-
--- Unit Test --
-
-server = core.httpd(9081)
-endpoint = core.endpoint()
-server:attach(endpoint, "/source")
-
-client = core.http("127.0.0.1", 9081)
-
-print('\n------------------\nTest01: Stream\n------------------')
-rsps = client:request("GET", "/source/version", "{}")
-print("|----------|")
+rsps = client:request("GET", "/source/example_source_endpoint", json_object)
 print(rsps)
-print("|----------|")
-
---[[
-os.execute(string.format("curl -sS -X POST -d '%s' http://127.0.0.1:9081/source/example_engine_endpoint > %s", json_object, tmpfile))
-f = io.open(tmpfile)
-f:read(4)
-result1 = f:read()
-f:read(4)
-result2 = f:read()
-f:read(4)
-result3 = f:read()
-f:close()
-runner.check(result1 == "FILE")
-runner.check(result2 == "P01_01.dat")
-runner.check(result3 == "CCSDS")
-
-print('\n------------------\nTest02: Return\n------------------')
-os.execute(string.format("curl -sS -X GET -d '%s' http://127.0.0.1:9081/source/example_source_endpoint > %s", json_object, tmpfile))
-f = io.open(tmpfile)
-result = f:read()
-f:close()
-runner.check(result == "{ \"result\": \"Hello World\" }")
---]]
+rsps_table = json.decode(rsps)
+runner.check(rsps_table["result"] == "Hello World")
 
 -- Clean Up --
 

@@ -178,22 +178,108 @@ void* HttpClient::requestThread(void* parm)
         else
         {
             /* Allocate Response Buffer */
-            unsigned char* rsps = new unsigned char [RSPS_READ_BUF_LEN];
+            char* rsps = new char [RSPS_READ_BUF_LEN];
+
+            /* Initialize Parsing Variables */
+            SafeString rsps_header;
+//            char response_code_buf[MAX_DIGITS];
+//            char content_length_buf[MAX_DIGITS];
+//            const char* content_length_label = "Content-Length: ";
+            bool header_complete = false;
 
             /* Read Response */
             int attempts = 0;
             bool done = false;
             while(!done)
             {
-                int bytes_read = sock.readBuffer(rsps, RSPS_READ_BUF_LEN);
+                unsigned char* rsps_data = NULL;
+                int rsps_size = 0;
+
+                int bytes_read = sock.readBuffer(rsps, RSPS_READ_BUF_LEN - 1);
                 if(bytes_read > 0)
                 {
-                    int post_status = connection->outq->postCopy(rsps, bytes_read);
-                    if(post_status <= 0)
+                    if(!header_complete)
                     {
-                        mlog(CRITICAL, "Failed to post response: %d\n", post_status);
-                        done = true;
+                        int index = 0;
+
+                        /* Check for Partial Delimeter */
+                        bool possible_partial_delim = false;
+                        while(rsps[index] == '\r' || rsps[index] == '\n')
+                        {
+                            possible_partial_delim = true;
+                            rsps_header.appendChar(rsps[index]);
+                            index++;
+                        }
+
+                        /* Check for Header Complete when Partial Delimeter Read */
+                        int possible_header_len = rsps_header.getLength();
+                        if(possible_partial_delim && possible_header_len > 4)
+                        {
+                            if( (rsps_header[possible_header_len - 5] == '\r') && 
+                                (rsps_header[possible_header_len - 4] == '\n') && 
+                                (rsps_header[possible_header_len - 3] == '\r') && 
+                                (rsps_header[possible_header_len - 2] == '\n') )
+                            {
+                                header_complete = true;
+                                rsps_data = (unsigned char*)&rsps[index];
+                                rsps_size = bytes_read - index;
+                            }
+                        }
+
+                        /* If Header still not Complete */
+                        if(!header_complete)
+                        {
+                            /* Look for Delimeter */
+                            while(index < (bytes_read - 4))
+                            {
+                                if((rsps[index + 0] == '\r') &&
+                                   (rsps[index + 1] == '\n') &&
+                                   (rsps[index + 2] == '\r') &&
+                                   (rsps[index + 3] == '\n') )
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    index++;
+                                }
+                            }
+
+                            /* Check if Header Complete */
+                            if(rsps[index] == '\r')
+                            {
+                                header_complete = true;
+                                rsps[index] = '\0';
+                                index += 4; // move past delimeter
+                                rsps_data = (unsigned char*)&rsps[index];
+                                rsps_size = bytes_read - index;
+                            }
+
+                            /* Append Bytes Read to Response Header */
+                            rsps_header += rsps;
+                        }
                     }
+                    else
+                    {
+                        /* Pass Through Everything Read */
+                        rsps_data = (unsigned char*)rsps;
+                        rsps_size = bytes_read;
+                    }
+
+                    /* Post Contents */
+                    if(rsps_size > 0)
+                    {
+                        int post_status = connection->outq->postCopy(rsps_data, rsps_size);
+                        if(post_status <= 0)
+                        {
+                            mlog(CRITICAL, "Failed to post response: %d\n", post_status);
+                            done = true;
+                        }
+                    }
+                }
+                else if(bytes_read == SHUTDOWN_RC)
+                {
+                    done = true;
                 }
                 else if(bytes_read == TIMEOUT_RC)
                 {
@@ -217,6 +303,13 @@ void* HttpClient::requestThread(void* parm)
 
         /* Clean Up Request Buffer */
         delete [] rqst;
+    }
+
+    /* Post Terminator */
+    int term_status = connection->outq->postCopy("", 0);
+    if(term_status < 0)
+    {
+        mlog(CRITICAL, "Failed to post terminator in http client: %d\n", term_status);
     }
 
     /* Clean Up Connection */

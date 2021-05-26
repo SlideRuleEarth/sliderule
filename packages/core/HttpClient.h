@@ -61,6 +61,7 @@ class HttpClient: public LuaObject
         static const int MAX_RQST_DATA_LEN  = 65536;
         static const int RSPS_READ_BUF_LEN  = 65536;
         static const int MAX_TIMEOUTS       = 5;
+        static const int MAX_DIGITS         = 10;
 
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
