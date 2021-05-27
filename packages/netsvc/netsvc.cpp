@@ -44,7 +44,7 @@
 #define LUA_SECURITY_LIBNAME  "netsvc"
 
 /******************************************************************************
- * LOCAL FUNCTIONS
+ * TYPEDEFS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -54,6 +54,10 @@ typedef struct {
     char* data;
     size_t size;
 } netsvc_rsps_t;
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * netsvc_write_data
@@ -74,9 +78,9 @@ size_t netsvc_write_data(void *buffer, size_t size, size_t nmemb, void *userp)
     return rsps.size;
 }
 /*----------------------------------------------------------------------------
- * netsvc_test
+ * netsvc_get
  *----------------------------------------------------------------------------*/
-int netsvc_test (lua_State* L)
+int netsvc_get (lua_State* L)
 {
     bool status = false;
     List<netsvc_rsps_t> rsps_set;
@@ -93,6 +97,9 @@ int netsvc_test (lua_State* L)
         curl_easy_setopt(curl, CURLOPT_URL, hostname);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, netsvc_write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set); 
+        curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
+        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies"); 
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies"); 
 
         /*
          * If you want to connect to a site who isn't using a certificate that is
@@ -176,7 +183,7 @@ int netsvc_test (lua_State* L)
 int netsvc_open (lua_State* L)
 {
     static const struct luaL_Reg netsvc_functions[] = {
-        {"test",        netsvc_test},
+        {"get",         netsvc_get},
         {NULL,          NULL}
     };
 
@@ -195,8 +202,6 @@ void initnetsvc (void)
 {
     /* Initialize cURL */
     curl_global_init(CURL_GLOBAL_DEFAULT);
-
-    /* Initialize Modules */
 
     /* Extend Lua */
     LuaEngine::extend(LUA_SECURITY_LIBNAME, netsvc_open);
