@@ -45,6 +45,8 @@
 const char* Monitor::LuaMetaName = "Monitor";
 const struct luaL_Reg Monitor::LuaMetaTable[] = {
     {"config",      luaConfig},
+    {"tail",        luaTail},
+    {"cat",         luaCat},
     {NULL,          NULL}
 };
 
@@ -86,9 +88,12 @@ Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t 
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     /* Initialize Event Monitor */
-    eventTypeMask = type_mask;
-    eventLevel = level;
-    outputFormat = format;
+    eventTypeMask   = type_mask;
+    eventLevel      = level;
+    outputFormat    = format;
+    eventTailArray  = NULL;
+    eventTailSize   = 0;
+    eventTailIndex  = 0;
 
     /* Initialize Output Q */
     if(outq_name)   outQ = new Publisher(outq_name);
@@ -101,6 +106,7 @@ Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t 
 Monitor::~Monitor(void)
 {
     if(outQ) delete outQ;
+    if(eventTailArray) delete [] eventTailArray;
 }
 
 /*----------------------------------------------------------------------------
@@ -154,6 +160,13 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
         /* Post Event */
         if(outQ) outQ->postCopy(event_buffer, event_size, IO_CHECK);
         else     fwrite(event_buffer, 1, event_size, stdout);
+
+        /* (Optionally) Tail Event */
+        if(eventTailArray)
+        {
+            LocalLib::copy(&eventTailArray[eventTailIndex * MAX_EVENT_SIZE], event_buffer, event_size);
+            eventTailIndex = (eventTailIndex + 1) % eventTailSize;
+        }
     }
 
     /* Return Success */
@@ -258,6 +271,141 @@ int Monitor::luaConfig (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(CRITICAL, "Error configuring monitor: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_ret);
+}
+
+/*----------------------------------------------------------------------------
+ * luaTail - :tail(<size>)
+ * 
+ *  Note: NOT thread safe; must be called prior to attaching monitor to dispatch
+ *----------------------------------------------------------------------------*/
+int Monitor::luaTail (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+
+        /* Get Tail Size */
+        int tail_size = getLuaInteger(L, 2);
+        if(tail_size <= 0 || tail_size > MAX_TAIL_SIZE)
+        {
+            throw RunTimeException("Invalid tail size: %d", tail_size);
+        }
+
+        /* Check if Tail Exists */
+        if(lua_obj->eventTailArray)
+        {
+            throw RunTimeException("Event tail already exists");
+        }
+
+        /* Create Event Tail */
+        char* event_tail = new char [tail_size * MAX_EVENT_SIZE];
+        LocalLib::set(event_tail, 0, tail_size * MAX_EVENT_SIZE);
+        lua_obj->eventTailArray = event_tail;
+        lua_obj->eventTailSize = tail_size;
+
+        /* Set return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Error creating tail: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaCat - :cat(<mode>)
+ *----------------------------------------------------------------------------*/
+int Monitor::luaCat (lua_State* L)
+{
+    bool status = false;
+    Publisher* outq = NULL;
+    int num_ret = 1;
+
+    try
+    {
+        /* Get Self */
+        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+
+        /* Get Mode */
+        cat_mode_t mode = (cat_mode_t)getLuaInteger(L, 2, true, TERM);
+
+        /* Check if Tail Exists */
+        if(!lua_obj->eventTailArray)
+        {
+            throw RunTimeException("Event tail does not exists");
+        }
+
+        /* Setup Cat */
+        if(mode == TERM)
+        {
+            // do nothing
+        }
+        else if(mode == LOCAL)
+        {
+            lua_newtable(L);
+            num_ret = 2;
+        }
+        else if(mode == MSGQ)
+        {
+            const char* outq_name = getLuaString(L, 3);
+            outq = new Publisher(outq_name);
+        }
+
+        /* Cat Event Messages */
+        int start = lua_obj->eventTailIndex;
+        for(int i = 0; i < lua_obj->eventTailSize; i++)
+        {
+            int index = (start + i) % lua_obj->eventTailSize;
+            const char* event_msg = (const char*)&lua_obj->eventTailArray[index * MAX_EVENT_SIZE];
+            if(event_msg[0] != '\0')
+            {
+                if(mode == TERM)
+                {
+                    print2term("%s", event_msg);
+                }
+                else if(mode == LOCAL)
+                {
+                    lua_pushstring(L, event_msg);
+                    lua_rawseti(L, -2, i+1);
+                }
+                else if(mode == MSGQ)
+                {
+                    int msg_size = StringLib::size(event_msg, MAX_EVENT_SIZE - 1) + 1;
+                    outq->postCopy(event_msg, msg_size, IO_CHECK);
+                }
+            }
+        }
+
+        /* Cleanup Cat */
+        if(mode == TERM)
+        {
+            // do nothing
+        }
+        else if(mode == LOCAL)
+        {
+            // do nothing
+        }
+        else if(mode == MSGQ)
+        {
+            delete outq;
+        }
+
+        /* Set return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Error concatenating tail: %s", e.what());
     }
 
     /* Return Status */

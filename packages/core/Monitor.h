@@ -68,6 +68,12 @@ class Monitor: public DispatchObject
             RECORD
         } format_t;
 
+        typedef enum {
+            TERM = 0,
+            LOCAL = 1,
+            MSGQ = 2
+        } cat_mode_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -81,6 +87,7 @@ class Monitor: public DispatchObject
          *--------------------------------------------------------------------*/
 
         static const int MAX_EVENT_SIZE = 512;
+        static const int MAX_TAIL_SIZE = 65536;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -96,6 +103,8 @@ class Monitor: public DispatchObject
         int         cloudOutput     (EventLib::event_t* event, char* event_buffer);
 
         static int  luaConfig       (lua_State* L);
+        static int  luaTail         (lua_State* L);
+        static int  luaCat          (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -105,6 +114,9 @@ class Monitor: public DispatchObject
         event_level_t   eventLevel;
         format_t        outputFormat;
         Publisher*      outQ;
+        char*           eventTailArray; // [][MAX_EVENT_SIZE]
+        int             eventTailSize;
+        int             eventTailIndex;
 };
 
 #endif  /* __monitor__ */
