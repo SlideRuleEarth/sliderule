@@ -64,7 +64,7 @@ size_t netsvc_write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 
     netsvc_rsps_t rsps;
     rsps.size = size * nmemb;
-    rsps.data = new char [rsps.size];
+    rsps.data = new char [rsps.size + 1];
 
     LocalLib::copy(rsps.data, buffer, rsps.size);
     rsps.data[rsps.size] = '\0';
@@ -78,12 +78,13 @@ size_t netsvc_write_data(void *buffer, size_t size, size_t nmemb, void *userp)
  *----------------------------------------------------------------------------*/
 int netsvc_test (lua_State* L)
 {
+    bool status = false;
+    List<netsvc_rsps_t> rsps_set;
+
     /* Get Parameters */
     const char* hostname        = LuaObject::getLuaString(L, 1);
     bool        verify_peer     = LuaObject::getLuaBoolean(L, 2, true, true);
     bool        verify_hostname = LuaObject::getLuaBoolean(L, 3, true, true);
-
-    List<netsvc_rsps_t> rsps_set;
 
     /* Initialize cURL */
     CURL* curl = curl_easy_init();
@@ -125,18 +126,48 @@ int netsvc_test (lua_State* L)
         /* Check for errors */
         if(res != CURLE_OK)
         {
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            mlog(CRITICAL, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
         }
         else
         {
-            fprintf(stdout, "cURL test successfull - %d responses\n", rsps_set.length());
+            mlog(CRITICAL, "cURL test successfull - %d responses\n", rsps_set.length());
+            status = true;
         }
-   
+
+        /* Get Total Response Size */
+        int total_rsps_size = 0;
+        for(int i = 0; i < rsps_set.length(); i++)
+        {
+            total_rsps_size += rsps_set[i].size;
+        }
+
+        /* Allocate and Populate Total Response */
+        int total_rsps_index = 0;
+        char* total_rsps = new char [total_rsps_size + 1];
+        for(int i = 0; i < rsps_set.length(); i++)
+        {
+            LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
+            total_rsps_index += rsps_set[i].size;
+            delete [] rsps_set[i].data;
+        }
+        total_rsps[total_rsps_index] = '\0';
+
+        /* Return Response String */
+        lua_pushlstring(L, total_rsps, total_rsps_index);
+        delete [] total_rsps;
+
         /* Always Cleanup */
         curl_easy_cleanup(curl);
     }
+    else
+    {
+        /* Return NIL in place of Response String */
+        lua_pushnil(L);
+    }
     
-    return 0;
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 2;
 }
 
 /*----------------------------------------------------------------------------
