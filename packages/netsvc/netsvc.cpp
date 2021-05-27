@@ -98,8 +98,9 @@ int netsvc_get (lua_State* L)
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, netsvc_write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set); 
         curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
-        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies"); 
-        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies"); 
+        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
         /*
          * If you want to connect to a site who isn't using a certificate that is
