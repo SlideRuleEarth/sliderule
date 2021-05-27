@@ -63,8 +63,8 @@ int HttpClient::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        const char* ip_addr         = getLuaString(L, 1, true, NULL);
-        int         port            = (int)getLuaInteger(L, 2);
+        const char* ip_addr = getLuaString(L, 1, true, NULL);
+        int         port    = (int)getLuaInteger(L, 2);
 
         /* Get Server Parameter */
         if( ip_addr && (StringLib::match(ip_addr, "0.0.0.0") || StringLib::match(ip_addr, "*")) )

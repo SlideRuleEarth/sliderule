@@ -48,44 +48,79 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * netsvc_rsps_t
+ *----------------------------------------------------------------------------*/
+typedef struct {
+    char* data;
+    size_t size;
+} netsvc_rsps_t;
+
+/*----------------------------------------------------------------------------
+ * netsvc_write_data
+ *----------------------------------------------------------------------------*/
+size_t netsvc_write_data(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    List<netsvc_rsps_t>* rsps_set = (List<netsvc_rsps_t>*)userp;
+
+    netsvc_rsps_t rsps;
+    rsps.size = size * nmemb;
+    rsps.data = new char [rsps.size];
+
+    LocalLib::copy(rsps.data, buffer, rsps.size);
+    rsps.data[rsps.size] = '\0';
+
+    rsps_set->add(rsps);
+ 
+    return rsps.size;
+}
+/*----------------------------------------------------------------------------
  * netsvc_test
  *----------------------------------------------------------------------------*/
 int netsvc_test (lua_State* L)
 {
-    (void)L;
-    CURL *curl;
-    CURLcode res;
- 
-    curl = curl_easy_init();
+    /* Get Parameters */
+    const char* hostname        = LuaObject::getLuaString(L, 1);
+    bool        verify_peer     = LuaObject::getLuaBoolean(L, 2, true, true);
+    bool        verify_hostname = LuaObject::getLuaBoolean(L, 3, true, true);
+
+    List<netsvc_rsps_t> rsps_set;
+
+    /* Initialize cURL */
+    CURL* curl = curl_easy_init();
     if(curl) 
     {
-        curl_easy_setopt(curl, CURLOPT_URL, "https://www.google.com/");
-        #ifdef SKIP_PEER_VERIFICATION
-            /*
-            * If you want to connect to a site who isn't using a certificate that is
-            * signed by one of the certs in the CA bundle you have, you can skip the
-            * verification of the server's certificate. This makes the connection
-            * A LOT LESS SECURE.
-            *
-            * If you have a CA cert for the server stored someplace else than in the
-            * default bundle, then the CURLOPT_CAPATH option might come handy for
-            * you.
-            */
+        curl_easy_setopt(curl, CURLOPT_URL, hostname);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, netsvc_write_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set); 
+
+        /*
+         * If you want to connect to a site who isn't using a certificate that is
+         * signed by one of the certs in the CA bundle you have, you can skip the
+         * verification of the server's certificate. This makes the connection
+         * A LOT LESS SECURE.
+         *
+         * If you have a CA cert for the server stored someplace else than in the
+         * default bundle, then the CURLOPT_CAPATH option might come handy for
+         * you.
+         */
+        if(verify_peer)
+        {
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        #endif
-        
-        #ifdef SKIP_HOSTNAME_VERIFICATION
-            /*
-            * If the site you're connecting to uses a different host name that what
-            * they have mentioned in their server certificate's commonName (or
-            * subjectAltName) fields, libcurl will refuse to connect. You can skip
-            * this check, but this will make the connection less secure.
-            */
+        }
+
+        /*
+         * If the site you're connecting to uses a different host name that what
+         * they have mentioned in their server certificate's commonName (or
+         * subjectAltName) fields, libcurl will refuse to connect. You can skip
+         * this check, but this will make the connection less secure.
+         */
+        if(verify_hostname)
+        {
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        #endif
+        }
         
         /* Perform the request, res will get the return code */
-        res = curl_easy_perform(curl);
+        CURLcode res = curl_easy_perform(curl);
 
         /* Check for errors */
         if(res != CURLE_OK)
@@ -94,7 +129,7 @@ int netsvc_test (lua_State* L)
         }
         else
         {
-            fprintf(stdout, "cURL test successfull\n");
+            fprintf(stdout, "cURL test successfull - %d responses\n", rsps_set.length());
         }
    
         /* Always Cleanup */
