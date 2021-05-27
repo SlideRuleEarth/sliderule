@@ -34,101 +34,88 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "security.h"
-
-#include <openssl/err.h>
-#include <openssl/ssl.h>
+#include "netsvc.h"
+#include <curl/curl.h>
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
-#define LUA_SECURITY_LIBNAME  "security"
+#define LUA_SECURITY_LIBNAME  "netsvc"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
-
-#include <string.h>
-
-int example1(const char* connect_str)
+/*----------------------------------------------------------------------------
+ * netsvc_test
+ *----------------------------------------------------------------------------*/
+int netsvc_test (lua_State* L)
 {
-    BIO *sbio = NULL, *out = NULL;
-   
-    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL_CONF_CTX* cctx = SSL_CONF_CTX_new();
-    SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_CLIENT);
-    SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
-
-    do
+    (void)L;
+    CURL *curl;
+    CURLcode res;
+ 
+    curl = curl_easy_init();
+    if(curl) 
     {
-        if (!SSL_CONF_CTX_finish(cctx)) {
-            fprintf(stderr, "Finish error\n");
-            ERR_print_errors_fp(stderr);
-            break;
+        curl_easy_setopt(curl, CURLOPT_URL, "https://www.google.com/");
+        #ifdef SKIP_PEER_VERIFICATION
+            /*
+            * If you want to connect to a site who isn't using a certificate that is
+            * signed by one of the certs in the CA bundle you have, you can skip the
+            * verification of the server's certificate. This makes the connection
+            * A LOT LESS SECURE.
+            *
+            * If you have a CA cert for the server stored someplace else than in the
+            * default bundle, then the CURLOPT_CAPATH option might come handy for
+            * you.
+            */
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        #endif
+        
+        #ifdef SKIP_HOSTNAME_VERIFICATION
+            /*
+            * If the site you're connecting to uses a different host name that what
+            * they have mentioned in their server certificate's commonName (or
+            * subjectAltName) fields, libcurl will refuse to connect. You can skip
+            * this check, but this will make the connection less secure.
+            */
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        #endif
+        
+        /* Perform the request, res will get the return code */
+        res = curl_easy_perform(curl);
+
+        /* Check for errors */
+        if(res != CURLE_OK)
+        {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
         }
-
-        sbio = BIO_new_ssl_connect(ctx);
-
-        SSL *ssl = NULL;
-        BIO_get_ssl(sbio, &ssl);
-
-        if (!ssl) {
-            fprintf(stderr, "Can't locate SSL pointer\n");
-            break;
+        else
+        {
+            fprintf(stdout, "cURL test successfull\n");
         }
-
-        BIO_set_conn_hostname(sbio, connect_str);
-
-        out = BIO_new_fp(stdout, BIO_NOCLOSE);
-        if (BIO_do_connect(sbio) <= 0) {
-            fprintf(stderr, "Error connecting to server\n");
-            ERR_print_errors_fp(stderr);
-            break;
-        }
-
-        BIO_puts(sbio, "GET / HTTP/1.0\n\n");
-        char tmpbuf[1024];
-        for (;;) {
-            int len = BIO_read(sbio, tmpbuf, 1024);
-            if (len <= 0)
-                break;
-            BIO_write(out, tmpbuf, len);
-        }
-    } while(false);
-
-    SSL_CONF_CTX_free(cctx);
-    BIO_free_all(sbio);
-    BIO_free(out);
+   
+        /* Always Cleanup */
+        curl_easy_cleanup(curl);
+    }
+    
     return 0;
 }
 
 /*----------------------------------------------------------------------------
- * security_test
+ * netsvc_open
  *----------------------------------------------------------------------------*/
-int security_test (lua_State* L)
+int netsvc_open (lua_State* L)
 {
-    (void)L;
-
-    example1("www.google.com:443");
-
-  return 0;
-
-}
-
-/*----------------------------------------------------------------------------
- * security_open
- *----------------------------------------------------------------------------*/
-int security_open (lua_State* L)
-{
-    static const struct luaL_Reg security_functions[] = {
-        {"test",        security_test},
+    static const struct luaL_Reg netsvc_functions[] = {
+        {"test",        netsvc_test},
         {NULL,          NULL}
     };
 
     /* Set Library */
-    luaL_newlib(L, security_functions);
+    luaL_newlib(L, netsvc_functions);
 
     return 1;
 }
@@ -138,12 +125,15 @@ int security_open (lua_State* L)
  ******************************************************************************/
 
 extern "C" {
-void initsecurity (void)
+void initnetsvc (void)
 {
+    /* Initialize cURL */
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+
     /* Initialize Modules */
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_SECURITY_LIBNAME, security_open);
+    LuaEngine::extend(LUA_SECURITY_LIBNAME, netsvc_open);
 
     /* Indicate Presence of Package */
     LuaEngine::indicate(LUA_SECURITY_LIBNAME, LIBID);
@@ -152,7 +142,8 @@ void initsecurity (void)
     print2term("%s package initialized (%s)\n", LUA_SECURITY_LIBNAME, LIBID);
 }
 
-void deinitsecurity (void)
+void deinitnetsvc (void)
 {
+    curl_global_cleanup(); 
 }
 }

@@ -52,7 +52,7 @@ option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
 option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
-option (USE_SECURITY_PACKAGE "Include the Security package" OFF)
+option (USE_NETSVC_PACKAGE "Include the Network Services package" OFF)
 
 # Platform Options #
 
@@ -196,8 +196,8 @@ if(${USE_LEGACY_PACKAGE})
     add_subdirectory (packages/legacy)
 endif()
 
-if(${USE_SECURITY_PACKAGE})
-    add_subdirectory (packages/security)
+if(${USE_NETSVC_PACKAGE})
+    add_subdirectory (packages/netsvc)
 endif()
 
 # Scripts #

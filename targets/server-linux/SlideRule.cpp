@@ -55,8 +55,8 @@
 #include "legacy.h"
 #endif
 
-#ifdef __security__
-#include "security.h"
+#ifdef __netsvc__
+#include "netsvc.h"
 #endif
 
 #include <stdlib.h>
@@ -283,8 +283,8 @@ int main (int argc, char* argv[])
         initlegacy();
     #endif
 
-    #ifdef __security__
-        initsecurity();
+    #ifdef __netsvc__
+        initnetsvc();
     #endif
 
     /* Load Plug-ins */
@@ -317,8 +317,8 @@ int main (int argc, char* argv[])
     delete [] lua_argv;
 
     /* Full Clean Up */
-    #ifdef __security__
-        deinitsecurity();
+    #ifdef __netsvc__
+        deinitnetsvc();
     #endif
 
     #ifdef __legacy__

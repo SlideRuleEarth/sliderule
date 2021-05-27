@@ -51,8 +51,8 @@
 #include "legacy.h"
 #endif
 
-#ifdef __security__
-#include "security.h"
+#ifdef __netsvc__
+#include "netsvc.h"
 #endif
 
 #include <pybind11/pybind11.h>
@@ -88,8 +88,8 @@ PYBIND11_MODULE(sliderule, m)
         initlegacy();
     #endif
 
-    #ifdef __security__
-        initsecurity();
+    #ifdef __netsvc__
+        initnetsvc();
     #endif
 
     m.doc() = "Python bindings for SlideRule on-demand data processing framework";

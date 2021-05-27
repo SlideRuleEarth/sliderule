@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __securitypkg__
-#define __securitypkg__
+#ifndef __netsvcpkg__
+#define __netsvcpkg__
 
 /******************************************************************************
  * INCLUDES
@@ -42,10 +42,10 @@
  ******************************************************************************/
 
 extern "C" {
-void initsecurity (void);
-void deinitsecurity (void);
+void initnetsvc (void);
+void deinitnetsvc (void);
 }
 
-#endif  /* __securitypkg__ */
+#endif  /* __netsvcpkg__ */
 
 
