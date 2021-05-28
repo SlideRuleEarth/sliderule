@@ -29,39 +29,30 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __runtime_exception__
+#define __runtime_exception__
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-
-#include <stdarg.h>
+#include <stdexcept>
 
 /******************************************************************************
- * PUBLIC METHODS
+ * EXCEPTION
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-RunTimeException::RunTimeException(const char* _errmsg, ...):
-    std::runtime_error("RunTimeException")
+class RunTimeException : public std::runtime_error
 {
-    errmsg[0] = '\0';
+   public:
 
-    va_list args;
-    va_start(args, _errmsg);
-    int vlen = vsnprintf(errmsg, ERROR_MSG_LEN - 1, _errmsg, args);
-    int msglen = MIN(vlen, ERROR_MSG_LEN - 1);
-    va_end(args);
+        static const int ERROR_MSG_LEN = 128;
 
-    if (msglen >= 0) errmsg[msglen] = '\0';
-}
+        char errmsg[ERROR_MSG_LEN];
 
-/*----------------------------------------------------------------------------
- * what
- *----------------------------------------------------------------------------*/
-char const* RunTimeException::what() const throw()
-{ 
-    return errmsg; 
+        RunTimeException(const char* _errmsg, ...); VARG_CHECK(printf, 1, 2);
+        char const* what() const throw();
 };
+
+#endif // __runtime_exception__

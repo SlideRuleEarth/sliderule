@@ -167,7 +167,7 @@ pointspan_t PointIndex::attr2span (Dictionary<double>* attr, bool* provided)
         span.minval = span.maxval;
         status = true;
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Failed to index asset: %s", e.what());
     }

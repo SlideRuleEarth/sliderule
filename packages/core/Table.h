@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include <assert.h>
-#include <stdexcept>
+#include "RTExcept.h"
 #include "OsApi.h"
 
 /******************************************************************************
@@ -355,7 +355,7 @@ T& Table<T,K>::get(K key, match_t match) const
     }
 
     /* Throw Exception When Not Found */
-    throw std::out_of_range("key not found");
+    throw RunTimeException("key not found");
 }
 
 /*----------------------------------------------------------------------------

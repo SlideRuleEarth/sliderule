@@ -85,12 +85,6 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
-    catch(std::out_of_range& e)
-    {
-        (void)e;
-        mlog(CRITICAL, "Invalid calculation function provided - no handler installed");
-        return returnLuaStatus(L, false);
-    }
 }
 
 /******************************************************************************

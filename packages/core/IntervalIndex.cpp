@@ -198,7 +198,7 @@ intervalspan_t IntervalIndex::attr2span (Dictionary<double>* attr, bool* provide
         span.t1 = (*attr)[fieldname1];
         status = true;
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Failed to index asset: %s", e.what());
     }

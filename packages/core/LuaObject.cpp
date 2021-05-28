@@ -102,7 +102,7 @@ int LuaObject::luaGetByName(lua_State* L)
         associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
         return createLuaObject(L, lua_obj);
     }
-    catch(const std::out_of_range& e)
+    catch(const RunTimeException& e)
     {
         mlog(CRITICAL, "Name was not registered");
         lua_pushnil(L);

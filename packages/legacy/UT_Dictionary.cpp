@@ -107,7 +107,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             return -1;
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
         return -1;
@@ -150,7 +150,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
                 failure = true;
             }
         }
-        catch(std::out_of_range& e)
+        catch(RunTimeException& e)
         {
             print2term("[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i]->getString(), e.what());
             failure = true;
@@ -304,7 +304,7 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             return -1;
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
         return -1;

@@ -68,7 +68,7 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             // free function on a queue created by a subscriber
             if(!msgQ->free_func && free_func) msgQ->free_func = free_func;
         }
-        catch(std::out_of_range& e)
+        catch(RunTimeException& e)
         {
             // Allocate and initialize new message queue structure
             msgQ                    = new message_queue_t;

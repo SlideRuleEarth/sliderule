@@ -122,7 +122,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
     else
     {
         dlog("Unable to create timer... exceeded available signals!");
-        throw RunTimeException("unable to create timer");
+        throw std::runtime_error("unable to create timer");
     }
 }
 

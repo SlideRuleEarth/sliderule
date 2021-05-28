@@ -334,7 +334,7 @@ int HttpServer::onRead(int fd)
                             /* Get Attached Endpoint Object */
                             connection->request.endpoint = routeTable[endpoint];
                         }
-                        catch(const std::out_of_range& e)
+                        catch(const RunTimeException& e)
                         {
                             mlog(CRITICAL, "No attached endpoint at %s: %s", endpoint, e.what());
                             status = INVALID_RC; // will close socket
@@ -349,7 +349,7 @@ int HttpServer::onRead(int fd)
                     delete request_line;
                     if(endpoint) delete [] endpoint;
                 }
-                catch(const std::out_of_range& e)
+                catch(const RunTimeException& e)
                 {
                     mlog(CRITICAL, "Invalid request line: %s: %s", (*header_list)[0].getString(), e.what());
                 }
@@ -365,7 +365,7 @@ int HttpServer::onRead(int fd)
                         const char* value = (*keyvalue_list)[1].getString(true);
                         connection->request.headers->add(key, value, true);
                     }
-                    catch(const std::out_of_range& e)
+                    catch(const RunTimeException& e)
                     {
                         mlog(CRITICAL, "Invalid header in http request: %s: %s", (*header_list)[h].getString(), e.what());
                     }
@@ -384,7 +384,7 @@ int HttpServer::onRead(int fd)
                         status = INVALID_RC; // will close socket
                     }
                 }
-                catch(const std::out_of_range& e)
+                catch(const RunTimeException& e)
                 {
                     mlog(CRITICAL, "Http request must supply Content-Length header: %s", e.what());
                     status = INVALID_RC; // will close socket

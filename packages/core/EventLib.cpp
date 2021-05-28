@@ -376,7 +376,7 @@ int32_t EventLib::registerMetric (const char* metric_name, const char* fmt, ...)
                     List<int32_t,MAX_METRICS>* id_list = metric_ids_from_attr[metric.attr];
                     id_list->add(metric.id);
                 }
-                catch(std::out_of_range& e)
+                catch(RunTimeException& e)
                 {
                     (void)e;
                     List<int32_t,MAX_METRICS>* id_list = new List<int32_t,MAX_METRICS>;

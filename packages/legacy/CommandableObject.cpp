@@ -149,7 +149,7 @@ int CommandableObject::executeCommand(const char* cmd_name, int argc, char argv[
             }
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
         mlog(CRITICAL, "Unable to find command %s for object %s", cmd_name, objName);

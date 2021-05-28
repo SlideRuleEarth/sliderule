@@ -81,7 +81,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
         LocalLib::set(recordMemory, 0, recordDefinition->data_size);
         populateHeader();
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
         delete [] recordMemory;
@@ -232,7 +232,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
                 pkt_def = pktDefs[full_rec_type];
                 status = DUPLICATE_DEF;
             }
-            catch(std::out_of_range& e)
+            catch(RunTimeException& e)
             {
                 (void)e;
 
@@ -287,7 +287,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
                 pkt_def = pktDefs[full_rec_type];
                 status = DUPLICATE_DEF;
             }
-            catch(std::out_of_range& e)
+            catch(RunTimeException& e)
             {
                 (void)e;
 

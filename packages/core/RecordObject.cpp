@@ -1029,7 +1029,7 @@ int RecordObject::getRecordFields(const char* rec_type, char*** field_names, fie
             {
                 *(*fields)[i] = def->fields[(*field_names)[i]];
             }
-            catch(std::out_of_range& e)
+            catch(RunTimeException& e)
             {
                 (void)e;
                 (*fields)[i]->type = INVALID_FIELD;
@@ -1489,7 +1489,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     {
         field = def->fields[field_name];
     }
-    catch(const std::out_of_range& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
     }
@@ -1565,7 +1565,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     {
         mlog(CRITICAL, "Failed to parse field %s: %s", field_name, e.what());
     }
-    catch(const std::out_of_range& e)
+    catch(const RunTimeException& e)
     {
         if(field_name)
         {
@@ -1694,7 +1694,7 @@ RecordObject::definition_t* RecordObject::getDefinition(const char* rec_type)
 
     definition_t* def = NULL;
     try { def = definitions[new_rec_type]; }
-    catch (std::out_of_range& e) { (void)e; }
+    catch (RunTimeException& e) { (void)e; }
     return def;
 }
 

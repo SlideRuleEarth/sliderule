@@ -322,7 +322,7 @@ int ClusterSocket::onRead(int fd)
             }
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
@@ -454,7 +454,7 @@ int ClusterSocket::onWrite(int fd)
             }
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
@@ -546,7 +546,7 @@ int ClusterSocket::onAlive(int fd)
             }
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
@@ -645,7 +645,7 @@ int ClusterSocket::onDisconnect(int fd)
         }
 
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         status = -1;

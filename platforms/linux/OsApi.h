@@ -150,7 +150,6 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #include "Mutex.h"
 #include "Cond.h"
 #include "Sem.h"
-#include "RTExcept.h"
 #include "Timer.h"
 #include "LocalLib.h"
 #include "SockLib.h"

@@ -174,7 +174,7 @@ void CcsdsPayloadDispatch::setPublisher (int apid, const char* qname)
             {
                 pub = qLookUp[qname];
             }
-            catch(std::out_of_range& e)
+            catch(RunTimeException& e)
             {
                 (void)e;
                 pub = new Publisher(qname);

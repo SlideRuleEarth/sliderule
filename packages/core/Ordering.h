@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include <assert.h>
-#include <stdexcept>
+#include "RTExcept.h"
 #include "OsApi.h"
 
 /******************************************************************************
@@ -232,7 +232,7 @@ T& Ordering<T,K>::get(K key, searchMode_t smode)
     }
 
     if (found)  return curr->data;
-    else        throw std::out_of_range("key not found");
+    else        throw RunTimeException("key not found");
 }
 
 /*----------------------------------------------------------------------------

@@ -50,6 +50,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/RecordObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/RTExcept.cpp
             ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.cpp
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.cpp
@@ -106,6 +107,7 @@ if (LUA_FOUND AND READLINE_LIB)
             ${CMAKE_CURRENT_LIST_DIR}/RecordObject.h
             ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.h
             ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.h
+            ${CMAKE_CURRENT_LIST_DIR}/RTExcept.h
             ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.h
             ${CMAKE_CURRENT_LIST_DIR}/StringLib.h
             ${CMAKE_CURRENT_LIST_DIR}/Table.h

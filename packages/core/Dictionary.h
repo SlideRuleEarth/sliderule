@@ -37,8 +37,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "RTExcept.h"
 #include <climits>
-#include <stdexcept>
 #include <assert.h>
 
 /******************************************************************************
@@ -269,7 +269,7 @@ T& Dictionary<T>::get(const char* key)
 {
     unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
-    else                    throw std::out_of_range("key not found");
+    else                    throw RunTimeException("key not found");
 }
 
 /*----------------------------------------------------------------------------

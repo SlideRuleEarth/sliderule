@@ -309,7 +309,7 @@ CommandableObject* CommandProcessor::getObject(const char* obj_name, const char*
             obj = entry.obj;
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
     }
@@ -327,7 +327,7 @@ const char* CommandProcessor::getObjectType (const char* obj_name)
         obj_entry_t entry = objects[obj_name];
         return entry.obj->getType();
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
         return NULL;
@@ -410,7 +410,7 @@ int CommandProcessor::getCurrentValue(const char* obj_name, const char* key, voi
                 }
             }
         }
-        catch(std::out_of_range& e)
+        catch(RunTimeException& e)
         {
             /* Error on Dictionary Exception */
             mlog(WARNING, "Unable to find global data %s: %s", keyname, e.what());
@@ -550,7 +550,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
                 obj = objects[objtoks[0]].obj;
                 cmd = objtoks[1];
             }
-            catch(std::out_of_range& e)
+            catch(RunTimeException& e)
             {
                 (void)e;
             }
@@ -780,7 +780,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             delete [] cmdnames;
             delete [] cmddescs;
         }
-        catch(std::out_of_range& e)
+        catch(RunTimeException& e)
         {
             (void)e;
             print2term("Object %s not found\n", obj_name);
@@ -928,7 +928,7 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
             return -1;
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Unable to find registered handler for %s: %s", class_name, e.what());
         return -1;
@@ -979,7 +979,7 @@ int CommandProcessor::deleteCmd (int argc, char argv[][MAX_CMD_SIZE])
         // Remove object from object list
         objects.remove(obj_name);
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
         mlog(CRITICAL, "Attempted to delete non-existent object: %s", obj_name);
@@ -1002,7 +1002,7 @@ int CommandProcessor::permCmd (int argc, char argv[][MAX_CMD_SIZE])
         obj_entry_t& entry = objects[obj_name];
         entry.permanent = true;
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
         mlog(CRITICAL, "Failed to make object %s permanent!", obj_name);
@@ -1025,7 +1025,7 @@ int CommandProcessor::typeCmd (int argc, char argv[][MAX_CMD_SIZE])
         CommandableObject* cmd_obj = objects[obj_name].obj;
         print2term("%s: %s\n", obj_name, cmd_obj->getType());
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
         mlog(ERROR, "Object %s not registered, unable to provide type!", obj_name);

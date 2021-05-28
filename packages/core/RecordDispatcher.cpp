@@ -102,12 +102,6 @@ int RecordDispatcher::luaCreate (lua_State* L)
         mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
-    catch(std::out_of_range& e)
-    {
-        (void)e;
-        mlog(CRITICAL, "Invalid calculation function provided - no handler installed");
-        return returnLuaStatus(L, false);
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -300,7 +294,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     delete [] old_dispatch.list;
                 }
             }
-            catch(std::out_of_range& e)
+            catch(RunTimeException& e)
             {
                 (void)e;
             }
@@ -537,7 +531,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record)
             dis.list[i]->processRecord(record, key);
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         (void)e;
     }

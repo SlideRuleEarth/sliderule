@@ -36,9 +36,9 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "RTExcept.h"
 #include <stdlib.h>
 #include <assert.h>
-#include <stdexcept>
 
 /******************************************************************************
  * LIST TEMPLATE
@@ -180,7 +180,7 @@ const T& List<T, LIST_BLOCK_SIZE>::Iterator::operator[](int index) const
     }
     else
     {
-        throw std::out_of_range("List::Iterator index out of range");
+        throw RunTimeException("List::Iterator index out of range");
     }
 }
 
@@ -365,7 +365,7 @@ T& List<T, LIST_BLOCK_SIZE>::get(int index)
     }
     else
     {
-        throw std::out_of_range("List::get index out of range");
+        throw RunTimeException("List::get index out of range");
     }
 }
 

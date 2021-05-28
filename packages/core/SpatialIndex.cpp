@@ -281,7 +281,7 @@ spatialspan_t SpatialIndex::attr2span (Dictionary<double>* attr, bool* provided)
             status = true;
         }
     }
-    catch(std::out_of_range& e)
+    catch(RunTimeException& e)
     {
         mlog(CRITICAL, "Failed to index asset %s", e.what());
     }
