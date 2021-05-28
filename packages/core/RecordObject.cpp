@@ -1565,13 +1565,6 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     {
         mlog(CRITICAL, "Failed to parse field %s: %s", field_name, e.what());
     }
-    catch(const RunTimeException& e)
-    {
-        if(field_name)
-        {
-            mlog(CRITICAL, "Failed to find subrecord definition for field %s", field_name);
-        }
-    }
 
     /* Return Field */
     return field;

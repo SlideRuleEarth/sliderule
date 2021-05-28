@@ -50,6 +50,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"abort",       LuaLibrarySys::lsys_abort},
     {"wait",        LuaLibrarySys::lsys_wait},
     {"log",         LuaLibrarySys::lsys_log},
+    {"metric",      LuaLibrarySys::lsys_metric},
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
@@ -204,6 +205,40 @@ int LuaLibrarySys::lsys_log (lua_State* L)
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_metric - .metric(<attribute>) --> table of metric values
+ *----------------------------------------------------------------------------*/
+static void populate_metric_table (const EventLib::metric_t& metric, int32_t index, void* parm)
+{
+    lua_State* L = (lua_State*)parm;
+
+    lua_newtable(L);
+    lua_pushstring(L, metric.name);
+    lua_pushnumber(L, metric.value);
+    lua_settable(L, -3);
+    lua_rawseti(L, -2, index+1);
+}
+
+int LuaLibrarySys::lsys_metric (lua_State* L)
+{
+    /* Get Attribute Parameter */
+    const char* attr = NULL;
+    if(lua_isstring(L, 1)) // query attribute
+    {
+        attr = lua_tostring(L, 1);
+    }
+    else if(!lua_isnil(L, 1) && lua_gettop(L) > 0)
+    {
+        mlog(CRITICAL, "Invalid parameter supplied to metric, must be nil or string (i.e. metric(\"myattribute\"))\n");
+        return 0;
+    }
+
+    /* Populate Metric Table */
+    lua_newtable(L);
+    EventLib::iterateMetric(attr, populate_metric_table, L);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

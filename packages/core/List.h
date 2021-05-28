@@ -71,8 +71,8 @@ class List
                                     Iterator    (const List& l);
                                     ~Iterator   (void);
                 const T&            operator[]  (int index) const;
+                const int           length;
             private:
-                int                 len;
                 const list_node_t** blocks;
         };
 
@@ -141,10 +141,10 @@ class MgList: public List<T, LIST_BLOCK_SIZE>
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, int LIST_BLOCK_SIZE>
-List<T, LIST_BLOCK_SIZE>::Iterator::Iterator(const List& l)
+List<T, LIST_BLOCK_SIZE>::Iterator::Iterator(const List& l):
+    length(l.len)
 {
-    len = l.len;
-    int num_blocks = (len + (LIST_BLOCK_SIZE - 1)) / LIST_BLOCK_SIZE;
+    int num_blocks = (length + (LIST_BLOCK_SIZE - 1)) / LIST_BLOCK_SIZE;
     blocks = new const List<T, LIST_BLOCK_SIZE>::list_node_t* [num_blocks];
 
     const List<T, LIST_BLOCK_SIZE>::list_node_t* curr_block = &l.head;
@@ -171,7 +171,7 @@ List<T, LIST_BLOCK_SIZE>::Iterator::~Iterator(void)
 template <class T, int LIST_BLOCK_SIZE>
 const T& List<T, LIST_BLOCK_SIZE>::Iterator::operator[](int index) const
 {
-    if( (index < len) && (index >= 0) )
+    if( (index < length) && (index >= 0) )
     {
         int node_block = index / LIST_BLOCK_SIZE;
         int node_offset = index % LIST_BLOCK_SIZE;

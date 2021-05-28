@@ -465,6 +465,40 @@ void EventLib::generateMetric (int32_t id, event_level_t lvl)
 }
 
 /*----------------------------------------------------------------------------
+ * iterateMetric
+ *----------------------------------------------------------------------------*/
+void EventLib::iterateMetric (const char* metric_attr, metric_func_t cb, void* parm)
+{
+    if(metric_attr)
+    {
+        try
+        {
+            List<int32_t, MAX_METRICS>* id_list = metric_ids_from_attr[metric_attr];
+            for(int i = 0; i < id_list->length(); i++)
+            {
+                metric_t metric = metric_vals[id_list->get(i)];
+                cb(metric, i, parm);
+            }
+        }
+        catch(const RunTimeException& e)
+        {
+            (void)e;
+        }
+    }
+    else
+    {
+        int i = 0;
+        metric_t metric;
+        int32_t id = metric_vals.first(&metric);
+        while(id != (int32_t)INVALID_KEY)
+        {
+            cb(metric, i++, parm);
+            id = metric_vals.next(&metric);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * sendEvent
  *----------------------------------------------------------------------------*/
 int EventLib::sendEvent (event_t* event, int attr_size)

@@ -107,11 +107,6 @@ int LuaObject::luaGetByName(lua_State* L)
         mlog(CRITICAL, "Name was not registered");
         lua_pushnil(L);
     }
-    catch(const RunTimeException& e)
-    {
-        mlog(CRITICAL, "Error associating object: %s", e.what());
-        lua_pushnil(L);
-    }
 
     return 1;
 }

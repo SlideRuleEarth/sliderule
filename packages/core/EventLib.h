@@ -124,6 +124,8 @@ class EventLib
             double      value;
         } metric_t;
 
+        typedef void (*metric_func_t) (const metric_t& metric, int32_t index, void* parm);
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -146,6 +148,7 @@ class EventLib
         static int32_t          registerMetric  (const char* metric_name, const char* fmt, ...) VARG_CHECK(printf, 2, 3);
         static void             updateMetric    (int32_t id, double value);
         static void             generateMetric  (int32_t id, event_level_t lvl);
+        static void             iterateMetric   (const char* metric_attr, metric_func_t cb, void* parm);
 
     private:
 
