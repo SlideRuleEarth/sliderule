@@ -60,7 +60,10 @@ class LuaEndpoint: public EndpointObject
 
         static const int MAX_SOURCED_RESPONSE_SIZE = 1048576; // 1M
         static const int MAX_RESPONSE_TIME_MS = 5000;
+        static const int INITIAL_NUM_ENDPOINTS = 32;
         static const char* RESPONSE_QUEUE;
+        static const char* CATCHALL_METRIC;
+        static const char* HITS_METRIC;
 
         /*--------------------------------------------------------------------
          * Data
@@ -72,7 +75,7 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate       (lua_State* L);
+       static int          luaCreate       (lua_State* L);
 
     protected:
 
@@ -91,6 +94,15 @@ class LuaEndpoint: public EndpointObject
         void                streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
 
         static const char*  sanitize        (const char* filename);
+
+        static int          luaMetric       (lua_State* L);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        int32_t catchallMetricId;
+        Dictionary<int32_t> metricIds;
 };
 
 #endif  /* __lua_endpoint__ */

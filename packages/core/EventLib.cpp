@@ -84,8 +84,7 @@ event_level_t EventLib::metric_level;
 
 Mutex EventLib::metric_mut;
 std::atomic<int32_t> EventLib::metric_id{1};
-Dictionary<List<int32_t,EventLib::MAX_METRICS>*> EventLib::metric_ids_from_attr(MAX_METRICS, 1.0);
-Dictionary<int32_t> EventLib::metric_ids_from_name(MAX_METRICS, 1.0);
+Dictionary<Dictionary<int32_t>*> EventLib::metric_ids(MAX_METRICS, 1.0);
 Table<EventLib::metric_t, int32_t> EventLib::metric_vals(MAX_METRICS);
 
 /******************************************************************************
@@ -131,6 +130,14 @@ void EventLib::deinit (void)
     /* Clean Up Metrics */
     metric_mut.lock();
     {
+        Dictionary<int32_t>* ids = NULL;
+        const char* attr = metric_ids.first(&ids);
+        while(attr != NULL)
+        {
+            delete ids;
+            attr = metric_ids.next(&ids);
+        }
+
         metric_t metric;
         int32_t key = metric_vals.first(&metric);
         while(key != (int32_t)INVALID_KEY)
@@ -138,14 +145,6 @@ void EventLib::deinit (void)
             delete [] metric.name;
             delete [] metric.attr;
             key = metric_vals.next(&metric);
-        }
-
-        List<int32_t,MAX_METRICS>* id_list = NULL;
-        const char* attr = metric_ids_from_attr.first(&id_list);
-        while(attr != NULL)
-        {
-            delete id_list;
-            attr = metric_ids_from_attr.next(&id_list);
         }
     }
     metric_mut.unlock();
@@ -344,7 +343,6 @@ int32_t EventLib::registerMetric (const char* metric_name, const char* fmt, ...)
     assert(metric_name);
 
     metric_t metric;
-    bool status = true;
 
     /* Build Attribute */
     char attr_buf[MAX_ATTR_SIZE];
@@ -364,49 +362,51 @@ int32_t EventLib::registerMetric (const char* metric_name, const char* fmt, ...)
     /* Regsiter Metric */
     metric_mut.lock();
     {
-        /* Register Metric Name */
-        if(metric_ids_from_name.add(metric.name, metric.id, true))
+        Dictionary<int32_t>* ids;
+        if(metric_ids.find(metric.attr))
+        {
+            ids = metric_ids[metric.attr];
+        }
+        else
+        {
+            ids = new Dictionary<int32_t>(MAX_METRICS, 1.0);
+            if(!metric_ids.add(metric.attr, ids, true))
+            {
+                mlog(WARNING, "Failed to add attribute to metrics: %s\n", metric.attr);
+            }
+        }
+
+        if(ids->add(metric.name, metric.id, true))
         {
             /* Register Metric Id */
-            if(metric_vals.add(metric.id, metric))
-            {
-                /* Register Metric Attribute */
-                try
-                {
-                    List<int32_t,MAX_METRICS>* id_list = metric_ids_from_attr[metric.attr];
-                    id_list->add(metric.id);
-                }
-                catch(RunTimeException& e)
-                {
-                    (void)e;
-                    List<int32_t,MAX_METRICS>* id_list = new List<int32_t,MAX_METRICS>;
-                    id_list->add(metric.id);
-                    metric_ids_from_attr.add(metric.attr, id_list, true);
-                }
-
-            }
-            else
+            if(!metric_vals.add(metric.id, metric))
             {
                 mlog(CRITICAL, "Failed to regsiter id for metric %s\n", metric.name);
-                metric_ids_from_name.remove(metric.name);
-                status = false;
+                ids->remove(metric.name);
+                metric.id = INVALID_METRIC;
+                delete [] metric.name;
+                delete [] metric.attr;
             }
         }
         else
         {
-            mlog(CRITICAL, "Failed to regsiter metric %s\n", metric.name);
-            status = false;
+            try
+            {
+                /* Grab Existing Metric */
+                metric.id = ids->get(metric.name);
+                delete [] metric.name;
+                delete [] metric.attr;
+            }
+            catch(const std::exception& e)
+            {
+                mlog(CRITICAL, "Failed to add metric %s\n", metric.name);
+                metric.id = INVALID_METRIC;
+                delete [] metric.name;
+                delete [] metric.attr;
+            }
         }
     }
     metric_mut.unlock();
-
-    /* Check Status */
-    if(!status)
-    {
-        metric.id = INVALID_METRIC;
-        delete [] metric.name;
-        delete [] metric.attr;
-    }
 
     /* Return Metric Id */
     return metric.id;
@@ -419,8 +419,35 @@ void EventLib::updateMetric (int32_t id, double value)
 {
     metric_mut.lock();
     {
-        metric_t& metric = metric_vals[id];
-        metric.value = value;
+        try 
+        {
+            metric_t& metric = metric_vals[id];
+            metric.value = value;
+        }
+        catch(const RunTimeException& e)
+        {
+            mlog(ERROR, "Failed to update metric %d: %s\n", id, e.what());
+        }
+    }
+    metric_mut.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * incrementMetric
+ *----------------------------------------------------------------------------*/
+void EventLib::incrementMetric (int32_t id)
+{
+    metric_mut.lock();
+    {
+        try
+        {
+            metric_t& metric = metric_vals[id];
+            metric.value += 1.0;
+        }
+        catch(const RunTimeException& e)
+        {
+            mlog(ERROR, "Failed to increment metric %d: %s\n", id, e.what());
+        }
     }
     metric_mut.unlock();
 }
@@ -469,32 +496,26 @@ void EventLib::generateMetric (int32_t id, event_level_t lvl)
  *----------------------------------------------------------------------------*/
 void EventLib::iterateMetric (const char* metric_attr, metric_func_t cb, void* parm)
 {
-    if(metric_attr)
+    assert(metric_attr);
+    assert(cb);
+
+    try
     {
-        try
+        Dictionary<int32_t>* ids = metric_ids[metric_attr];
+
+        int32_t id;
+        int i = 0;
+        const char* name = ids->first(&id);
+        while(name != NULL)
         {
-            List<int32_t, MAX_METRICS>* id_list = metric_ids_from_attr[metric_attr];
-            for(int i = 0; i < id_list->length(); i++)
-            {
-                metric_t metric = metric_vals[id_list->get(i)];
-                cb(metric, i, parm);
-            }
-        }
-        catch(const RunTimeException& e)
-        {
-            (void)e;
+            metric_t metric = metric_vals[id];
+            cb(metric, i++, parm);
+            name = ids->next(&id);
         }
     }
-    else
+    catch(const RunTimeException& e)
     {
-        int i = 0;
-        metric_t metric;
-        int32_t id = metric_vals.first(&metric);
-        while(id != (int32_t)INVALID_KEY)
-        {
-            cb(metric, i++, parm);
-            id = metric_vals.next(&metric);
-        }
+        mlog(ERROR, "Failed to iterate metrics for %s: %s\n", metric_attr, e.what());
     }
 }
 

@@ -42,12 +42,16 @@
 
 const char* LuaEndpoint::LuaMetaName = "LuaEndpoint";
 const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
+    {"metric",      luaMetric},
     {NULL,          NULL}
 };
 
 SafeString LuaEndpoint::ServerHeader("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
+
+const char* LuaEndpoint::CATCHALL_METRIC = "catchall";
+const char* LuaEndpoint::HITS_METRIC = "hits";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -78,8 +82,10 @@ int LuaEndpoint::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 LuaEndpoint::LuaEndpoint(lua_State* L):
-    EndpointObject(L, LuaMetaName, LuaMetaTable)
+    EndpointObject(L, LuaMetaName, LuaMetaTable),
+    metricIds(INITIAL_NUM_ENDPOINTS)
 {
+    catchallMetricId = EventLib::registerMetric(CATCHALL_METRIC, "%s", LuaMetaName);
 }
 
 /*----------------------------------------------------------------------------
@@ -105,6 +111,20 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Log Request */
     mlog(INFO, "%s request at %s to %s", verb2str(request->verb), request->id, script_pathname);
+
+    /* Get Metric Id */
+    int32_t metric_id = lua_endpoint->catchallMetricId;
+    try
+    {
+        metric_id = lua_endpoint->metricIds[script_pathname];
+    }
+    catch (const RunTimeException& e)
+    {
+        (void)e;
+    }
+
+    /* Update Metrics */
+    EventLib::incrementMetric(metric_id);
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
@@ -223,4 +243,49 @@ const char* LuaEndpoint::sanitize (const char* filename)
     safe_filename.replace(delimeter.getString(), "_");
     SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.getString());
     return safe_pathname.getString(true);
+}
+
+/*----------------------------------------------------------------------------
+ * luaMetric - :metric(<endpoint name>)
+ * 
+ * Note: NOT thread safe, must be called prior to attaching endpoint to server
+ *----------------------------------------------------------------------------*/
+int LuaEndpoint::luaMetric (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
+
+        /* Get Endpoint Name */
+        const char* endpoint_name = getLuaString(L, 2);
+
+        /* Get Object Name */
+        const char* obj_name = lua_obj->getName();
+
+        /* Register Metrics */
+        int32_t id = EventLib::registerMetric(HITS_METRIC, "%s.%s", obj_name, endpoint_name);
+        if(id == EventLib::INVALID_METRIC)
+        {
+            throw RunTimeException("Registry failed for %s.%s", obj_name, endpoint_name);
+        }
+
+        /* Add to Metric Ids */
+        if(!lua_obj->metricIds.add(endpoint_name, id, true))
+        {
+            throw RunTimeException("Could not associate metric id to endpoint");
+        }
+
+        /* Set return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Error creating metric: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }

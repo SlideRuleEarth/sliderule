@@ -38,7 +38,6 @@
 
 #include "OsApi.h"
 #include "Dictionary.h"
-#include "List.h"
 #include "Table.h"
 
 #include <atomic>
@@ -68,7 +67,8 @@ typedef enum {
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
 #endif
 
-#define up_metric(lvl, id, val) {EventLib::updateMetric(id, val); EventLib::generateMetric(id, lvl);}
+#define update_metric(lvl, id, val) {EventLib::updateMetric(id, val); EventLib::generateMetric(id, lvl);}
+#define increment_metric(lvl, id) {EventLib::incrementMetric(id); EventLib::generateMetric(id, lvl);}
 
 /******************************************************************************
  * EVENT LIBRARY CLASS
@@ -147,6 +147,7 @@ class EventLib
 
         static int32_t          registerMetric  (const char* metric_name, const char* fmt, ...) VARG_CHECK(printf, 2, 3);
         static void             updateMetric    (int32_t id, double value);
+        static void             incrementMetric (int32_t id);
         static void             generateMetric  (int32_t id, event_level_t lvl);
         static void             iterateMetric   (const char* metric_attr, metric_func_t cb, void* parm);
 
@@ -173,8 +174,7 @@ class EventLib
 
         static Mutex metric_mut;
         static std::atomic<int32_t> metric_id;
-        static Dictionary<List<int32_t,MAX_METRICS>*> metric_ids_from_attr;
-        static Dictionary<int32_t> metric_ids_from_name;
+        static Dictionary<Dictionary<int32_t>*> metric_ids;
         static Table<metric_t, int32_t> metric_vals;
 };
 

@@ -60,7 +60,7 @@ bool appActive = true;
  *
  *  Notes: OS API "dlog" print function
  *----------------------------------------------------------------------------*/
-void os_print (const char* file_name, unsigned int line_number, const char* message)
+static void os_print (const char* file_name, unsigned int line_number, const char* message)
 {
     EventLib::logMsg(file_name, line_number, CRITICAL, "%s", message);
 }
@@ -68,7 +68,7 @@ void os_print (const char* file_name, unsigned int line_number, const char* mess
 /*----------------------------------------------------------------------------
  * core_open
  *----------------------------------------------------------------------------*/
-int core_open (lua_State *L)
+static int core_open (lua_State *L)
 {
     static const struct luaL_Reg core_functions[] = {
         {"getbyname",       LuaObject::luaGetByName},
