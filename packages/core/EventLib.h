@@ -138,14 +138,14 @@ class EventLib
         static  const char*     lvl2str         (event_level_t lvl);
         static  const char*     type2str        (type_t type);
 
-        static uint32_t         startTrace      (uint32_t parent, const char* name, event_level_t lvl, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
+        static uint32_t         startTrace      (uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...) VARG_CHECK(printf, 4, 5);
         static void             stopTrace       (uint32_t id, event_level_t lvl);
         static void             stashId         (uint32_t id);
         static uint32_t         grabId          (void);
 
-        static void             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
+        static void             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...) VARG_CHECK(printf, 4, 5);
 
-        static int32_t          registerMetric  (const char* metric_name, const char* fmt, ...) VARG_CHECK(printf, 2, 3);
+        static int32_t          registerMetric  (const char* metric_attr, const char* name_fmt, ...) VARG_CHECK(printf, 2, 3);
         static void             updateMetric    (int32_t id, double value);
         static void             incrementMetric (int32_t id);
         static void             generateMetric  (int32_t id, event_level_t lvl);

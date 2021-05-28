@@ -85,7 +85,6 @@ LuaEndpoint::LuaEndpoint(lua_State* L):
     EndpointObject(L, LuaMetaName, LuaMetaTable),
     metricIds(INITIAL_NUM_ENDPOINTS)
 {
-    catchallMetricId = EventLib::registerMetric(CATCHALL_METRIC, "%s", LuaMetaName);
 }
 
 /*----------------------------------------------------------------------------
@@ -112,19 +111,12 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Log Request */
     mlog(INFO, "%s request at %s to %s", verb2str(request->verb), request->id, script_pathname);
 
-    /* Get Metric Id */
-    int32_t metric_id = lua_endpoint->catchallMetricId;
-    try
-    {
-        metric_id = lua_endpoint->metricIds[script_pathname];
-    }
-    catch (const RunTimeException& e)
-    {
-        (void)e;
-    }
-
     /* Update Metrics */
-    EventLib::incrementMetric(metric_id);
+    int32_t metric_id = lua_endpoint->getMetricId(request->url);
+    if(metric_id != EventLib::INVALID_METRIC)
+    {
+        EventLib::incrementMetric(metric_id);
+    }
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
@@ -232,6 +224,34 @@ void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publ
 }
 
 /*----------------------------------------------------------------------------
+ * getMetricId
+ *----------------------------------------------------------------------------*/
+int32_t LuaEndpoint::getMetricId (const char* endpoint)
+{
+    int32_t metric_id = EventLib::INVALID_METRIC;
+
+    try
+    {
+        metric_id = metricIds[endpoint];
+    }
+    catch (const RunTimeException& e1)
+    {
+        (void)e1;
+
+        try
+        {
+            metric_id = metricIds[CATCHALL_METRIC];            
+        }
+        catch(const RunTimeException& e2)
+        {
+            (void)e2;
+        }
+    }
+
+    return metric_id;
+}
+
+/*----------------------------------------------------------------------------
  * sanitize
  *
  *  Note: must delete returned string
@@ -260,13 +280,13 @@ int LuaEndpoint::luaMetric (lua_State* L)
         LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
 
         /* Get Endpoint Name */
-        const char* endpoint_name = getLuaString(L, 2);
+        const char* endpoint_name = getLuaString(L, 2, true, CATCHALL_METRIC);
 
         /* Get Object Name */
         const char* obj_name = lua_obj->getName();
 
         /* Register Metrics */
-        int32_t id = EventLib::registerMetric(HITS_METRIC, "%s.%s", obj_name, endpoint_name);
+        int32_t id = EventLib::registerMetric(obj_name, "%s.%s", endpoint_name, HITS_METRIC);
         if(id == EventLib::INVALID_METRIC)
         {
             throw RunTimeException("Registry failed for %s.%s", obj_name, endpoint_name);

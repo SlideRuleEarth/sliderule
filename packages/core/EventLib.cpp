@@ -211,7 +211,7 @@ const char* EventLib::type2str (type_t type)
 /*----------------------------------------------------------------------------
  * startTrace
  *----------------------------------------------------------------------------*/
-uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t lvl, const char* fmt, ...)
+uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...)
 {
     event_t event;
     
@@ -237,8 +237,8 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
 
     /* Build Attribute */
     va_list args;
-    va_start(args, fmt);
-    int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, fmt, args);
+    va_start(args, attr_fmt);
+    int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, attr_fmt, args);
     int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
     event.attr[attr_size - 1] = '\0';
     va_end(args);
@@ -299,7 +299,7 @@ uint32_t EventLib::grabId (void)
 /*----------------------------------------------------------------------------
  * logMsg
  *----------------------------------------------------------------------------*/
-void EventLib::logMsg(const char* file_name, unsigned int line_number, event_level_t lvl, const char* fmt, ...)
+void EventLib::logMsg(const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...)
 {
     event_t event;
 
@@ -325,8 +325,8 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 
     /* Build Attribute - <log message> */
     va_list args;
-    va_start(args, fmt);
-    int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, fmt, args);
+    va_start(args, msg_fmt);
+    int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, msg_fmt, args);
     int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
     event.attr[attr_size - 1] = '\0';
     va_end(args);
@@ -338,25 +338,25 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 /*----------------------------------------------------------------------------
  * registerMetric
  *----------------------------------------------------------------------------*/
-int32_t EventLib::registerMetric (const char* metric_name, const char* fmt, ...)
+int32_t EventLib::registerMetric (const char* metric_attr, const char* name_fmt, ...)
 {
-    assert(metric_name);
+    assert(metric_attr);
 
     metric_t metric;
 
     /* Build Attribute */
-    char attr_buf[MAX_ATTR_SIZE];
+    char name_buf[MAX_ATTR_SIZE];
     va_list args;
-    va_start(args, fmt);
-    int vlen = vsnprintf(attr_buf, MAX_ATTR_SIZE - 1, fmt, args);
+    va_start(args, name_fmt);
+    int vlen = vsnprintf(name_buf, MAX_ATTR_SIZE - 1, name_fmt, args);
     int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
-    attr_buf[attr_size - 1] = '\0';
+    name_buf[attr_size - 1] = '\0';
     va_end(args);
 
     /* Initialize Metric */
     metric.id       = metric_id++;
-    metric.name     = StringLib::duplicate(metric_name);
-    metric.attr     = StringLib::duplicate(attr_buf);
+    metric.name     = StringLib::duplicate(name_buf);
+    metric.attr     = StringLib::duplicate(metric_attr);
     metric.value    = 0.0;
 
     /* Regsiter Metric */

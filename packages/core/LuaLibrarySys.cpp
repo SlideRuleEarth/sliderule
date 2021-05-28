@@ -212,13 +212,13 @@ int LuaLibrarySys::lsys_log (lua_State* L)
  *----------------------------------------------------------------------------*/
 static void populate_metric_table (const EventLib::metric_t& metric, int32_t index, void* parm)
 {
+    (void)index;
+    
     lua_State* L = (lua_State*)parm;
 
-    lua_newtable(L);
     lua_pushstring(L, metric.name);
     lua_pushnumber(L, metric.value);
     lua_settable(L, -3);
-    lua_rawseti(L, -2, index+1);
 }
 
 int LuaLibrarySys::lsys_metric (lua_State* L)
