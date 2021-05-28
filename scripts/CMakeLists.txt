@@ -10,6 +10,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/tail.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/version.lua
     DESTINATION
