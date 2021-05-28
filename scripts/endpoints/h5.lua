@@ -1,5 +1,5 @@
 --
--- ENDPOINT:    /engine/h5
+-- ENDPOINT:    /source/h5
 --
 -- INPUT:       arg[1] -
 --              {

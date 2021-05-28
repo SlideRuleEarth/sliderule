@@ -1,5 +1,5 @@
 --
--- ENDPOINT:    /engine/tail
+-- ENDPOINT:    /source/tail
 --
 -- INPUT:       arg[1] -
 --              {

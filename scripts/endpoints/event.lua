@@ -1,5 +1,5 @@
 --
--- ENDPOINT:    /engine/event
+-- ENDPOINT:    /source/event
 --
 -- INPUT:       arg[1] -
 --              {
