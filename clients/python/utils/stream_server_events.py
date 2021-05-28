@@ -1,11 +1,12 @@
 #
-# Connects to SlideRule server node at provided url and prints the last 
-# 1K log messages to local terminal.  
+# Connects to SlideRule server node at provided url and prints log messages
+# as they are generated on server to local terminal.  
 # 
 # This bypasses service discovery and goes directly to the server node.  
 # 
 # Use query_services.py to get list of server node IP addresses 
 #
+
 import sys
 import logging
 from sliderule import sliderule
@@ -29,22 +30,30 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         url = [sys.argv[1]]
 
-    # Override monitor name
-    monitor = "EventMonitor"
+    # Override duration to maintain connection
+    duration = 30 # seconds
     if len(sys.argv) > 2:
-        monitor = int(sys.argv[2])
+        duration = int(sys.argv[2])
+
+    # Override event type
+    event_type = "LOG"
+    if len(sys.argv) > 3:
+        event_type = sys.argv[3]
+
+    # Override event level
+    event_level = "INFO"
+    if len(sys.argv) > 4:
+        event_level = sys.argv[4]
 
     # Initialize ICESat2/SlideRule Package
     icesat2.init(url, True)
 
     # Build Logging Request
     rqst = {
-        "monitor": monitor 
+        "type": event_type, 
+        "level" : event_level,
+        "duration": duration
     }
 
     # Retrieve logs
-    rsps = sliderule.source("tail", rqst, stream=False)
-
-    # Display logs
-    for rsp in rsps:
-        print(rsp, end='')
+    rsps = sliderule.source("event", rqst, stream=True)
