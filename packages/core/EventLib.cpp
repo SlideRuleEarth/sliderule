@@ -75,12 +75,18 @@ const char* EventLib::rec_type = "eventrec";
 
 int EventLib::rec_type_size;
 
-std::atomic<uint32_t> EventLib::unique_id{1};
+std::atomic<uint32_t> EventLib::trace_id{1};
 Thread::key_t EventLib::trace_key;
 
 event_level_t EventLib::log_level;
 event_level_t EventLib::trace_level;
 event_level_t EventLib::metric_level;
+
+Mutex EventLib::metric_mut;
+std::atomic<int32_t> EventLib::metric_id{1};
+Dictionary<List<int32_t,EventLib::MAX_METRICS>*> EventLib::metric_ids_from_attr(MAX_METRICS, 1.0);
+Dictionary<int32_t> EventLib::metric_ids_from_name(MAX_METRICS, 1.0);
+Table<EventLib::metric_t, int32_t> EventLib::metric_vals(MAX_METRICS);
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -119,7 +125,30 @@ void EventLib::init (const char* eventq)
  *----------------------------------------------------------------------------*/
 void EventLib::deinit (void)
 {
+    /* Cleanup Output Q */
     delete outq;
+
+    /* Clean Up Metrics */
+    metric_mut.lock();
+    {
+        metric_t metric;
+        int32_t key = metric_vals.first(&metric);
+        while(key != (int32_t)INVALID_KEY)
+        {
+            delete [] metric.name;
+            delete [] metric.attr;
+            key = metric_vals.next(&metric);
+        }
+
+        List<int32_t,MAX_METRICS>* id_list = NULL;
+        const char* attr = metric_ids_from_attr.first(&id_list);
+        while(attr != NULL)
+        {
+            delete id_list;
+            attr = metric_ids_from_attr.next(&id_list);
+        }
+    }
+    metric_mut.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -193,7 +222,7 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
     /* Initialize Trace */
     event.systime   = TimeLib::gettimems();
     event.tid       = Thread::getId();
-    event.id        = unique_id++;;
+    event.id        = trace_id++;;
     event.parent    = parent;
     event.flags     = START;
     event.type      = TRACE;
@@ -304,6 +333,134 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
     va_end(args);
 
     /* Post Log Message */
+    sendEvent(&event, attr_size);
+}
+
+/*----------------------------------------------------------------------------
+ * registerMetric
+ *----------------------------------------------------------------------------*/
+int32_t EventLib::registerMetric (const char* metric_name, const char* fmt, ...)
+{
+    assert(metric_name);
+
+    metric_t metric;
+    bool status = true;
+
+    /* Build Attribute */
+    char attr_buf[MAX_ATTR_SIZE];
+    va_list args;
+    va_start(args, fmt);
+    int vlen = vsnprintf(attr_buf, MAX_ATTR_SIZE - 1, fmt, args);
+    int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
+    attr_buf[attr_size - 1] = '\0';
+    va_end(args);
+
+    /* Initialize Metric */
+    metric.id       = metric_id++;
+    metric.name     = StringLib::duplicate(metric_name);
+    metric.attr     = StringLib::duplicate(attr_buf);
+    metric.value    = 0.0;
+
+    /* Regsiter Metric */
+    metric_mut.lock();
+    {
+        /* Register Metric Name */
+        if(metric_ids_from_name.add(metric.name, metric.id, true))
+        {
+            /* Register Metric Id */
+            if(metric_vals.add(metric.id, metric))
+            {
+                /* Register Metric Attribute */
+                try
+                {
+                    List<int32_t,MAX_METRICS>* id_list = metric_ids_from_attr[metric.attr];
+                    id_list->add(metric.id);
+                }
+                catch(std::out_of_range& e)
+                {
+                    (void)e;
+                    List<int32_t,MAX_METRICS>* id_list = new List<int32_t,MAX_METRICS>;
+                    id_list->add(metric.id);
+                    metric_ids_from_attr.add(metric.attr, id_list, true);
+                }
+
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed to regsiter id for metric %s\n", metric.name);
+                metric_ids_from_name.remove(metric.name);
+                status = false;
+            }
+        }
+        else
+        {
+            mlog(CRITICAL, "Failed to regsiter metric %s\n", metric.name);
+            status = false;
+        }
+    }
+    metric_mut.unlock();
+
+    /* Check Status */
+    if(!status)
+    {
+        metric.id = INVALID_METRIC;
+        delete [] metric.name;
+        delete [] metric.attr;
+    }
+
+    /* Return Metric Id */
+    return metric.id;
+}
+
+/*----------------------------------------------------------------------------
+ * updateMetric
+ *----------------------------------------------------------------------------*/
+void EventLib::updateMetric (int32_t id, double value)
+{
+    metric_mut.lock();
+    {
+        metric_t& metric = metric_vals[id];
+        metric.value = value;
+    }
+    metric_mut.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * generateMetric
+ *----------------------------------------------------------------------------*/
+void EventLib::generateMetric (int32_t id, event_level_t lvl)
+{
+    event_t event;
+    metric_t metric;
+
+    /* Return Here If Nothing to Do */
+    if(lvl < metric_level) return;
+
+    /* Get Metric */
+    metric_mut.lock();
+    {
+        metric = metric_vals[id];
+    }
+    metric_mut.unlock();
+
+    /* Initialize Log Message */
+    event.systime   = TimeLib::gettimems();
+    event.tid       = Thread::getId();
+    event.id        = metric.id;
+    event.parent    = ORIGIN;
+    event.flags     = 0;
+    event.type      = METRIC;
+    event.level     = lvl;
+
+    /* Copy IP Address */
+    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
+
+    /* Copy Name and Attribute */
+    StringLib::copy(event.name, metric.name, MAX_NAME_SIZE);
+    StringLib::copy(event.attr, metric.attr, MAX_ATTR_SIZE);
+
+    /* Post Metric */
+    int attr_size = StringLib::size(metric.attr) + 1;
     sendEvent(&event, attr_size);
 }
 

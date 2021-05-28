@@ -37,6 +37,10 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "Dictionary.h"
+#include "List.h"
+#include "Table.h"
+
 #include <atomic>
 
 /******************************************************************************
@@ -64,6 +68,8 @@ typedef enum {
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
 #endif
 
+#define up_metric(lvl, id, val) {EventLib::updateMetric(id, val); EventLib::generateMetric(id, lvl);}
+
 /******************************************************************************
  * EVENT LIBRARY CLASS
  ******************************************************************************/
@@ -78,6 +84,8 @@ class EventLib
 
         static const int MAX_NAME_SIZE = 32;
         static const int MAX_ATTR_SIZE = 512;
+        static const int MAX_METRICS = 128;
+        static const int32_t INVALID_METRIC = -1;
 
         static const char* rec_type;
 
@@ -109,24 +117,35 @@ class EventLib
             METRIC  = 0x04
         } type_t;
 
+        typedef struct {
+            int32_t     id;
+            const char* name;
+            const char* attr;
+            double      value;
+        } metric_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void             init        (const char* eventq);
-        static void             deinit      (void);
+        static void             init            (const char* eventq);
+        static void             deinit          (void);
 
-        static  bool            setLvl      (type_t type, event_level_t lvl);
-        static  event_level_t   getLvl      (type_t type);
-        static  const char*     lvl2str     (event_level_t lvl);
-        static  const char*     type2str    (type_t type);
+        static  bool            setLvl          (type_t type, event_level_t lvl);
+        static  event_level_t   getLvl          (type_t type);
+        static  const char*     lvl2str         (event_level_t lvl);
+        static  const char*     type2str        (type_t type);
 
-        static uint32_t         startTrace  (uint32_t parent, const char* name, event_level_t lvl, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
-        static void             stopTrace   (uint32_t id, event_level_t lvl);
-        static void             stashId     (uint32_t id);
-        static uint32_t         grabId      (void);
+        static uint32_t         startTrace      (uint32_t parent, const char* name, event_level_t lvl, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
+        static void             stopTrace       (uint32_t id, event_level_t lvl);
+        static void             stashId         (uint32_t id);
+        static uint32_t         grabId          (void);
 
-        static  void            logMsg      (const char* file_name, unsigned int line_number, event_level_t lvl, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
+        static void             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* fmt, ...) VARG_CHECK(printf, 4, 5);
+
+        static int32_t          registerMetric  (const char* metric_name, const char* fmt, ...) VARG_CHECK(printf, 2, 3);
+        static void             updateMetric    (int32_t id, double value);
+        static void             generateMetric  (int32_t id, event_level_t lvl);
 
     private:
 
@@ -142,12 +161,18 @@ class EventLib
 
         static int rec_type_size;
 
-        static std::atomic<uint32_t> unique_id;
+        static std::atomic<uint32_t> trace_id;
         static Thread::key_t trace_key;
         
         static event_level_t log_level;
         static event_level_t trace_level;
         static event_level_t metric_level;
+
+        static Mutex metric_mut;
+        static std::atomic<int32_t> metric_id;
+        static Dictionary<List<int32_t,MAX_METRICS>*> metric_ids_from_attr;
+        static Dictionary<int32_t> metric_ids_from_name;
+        static Table<metric_t, int32_t> metric_vals;
 };
 
 #endif  /* __eventlib__ */

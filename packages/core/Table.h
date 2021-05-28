@@ -78,7 +78,7 @@ class Table
 
 
         bool        add         (K key, T& data, bool overwrite=false, bool with_delete=true);
-        T&          get         (K key, match_t match=MATCH_EXACTLY);
+        T&          get         (K key, match_t match=MATCH_EXACTLY) const;
         bool        find        (K key, match_t match, T* data);
         bool        remove      (K key);
         long        length      (void);
@@ -91,7 +91,7 @@ class Table
         K           prev        (T* data);
 
         Table&      operator=   (const Table& other);
-        T&          operator[]  (K key);
+        T&          operator[]  (K key) const;
 
     protected:
 
@@ -303,7 +303,7 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
  * get
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-T& Table<T,K>::get(K key, match_t match)
+T& Table<T,K>::get(K key, match_t match) const
 {
     K curr_index = hash(key) % size;
 
@@ -637,7 +637,7 @@ Table<T,K>& Table<T,K>::operator=(const Table& other)
  * operator[]
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-T& Table<T,K>::operator[](K key)
+T& Table<T,K>::operator[](K key) const
 {
     return get(key);
 }

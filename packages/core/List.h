@@ -40,20 +40,11 @@
 #include <assert.h>
 #include <stdexcept>
 
-
 /******************************************************************************
  * LIST TEMPLATE
  ******************************************************************************/
 
-#ifndef LIST_BLOCK_SIZE
-#define LIST_BLOCK_SIZE 256
-#endif
-
-/******************************************************************************
- * LIST TEMPLATE
- ******************************************************************************/
-
-template <class T>
+template <class T, int LIST_BLOCK_SIZE=256>
 class List
 {
     protected:
@@ -123,7 +114,7 @@ class List
         void            initialize          (void);
         void            copy                (const List& l1);
         list_node_t*    newNode             (void);
-        virtual void    freeNode            (typename List<T>::list_node_t* node, int index);
+        virtual void    freeNode            (typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index);
         void            quicksort           (T* array, int start, int end);
         int             quicksortpartition  (T* array, int start, int end);
 };
@@ -132,14 +123,14 @@ class List
  * MANAGED LIST TEMPLATE
  ******************************************************************************/
 
-template <class T, bool is_array=false>
-class MgList: public List<T>
+template <class T, int LIST_BLOCK_SIZE=256, bool is_array=false>
+class MgList: public List<T, LIST_BLOCK_SIZE>
 {
     public:
         MgList (void);
         ~MgList (void);
     private:
-        void freeNode (typename List<T>::list_node_t* node, int index);
+        void freeNode (typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index);
 };
 
 /******************************************************************************
@@ -149,14 +140,14 @@ class MgList: public List<T>
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-List<T>::Iterator::Iterator(const List& l)
+template <class T, int LIST_BLOCK_SIZE>
+List<T, LIST_BLOCK_SIZE>::Iterator::Iterator(const List& l)
 {
     len = l.len;
     int num_blocks = (len + (LIST_BLOCK_SIZE - 1)) / LIST_BLOCK_SIZE;
-    blocks = new const List<T>::list_node_t* [num_blocks];
+    blocks = new const List<T, LIST_BLOCK_SIZE>::list_node_t* [num_blocks];
 
-    const List<T>::list_node_t* curr_block = &l.head;
+    const List<T, LIST_BLOCK_SIZE>::list_node_t* curr_block = &l.head;
     for(int b = 0; b < num_blocks; b++)
     {
         assert(curr_block);
@@ -168,8 +159,8 @@ List<T>::Iterator::Iterator(const List& l)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T>
-List<T>::Iterator::~Iterator(void)
+template <class T, int LIST_BLOCK_SIZE>
+List<T, LIST_BLOCK_SIZE>::Iterator::~Iterator(void)
 {
     delete [] blocks;
 }
@@ -177,14 +168,14 @@ List<T>::Iterator::~Iterator(void)
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
-template <class T>
-const T& List<T>::Iterator::operator[](int index) const
+template <class T, int LIST_BLOCK_SIZE>
+const T& List<T, LIST_BLOCK_SIZE>::Iterator::operator[](int index) const
 {
     if( (index < len) && (index >= 0) )
     {
         int node_block = index / LIST_BLOCK_SIZE;
         int node_offset = index % LIST_BLOCK_SIZE;
-        const List<T>::list_node_t* block = blocks[node_block];
+        const List<T, LIST_BLOCK_SIZE>::list_node_t* block = blocks[node_block];
         return block->data[node_offset];
     }
     else
@@ -201,8 +192,8 @@ const T& List<T>::Iterator::operator[](int index) const
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-List<T>::List(void)
+template <class T, int LIST_BLOCK_SIZE>
+List<T, LIST_BLOCK_SIZE>::List(void)
 {
     initialize();
 }
@@ -210,8 +201,8 @@ List<T>::List(void)
 /*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-List<T>::List(const List<T>& l1)
+template <class T, int LIST_BLOCK_SIZE>
+List<T, LIST_BLOCK_SIZE>::List(const List<T, LIST_BLOCK_SIZE>& l1)
 {
     initialize();
     copy(l1);
@@ -220,8 +211,8 @@ List<T>::List(const List<T>& l1)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T>
-List<T>::~List(void)
+template <class T, int LIST_BLOCK_SIZE>
+List<T, LIST_BLOCK_SIZE>::~List(void)
 {
     clear();
 }
@@ -229,8 +220,8 @@ List<T>::~List(void)
 /*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
-template <class T>
-int List<T>::add(const T& data)
+template <class T, int LIST_BLOCK_SIZE>
+int List<T, LIST_BLOCK_SIZE>::add(const T& data)
 {
     /* Check if Current Node is Full */
     if(tail->offset >= LIST_BLOCK_SIZE)
@@ -251,8 +242,8 @@ int List<T>::add(const T& data)
 /*----------------------------------------------------------------------------
  * remove
  *----------------------------------------------------------------------------*/
-template <class T>
-bool List<T>::remove(int index)
+template <class T, int LIST_BLOCK_SIZE>
+bool List<T, LIST_BLOCK_SIZE>::remove(int index)
 {
     if( (index < len) && (index >= 0) )
     {
@@ -342,8 +333,8 @@ bool List<T>::remove(int index)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T>
-T& List<T>::get(int index)
+template <class T, int LIST_BLOCK_SIZE>
+T& List<T, LIST_BLOCK_SIZE>::get(int index)
 {
     if( (index < len) && (index >= 0) )
     {
@@ -384,8 +375,8 @@ T& List<T>::get(int index)
  *  with_delete which is defaulted to true, can be set to false for times when
  *  the list is reordered in place and the caller wants control over deallocation
  *----------------------------------------------------------------------------*/
-template <class T>
-bool List<T>::set(int index, T& data, bool with_delete)
+template <class T, int LIST_BLOCK_SIZE>
+bool List<T, LIST_BLOCK_SIZE>::set(int index, T& data, bool with_delete)
 {
     if( (index < len) && (index >= 0) )
     {
@@ -425,8 +416,8 @@ bool List<T>::set(int index, T& data, bool with_delete)
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-template <class T>
-int List<T>::length(void) const
+template <class T, int LIST_BLOCK_SIZE>
+int List<T, LIST_BLOCK_SIZE>::length(void) const
 {
     return len;
 }
@@ -434,8 +425,8 @@ int List<T>::length(void) const
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-template <class T>
-void List<T>::clear(void)
+template <class T, int LIST_BLOCK_SIZE>
+void List<T, LIST_BLOCK_SIZE>::clear(void)
 {
     /* Delete Head */
     for(int i = 0; i < head.offset; i++) freeNode(&head, i);
@@ -462,8 +453,8 @@ void List<T>::clear(void)
 /*----------------------------------------------------------------------------
  * sort
  *----------------------------------------------------------------------------*/
-template <class T>
-void List<T>::sort(void)
+template <class T, int LIST_BLOCK_SIZE>
+void List<T, LIST_BLOCK_SIZE>::sort(void)
 {
     /* Allocate Array */
     T* array = new T[len];
@@ -490,8 +481,8 @@ void List<T>::sort(void)
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
-template <class T>
-T& List<T>::operator[](int index)
+template <class T, int LIST_BLOCK_SIZE>
+T& List<T, LIST_BLOCK_SIZE>::operator[](int index)
 {
     return get(index);
 }
@@ -499,8 +490,8 @@ T& List<T>::operator[](int index)
 /*----------------------------------------------------------------------------
  * =
  *----------------------------------------------------------------------------*/
-template <class T>
-List<T>& List<T>::operator= (const List<T>& l1)
+template <class T, int LIST_BLOCK_SIZE>
+List<T, LIST_BLOCK_SIZE>& List<T, LIST_BLOCK_SIZE>::operator= (const List<T, LIST_BLOCK_SIZE>& l1)
 {
     clear();
     copy(l1);
@@ -510,8 +501,8 @@ List<T>& List<T>::operator= (const List<T>& l1)
 /*----------------------------------------------------------------------------
  * initialize
  *----------------------------------------------------------------------------*/
-template <class T>
-void List<T>::initialize(void)
+template <class T, int LIST_BLOCK_SIZE>
+void List<T, LIST_BLOCK_SIZE>::initialize(void)
 {
     head.offset = 0;
     head.next = NULL;
@@ -524,8 +515,8 @@ void List<T>::initialize(void)
 /*----------------------------------------------------------------------------
  * =
  *----------------------------------------------------------------------------*/
-template <class T>
-void List<T>::copy(const List<T>& l1)
+template <class T, int LIST_BLOCK_SIZE>
+void List<T, LIST_BLOCK_SIZE>::copy(const List<T, LIST_BLOCK_SIZE>& l1)
 {
     const list_node_t* curr = &l1.head;
     while(curr)
@@ -541,8 +532,8 @@ void List<T>::copy(const List<T>& l1)
 /*----------------------------------------------------------------------------
  * newNode
  *----------------------------------------------------------------------------*/
-template <class T>
-typename List<T>::list_node_t* List<T>::newNode(void)
+template <class T, int LIST_BLOCK_SIZE>
+typename List<T, LIST_BLOCK_SIZE>::list_node_t* List<T, LIST_BLOCK_SIZE>::newNode(void)
 {
     list_node_t* node = new list_node_t;
     node->next = NULL;
@@ -553,8 +544,8 @@ typename List<T>::list_node_t* List<T>::newNode(void)
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T>
-void List<T>::freeNode(typename List<T>::list_node_t* node, int index)
+template <class T, int LIST_BLOCK_SIZE>
+void List<T, LIST_BLOCK_SIZE>::freeNode(typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index)
 {
     (void)node;
     (void)index;
@@ -563,8 +554,8 @@ void List<T>::freeNode(typename List<T>::list_node_t* node, int index)
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-template <class T>
-void List<T>::quicksort(T* array, int start, int end)
+template <class T, int LIST_BLOCK_SIZE>
+void List<T, LIST_BLOCK_SIZE>::quicksort(T* array, int start, int end)
 {
     if(start < end)
     {
@@ -577,8 +568,8 @@ void List<T>::quicksort(T* array, int start, int end)
 /*----------------------------------------------------------------------------
  * quicksortpartition
  *----------------------------------------------------------------------------*/
-template <class T>
-int List<T>::quicksortpartition(T* array, int start, int end)
+template <class T, int LIST_BLOCK_SIZE>
+int List<T, LIST_BLOCK_SIZE>::quicksortpartition(T* array, int start, int end)
 {
     double pivot = array[(start + end) / 2];
 
@@ -603,25 +594,25 @@ int List<T>::quicksortpartition(T* array, int start, int end)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-MgList<T, is_array>::MgList(void): List<T>()
+template <class T, int LIST_BLOCK_SIZE, bool is_array>
+MgList<T, LIST_BLOCK_SIZE, is_array>::MgList(void): List<T, LIST_BLOCK_SIZE>()
 {
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-MgList<T, is_array>::~MgList(void)
+template <class T, int LIST_BLOCK_SIZE, bool is_array>
+MgList<T, LIST_BLOCK_SIZE, is_array>::~MgList(void)
 {
-    List<T>::clear();
+    List<T, LIST_BLOCK_SIZE>::clear();
 }
 
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T, bool is_array>
-void MgList<T, is_array>::freeNode(typename List<T>::list_node_t* node, int index)
+template <class T, int LIST_BLOCK_SIZE, bool is_array>
+void MgList<T, LIST_BLOCK_SIZE, is_array>::freeNode(typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index)
 {
     if(!is_array)   delete node->data[index];
     else            delete [] node->data[index];

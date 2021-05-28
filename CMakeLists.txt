@@ -140,11 +140,6 @@ if (DEFINED MAX_FREE_STACK_SIZE)
     target_compile_definitions (slideruleLib PUBLIC MAX_FREE_STACK_SIZE=${MAX_FREE_STACK_SIZE})
 endif ()
 
-if (DEFINED LIST_BLOCK_SIZE)
-    message (STATUS "Setting LIST_BLOCK_SIZE to " ${LIST_BLOCK_SIZE})
-    target_compile_definitions (slideruleLib PUBLIC LIST_BLOCK_SIZE=${LIST_BLOCK_SIZE})
-endif ()
-
 # Platform File #
 
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")
