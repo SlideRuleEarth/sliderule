@@ -362,6 +362,7 @@ int Monitor::luaCat (lua_State* L)
         }
 
         /* Cat Event Messages */
+        int msg_index = 0;
         int start = lua_obj->eventTailIndex;
         for(int i = 0; i < lua_obj->eventTailSize; i++)
         {
@@ -369,6 +370,7 @@ int Monitor::luaCat (lua_State* L)
             const char* event_msg = (const char*)&lua_obj->eventTailArray[index * MAX_EVENT_SIZE];
             if(event_msg[0] != '\0')
             {
+                msg_index++;
                 if(mode == TERM)
                 {
                     print2term("%s", event_msg);
@@ -376,7 +378,7 @@ int Monitor::luaCat (lua_State* L)
                 else if(mode == LOCAL)
                 {
                     lua_pushstring(L, event_msg);
-                    lua_rawseti(L, -2, i+1);
+                    lua_rawseti(L, -2, msg_index);
                 }
                 else if(mode == MSGQ)
                 {

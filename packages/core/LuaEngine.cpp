@@ -571,8 +571,14 @@ void LuaEngine::logErrorMessage (void)
     */
     char msg[MAX_STR_SIZE];
     StringLib::format(msg, MAX_STR_SIZE, "%s: %s", getName(), lua_tostring(L, -1));
-    mlog(CRITICAL, "%s", msg);
-    lua_pop(L, 1);  /* remove message */
+
+    /* Cannot log here because console monitor may be garbage collected 
+     * as a result of the script error; so instead write to stderr. */
+    // mlog(CRITICAL, "%s", msg);
+    fprintf(stderr, "%s\n", msg);
+
+    /* remove message */
+    lua_pop(L, 1);
 }
 
 /******************************************************************************

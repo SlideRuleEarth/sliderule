@@ -15,6 +15,7 @@ if __core__ then
     runner.script(td .. "multicast_device_writer.lua")
     runner.script(td .. "cluster_socket.lua")
     runner.script(td .. "asset_index.lua")
+    runner.script(td .. "monitor.lua")
     runner.script(td .. "http_server.lua")
     runner.script(td .. "http_client.lua")
 end
