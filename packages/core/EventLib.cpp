@@ -89,7 +89,7 @@ event_level_t EventLib::metric_level;
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void EventLib::init (const char* monitorq)
+void EventLib::init (const char* eventq)
 {
     /* Define Event Record */
     RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, offsetof(event_t, attr) + 1, rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t), 16);
@@ -111,7 +111,7 @@ void EventLib::init (const char* monitorq)
     metric_level = CRITICAL;
 
     /* Create Output Q */
-    outq = new Publisher(monitorq);
+    outq = new Publisher(eventq);
 }
 
 /*----------------------------------------------------------------------------

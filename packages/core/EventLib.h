@@ -113,7 +113,7 @@ class EventLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void             init        (const char* monitorq);
+        static void             init        (const char* eventq);
         static void             deinit      (void);
 
         static  bool            setLvl      (type_t type, event_level_t lvl);

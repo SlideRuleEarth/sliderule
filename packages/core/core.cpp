@@ -41,8 +41,8 @@
 
 #define LUA_CORE_LIBNAME    "core"
 
-#ifndef MONITORQ
-#define MONITORQ "monitorq"
+#ifndef EVENTQ
+#define EVENTQ "eventq"
 #endif
 
 /******************************************************************************
@@ -114,7 +114,7 @@ int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FMT_JSON",                 Monitor::JSON);
     LuaEngine::setAttrInt   (L, "FMT_CLOUD",                Monitor::CLOUD);
     LuaEngine::setAttrInt   (L, "FMT_RECORD",               Monitor::RECORD);
-    LuaEngine::setAttrStr   (L, "MONITORQ",                 MONITORQ);
+    LuaEngine::setAttrStr   (L, "EVENTQ",                 EVENTQ);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                     RecordObject::REAL);
     LuaEngine::setAttrInt   (L, "INTEGER",                  RecordObject::INTEGER);
@@ -162,7 +162,7 @@ void initcore (void)
     SockLib::init();
     TTYLib::init();
     TimeLib::init();
-    EventLib::init(MONITORQ);
+    EventLib::init(EVENTQ);
 
     /* Attach OsApi Print Function */
     LocalLib::setPrint(os_print);
