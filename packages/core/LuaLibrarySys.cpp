@@ -48,6 +48,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"version",     LuaLibrarySys::lsys_version},
     {"quit",        LuaLibrarySys::lsys_quit},
     {"abort",       LuaLibrarySys::lsys_abort},
+    {"alive",       LuaLibrarySys::lsys_alive},
     {"wait",        LuaLibrarySys::lsys_wait},
     {"log",         LuaLibrarySys::lsys_log},
     {"metric",      LuaLibrarySys::lsys_metric},
@@ -162,6 +163,15 @@ int LuaLibrarySys::lsys_abort (lua_State* L)
     quick_exit(0);
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_alive
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_alive (lua_State* L)
+{
+    lua_pushboolean(L, checkactive());
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

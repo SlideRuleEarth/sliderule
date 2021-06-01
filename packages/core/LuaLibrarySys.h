@@ -73,6 +73,7 @@ class LuaLibrarySys
         static int      lsys_version        (lua_State* L);
         static int      lsys_quit           (lua_State* L);
         static int      lsys_abort          (lua_State* L);
+        static int      lsys_alive          (lua_State* L);
         static int      lsys_wait           (lua_State* L);
         static int      lsys_log            (lua_State* L);
         static int      lsys_metric         (lua_State* L);
