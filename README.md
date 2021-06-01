@@ -64,6 +64,9 @@ Options include:
    -DENABLE_HDF5_LIB=[ON|OFF]          configure H5 package to use the HDF5 library
                                        default: OFF
 
+   -DENABLE_COMPAT=[ON|OFF]            configure build for older tool chains (needed to build on CentOS 7)
+                                       default: OFF
+
    -DENABLE_H5_REST_VOL=[ON|OFF]       configure H5 package to use REST VOL plugin (requires ENABLE_HDF5_LIB=ON)
                                        default: OFF
 
@@ -83,6 +86,9 @@ Options include:
                                        default: ON
 
    -DUSE_PISTACHE_PACKAGE=[ON|OFF]     http server and client
+                                       default: OFF
+
+   -DUSE_NETSVC_PACKAGE=[ON|OFF]       network services (e.g. https)
                                        default: OFF
 
    -DPYTHON_BINDINGS=[ON|OFF]          build python bindings instead of sliderule executable (overrides all other targets)
