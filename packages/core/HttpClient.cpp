@@ -72,7 +72,7 @@ int HttpClient::luaCreate (lua_State* L)
             ip_addr = NULL;
         }
 
-        /* Return File Device Object */
+        /* Return Http Client Object */
         return createLuaObject(L, new HttpClient(L, ip_addr, port));
     }
     catch(const RunTimeException& e)

@@ -72,6 +72,7 @@ static int core_open (lua_State *L)
 {
     static const struct luaL_Reg core_functions[] = {
         {"getbyname",       LuaObject::luaGetByName},
+        {"script",          LuaScript::luaCreate},
         {"monitor",         Monitor::luaCreate},
         {"cluster",         ClusterSocket::luaCreate},
         {"file",            File::luaCreate},

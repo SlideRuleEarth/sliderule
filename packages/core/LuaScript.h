@@ -29,71 +29,62 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __corepkg__
-#define __corepkg__
+#ifndef __lua_script__
+#define __lua_script__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
+#include <atomic>
 
-#include "Asset.h"
-#include "AssetIndex.h"
-#include "CaptureDispatch.h"
-#include "ClusterSocket.h"
-#include "CsvDispatch.h"
-#include "DispatchObject.h"
-#include "DeviceIO.h"
-#include "DeviceObject.h"
-#include "DeviceReader.h"
-#include "DeviceWriter.h"
-#include "Dictionary.h"
-#include "EndpointObject.h"
-#include "PointIndex.h"
-#include "File.h"
-#include "HttpClient.h"
-#include "HttpServer.h"
-#include "LimitDispatch.h"
-#include "List.h"
-#include "LimitRecord.h"
-#include "EventLib.h"
-#include "LuaEndpoint.h"
-#include "LuaEngine.h"
-#include "LuaLibraryMsg.h"
-#include "LuaLibrarySys.h"
-#include "LuaLibraryTime.h"
-#include "LuaObject.h"
-#include "LuaScript.h"
-#include "MathLib.h"
-#include "MetricDispatch.h"
-#include "MetricRecord.h"
-#include "Monitor.h"
-#include "MsgBridge.h"
-#include "MsgProcessor.h"
 #include "MsgQ.h"
-#include "Ordering.h"
-#include "PublisherDispatch.h"
-#include "RecordObject.h"
-#include "RecordDispatcher.h"
-#include "ReportDispatch.h"
-#include "RTExcept.h"
-#include "SpatialIndex.h"
+#include "OsApi.h"
+#include "List.h"
 #include "StringLib.h"
-#include "Table.h"
-#include "TcpSocket.h"
-#include "IntervalIndex.h"
-#include "TimeLib.h"
-#include "Uart.h"
-#include "UdpSocket.h"
+#include "LuaEngine.h"
+#include "LuaObject.h"
+#include "EndpointObject.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * LUA SCRIPT CLASS
  ******************************************************************************/
 
-void    initcore    (void);
-void    deinitcore  (void);
-bool    checkactive (void);
-void    setinactive (void);
+class LuaScript: public LuaObject
+{
+    public:
 
-#endif  /* __corepkg__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* OBJECT_TYPE;
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int          luaCreate       (lua_State* L);
+
+                            LuaScript       (lua_State* L, const char* name, const char* script, const char* arg);
+                            ~LuaScript      (void);
+
+    private:
+
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        LuaEngine*          engine;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+        
+        static int          luaIsActive     (lua_State* L);
+};
+
+#endif  /* __lua_script__ */
