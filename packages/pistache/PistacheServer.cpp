@@ -242,7 +242,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
 
     /* Launch Engine */
     const char* script_pathname = sanitize(script_name.c_str());
-    LuaEngine* engine = new LuaEngine(id_str, script_pathname, request.body().c_str(), trace_id, NULL, true);
+    LuaEngine* engine = new LuaEngine(script_pathname, request.body().c_str(), trace_id, NULL, true);
     bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
     /* Send Response */
@@ -294,7 +294,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
 
     /* Create Engine */
     const char* script_pathname = sanitize(script_name.c_str());
-    LuaEngine* engine = new LuaEngine(id_str, script_pathname, request.body().c_str(), trace_id, NULL, true);
+    LuaEngine* engine = new LuaEngine(script_pathname, request.body().c_str(), trace_id, NULL, true);
 
     /* Supply and Setup Request Queue */
     engine->setString(RESPONSE_QUEUE, id_str);

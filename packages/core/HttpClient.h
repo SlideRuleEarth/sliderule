@@ -96,11 +96,6 @@ class HttpClient: public LuaObject
             HttpClient*                 client;
         } connection_t;
 
-        typedef struct {
-            const char*                 data;
-            int                         size;
-        } in_place_rsps_t;
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

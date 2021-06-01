@@ -314,8 +314,8 @@ void* HttpClient::requestThread(void* parm)
 
     /* Clean Up Connection */
     delete connection->outq;    
-    delete connection->data;
-    delete connection->resource;
+    delete [] connection->data;
+    delete [] connection->resource;
 
     return NULL;
 }
@@ -378,7 +378,7 @@ int HttpClient::luaRequest (lua_State* L)
 
             /* Setup Response Variables */
             int total_response_length = 0;
-            List<in_place_rsps_t> responses;
+            List<Subscriber::msgRef_t> responses;
 
             /* Read Responses */
             int attempts = 0;
@@ -392,17 +392,14 @@ int HttpClient::luaRequest (lua_State* L)
                     if(ref.size > 0)
                     {
                         total_response_length += ref.size;
-                        in_place_rsps_t rsps = {(const char*)ref.data, ref.size};
-                        responses.add(rsps);
+                        responses.add(ref);
                     }
                     else // terminator
                     {
+                        inq->dereference(ref);
                         done = true;
                         status = true;
                     }
-
-                    /* Dereference Message */
-                    inq->dereference(ref);
                 }
                 else if(recv_status == TIMEOUT_RC)
                 {
@@ -420,20 +417,21 @@ int HttpClient::luaRequest (lua_State* L)
                 }
             }
 
-            /* Delete Subscriber */
-            if(inq) delete inq;
-
             /* Allocate and Build Response Array */
             char* response = new char [total_response_length + 1];
-            List<in_place_rsps_t>::Iterator iterator(responses);
+            List<Subscriber::msgRef_t>::Iterator iterator(responses);
             int index = 0;
             for(int i = 0; i < responses.length(); i++)
             {
                 LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
                 index += iterator[i].size;
+                inq->dereference((Subscriber::msgRef_t&)iterator[i]);
             }
             response[index] = '\0';
         
+            /* Delete Subscriber */
+            if(inq) delete inq;
+
             /* Return Respnonse String */
             lua_pushlstring(L, response, total_response_length + 1);
             delete [] response;

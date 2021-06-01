@@ -68,7 +68,7 @@ class LuaScript: public LuaObject
 
         static int          luaCreate       (lua_State* L);
 
-                            LuaScript       (lua_State* L, const char* name, const char* script, const char* arg);
+                            LuaScript       (lua_State* L, const char* script, const char* arg);
                             ~LuaScript      (void);
 
     private:

@@ -54,19 +54,18 @@ const struct luaL_Reg LuaScript::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - script(<name>, <script>, <arg>)
+ * luaCreate - script(<script>, <arg>)
  *----------------------------------------------------------------------------*/
 int LuaScript::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        const char* name = getLuaString(L, 1);
         const char* script = getLuaString(L, 2);
         const char* arg = getLuaString(L, 3, true, NULL);
 
         /* Return Lua Script Object */
-        return createLuaObject(L, new LuaScript(L, name, script, arg));
+        return createLuaObject(L, new LuaScript(L, script, arg));
     }
     catch(const RunTimeException& e)
     {
@@ -78,10 +77,10 @@ int LuaScript::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaScript::LuaScript(lua_State* L, const char* name, const char* script, const char* arg):
+LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    engine = new LuaEngine(name, script, arg, ORIGIN, NULL, false);
+    engine = new LuaEngine(script, arg, ORIGIN, NULL, false);
 }
 
 /*----------------------------------------------------------------------------

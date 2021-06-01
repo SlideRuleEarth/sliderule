@@ -95,7 +95,7 @@ int LuaLibraryCmd::lcmd_exec (lua_State* L)
     {
         /* Get Key */
         char store_key[LuaEngine::MAX_LUA_ARG];
-        StringLib::format(store_key, LuaEngine::MAX_LUA_ARG, "%s_cmd_status", li->getName());
+        StringLib::format(store_key, LuaEngine::MAX_LUA_ARG, "%ld_cmd_status", li->getEngineId());
 
         /* Clean Command */
         char* comment_ptr = StringLib::find(str, CommandProcessor::COMMENT[0]);

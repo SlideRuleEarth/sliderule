@@ -161,7 +161,7 @@ void LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publ
     char header[MAX_HDR_SIZE];
 
     /* Launch Engine */
-    LuaEngine* engine = new LuaEngine(rspq->getName(), scriptpath, body, trace_id, NULL, true);
+    LuaEngine* engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
     bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
     /* Send Response */
@@ -206,7 +206,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publ
     rspq->postCopy(header, header_length);
 
     /* Create Engine */
-    LuaEngine* engine = new LuaEngine(rspq->getName(), scriptpath, body, trace_id, NULL, true);
+    LuaEngine* engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
 
     /* Supply and Setup Request Queue */
     engine->setString(RESPONSE_QUEUE, rspq->getName());

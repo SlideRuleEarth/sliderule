@@ -41,6 +41,8 @@
 #include "StringLib.h"
 #include "List.h"
 
+#include <atomic>
+
 extern "C"
 {
 #include <lua.h>
@@ -84,7 +86,7 @@ class LuaEngine
          *--------------------------------------------------------------------*/
 
                             LuaEngine       (const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // protected mode
-                            LuaEngine       (const char* name, const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
+                            LuaEngine       (const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
                             ~LuaEngine      (void);
 
         static void         extend          (const char* lib_name, luaOpenLibFunc lib_func);
@@ -98,7 +100,7 @@ class LuaEngine
         static void         setAttrStr      (lua_State* l, const char* name, const char* val, int size=0);
         static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);
 
-        const char*         getName         (void);
+        uint64_t            getEngineId     (void);
         bool                executeEngine   (int timeout_ms);
         bool                isActive        (void);
         void                setBoolean      (const char* name, bool val);
@@ -152,9 +154,11 @@ class LuaEngine
         static List<pkgInitEntry_t>     pkgInitTable;
         static Mutex                    pkgInitTableMutex;
 
+        static std::atomic<uint64_t>    engineIds;
+
         lua_State*                      L;      // lua state variable
     
-        const char*                     engineName;
+        uint64_t                        engineId;
         bool                            engineActive;
         Thread*                         engineThread;
         Cond                            engineSignal;
