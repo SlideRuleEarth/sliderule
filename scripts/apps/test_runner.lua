@@ -20,6 +20,12 @@ if __core__ then
     runner.script(td .. "http_client.lua")
 end
 
+-- Run AWS Unit Tests --
+
+if __aws__ then
+    runner.script(td .. "credential_store.lua")
+end
+
 -- Run H5 Unit Tests --
 
 if __h5__ then

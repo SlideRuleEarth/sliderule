@@ -35,6 +35,13 @@ print(rsps)
 rsps_table = json.decode(rsps)
 runner.check(rsps_table["result"] == "Hello World")
 
+print('\n------------------\nTest03: Return\n------------------')
+
+rsps = client:request("GET", "/source/health", "{}")
+print(rsps)
+rsps_table = json.decode(rsps)
+runner.check(rsps_table["healthy"] == true)
+
 -- Clean Up --
 
 server:destroy()
