@@ -29,25 +29,57 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __awspkg__
-#define __awspkg__
+#ifndef __credential_store__
+#define __credential_store__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "CredentialStore.h"
-#include "S3Lib.h"
+#include "OsApi.h"
+#include "Dictionary.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * AWS S3 LIBRARY CLASS
  ******************************************************************************/
 
-extern "C" {
-void initaws (void);
-void deinitaws (void);
-}
+class CredentialStore
+{
+    public:
 
-#endif  /* __awspkg__ */
+        /*--------------------------------------------------------------------
+         * Typdefs
+         *--------------------------------------------------------------------*/
 
+        typedef struct {
+            const char* access_key_id;
+            const char* secret_access_key;
+            const char* access_token;
+            uint64_t    expiration_time;
+        } credential_t;
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static void         init    (void);
+        static void         deinit  (void);
+
+        static credential_t get     (const char* host);
+        static bool         put     (const char* host, credential_t credential);
+
+        static int          luaGet  (lua_State* L);
+        static int          luaPut  (lua_State* L);
+
+    private:
+        
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        static Mutex credentialLock;
+        static Dictionary<credential_t> credentialStore;
+};
+
+#endif  /* __credential_store__ */

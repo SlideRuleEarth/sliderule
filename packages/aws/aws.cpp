@@ -60,6 +60,8 @@ Aws::SDKOptions options;
 int aws_open (lua_State *L)
 {
     static const struct luaL_Reg aws_functions[] = {
+        {"csget",       CredentialStore::luaGet},
+        {"csput",       CredentialStore::luaPut},
         {"s3get",       S3Lib::luaGet},
         {"s3config",    S3Lib::luaConfig},
         {"s3cache",     S3Lib::luaCreateCache},
@@ -92,6 +94,7 @@ void initaws (void)
     Aws::InitAPI(options);
 
     /* Initialize Modules */
+    CredentialStore::init();
     S3Lib::init();
 
     /* Extend Lua */
@@ -107,6 +110,7 @@ void initaws (void)
 void deinitaws (void)
 {
     S3Lib::deinit();
+    CredentialStore::deinit();
     Aws::ShutdownAPI(options);
 }
 }
