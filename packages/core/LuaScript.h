@@ -84,7 +84,8 @@ class LuaScript: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
         
-        static int          luaIsActive     (lua_State* L);
+        static int          luaActive       (lua_State* L);
+        static int          luaResult       (lua_State* L);
 };
 
 #endif  /* __lua_script__ */

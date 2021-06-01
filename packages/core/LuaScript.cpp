@@ -45,7 +45,8 @@
 const char* LuaScript::OBJECT_TYPE = "LuaScript";
 const char* LuaScript::LuaMetaName = "LuaScript";
 const struct luaL_Reg LuaScript::LuaMetaTable[] = {
-    {"isactive",    luaIsActive},
+    {"active",      luaActive},
+    {"result",      luaResult},
     {NULL,          NULL}
 };
 
@@ -61,8 +62,8 @@ int LuaScript::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        const char* script = getLuaString(L, 2);
-        const char* arg = getLuaString(L, 3, true, NULL);
+        const char* script = getLuaString(L, 1);
+        const char* arg = getLuaString(L, 2, true, NULL);
 
         /* Return Lua Script Object */
         return createLuaObject(L, new LuaScript(L, script, arg));
@@ -80,7 +81,10 @@ int LuaScript::luaCreate (lua_State* L)
 LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    engine = new LuaEngine(script, arg, ORIGIN, NULL, false);
+    assert(script);
+    const char* script_pathname = LuaEngine::sanitize(script);
+    engine = new LuaEngine(script_pathname, arg, ORIGIN, NULL, false);
+    delete [] script_pathname;
 }
 
 /*----------------------------------------------------------------------------
@@ -92,9 +96,9 @@ LuaScript::~LuaScript(void)
 }
 
 /*----------------------------------------------------------------------------
- * luaIsActive - :isactive()
+ * luaActive - :active()
  *----------------------------------------------------------------------------*/
-int LuaScript::luaIsActive (lua_State* L)
+int LuaScript::luaActive (lua_State* L)
 {
     try
     {
@@ -107,6 +111,30 @@ int LuaScript::luaIsActive (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(CRITICAL, "Error checking srcipt status: %s", e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaResult - :result()
+ *----------------------------------------------------------------------------*/
+int LuaScript::luaResult (lua_State* L)
+{
+    try
+    {
+        /* Get Self */
+        LuaScript* lua_obj = (LuaScript*)getLuaSelf(L, 1);
+        
+        /* Get Engine Results */
+        const char* result = lua_obj->engine->getResult();
+
+        /* Push Results */
+        lua_pushstring(L, result);
+        return returnLuaStatus(L, true, 2);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Error return script result: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }

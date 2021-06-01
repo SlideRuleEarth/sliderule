@@ -94,7 +94,6 @@ class LuaEndpoint: public EndpointObject
         void                streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
 
         int32_t             getMetricId     (const char* endpoint);
-        static const char*  sanitize        (const char* filename);
 
         static int          luaMetric       (lua_State* L);
 

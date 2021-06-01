@@ -103,7 +103,7 @@ void* LuaEndpoint::requestThread (void* parm)
     LuaEndpoint* lua_endpoint = (LuaEndpoint*)request->endpoint;
 
     /* Get Request Script */
-    const char* script_pathname = sanitize(request->url);
+    const char* script_pathname = LuaEngine::sanitize(request->url);
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
@@ -249,20 +249,6 @@ int32_t LuaEndpoint::getMetricId (const char* endpoint)
     }
 
     return metric_id;
-}
-
-/*----------------------------------------------------------------------------
- * sanitize
- *
- *  Note: must delete returned string
- *----------------------------------------------------------------------------*/
-const char* LuaEndpoint::sanitize (const char* filename)
-{
-    SafeString delimeter("%c", PATH_DELIMETER);
-    SafeString safe_filename("%s", filename);
-    safe_filename.replace(delimeter.getString(), "_");
-    SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.getString());
-    return safe_pathname.getString(true);
 }
 
 /*----------------------------------------------------------------------------

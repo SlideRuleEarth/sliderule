@@ -287,6 +287,20 @@ void LuaEngine::setAttrFunc (lua_State* l, const char* name, lua_CFunction val)
 }
 
 /*----------------------------------------------------------------------------
+ * sanitize
+ *
+ *  Note: must delete returned string
+ *----------------------------------------------------------------------------*/
+const char* LuaEngine::sanitize (const char* filename)
+{
+    SafeString delimeter("%c", PATH_DELIMETER);
+    SafeString safe_filename("%s", filename);
+    safe_filename.replace(delimeter.getString(), "_");
+    SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.getString());
+    return safe_pathname.getString(true);
+}
+
+/*----------------------------------------------------------------------------
  * getEngineId
  *----------------------------------------------------------------------------*/
 uint64_t LuaEngine::getEngineId(void)
