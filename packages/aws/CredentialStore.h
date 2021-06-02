@@ -53,16 +53,20 @@ class CredentialStore
          *--------------------------------------------------------------------*/
 
         static const int STARTING_STORE_SIZE = 8;
+        static const char* ACCESS_KEY_ID_STR;
+        static const char* SECRET_ACCESS_KEY_STR;
+        static const char* SESSION_TOKEN_STR;
+        static const char* EXPIRATION_STR;
 
         /*--------------------------------------------------------------------
          * Typdefs
          *--------------------------------------------------------------------*/
 
         struct Credential {
-            const char* access_key_id;
-            const char* secret_access_key;
-            const char* access_token;
-            const char* expiration_time;
+            const char* accessKeyId;
+            const char* secretAccessKey;
+            const char* sessionToken;
+            const char* expiration;
 
             Credential(void) {
                 zero();
@@ -86,24 +90,24 @@ class CredentialStore
             private:
 
                 void zero (void) {
-                    access_key_id = NULL;
-                    secret_access_key = NULL;
-                    access_token = NULL;
-                    expiration_time = NULL;
+                    accessKeyId = NULL;
+                    secretAccessKey = NULL;
+                    sessionToken = NULL;
+                    expiration = NULL;
                 }
 
                 void cleanup (void) {
-                    if(access_key_id) delete [] access_key_id;
-                    if(secret_access_key) delete [] secret_access_key;
-                    if(access_token) delete [] access_token;
-                    if(expiration_time) delete [] expiration_time;
+                    if(accessKeyId) delete [] accessKeyId;
+                    if(secretAccessKey) delete [] secretAccessKey;
+                    if(sessionToken) delete [] sessionToken;
+                    if(expiration) delete [] expiration;
                 }
 
                 void copy (const Credential& c) {
-                    access_key_id = StringLib::duplicate(c.access_key_id);
-                    secret_access_key = StringLib::duplicate(c.secret_access_key);
-                    access_token = StringLib::duplicate(c.access_token);
-                    expiration_time = StringLib::duplicate(c.expiration_time);
+                    accessKeyId = StringLib::duplicate(c.accessKeyId);
+                    secretAccessKey = StringLib::duplicate(c.secretAccessKey);
+                    sessionToken = StringLib::duplicate(c.sessionToken);
+                    expiration = StringLib::duplicate(c.expiration);
                 }
 
         };

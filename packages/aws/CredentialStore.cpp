@@ -46,6 +46,11 @@
 Mutex CredentialStore::credentialLock;
 Dictionary<CredentialStore::Credential> CredentialStore::credentialStore(STARTING_STORE_SIZE);
 
+const char* CredentialStore::ACCESS_KEY_ID_STR = "accessKeyId";
+const char* CredentialStore::SECRET_ACCESS_KEY_STR = "secretAccessKey";
+const char* CredentialStore::SESSION_TOKEN_STR="sessionToken";
+const char* CredentialStore::EXPIRATION_STR = "expiration";
+
 /******************************************************************************
  * CREDENTIAL STORE CLASS
  ******************************************************************************/
@@ -117,24 +122,24 @@ int CredentialStore::luaGet(lua_State* L)
         Credential credential = CredentialStore::get(host);
 
         /* Return Credentials */
-        if(credential.access_key_id)
+        if(credential.accessKeyId)
         {
             lua_newtable(L);
 
-            lua_pushstring(L, "access_key_id");
-            lua_pushstring(L, credential.access_key_id);
+            lua_pushstring(L, ACCESS_KEY_ID_STR);
+            lua_pushstring(L, credential.accessKeyId);
             lua_settable(L, -3);
 
-            lua_pushstring(L, "secret_access_key");
-            lua_pushstring(L, credential.secret_access_key);
+            lua_pushstring(L, SECRET_ACCESS_KEY_STR);
+            lua_pushstring(L, credential.secretAccessKey);
             lua_settable(L, -3);
 
-            lua_pushstring(L, "access_token");
-            lua_pushstring(L, credential.access_token);
+            lua_pushstring(L, SESSION_TOKEN_STR);
+            lua_pushstring(L, credential.sessionToken);
             lua_settable(L, -3);
  
-            lua_pushstring(L, "expiration_time");
-            lua_pushstring(L, credential.expiration_time);
+            lua_pushstring(L, EXPIRATION_STR);
+            lua_pushstring(L, credential.expiration);
             lua_settable(L, -3);
 
             return LuaObject::returnLuaStatus(L, true, 2);
@@ -167,20 +172,20 @@ int CredentialStore::luaPut(lua_State* L)
         int index = 2;
         if(lua_type(L, index) == LUA_TTABLE)
         {
-            lua_getfield(L, index, "access_key_id");
-            credential.access_key_id = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            lua_getfield(L, index, ACCESS_KEY_ID_STR);
+            credential.accessKeyId = StringLib::duplicate(LuaObject::getLuaString(L, -1));
             lua_pop(L, 1);
 
-            lua_getfield(L, index, "secret_access_key");
-            credential.secret_access_key = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            lua_getfield(L, index, SECRET_ACCESS_KEY_STR);
+            credential.secretAccessKey = StringLib::duplicate(LuaObject::getLuaString(L, -1));
             lua_pop(L, 1);
 
-            lua_getfield(L, index, "access_token");
-            credential.access_token = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            lua_getfield(L, index, SESSION_TOKEN_STR);
+            credential.sessionToken = StringLib::duplicate(LuaObject::getLuaString(L, -1));
             lua_pop(L, 1);
 
-            lua_getfield(L, index, "expiration_time");
-            credential.expiration_time = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            lua_getfield(L, index, EXPIRATION_STR);
+            credential.expiration = StringLib::duplicate(LuaObject::getLuaString(L, -1));
             lua_pop(L, 1);
         }
 
@@ -189,7 +194,7 @@ int CredentialStore::luaPut(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error putting credentials: %s", e.what());
+        mlog(CRITICAL, "Error putting credential: %s", e.what());
     }
 
     return LuaObject::returnLuaStatus(L, status);
