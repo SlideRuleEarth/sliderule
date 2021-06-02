@@ -195,6 +195,8 @@ int LuaLibraryTime::ltime_gmt2gps (lua_State* L)
     else // string
     {
         const char* gmt = lua_tostring(L, 1);           /* get argument 1 */
+        if(!gmt) return luaL_error(L, "invalid string passed to gmt2gps function");
+
         int64_t ms = TimeLib::str2gpstime(gmt);
         lua_pushnumber(L, (lua_Number)ms);              /* push "ms" as result */
         return 1;                                       /* one result */

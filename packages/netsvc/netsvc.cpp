@@ -134,11 +134,10 @@ int netsvc_get (lua_State* L)
         /* Check for errors */
         if(res != CURLE_OK)
         {
-            mlog(CRITICAL, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            mlog(CRITICAL, "network services request failed: %s\n", curl_easy_strerror(res));
         }
         else
         {
-            mlog(CRITICAL, "cURL test successfull - %d responses\n", rsps_set.length());
             status = true;
         }
 
