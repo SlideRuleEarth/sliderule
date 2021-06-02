@@ -930,7 +930,7 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
     catch(RunTimeException& e)
     {
-        mlog(CRITICAL, "Unable to find registered handler for %s: %s", class_name, e.what());
+        mlog(e.level(), "Unable to find registered handler for %s: %s", class_name, e.what());
         return -1;
     }
 
@@ -961,9 +961,9 @@ int CommandProcessor::deleteCmd (int argc, char argv[][MAX_CMD_SIZE])
             {
                 delete entry.obj;
             }
-            catch(const std::exception& e)
+            catch(const RunTimeException& e)
             {
-                mlog(CRITICAL, "Caught exception during deletion of object %s --> %s", obj_name, e.what());
+                mlog(e.level(), "Caught exception during deletion of object %s --> %s", obj_name, e.what());
             }
             catch(...)
             {

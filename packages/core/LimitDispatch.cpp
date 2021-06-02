@@ -76,7 +76,7 @@ int LimitDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -218,7 +218,7 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting level: %s", e.what());
+        mlog(e.level(), "Error setting level: %s", e.what());
     }
 
     /* Return Status */
@@ -242,7 +242,7 @@ int LimitDispatch::luaGMTDisplay(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring GMT display: %s", e.what());
+        mlog(e.level(), "Error configuring GMT display: %s", e.what());
     }
 
     /* Return Status */

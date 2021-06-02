@@ -67,7 +67,7 @@ int CaptureDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -193,7 +193,7 @@ int CaptureDispatch::luaCapture (lua_State* L)
             cap->cond.unlock();
             if(!status)
             {
-                throw RunTimeException("timed out waiting to capture field");
+                throw RunTimeException(CRITICAL, "timed out waiting to capture field");
             }
 
             /* Delete Capture */
@@ -209,7 +209,7 @@ int CaptureDispatch::luaCapture (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error capturing: %s", e.what());
+        mlog(e.level(), "Error capturing: %s", e.what());
     }
 
     /* Return Status */
@@ -240,7 +240,7 @@ int CaptureDispatch::luaClear (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error removing all captures: %s", e.what());
+        mlog(e.level(), "Error removing all captures: %s", e.what());
     }
 
     /* Return Status */
@@ -279,7 +279,7 @@ int CaptureDispatch::luaRemove (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error removing capture: %s", e.what());
+        mlog(e.level(), "Error removing capture: %s", e.what());
     }
 
     /* Return Status */

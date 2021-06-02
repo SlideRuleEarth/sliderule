@@ -65,7 +65,7 @@ int CcsdsPayloadDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -122,9 +122,9 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key)
         }
         qMut.unlock();
     }
-    catch(std::invalid_argument& e)
+    catch(RunTimeException& e)
     {
-        mlog(ERROR, "Unable to create CCSDS packet in %s: %s", getName(), e.what());
+        mlog(e.level(), "Unable to create CCSDS packet in %s: %s", getName(), e.what());
         return false;
     }
 
@@ -242,7 +242,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
         }
         else
         {
-            throw RunTimeException("invalid APID specified: %04X", (uint16_t)apid);
+            throw RunTimeException(CRITICAL, "invalid APID specified: %04X", (uint16_t)apid);
         }
 
         /* Set Success */
@@ -250,7 +250,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error forwarding packet: %s", e.what());
+        mlog(e.level(), "Error forwarding packet: %s", e.what());
     }
 
     /* Return Status */
@@ -280,7 +280,7 @@ int CcsdsPayloadDispatch::luaCheckLength(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring length check: %s", e.what());
+        mlog(e.level(), "Error configuring length check: %s", e.what());
     }
 
     /* Return Status */
@@ -310,7 +310,7 @@ int CcsdsPayloadDispatch::luaCheckChecksum(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring checsum check: %s", e.what());
+        mlog(e.level(), "Error configuring checsum check: %s", e.what());
     }
 
     /* Return Status */

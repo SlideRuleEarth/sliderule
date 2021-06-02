@@ -77,7 +77,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
         CcsdsPacket::type_t pkt_type = str2pkttype(type_str);
         if(pkt_type == CcsdsPacket::INVALID_PACKET)
         {
-            throw RunTimeException("invalid packet type: %s", type_str);
+            throw RunTimeException(CRITICAL, "invalid packet type: %s", type_str);
         }
 
         /* Create Packet Parser */
@@ -85,7 +85,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -200,7 +200,7 @@ int CcsdsPacketParser::luaPassInvalid (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s", e.what());
+        mlog(e.level(), "Error setting pass invalid state: %s", e.what());
     }
 
     /* Return Success */
@@ -230,7 +230,7 @@ int CcsdsPacketParser::luaResetInvalid (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s", e.what());
+        mlog(e.level(), "Error setting pass invalid state: %s", e.what());
     }
 
     /* Return Success */
@@ -257,7 +257,7 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         /* Check APID */
         if(apid < 0 && apid > CCSDS_NUM_APIDS)
         {
-            throw RunTimeException("invalid apid: %04X", (unsigned int)apid);
+            throw RunTimeException(CRITICAL, "invalid apid: %04X", (unsigned int)apid);
         }
 
         /* Create Statistics Table */
@@ -311,7 +311,7 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting pass invalid state: %s", e.what());
+        mlog(e.level(), "Error setting pass invalid state: %s", e.what());
     }
 
     /* Return Success */
@@ -359,7 +359,7 @@ int CcsdsPacketParser::luaFilterPkt (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting filter: %s", e.what());
+        mlog(e.level(), "Error setting filter: %s", e.what());
     }
 
     /* Return Success */
@@ -403,7 +403,7 @@ int CcsdsPacketParser::luaClearApidStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting filter: %s", e.what());
+        mlog(e.level(), "Error setting filter: %s", e.what());
     }
 
     /* Return Success */
@@ -433,7 +433,7 @@ int CcsdsPacketParser::luaStripHdrOnPost (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting strip header on post: %s", e.what());
+        mlog(e.level(), "Error setting strip header on post: %s", e.what());
     }
 
     /* Return Success */
@@ -735,9 +735,9 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
         }
         apidStats[apid].last_seg = seg;
     }
-    catch (std::invalid_argument& e)
+    catch (RunTimeException& e)
     {
-        mlog(ERROR, "Unable to create CCSDS packet in order to validate: %s", e.what());
+        mlog(e.level(), "Unable to create CCSDS packet in order to validate: %s", e.what());
         status = false;
     }
 

@@ -465,9 +465,9 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
     {
         pkt = new CcsdsSpacePacket(msg, bytes, true); // memory allocated here
     }
-    catch (std::invalid_argument& e)
+    catch (RunTimeException& e)
     {
-        mlog(CRITICAL, "Unable to create CCSDS packet from buffer: %s", e.what());
+        mlog(e.level(), "Unable to create CCSDS packet from buffer: %s", e.what());
         return false;
     }
 

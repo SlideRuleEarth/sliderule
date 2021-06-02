@@ -79,7 +79,7 @@ int H5File::luaCreate(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating HDF5 File: %s", e.what());
+        mlog(e.level(), "Error creating HDF5 File: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -132,7 +132,7 @@ void* H5File::readThread (void* parm)
     }
     catch (const RunTimeException& e)
     {
-        mlog(CRITICAL, "Failed to read dataset %s/%s: %s", info->h5file->filename, info->dataset, e.what());
+        mlog(e.level(), "Failed to read dataset %s/%s: %s", info->h5file->filename, info->dataset, e.what());
     }
 
     /* Post Results to Output Queue */
@@ -230,7 +230,7 @@ int H5File::luaRead (lua_State* L)
                 }
                 else
                 {
-                    throw RunTimeException("expecting dataset entry");
+                    throw RunTimeException(CRITICAL, "expecting dataset entry");
                 }
 
                 /* Start Thread */
@@ -251,12 +251,12 @@ int H5File::luaRead (lua_State* L)
         }
         else
         {
-            throw RunTimeException("expecting list of datasets");
+            throw RunTimeException(CRITICAL, "expecting list of datasets");
         }
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Failed to read resource: %s", e.what());
+        mlog(e.level(), "Failed to read resource: %s", e.what());
         status = false;
     }
 
@@ -302,7 +302,7 @@ int H5File::luaTraverse (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error traversing hdf5 file: %s", e.what());
+        mlog(e.level(), "Error traversing hdf5 file: %s", e.what());
     }
 
     /* Return Status */
@@ -364,7 +364,7 @@ int H5File::luaInspect (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error inspecting hdf5 file: %s\n", e.what());
+        mlog(e.level(), "Error inspecting hdf5 file: %s\n", e.what());
         status = false;
     }
 

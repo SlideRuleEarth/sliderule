@@ -68,7 +68,7 @@ int TcpSocket::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating TcpSocket: %s", e.what());
+        mlog(e.level(), "Error creating TcpSocket: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }

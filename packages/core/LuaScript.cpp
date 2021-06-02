@@ -70,7 +70,7 @@ int LuaScript::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating LuaScript: %s", e.what());
+        mlog(e.level(), "Error creating LuaScript: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -110,7 +110,7 @@ int LuaScript::luaActive (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error checking srcipt status: %s", e.what());
+        mlog(e.level(), "Error checking srcipt status: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -134,7 +134,7 @@ int LuaScript::luaResult (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error return script result: %s", e.what());
+        mlog(e.level(), "Error return script result: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }

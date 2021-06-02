@@ -229,7 +229,7 @@ int MsgProcessor::luaDrain (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error draining queue: %s", e.what());
+        mlog(e.level(), "Error draining queue: %s", e.what());
     }
 
     /* Return Success */

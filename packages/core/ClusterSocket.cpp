@@ -83,7 +83,7 @@ int ClusterSocket::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating ClusterSocket: %s", e.what());
+        mlog(e.level(), "Error creating ClusterSocket: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -324,7 +324,7 @@ int ClusterSocket::onRead(int fd)
     }
     catch(RunTimeException& e)
     {
-        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
+        mlog(e.level(), "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
     }
 
@@ -456,7 +456,7 @@ int ClusterSocket::onWrite(int fd)
     }
     catch(RunTimeException& e)
     {
-        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
+        mlog(e.level(), "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
     }
 
@@ -548,7 +548,7 @@ int ClusterSocket::onAlive(int fd)
     }
     catch(RunTimeException& e)
     {
-        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
+        mlog(e.level(), "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         return -1;
     }
 
@@ -647,7 +647,7 @@ int ClusterSocket::onDisconnect(int fd)
     }
     catch(RunTimeException& e)
     {
-        mlog(CRITICAL, "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
+        mlog(e.level(), "Cluster socket on %s:%d failed to retrieve connection information for file descriptor %d: %s", getIpAddr(), getPort(), fd, e.what());
         status = -1;
     }
 

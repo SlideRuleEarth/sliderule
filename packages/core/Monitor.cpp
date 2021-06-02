@@ -72,7 +72,7 @@ int Monitor::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -272,7 +272,7 @@ int Monitor::luaConfig (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring monitor: %s", e.what());
+        mlog(e.level(), "Error configuring monitor: %s", e.what());
     }
 
     /* Return Status */
@@ -297,13 +297,13 @@ int Monitor::luaTail (lua_State* L)
         int tail_size = getLuaInteger(L, 2);
         if(tail_size <= 0 || tail_size > MAX_TAIL_SIZE)
         {
-            throw RunTimeException("Invalid tail size: %d", tail_size);
+            throw RunTimeException(CRITICAL, "Invalid tail size: %d", tail_size);
         }
 
         /* Check if Tail Exists */
         if(lua_obj->eventTailArray)
         {
-            throw RunTimeException("Event tail already exists");
+            throw RunTimeException(CRITICAL, "Event tail already exists");
         }
 
         /* Create Event Tail */
@@ -317,7 +317,7 @@ int Monitor::luaTail (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating tail: %s", e.what());
+        mlog(e.level(), "Error creating tail: %s", e.what());
     }
 
     /* Return Status */
@@ -344,7 +344,7 @@ int Monitor::luaCat (lua_State* L)
         /* Check if Tail Exists */
         if(!lua_obj->eventTailArray)
         {
-            throw RunTimeException("Event tail does not exists");
+            throw RunTimeException(CRITICAL, "Event tail does not exists");
         }
 
         /* Setup Cat */
@@ -409,7 +409,7 @@ int Monitor::luaCat (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error concatenating tail: %s", e.what());
+        mlog(e.level(), "Error concatenating tail: %s", e.what());
     }
 
     /* Return Status */

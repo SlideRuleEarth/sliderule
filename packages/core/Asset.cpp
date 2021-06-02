@@ -75,7 +75,7 @@ int Asset::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -187,7 +187,7 @@ int Asset::luaInfo (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error retrieving asset: %s", e.what());
+        mlog(e.level(), "Error retrieving asset: %s", e.what());
     }
 
     /* Return Status */
@@ -249,7 +249,7 @@ int Asset::luaLoad (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error loading resource: %s", e.what());
+        mlog(e.level(), "Error loading resource: %s", e.what());
     }
 
     /* Return Status */

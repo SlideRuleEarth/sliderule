@@ -84,7 +84,7 @@ int MetricDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -289,7 +289,7 @@ int MetricDispatch::luaPlaybackSource(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback source: %s", e.what());
+        mlog(e.level(), "Error configuring playback source: %s", e.what());
     }
 
     /* Return Status */
@@ -313,7 +313,7 @@ int MetricDispatch::luaPlaybackText(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback test; %s", e.what());
+        mlog(e.level(), "Error configuring playback test; %s", e.what());
     }
 
     /* Return Status */
@@ -337,7 +337,7 @@ int MetricDispatch::luaPlaybackName(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring playback name: %s", e.what());
+        mlog(e.level(), "Error configuring playback name: %s", e.what());
     }
 
     /* Return Status */
@@ -378,7 +378,7 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting key offset: %s", e.what());
+        mlog(e.level(), "Error setting key offset: %s", e.what());
     }
 
     /* Return Status */
@@ -444,7 +444,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error setting key range: %s", e.what());
+        mlog(e.level(), "Error setting key range: %s", e.what());
     }
 
     /* Return Status */
@@ -498,7 +498,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error adding filter: %s", e.what());
+        mlog(e.level(), "Error adding filter: %s", e.what());
     }
 
     /* Return Status */

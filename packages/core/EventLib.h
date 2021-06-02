@@ -46,17 +46,6 @@
  * DEFINES
  ******************************************************************************/
 
-#define ORIGIN  0
-
-typedef enum {
-    DEBUG               = 0,
-    INFO                = 1,
-    WARNING             = 2,
-    ERROR               = 3,
-    CRITICAL            = 4,
-    INVALID_EVENT_LEVEL = 5
-} event_level_t;
-
 #define mlog(lvl,...) EventLib::logMsg(__FILE__,__LINE__,lvl,__VA_ARGS__)
 
 #ifdef __tracing__

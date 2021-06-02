@@ -142,11 +142,17 @@ int CommandableObject::executeCommand(const char* cmd_name, int argc, char argv[
             {
                 return (this->*cmd->func)(argc, argv);
             }
-            catch(std::exception &e)
+            catch(const RunTimeException& e)
             {
-                mlog(CRITICAL, "While executing command %s caught unhandled exception %s", cmd_name, e.what());
+                mlog(e.level(), "While executing command %s caught unhandled exception %s", cmd_name, e.what());
                 return STANDARD_CMD_ERROR;
             }
+            catch(...)
+            {
+                mlog(CRITICAL, "Caught unknown exception while executing command %s", cmd_name);
+                return STANDARD_CMD_ERROR;
+            }
+
         }
     }
     catch(RunTimeException& e)

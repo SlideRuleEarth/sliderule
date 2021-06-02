@@ -87,9 +87,21 @@
 #define PATH_DELIMETER '/'
 #define PATH_DELIMETER_STR "/"
 
+#define ORIGIN  0
+
 /******************************************************************************
  * TYPEDEFS
  ******************************************************************************/
+
+/* Event Levels */
+typedef enum {
+    DEBUG               = 0,
+    INFO                = 1,
+    WARNING             = 2,
+    ERROR               = 3,
+    CRITICAL            = 4,
+    INVALID_EVENT_LEVEL = 5
+} event_level_t;
 
 /* Ordered Key */
 typedef unsigned long okey_t;

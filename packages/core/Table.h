@@ -355,7 +355,7 @@ T& Table<T,K>::get(K key, match_t match) const
     }
 
     /* Throw Exception When Not Found */
-    throw RunTimeException("key not found");
+    throw RunTimeException(CRITICAL, "key not found");
 }
 
 /*----------------------------------------------------------------------------
@@ -370,8 +370,9 @@ bool Table<T,K>::find(K key, match_t match, T* data)
         if(data) *data = entry;
         return true;
     }
-    catch(const std::exception& e)
+    catch(const RunTimeException& e)
     {
+        (void)e;
         return false;
     }
 }

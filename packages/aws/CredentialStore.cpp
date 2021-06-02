@@ -147,7 +147,7 @@ int CredentialStore::luaGet(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error getting credential: %s", e.what());
+        mlog(e.level(), "Error getting credential: %s", e.what());
     }
 
     return LuaObject::returnLuaStatus(L, false);
@@ -194,7 +194,7 @@ int CredentialStore::luaPut(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error putting credential: %s", e.what());
+        mlog(e.level(), "Error putting credential: %s", e.what());
     }
 
     return LuaObject::returnLuaStatus(L, status);

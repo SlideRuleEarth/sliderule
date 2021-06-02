@@ -128,7 +128,7 @@ int DeviceIO::luaLogPktStats(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error logging device I/O statistics: %s", e.what());
+        mlog(e.level(), "Error logging device I/O statistics: %s", e.what());
     }
 
     /* Return Success */
@@ -154,7 +154,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
         /* Check Device Exists */
         if(!lua_obj->device)
         {
-            throw RunTimeException("device invalid... unable to execute command!");
+            throw RunTimeException(CRITICAL, "device invalid... unable to execute command!");
         }
 
         /* Wait for Device */
@@ -167,7 +167,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
         /* Check Success */
         if(!lua_obj->device->isConnected(number_of_connections))
         {
-            throw RunTimeException ("timeout occurred waiting for connection on device");
+            throw RunTimeException(CRITICAL, "timeout occurred waiting for connection on device");
         }
 
         /* Set Success */
@@ -175,7 +175,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error waiting on device: %s", e.what());
+        mlog(e.level(), "Error waiting on device: %s", e.what());
     }
 
     /* Return Success */
@@ -208,7 +208,7 @@ int DeviceIO::luaConfigBlock(lua_State* L)
         }
         else
         {
-            throw RunTimeException("invalid block configuration specified");
+            throw RunTimeException(CRITICAL, "invalid block configuration specified");
         }
 
         /* Set Success */
@@ -216,7 +216,7 @@ int DeviceIO::luaConfigBlock(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring blocking on device: %s", e.what());
+        mlog(e.level(), "Error configuring blocking on device: %s", e.what());
     }
 
     /* Return Success */
@@ -244,7 +244,7 @@ int DeviceIO::luaDieOnDisconnect(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring blocking on device: %s", e.what());
+        mlog(e.level(), "Error configuring blocking on device: %s", e.what());
     }
 
     /* Return Success */

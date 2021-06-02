@@ -243,7 +243,7 @@ int64_t S3Lib::rangeGet (uint8_t* data, int64_t size, uint64_t pos, const char* 
     }
     else
     {
-        throw RunTimeException("failed to read S3 data");
+        throw RunTimeException(CRITICAL, "failed to read S3 data");
     }
 
     return bytes_read;
@@ -278,7 +278,7 @@ int S3Lib::luaGet(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error getting S3 object: %s", e.what());
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -307,7 +307,7 @@ int S3Lib::luaConfig(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring S3 access: %s", e.what());
+        mlog(e.level(), "Error configuring S3 access: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -384,7 +384,7 @@ int S3Lib::luaCreateCache(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating S3 cache: %s", e.what());
+        mlog(e.level(), "Error creating S3 cache: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }
@@ -410,7 +410,7 @@ int S3Lib::luaFlushCache(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error flushing S3 cache: %s", e.what());
+        mlog(e.level(), "Error flushing S3 cache: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
 }

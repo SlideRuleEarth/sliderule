@@ -72,7 +72,7 @@ int PointIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -169,7 +169,7 @@ pointspan_t PointIndex::attr2span (Dictionary<double>* attr, bool* provided)
     }
     catch(RunTimeException& e)
     {
-        mlog(CRITICAL, "Failed to index asset: %s", e.what());
+        mlog(e.level(), "Failed to index asset: %s", e.what());
     }
 
     if(provided)

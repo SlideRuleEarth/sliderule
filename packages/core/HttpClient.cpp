@@ -77,7 +77,7 @@ int HttpClient::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating HttpClient: %s", e.what());
+        mlog(e.level(), "Error creating HttpClient: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -340,7 +340,7 @@ int HttpClient::luaRequest (lua_State* L)
         EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
         if(verb == EndpointObject::UNRECOGNIZED)
         {
-            throw RunTimeException("Invalid verb: %s", verb_str);
+            throw RunTimeException(CRITICAL, "Invalid verb: %s", verb_str);
         }
 
         /* Allocate Connection Structure */
@@ -443,7 +443,7 @@ int HttpClient::luaRequest (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error initiating request: %s", e.what());
+        mlog(e.level(), "Error initiating request: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }

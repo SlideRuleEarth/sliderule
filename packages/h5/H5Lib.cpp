@@ -431,7 +431,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, valtype_t v
 
     /* Return Info */
     if(status)  return info;
-    else        throw RunTimeException("H5Lib failed to read dataset");
+    else        throw RunTimeException(CRITICAL, "H5Lib failed to read dataset");
 }
 
 /*----------------------------------------------------------------------------

@@ -114,7 +114,7 @@ void TimeLib::init(void)
     }
     catch(RunTimeException& e)
     {
-        mlog(CRITICAL, "Fatal error: unable to start heart beat timer: %s", e.what());
+        mlog(e.level(), "Fatal error: unable to start heart beat timer: %s", e.what());
         assert(false);
     }
 }

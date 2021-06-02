@@ -83,7 +83,7 @@ int File::luaCreate(lua_State* L)
         /* Check Access Type */
         if(role != File::READER && role != File::WRITER)
         {
-            throw RunTimeException("unrecognized file access specified: %d", role);
+            throw RunTimeException(CRITICAL, "unrecognized file access specified: %d", role);
         }
 
         /* Return File Device Object */
@@ -91,7 +91,7 @@ int File::luaCreate(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating File: %s", e.what());
+        mlog(e.level(), "Error creating File: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }

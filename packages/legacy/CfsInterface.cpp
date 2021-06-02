@@ -532,9 +532,9 @@ bool CfsInterface::validatePkt (unsigned char* pktbuf, int bytes)
         }
         stat->last_seg = seg;
     }
-    catch (const std::invalid_argument& e)
+    catch (const RunTimeException& e)
     {
-        mlog(CRITICAL, "Unable to create or validate CCSDS packet: %s", e.what());
+        mlog(e.level(), "Unable to create or validate CCSDS packet: %s", e.what());
         status = false;
     }
 

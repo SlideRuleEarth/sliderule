@@ -180,7 +180,7 @@ const T& List<T, LIST_BLOCK_SIZE>::Iterator::operator[](int index) const
     }
     else
     {
-        throw RunTimeException("List::Iterator index out of range");
+        throw RunTimeException(CRITICAL, "List::Iterator index out of range");
     }
 }
 
@@ -365,7 +365,7 @@ T& List<T, LIST_BLOCK_SIZE>::get(int index)
     }
     else
     {
-        throw RunTimeException("List::get index out of range");
+        throw RunTimeException(CRITICAL, "List::get index out of range");
     }
 }
 

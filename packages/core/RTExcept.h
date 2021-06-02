@@ -45,14 +45,17 @@
 
 class RunTimeException : public std::runtime_error
 {
-   public:
+    public:
+
+        RunTimeException(event_level_t _lvl, const char* _errmsg, ...); VARG_CHECK(printf, 1, 2);
+        char const* what() const throw();
+        event_level_t level (void) const;
+
+    private:
 
         static const int ERROR_MSG_LEN = 128;
-
         char errmsg[ERROR_MSG_LEN];
-
-        RunTimeException(const char* _errmsg, ...); VARG_CHECK(printf, 1, 2);
-        char const* what() const throw();
+        const event_level_t lvl;
 };
 
 #endif // __runtime_exception__

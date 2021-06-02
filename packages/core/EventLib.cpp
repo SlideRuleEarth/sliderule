@@ -100,7 +100,7 @@ void EventLib::init (const char* eventq)
     RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, offsetof(event_t, attr) + 1, rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t), 16);
     if(rc != RecordObject::SUCCESS_DEF)
     {
-        throw RunTimeException("Fatal error: failed to register event record");
+        throw RunTimeException(CRITICAL, "Fatal error: failed to register event record");
     }
 
     /* Calculate Size of Record Type */
@@ -397,9 +397,9 @@ int32_t EventLib::registerMetric (const char* metric_attr, const char* name_fmt,
                 delete [] metric.name;
                 delete [] metric.attr;
             }
-            catch(const std::exception& e)
+            catch(const RunTimeException& e)
             {
-                mlog(CRITICAL, "Failed to add metric %s\n", metric.name);
+                mlog(e.level(), "Failed to add metric %s\n", metric.name);
                 metric.id = INVALID_METRIC;
                 delete [] metric.name;
                 delete [] metric.attr;
@@ -426,7 +426,7 @@ void EventLib::updateMetric (int32_t id, double value)
         }
         catch(const RunTimeException& e)
         {
-            mlog(ERROR, "Failed to update metric %d: %s\n", id, e.what());
+            mlog(e.level(), "Failed to update metric %d: %s\n", id, e.what());
         }
     }
     metric_mut.unlock();
@@ -446,7 +446,7 @@ void EventLib::incrementMetric (int32_t id)
         }
         catch(const RunTimeException& e)
         {
-            mlog(ERROR, "Failed to increment metric %d: %s\n", id, e.what());
+            mlog(e.level(), "Failed to increment metric %d: %s\n", id, e.what());
         }
     }
     metric_mut.unlock();
@@ -515,7 +515,7 @@ void EventLib::iterateMetric (const char* metric_attr, metric_func_t cb, void* p
     }
     catch(const RunTimeException& e)
     {
-        mlog(ERROR, "Failed to iterate metrics for %s: %s\n", metric_attr, e.what());
+        mlog(e.level(), "Failed to iterate metrics for %s: %s\n", metric_attr, e.what());
     }
 }
 

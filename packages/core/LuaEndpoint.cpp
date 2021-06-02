@@ -69,7 +69,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -275,13 +275,13 @@ int LuaEndpoint::luaMetric (lua_State* L)
         int32_t id = EventLib::registerMetric(obj_name, "%s.%s", endpoint_name, HITS_METRIC);
         if(id == EventLib::INVALID_METRIC)
         {
-            throw RunTimeException("Registry failed for %s.%s", obj_name, endpoint_name);
+            throw RunTimeException(CRITICAL, "Registry failed for %s.%s", obj_name, endpoint_name);
         }
 
         /* Add to Metric Ids */
         if(!lua_obj->metricIds.add(endpoint_name, id, true))
         {
-            throw RunTimeException("Could not associate metric id to endpoint");
+            throw RunTimeException(CRITICAL, "Could not associate metric id to endpoint");
         }
 
         /* Set return Status */
@@ -289,7 +289,7 @@ int LuaEndpoint::luaMetric (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating metric: %s", e.what());
+        mlog(e.level(), "Error creating metric: %s", e.what());
     }
 
     /* Return Status */

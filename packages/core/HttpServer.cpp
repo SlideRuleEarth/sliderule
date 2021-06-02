@@ -78,7 +78,7 @@ int HttpServer::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating HttpServer: %s", e.what());
+        mlog(e.level(), "Error creating HttpServer: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -227,7 +227,7 @@ int HttpServer::luaAttach (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error attaching handler: %s", e.what());
+        mlog(e.level(), "Error attaching handler: %s", e.what());
     }
 
     /* Return Status */
@@ -336,7 +336,7 @@ int HttpServer::onRead(int fd)
                         }
                         catch(const RunTimeException& e)
                         {
-                            mlog(CRITICAL, "No attached endpoint at %s: %s", endpoint, e.what());
+                            mlog(e.level(), "No attached endpoint at %s: %s", endpoint, e.what());
                             status = INVALID_RC; // will close socket
                         }
                     }
@@ -351,7 +351,7 @@ int HttpServer::onRead(int fd)
                 }
                 catch(const RunTimeException& e)
                 {
-                    mlog(CRITICAL, "Invalid request line: %s: %s", (*header_list)[0].getString(), e.what());
+                    mlog(e.level(), "Invalid request line: %s: %s", (*header_list)[0].getString(), e.what());
                 }
 
                 /* Parse Headers */
@@ -367,7 +367,7 @@ int HttpServer::onRead(int fd)
                     }
                     catch(const RunTimeException& e)
                     {
-                        mlog(CRITICAL, "Invalid header in http request: %s: %s", (*header_list)[h].getString(), e.what());
+                        mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h].getString(), e.what());
                     }
                     delete keyvalue_list;
                 }
@@ -386,7 +386,7 @@ int HttpServer::onRead(int fd)
                 }
                 catch(const RunTimeException& e)
                 {
-                    mlog(CRITICAL, "Http request must supply Content-Length header: %s", e.what());
+                    mlog(e.level(), "Http request must supply Content-Length header: %s", e.what());
                     status = INVALID_RC; // will close socket
                 }
             }

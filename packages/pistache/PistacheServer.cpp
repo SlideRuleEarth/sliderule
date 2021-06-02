@@ -78,7 +78,7 @@ int PistacheServer::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -393,7 +393,7 @@ int PistacheServer::luaRoute(lua_State* L)
         /* Check Action */
         if(action != GET && action != POST && action != PUT)
         {
-            throw RunTimeException("Invalid action: %d", action);
+            throw RunTimeException(CRITICAL, "Invalid action: %d", action);
         }
 
         /* Get URL */
@@ -421,7 +421,7 @@ int PistacheServer::luaRoute(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error binding route: %s", e.what());
+        mlog(e.level(), "Error binding route: %s", e.what());
     }
 
     /* Return Status */

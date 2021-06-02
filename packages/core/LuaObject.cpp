@@ -129,7 +129,7 @@ long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltv
     }
     else
     {
-        throw RunTimeException("must supply an integer for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, "must supply an integer for parameter #%d", parm);
     }
 }
 
@@ -151,7 +151,7 @@ double LuaObject::getLuaFloat (lua_State* L, int parm, bool optional, double dfl
     }
     else
     {
-        throw RunTimeException("must supply a floating point number for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, "must supply a floating point number for parameter #%d", parm);
     }
 }
 
@@ -173,7 +173,7 @@ bool LuaObject::getLuaBoolean (lua_State* L, int parm, bool optional, bool dfltv
     }
     else
     {
-        throw RunTimeException("must supply a boolean for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, "must supply a boolean for parameter #%d", parm);
     }
 }
 
@@ -195,7 +195,7 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
     }
     else
     {
-        throw RunTimeException("must supply a string for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, "must supply a string for parameter #%d", parm);
     }
 }
 
@@ -330,12 +330,12 @@ int LuaObject::luaDelete (lua_State* L)
         }
         else
         {
-            throw RunTimeException("unable to retrieve user data");
+            throw RunTimeException(CRITICAL, "unable to retrieve user data");
         }
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error deleting object: %s", e.what());
+        mlog(e.level(), "Error deleting object: %s", e.what());
     }
 
     return 0;
@@ -367,7 +367,7 @@ int LuaObject::luaName(lua_State* L)
             /* Register Name */
             if(!globalObjects.add(name, lua_obj))
             {
-                throw RunTimeException("Unable to register name: %s", name);
+                throw RunTimeException(CRITICAL, "Unable to register name: %s", name);
             }
         }
         globalMut.unlock();
@@ -381,7 +381,7 @@ int LuaObject::luaName(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error associating object: %s", e.what());
+        mlog(e.level(), "Error associating object: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -403,7 +403,7 @@ int LuaObject::luaLock(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error locking object: %s", e.what());
+        mlog(e.level(), "Error locking object: %s", e.what());
     }
 
     return 0;
@@ -437,7 +437,7 @@ int LuaObject::luaWaitOn(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error locking object: %s", e.what());
+        mlog(e.level(), "Error locking object: %s", e.what());
     }
 
     /* Return Completion Status */
@@ -493,7 +493,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
     luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
     if(!user_data)
     {
-        throw RunTimeException("failed to allocate new user data");
+        throw RunTimeException(CRITICAL, "failed to allocate new user data");
     }
 
     /* Bump Reference Count */
@@ -522,7 +522,7 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
         }
         else
         {
-            throw RunTimeException("%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
+            throw RunTimeException(CRITICAL, "%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
         }
     }
     else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
@@ -531,7 +531,7 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
     }
     else
     {
-        throw RunTimeException("calling object method from something not an object");
+        throw RunTimeException(CRITICAL, "calling object method from something not an object");
     }
 
     return lua_obj;
@@ -553,16 +553,16 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
             }
             else
             {
-                throw RunTimeException("object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
+                throw RunTimeException(CRITICAL, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
             }
         }
         else
         {
-            throw RunTimeException("object method called on emtpy object");
+            throw RunTimeException(CRITICAL, "object method called on emtpy object");
         }
     }
     else
     {
-        throw RunTimeException("calling object method from something not an object");
+        throw RunTimeException(CRITICAL, "calling object method from something not an object");
     }
 }

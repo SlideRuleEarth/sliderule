@@ -70,7 +70,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         /* Check Number of Threads */
         if(num_threads < 1)
         {
-            throw RunTimeException("invalid number of threads supplied (must be >= 1)");
+            throw RunTimeException(CRITICAL, "invalid number of threads supplied (must be >= 1)");
         }
 
         /* Set Key Mode */
@@ -79,7 +79,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         calcFunc_t  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
-            throw RunTimeException("Invalid key mode specified: %s", key_mode_str);
+            throw RunTimeException(CRITICAL, "Invalid key mode specified: %s", key_mode_str);
         }
         else if(key_mode == FIELD_KEY_MODE)
         {
@@ -99,7 +99,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -231,7 +231,7 @@ int RecordDispatcher::luaRun(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error starting dispatcher: %s", e.what());
+        mlog(e.level(), "Error starting dispatcher: %s", e.what());
     }
 
     /* Return Status */
@@ -257,7 +257,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         /* Check if Active */
         if(lua_obj->dispatcherActive)
         {
-            throw RunTimeException("Cannot attach %s to a running dispatcher", dispatch->getName());
+            throw RunTimeException(CRITICAL, "Cannot attach %s to a running dispatcher", dispatch->getName());
         }
 
         /* Attach Dispatches */
@@ -280,7 +280,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     {
                         if(old_dispatch.list[d] == dispatch)
                         {
-                            throw RunTimeException("Dispatch already attached to %s", rec_type_str);
+                            throw RunTimeException(CRITICAL, "Dispatch already attached to %s", rec_type_str);
                         }
                     }
 
@@ -322,7 +322,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error attaching dispatch: %s", e.what());
+        mlog(e.level(), "Error attaching dispatch: %s", e.what());
     }
 
     /* Return Status */
@@ -349,7 +349,7 @@ int RecordDispatcher::luaClearError(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error clearing errors: %s", e.what());
+        mlog(e.level(), "Error clearing errors: %s", e.what());
     }
 
     /* Return Status */
@@ -376,7 +376,7 @@ int RecordDispatcher::luaDrain (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error draining input stream: %s", e.what());
+        mlog(e.level(), "Error draining input stream: %s", e.what());
     }
 
     /* Return Status */
@@ -421,7 +421,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
                     {
                         int num_newlines = len / 16 + 3;
                         char* msg_str = new char[len * 2 + num_newlines + 1];
-                        mlog(CRITICAL, "%s unable to create record from message: %s", dispatcher->ObjectType, e.what());
+                        mlog(e.level(), "%s unable to create record from message: %s", dispatcher->ObjectType, e.what());
                         int msg_index = 0;
                         for(int i = 0; i < len; i++)
                         {

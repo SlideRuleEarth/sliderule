@@ -88,14 +88,14 @@ int ReportDispatch::luaCreate (lua_State* L)
         if(file_format == INVALID_FORMAT)
         {
             mlog(CRITICAL, "Invalid file format provided: %s", format_str);
-            throw RunTimeException("parameter error");
+            throw RunTimeException(CRITICAL, "parameter error");
         }
 
         /* Check Buffer Size */
         if(buffer_size < 0)
         {
             mlog(CRITICAL, "Invalid size provided for buffer: %ld", buffer_size);
-            throw RunTimeException("parameter error");
+            throw RunTimeException(CRITICAL, "parameter error");
         }
 
         /* Parse Header Columns */
@@ -115,7 +115,7 @@ int ReportDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         num_results = returnLuaStatus(L, false);
     }
 
@@ -348,11 +348,11 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key)
     {
         name    = record->getValueText(record->getField("NAME"));
         value   = record->getValueText(record->getField("TEXT"));
-        if(!name || !value) throw RunTimeException("received incomplete metric");
+        if(!name || !value) throw RunTimeException(CRITICAL, "received incomplete metric");
     }
     catch(const RunTimeException& e)
     {
-        if(reportError) mlog(CRITICAL, "%s failed to retrieve fields of record %s: %s", ObjectType, MetricRecord::rec_type, e.what());
+        if(reportError) mlog(e.level(), "%s failed to retrieve fields of record %s: %s", ObjectType, MetricRecord::rec_type, e.what());
         reportError = false;
         return false;
     }
@@ -475,7 +475,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
         if(display == INVALID_DISPLAY)
         {
             mlog(CRITICAL, "Invalid index display selected: %s", display_str);
-            throw RunTimeException("parameter error");
+            throw RunTimeException(CRITICAL, "parameter error");
         }
 
         /* Set Display Type */
@@ -486,7 +486,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring display: %s", e.what());
+        mlog(e.level(), "Error configuring display: %s", e.what());
     }
 
     /* Return Status */
@@ -530,7 +530,7 @@ int ReportDispatch::luaFlushRow(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Error configuring display: %s", e.what());
+        mlog(e.level(), "Error configuring display: %s", e.what());
     }
 
     /* Return Status */
