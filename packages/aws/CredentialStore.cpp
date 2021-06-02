@@ -44,7 +44,7 @@
  ******************************************************************************/
 
 Mutex CredentialStore::credentialLock;
-Dictionary<CredentialStore::credential_t> CredentialStore::credentialStore;
+Dictionary<CredentialStore::Credential> CredentialStore::credentialStore(STARTING_STORE_SIZE);
 
 /******************************************************************************
  * CREDENTIAL STORE CLASS
@@ -67,10 +67,10 @@ void CredentialStore::deinit (void)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-CredentialStore::credential_t CredentialStore::get (const char* host)
+CredentialStore::Credential CredentialStore::get (const char* host)
 {
-    credential_t credential;
-    
+    Credential credential;
+
     credentialLock.lock();
     {
         try
@@ -79,7 +79,7 @@ CredentialStore::credential_t CredentialStore::get (const char* host)
         }
         catch(const RunTimeException& e)
         {
-            LocalLib::set(&credential, 0, sizeof(credential));
+            (void)e;
         }
     }
     credentialLock.unlock();
@@ -90,7 +90,7 @@ CredentialStore::credential_t CredentialStore::get (const char* host)
 /*----------------------------------------------------------------------------
  * put
  *----------------------------------------------------------------------------*/
-bool CredentialStore::put (const char* host, credential_t credential)
+bool CredentialStore::put (const char* host, Credential& credential)
 {
     bool status = false;
 
@@ -114,7 +114,7 @@ int CredentialStore::luaGet(lua_State* L)
         const char* host = LuaObject::getLuaString(L, 1);
 
         /* Get Credentials */
-        credential_t credential = CredentialStore::get(host);
+        Credential credential = CredentialStore::get(host);
 
         /* Return Credentials */
         if(credential.access_key_id)
@@ -134,7 +134,7 @@ int CredentialStore::luaGet(lua_State* L)
             lua_settable(L, -3);
  
             lua_pushstring(L, "expiration_time");
-            lua_pushinteger(L, credential.expiration_time);
+            lua_pushstring(L, credential.expiration_time);
             lua_settable(L, -3);
 
             return LuaObject::returnLuaStatus(L, true, 2);
@@ -161,8 +161,7 @@ int CredentialStore::luaPut(lua_State* L)
         const char* host = LuaObject::getLuaString(L, 1);
 
         /* Initialize Credentials */
-        credential_t credential;
-        LocalLib::set(&credential, 0, sizeof(credential));
+        Credential credential;
 
         /* Get Credentials */
         int index = 2;
@@ -181,7 +180,7 @@ int CredentialStore::luaPut(lua_State* L)
             lua_pop(L, 1);
 
             lua_getfield(L, index, "expiration_time");
-            credential.expiration_time = LuaObject::getLuaInteger(L, -1);
+            credential.expiration_time = StringLib::duplicate(LuaObject::getLuaString(L, -1));
             lua_pop(L, 1);
         }
 

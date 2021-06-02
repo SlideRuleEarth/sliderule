@@ -49,15 +49,64 @@ class CredentialStore
     public:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int STARTING_STORE_SIZE = 8;
+
+        /*--------------------------------------------------------------------
          * Typdefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
+        struct Credential {
             const char* access_key_id;
             const char* secret_access_key;
             const char* access_token;
-            uint64_t    expiration_time;
-        } credential_t;
+            const char* expiration_time;
+
+            Credential(void) {
+                zero();
+            };
+
+            Credential(const Credential& c) {
+                cleanup();
+                copy(c);
+            };
+
+            const Credential& operator=(const Credential& c) {
+                cleanup();
+                copy(c);
+                return *this;
+            };
+
+            ~Credential(void) { 
+                cleanup();
+            };
+
+            private:
+
+                void zero (void) {
+                    access_key_id = NULL;
+                    secret_access_key = NULL;
+                    access_token = NULL;
+                    expiration_time = NULL;
+                }
+
+                void cleanup (void) {
+                    if(access_key_id) delete [] access_key_id;
+                    if(secret_access_key) delete [] secret_access_key;
+                    if(access_token) delete [] access_token;
+                    if(expiration_time) delete [] expiration_time;
+                }
+
+                void copy (const Credential& c) {
+                    access_key_id = StringLib::duplicate(c.access_key_id);
+                    secret_access_key = StringLib::duplicate(c.secret_access_key);
+                    access_token = StringLib::duplicate(c.access_token);
+                    expiration_time = StringLib::duplicate(c.expiration_time);
+                }
+
+        };
 
         /*--------------------------------------------------------------------
          * Methods
@@ -66,8 +115,8 @@ class CredentialStore
         static void         init    (void);
         static void         deinit  (void);
 
-        static credential_t get     (const char* host);
-        static bool         put     (const char* host, credential_t credential);
+        static Credential   get     (const char* host);
+        static bool         put     (const char* host, Credential& credential);
 
         static int          luaGet  (lua_State* L);
         static int          luaPut  (lua_State* L);
@@ -79,7 +128,7 @@ class CredentialStore
          *--------------------------------------------------------------------*/
 
         static Mutex credentialLock;
-        static Dictionary<credential_t> credentialStore;
+        static Dictionary<Credential> credentialStore;
 };
 
 #endif  /* __credential_store__ */
