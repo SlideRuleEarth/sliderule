@@ -297,39 +297,22 @@ TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
 {
     TimeLib::date_t date;
 
-    /* Determine If Leap Year */
-    bool is_leap_year = false;
-    if(gmt_time.year % 4 == 0)
-    {
-        is_leap_year = true;
-        if(gmt_time.year % 100 == 0)
-        {
-            is_leap_year = false;
-            if(gmt_time.year % 400 == 0)
-            {
-                is_leap_year = true;
-            }
-        }
-    }
-
     /* Determine Month */
-    int month = 0, day = 0, preceding_day = 0;
-    while(month < MONTHS_IN_YEAR)
+    int month = 1, day = 0, preceding_day = 0;
+    while(month <= MONTHS_IN_YEAR)
     {
-        /* Check for Leap Year */
-        int leap_day = 0;
-        if(is_leap_year && month == 1) leap_day = 1;
-
-        /* Go to Next Month */
+        /* Accumulate Days */
         preceding_day = day;
-        day += DaysInEachMonth[month] + leap_day;
-        month++;
+        day += daysinmonth(gmt_time.year, month);
 
-        /* Check Month */
+        /* Check Day */
         if(gmt_time.doy <= day)
         {
             break;
         }
+
+        /* Go to Next Month */
+        month++;
     }
 
     /* Set Date */
@@ -396,21 +379,54 @@ int64_t TimeLib::str2gpstime (const char* time_str)
 {
     const int max_time_size = 256;
     char time_buf[max_time_size];
-    const int max_token_count = 6;
+    const int max_token_count = 8;
     char* token_ptr[max_token_count];
 
     /* Determine format of time string and copy into buffer */
     int i;
     int tok = 1;
+    int token_count = 0;
     int colon_count = 0;
+    int dash_count = 0;
+    int space_count = 0;
+    int tz_count = 0;
+    int zulu_count = 0;
     token_ptr[0] = &time_buf[0];
     for(i = 0; i < (max_time_size - 1) && time_str[i] != '\0'; i++)
     {
         time_buf[i] = time_str[i];
+
+        bool is_delim = false;
         if(time_str[i] == ':')
         {
             colon_count++;
-            if(colon_count < max_token_count)
+            is_delim = true;
+        }
+        else if(time_str[i] == ' ')
+        {
+            space_count++;
+            is_delim = true;
+        }
+        else if(time_str[i] == '-')
+        {
+            dash_count++;
+            is_delim = true;
+        }
+        else if(time_str[i] == '+')
+        {
+            tz_count++;
+            is_delim = true;
+        }
+        else if(time_str[i] == 'T' || time_str[i] == 'Z')
+        {
+            zulu_count++;
+            is_delim = true;
+        }
+
+        if(is_delim)
+        {
+            token_count++;
+            if(token_count < max_token_count)
             {
                 time_buf[i] = '\0';
                 token_ptr[tok++] = &time_buf[i+1];
@@ -420,17 +436,19 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     time_buf[i] = '\0';
 
     /* Process String Input */
-    bool status         = false;
-    long year           = 0;
-    long month          = 0;
-    long day            = 0;
-    long day_of_year    = 0;
-    long hour           = 0;
-    long minute         = 0;
-    double second       = 0;
+    bool status     = false;
+    long year       = 0;
+    long month      = 0;
+    long day        = 0;
+    long doy        = 0;
+    long hour       = 0;
+    long minute     = 0;
+    double second   = 0;
 
-    /* <year>:<month>:<day of month>:<hour in day>:<minute in hour>:<second in minute> */
-    if(colon_count == 5)
+    /* Zulu = <year>-<month>-<day of month>T<hour in day>:<minute in hour>:<second in minute>Z */
+    /* Basic = <year>:<month>:<day of month>:<hour in day>:<minute in hour>:<second in minute> */
+    /* AWS = <year>-<month>-<day of month> <hour in day>:<minute in hour>:<second in minute>+/-HH:MM */
+    if(zulu_count > 0 || dash_count > 0 || colon_count == 5)
     {
         if(StringLib::str2long(token_ptr[0], &year))
         {
@@ -447,7 +465,75 @@ int64_t TimeLib::str2gpstime (const char* time_str)
                                 if(StringLib::str2double(token_ptr[5], &second))
                                 {
                                     status = true;
-                                    day_of_year = dayofyear(year, month, day);
+                                    doy = dayofyear(year, month, day);
+
+                                    if(token_count == 8) // AWS
+                                    {
+                                        long hour_adjust = 0;
+                                        long minute_adjust = 0;
+                                        if(StringLib::str2long(token_ptr[6], &hour_adjust))
+                                        {
+                                            if(StringLib::str2long(token_ptr[7], &minute_adjust))
+                                            {
+                                                if(tz_count > 1)
+                                                {
+                                                    hour -= hour_adjust;
+                                                    minute -= minute_adjust;
+                                                    
+                                                    if(minute < 0)
+                                                    {
+                                                        hour -= 1;
+                                                        minute = 60 + minute;
+                                                    }
+
+                                                    if(hour < 0)
+                                                    {
+                                                        day -= 1;
+                                                        hour = 24 + hour;
+                                                    }
+
+                                                    if(day < 1)
+                                                    {
+                                                        month -= 1;
+                                                        if(month < 1)
+                                                        {
+                                                            month = 12;
+                                                            year -= 1;
+                                                        }                                                        
+                                                        day = daysinmonth(year, month) + day;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    hour += hour_adjust;
+                                                    minute += minute_adjust;
+
+                                                    if(minute >= 60)
+                                                    {
+                                                        hour += 1;
+                                                        minute = minute - 60;
+                                                    }
+
+                                                    if(hour >= 24)
+                                                    {
+                                                        day += 1;
+                                                        hour = hour - 24;
+                                                    }
+
+                                                    if(day > daysinmonth(year, month))
+                                                    {
+                                                        day = day - daysinmonth(year, month);
+                                                        month += 1;
+                                                        if(month > 12)
+                                                        {
+                                                            month = 1;
+                                                            year += 1;
+                                                        }                                                        
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -456,12 +542,12 @@ int64_t TimeLib::str2gpstime (const char* time_str)
             }
         }
     }
-    /* <year>:<day of year>:<hour in day>:<minute in hour>:<second in minute> */
+    /* Day of Year = <year>:<day of year>:<hour in day>:<minute in hour>:<second in minute> */
     else if(colon_count == 4)
     {
         if(StringLib::str2long(token_ptr[0], &year))
         {
-            if(StringLib::str2long(token_ptr[1], &day_of_year))
+            if(StringLib::str2long(token_ptr[1], &doy))
             {
                 if(StringLib::str2long(token_ptr[2], &hour))
                 {
@@ -487,7 +573,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     {
         gmt_time_t gmt_time;
         gmt_time.year = year;
-        gmt_time.doy = day_of_year;
+        gmt_time.doy = doy;
         gmt_time.hour = hour;
         gmt_time.minute = minute;
         gmt_time.second = (int)second;
@@ -501,14 +587,48 @@ int64_t TimeLib::str2gpstime (const char* time_str)
  *----------------------------------------------------------------------------*/
 int TimeLib::dayofyear(int year, int month, int day_of_month)
 {
-    /* Leap Year...       J   F   M   A   M   J   J   A   S   O   N   D */
-    int month2days[12] = { 31, 28, 31, 30, 31, 30, 31, 30, 30, 31, 30, 31 };
-    if (year % 4 == 0 && year % 100 != 0) month2days[1] = 29;
-    else if (year % 4 == 0 && year % 100 == 0 && year % 400 == 0) month2days[1] = 29;
     int day_of_year = 0;
-    for (int m = 0; m < (month - 1); m++) day_of_year += month2days[m];
+    
+    for (int m = 1; m < month; m++)
+    {
+        day_of_year += daysinmonth(year, m);
+    }
+    
     day_of_year += day_of_month;
+    
     return day_of_year;
+}
+
+/*----------------------------------------------------------------------------
+ * daysinmonth
+ *
+ *  year - YYYY
+ *  month - [1..12]
+ *----------------------------------------------------------------------------*/
+int TimeLib::daysinmonth (int year, int month)
+{
+    if(month < 1 || month > MONTHS_IN_YEAR) return 0;
+
+    int days_in_month = DaysInEachMonth[month - 1];
+
+    int leap_day = 0;
+    if(month == 2)
+    {
+        if(year % 4 == 0)
+        {
+            leap_day = 1;
+            if(year % 100 == 0)
+            {
+                leap_day = 0;
+                if(year % 400 == 0)
+                {
+                    leap_day = 1;
+                }
+            }
+        }
+    }
+
+    return days_in_month + leap_day;
 }
 
 /*----------------------------------------------------------------------------

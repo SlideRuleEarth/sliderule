@@ -50,7 +50,7 @@ const struct luaL_Reg LuaLibraryTime::timeLibs [] = {
     {"gps2gmt",  LuaLibraryTime::ltime_gps2gmt},
     {"cds2gmt",  LuaLibraryTime::ltime_cds2gmt},
     {"gmt2gps",  LuaLibraryTime::ltime_gmt2gps},
-    {"gps2date", LuaLibraryTime::ltime_gps2gmt},
+    {"gps2date", LuaLibraryTime::ltime_gps2date},
     {NULL, NULL}
 };
 
@@ -213,12 +213,12 @@ int LuaLibraryTime::ltime_gps2date (lua_State* L)
     const int64_t gpsms = (int64_t)lua_tonumber(L, 1);     /* get argument 1 */
     TimeLib::gmt_time_t now = TimeLib::gps2gmttime(gpsms);
     TimeLib::date_t date = TimeLib::gmt2date(now);
-    lua_pushnumber(L, now.year);                    /* push "year" as result */
-    lua_pushnumber(L, date.month);                  /* push "month" as result */
-    lua_pushnumber(L, date.day);                    /* push "day" as result */
-    lua_pushnumber(L, now.hour);                    /* push "hour" as result */
-    lua_pushnumber(L, now.minute);                  /* push "minute" as result */
-    lua_pushnumber(L, now.second);                  /* push "second" as result */
-    lua_pushnumber(L, now.millisecond);             /* push "millisecond" as result */
-    return 6;                                       /* six results */
+    lua_pushinteger(L, now.year);                   /* push "year" as result */
+    lua_pushinteger(L, date.month);                 /* push "month" as result */
+    lua_pushinteger(L, date.day);                   /* push "day" as result */
+    lua_pushinteger(L, now.hour);                   /* push "hour" as result */
+    lua_pushinteger(L, now.minute);                 /* push "minute" as result */
+    lua_pushinteger(L, now.second);                 /* push "second" as result */
+    lua_pushinteger(L, now.millisecond);            /* push "millisecond" as result */
+    return 7;                                       /* six results */
 }
