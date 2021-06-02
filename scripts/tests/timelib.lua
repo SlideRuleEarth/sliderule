@@ -10,7 +10,7 @@ runner.command("DELETE ut_timelib")
 
 -- Lua Time Unit Tests --
 
-timestamp = "2021:06:02T16:42:51.743Z"
+timestamp = "2021-06-02T16:42:51.743Z"
 gps = time.gmt2gps(timestamp)
 year, month, day, hour, minute, second, millisecond = time.gps2date(gps)
 runner.check(year == 2021.0, "incorrect year: " .. tostring(year))
