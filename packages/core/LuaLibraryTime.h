@@ -77,6 +77,7 @@ class LuaLibraryTime
         static int      ltime_gps2gmt       (lua_State* L);
         static int      ltime_cds2gmt       (lua_State* L);
         static int      ltime_gmt2gps       (lua_State* L);
+        static int      ltime_gps2date      (lua_State* L);
 };
 
 #endif  /* __lua_library_time__ */

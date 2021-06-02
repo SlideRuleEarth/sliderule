@@ -62,6 +62,15 @@ const int TimeLib::GpsDaysToStartOfYear[TimeLib::MAX_GPS_YEARS] =
     29214,  29580,  29945,  30310,  30675,  31041,  31406,  31771,  32136,  32502,
     32867,  33232,  33597,  33963,  34328,  34693,  35058,  35424,  35789,  36154   };
 
+const int TimeLib::DaysInEachMonth[TimeLib::MONTHS_IN_YEAR] = 
+{// J   F   M   A   M   J   J   A   S   O   N   D
+    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31  };
+
+const char* TimeLib::MonthNames[TimeLib::MONTHS_IN_YEAR] = 
+{   "January",      "February",     "March",        "April",
+    "May",          "June",         "July",         "August",
+    "September",    "October",      "November",     "December"  };
+
 int64_t  TimeLib::baseTimeMs = 0;
 int64_t  TimeLib::runningTimeUs = 0;
 int64_t  TimeLib::stepTimeUs = 0;
@@ -280,6 +289,59 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
 }
 
 /*----------------------------------------------------------------------------
+ * gmt2date
+ * 
+ *  returns date
+ *----------------------------------------------------------------------------*/
+TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
+{
+    TimeLib::date_t date;
+
+    /* Determine If Leap Year */
+    bool is_leap_year = false;
+    if(gmt_time.year % 4 == 0)
+    {
+        is_leap_year = true;
+        if(gmt_time.year % 100 == 0)
+        {
+            is_leap_year = false;
+            if(gmt_time.year % 400 == 0)
+            {
+                is_leap_year = true;
+            }
+        }
+    }
+
+    /* Determine Month */
+    int month = 0, day = 0, preceding_day = 0;
+    while(month < MONTHS_IN_YEAR)
+    {
+        /* Check for Leap Year */
+        int leap_day = 0;
+        if(is_leap_year && month == 1) leap_day = 1;
+
+        /* Go to Next Month */
+        preceding_day = day;
+        day += DaysInEachMonth[month] + leap_day;
+        month++;
+
+        /* Check Month */
+        if(gmt_time.day <= day)
+        {
+            break;
+        }
+    }
+
+    /* Set Date */
+    date.year = gmt_time.year;
+    date.month = month;
+    date.day = gmt_time.day - preceding_day;
+
+    /* Return Date */
+    return date;
+}
+
+/*----------------------------------------------------------------------------
  * gmt2gpstime
  * 
  *  returns gps time in milliseconds 
@@ -486,6 +548,22 @@ int TimeLib::getleapms(int64_t current_time, int64_t start_time)
 
     /* Leap seconds elapsed between start time and current time */
     return ((current_index - start_index) + 1) * TIME_MILLISECS_IN_A_SECOND;
+}
+
+/*----------------------------------------------------------------------------
+ * getleapms
+ *----------------------------------------------------------------------------*/
+const char* TimeLib::getMonthName (int month)
+{
+    int month_index = month - 1;
+    if(month_index >= 0 && month_index < MONTHS_IN_YEAR)
+    {
+        return MonthNames[month_index];
+    }
+    else
+    {
+        return NULL;
+    }
 }
 
 /******************************************************************************

@@ -92,6 +92,12 @@ class TimeLib
             int millisecond;
         } gmt_time_t;
 
+        typedef struct {
+            int year;
+            int month;
+            int day;
+        } date_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -103,10 +109,12 @@ class TimeLib
         static gmt_time_t   gettime         (int64_t now=USE_CURRENT_TIME); // returns GMT time (includes leap seconds)
         static gmt_time_t   gps2gmttime     (int64_t ms); // returns GMT time (includes leap seconds), takes gps time as milliseconds since gps epoch
         static gmt_time_t   cds2gmttime     (int days, int msecs); // returns GMT time (includes leap seconds)
+        static date_t       gmt2date        (gmt_time_t gmt_time); // returns date (taking into account leap years)
         static int64_t      gmt2gpstime     (gmt_time_t gmt_time); // returns milliseconds from gps epoch to time specified in gmt_time
         static int64_t      str2gpstime     (const char* time_str); // returns milliseconds from gps epoch to time specified in time_str
         static int          dayofyear       (int year, int month, int day_of_month);
         static int          getleapms       (int64_t current_time, int64_t start_time = TIME_GPS_EPOCH_START);
+        static const char*  getMonthName    (int month); // [1..12] --> ["January".."December"]
 
     private:
 
@@ -118,8 +126,11 @@ class TimeLib
         static const int HEARTBEAT_PERIOD_MS = 1;
         static const int HEARTBEATS_PER_SECOND = 1000; // must be consistent with HEARTBEAT_PERIOD
         static const int MAX_GPS_YEARS = 100;
+        static const int MONTHS_IN_YEAR = 12;
 
         static const int GpsDaysToStartOfYear[MAX_GPS_YEARS];
+        static const int DaysInEachMonth[MONTHS_IN_YEAR];
+        static const char* MonthNames[MONTHS_IN_YEAR];
 
         /*--------------------------------------------------------------------
          * Data
