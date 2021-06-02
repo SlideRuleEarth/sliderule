@@ -111,7 +111,7 @@ int LuaLibraryTime::ltime_getgmt (lua_State* L)
 {
     TimeLib::gmt_time_t now = TimeLib::gettime();
     lua_pushnumber(L, now.year);                    /* push "year" as result */
-    lua_pushnumber(L, now.day);                     /* push "day" as result */
+    lua_pushnumber(L, now.doy);                     /* push "day of year" as result */
     lua_pushnumber(L, now.hour);                    /* push "hour" as result */
     lua_pushnumber(L, now.minute);                  /* push "minute" as result */
     lua_pushnumber(L, now.second);                  /* push "second" as result */
@@ -131,7 +131,7 @@ int LuaLibraryTime::ltime_gps2gmt (lua_State* L)
     const int64_t gpsms = (int64_t)lua_tonumber(L, 1);     /* get argument 1 */
     TimeLib::gmt_time_t now = TimeLib::gps2gmttime(gpsms);
     lua_pushnumber(L, now.year);                    /* push "year" as result */
-    lua_pushnumber(L, now.day);                     /* push "day" as result */
+    lua_pushnumber(L, now.doy);                     /* push "day of year" as result */
     lua_pushnumber(L, now.hour);                    /* push "hour" as result */
     lua_pushnumber(L, now.minute);                  /* push "minute" as result */
     lua_pushnumber(L, now.second);                  /* push "second" as result */
@@ -153,7 +153,7 @@ int LuaLibraryTime::ltime_cds2gmt (lua_State* L)
     const int ms = (int)lua_tonumber(L, 2);        /* get argument 2 */
     TimeLib::gmt_time_t now = TimeLib::cds2gmttime(days, ms);
     lua_pushnumber(L, now.year);                    /* push "year" as result */
-    lua_pushnumber(L, now.day);                     /* push "day" as result */
+    lua_pushnumber(L, now.doy);                     /* push "day of year" as result */
     lua_pushnumber(L, now.hour);                    /* push "hour" as result */
     lua_pushnumber(L, now.minute);                  /* push "minute" as result */
     lua_pushnumber(L, now.second);                  /* push "second" as result */
@@ -182,7 +182,7 @@ int LuaLibraryTime::ltime_gmt2gps (lua_State* L)
         {
             TimeLib::gmt_time_t gmt;
             gmt.year = (int)lua_tonumber(L, 1);             /* get argument 1 */
-            gmt.day = (int)lua_tonumber(L, 2);              /* get argument 2 */
+            gmt.doy = (int)lua_tonumber(L, 2);              /* get argument 2 */
             gmt.hour = (int)lua_tonumber(L, 3);             /* get argument 3 */
             gmt.minute = (int)lua_tonumber(L, 4);           /* get argument 4 */
             gmt.second = (int)lua_tonumber(L, 5);           /* get argument 5 */

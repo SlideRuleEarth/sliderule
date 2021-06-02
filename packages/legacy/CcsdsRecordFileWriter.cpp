@@ -254,13 +254,13 @@ const char* CcsdsRecordFileWriter::createPrependStr (unsigned char* buffer, int 
             CcsdsPacket ccsdspkt(buffer, size);
             CcsdsPacket::gmt_time_t gmt_time = ccsdspkt.getCdsTimeAsGmt();
             double unix_time = gmt2unixtime(gmt_time);
-            StringLib::format(timestr, MAX_STR_SIZE, "%ld,%02d:%03d:%02d:%02d:%02d,%d", (long)(unix_time * 1000000.0), gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second, 0);
+            StringLib::format(timestr, MAX_STR_SIZE, "%ld,%02d:%03d:%02d:%02d:%02d,%d", (long)(unix_time * 1000000.0), gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second, 0);
             return StringLib::duplicate(timestr);
 #else
             CcsdsSpacePacket ccsdspkt(buffer, size);
             CcsdsSpacePacket::pkt_time_t gmt_time = ccsdspkt.getCdsTimeAsGmt();
             char gmtstr[MAX_STR_SIZE];
-            StringLib::format(gmtstr, MAX_STR_SIZE, "%02d:%03d:%02d:%02d:%02d", gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+            StringLib::format(gmtstr, MAX_STR_SIZE, "%02d:%03d:%02d:%02d:%02d", gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second);
             return StringLib::duplicate(gmtstr);
 #endif
         }

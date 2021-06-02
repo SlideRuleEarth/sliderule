@@ -164,13 +164,13 @@ int UT_TimeLib::CheckGps2GmtCmd(int argc, char argv[][MAX_CMD_SIZE])
     if (gmt_time.second      != Truth_GMT[i].second)      success = false;
     if (gmt_time.minute      != Truth_GMT[i].minute)      success = false;
     if (gmt_time.hour        != Truth_GMT[i].hour)        success = false;
-    if (gmt_time.day         != Truth_GMT[i].day)         success = false;
+    if (gmt_time.doy         != Truth_GMT[i].doy)         success = false;
     if (gmt_time.year        != Truth_GMT[i].year)        success = false;
 
     if (!success)
     {
-      print2term("Calculated - Year: %d, Day: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
-      print2term("Truth      - Year: %d, Day: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", Truth_GMT[i].year, Truth_GMT[i].day, Truth_GMT[i].hour, Truth_GMT[i].minute, Truth_GMT[i].second, Truth_GMT[i].millisecond);
+      print2term("Calculated - Year: %d, DOY: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
+      print2term("Truth      - Year: %d, DOY: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", Truth_GMT[i].year, Truth_GMT[i].doy, Truth_GMT[i].hour, Truth_GMT[i].minute, Truth_GMT[i].second, Truth_GMT[i].millisecond);
       return -1;
     }
   }
@@ -211,7 +211,7 @@ void UT_TimeLib::initTruthGMT(void)
     Truth_GMT[i].second      = 0;
     Truth_GMT[i].minute      = 0;
     Truth_GMT[i].hour        = 0;
-    Truth_GMT[i].day         = 6;
+    Truth_GMT[i].doy         = 6;
     Truth_GMT[i].year        = 1980 + i;
   }
 }

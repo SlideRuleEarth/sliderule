@@ -230,7 +230,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
         else if(indexDisplay == ReportDispatch::GMT_DISPLAY)
         {
             TimeLib::gmt_time_t index_time = TimeLib::gps2gmttime(index);
-            StringLib::format(index_str, MAX_INDEX_STR_SIZE, "%d:%d:%d:%d:%d:%d", index_time.year, index_time.day, index_time.hour, index_time.minute, index_time.second, index_time.millisecond);
+            StringLib::format(index_str, MAX_INDEX_STR_SIZE, "%d:%d:%d:%d:%d:%d", index_time.year, index_time.doy, index_time.hour, index_time.minute, index_time.second, index_time.millisecond);
         }
         else
         {

@@ -159,7 +159,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key)
                     mlog(logLevel, "Limit violation for %s - %s(%ld): %lf violates %s: [%lf, %lf] at %d:%d:%d:%d:%d:%d",
                             limit.field_name, violation.limit->record_name, record->getRecordId(),
                             violation.limit->d_val, ObjectType, limit.d_min, limit.d_max,
-                            index_time.year, index_time.day, index_time.hour, index_time.minute, index_time.second, index_time.millisecond);
+                            index_time.year, index_time.doy, index_time.hour, index_time.minute, index_time.second, index_time.millisecond);
                 }
                 else
                 {

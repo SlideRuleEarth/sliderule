@@ -279,7 +279,7 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     /* Populate GMT Structure */
     gmt_time_t gmt;
     gmt.year        = years;
-    gmt.day         = year_days;
+    gmt.doy         = year_days;
     gmt.hour        = hours;
     gmt.minute      = minutes;
     gmt.second      = secs;
@@ -326,7 +326,7 @@ TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
         month++;
 
         /* Check Month */
-        if(gmt_time.day <= day)
+        if(gmt_time.doy <= day)
         {
             break;
         }
@@ -335,7 +335,7 @@ TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
     /* Set Date */
     date.year = gmt_time.year;
     date.month = month;
-    date.day = gmt_time.day - preceding_day;
+    date.day = gmt_time.doy - preceding_day;
 
     /* Return Date */
     return date;
@@ -350,15 +350,15 @@ int64_t TimeLib::gmt2gpstime (gmt_time_t gmt_time)
 {
     /* Check GMT Time Passed In */
     if( (gmt_time.year < 1980 || gmt_time.year > (1980 + MAX_GPS_YEARS)) ||
-        (gmt_time.day < 0 || gmt_time.day > 365) ||
+        (gmt_time.doy < 0 || gmt_time.doy > 365) ||
         (gmt_time.hour < 0 || gmt_time.hour > 24) ||
         (gmt_time.minute < 0 || gmt_time.minute > 60) ||
         (gmt_time.second < 0 || gmt_time.second > 60) ||
         (gmt_time.millisecond < 0 || gmt_time.millisecond > 1000) ||
-        (gmt_time.year == 1980 && gmt_time.day < 6) )
+        (gmt_time.year == 1980 && gmt_time.doy < 6) )
     {
         mlog(CRITICAL, "Invalid time supplied in GMT structure: %d:%d:%d:%d:%d:%d",
-                gmt_time.year, gmt_time.day, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
+                gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
         return 0;
     }
 
@@ -367,11 +367,11 @@ int64_t TimeLib::gmt2gpstime (gmt_time_t gmt_time)
     int years = gmt_time.year - 1980;
     if(years == 0)
     {
-        gps_seconds = (gmt_time.day - 6) * TIME_SECS_IN_A_DAY;
+        gps_seconds = (gmt_time.doy - 6) * TIME_SECS_IN_A_DAY;
     }
     else if(years > 0 && years < MAX_GPS_YEARS)
     {
-        gps_seconds = (GpsDaysToStartOfYear[years] + gmt_time.day) * TIME_SECS_IN_A_DAY;
+        gps_seconds = (GpsDaysToStartOfYear[years] + gmt_time.doy) * TIME_SECS_IN_A_DAY;
     }
 
     /* Adjust Seconds for Time within Day */
@@ -487,7 +487,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     {
         gmt_time_t gmt_time;
         gmt_time.year = year;
-        gmt_time.day = day_of_year;
+        gmt_time.doy = day_of_year;
         gmt_time.hour = hour;
         gmt_time.minute = minute;
         gmt_time.second = (int)second;

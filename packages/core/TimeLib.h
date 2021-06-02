@@ -85,7 +85,7 @@ class TimeLib
 
         typedef struct {
             int year;
-            int day;
+            int doy; // day of year
             int hour;
             int minute;
             int second;
