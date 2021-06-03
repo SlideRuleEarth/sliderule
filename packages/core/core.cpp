@@ -84,6 +84,7 @@ class FileIODriver: Asset::IODriver
         void ioClose (void)
         {
             if(ioFile) fclose(ioFile);
+            ioFile = NULL;
         }
 
         int64_t ioRead (uint8_t* data, int64_t size, uint64_t pos)
