@@ -39,6 +39,7 @@
 #include "RecordObject.h"
 #include "List.h"
 #include "Table.h"
+#include "Asset.h"
 
 /******************************************************************************
  * HDF5 FILE BUFFER CLASS
@@ -99,7 +100,7 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
 
-                            H5FileBuffer        (dataset_info_t* data_info, io_context_t* context, const char* url, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
+                            H5FileBuffer        (dataset_info_t* data_info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
         virtual             ~H5FileBuffer       (void);
 
     protected:
@@ -252,22 +253,13 @@ class H5FileBuffer
 
         typedef Table<meta_entry_t, uint64_t> meta_repo_t;
         
-        typedef enum {
-            FILE,
-            S3,
-            UNKNOWN
-        } io_driver_t;
-
        /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
         
         void                tearDown            (void);
 
-        void                ioOpen              (const char* resource);
-        void                ioClose             (void);
         int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
-
         uint8_t*            ioRequest           (int64_t size, uint64_t* pos, int64_t hint=IO_CACHE_L1_LINESIZE, bool* cached=NULL);
         bool                ioCheckCache        (int64_t size, uint64_t pos, cache_t* cache, long line_mask, cache_entry_t* entry);
         static uint64_t     ioHashL1            (uint64_t key);
@@ -302,7 +294,6 @@ class H5FileBuffer
         int                 readSymbolTableMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
 
         void                parseDataset        (void);
-        io_driver_t         parseUrl            (const char* url, const char** resource);
         const char*         type2str            (data_type_t datatype);
         const char*         layout2str          (layout_t layout);
         int                 highestBit          (uint64_t value);
@@ -330,8 +321,7 @@ class H5FileBuffer
         bool                verbose;
 
         /* I/O Management */
-        io_driver_t         ioDriver;
-        fileptr_t           ioFile;                 // file driver
+        Asset::IODriver*    ioDriver;
         char*               ioBucket;               // s3 driver
         char*               ioKey;                  // s3 driver
         io_context_t*       ioContext;
@@ -369,8 +359,8 @@ struct H5Coro
 
     static void         init            (void);
     static void         deinit          (void);
-    static info_t       read            (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
-    static bool         traverse        (const char* url, int max_depth, const char* start_group);
+    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
+    static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
 };
 
 #endif  /* __h5coro__ */

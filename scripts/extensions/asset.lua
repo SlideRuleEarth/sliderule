@@ -148,37 +148,11 @@ local function loaddir(file, quiet)
 end
 
 --------------------------------------------------------------------------------------
--- buildurl
---------------------------------------------------------------------------------------
-local function buildurl(name, resource)
-    
-    if resource:find("/") then
-        -- sanitize resource name
-        resource = resource:sub(resource:match(".*/()"))
-    end
-
-    if name then
-        local index = core.getbyname(name)
-        if index then
-            name, format, url = index:info()
-            return string.format('%s://%s/%s', format, url, resource)
-        else
-            print(string.format('Failed to retrieve asset info for %s', name))
-            return nil
-        end
-    else
-        return string.format('file://%s', resource)
-    end
-
-end
-
---------------------------------------------------------------------------------------
 -- Return Local Package
 --------------------------------------------------------------------------------------
 local package = {
     loadresource = loadresource,
-    loaddir = loaddir,
-    buildurl = buildurl
+    loaddir = loaddir
 }
 
 return package

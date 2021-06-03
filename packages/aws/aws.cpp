@@ -42,7 +42,9 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_AWS_LIBNAME  "aws"
+#define LUA_AWS_LIBNAME     "aws"
+#define S3_IO_DRIVER        "s3"
+#define S3_CACHE_IO_DRIVER  "s3cache"
 
 /******************************************************************************
  * FILE DATA
@@ -53,6 +55,158 @@ Aws::SDKOptions options;
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * S3 I/O Driver
+ *
+ *  Notes: Used as driver for S3 access
+ *----------------------------------------------------------------------------*/
+class S3IODriver: Asset::IODriver
+{
+    public:
+
+        static IODriver* create (const Asset* _asset)
+        {
+            return new S3IODriver(_asset);
+        }
+
+        void ioOpen (const char* resource)
+        {
+            SafeString resourcepath("%s/%s", asset->getUrl(), resource);
+
+            /* Allocate Memory */
+            ioBucket = StringLib::duplicate(resourcepath.getString());
+
+            /* 
+            * Differentiate Bucket and Key
+            *  <bucket_name>/<path_to_file>/<filename>
+            *  |             |
+            * ioBucket      ioKey
+            */
+            ioKey = ioBucket;
+            while(*ioKey != '\0' && *ioKey != '/') ioKey++;
+            if(*ioKey == '/') *ioKey = '\0';
+            else throw RunTimeException(CRITICAL, "invalid S3 url: %s", resource);
+            ioKey++;
+        }
+
+        void ioClose (void)
+        {
+        }
+
+        int64_t ioRead (uint8_t* data, int64_t size, uint64_t pos)
+        {
+            return S3Lib::rangeGet(data, size, pos, ioBucket, ioKey);
+        }
+
+    private:
+
+        S3IODriver (const Asset* _asset)
+        {
+            asset = _asset;
+            ioBucket = NULL; 
+            ioKey = NULL;
+        }
+
+        ~S3IODriver (void)
+        { 
+            /*
+             * Delete Memory Allocated for ioBucket
+             *  only ioBucket is freed because ioKey only points
+             *  into the memory allocated to ioBucket
+             */
+            if(ioBucket) delete [] ioBucket;
+        }
+
+        const Asset*    asset;
+        char*           ioBucket;
+        char*           ioKey;
+};
+
+/*----------------------------------------------------------------------------
+ * S3 Cache I/O Driver
+ *
+ *  Notes: Used as driver for S3 cached access
+ *----------------------------------------------------------------------------*/
+class S3CacheIODriver: Asset::IODriver
+{
+    public:
+
+        static IODriver* create (const Asset* _asset)
+        {
+            return new S3CacheIODriver(_asset);
+        }
+
+        void ioOpen (const char* resource)
+        {
+            SafeString resourcepath("%s/%s", asset->getUrl(), resource);
+
+            /* Allocate Bucket String */
+            char* bucket = StringLib::duplicate(resourcepath.getString());
+
+            /* 
+            * Differentiate Bucket and Key
+            *  <bucket_name>/<path_to_file>/<filename>
+            *  |             |
+            * ioBucket      ioKey
+            */
+            char* key = bucket;
+            while(*key != '\0' && *key != '/') key++;
+            if(*key == '/')
+            {
+                /* Terminate Bucket and Set Key */
+                *key = '\0';
+                key++;
+
+                /* Get Cached File */
+                const char* filename = NULL;
+                if(S3Lib::fileGet(bucket, key, &filename))
+                {
+                    ioFile = fopen(filename, "r");
+                    delete [] filename;
+                }                
+            }
+
+            /* Free Bucket String */
+            delete [] bucket;
+
+            /* Check if File Opened */
+            if(ioFile == NULL) throw RunTimeException(CRITICAL, "failed to open resource");
+        }
+
+        void ioClose (void)
+        {
+            if(ioFile) fclose(ioFile);
+        }
+
+        int64_t ioRead (uint8_t* data, int64_t size, uint64_t pos)
+        {
+            /* Seek to New Position */
+            if(fseek(ioFile, pos, SEEK_SET) != 0)
+            {
+                throw RunTimeException(CRITICAL, "failed to go to I/O position: 0x%lx", pos);
+            }
+
+            /* Read Data */
+            return fread(data, 1, size, ioFile);            
+        }
+
+    private:
+
+        S3CacheIODriver (const Asset* _asset)
+        {
+            asset = _asset;
+            ioFile = NULL; 
+        }
+
+        ~S3CacheIODriver (void)
+        { 
+            ioClose(); 
+        }
+
+        const Asset*    asset;
+        fileptr_t       ioFile;
+};
 
 /*----------------------------------------------------------------------------
  * aws_open
@@ -96,6 +250,8 @@ void initaws (void)
     /* Initialize Modules */
     CredentialStore::init();
     S3Lib::init();
+    Asset::registerDriver(S3_IO_DRIVER, S3IODriver::create);
+    Asset::registerDriver(S3_CACHE_IO_DRIVER, S3CacheIODriver::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_AWS_LIBNAME, aws_open);

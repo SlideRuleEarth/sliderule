@@ -42,6 +42,18 @@
 #include "LuaObject.h"
 
 /******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#ifndef ASSET_STARTING_ATTRIBUTES_PER_RESOURCE
+#define ASSET_STARTING_ATTRIBUTES_PER_RESOURCE  4
+#endif
+
+#ifndef ASSET_STARTING_RESOURCES_PER_INDEX  
+#define ASSET_STARTING_RESOURCES_PER_INDEX      16
+#endif
+
+/******************************************************************************
  * ASSET INDEX CLASS
  ******************************************************************************/
 
@@ -49,12 +61,26 @@ class Asset: public LuaObject
 {
     public:
 
+        /**********************************************************************
+         * IO DRIVER SUBCLASS
+         **********************************************************************/
+        class IODriver
+        {
+            public:
+                                IODriver    (void) {};
+                virtual         ~IODriver   (void) {};
+
+                virtual void    ioOpen      (const char* resource) = 0;
+                virtual void    ioClose     (void) = 0;
+                virtual int64_t ioRead      (uint8_t* data, int64_t size, uint64_t pos) = 0;
+        };
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int   RESOURCE_NAME_LENGTH = 150;
-        static const char* OBJECT_TYPE;
+        static const int    RESOURCE_NAME_LENGTH = 150;
+        static const char*  OBJECT_TYPE;
 
         /*--------------------------------------------------------------------
          * Types
@@ -62,25 +88,30 @@ class Asset: public LuaObject
 
         typedef struct {
             char                name[RESOURCE_NAME_LENGTH];
-            Dictionary<double>  attributes{16};
+            Dictionary<double>  attributes{ASSET_STARTING_ATTRIBUTES_PER_RESOURCE};
         } resource_t;
+
+        typedef IODriver* (*new_driver_t) (const Asset* _asset);
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
+        static int      luaCreate       (lua_State* L);
+        static bool     registerDriver  (const char* _format, new_driver_t driver);
 
-        virtual     ~Asset      (void);
+        IODriver*       createDriver    (void) const;
+        
+        virtual         ~Asset          (void);
 
-        int         load        (resource_t& resource);
-        resource_t& operator[]  (int i);
+        int             load            (resource_t& resource);
+        resource_t&     operator[]      (int i);
 
-        int         size        (void);
-        const char* getName     (void);
-        const char* getFormat   (void);
-        const char* getUrl      (void);
-        const char* getIndex    (void);
+        int             size            (void) const;
+        const char*     getName         (void) const;
+        const char*     getFormat       (void) const;
+        const char*     getUrl          (void) const;
+        const char*     getIndex        (void) const;
 
     private:
 
@@ -88,25 +119,29 @@ class Asset: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char*                  LuaMetaName;
-        static const struct luaL_Reg        LuaMetaTable[];
+        static const char*              LuaMetaName;
+        static const struct luaL_Reg    LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        const char*                         name;
-        const char*                         format;
-        const char*                         url;
-        const char*                         index;
+        static Mutex                    driverMut;
+        static Dictionary<new_driver_t> drivers;
 
-        List<resource_t>                    resources;
+        const char*                     name;
+        const char*                     format;
+        const char*                     url;
+        const char*                     index;
+        new_driver_t                    driver;
+
+        List<resource_t,ASSET_STARTING_RESOURCES_PER_INDEX> resources;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Asset       (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index);
+                        Asset       (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index, new_driver_t _driver);
 
         static int      luaInfo     (lua_State* L);
         static int      luaLoad     (lua_State* L);

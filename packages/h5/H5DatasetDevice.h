@@ -39,6 +39,7 @@
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "DeviceObject.h"
+#include "Asset.h"
 
 /******************************************************************************
  * HDF5 DATASET HANDLER
@@ -81,7 +82,8 @@ class H5DatasetDevice: public DeviceObject
 
         RecordObject*   recObj;
         h5dataset_t*    recData;
-        char*           fileName;
+        const Asset*    asset;
+        const char*     resource;
         const char*     dataName;
         uint8_t*        dataBuffer;
         int             dataSize;
@@ -95,7 +97,7 @@ class H5DatasetDevice: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DatasetDevice     (lua_State* L, role_t _role, const char* filename, const char* dataset_name, long id, bool raw_mode, 
+                            H5DatasetDevice     (lua_State* L, role_t _role, const Asset* asset, const char* resource, const char* dataset_name, long id, bool raw_mode, 
                                                     RecordObject::valType_t datatype, long col, long startrow, long numrows);
                             ~H5DatasetDevice    (void);
 

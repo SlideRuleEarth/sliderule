@@ -41,6 +41,7 @@
 #include <aws/transfer/TransferManager.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/GetObjectRequest.h>
+#include <aws/core/auth/AWSCredentials.h>
 
 #include <assert.h>
 #include <sys/stat.h>
@@ -66,9 +67,6 @@ const char* S3Lib::AWS_S3_REGION_ENV_VAR_NAME = "SLIDERULE_S3_REGION";
 const char* S3Lib::DEFAULT_ENDPOINT = "https://s3.us-west-2.amazonaws.com";
 const char* S3Lib::DEFAULT_REGION = "us-west-2";
 
-const char* S3Lib::endpoint = NULL;
-const char* S3Lib::region = NULL;
-
 const char* S3Lib::DEFAULT_CACHE_ROOT = ".cache";
 const char* S3Lib::cacheRoot = NULL;
 
@@ -87,25 +85,20 @@ MgOrdering<const char*, okey_t, true> S3Lib::cacheFiles;
  *----------------------------------------------------------------------------*/
 void S3Lib::init (void)
 {
-    /* Attempt to AWS S3 Information from Environment */
+    /* Attempt to Get AWS S3 Information from Environment */
     const char* endpoint_from_env = getenv(AWS_S3_ENDPOINT_ENV_VAR_NAME);
     const char* region_from_env = getenv(AWS_S3_REGION_ENV_VAR_NAME);
 
     /* Set AWS Attributes */
-    endpoint = endpoint_from_env ? StringLib::duplicate(endpoint_from_env) : StringLib::duplicate(DEFAULT_ENDPOINT);
-    region = region_from_env ? StringLib::duplicate(region_from_env) : StringLib::duplicate(DEFAULT_REGION);
+    const char* endpoint = endpoint_from_env ? StringLib::duplicate(endpoint_from_env) : StringLib::duplicate(DEFAULT_ENDPOINT);
+    const char* region = region_from_env ? StringLib::duplicate(region_from_env) : StringLib::duplicate(DEFAULT_REGION);
+
+    /* Create S3 Client */
+    createClient(endpoint, region);
 
     /* Set Cache Attributes */
     cacheRoot = StringLib::duplicate(DEFAULT_CACHE_ROOT);
     cacheMaxSize = DEFAULT_MAX_CACHE_FILES;
-
-    /* Create S3 Client Configuration */
-    Aws::Client::ClientConfiguration client_config;
-    client_config.endpointOverride = endpoint;
-    client_config.region = region;
-
-    /* Create S3 Client */
-    s3Client = new Aws::S3::S3Client(client_config);
 }
 
 /*----------------------------------------------------------------------------
@@ -113,18 +106,17 @@ void S3Lib::init (void)
  *----------------------------------------------------------------------------*/
 void S3Lib::deinit (void)
 {
-    delete s3Client;
+    /* Delete S3 Client */
+    deleteClient();
 
-    delete [] endpoint;
-    delete [] region;
-
+    /* Delete Cache Root */
     delete [] cacheRoot;
 }
 
 /*----------------------------------------------------------------------------
- * get
+ * fileGet
  *----------------------------------------------------------------------------*/
-bool S3Lib::get (const char* bucket, const char* key, const char** file)
+bool S3Lib::fileGet (const char* bucket, const char* key, const char** file)
 {
     const char* ALLOC_TAG = __FUNCTION__;
 
@@ -262,7 +254,7 @@ int S3Lib::luaGet(lua_State* L)
 
         /* Download File */
         const char* filename = NULL;
-        bool status = get(bucket, key, &filename);
+        bool status = fileGet(bucket, key, &filename);
         if(status)
         {
             lua_pushstring(L, filename);
@@ -286,23 +278,20 @@ int S3Lib::luaGet(lua_State* L)
 /*----------------------------------------------------------------------------
  * luaConfig - s3config(<endpoint>, <region>)
  * 
- *  Note: Should only be called once at start of program
+ *  MUST BE CALLED AT STARTUP
  *----------------------------------------------------------------------------*/
 int S3Lib::luaConfig(lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        const char* _endpoint   = LuaObject::getLuaString(L, 1);
-        const char* _region     = LuaObject::getLuaString(L, 2);
+        const char* endpoint = LuaObject::getLuaString(L, 1);
+        const char* region   = LuaObject::getLuaString(L, 2);
 
         /* Change Endpoint and Region */
-        delete [] endpoint;
-        delete [] region;
-        endpoint = StringLib::duplicate(_endpoint);
-        endpoint = StringLib::duplicate(_region);
-        
-        /* Get Object and Write to File */
+        createClient(endpoint, region);
+
+        /* Return Success */
         return LuaObject::returnLuaStatus(L, true);
     }
     catch(const RunTimeException& e)
@@ -413,4 +402,36 @@ int S3Lib::luaFlushCache(lua_State* L)
         mlog(e.level(), "Error flushing S3 cache: %s", e.what());
         return LuaObject::returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * createClient
+ * 
+ *  MUST BE CALLED AT STARTUP
+ *----------------------------------------------------------------------------*/
+void S3Lib::createClient (const char* endpoint, const char* region)
+{
+    /* Create S3 Client Configuration */
+    Aws::Client::ClientConfiguration client_config;
+    client_config.endpointOverride = endpoint;
+    client_config.region = region;
+
+    /* Delete S3 Client if it already Exists */
+    deleteClient();
+
+//    const Aws::String accessKeyId("asdf");
+//    const Aws::String secretKey("34343");
+//    const Aws::String sessionToken("3334dfff");
+//    Aws::Auth::AWSCredentials credentials(accessKeyId, secretKey, sessionToken);
+
+    /* Create S3 Client */
+    s3Client = new Aws::S3::S3Client(client_config);
+}
+
+/*----------------------------------------------------------------------------
+ * deleteClient
+ *----------------------------------------------------------------------------*/
+void S3Lib::deleteClient (void)
+{
+    if(s3Client) delete s3Client;
 }

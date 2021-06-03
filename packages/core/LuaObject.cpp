@@ -346,6 +346,8 @@ int LuaObject::luaDelete (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaObject::luaName(lua_State* L)
 {
+    bool status = false;
+
     try
     {
         /* Get Self */
@@ -365,17 +367,19 @@ int LuaObject::luaName(lua_State* L)
             }
 
             /* Register Name */
-            if(!globalObjects.add(name, lua_obj))
+            if(globalObjects.add(name, lua_obj))
             {
-                throw RunTimeException(CRITICAL, "Unable to register name: %s", name);
+                /* Associate Name */
+                lua_obj->ObjectName = StringLib::duplicate(name);
+                mlog(INFO, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
+                status = true;
             }
         }
         globalMut.unlock();
 
-        /* Associate Name */
-        lua_obj->ObjectName = StringLib::duplicate(name);
-        mlog(INFO, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
-
+        /* Check for Errors */
+        if(!status) throw RunTimeException(CRITICAL, "Unable to register name: %s", name);
+    
         /* Return Name */
         lua_pushstring(L, lua_obj->ObjectName);
     }

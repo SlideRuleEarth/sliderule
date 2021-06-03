@@ -38,6 +38,7 @@
 
 #include "StringLib.h"
 #include "EventLib.h"
+#include "Asset.h"
 #include "H5Api.h"
 
 /******************************************************************************
@@ -53,7 +54,7 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const char* url, const char* dataset, H5Api::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Api::ALL_ROWS);
+                H5Array     (const Asset* asset, const char* resource, const char* dataset, H5Api::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Api::ALL_ROWS);
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
@@ -86,9 +87,9 @@ class H5Array
  *  exception; the ordering of the statements below is preferred over that. 
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const char* url, const char* dataset, H5Api::context_t* context, long col, long startrow, long numrows)
+H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* dataset, H5Api::context_t* context, long col, long startrow, long numrows)
 {
-    H5Api::info_t info = H5Api::read(url, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
+    H5Api::info_t info = H5Api::read(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
     name = StringLib::duplicate(dataset);
     data = (T*)info.data;
     size = info.elements;

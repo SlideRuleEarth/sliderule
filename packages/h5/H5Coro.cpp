@@ -118,19 +118,20 @@ H5FileBuffer::io_context_t::~io_context_t (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, const char* url, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
+H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
 {
     assert(data_info);
-    assert(url);
+    assert(asset);
+    assert(resource);
     assert(dataset);    
 
     /* Clear Data Info */
     LocalLib::set(data_info, 0, sizeof(dataset_info_t));
 
     /* Initialize Class Data */
+    ioDriver            = NULL;
     ioContextLocal      = true;
     ioContext           = NULL;
-    ioFile              = NULL;
     ioBucket            = NULL;
     dataChunkBuffer     = NULL;
     datasetName         = StringLib::duplicate(dataset);
@@ -148,15 +149,8 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     try
     {
         /* Initialize Driver */
-        const char* resource = NULL;
-        ioDriver = parseUrl(url, &resource);    
-        if(ioDriver == UNKNOWN)
-        {
-            throw RunTimeException(CRITICAL, "Invalid url: %s", url);
-        }
-
-        /* Open Resource (file) */
-        ioOpen(resource);
+        ioDriver = asset->createDriver();
+        ioDriver->ioOpen(resource);
 
         /* Set or Create I/O Context */
         if(context)
@@ -261,7 +255,11 @@ H5FileBuffer::~H5FileBuffer (void)
 void H5FileBuffer::tearDown (void)
 {
     /* Close I/O Resources */
-    ioClose();
+    if(ioDriver)
+    {
+        ioDriver->ioClose();
+        delete ioDriver;
+    }
 
     /* Delete Local Context */
     if(ioContextLocal)
@@ -278,62 +276,6 @@ void H5FileBuffer::tearDown (void)
 }
 
 /*----------------------------------------------------------------------------
- * ioOpen
- *----------------------------------------------------------------------------*/
-void H5FileBuffer::ioOpen (const char* resource)
-{
-    if(ioDriver == H5FileBuffer::FILE)
-    {
-        ioFile = fopen(resource, "r");
-        if(ioFile == NULL)
-        {
-            throw RunTimeException(CRITICAL, "failed to open resource");
-        }
-    }
-    #ifdef __aws__
-    else if(ioDriver == H5FileBuffer::S3)
-    {
-        /* Allocate Memory */
-        ioBucket = StringLib::duplicate(resource);
-
-        /* 
-         * Differentiate Bucket and Key
-         *  <bucket_name>/<path_to_file>/<filename>
-         *  |             |
-         * ioBucket      ioKey
-         */
-        ioKey = ioBucket;
-        while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-        if(*ioKey == '/') *ioKey = '\0';
-        else throw RunTimeException(CRITICAL, "invalid S3 url: %s", resource);
-        ioKey++;
-    }
-    #endif
-}
-
-/*----------------------------------------------------------------------------
- * ioClose
- *----------------------------------------------------------------------------*/
-void H5FileBuffer::ioClose (void)
-{
-    if(ioDriver == H5FileBuffer::FILE)
-    {
-        if(ioFile) fclose(ioFile);
-    }
-    #ifdef __aws__
-    else if(ioDriver == H5FileBuffer::S3)
-    {
-        /*
-         * Delete Memory Allocated for ioBucket
-         *  only ioBucket is freed because ioKey only points
-         *  into the memory allocated to ioBucket
-         */
-        if(ioBucket) delete [] ioBucket;
-    }
-    #endif
-}
-
-/*----------------------------------------------------------------------------
  * ioRead
  *----------------------------------------------------------------------------*/
 int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
@@ -341,25 +283,8 @@ int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     static int io_reads = 0;
     static long io_data = 0;
 
-    int64_t bytes_read = 0;
-
-    if(ioDriver == H5FileBuffer::FILE)
-    {
-        /* Seek to New Position */
-        if(fseek(ioFile, pos, SEEK_SET) != 0)
-        {
-            throw RunTimeException(CRITICAL, "failed to go to I/O position: 0x%lx", pos);
-        }
-
-        /* Read Data */
-        bytes_read = fread(data, 1, size, ioFile);
-    }
-    #ifdef __aws__
-    else if(ioDriver == H5FileBuffer::S3)
-    {
-        bytes_read = S3Lib::rangeGet(data, size, pos, ioBucket, ioKey);
-    }
-    #endif
+    /* Perform Read */
+    int64_t bytes_read = ioDriver->ioRead(data, size, pos);
 
     /* Characterize Performance */
     if(H5_CHARACTERIZE_IO)
@@ -2692,39 +2617,6 @@ void H5FileBuffer::parseDataset (void)
 }
 
 /*----------------------------------------------------------------------------
- * parseUrl
- *----------------------------------------------------------------------------*/
-H5FileBuffer::io_driver_t H5FileBuffer::parseUrl (const char* url, const char** resource)
-{
-    /* Sanity Check Input */
-    if(!url) return UNKNOWN;
-
-    /* Set Resource */
-    if(resource) 
-    {
-        const char* rptr = StringLib::find(url, "//");
-        if(rptr)
-        {
-            *resource = rptr + 2;
-        }
-    }
-
-    /* Return Driver */
-    if(StringLib::find(url, "file://"))
-    {
-        return H5FileBuffer::FILE;
-    }
-    else if(StringLib::find(url, "s3://"))
-    {
-        return H5FileBuffer::S3;
-    }
-    else
-    {
-        return H5FileBuffer::UNKNOWN;
-    }
-}
-
-/*----------------------------------------------------------------------------
  * type2str
  *----------------------------------------------------------------------------*/
 const char* H5FileBuffer::type2str (data_type_t datatype)
@@ -2915,16 +2807,16 @@ void H5Coro::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
+H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
 {
     info_t info;
 
     /* Start Trace */
     uint32_t parent_trace_id = EventLib::grabId();
-    uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lite_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+    uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lite_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, context, url, datasetname, startrow, numrows, true, H5_VERBOSE);
+    H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, true, H5_VERBOSE);
     if(info.data)
     {
         bool data_valid = true;
@@ -3113,7 +3005,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    mlog(INFO, "Read %d elements (%d bytes) from %s/%s", info.elements, info.datasize, url, datasetname);
+    mlog(INFO, "Read %d elements (%d bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
 
     /* Return Info */
     return info;
@@ -3122,7 +3014,7 @@ H5Coro::info_t H5Coro::read (const char* url, const char* datasetname, RecordObj
 /*----------------------------------------------------------------------------
  * traverse
  *----------------------------------------------------------------------------*/
-bool H5Coro::traverse (const char* url, int max_depth, const char* start_group)
+bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, const char* start_group)
 {
     (void)max_depth;
  
@@ -3132,7 +3024,7 @@ bool H5Coro::traverse (const char* url, int max_depth, const char* start_group)
     {
         /* Open File */
         info_t data_info;
-        H5FileBuffer h5file((H5FileBuffer::dataset_info_t*)&data_info, NULL, url, start_group, 0, 0, true, true);
+        H5FileBuffer h5file((H5FileBuffer::dataset_info_t*)&data_info, NULL, asset, resource, start_group, 0, 0, true, true);
 
         /* Free Data */
         if(data_info.data) delete [] data_info.data;

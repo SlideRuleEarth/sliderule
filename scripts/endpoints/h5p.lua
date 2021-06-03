@@ -27,14 +27,19 @@
 --
 
 local json = require("json")
-local asset = require("asset")
 local parm = json.decode(arg[1])
 
 local asset_name = parm["asset"]
 local resource = parm["resource"]
 local datasets = parm["datasets"] 
 
-f = h5.file(asset.buildurl(asset_name, resource))
+asset = core.getbyname(asset_name)
+if not asset then
+    userlog:sendlog(core.INFO, string.format("invalid asset specified: %s", asset_name))
+    return
+end
+
+f = h5.file(asset, resource)
 f:read(datasets, rspq)
 
 return

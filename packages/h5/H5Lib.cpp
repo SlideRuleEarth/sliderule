@@ -38,10 +38,6 @@
 #include <rest_vol_public.h>
 #endif
 
-#ifdef __aws__
-#include "S3Lib.h"
-#endif
-
 #include "H5Lib.h"
 #include "core.h"
 
@@ -89,86 +85,13 @@ hid_t rest_vol_fapl = H5P_DEFAULT;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * parse_url
+ * get_file_property
  *----------------------------------------------------------------------------*/
-H5Lib::driver_t parse_url (const char* url, const char** resource)
+hid_t get_file_property (const Asset* asset)
 {
-    /* Sanity Check Input */
-    if(!url) return H5Lib::UNKNOWN;
-
-    /* Set Resource */
-    if(resource) 
-    {
-        const char* rptr = StringLib::find(url, "//");
-        if(rptr)
-        {
-            *resource = rptr + 2;
-        }
-    }
-
-    /* Return Driver */
-    if(StringLib::find(url, "file://"))
-    {
-        return H5Lib::FILE;
-    }
-    else if(StringLib::find(url, "s3://"))
-    {
-        return H5Lib::S3;
-    }
-    else if(StringLib::find(url, "hsds://"))    
-    {
-        return H5Lib::HSDS;
-    }
-    else
-    {
-        return H5Lib::UNKNOWN;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * url2driver
- *----------------------------------------------------------------------------*/
-H5Lib::driver_t url2driver (const char* url, const char** resource, hid_t* fapl)
-{
-    H5Lib::driver_t driver = parse_url(url, resource);
-
-    switch(driver)
-    {
-        case H5Lib::FILE:
-        {
-            *fapl = H5P_DEFAULT;
-            break;
-        }
-        case H5Lib::S3:
-        {
-            driver = H5Lib::UNKNOWN; // reset it back to unknown, conditioned on below
-            #ifdef __aws__
-                const char* key_ptr = StringLib::find(*resource, PATH_DELIMETER);
-                if(key_ptr)
-                {
-                    SafeString bucket("%s", *resource);
-                    bucket.setChar('\0', bucket.findChar(PATH_DELIMETER));
-                    if(S3Lib::get(bucket.getString(), key_ptr + 1, resource))
-                    {
-                        *fapl = H5P_DEFAULT;
-                        return H5Lib::S3;
-                    }
-                }
-            #endif
-            break;
-        }
-        case H5Lib::HSDS:
-        {
-            *fapl = rest_vol_fapl;
-            break;
-        }
-        case H5Lib::UNKNOWN:
-        {
-            break;
-        }
-    }
-
-    return driver;
+    if(StringLib::match(asset->getFormat(), "file"))        return H5P_DEFAULT;
+    else if(StringLib::match(asset->getFormat(), "hsds"))   return rest_vol_fapl;
+    else                                                    return H5P_DEFAULT;
 }
 
 /*----------------------------------------------------------------------------
@@ -266,7 +189,7 @@ void H5Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, valtype_t valtype, long col, long startrow, long numrows, context_t* context)
+H5Lib::info_t H5Lib::read (const Asset* asset, const char* resource, const char* datasetname, valtype_t valtype, long col, long startrow, long numrows, context_t* context)
 {
     (void)context;
     
@@ -285,15 +208,8 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, valtype_t v
 
     do
     {
-        /* Initialize Driver */
-        driver_t driver = url2driver(url, &resource, &fapl);
-        if(driver == UNKNOWN)
-        {
-            mlog(CRITICAL, "Invalid url: %s", url);
-            break;
-        }
-
         /* Open Resource */
+        fapl = get_file_property(asset);
         file = H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
@@ -389,9 +305,9 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, valtype_t v
         }
 
         /* Start Trace */
-        mlog(INFO, "Reading %d elements (%ld bytes) from %s %s", elements, datasize, url, datasetname);
+        mlog(INFO, "Reading %d elements (%ld bytes) from %s %s", elements, datasize, resource, datasetname);
         uint32_t parent_trace_id = EventLib::grabId();
-        uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lib_read", "{\"url\":\"%s\", \"dataset\":\"%s\"}", url, datasetname);
+        uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lib_read", "{\"resource\":\"%s\", \"dataset\":\"%s\"}", resource, datasetname);
 
         /* Read Dataset */
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
@@ -437,7 +353,7 @@ H5Lib::info_t H5Lib::read (const char* url, const char* datasetname, valtype_t v
 /*----------------------------------------------------------------------------
  * traverse
  *----------------------------------------------------------------------------*/
-bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
+bool H5Lib::traverse (const Asset* asset, const char* resource, int max_depth, const char* start_group)
 {
     bool        status = false;
     hid_t       file = INVALID_RC;
@@ -451,19 +367,12 @@ bool H5Lib::traverse (const char* url, int max_depth, const char* start_group)
         rdepth_t recurse = {.data = 0};
         recurse.curr.max = max_depth;
 
-        /* Initialize Driver */
-        driver_t driver = url2driver(url, &resource, &fapl);
-        if(driver == UNKNOWN)
-        {
-            mlog(CRITICAL, "Invalid url: %s", url);
-            break;
-        }
-
         /* Open File */
+        fapl = get_file_property(asset);
         file = H5Fopen(resource, H5F_ACC_RDONLY, fapl);
         if(file < 0)
         {
-            mlog(CRITICAL, "Failed to open resource: %s", url);
+            mlog(CRITICAL, "Failed to open resource: %s", resource);
             break;
         }
 

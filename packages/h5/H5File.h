@@ -40,6 +40,7 @@
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "H5Api.h"
+#include "Asset.h"
 
 /******************************************************************************
  * HDF5 FILE CLASS
@@ -100,8 +101,8 @@ class H5File: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5File              (lua_State* L, const char* _filename);
-        virtual             ~H5File             ();
+                            H5File              (lua_State* L, const Asset* _asset, const char* _resource);
+        virtual             ~H5File             (void);
 
         static void*        readThread          (void* parm);
 
@@ -113,7 +114,8 @@ class H5File: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        char*               filename;
+        const Asset*        asset;
+        const char*         resource;
         H5Api::context_t    context;
 };
 

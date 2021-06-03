@@ -53,6 +53,9 @@ const struct luaL_Reg Asset::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+Mutex Asset::driverMut;
+Dictionary<Asset::new_driver_t> Asset::drivers;
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -65,13 +68,24 @@ int Asset::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        const char* _name = getLuaString(L, 1);
+        const char* _name   = getLuaString(L, 1);
         const char* _format = getLuaString(L, 2);
         const char* _url    = getLuaString(L, 3);
         const char* _index  = getLuaString(L, 4);
 
+        /* Get IO Driver */
+        new_driver_t _driver = NULL;
+        driverMut.lock();
+        {
+            if(!drivers.find(_format, &_driver))
+            {
+                mlog(CRITICAL, "Failed to find I/O driver for %s\n", _format);
+            }
+        }
+        driverMut.unlock();
+        
         /* Return Asset Object */
-        return createLuaObject(L, new Asset(L, _name, _format, _url, _index));
+        return createLuaObject(L, new Asset(L, _name, _format, _url, _index, _driver));
     }
     catch(const RunTimeException& e)
     {
@@ -81,11 +95,35 @@ int Asset::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * registerDriver
+ *----------------------------------------------------------------------------*/
+bool Asset::registerDriver (const char* _format, new_driver_t driver)
+{
+    bool status;
+
+    driverMut.lock();
+    {
+        status = drivers.add(_format, driver);
+    }
+    driverMut.unlock();
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * createDriver
+ *----------------------------------------------------------------------------*/
+Asset::IODriver* Asset::createDriver (void) const
+{
+    if(driver)  return driver(this);
+    else        return NULL;
+}
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 Asset::~Asset (void)
 {
-    /* Delete Members */
     delete [] name;
     delete [] format;
     delete [] url;
@@ -111,7 +149,7 @@ Asset::resource_t& Asset::operator[](int i)
 /*----------------------------------------------------------------------------
  * size
  *----------------------------------------------------------------------------*/
-int Asset::size(void)
+int Asset::size(void) const
 {
     return resources.length();
 }
@@ -119,7 +157,7 @@ int Asset::size(void)
 /*----------------------------------------------------------------------------
  * getName
  *----------------------------------------------------------------------------*/
-const char* Asset::getName (void)
+const char* Asset::getName (void) const
 {
     return name;
 }
@@ -127,7 +165,7 @@ const char* Asset::getName (void)
 /*----------------------------------------------------------------------------
  * getFormat
  *----------------------------------------------------------------------------*/
-const char* Asset::getFormat (void)
+const char* Asset::getFormat (void) const
 {
     return format;
 }
@@ -135,7 +173,7 @@ const char* Asset::getFormat (void)
 /*----------------------------------------------------------------------------
  * getUrl
  *----------------------------------------------------------------------------*/
-const char* Asset::getUrl (void)
+const char* Asset::getUrl (void) const
 {
     return url;
 }
@@ -143,7 +181,7 @@ const char* Asset::getUrl (void)
 /*----------------------------------------------------------------------------
  * getIndex
  *----------------------------------------------------------------------------*/
-const char* Asset::getIndex (void)
+const char* Asset::getIndex (void) const
 {
     return index;
 }
@@ -151,17 +189,14 @@ const char* Asset::getIndex (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index):
+Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index, new_driver_t _driver):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    /* Configure LuaObject Name */
-    ObjectName  = StringLib::duplicate(_name);
-
-    /* Initialize Members */
     name    = StringLib::duplicate(_name);
     format  = StringLib::duplicate(_format);
     url     = StringLib::duplicate(_url);
     index   = StringLib::duplicate(_index);
+    driver  = _driver;
 }
 
 /*----------------------------------------------------------------------------

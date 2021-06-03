@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "RecordObject.h"
+#include "Asset.h"
 
 /******************************************************************************
  * HDF5 I/O LIBRARY
@@ -90,8 +91,8 @@ struct H5Lib
 
     static void         init            (void);
     static void         deinit          (void);
-    static info_t       read            (const char* url, const char* datasetname, valtype_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
-    static bool         traverse        (const char* url, int max_depth, const char* start_group);
+    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, valtype_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
+    static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
     static datatype_t   h5type2datatype (int h5type, int typesize);
 };
 

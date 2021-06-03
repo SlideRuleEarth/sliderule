@@ -69,7 +69,7 @@ class S3Lib
         static void     init            (void);
         static void     deinit          (void);
 
-        static bool     get             (const char* bucket, const char* key, const char** file);
+        static bool     fileGet         (const char* bucket, const char* key, const char** file);
         static int64_t  rangeGet        (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key);
 
         static int      luaGet          (lua_State* L);
@@ -80,11 +80,15 @@ class S3Lib
     private:
         
         /*--------------------------------------------------------------------
-         * Data
+         * Methods
          *--------------------------------------------------------------------*/
 
-        static const char* endpoint;
-        static const char* region;
+        static void     createClient (const char* endpoint, const char* region);
+        static void     deleteClient (void);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
         static const char* cacheRoot;
         static int cacheMaxSize;

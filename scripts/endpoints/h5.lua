@@ -19,7 +19,6 @@
 --
 
 local json = require("json")
-local asset = require("asset")
 local parm = json.decode(arg[1])
 
 local asset_name = parm["asset"]
@@ -31,7 +30,13 @@ local startrow = parm["startrow"] or 0
 local numrows = parm["numrows"] or h5.ALL_ROWS
 local id = parm["id"] or 0
 
-f = h5.dataset(core.READER, asset.buildurl(asset_name, resource), dataset, id, false, datatype, col, startrow, numrows)
+asset = core.getbyname(asset_name)
+if not asset then
+    userlog:sendlog(core.INFO, string.format("invalid asset specified: %s", asset_name))
+    return
+end
+
+f = h5.dataset(core.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
 r = core.reader(f, rspq)
 
 r:waiton() -- waits until reader completes

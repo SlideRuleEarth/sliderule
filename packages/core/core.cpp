@@ -41,8 +41,10 @@
 
 #define LUA_CORE_LIBNAME    "core"
 
+#define FILE_IO_DRIVER      "file"
+
 #ifndef EVENTQ
-#define EVENTQ "eventq"
+#define EVENTQ              "eventq"
 #endif
 
 /******************************************************************************
@@ -54,6 +56,64 @@ bool appActive = true;
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * File I/O Driver
+ *
+ *  Notes: Used as driver for file access
+ *----------------------------------------------------------------------------*/
+class FileIODriver: Asset::IODriver
+{
+    public:
+
+        static IODriver* create (const Asset* _asset)
+        {
+            return new FileIODriver(_asset);
+        }
+
+        void ioOpen (const char* resource)
+        {
+            SafeString filepath("%s/%s", asset->getUrl(), resource);
+            ioFile = fopen(filepath.getString(), "r");
+            if(ioFile == NULL)
+            {
+                throw RunTimeException(CRITICAL, "failed to open resource");
+            }
+        }
+
+        void ioClose (void)
+        {
+            if(ioFile) fclose(ioFile);
+        }
+
+        int64_t ioRead (uint8_t* data, int64_t size, uint64_t pos)
+        {
+            /* Seek to New Position */
+            if(fseek(ioFile, pos, SEEK_SET) != 0)
+            {
+                throw RunTimeException(CRITICAL, "failed to go to I/O position: 0x%lx", pos);
+            }
+
+            /* Read Data */
+            return fread(data, 1, size, ioFile);            
+        }
+
+    private:
+
+        FileIODriver (const Asset* _asset)
+        { 
+            asset = _asset; 
+            ioFile = NULL; 
+        }
+
+        ~FileIODriver (void) 
+        { 
+            ioClose(); 
+        }
+
+        const Asset*    asset;
+        fileptr_t       ioFile;
+};
 
 /*----------------------------------------------------------------------------
  * os_print
@@ -164,6 +224,9 @@ void initcore (void)
     TTYLib::init();
     TimeLib::init();
     EventLib::init(EVENTQ);
+
+    /* Register File IO Driver */
+    Asset::registerDriver(FILE_IO_DRIVER, FileIODriver::create);
 
     /* Attach OsApi Print Function */
     LocalLib::setPrint(os_print);
