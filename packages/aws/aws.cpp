@@ -34,6 +34,9 @@
  ******************************************************************************/
 
 #include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetObjectRequest.h>
+#include <aws/core/auth/AWSCredentials.h>
 
 #include "core.h"
 #include "aws.h"
@@ -42,9 +45,10 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_AWS_LIBNAME     "aws"
-#define S3_IO_DRIVER        "s3"
-#define S3_CACHE_IO_DRIVER  "s3cache"
+#define LUA_AWS_LIBNAME         "aws"
+
+#define AWS_DEFAULT_REGION      "us-west-2"
+#define AWS_DEFAULT_ENDPOINT    "https://s3.us-west-2.amazonaws.com"
 
 /******************************************************************************
  * FILE DATA
@@ -57,157 +61,59 @@ Aws::SDKOptions options;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * S3 I/O Driver
- *
- *  Notes: Used as driver for S3 access
+ * aws_s3_get - s3get(<bucket>, <key>, [<region>], [<endpoint>]) -> contents
  *----------------------------------------------------------------------------*/
-class S3IODriver: Asset::IODriver
+int aws_s3_get(lua_State* L)
 {
-    public:
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* region      = LuaObject::getLuaString(L, 3, true, AWS_DEFAULT_REGION);
+        const char* endpoint    = LuaObject::getLuaString(L, 4, true, AWS_DEFAULT_ENDPOINT);
 
-        static IODriver* create (const Asset* _asset)
+        /* Initialize Variables for Read */
+        char* data = NULL;
+        int64_t bytes_read = 0;
+        Aws::S3::Model::GetObjectRequest object_request;
+        
+        /* Set Bucket and Key */
+        object_request.SetBucket(bucket);
+        object_request.SetKey(key);
+
+        /* Create S3 Client */
+        Aws::Client::ClientConfiguration client_config;
+        client_config.endpointOverride = endpoint;
+        client_config.region = region;
+        Aws::S3::S3Client* s3_client = new Aws::S3::S3Client(client_config);
+
+        /* Make Request */
+        Aws::S3::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
+        if(response.IsSuccess())
         {
-            return new S3IODriver(_asset);
+            bytes_read = (int64_t)response.GetResult().GetContentLength();
+            data = new char [bytes_read];
+            std::streambuf* sbuf = response.GetResult().GetBody().rdbuf();
+            std::istream reader(sbuf);
+            reader.read((char*)data, bytes_read);
+            
+            /* Return Contents */
+            lua_pushlstring(L, data, bytes_read);
+            return LuaObject::returnLuaStatus(L, true, 2);
         }
-
-        void ioOpen (const char* resource)
+        else
         {
-            SafeString resourcepath("%s/%s", asset->getUrl(), resource);
-
-            /* Allocate Memory */
-            ioBucket = StringLib::duplicate(resourcepath.getString());
-
-            /* 
-            * Differentiate Bucket and Key
-            *  <bucket_name>/<path_to_file>/<filename>
-            *  |             |
-            * ioBucket      ioKey
-            */
-            ioKey = ioBucket;
-            while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-            if(*ioKey == '/') *ioKey = '\0';
-            else throw RunTimeException(CRITICAL, "invalid S3 url: %s", resource);
-            ioKey++;
+            throw RunTimeException(CRITICAL, "failed to read S3 data");
         }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
 
-        void ioClose (void)
-        {
-        }
-
-        int64_t ioRead (uint8_t* data, int64_t size, uint64_t pos)
-        {
-            return S3Lib::rangeGet(data, size, pos, ioBucket, ioKey);
-        }
-
-    private:
-
-        S3IODriver (const Asset* _asset)
-        {
-            asset = _asset;
-            ioBucket = NULL; 
-            ioKey = NULL;
-        }
-
-        ~S3IODriver (void)
-        { 
-            /*
-             * Delete Memory Allocated for ioBucket
-             *  only ioBucket is freed because ioKey only points
-             *  into the memory allocated to ioBucket
-             */
-            if(ioBucket) delete [] ioBucket;
-        }
-
-        const Asset*    asset;
-        char*           ioBucket;
-        char*           ioKey;
-};
-
-/*----------------------------------------------------------------------------
- * S3 Cache I/O Driver
- *
- *  Notes: Used as driver for S3 cached access
- *----------------------------------------------------------------------------*/
-class S3CacheIODriver: Asset::IODriver
-{
-    public:
-
-        static IODriver* create (const Asset* _asset)
-        {
-            return new S3CacheIODriver(_asset);
-        }
-
-        void ioOpen (const char* resource)
-        {
-            SafeString resourcepath("%s/%s", asset->getUrl(), resource);
-
-            /* Allocate Bucket String */
-            char* bucket = StringLib::duplicate(resourcepath.getString());
-
-            /* 
-            * Differentiate Bucket and Key
-            *  <bucket_name>/<path_to_file>/<filename>
-            *  |             |
-            * ioBucket      ioKey
-            */
-            char* key = bucket;
-            while(*key != '\0' && *key != '/') key++;
-            if(*key == '/')
-            {
-                /* Terminate Bucket and Set Key */
-                *key = '\0';
-                key++;
-
-                /* Get Cached File */
-                const char* filename = NULL;
-                if(S3Lib::fileGet(bucket, key, &filename))
-                {
-                    ioFile = fopen(filename, "r");
-                    delete [] filename;
-                }                
-            }
-
-            /* Free Bucket String */
-            delete [] bucket;
-
-            /* Check if File Opened */
-            if(ioFile == NULL) throw RunTimeException(CRITICAL, "failed to open resource");
-        }
-
-        void ioClose (void)
-        {
-            if(ioFile) fclose(ioFile);
-            ioFile = NULL;
-        }
-
-        int64_t ioRead (uint8_t* data, int64_t size, uint64_t pos)
-        {
-            /* Seek to New Position */
-            if(fseek(ioFile, pos, SEEK_SET) != 0)
-            {
-                throw RunTimeException(CRITICAL, "failed to go to I/O position: 0x%lx", pos);
-            }
-
-            /* Read Data */
-            return fread(data, 1, size, ioFile);            
-        }
-
-    private:
-
-        S3CacheIODriver (const Asset* _asset)
-        {
-            asset = _asset;
-            ioFile = NULL; 
-        }
-
-        ~S3CacheIODriver (void)
-        { 
-            ioClose(); 
-        }
-
-        const Asset*    asset;
-        fileptr_t       ioFile;
-};
+    return LuaObject::returnLuaStatus(L, false);
+}
 
 /*----------------------------------------------------------------------------
  * aws_open
@@ -217,10 +123,8 @@ int aws_open (lua_State *L)
     static const struct luaL_Reg aws_functions[] = {
         {"csget",       CredentialStore::luaGet},
         {"csput",       CredentialStore::luaPut},
-        {"s3get",       S3Lib::luaGet},
-        {"s3config",    S3Lib::luaConfig},
-        {"s3cache",     S3Lib::luaCreateCache},
-        {"s3flush",     S3Lib::luaFlushCache},
+        {"s3get",       aws_s3_get},
+        {"s3cache",     S3CacheIODriver::luaCreateCache},
         {NULL,          NULL}
     };
 
@@ -251,8 +155,8 @@ void initaws (void)
     /* Initialize Modules */
     CredentialStore::init();
     S3Lib::init();
-    Asset::registerDriver(S3_IO_DRIVER, S3IODriver::create);
-    Asset::registerDriver(S3_CACHE_IO_DRIVER, S3CacheIODriver::create);
+    Asset::registerDriver(S3IODriver::FORMAT, S3IODriver::create);
+    Asset::registerDriver(S3CacheIODriver::FORMAT, S3CacheIODriver::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_AWS_LIBNAME, aws_open);

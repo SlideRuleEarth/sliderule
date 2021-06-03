@@ -112,6 +112,8 @@ class Asset: public LuaObject
         const char*     getFormat       (void) const;
         const char*     getUrl          (void) const;
         const char*     getIndex        (void) const;
+        const char*     getRegion       (void) const;
+        const char*     getEndpoint     (void) const;
 
     private:
 
@@ -123,16 +125,26 @@ class Asset: public LuaObject
         static const struct luaL_Reg    LuaMetaTable[];
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            const char*                 name;
+            const char*                 format;
+            const char*                 url;
+            const char*                 index;
+            const char*                 region;
+            const char*                 endpoint;
+        } attributes_t;
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static Mutex                    driverMut;
         static Dictionary<new_driver_t> drivers;
 
-        const char*                     name;
-        const char*                     format;
-        const char*                     url;
-        const char*                     index;
+        attributes_t                    attributes;
         new_driver_t                    driver;
 
         List<resource_t,ASSET_STARTING_RESOURCES_PER_INDEX> resources;
@@ -141,7 +153,7 @@ class Asset: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Asset       (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index, new_driver_t _driver);
+                        Asset       (lua_State* L, attributes_t _attributes, new_driver_t _driver);
 
         static int      luaInfo     (lua_State* L);
         static int      luaLoad     (lua_State* L);

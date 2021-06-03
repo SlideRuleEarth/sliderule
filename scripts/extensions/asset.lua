@@ -89,7 +89,7 @@ end
 --  Creates Asset for each asset listed in the asset directory file.
 --
 --  file: name of .csv file with the following header row
---      asset,      format,     url,        index
+--      asset,      format,     url,        index,      region,     endpoint
 --
 --  quiet: boolean whether to print a message for each asset loaded [optional]
 --------------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ local function loaddir(file, quiet)
 
     -- create asset for each entry in directory
     for k,v in pairs(directory) do
-        assets[k] = core.asset(k, v["format"], v["url"], v["index"])
+        assets[k] = core.asset(k, v["format"], v["url"], v["index"], v["region"], v["endpoint"])
         assets[k]:name(k)
     end
 

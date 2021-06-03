@@ -165,6 +165,8 @@ herr_t hdf5_iter_op_func (hid_t loc_id, const char* name, const H5L_info_t* info
 void H5Lib::init (void)
 {
     #ifdef H5_USE_REST_VOL
+        Asset::registerDriver("hsds", IOFileDriver::create); // not used, but allows hsds assets to be created
+
         setenv("HSDS_ENDPOINT", DEFAULT_HSDS_ENDPOINT, 0);
         setenv("HSDS_USERNAME", DEFAULT_HSDS_USERNAME, 0);
         setenv("HSDS_PASSWORD", DEFAULT_HSDS_PASSWORD, 0);

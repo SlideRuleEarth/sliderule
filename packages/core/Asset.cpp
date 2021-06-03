@@ -67,25 +67,29 @@ int Asset::luaCreate (lua_State* L)
 {
     try
     {
+        attributes_t _attributes;
+
         /* Get Parameters */
-        const char* _name   = getLuaString(L, 1);
-        const char* _format = getLuaString(L, 2);
-        const char* _url    = getLuaString(L, 3);
-        const char* _index  = getLuaString(L, 4);
+        _attributes.name       = getLuaString(L, 1);
+        _attributes.format     = getLuaString(L, 2);
+        _attributes.url        = getLuaString(L, 3);
+        _attributes.index      = getLuaString(L, 4, true, NULL);
+        _attributes.region     = getLuaString(L, 5, true, NULL);
+        _attributes.endpoint   = getLuaString(L, 6, true, NULL);
 
         /* Get IO Driver */
         new_driver_t _driver = NULL;
         driverMut.lock();
         {
-            if(!drivers.find(_format, &_driver))
-            {
-                mlog(CRITICAL, "Failed to find I/O driver for %s\n", _format);
-            }
+            drivers.find(_attributes.format, &_driver);
         }
         driverMut.unlock();
         
+        /* Check Driver */
+        if(_driver == NULL) throw RunTimeException(CRITICAL, "Failed to find I/O driver for %s", _attributes.format);
+
         /* Return Asset Object */
-        return createLuaObject(L, new Asset(L, _name, _format, _url, _index, _driver));
+        return createLuaObject(L, new Asset(L, _attributes, _driver));
     }
     catch(const RunTimeException& e)
     {
@@ -124,10 +128,12 @@ Asset::IODriver* Asset::createDriver (void) const
  *----------------------------------------------------------------------------*/
 Asset::~Asset (void)
 {
-    delete [] name;
-    delete [] format;
-    delete [] url;
-    delete [] index;
+    if(attributes.name)     delete [] attributes.name;
+    if(attributes.format)   delete [] attributes.format;
+    if(attributes.url)      delete [] attributes.url;
+    if(attributes.index)    delete [] attributes.index;
+    if(attributes.region)   delete [] attributes.region;
+    if(attributes.endpoint) delete [] attributes.endpoint;
 }
 
 /*----------------------------------------------------------------------------
@@ -159,7 +165,7 @@ int Asset::size(void) const
  *----------------------------------------------------------------------------*/
 const char* Asset::getName (void) const
 {
-    return name;
+    return attributes.name;
 }
 
 /*----------------------------------------------------------------------------
@@ -167,7 +173,7 @@ const char* Asset::getName (void) const
  *----------------------------------------------------------------------------*/
 const char* Asset::getFormat (void) const
 {
-    return format;
+    return attributes.format;
 }
 
 /*----------------------------------------------------------------------------
@@ -175,7 +181,7 @@ const char* Asset::getFormat (void) const
  *----------------------------------------------------------------------------*/
 const char* Asset::getUrl (void) const
 {
-    return url;
+    return attributes.url;
 }
 
 /*----------------------------------------------------------------------------
@@ -183,24 +189,42 @@ const char* Asset::getUrl (void) const
  *----------------------------------------------------------------------------*/
 const char* Asset::getIndex (void) const
 {
-    return index;
+    return attributes.index;
+}
+
+/*----------------------------------------------------------------------------
+ * getRegion
+ *----------------------------------------------------------------------------*/
+const char* Asset::getRegion (void) const
+{
+    return attributes.region;
+}
+
+/*----------------------------------------------------------------------------
+ * getEndpoint
+ *----------------------------------------------------------------------------*/
+const char* Asset::getEndpoint (void) const
+{
+    return attributes.endpoint;
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Asset::Asset (lua_State* L, const char* _name, const char* _format, const char* _url, const char* _index, new_driver_t _driver):
+Asset::Asset (lua_State* L, attributes_t _attributes, new_driver_t _driver):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    name    = StringLib::duplicate(_name);
-    format  = StringLib::duplicate(_format);
-    url     = StringLib::duplicate(_url);
-    index   = StringLib::duplicate(_index);
-    driver  = _driver;
+    attributes.name     = StringLib::duplicate(_attributes.name);
+    attributes.format   = StringLib::duplicate(_attributes.format);
+    attributes.url      = StringLib::duplicate(_attributes.url);
+    attributes.index    = StringLib::duplicate(_attributes.index);
+    attributes.region   = StringLib::duplicate(_attributes.region);
+    attributes.endpoint = StringLib::duplicate(_attributes.endpoint);
+    driver              = _driver;
 }
 
 /*----------------------------------------------------------------------------
- * luaInfo - :info() --> name, format, url, index
+ * luaInfo - :info() --> name, format, url, index, region, endpoint
  *----------------------------------------------------------------------------*/
 int Asset::luaInfo (lua_State* L)
 {
@@ -210,12 +234,15 @@ int Asset::luaInfo (lua_State* L)
     {
         /* Get Self */
         Asset* lua_obj = (Asset*)getLuaSelf(L, 1);
+        attributes_t* attr = &lua_obj->attributes;
 
         /* Push Info */
-        lua_pushlstring(L, lua_obj->name,   StringLib::size(lua_obj->name));
-        lua_pushlstring(L, lua_obj->format, StringLib::size(lua_obj->format));
-        lua_pushlstring(L, lua_obj->url,    StringLib::size(lua_obj->url));
-        lua_pushlstring(L, lua_obj->index,  StringLib::size(lua_obj->index));
+        attr->name      ? (void)lua_pushlstring(L, attr->name,      StringLib::size(attr->name))        : lua_pushnil(L);
+        attr->format    ? (void)lua_pushlstring(L, attr->format,    StringLib::size(attr->format))      : lua_pushnil(L);
+        attr->url       ? (void)lua_pushlstring(L, attr->url,       StringLib::size(attr->url))         : lua_pushnil(L);
+        attr->index     ? (void)lua_pushlstring(L, attr->index,     StringLib::size(attr->index))       : lua_pushnil(L);
+        attr->region    ? (void)lua_pushlstring(L, attr->region,    StringLib::size(attr->region))      : lua_pushnil(L);
+        attr->endpoint  ? (void)lua_pushlstring(L, attr->endpoint,  StringLib::size(attr->endpoint))    : lua_pushnil(L);
 
         /* Set Status */
         status = true;
@@ -226,7 +253,7 @@ int Asset::luaInfo (lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, 5);
+    return returnLuaStatus(L, status, 7);
 }
 
 /*----------------------------------------------------------------------------

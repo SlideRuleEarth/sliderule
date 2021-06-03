@@ -29,72 +29,55 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __corepkg__
-#define __corepkg__
+#ifndef __s3_io_driver__
+#define __s3_io_driver__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-
 #include "Asset.h"
-#include "AssetIndex.h"
-#include "CaptureDispatch.h"
-#include "ClusterSocket.h"
-#include "CsvDispatch.h"
-#include "DispatchObject.h"
-#include "DeviceIO.h"
-#include "DeviceObject.h"
-#include "DeviceReader.h"
-#include "DeviceWriter.h"
-#include "Dictionary.h"
-#include "EndpointObject.h"
-#include "PointIndex.h"
-#include "File.h"
-#include "FileIODriver.h"
-#include "HttpClient.h"
-#include "HttpServer.h"
-#include "LimitDispatch.h"
-#include "List.h"
-#include "LimitRecord.h"
-#include "EventLib.h"
-#include "LuaEndpoint.h"
-#include "LuaEngine.h"
-#include "LuaLibraryMsg.h"
-#include "LuaLibrarySys.h"
-#include "LuaLibraryTime.h"
-#include "LuaObject.h"
-#include "LuaScript.h"
-#include "MathLib.h"
-#include "MetricDispatch.h"
-#include "MetricRecord.h"
-#include "Monitor.h"
-#include "MsgBridge.h"
-#include "MsgProcessor.h"
-#include "MsgQ.h"
-#include "Ordering.h"
-#include "PublisherDispatch.h"
-#include "RecordObject.h"
-#include "RecordDispatcher.h"
-#include "ReportDispatch.h"
-#include "RTExcept.h"
-#include "SpatialIndex.h"
-#include "StringLib.h"
-#include "Table.h"
-#include "TcpSocket.h"
-#include "IntervalIndex.h"
-#include "TimeLib.h"
-#include "Uart.h"
-#include "UdpSocket.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * S3 IO DRIVER CLASS
  ******************************************************************************/
 
-void    initcore    (void);
-void    deinitcore  (void);
-bool    checkactive (void);
-void    setinactive (void);
+class S3IODriver: Asset::IODriver
+{
+    public:
 
-#endif  /* __corepkg__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* FORMAT;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static IODriver*    create  (const Asset* _asset);
+        void                ioOpen  (const char* resource);
+        void                ioClose (void);
+        int64_t             ioRead  (uint8_t* data, int64_t size, uint64_t pos);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        S3IODriver (const Asset* _asset);
+        ~S3IODriver (void);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        const Asset*    asset;
+        char*           ioBucket;
+        char*           ioKey;
+};
+
+#endif  /* __s3_io_driver__ */

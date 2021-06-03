@@ -55,7 +55,7 @@ class CredentialStore
         static const int STARTING_STORE_SIZE = 8;
 
         static const char* LIBRARY_NAME;
-        static const char* TIME_TO_LIVE_METRIC;
+        static const char* EXPIRATION_GPS_METRIC;
 
         static const char* ACCESS_KEY_ID_STR;
         static const char* SECRET_ACCESS_KEY_STR;
@@ -71,6 +71,7 @@ class CredentialStore
             const char* secretAccessKey;
             const char* sessionToken;
             const char* expiration;
+            int64_t     expirationGps;
 
             Credential(void) {
                 zero();
@@ -98,6 +99,7 @@ class CredentialStore
                     secretAccessKey = NULL;
                     sessionToken = NULL;
                     expiration = NULL;
+                    expirationGps = 0L;
                 }
 
                 void cleanup (void) {
@@ -112,6 +114,7 @@ class CredentialStore
                     secretAccessKey = StringLib::duplicate(c.secretAccessKey);
                     sessionToken = StringLib::duplicate(c.sessionToken);
                     expiration = StringLib::duplicate(c.expiration);
+                    expirationGps = c.expirationGps;
                 }
 
         };

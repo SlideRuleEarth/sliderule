@@ -48,7 +48,7 @@ Dictionary<CredentialStore::Credential> CredentialStore::credentialStore(STARTIN
 Dictionary<int32_t> CredentialStore::metricIds(STARTING_STORE_SIZE);
 
 const char* CredentialStore::LIBRARY_NAME = "CredentialStore";
-const char* CredentialStore::TIME_TO_LIVE_METRIC = "time_to_live";
+const char* CredentialStore::EXPIRATION_GPS_METRIC = "exp_gps";
 
 const char* CredentialStore::ACCESS_KEY_ID_STR = "accessKeyId";
 const char* CredentialStore::SECRET_ACCESS_KEY_STR = "secretAccessKey";
@@ -112,7 +112,7 @@ bool CredentialStore::put (const char* host, Credential& credential)
         int32_t metric_id;
         if(!metricIds.find(host, &metric_id))
         {
-            metric_id = EventLib::registerMetric(LIBRARY_NAME, "%s:%s", host, TIME_TO_LIVE_METRIC);
+            metric_id = EventLib::registerMetric(LIBRARY_NAME, "%s:%s", host, EXPIRATION_GPS_METRIC);
         }
 
         /* Update Metric */
@@ -120,10 +120,7 @@ bool CredentialStore::put (const char* host, Credential& credential)
         {
             if(credential.expiration != NULL)
             {
-                int64_t exp_time = TimeLib::str2gpstime(credential.expiration);
-                int64_t now = TimeLib::gettimems();
-                double time_to_live = (exp_time - now) / 1000.0; // seconds
-                update_metric(DEBUG, metric_id, time_to_live);
+                update_metric(DEBUG, metric_id, credential.expirationGps);
             }
             else
             {
@@ -219,6 +216,8 @@ int CredentialStore::luaPut(lua_State* L)
             lua_getfield(L, index, EXPIRATION_STR);
             credential.expiration = StringLib::duplicate(LuaObject::getLuaString(L, -1));
             lua_pop(L, 1);
+
+            credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
         }
 
         /* Put Credentials */

@@ -38,8 +38,9 @@
 
 #include "OsApi.h"
 #include "Dictionary.h"
-#include "Ordering.h"
-#include "LuaEngine.h"
+#include "Asset.h"
+
+#include <aws/s3/S3Client.h>
 
 /******************************************************************************
  * AWS S3 LIBRARY CLASS
@@ -48,54 +49,38 @@
 class S3Lib
 {
     public:
-
+        
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* AWS_S3_ENDPOINT_ENV_VAR_NAME;
-        static const char* AWS_S3_REGION_ENV_VAR_NAME;
+        static const int STARTING_NUM_CLIENTS = 32;
 
-        static const char* DEFAULT_ENDPOINT;
-        static const char* DEFAULT_REGION;
-
-        static const char* DEFAULT_CACHE_ROOT;
-        static const int DEFAULT_MAX_CACHE_FILES = 16;
-        
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     init            (void);
-        static void     deinit          (void);
+        static void                 init            (void);
+        static void                 deinit          (void);
+        static Aws::S3::S3Client*   createClient    (const Asset* asset);
 
-        static bool     fileGet         (const char* bucket, const char* key, const char** file);
-        static int64_t  rangeGet        (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key);
-
-        static int      luaGet          (lua_State* L);
-        static int      luaConfig       (lua_State* L);
-        static int      luaCreateCache  (lua_State* L);
-        static int      luaFlushCache   (lua_State* L);
-
-    private:
+    public:
         
         /*--------------------------------------------------------------------
-         * Methods
+         * Typedefs
          *--------------------------------------------------------------------*/
 
-        static void     createClient (const char* endpoint, const char* region);
-        static void     deleteClient (void);
+        typedef struct {
+            Aws::S3::S3Client*  s3_client;
+            int64_t             expiration_gps;
+        } client_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static const char* cacheRoot;
-        static int cacheMaxSize;
-        static Mutex cacheMut;
-        static okey_t cacheIndex;
-        static Dictionary<okey_t> cacheLookUp;
-        static MgOrdering<const char*, okey_t, true> cacheFiles;
+        static Mutex clientsMut;
+        static Dictionary<client_t> clients;
 };
 
 #endif  /* __s3_lib__ */

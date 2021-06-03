@@ -21,6 +21,8 @@ if (AWSSDK_LINK_LIBRARIES)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/aws.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3Lib.cpp
     )
 
@@ -34,6 +36,8 @@ if (AWSSDK_LINK_LIBRARIES)
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/aws.h
             ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.h
+            ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.h
+            ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.h
             ${CMAKE_CURRENT_LIST_DIR}/S3Lib.h
         DESTINATION
             ${INCDIR}
