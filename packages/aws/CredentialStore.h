@@ -53,6 +53,10 @@ class CredentialStore
          *--------------------------------------------------------------------*/
 
         static const int STARTING_STORE_SIZE = 8;
+
+        static const char* LIBRARY_NAME;
+        static const char* TIME_TO_LIVE_METRIC;
+
         static const char* ACCESS_KEY_ID_STR;
         static const char* SECRET_ACCESS_KEY_STR;
         static const char* SESSION_TOKEN_STR;
@@ -133,6 +137,7 @@ class CredentialStore
 
         static Mutex credentialLock;
         static Dictionary<Credential> credentialStore;
+        static Dictionary<int32_t> metricIds;
 };
 
 #endif  /* __credential_store__ */

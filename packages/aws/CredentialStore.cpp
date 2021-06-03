@@ -45,6 +45,10 @@
 
 Mutex CredentialStore::credentialLock;
 Dictionary<CredentialStore::Credential> CredentialStore::credentialStore(STARTING_STORE_SIZE);
+Dictionary<int32_t> CredentialStore::metricIds(STARTING_STORE_SIZE);
+
+const char* CredentialStore::LIBRARY_NAME = "CredentialStore";
+const char* CredentialStore::TIME_TO_LIVE_METRIC = "time_to_live";
 
 const char* CredentialStore::ACCESS_KEY_ID_STR = "accessKeyId";
 const char* CredentialStore::SECRET_ACCESS_KEY_STR = "secretAccessKey";
@@ -101,7 +105,35 @@ bool CredentialStore::put (const char* host, Credential& credential)
 
     credentialLock.lock();
     {
+        /* Store Credentials */
         status = credentialStore.add(host, credential);
+
+        /* Find/Register Metric Id */
+        int32_t metric_id;
+        if(!metricIds.find(host, &metric_id))
+        {
+            metric_id = EventLib::registerMetric(LIBRARY_NAME, "%s:%s", host, TIME_TO_LIVE_METRIC);
+        }
+
+        /* Update Metric */
+        if(metric_id != EventLib::INVALID_METRIC)
+        {
+            if(credential.expiration != NULL)
+            {
+                int64_t exp_time = TimeLib::str2gpstime(credential.expiration);
+                int64_t now = TimeLib::gettimems();
+                double time_to_live = (exp_time - now) / 1000.0; // seconds
+                update_metric(DEBUG, metric_id, time_to_live);
+            }
+            else
+            {
+                mlog(CRITICAL, "Null expiration time supplied to credential for %s\n", host);
+            }
+        }
+        else
+        {
+            mlog(CRITICAL, "Unable to register credential metric for %s\n", host);
+        }
     }
     credentialLock.unlock();    
 

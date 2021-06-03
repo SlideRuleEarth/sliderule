@@ -115,7 +115,7 @@ void* LuaEndpoint::requestThread (void* parm)
     int32_t metric_id = lua_endpoint->getMetricId(request->url);
     if(metric_id != EventLib::INVALID_METRIC)
     {
-        EventLib::incrementMetric(metric_id);
+        increment_metric(DEBUG, metric_id);
     }
 
     /* Create Publisher */
