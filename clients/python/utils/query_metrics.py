@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # Override monitor name
     attr = "LuaEndpoint"
     if len(sys.argv) > 2:
-        attr = int(sys.argv[2])
+        attr = sys.argv[2]
 
     # Initialize ICESat2/SlideRule Package
     icesat2.init(url, True)
