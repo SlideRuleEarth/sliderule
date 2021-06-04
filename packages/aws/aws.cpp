@@ -104,7 +104,7 @@ int aws_s3_get(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "failed to read S3 data");
+            throw RunTimeException(CRITICAL, "failed to get S3 object");
         }
     }
     catch(const RunTimeException& e)
