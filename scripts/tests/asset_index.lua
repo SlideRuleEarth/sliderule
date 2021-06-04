@@ -8,9 +8,9 @@ local td = sys.cwd() .. "/" .. runner.rootdir(arg[0]) .. "../tests"
 assets = asset.loaddir(td.."/asset_directory.csv")
 
 expected = {
-    dataset1={format="json", url="/data/1"},
-    dataset2={format="binary", url="/data/2"},
-    dataset3={format="binary", url="/data/3"}
+    dataset1={format="file", url="/data/1"},
+    dataset2={format="file", url="/data/2"},
+    dataset3={format="s3",   url="/data/3"}
 }
 
 local function check_query(act, exp)
@@ -29,7 +29,7 @@ end
 
 print('\n------------------\nTest01: Print Info\n------------------\n')
 for _,v in pairs(assets) do
-    name, format, url, index_filename, status = v:info()
+    name, format, url, index_filename, region, endpoint, status = v:info()
     runner.compare(format, expected[name]["format"])
     runner.compare(url, expected[name]["url"])
     runner.check(status)
@@ -37,7 +37,7 @@ end
 
 print('\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
 local a2 = core.getbyname("dataset1")
-name, format, url, index_filename, status = a2:info()
+name, format, url, index_filename, region, endpoint, status = a2:info()
 runner.compare(name, "dataset1")
 runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])
@@ -65,7 +65,7 @@ check_query(r5, e5)
 
 print('\n------------------\nTest06: Query Overlapping Dataset\n------------------\n')
 local a6 = core.getbyname("dataset2")
-name, format, url, index_filename, status = a6:info()
+name, format, url, index_filename, region, endpoint, status = a6:info()
 runner.compare(name, "dataset2")
 runner.compare(format, expected["dataset2"]["format"])
 runner.compare(url, expected["dataset2"]["url"])

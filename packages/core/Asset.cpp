@@ -224,7 +224,7 @@ Asset::Asset (lua_State* L, attributes_t _attributes, new_driver_t _driver):
 }
 
 /*----------------------------------------------------------------------------
- * luaInfo - :info() --> name, format, url, index, region, endpoint
+ * luaInfo - :info() --> name, format, url, index, region, endpoint, status
  *----------------------------------------------------------------------------*/
 int Asset::luaInfo (lua_State* L)
 {
