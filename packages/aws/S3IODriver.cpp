@@ -119,7 +119,7 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     }
     else
     {
-        throw RunTimeException(CRITICAL, "failed to read S3 data");
+        throw RunTimeException(CRITICAL, "failed to read S3 data: %s", response.GetError().GetMessage().c_str());
     }
 
     return bytes_read;
