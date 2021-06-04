@@ -43,7 +43,7 @@
  * S3 IO DRIVER CLASS
  ******************************************************************************/
 
-class S3IODriver: Asset::IODriver
+class S3IODriver: public Asset::IODriver
 {
     public:
 
@@ -58,18 +58,18 @@ class S3IODriver: Asset::IODriver
          *--------------------------------------------------------------------*/
 
         static IODriver*    create  (const Asset* _asset);
-        void                ioOpen  (const char* resource);
-        void                ioClose (void);
-        int64_t             ioRead  (uint8_t* data, int64_t size, uint64_t pos);
+        virtual void        ioOpen  (const char* resource);
+        virtual void        ioClose (void);
+        virtual int64_t     ioRead  (uint8_t* data, int64_t size, uint64_t pos);
 
-    private:
+    protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        S3IODriver (const Asset* _asset);
-        ~S3IODriver (void);
+                S3IODriver  (const Asset* _asset);
+        virtual ~S3IODriver (void);
 
         /*--------------------------------------------------------------------
          * Data
