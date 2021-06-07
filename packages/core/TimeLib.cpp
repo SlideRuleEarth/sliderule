@@ -450,30 +450,27 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     /* AWS = <year>-<month>-<day of month> <hour in day>:<minute in hour>:<second in minute>+/-HH:MM */
     if(zulu_count > 0 || dash_count > 0 || colon_count == 5)
     {
-        if(StringLib::str2long(token_ptr[0], &year))
+        if(StringLib::str2long(token_ptr[0], &year, 10))
         {
-            if(StringLib::str2long(token_ptr[1], &month))
+            if(StringLib::str2long(token_ptr[1], &month, 10))
             {
                 if(month > 0 && month <= 12)
                 {
-                    if(StringLib::str2long(token_ptr[2], &day))
+                    if(StringLib::str2long(token_ptr[2], &day, 10))
                     {
-                        if(StringLib::str2long(token_ptr[3], &hour))
+                        if(StringLib::str2long(token_ptr[3], &hour, 10))
                         {
-                            if(StringLib::str2long(token_ptr[4], &minute))
+                            if(StringLib::str2long(token_ptr[4], &minute, 10))
                             {
                                 if(StringLib::str2double(token_ptr[5], &second))
                                 {
-                                    status = true;
-                                    doy = dayofyear(year, month, day);
-
                                     if(token_count == 8) // AWS
                                     {
                                         long hour_adjust = 0;
                                         long minute_adjust = 0;
-                                        if(StringLib::str2long(token_ptr[6], &hour_adjust))
+                                        if(StringLib::str2long(token_ptr[6], &hour_adjust, 10))
                                         {
-                                            if(StringLib::str2long(token_ptr[7], &minute_adjust))
+                                            if(StringLib::str2long(token_ptr[7], &minute_adjust, 10))
                                             {
                                                 if(tz_count > 1)
                                                 {
@@ -534,6 +531,10 @@ int64_t TimeLib::str2gpstime (const char* time_str)
                                             }
                                         }
                                     }
+
+                                    /* Calculate Day of Year */
+                                    doy = dayofyear(year, month, day);
+                                    status = true;
                                 }
                             }
                         }
@@ -545,13 +546,13 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     /* Day of Year = <year>:<day of year>:<hour in day>:<minute in hour>:<second in minute> */
     else if(colon_count == 4)
     {
-        if(StringLib::str2long(token_ptr[0], &year))
+        if(StringLib::str2long(token_ptr[0], &year, 10))
         {
-            if(StringLib::str2long(token_ptr[1], &doy))
+            if(StringLib::str2long(token_ptr[1], &doy, 10))
             {
-                if(StringLib::str2long(token_ptr[2], &hour))
+                if(StringLib::str2long(token_ptr[2], &hour, 10))
                 {
-                    if(StringLib::str2long(token_ptr[3], &minute))
+                    if(StringLib::str2long(token_ptr[3], &minute, 10))
                     {
                         if(StringLib::str2double(token_ptr[4], &second))
                         {
