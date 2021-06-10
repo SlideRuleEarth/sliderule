@@ -27,7 +27,7 @@ def query_services (url, service, list_only=False, passing_only=False):
     if list_only:
         ip_list = []
         for entry in services:
-            ip_list.append(entry["Node"])
+            ip_list.append(entry["Address"])
         services = ip_list
 
     return services
