@@ -2822,7 +2822,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
         bool data_valid = true;
 
         /* Perform Column Translation */
-        if(info.numcols > 1)
+        if((info.numcols > 1) && (col != ALL_COLS))
         {
             /* Allocate Column Buffer */
             int tbuf_size = info.datasize / info.numcols;

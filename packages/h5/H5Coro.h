@@ -348,6 +348,7 @@ struct H5Coro
      *--------------------------------------------------------------------*/
     
     static const long ALL_ROWS = H5FileBuffer::ALL_ROWS;
+    static const long ALL_COLS = -1L;
 
     typedef H5FileBuffer::dataset_info_t info_t;
 
