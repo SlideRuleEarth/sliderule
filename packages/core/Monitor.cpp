@@ -184,7 +184,7 @@ int Monitor::textOutput (EventLib::event_t* event, char* event_buffer)
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     double seconds = (double)timeinfo.second + ((double)timeinfo.millisecond / 1000.0);
-    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%04d-%02d-%02dT%d:%d:%.03lfZ %s:%s:%s ", 
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%04d-%02d-%02dT%02d:%02d:%.03lfZ %s:%s:%s ", 
         timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, seconds,
         event->ipv4, EventLib::lvl2str((event_level_t)event->level), event->name);
 
