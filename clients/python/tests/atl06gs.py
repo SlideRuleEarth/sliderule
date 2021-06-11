@@ -143,13 +143,14 @@ if __name__ == '__main__':
     nsidc = pd.DataFrame(atl06)
 
     # Display Status of SlideRule Processing #
-    print("\nNSIDC")
+    print("\nASAS")
     print("-----")
     print("Received {} elevations".format(len(nsidc)))
 
     # Initialize Error Variables #
     diff_set = ["h_mean", "lat", "lon"]
     errors = {}
+    total_error = {}
     segments = {}    
     orphans = {"segment_id": [], "h_mean": [], "lat": [], "lon": []}
 
@@ -179,6 +180,7 @@ if __name__ == '__main__':
     # Flatten Segment Sets to just Differences #
     for element in diff_set:
         errors[element] = []
+        total_error[element] = 0.0
         for segment_id in segments:
             for spot in [1, 2, 3, 4, 5, 6]:
                 error = segments[segment_id][spot]["difference"][element]
@@ -186,14 +188,15 @@ if __name__ == '__main__':
                     orphans[element].append(error)
                 else:
                     errors[element].append(error)
+                    total_error[element] += error
 
     # Display Status of Differencing #
     print("\nErrors")
     print("------")
     print("Estimated Segments Missing: {}".format(len(orphans["segment_id"]) / 6)) # one for each spot
-    print("Gross Errors in Heights: {}".format(len(orphans["h_mean"])))
-    print("Gross Errors in Latitudes: {}".format(len(orphans["lat"])))
-    print("Gross Errors in Longitudes: {}".format(len(orphans["lon"])))
+    print("Height Errors: {} orphans, {:.5} total".format(len(orphans["h_mean"]), total_error["h_mean"]))
+    print("Latitude Errors: {} orphans, {:.5} total".format(len(orphans["lat"]), total_error["lat"]))
+    print("Longitude Errors: {} orphans, {:.5} total".format(len(orphans["lon"]), total_error["lon"]))
 
     # Create Plots
     fig = plt.figure(num=None, figsize=(12, 8))
