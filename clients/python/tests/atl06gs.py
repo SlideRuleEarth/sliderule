@@ -188,7 +188,7 @@ if __name__ == '__main__':
                     orphans[element].append(error)
                 else:
                     errors[element].append(error)
-                    total_error[element] += error
+                    total_error[element] += abs(error)
 
     # Display Status of Differencing #
     print("\nErrors")
