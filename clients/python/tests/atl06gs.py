@@ -61,7 +61,7 @@ if __name__ == '__main__':
               "cnt": 10,
               "len": 40.0,
               "res": 20.0,
-              "maxi": 1 }
+              "maxi": 10 }
 
     # Request ATL06 Data
     rsps = icesat2.atl06(parms, "ATL03_"+resource, atl03_asset, as_numpy=False)
@@ -212,6 +212,10 @@ if __name__ == '__main__':
     ax3 = plt.subplot(143)
     ax3.set_title("Longitude Errors")
     ax3.scatter([i for i in range(len(errors["lon"]))], errors["lon"], s=1.5, color='r')
+
+#    ax4 = plt.subplot(144)
+#    ax4.set_title("Processing Flags")
+#    ax4.scatter([i for i in range(len(sliderule["pflags"]))], sliderule["pflags"].values, s=1.5, color='b')
 
     ax4 = plt.subplot(144,projection=cartopy.crs.PlateCarree())
     ax4.set_title("Track Plots")
