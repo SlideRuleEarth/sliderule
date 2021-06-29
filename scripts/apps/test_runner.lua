@@ -14,7 +14,6 @@ if __core__ then
     runner.script(td .. "udp_socket.lua")
     runner.script(td .. "multicast_device_writer.lua")
     runner.script(td .. "cluster_socket.lua")
-    runner.script(td .. "asset_index.lua")
     runner.script(td .. "monitor.lua")
     runner.script(td .. "http_server.lua")
     runner.script(td .. "http_client.lua")
@@ -24,6 +23,7 @@ end
 -- Run AWS Unit Tests --
 
 if __aws__ then
+    runner.script(td .. "asset_index.lua")
     runner.script(td .. "credential_store.lua")
 end
 
