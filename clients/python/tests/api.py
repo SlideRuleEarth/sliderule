@@ -84,7 +84,7 @@ def test_h5_types (atl03_asset, atl06_asset):
         if (round(c[0]) != round(c[1])) or (round(c[2]) != round(c[3])) or (round(c[4]) != round(c[5])):
             cmp_error = True
             last_fail = c
-    
+
     if(not cmp_error):
         logging.info("Passed h5 types test")
     else:
@@ -118,7 +118,7 @@ def test_h5p (atl06_asset):
     rsps = icesat2.h5p(datasets, "ATL06_20181019065445_03150111_003_01.h5", atl06_asset)
 
     expected = {'/gt1l/land_ice_segments/h_li': [45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465],
-                '/gt1r/land_ice_segments/h_li': [45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948], 
+                '/gt1r/land_ice_segments/h_li': [45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948],
                 '/gt2r/land_ice_segments/h_li': [45.3146427 , 45.27640582, 45.23608027, 45.21131015, 45.15692304],
                 '/gt2l/land_ice_segments/h_li': [45.35118977, 45.33535027, 45.27195617, 45.21816889, 45.18534204],
                 '/gt3r/land_ice_segments/h_li': [45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806],
@@ -204,7 +204,7 @@ def test_geospatial (asset):
     else:
         logging.error("Failed projection test", d["x"], d["y"])
 
-    # Test 2 # 
+    # Test 2 #
 
     test2 = {
         "asset": atl03_asset,
@@ -222,7 +222,7 @@ def test_geospatial (asset):
     else:
         logging.error("Failed sphere2 test", d["lat"], d["lon"])
 
-    # Test 3 # 
+    # Test 3 #
 
     test3 = {
         "asset": atl03_asset,
@@ -240,7 +240,7 @@ def test_geospatial (asset):
     else:
         logging.error("Failed sphere3 test", d["lat"], d["lon"])
 
-    # Test 4 # 
+    # Test 4 #
 
     test4 = {
         "asset": atl03_asset,
@@ -268,10 +268,10 @@ def test_definition ():
 
     d = sliderule.source("definition", rqst)
 
-    if(d["delta_time"]["offset"] == 448):
+    if(d["delta_time"]["offset"] == 576):
         logging.info("Passed definition test")
     else:
-        logging.error("Failed definition test", d["delta_time"]["offset"])
+        logging.error("Failed definition test: {}".format(d["delta_time"]["offset"]))
 
 #
 #  TEST VERSION
