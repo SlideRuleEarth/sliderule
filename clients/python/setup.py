@@ -9,6 +9,10 @@ with open("README.md", "r") as fh:
 with open('requirements.txt') as fh:
     install_requires = fh.read().splitlines()
 
+# get version
+with open('version.txt') as fh:
+    version = fh.read().strip()
+
 # list of all utility scripts to be included with package
 scripts=[os.path.join('utils',f) for f in os.listdir('utils') if f.endswith('.py')]
 
@@ -31,13 +35,14 @@ setup(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Physics',
-        'License :: OSI Approved :: Apache License',
+        'License :: OSI Approved :: BSD License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
     ],
     packages=find_packages(),
+    version=version,
     install_requires=install_requires,
     setup_requires=setup_requires,
-    use_scm_version=use_scm_version,
+#    use_scm_version=use_scm_version,
     scripts=scripts,
 )
