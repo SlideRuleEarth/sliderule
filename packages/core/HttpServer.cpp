@@ -360,7 +360,7 @@ int HttpServer::onRead(int fd)
                 }
                 catch(const RunTimeException& e)
                 {
-                    mlog(e.level(), "Invalid request line: %s: %s", (*header_list)[0].getString(), e.what());
+                    mlog(e.level(), "Invalid request line: %s", e.what());
                 }
 
                 /* Parse Headers */
