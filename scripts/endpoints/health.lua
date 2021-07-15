@@ -7,4 +7,4 @@
 --
 
 local json = require("json")
-return json.encode({healthy=true})
+return json.encode({healthy=sys.healthy()})

@@ -151,14 +151,23 @@ void* HttpServer::listenerThread(void* parm)
 {
     HttpServer* s = (HttpServer*)parm;
 
-    try
+    while(s->active)
     {
-        int status = SockLib::startserver (s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
-        if(status < 0) mlog(CRITICAL, "Failed to establish http server on %s:%d (%d)", s->getIpAddr(), s->getPort(), status);
-    }
-    catch(const std::exception& e)
-    {
-        mlog(CRITICAL, "Caught fatal exception, aborting http server thread: %s", e.what());
+        /* Start Http Server */
+        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
+        if(status < 0)
+        {
+            /* Set Global Health State */
+            setunhealthy();
+            mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
+
+            /* Restart Http Server */
+            if(s->active)
+            {
+                mlog(CRITICAL, "Attempting to restart http server: %s", s->getName());
+                LocalLib::sleep(3.0); // wait three second to prevent spint
+            }
+        }
     }
 
     return NULL;

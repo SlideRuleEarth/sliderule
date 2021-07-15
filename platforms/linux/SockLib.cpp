@@ -55,6 +55,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <poll.h>
+#include <exception>
 
 /******************************************************************************
  * DEFINES
@@ -413,6 +414,8 @@ void SockLib::sockclose(int fd)
  *----------------------------------------------------------------------------*/
 int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm)
 {
+    int status = 0;
+
     /* Initialize Connection Variables */
     int num_sockets = 0;
     int max_num_sockets = max_num_connections + 1; // add in listener
@@ -421,180 +424,196 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
     /* Create Listen Socket */
     int listen_socket = sockcreate(SOCK_STREAM, ip_addr, port, true, NULL);
-    if(listen_socket == INVALID_RC)
+    if(listen_socket != INVALID_RC)
     {
-        dlog("Unable to establish socket server on %s:%d, failed to create listen socket", ip_addr ? ip_addr : "0.0.0.0", port);
-        delete [] polllist;
-        delete [] flags;
-        return INVALID_RC;
+        /* Make Socket a Listen Socket */
+        if(listen(listen_socket, 1) == 0)
+        {
+            /* Set Listener in Poll List */
+            dlog("Established listener socket on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
+            num_sockets++; // for listener socket
+            polllist[0].fd = listen_socket;
+            polllist[0].events = POLLIN; // start out listening for new connections
+            polllist[0].revents = 0;
+        }
+        else
+        {
+            dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+            listen_socket = INVALID_RC;
+        }
     }
     else
     {
-        /* Make Socket a Listen Socket */
-        if(listen(listen_socket, 1) != 0)
+        dlog("Unable to establish socket server on %s:%d, failed to create listen socket", ip_addr ? ip_addr : "0.0.0.0", port);
+    }
+
+
+    if(listen_socket != INVALID_RC)
+    {
+        try
         {
-            dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
-            close(listen_socket);
-            delete [] polllist;
-            delete [] flags;
-            return INVALID_RC;
-        }
-
-        /* Set Listener in Poll List */
-        dlog("Established listener socket on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
-        num_sockets++; // for listener socket
-        polllist[0].fd = listen_socket;
-        polllist[0].events = POLLIN; // start out listening for new connections
-        polllist[0].revents = 0;
-
-        /* Loop While Active */
-        while(*active)
-        {
-            /* Build Polling Flags */
-            for(int j = 1; j < num_sockets; j++)
+            /* Loop While Active */
+            while(*active)
             {
-                on_poll(polllist[j].fd, &polllist[j].events, parm);
-            }
-
-            /* Poll On All Connections */
-            int activity = 0;
-            do activity = poll(polllist, num_sockets, 100); // 10Hz
-            while(activity == -1 && (errno == EINTR || errno == EAGAIN));
-
-            /* Handle Existing Connections  */
-            int i = 1; // skip listener socket
-            while(i < num_sockets)
-            {
-                bool valid_fd = true;
-                int cb_stat = 0;
-
-                /* Handle Errors */
-                if(polllist[i].revents & POLLERR)
+                /* Build Polling Flags */
+                for(int j = 1; j < num_sockets; j++)
                 {
-                    dlog("Poll error detected on server socket [%d]: %s", polllist[i].fd, strerror(errno));
-                    cb_stat = -1; // treat like a callback error or disconnect
-                }
-                else if(polllist[i].revents & POLLNVAL)
-                {
-                    dlog("Socket [%d] not open, yet trying to poll: %s", polllist[i].fd, strerror(errno));
-                    valid_fd = false;
-                }
-                else
-                {
-                    /* Call Back for Active Connection */
-                    int actevents = IO_ALIVE_FLAG;
-                    if(polllist[i].revents & POLLIN) actevents |= IO_READ_FLAG;
-                    if(polllist[i].revents & POLLOUT) actevents |= IO_WRITE_FLAG;
-                    cb_stat = on_act(polllist[i].fd, actevents, parm);
+                    on_poll(polllist[j].fd, &polllist[j].events, parm);
                 }
 
-                /* Handle Disconnections */
-                if( (cb_stat < 0) || (polllist[i].revents & POLLHUP) )
-                {
-                    /* Call Back for Disconnect */
-                    on_act(polllist[i].fd, IO_DISCONNECT_FLAG, parm);
-                    sockclose(polllist[i].fd);
-                    valid_fd = false;
-                }
+                /* Poll On All Connections */
+                int activity = 0;
+                do activity = poll(polllist, num_sockets, 100); // 10Hz
+                while(activity == -1 && (errno == EINTR || errno == EAGAIN));
 
-                /* Check if FD still Valid */
-                if(!valid_fd)
+                /* Handle Existing Connections  */
+                int i = 1; // skip listener socket
+                while(i < num_sockets)
                 {
-                    /* Remove from Polling */
-                    dlog("Disconnected [%d] from server socket %s:%d", polllist[i].fd, ip_addr ? ip_addr : "0.0.0.0", port);
-                    int connections_left = num_sockets - 1;
-                    if(i < connections_left)
+                    bool valid_fd = true;
+                    int cb_stat = 0;
+
+                    /* Handle Errors */
+                    if(polllist[i].revents & POLLERR)
                     {
-                        LocalLib::move(&polllist[i], &polllist[i+1], (connections_left - i) * sizeof(struct pollfd));
+                        dlog("Poll error detected on server socket [%d]: %s", polllist[i].fd, strerror(errno));
+                        cb_stat = -1; // treat like a callback error or disconnect
+                    }
+                    else if(polllist[i].revents & POLLNVAL)
+                    {
+                        dlog("Socket [%d] not open, yet trying to poll: %s", polllist[i].fd, strerror(errno));
+                        valid_fd = false;
+                    }
+                    else
+                    {
+                        /* Call Back for Active Connection */
+                        int actevents = IO_ALIVE_FLAG;
+                        if(polllist[i].revents & POLLIN) actevents |= IO_READ_FLAG;
+                        if(polllist[i].revents & POLLOUT) actevents |= IO_WRITE_FLAG;
+                        cb_stat = on_act(polllist[i].fd, actevents, parm);
                     }
 
-                    /* Decrement Number of Connections */
-                    num_sockets = connections_left;
-                    if(num_sockets < max_num_sockets)
+                    /* Handle Disconnections */
+                    if( (cb_stat < 0) || (polllist[i].revents & POLLHUP) )
                     {
-                        /* start listener socket polling for new connections */
-                        polllist[0].events |= POLLIN;
+                        /* Call Back for Disconnect */
+                        on_act(polllist[i].fd, IO_DISCONNECT_FLAG, parm);
+                        sockclose(polllist[i].fd);
+                        valid_fd = false;
                     }
-                }
-                else
-                {
-                    /* Clear Return Events */
-                    polllist[i].revents = 0;
 
-                    // if there was a disconnect, then the 'fd' list
-                    // moved down and 'i' does not need to be incremented
-                    // but if it remained connected then 'i' increments
-                    i++;
-                }
-            }
-
-            /* Handle New Connections */
-            if(polllist[0].revents & (POLLNVAL | POLLERR))
-            {
-                dlog("Error detected on listener socket: %s", strerror(errno));
-            }
-            else if(polllist[0].revents & POLLIN)
-            {
-                if(num_sockets < max_num_sockets)
-                {
-                    /* Accept Next Connection */
-                    client_address_t    client_address;
-                    socklen_t           address_length = sizeof(socket_address_t);
-
-                    int client_socket = accept(listen_socket, &client_address, &address_length);
-                    if(client_socket != -1)
+                    /* Check if FD still Valid */
+                    if(!valid_fd)
                     {
-                        /* Set Non-Blocking */
-                        if(socknonblock(client_socket) == 0)
+                        /* Remove from Polling */
+                        dlog("Disconnected [%d] from server socket %s:%d", polllist[i].fd, ip_addr ? ip_addr : "0.0.0.0", port);
+                        int connections_left = num_sockets - 1;
+                        if(i < connections_left)
                         {
-                            /* Call On Activity Call-Back */
-                            if(on_act(client_socket, IO_CONNECT_FLAG, parm) >= 0)
-                            {
-                                dlog("Established connection [%d] to server socket %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
-
-                                /* Populate New Connection */
-                                polllist[num_sockets].fd = client_socket;
-                                polllist[num_sockets].events = POLLHUP; // always listen for haning up
-                                polllist[num_sockets].revents = 0;
-
-                                /* Increment Number of Connections */
-                                num_sockets++;
-                                if(num_sockets >= max_num_sockets)
-                                {
-                                    /* stop listener socket polling for new connections */
-                                    polllist[0].events &= ~POLLIN;
-                                }
-                            }
-                            else
-                            {
-                                SockLib::sockclose(client_socket);
-                            }
+                            LocalLib::move(&polllist[i], &polllist[i+1], (connections_left - i) * sizeof(struct pollfd));
                         }
-                        else
+
+                        /* Decrement Number of Connections */
+                        num_sockets = connections_left;
+                        if(num_sockets < max_num_sockets)
                         {
-                            dlog("Failed to set socket to non-blocking %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
+                            /* start listener socket polling for new connections */
+                            polllist[0].events |= POLLIN;
                         }
                     }
                     else
                     {
-                        dlog("Failed to set accept connection on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
+                        /* Clear Return Events */
+                        polllist[i].revents = 0;
+
+                        // if there was a disconnect, then the 'fd' list
+                        // moved down and 'i' does not need to be incremented
+                        // but if it remained connected then 'i' increments
+                        i++;
                     }
                 }
-                else
+
+                /* Handle New Connections */
+                if(polllist[0].revents & (POLLNVAL | POLLERR))
                 {
-                    dlog("Maximum number of sockets exceeded: %d", max_num_sockets);
+                    dlog("Error detected on listener socket: %s", strerror(errno));
+                }
+                else if(polllist[0].revents & POLLIN)
+                {
+                    if(num_sockets < max_num_sockets)
+                    {
+                        /* Accept Next Connection */
+                        client_address_t    client_address;
+                        socklen_t           address_length = sizeof(socket_address_t);
+
+                        int client_socket = accept(listen_socket, &client_address, &address_length);
+                        if(client_socket != -1)
+                        {
+                            /* Set Non-Blocking */
+                            if(socknonblock(client_socket) == 0)
+                            {
+                                /* Call On Activity Call-Back */
+                                if(on_act(client_socket, IO_CONNECT_FLAG, parm) >= 0)
+                                {
+                                    dlog("Established connection [%d] to server socket %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
+
+                                    /* Populate New Connection */
+                                    polllist[num_sockets].fd = client_socket;
+                                    polllist[num_sockets].events = POLLHUP; // always listen for haning up
+                                    polllist[num_sockets].revents = 0;
+
+                                    /* Increment Number of Connections */
+                                    num_sockets++;
+                                    if(num_sockets >= max_num_sockets)
+                                    {
+                                        /* stop listener socket polling for new connections */
+                                        polllist[0].events &= ~POLLIN;
+                                    }
+                                }
+                                else
+                                {
+                                    SockLib::sockclose(client_socket);
+                                }
+                            }
+                            else
+                            {
+                                dlog("Failed to set socket to non-blocking %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
+                            }
+                        }
+                        else
+                        {
+                            dlog("Failed to set accept connection on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
+                        }
+                    }
+                    else
+                    {
+                        dlog("Maximum number of sockets exceeded: %d", max_num_sockets);
+                    }
                 }
             }
         }
+        catch(const std::exception& e)
+        {
+            status = -1;
+            dlog("Caught fatal exception, aborting http server thread: %s", e.what());
+        }
+
+        /* Close Listening Socket */
+        sockclose(listen_socket);
     }
 
-    /* Close Listening Socket */
-    sockclose(listen_socket);
-
-    /* Disconnect Existing Connections */
+    /* Disconnect Existing Connections (*/
     for(int i = 1; i < num_sockets; i++)
     {
-        on_act(polllist[i].fd, IO_DISCONNECT_FLAG, parm);
+        try
+        {
+            on_act(polllist[i].fd, IO_DISCONNECT_FLAG, parm);
+        }
+        catch(const std::exception& e)
+        {
+            status = -1;
+            dlog("Caught exception on disconnect: %s", e.what());
+        }
         sockclose(polllist[i].fd);
     }
 
@@ -602,8 +621,8 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
     delete [] polllist;
     delete [] flags;
 
-    /* Return Success */
-    return 0;
+    /* Return Status */
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -782,6 +801,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
             /* Set Reuse Option on Listen Socket */
             if(sockreuse(sock) < 0)
             {
+                dlog("Failed to set reuse on socket %s:%s, %s", host, serv, strerror(errno));
                 close(sock);
                 continue;
             }
@@ -820,7 +840,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
     freeaddrinfo(result);
 
     /* Check success of connection */
-    if (rp == NULL)
+    if(rp == NULL)
     {
         dlog("Failed to create socket for %s:%d", ip_addr, port);
         return WOULDBLOCK_RC;

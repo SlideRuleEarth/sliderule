@@ -190,15 +190,16 @@ void* HttpClient::requestThread(void* parm)
         }
 
         /* Establish Connection */
-        bool block = false; // only try to connect once
+        int connection_attempts = MAX_TIMEOUTS;
         bool die_on_disconnect = false; // only used for non-blocking/threaded connections
-        TcpSocket sock(NULL, connection->client->getIpAddr(), connection->client->getPort(), false, &block, die_on_disconnect);
+        TcpSocket sock(NULL, connection->client->getIpAddr(), connection->client->getPort(), false, NULL, die_on_disconnect);
+        while(!sock.isConnected() && connection_attempts--) LocalLib::sleep(1);
 
         /* Issue Request */
         int bytes_written = sock.writeBuffer(rqst, rqst_len);
         if(bytes_written != rqst_len)
         {
-            mlog(CRITICAL, "Http request failed to send request: act=%d, exp=%d\n", bytes_written, rqst_len);
+            mlog(CRITICAL, "Http request failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
             connection->status = RQST_FAILED_TO_SEND;
         }
         else

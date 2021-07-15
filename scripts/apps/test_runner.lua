@@ -17,6 +17,7 @@ if __core__ then
     runner.script(td .. "monitor.lua")
     runner.script(td .. "http_server.lua")
     runner.script(td .. "http_client.lua")
+    runner.script(td .. "http_faults.lua")
     runner.script(td .. "lua_script.lua")
 end
 
