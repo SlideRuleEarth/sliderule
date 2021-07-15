@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -96,7 +96,7 @@ void SockLib::init()
     /* Attempt to Get Host Information */
     struct hostent* host = NULL;
     if(gethostname(local_host_name, HOST_STR_LEN) != -1)
-    {    
+    {
         host = gethostbyname(local_host_name);
     }
 
@@ -441,7 +441,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         }
 
         /* Set Listener in Poll List */
-        print2term("Established listener socket on %s:%d\n", ip_addr ? ip_addr : "0.0.0.0", port);
+        dlog("Established listener socket on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
         num_sockets++; // for listener socket
         polllist[0].fd = listen_socket;
         polllist[0].events = POLLIN; // start out listening for new connections
@@ -501,7 +501,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                 if(!valid_fd)
                 {
                     /* Remove from Polling */
-                    print2term("Disconnected [%d] from server socket %s:%d\n", polllist[i].fd, ip_addr ? ip_addr : "0.0.0.0", port);
+                    dlog("Disconnected [%d] from server socket %s:%d", polllist[i].fd, ip_addr ? ip_addr : "0.0.0.0", port);
                     int connections_left = num_sockets - 1;
                     if(i < connections_left)
                     {
@@ -550,7 +550,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                             /* Call On Activity Call-Back */
                             if(on_act(client_socket, IO_CONNECT_FLAG, parm) >= 0)
                             {
-                                print2term("Established connection [%d] to server socket %s:%d\n", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
+                                dlog("Established connection [%d] to server socket %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
 
                                 /* Populate New Connection */
                                 polllist[num_sockets].fd = client_socket;
@@ -646,7 +646,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
                 }
 
                 /* Update Connection Variables */
-                print2term("Client socket [%d] connection made to %s:%d\n", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
+                dlog("Client socket [%d] connection made to %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
                 polllist[0].fd = client_socket;
                 connected = true;
                 num_sockets++;
@@ -701,7 +701,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             /* Handle Disconnects */
             if( (cb_stat < 0) || (polllist[0].revents & POLLHUP) )
             {
-                print2term("Disconnect [%d] from client socket %s:%d\n", polllist[0].fd, ip_addr ? ip_addr : "0.0.0.0", port);
+                dlog("Disconnect [%d] from client socket %s:%d", polllist[0].fd, ip_addr ? ip_addr : "0.0.0.0", port);
                 on_act(polllist[0].fd, IO_DISCONNECT_FLAG, parm); // no sense checking error, nothing to do
                 SockLib::sockclose(polllist[0].fd);
                 valid_fd = false;

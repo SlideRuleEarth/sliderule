@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -88,6 +88,7 @@ int HttpClient::luaCreate (lua_State* L)
 HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
+    active = true;
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
 }
@@ -97,6 +98,7 @@ HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
  *----------------------------------------------------------------------------*/
 HttpClient::~HttpClient(void)
 {
+    active = false;
     connMutex.lock();
     {
         for(int i = 0; i < connections.length(); i++)
@@ -136,6 +138,9 @@ void* HttpClient::requestThread(void* parm)
 {
     connection_t* connection = (connection_t*)parm;
 
+    /* Initialize Connection Status */
+    connection->status = RSPS_INCOMPLETE;
+
     /* Calculate Content Length */
     int content_length = StringLib::size(connection->data, MAX_RQST_DATA_LEN);
     if(content_length == MAX_RQST_DATA_LEN)
@@ -148,21 +153,41 @@ void* HttpClient::requestThread(void* parm)
         const char* keep_alive_header = "";
         if(connection->keep_alive) keep_alive_header = "Connection: keep-alive\r\n";
 
-        /* Build Request Header */
-        SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n", 
-                            EndpointObject::verb2str(connection->verb), 
-                            connection->resource,
-                            connection->client->ipAddr,
-                            LIBID,
-                            keep_alive_header,
-                            content_length);
-        
-        /* Build Request */
-        int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
-        int rqst_len = content_length + hdr_len;
-        unsigned char* rqst = new unsigned char [rqst_len];
-        LocalLib::copy(rqst, rqst_hdr.getString(), hdr_len);
-        LocalLib::copy(&rqst[hdr_len], connection->data, content_length);
+        /* Build Request*/
+        unsigned char* rqst = NULL;
+        int rqst_len = 0;
+        if(connection->verb != EndpointObject::RAW)
+        {
+            /* Build Request Header */
+            SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
+                                EndpointObject::verb2str(connection->verb),
+                                connection->resource,
+                                connection->client->ipAddr,
+                                LIBID,
+                                keep_alive_header,
+                                content_length);
+
+            /* Build Request */
+            int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
+            rqst_len = content_length + hdr_len;
+            rqst = new unsigned char [rqst_len];
+            LocalLib::copy(rqst, rqst_hdr.getString(), hdr_len);
+            LocalLib::copy(&rqst[hdr_len], connection->data, content_length);
+        }
+        else if(content_length > 0)
+        {
+            /* Build Raw Request */
+            rqst = new unsigned char [content_length];
+            rqst_len = content_length;
+            LocalLib::copy(rqst, connection->data, content_length);
+        }
+        else
+        {
+            /* Invalid Request */
+            mlog(ERROR, "Invalid HTTP request - raw requests cannot be null\n");
+            connection->status = RQST_INVALID;
+            return NULL; // no memory allocated at this point
+        }
 
         /* Establish Connection */
         bool block = false; // only try to connect once
@@ -174,6 +199,7 @@ void* HttpClient::requestThread(void* parm)
         if(bytes_written != rqst_len)
         {
             mlog(CRITICAL, "Http request failed to send request: act=%d, exp=%d\n", bytes_written, rqst_len);
+            connection->status = RQST_FAILED_TO_SEND;
         }
         else
         {
@@ -190,7 +216,7 @@ void* HttpClient::requestThread(void* parm)
             /* Read Response */
             int attempts = 0;
             bool done = false;
-            while(!done)
+            while(!done && connection->client->active)
             {
                 unsigned char* rsps_data = NULL;
                 int rsps_size = 0;
@@ -215,9 +241,9 @@ void* HttpClient::requestThread(void* parm)
                         int possible_header_len = rsps_header.getLength();
                         if(possible_partial_delim && possible_header_len > 4)
                         {
-                            if( (rsps_header[possible_header_len - 5] == '\r') && 
-                                (rsps_header[possible_header_len - 4] == '\n') && 
-                                (rsps_header[possible_header_len - 3] == '\r') && 
+                            if( (rsps_header[possible_header_len - 5] == '\r') &&
+                                (rsps_header[possible_header_len - 4] == '\n') &&
+                                (rsps_header[possible_header_len - 3] == '\r') &&
                                 (rsps_header[possible_header_len - 2] == '\n') )
                             {
                                 header_complete = true;
@@ -248,6 +274,7 @@ void* HttpClient::requestThread(void* parm)
                             /* Check if Header Complete */
                             if(rsps[index] == '\r')
                             {
+                                connection->status = CONNECTION_OKAY;
                                 header_complete = true;
                                 rsps[index] = '\0';
                                 index += 4; // move past delimeter
@@ -273,6 +300,7 @@ void* HttpClient::requestThread(void* parm)
                         if(post_status <= 0)
                         {
                             mlog(CRITICAL, "Failed to post response: %d\n", post_status);
+                            connection->status = RSPS_FAILED_TO_POST;
                             done = true;
                         }
                     }
@@ -286,13 +314,13 @@ void* HttpClient::requestThread(void* parm)
                     attempts++;
                     if(attempts >= MAX_TIMEOUTS)
                     {
-                        mlog(CRITICAL, "Maximum number of attempts to read response reached\n");
+                        mlog(CRITICAL, "Maximum number of attempts to read response reached");
                         done = true;
                     }
                 }
                 else
                 {
-                    mlog(CRITICAL, "Failed to read socket for response: %d\n", bytes_read);
+                    mlog(CRITICAL, "Failed to read socket for response: %d", bytes_read);
                     done = true;
                 }
             }
@@ -310,10 +338,11 @@ void* HttpClient::requestThread(void* parm)
     if(term_status < 0)
     {
         mlog(CRITICAL, "Failed to post terminator in http client: %d\n", term_status);
+        connection->status = RSPS_FAILED_TO_POST;
     }
 
     /* Clean Up Connection */
-    delete connection->outq;    
+    delete connection->outq;
     delete [] connection->data;
     delete [] connection->resource;
 
@@ -325,6 +354,11 @@ void* HttpClient::requestThread(void* parm)
  *----------------------------------------------------------------------------*/
 int HttpClient::luaRequest (lua_State* L)
 {
+    bool status = false;
+    int num_rets = 1;
+    connection_t* connection = NULL;
+    Subscriber* inq = NULL;
+
     try
     {
         /* Get Self */
@@ -343,10 +377,8 @@ int HttpClient::luaRequest (lua_State* L)
             throw RunTimeException(CRITICAL, "Invalid verb: %s", verb_str);
         }
 
-        /* Allocate Connection Structure */
-        connection_t* connection = new connection_t;
-
-        /* Initialize Connection */
+        /* Allocate and Initialize Connection */
+        connection = new connection_t;
         connection->active = true;
         connection->keep_alive = true;
         connection->verb = verb;
@@ -354,9 +386,9 @@ int HttpClient::luaRequest (lua_State* L)
         connection->data = StringLib::duplicate(data);
         connection->outq = new Publisher(outq_name);
         connection->client = lua_obj;
+        connection->status = CONNECTION_ERROR;
 
         /* Check if Blocking */
-        Subscriber* inq = NULL;
         if(outq_name == NULL)
         {
             /* Create Subscriber */
@@ -374,8 +406,6 @@ int HttpClient::luaRequest (lua_State* L)
         /* Check if Blocking */
         if(outq_name == NULL)
         {
-            bool status = false;
-
             /* Setup Response Variables */
             int total_response_length = 0;
             List<Subscriber::msgRef_t> responses;
@@ -398,7 +428,6 @@ int HttpClient::luaRequest (lua_State* L)
                     {
                         inq->dereference(ref);
                         done = true;
-                        status = true;
                     }
                 }
                 else if(recv_status == TIMEOUT_RC)
@@ -406,7 +435,7 @@ int HttpClient::luaRequest (lua_State* L)
                     attempts++;
                     if(attempts >= MAX_TIMEOUTS)
                     {
-                        mlog(CRITICAL, "Maximum number of attempts to read queue reached\n");
+                        mlog(CRITICAL, "Maximum number of attempts to read queue reached");
                         done = true;
                     }
                 }
@@ -428,22 +457,32 @@ int HttpClient::luaRequest (lua_State* L)
                 inq->dereference((Subscriber::msgRef_t&)iterator[i]);
             }
             response[index] = '\0';
-        
-            /* Delete Subscriber */
-            if(inq) delete inq;
 
             /* Return Respnonse String */
             lua_pushlstring(L, response, total_response_length + 1);
             delete [] response;
-            return returnLuaStatus(L, status, 2);
+            num_rets++;
         }
-
-        /* Return */
-        return returnLuaStatus(L, true);
+        else
+        {
+            /* No way to verify connection status when not blocking */
+            connection->status = CONNECTION_OKAY;
+        }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error initiating request: %s", e.what());
-        return returnLuaStatus(L, false);
     }
+
+    /* Delete Subscriber */
+    if(inq) delete inq;
+
+    /* Get Status */
+    if(connection)
+    {
+        status = connection->status == CONNECTION_OKAY;
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_rets);
 }
