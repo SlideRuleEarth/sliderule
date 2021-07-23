@@ -105,8 +105,10 @@ Asset* Asset::pythonCreate (const char* format, const char* url, const char* ind
 {
     attributes_t _attributes;
 
+    SafeString asset_name("%s://%s", format, url);
+
     /* Get Parameters */
-    _attributes.name       = NULL;
+    _attributes.name       = asset_name.getString(true);
     _attributes.format     = format;
     _attributes.url        = url;
     _attributes.index      = index;
