@@ -66,7 +66,7 @@ option (ENABLE_BIG_ENDIAN "Compile code for big endian machine" OFF)
 
 # SlideRule Library #
 
-if(${SHARED_LIBRARY} OR ${PYTHON_BINDINGS})
+if(${SHARED_LIBRARY})
     add_library(slideruleLib SHARED "")
 else()
     add_library(slideruleLib STATIC "")
@@ -120,6 +120,10 @@ set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
 set_target_properties (slideruleLib PROPERTIES CXX_STANDARD ${CXX_VERSION})
+
+if(${PYTHON_BINDINGS})
+    set_target_properties (slideruleLib PROPERTIES POSITION_INDEPENDENT_CODE 1)
+endif()
 
 # Compile Definitions #
 
@@ -207,7 +211,7 @@ if(${PYTHON_BINDINGS})
 
     # binding-python #
     find_package(pybind11 REQUIRED)
-    pybind11_add_module(sliderule 
+    pybind11_add_module(sliderule
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyH5Coro.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/init.cpp)
     target_include_directories (sliderule PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)
@@ -217,7 +221,7 @@ if(${PYTHON_BINDINGS})
     install (TARGETS sliderule DESTINATION ${INSTALLDIR}/lib)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
-    
+
     # server-linux #
     add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/server-linux/SlideRule.cpp)
     set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
