@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -84,7 +84,7 @@ int Asset::luaCreate (lua_State* L)
             drivers.find(_attributes.format, &_driver);
         }
         driverMut.unlock();
-        
+
         /* Check Driver */
         if(_driver == NULL) throw RunTimeException(CRITICAL, "Failed to find I/O driver for %s", _attributes.format);
 
@@ -96,6 +96,34 @@ int Asset::luaCreate (lua_State* L)
         mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * pythonCreate - create(<name>, <format>, <url>, <index>)
+ *----------------------------------------------------------------------------*/
+Asset* Asset::pythonCreate (const char* format, const char* url, const char* index, const char* region, const char* endpoint)
+{
+    attributes_t _attributes;
+
+    /* Get Parameters */
+    _attributes.name       = NULL;
+    _attributes.format     = format;
+    _attributes.url        = url;
+    _attributes.index      = index;
+    _attributes.region     = region;
+    _attributes.endpoint   = endpoint;
+
+    /* Get IO Driver */
+    new_driver_t _driver = NULL;
+    driverMut.lock();
+    {
+        drivers.find(_attributes.format, &_driver);
+    }
+    driverMut.unlock();
+
+    /* Return Asset Object */
+    if(_driver == NULL) return NULL;
+    else                return new Asset(NULL, _attributes, _driver);
 }
 
 /*----------------------------------------------------------------------------
@@ -141,7 +169,7 @@ Asset::~Asset (void)
  *----------------------------------------------------------------------------*/
 int Asset::load (resource_t& resource)
 {
-    return resources.add(resource);    
+    return resources.add(resource);
 }
 
 /*----------------------------------------------------------------------------

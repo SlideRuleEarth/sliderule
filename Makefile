@@ -88,3 +88,6 @@ testcov:
 	genhtml build/coverage.info --output-directory build/coverage_html
 	# firefox build/coverage_html/index.html
 
+testpy:
+	cp scripts/tests/coro.py build
+	cd build; /usr/bin/python3 coro.py
