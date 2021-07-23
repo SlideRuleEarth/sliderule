@@ -98,7 +98,7 @@ class Asset: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int      luaCreate       (lua_State* L);
-        static Asset*   pythonCreate    (const char* format, const char* url, const char* index, const char* region, const char* endpoint);
+        static Asset*   pythonCreate    (const char* format, const char* path, const char* index, const char* region, const char* endpoint);
         static bool     registerDriver  (const char* _format, new_driver_t driver);
 
         IODriver*       createDriver    (void) const;
@@ -111,7 +111,7 @@ class Asset: public LuaObject
         int             size            (void) const;
         const char*     getName         (void) const;
         const char*     getFormat       (void) const;
-        const char*     getUrl          (void) const;
+        const char*     getPath         (void) const;
         const char*     getIndex        (void) const;
         const char*     getRegion       (void) const;
         const char*     getEndpoint     (void) const;
@@ -132,7 +132,7 @@ class Asset: public LuaObject
         typedef struct {
             const char*                 name;
             const char*                 format;
-            const char*                 url;
+            const char*                 path;
             const char*                 index;
             const char*                 region;
             const char*                 endpoint;

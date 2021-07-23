@@ -98,7 +98,7 @@ PYBIND11_MODULE(sliderule, m)
 
         .def(py::init<const std::string &,      // _resource
                       const std::string &,      // format
-                      const std::string &,      // url
+                      const std::string &,      // path
                       const std::string &,      // region
                       const std::string &>())   // endpoint
 

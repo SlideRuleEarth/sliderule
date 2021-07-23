@@ -61,7 +61,7 @@ Dictionary<Asset::new_driver_t> Asset::drivers;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, <format>, <url>, <index>)
+ * luaCreate - create(<name>, <format>, <path>, <index>)
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {
@@ -72,7 +72,7 @@ int Asset::luaCreate (lua_State* L)
         /* Get Parameters */
         _attributes.name       = getLuaString(L, 1);
         _attributes.format     = getLuaString(L, 2);
-        _attributes.url        = getLuaString(L, 3);
+        _attributes.path       = getLuaString(L, 3);
         _attributes.index      = getLuaString(L, 4, true, NULL);
         _attributes.region     = getLuaString(L, 5, true, NULL);
         _attributes.endpoint   = getLuaString(L, 6, true, NULL);
@@ -99,18 +99,18 @@ int Asset::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * pythonCreate - create(<name>, <format>, <url>, <index>)
+ * pythonCreate - create(<name>, <format>, <path>, <index>)
  *----------------------------------------------------------------------------*/
-Asset* Asset::pythonCreate (const char* format, const char* url, const char* index, const char* region, const char* endpoint)
+Asset* Asset::pythonCreate (const char* format, const char* path, const char* index, const char* region, const char* endpoint)
 {
     attributes_t _attributes;
 
-    SafeString asset_name("%s://%s", format, url);
+    SafeString asset_name("%s://%s", format, path);
 
     /* Get Parameters */
     _attributes.name       = asset_name.getString(true);
     _attributes.format     = format;
-    _attributes.url        = url;
+    _attributes.path       = path;
     _attributes.index      = index;
     _attributes.region     = region;
     _attributes.endpoint   = endpoint;
@@ -160,7 +160,7 @@ Asset::~Asset (void)
 {
     if(attributes.name)     delete [] attributes.name;
     if(attributes.format)   delete [] attributes.format;
-    if(attributes.url)      delete [] attributes.url;
+    if(attributes.path)     delete [] attributes.path;
     if(attributes.index)    delete [] attributes.index;
     if(attributes.region)   delete [] attributes.region;
     if(attributes.endpoint) delete [] attributes.endpoint;
@@ -207,11 +207,11 @@ const char* Asset::getFormat (void) const
 }
 
 /*----------------------------------------------------------------------------
- * getUrl
+ * getPath
  *----------------------------------------------------------------------------*/
-const char* Asset::getUrl (void) const
+const char* Asset::getPath (void) const
 {
-    return attributes.url;
+    return attributes.path;
 }
 
 /*----------------------------------------------------------------------------
@@ -246,7 +246,7 @@ Asset::Asset (lua_State* L, attributes_t _attributes, new_driver_t _driver):
 {
     attributes.name     = StringLib::duplicate(_attributes.name);
     attributes.format   = StringLib::duplicate(_attributes.format);
-    attributes.url      = StringLib::duplicate(_attributes.url);
+    attributes.path     = StringLib::duplicate(_attributes.path);
     attributes.index    = StringLib::duplicate(_attributes.index);
     attributes.region   = StringLib::duplicate(_attributes.region);
     attributes.endpoint = StringLib::duplicate(_attributes.endpoint);
@@ -254,7 +254,7 @@ Asset::Asset (lua_State* L, attributes_t _attributes, new_driver_t _driver):
 }
 
 /*----------------------------------------------------------------------------
- * luaInfo - :info() --> name, format, url, index, region, endpoint, status
+ * luaInfo - :info() --> name, format, path, index, region, endpoint, status
  *----------------------------------------------------------------------------*/
 int Asset::luaInfo (lua_State* L)
 {
@@ -269,7 +269,7 @@ int Asset::luaInfo (lua_State* L)
         /* Push Info */
         attr->name      ? (void)lua_pushlstring(L, attr->name,      StringLib::size(attr->name))        : lua_pushnil(L);
         attr->format    ? (void)lua_pushlstring(L, attr->format,    StringLib::size(attr->format))      : lua_pushnil(L);
-        attr->url       ? (void)lua_pushlstring(L, attr->url,       StringLib::size(attr->url))         : lua_pushnil(L);
+        attr->path      ? (void)lua_pushlstring(L, attr->path,      StringLib::size(attr->path))        : lua_pushnil(L);
         attr->index     ? (void)lua_pushlstring(L, attr->index,     StringLib::size(attr->index))       : lua_pushnil(L);
         attr->region    ? (void)lua_pushlstring(L, attr->region,    StringLib::size(attr->region))      : lua_pushnil(L);
         attr->endpoint  ? (void)lua_pushlstring(L, attr->endpoint,  StringLib::size(attr->endpoint))    : lua_pushnil(L);

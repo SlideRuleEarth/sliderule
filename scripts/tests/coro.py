@@ -20,11 +20,11 @@ import sliderule
 ###############################################################################
 # DATA
 ###############################################################################
-
+""
 # set resource parameters
 resource    = "ATL06_20200714160647_02950802_003_01.h5"
-format      = "file"        # "cumulus"
-url         = "/data/ATLAS" # "nsidc-cumulus-prod-protected"
+format      = "file"        # "s3"
+path        = "/data/ATLAS" # "icesat2-sliderule/data/ATLAS"
 region      = ""            # "us-west-2"
 endpoint    = ""            # "https://s3.us-west-2.amazonaws.com"
 
@@ -64,7 +64,7 @@ def check_results(act, exp):
 if __name__ == '__main__':
 
     # Open H5Coro File #
-    h5file = sliderule.h5coro(resource, format, url, region, endpoint)
+    h5file = sliderule.h5coro(resource, format, path, region, endpoint)
 
     # Perform Single Read #
     h_li_1 = h5file.read("/gt1l/land_ice_segments/h_li", 0, 19, 5)

@@ -54,10 +54,10 @@ namespace py = pybind11;
 /*--------------------------------------------------------------------
  * Constructor
  *--------------------------------------------------------------------*/
-pyH5Coro::pyH5Coro (const std::string &_resource, const std::string &format, const std::string &url, const std::string &region, const std::string &endpoint):
+pyH5Coro::pyH5Coro (const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint):
     resource(_resource)
 {
-    asset = Asset::pythonCreate(format.c_str(), url.c_str(), NULL, region.c_str(), endpoint.c_str());
+    asset = Asset::pythonCreate(format.c_str(), path.c_str(), NULL, region.c_str(), endpoint.c_str());
     if(asset == NULL) throw std::invalid_argument("failed to create asset, likely missing driver for provided format");
 }
 

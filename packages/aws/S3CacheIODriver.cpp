@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -127,7 +127,7 @@ int S3CacheIODriver::luaCreateCache(lua_State* L)
                         {
                             char cache_filepath[MAX_STR_SIZE];
                             StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
-                            
+
                             /* Reformat Filename to Key */
                             SafeString key("%s", ent->d_name);
                             key.replace("#", PATH_DELIMETER_STR);
@@ -151,7 +151,7 @@ int S3CacheIODriver::luaCreateCache(lua_State* L)
             }
         }
         cacheMut.unlock();
-        
+
         /* Get Object and Write to File */
         return LuaObject::returnLuaStatus(L, true);
     }
@@ -167,12 +167,12 @@ int S3CacheIODriver::luaCreateCache(lua_State* L)
  *----------------------------------------------------------------------------*/
 void S3CacheIODriver::ioOpen (const char* resource)
 {
-    SafeString resourcepath("%s/%s", asset->getUrl(), resource);
+    SafeString resourcepath("%s/%s", asset->getPath(), resource);
 
     /* Allocate Bucket String */
     char* bucket = StringLib::duplicate(resourcepath.getString());
 
-    /* 
+    /*
     * Differentiate Bucket and Key
     *  <bucket_name>/<path_to_file>/<filename>
     *  |             |
@@ -192,7 +192,7 @@ void S3CacheIODriver::ioOpen (const char* resource)
         {
             ioFile = fopen(filename, "r");
             delete [] filename;
-        }                
+        }
     }
 
     /* Free Bucket String */
@@ -223,24 +223,24 @@ int64_t S3CacheIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     }
 
     /* Read Data */
-    return fread(data, 1, size, ioFile);            
+    return fread(data, 1, size, ioFile);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 S3CacheIODriver::S3CacheIODriver (const Asset* _asset)
-{ 
-    asset = _asset; 
-    ioFile = NULL; 
+{
+    asset = _asset;
+    ioFile = NULL;
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-S3CacheIODriver::~S3CacheIODriver (void) 
-{ 
-    ioClose(); 
+S3CacheIODriver::~S3CacheIODriver (void)
+{
+    ioClose();
 }
 
 /*----------------------------------------------------------------------------
@@ -261,7 +261,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
             const char* cache_key = StringLib::duplicate(key);
             cacheFiles.add(cacheIndex, cache_key);
             found_in_cache = true;
-        }        
+        }
     }
     cacheMut.unlock();
 
