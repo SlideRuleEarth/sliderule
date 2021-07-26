@@ -3,8 +3,9 @@
 --
 -- INPUT:       arg[1] -
 --              {
+--                  "asset":        "<name of asset>",
 --                  "resource":     "<url of hdf5 file or object>",
---                  "datasets": 
+--                  "datasets":
 --                  [
 --                      {
 --                          "dataset":  "<name of dataset>",
@@ -31,7 +32,7 @@ local parm = json.decode(arg[1])
 
 local asset_name = parm["asset"]
 local resource = parm["resource"]
-local datasets = parm["datasets"] 
+local datasets = parm["datasets"]
 
 asset = core.getbyname(asset_name)
 if not asset then
