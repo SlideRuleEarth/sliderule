@@ -48,6 +48,12 @@
 namespace py = pybind11;
 
 /******************************************************************************
+ * Static
+ ******************************************************************************/
+
+Mutex pyH5Coro::pyMut;
+
+/******************************************************************************
  * pyH5Coro Class
  ******************************************************************************/
 
@@ -79,18 +85,14 @@ py::list* pyH5Coro::read (const std::string &datasetname, long col, long startro
     // workaround for binding to default argument value
     if(numrows < 0) numrows = H5Coro::ALL_ROWS;
 
-//    Py_BEGIN_ALLOW_THREADS;
-    {
-        // perform read of dataset
-        H5Coro::info_t info = H5Coro::read(asset, resource.c_str(), datasetname.c_str(), RecordObject::DYNAMIC, col, startrow, numrows, &context);
+    // perform read of dataset
+    H5Coro::info_t info = H5Coro::read(asset, resource.c_str(), datasetname.c_str(), RecordObject::DYNAMIC, col, startrow, numrows, &context);
 
-        // build dataset array
-        result = tolist(&info);
+    // build dataset array
+    result = tolist(&info);
 
-        // clean up data
-        if(info.data) delete [] info.data;
-    }
-//    Py_END_ALLOW_THREADS;
+    // clean up data
+    if(info.data) delete [] info.data;
 
     // return list
     return result;
@@ -124,22 +126,21 @@ const py::dict* pyH5Coro::readp (const py::list& datasets)
 
     // process results
     py::dict* result = new py::dict;
-//    Py_BEGIN_ALLOW_THREADS;
+    for(int i = 0; i < readers.length(); i++)
     {
-        for(int i = 0; i < readers.length(); i++)
-        {
-            // wait for read to complete
-            delete readers[i]->pid;
+        // wait for read to complete
+        delete readers[i]->pid;
 
-            // populate result dictionary
-            py::str key(readers[i]->dataset);
-            (*result)[key] = readers[i]->result;
+        // populate result dictionary
+        py::str key(readers[i]->dataset);
+        (*result)[key] = readers[i]->result;
 
-            // clean up request
-            delete readers[i];
-        }
+        // clean up data
+        if(readers[i]->info.data) delete [] readers[i]->info.data;
+
+        // clean up request
+        delete readers[i];
     }
-//    Py_END_ALLOW_THREADS;
 
     // return result dictionary
     return result;
@@ -215,10 +216,11 @@ void* pyH5Coro::read_thread (void* parm)
     rqst->info = H5Coro::read(rqst->file->asset, rqst->file->resource.c_str(), rqst->dataset.c_str(), RecordObject::DYNAMIC, rqst->col, rqst->startrow, rqst->numrows, &rqst->file->context);
 
     // build dataset array
-    rqst->result = rqst->file->tolist(&rqst->info);
-
-    // clean up data
-    if(rqst->info.data) delete [] rqst->info.data;
+    pyMut.lock();
+    {
+        rqst->result = rqst->file->tolist(&rqst->info);
+    }
+    pyMut.unlock();
 
     // exit
     return NULL;

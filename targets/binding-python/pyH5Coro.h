@@ -77,6 +77,8 @@ class pyH5Coro
         py::list*           tolist      (H5Coro::info_t* info);
         static void*        read_thread (void* parm);
 
+        static Mutex        pyMut;
+
         std::string         resource;
         Asset*              asset;
         H5Coro::context_t   context;

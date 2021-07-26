@@ -47,14 +47,12 @@ def check_results(act, exp):
                 if exp[dataset][i] != act[dataset][i]:
                     print("Failed parallel read test")
                     return False
-        print("Passed parallel read test")
         return True
     else:
         for i in range(len(exp)):
             if exp[i] != act[i]:
                 print("Failed single read test")
                 return False
-        print("Passed single read test")
         return True
 
 ###############################################################################
@@ -63,16 +61,24 @@ def check_results(act, exp):
 
 if __name__ == '__main__':
 
+    result = True
+
     # Open H5Coro File #
     h5file = sliderule.h5coro(resource, format, path, region, endpoint)
 
-    # Perform Single Read #
-    h_li_1 = h5file.read("/gt1l/land_ice_segments/h_li", 0, 19, 5)
-    check_results(h_li_1, h_li_exp_1)
+    # Run Tests #
+    for test in range(10):
+        # Perform Single Read #
+        h_li_1 = h5file.read("/gt1l/land_ice_segments/h_li", 0, 19, 5)
+        result = result and check_results(h_li_1, h_li_exp_1)
 
-    # Perform Parallel Read #
-    datasets = [["/gt1l/land_ice_segments/h_li", 0, 19, 5],
-                ["/gt2l/land_ice_segments/h_li", 0, 19, 5],
-                ["/gt3l/land_ice_segments/h_li", 0, 19, 5]]
-    h_li_2 = h5file.readp(datasets)
-    check_results(h_li_2, h_li_exp_2)
+        # Perform Parallel Read #
+        datasets = [["/gt1l/land_ice_segments/h_li", 0, 19, 5],
+                    ["/gt2l/land_ice_segments/h_li", 0, 19, 5],
+                    ["/gt3l/land_ice_segments/h_li", 0, 19, 5]]
+        h_li_2 = h5file.readp(datasets)
+        result = result and check_results(h_li_2, h_li_exp_2)
+
+    # Display Results #
+    if result:
+        print("Passed H5Coro Test")
