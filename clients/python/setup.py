@@ -16,14 +16,6 @@ with open('version.txt') as fh:
 # list of all utility scripts to be included with package
 scripts=[os.path.join('utils',f) for f in os.listdir('utils') if f.endswith('.py')]
 
-# semantic version configuration for setuptools-scm
-setup_requires = ["setuptools_scm"]
-use_scm_version = {
-    "relative_to": __file__,
-    "local_scheme": "node-and-date",
-    "tag_regex":r'^(?:[\\w-]+-)?(?P<version>[vV]?\d+\.\d+\.\d+)',
-}
-
 setup(
     name='sliderule',
     author='SlideRule Developers',
@@ -42,7 +34,5 @@ setup(
     packages=find_packages(),
     version=version,
     install_requires=install_requires,
-    setup_requires=setup_requires,
-#    use_scm_version=use_scm_version,
     scripts=scripts,
 )

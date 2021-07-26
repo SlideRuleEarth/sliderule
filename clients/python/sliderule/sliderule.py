@@ -48,6 +48,8 @@ server_max_errors = 3
 
 verbose = False
 
+request_timeout = (10, 60) # (connection, read) in seconds
+
 logger = logging.getLogger(__name__)
 
 recdef_lock = threading.Lock()
@@ -87,60 +89,6 @@ basictypes = {
 ###############################################################################
 # UTILITIES
 ###############################################################################
-
-#
-#  set verbose
-#
-def __setverb(enable):
-    global verbose
-    verbose = (enable == True)
-
-#
-#  set maximum server errors allowed
-#
-def __setmaxerr(max_errors):
-    global server_max_errors
-    if max_errors > 0:
-        server_max_errors = max_errors
-    else:
-        raise TypeError('max errors must be greater than zero')
-
-#
-#  set server urls
-#   - you either pass in a single ip address or hostname which is used for service discovery
-#   - OR you pass in a list of ip address or hostnames which are treated as a fixed list of servers
-#
-def __setserv(servs):
-    global server_table, server_index, service_url
-    with server_lock:
-        service_url = None
-        server_index = 0
-        server_table = {}
-        if type(servs) == list: # hardcoded list of sliderule server IP addresses
-            for serv in servs:
-                server_url = "http://" + serv + ":9081"
-                server_table[server_url] = 0
-        elif type(servs) == str: # IP address of sliderule's service discovery
-            service_url = "http://" + servs + ":8500/v1/catalog/service/srds?passing"
-        else:
-            raise TypeError('expected ip address or hostname as a string or list of strings')
-    # then update server table
-    __upserv()
-
-#
-# update server urls
-#
-def __upserv():
-    global server_table, server_index, service_url
-    with server_lock:
-        if service_url != None:
-            server_index = 0
-            server_table = {}
-            services = requests.get(service_url).json()
-            for entry in services:
-                server_url = "http://" + entry["Address"] + ":" + str(entry["ServicePort"])
-                server_table[server_url] = 0
-    return len(server_table)
 
 #
 #  get the ip address of an available sliderule server
@@ -374,9 +322,9 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
         try:
             url  = '%s/source/%s' % (serv, api)
             if not stream:
-                rsps = requests.get(url, data=rqst).json()
+                rsps = requests.get(url, data=rqst, timeout=request_timeout).json()
             else:
-                data = requests.post(url, data=rqst, stream=True)
+                data = requests.post(url, data=rqst, timeout=request_timeout, stream=True)
                 rsps = __parse(data, callbacks)
             __clrserv(serv)
             complete = True
@@ -387,28 +335,67 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
 
 #
 #  SET_URL
+#   - you either pass in a single ip address or hostname which is used for service discovery
+#   - OR you pass in a list of ip address or hostnames which are treated as a fixed list of servers
 #
 def set_url (urls):
-    __setserv(urls)
+    global server_table, server_index, service_url
+    with server_lock:
+        service_url = None
+        server_index = 0
+        server_table = {}
+        if type(urls) == list: # hardcoded list of sliderule server IP addresses
+            for serv in urls:
+                server_url = "http://" + serv + ":9081"
+                server_table[server_url] = 0
+        elif type(urls) == str: # IP address of sliderule's service discovery
+            service_url = "http://" + urls + ":8500/v1/catalog/service/srds?passing"
+        else:
+            raise TypeError('expected ip address or hostname as a string or list of strings')
+    # then update server table
+    update_available_servers()
 
 #
 #  UPDATE_AVAIABLE_SERVERS
 #
 def update_available_servers ():
-    return __upserv()
+    global server_table, server_index, service_url
+    with server_lock:
+        if service_url != None:
+            server_index = 0
+            server_table = {}
+            services = requests.get(service_url, timeout=request_timeout).json()
+            for entry in services:
+                server_url = "http://" + entry["Address"] + ":" + str(entry["ServicePort"])
+                server_table[server_url] = 0
+    return len(server_table)
 
 #
 #  SET_VERBOSE
 #
 def set_verbose (enable):
-    __setverb(enable)
+    global verbose
+    verbose = (enable == True)
 
 #
 #  SET_MAX_ERRORS
 #
 def set_max_errors (max_errors):
-    __setmaxerr(max_errors)
+    global server_max_errors
+    if max_errors > 0:
+        server_max_errors = max_errors
+    else:
+        raise TypeError('max errors must be greater than zero')
 
+#
+# SET_REQUEST_TIMEOUT
+#
+def set_rqst_timeout (timeout):
+    global request_timeout
+    if type(timeout) == tuple:
+        request_timeout = timeout
+    else:
+        raise TypeError('timeout must be a tuple (<connection timeout>, <read timeout>)')
 #
 # GPS2UTC
 #
