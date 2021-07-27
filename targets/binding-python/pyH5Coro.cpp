@@ -132,8 +132,12 @@ const py::dict* pyH5Coro::readp (const py::list& datasets)
         delete readers[i]->pid;
 
         // populate result dictionary
-        py::str key(readers[i]->dataset);
-        (*result)[key] = readers[i]->result;
+        pyMut.lock();
+        {
+            py::str key(readers[i]->dataset);
+            (*result)[key] = readers[i]->result;
+        }
+        pyMut.unlock();
 
         // clean up data
         if(readers[i]->info.data) delete [] readers[i]->info.data;

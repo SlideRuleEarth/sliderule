@@ -67,7 +67,7 @@ if __name__ == '__main__':
     h5file = sliderule.h5coro(resource, format, path, region, endpoint)
 
     # Run Tests #
-    for test in range(10):
+    for test in range(10000):
         # Perform Single Read #
         h_li_1 = h5file.read("/gt1l/land_ice_segments/h_li", 0, 19, 5)
         result = result and check_results(h_li_1, h_li_exp_1)
