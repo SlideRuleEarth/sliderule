@@ -259,7 +259,7 @@ def __get_values(data, dtype, size):
 #
 #  __query_resources
 #
-def __query_resources(parm):
+def __query_resources(parm, version):
 
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
@@ -280,7 +280,7 @@ def __query_resources(parm):
         time_start = parm["t1"]
 
     # Make CMR Request #
-    resources = cmr(polygon, time_start, time_end)
+    resources = cmr(polygon, time_start, time_end, version)
     if(len(resources) > max_requested_resources):
         logger.info("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
         logger.info("Consider using icesat2.set_max_resources to set a higher limit")
@@ -470,10 +470,10 @@ def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block=True):
+def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block=True, version='004'):
 
     # Query System #
-    resources = __query_resources(parm)
+    resources = __query_resources(parm, version)
     max_workers = __query_servers(max_workers)
     return __parallelize(atl06, parm, resources, max_workers, block, asset, track, as_numpy)
 
@@ -510,9 +510,9 @@ def atl03s (parm, resource, asset="atlas-s3", track=0):
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, block=True):
+def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, block=True, version='004'):
 
-    resources = __query_resources(parm)
+    resources = __query_resources(parm, version)
     max_workers = __query_servers(max_workers)
     return __parallelize(atl03s, parm, resources, max_workers, block, asset, track)
 
