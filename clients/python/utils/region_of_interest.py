@@ -1,5 +1,5 @@
 #
-# Requests SlideRule to process the provided region of interest twice: 
+# Requests SlideRule to process the provided region of interest twice:
 # (1) perform ATL06-SR algorithm to calculate elevations in region
 # (2) retrieve photon counts from each ATL06 extent
 #
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     # Configure Logging #
     logging.basicConfig(level=logging.INFO)
-    
+
     # Region of Interest #
     region_filename = sys.argv[1]
     regions = icesat2.toregion(region_filename)

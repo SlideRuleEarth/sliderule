@@ -470,7 +470,7 @@ def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, block=True, version='004'):
+def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, version='004', block=True):
 
     # Query System #
     resources = __query_resources(parm, version)
@@ -510,7 +510,7 @@ def atl03s (parm, resource, asset="atlas-s3", track=0):
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, block=True, version='004'):
+def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True):
 
     resources = __query_resources(parm, version)
     max_workers = __query_servers(max_workers)
