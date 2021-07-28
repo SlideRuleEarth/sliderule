@@ -359,6 +359,10 @@ def __parallelize(function, parm, resources, max_workers, block, *args):
 #  INIT
 #
 def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max_errors=3):
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
+    else:
+        logging.basicConfig(level=logging.CRITICAL)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
     sliderule.set_max_errors(max_errors)
@@ -461,7 +465,7 @@ def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
             for element in rsps[0]["elevation"][0].keys():
                 flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
         else: # Unrecognized
-            logger.warning("unable to process resource %s: no elements", resource)
+            logger.debug("unable to process resource %s: no elements", resource)
         rsps = flattened
 
     # Return Responses
@@ -502,7 +506,7 @@ def atl03s (parm, resource, asset="atlas-s3", track=0):
             elif type(rsps[0][element]) == int:
                 flattened[element] = [rsps[r][element] for r in range(len(rsps)) for i in range(2)]
     else: # Unrecognized
-        logger.warning("unable to process resource %s: no elements", resource)
+        logger.debug("unable to process resource %s: no elements", resource)
 
     # Return Responses
     return flattened

@@ -66,9 +66,6 @@ if __name__ == '__main__':
     asset = "atlas-local"
     max_workers = 0
 
-    # Configure Logging #
-    logging.basicConfig(level=logging.INFO)
-
     # Region of Interest #
     region_filename = sys.argv[1]
     regions = icesat2.toregion(region_filename)
@@ -98,7 +95,7 @@ if __name__ == '__main__':
             url = [url]
 
     # Configure SlideRule #
-    icesat2.init(url, False)
+    icesat2.init(url, True)
 
     # Build ATL06 Request #
     parms = {
