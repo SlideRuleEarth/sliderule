@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -529,14 +529,14 @@ int Publisher::post(void* data, unsigned int mask, void* secondary_data, unsigne
 
         /* set queue state */
         msgQ->state = post_state;
+
+        /* if still room wake up other publishers */
+        if(!isFull())
+        {
+            msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
+        }
     }
     msgQ->locknblock->unlock();
-
-    /* if still room wake up other publishers */
-    if(!isFull())
-    {
-        msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
-    }
 
     /* return */
     return post_state;
@@ -604,14 +604,14 @@ Subscriber::~Subscriber()
         if(msgQ->subscriber_type[id] == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count--;
         msgQ->subscriber_type[id] = UNSUBSCRIBED;
         msgQ->subscriptions--;
+
+        /* Signal Publishers */
+        if(space_reclaimed)
+        {
+            msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
+        }
     }
     msgQ->locknblock->unlock();
-
-    /* Signal Publishers */
-    if(space_reclaimed)
-    {
-        msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -622,19 +622,18 @@ bool Subscriber::dereference(msgRef_t& ref, bool with_delete)
     assert(ref._handle); // casted to a pointer below and dereferenced
 
     queue_node_t* node = (queue_node_t*)ref._handle;
-    bool space_reclaimed = false;
 
     msgQ->locknblock->lock();
     {
         node->refs--;
-        space_reclaimed = reclaim_nodes(with_delete);
+        bool space_reclaimed = reclaim_nodes(with_delete);
+
+        if(space_reclaimed)
+        {
+            msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
+        }
     }
     msgQ->locknblock->unlock();
-
-    if(space_reclaimed)
-    {
-        msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
-    }
 
     return true;
 }
@@ -644,8 +643,6 @@ bool Subscriber::dereference(msgRef_t& ref, bool with_delete)
  *----------------------------------------------------------------------------*/
 void Subscriber::drain(bool with_delete)
 {
-    bool space_reclaimed = false;
-
     msgQ->locknblock->lock();
     {
         /* Dereference All Nodes */
@@ -655,15 +652,15 @@ void Subscriber::drain(bool with_delete)
             node->refs--;
             node = node->next;
         }
-        space_reclaimed = reclaim_nodes(with_delete);
+        bool space_reclaimed = reclaim_nodes(with_delete);
         msgQ->curr_nodes[id] = NULL;
+
+        if(space_reclaimed)
+        {
+            msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
+        }
     }
     msgQ->locknblock->unlock();
-
-    if(space_reclaimed)
-    {
-        msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -774,7 +771,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
                 ref.size = node_size;
                 ref._handle = (void*)node;
             }
-            else 
+            else
             {
                 if(node_size <= size)
                 {
@@ -793,14 +790,14 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
 
         /* set queue state */
         msgQ->state = ref.state;
+
+        /* signal publishers */
+        if(space_reclaimed)
+        {
+            msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
+        }
     }
     msgQ->locknblock->unlock();
-
-    /* signal publishers */
-    if(space_reclaimed)
-    {
-        msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
-    }
 
     /* return status */
     return ref.state;
