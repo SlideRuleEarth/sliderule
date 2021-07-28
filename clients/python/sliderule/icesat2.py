@@ -1,32 +1,32 @@
 # Copyright (c) 2021, University of Washington
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
-# 1. Redistributions of source code must retain the above copyright notice, 
+#
+# 1. Redistributions of source code must retain the above copyright notice,
 #    this list of conditions and the following disclaimer.
 #
-# 2. Redistributions in binary form must reproduce the above copyright notice, 
-#    this list of conditions and the following disclaimer in the documentation 
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-# 
-# 3. Neither the name of the University of Washington nor the names of its 
-#    contributors may be used to endorse or promote products derived from this 
+#
+# 3. Neither the name of the University of Washington nor the names of its
+#    contributors may be used to endorse or promote products derived from this
 #    software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
-# “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+# “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
 # TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 # PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
-# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
+
 import itertools
 import json
 import ssl
@@ -233,7 +233,7 @@ def __get_values(data, dtype, size):
     """
 
     codedtype2nptype = {
-        0:  numpy.int8,     # INT8  
+        0:  numpy.int8,     # INT8
         1:  numpy.int16,    # INT16
         2:  numpy.int32,    # INT32
         3:  numpy.int64,    # INT64
@@ -242,12 +242,12 @@ def __get_values(data, dtype, size):
         6:  numpy.uint32,   # UINT32
         7:  numpy.uint64,   # UINT64
         8:  numpy.byte,     # BITFIELD
-        9:  numpy.single,   # FLOAT  
-        10: numpy.double,   # DOUBLE  
-        11: numpy.byte,     # TIME8  
-        12: numpy.byte      # STRING 
+        9:  numpy.single,   # FLOAT
+        10: numpy.double,   # DOUBLE
+        11: numpy.byte,     # TIME8
+        12: numpy.byte      # STRING
     }
-  
+
     raw = bytes(data)
     datatype = codedtype2nptype[dtype]
     num_elements = int(size / numpy.dtype(datatype).itemsize)
@@ -307,7 +307,7 @@ def __query_servers(max_workers):
         return
     else:
         logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
-    
+
     # Return Number of Workers #
     return max_workers
 
@@ -374,7 +374,7 @@ def set_max_resources (max_resources):
 #
 #  COMMON METADATA REPOSITORY
 #
-def cmr (polygon=None, time_start=None, time_end=None, version='003', short_name='ATL03'):
+def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name='ATL03'):
     """
     polygon: list of longitude,latitude in counter-clockwise order with first and last point matching;
              - e.g. [ {"lon": -115.43, "lat": 37.40},
@@ -599,11 +599,11 @@ def toregion (filename, tolerance=0.0):
             for coord in list(polygon.exterior.coords):
                 point = {"lon": coord[0], "lat": coord[1]}
                 region.append(point)
-            if len(region) > 0 and len(region) <= MAX_COORDS_IN_POLYGON:       
+            if len(region) > 0 and len(region) <= MAX_COORDS_IN_POLYGON:
                 regions.append(region)
             else:
                 logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region), MAX_COORDS_IN_POLYGON)
-    
+
     # determine winding of polygons #
     for r in range(len(regions)):
         region = regions[r]
@@ -615,7 +615,7 @@ def toregion (filename, tolerance=0.0):
             for i in range(len(region), 0, -1):
                 ccw_region.append(region[i - 1])
             # replace region with counter-clockwise version #
-            regions[r] = ccw_region               
+            regions[r] = ccw_region
 
     # return region #
     return regions
