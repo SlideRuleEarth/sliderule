@@ -45,13 +45,17 @@ def process_atl06_algorithm(parms, asset, max_workers, subset=False):
 
     # Build DataFrame of SlideRule Responses
     df = pd.DataFrame(rsps)
+    num_elevations = len(df)
 
     # Display Statistics
     perf_duration = perf_stop - perf_start
     print("Completed in {:.3f} seconds of wall-clock time".format(perf_duration))
-    print("Reference Ground Tracks: {}".format(df["rgt"].unique()))
-    print("Cycles: {}".format(df["cycle"].unique()))
-    print("Received {} elevations".format(len(df)))
+    if num_elevations > 0:
+        print("Reference Ground Tracks: {}".format(df["rgt"].unique()))
+        print("Cycles: {}".format(df["cycle"].unique()))
+        print("Received {} elevations".format(len(df)))
+    else:
+        print("No elevations were returned")
 
     # Return DataFrame
     return df
@@ -114,6 +118,14 @@ if __name__ == '__main__':
 
     # Get ATL03 Subsetted Segments
     atl03 = process_atl06_algorithm(parms, asset, max_workers, subset=True)
+
+    # Check Results Present
+    if len(atl06) == 0:
+        print("No ATL06 data available")
+        sys.exit()
+    elif len(atl03) == 0:
+        print("No ATL03 data available")
+        sys.exit()
 
     # Calculate Extent
     lons = [p["lon"] for p in region]

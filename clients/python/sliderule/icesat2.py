@@ -304,7 +304,7 @@ def __query_servers(max_workers):
     # Check if Servers are Available #
     if max_workers <= 0:
         logger.error("There are no servers available to fulfill this request")
-        return
+        return 0
     else:
         logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
 
@@ -312,9 +312,74 @@ def __query_servers(max_workers):
     return max_workers
 
 #
+#  __atl06
+#
+def __atl06 (parm, resource, asset, track, as_numpy):
+
+    # Build ATL06 Request
+    rqst = {
+        "atl03-asset" : asset,
+        "resource": resource,
+        "track": track,
+        "parms": parm
+    }
+
+    # Execute ATL06 Algorithm
+    rsps = sliderule.source("atl06", rqst, stream=True)
+
+    # Flatten Responses
+    if as_numpy:
+        rsps = __flatten_atl06(rsps)
+    else:
+        flattened = {}
+        if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl06rec' or rsps[0]['__rectype'] == 'atl06rec-compact'):
+            for element in rsps[0]["elevation"][0].keys():
+                flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
+        else: # Unrecognized
+            logger.debug("unable to process resource %s: no elements", resource)
+        rsps = flattened
+
+    # Return Responses
+    return rsps
+
+#
+#  __atl03s
+#
+def __atl03s (parm, resource, asset, track):
+
+    # Build ATL06 Request
+    rqst = {
+        "atl03-asset" : asset,
+        "resource": resource,
+        "track": track,
+        "parms": parm
+    }
+
+    # Execute ATL06 Algorithm
+    rsps = sliderule.source("atl03s", rqst, stream=True)
+
+    # Flatten Responses
+    flattened = {}
+    if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl03rec'):
+        for element in rsps[0].keys():
+            if type(rsps[0][element]) == tuple:
+                flattened[element] = [rsps[r][element][i] for r in range(len(rsps)) for i in range(2)]
+            elif type(rsps[0][element]) == int:
+                flattened[element] = [rsps[r][element] for r in range(len(rsps)) for i in range(2)]
+    else: # Unrecognized
+        logger.debug("unable to process resource %s: no elements", resource)
+
+    # Return Responses
+    return flattened
+
+#
 #  __parallelize
 #
 def __parallelize(function, parm, resources, max_workers, block, *args):
+
+    # Check Max Workers
+    if max_workers <= 0:
+        return {}
 
     # For Blocking Calls
     if block:
@@ -328,16 +393,19 @@ def __parallelize(function, parm, resources, max_workers, block, *args):
             result_cnt = 0
             for future in concurrent.futures.as_completed(futures):
                 result_cnt += 1
-                logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
-                if len(results) == 0:
-                    results = future.result()
+                result = future.result()
+                if len(result) > 0:
+                    logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
+                    if len(results) == 0:
+                        results = result
+                    else:
+                        for element in result:
+                            if element not in results:
+                                logger.error("Unable to construct results with element: %s", element)
+                                continue
+                            results[element] += result[element]
                 else:
-                    result = future.result()
-                    for element in result:
-                        if element not in results:
-                            logger.error("Unable to construct results with element: %s", element)
-                            continue
-                        results[element] += result[element]
+                    logger.error("No results returned for resource %d of %d", result_cnt, len(resources))
 
         # Return Results
         return results
@@ -445,80 +513,48 @@ def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name
 #
 def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
 
-    # Build ATL06 Request
-    rqst = {
-        "atl03-asset" : asset,
-        "resource": resource,
-        "track": track,
-        "parms": parm
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("atl06", rqst, stream=True)
-
-    # Flatten Responses
-    if as_numpy:
-        rsps = __flatten_atl06(rsps)
-    else:
-        flattened = {}
-        if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl06rec' or rsps[0]['__rectype'] == 'atl06rec-compact'):
-            for element in rsps[0]["elevation"][0].keys():
-                flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-        else: # Unrecognized
-            logger.debug("unable to process resource %s: no elements", resource)
-        rsps = flattened
-
-    # Return Responses
-    return rsps
+    try:
+        return __atl06(parm, resource, asset, track, as_numpy)
+    except RuntimeError as e:
+        logger.critical(e)
+        return {}
 
 #
 #  PARALLEL ATL06
 #
 def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, version='004', block=True):
 
-    # Query System #
-    resources = __query_resources(parm, version)
-    max_workers = __query_servers(max_workers)
-    return __parallelize(atl06, parm, resources, max_workers, block, asset, track, as_numpy)
+    try:
+        resources = __query_resources(parm, version)
+        max_workers = __query_servers(max_workers)
+        return __parallelize(__atl06, parm, resources, max_workers, block, asset, track, as_numpy)
+    except RuntimeError as e:
+        logger.critical(e)
+        return {}
 
 #
 #  Subsetted ATL03
 #
 def atl03s (parm, resource, asset="atlas-s3", track=0):
 
-    # Build ATL06 Request
-    rqst = {
-        "atl03-asset" : asset,
-        "resource": resource,
-        "track": track,
-        "parms": parm
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("atl03s", rqst, stream=True)
-
-    # Flatten Responses
-    flattened = {}
-    if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl03rec'):
-        for element in rsps[0].keys():
-            if type(rsps[0][element]) == tuple:
-                flattened[element] = [rsps[r][element][i] for r in range(len(rsps)) for i in range(2)]
-            elif type(rsps[0][element]) == int:
-                flattened[element] = [rsps[r][element] for r in range(len(rsps)) for i in range(2)]
-    else: # Unrecognized
-        logger.debug("unable to process resource %s: no elements", resource)
-
-    # Return Responses
-    return flattened
+    try:
+        return __atl03s(parm, resource, asset, track)
+    except RuntimeError as e:
+        logger.critical(e)
+        return {}
 
 #
 #  PARALLEL SUBSETTED ATL03
 #
 def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True):
 
-    resources = __query_resources(parm, version)
-    max_workers = __query_servers(max_workers)
-    return __parallelize(atl03s, parm, resources, max_workers, block, asset, track)
+    try:
+        resources = __query_resources(parm, version)
+        max_workers = __query_servers(max_workers)
+        return __parallelize(__atl03s, parm, resources, max_workers, block, asset, track)
+    except RuntimeError as e:
+        logger.critical(e)
+        return {}
 
 #
 #  H5
@@ -538,7 +574,11 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["DYNAM
     }
 
     # Read H5 File
-    rsps = sliderule.source("h5", rqst, stream=True)
+    try:
+        rsps = sliderule.source("h5", rqst, stream=True)
+    except RuntimeError as e:
+        logger.critical(e)
+        return numpy.empty(0)
 
     # Build Record Data
     rsps_datatype = rsps[0]["datatype"]
@@ -567,7 +607,11 @@ def h5p (datasets, resource, asset="atlas-s3"):
     }
 
     # Read H5 File
-    rsps = sliderule.source("h5p", rqst, stream=True)
+    try:
+        rsps = sliderule.source("h5p", rqst, stream=True)
+    except RuntimeError as e:
+        logger.critical(e)
+        rsps = []
 
     # Build Record Data
     results = {}

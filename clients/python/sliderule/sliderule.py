@@ -117,7 +117,7 @@ def __errserv(serv):
             if server_table[serv] > server_max_errors:
                 server_table.pop(serv, None)
         except Exception as e:
-            logger.critical(serv + " already removed from table")
+            logger.debug(serv + " already removed from table")
 
 #
 #  __clrserv
@@ -317,8 +317,9 @@ def __logeventrec(rec):
 def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
     rqst = json.dumps(parm)
     complete = False
+    rsps = []
     while not complete:
-        serv = __getserv()
+        serv = __getserv() # it throws a RuntimeError that must be caught by calling function
         try:
             url  = '%s/source/%s' % (serv, api)
             if not stream:
@@ -328,8 +329,14 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
                 rsps = __parse(data, callbacks)
             __clrserv(serv)
             complete = True
-        except Exception as e:
-            logger.critical(e)
+        except requests.ConnectionError as e:
+            logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
+            __errserv(serv)
+        except requests.HTTPError as e:
+            logger.error("Invalid HTTP response from endpoint {} ... retrying request".format(url))
+            __errserv(serv)
+        except requests.Timeout as e:
+            logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))
             __errserv(serv)
     return rsps
 
