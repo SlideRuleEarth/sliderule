@@ -223,6 +223,35 @@ def __flatten_atl06(rsps):
     return flattened
 
 #
+#  __to_dataframe
+#
+def __to_dataframe(rsps,epoch=(1980,1,6),**kwargs):
+    """
+    rsps: response from streaming source call to atl06p endpoint
+    """
+    # default variables for output dataframe
+    kwargs.setdefault('fields',['segment_id','lon','lat','cycle',
+        'rgt','h_mean','spot','dh_fit_dx','dh_fit_dy','rms_misfit',
+        'h_sigma','w_surface_window_final','n_fit_photons','pflags'])
+    # remove fields that will be converted separately
+    for key in ['delta_time',]:
+        try:
+            kwargs['fields'].remove(key)
+        except ValueError:
+            pass
+    # flatten SlideRule Responses to fields of interest
+    delta_time = numpy.array(rsps['delta_time']).astype('timedelta64[s]')
+    atlas_sdp_epoch = numpy.datetime64('{0:4d}-{1:02d}-{2:02d}'.format(*epoch))
+    flattened = {key:rsps[key] for key in kwargs['fields']}
+    flattened['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
+    # Build Dataframe of SlideRule Responses
+    df = geopandas.pd.DataFrame(flattened)
+    # default geometry is crs="EPSG:4326"
+    geometry = geopandas.points_from_xy(rsps['lon'],rsps['lat'])
+    gdf = geopandas.GeoDataFrame(df,geometry=geometry)
+    return gdf
+
+#
 #  __get_values
 #
 def __get_values(data, dtype, size):
