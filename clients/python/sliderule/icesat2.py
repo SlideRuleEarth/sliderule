@@ -76,6 +76,9 @@ SRT_INLAND_WATER = 4
 ALL_ROWS = -1
 MAX_COORDS_IN_POLYGON = 16384
 
+# gps-based epoch for delta times #
+ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
+
 ###############################################################################
 # NSIDC UTILITIES
 ###############################################################################

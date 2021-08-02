@@ -263,12 +263,12 @@ def test_geospatial (asset):
 #
 def test_definition ():
     rqst = {
-        "rectype": "atl03rec",
+        "rectype": "atl06rec.elevation",
     }
 
     d = sliderule.source("definition", rqst)
 
-    if(d["delta_time"]["offset"] == 576):
+    if(d["delta_time"]["offset"] == 128):
         logging.info("Passed definition test")
     else:
         logging.error("Failed definition test: {}".format(d["delta_time"]["offset"]))
