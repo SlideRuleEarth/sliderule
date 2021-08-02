@@ -406,8 +406,8 @@ def set_rqst_timeout (timeout):
 #
 # GPS2UTC
 #
-def gps2utc (gps_time, as_str=True):
-    gps_time = gps_epoch + timedelta(seconds=gps_time)
+def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
+    gps_time = epoch + timedelta(seconds=gps_time)
     tai_time = gps_time + timedelta(seconds=19)
     tai_timestamp = (tai_time - tai_epoch).total_seconds()
     utc_timestamp = datetime.utcfromtimestamp(tai_timestamp)

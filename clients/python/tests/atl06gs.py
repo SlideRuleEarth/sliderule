@@ -32,7 +32,7 @@ if __name__ == '__main__':
     atl06_asset = "atlas-local"
     resource = "20210114170723_03311012_004_01.h5"
     region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
-               {"lon": 114.29798416287946, "lat": -70.08880029415151}, 
+               {"lon": 114.29798416287946, "lat": -70.08880029415151},
                {"lon": 112.05139144652648, "lat": -74.18128224472123},
                {"lon": 126.62732471857403, "lat": -74.37827832634999},
                {"lon": 126.54560629670780, "lat": -70.28232209449946} ]
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     diff_set = ["h_mean", "lat", "lon"]
     errors = {}
     total_error = {}
-    segments = {}    
+    segments = {}
     orphans = {"segment_id": [], "h_mean": [], "lat": [], "lon": []}
 
     # Create Segment Sets #
@@ -165,7 +165,7 @@ if __name__ == '__main__':
                 for process in ["sliderule", "nsidc", "difference"]:
                     segments[segment_id][spot][process] = {}
                     for element in diff_set:
-                        segments[segment_id][spot][process][element] = 0.0                        
+                        segments[segment_id][spot][process][element] = 0.0
         for element in diff_set:
             segments[segment_id][row["spot"]]["nsidc"][element] = row[element]
     for index, row in sliderule.iterrows():
