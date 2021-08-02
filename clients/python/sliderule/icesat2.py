@@ -676,7 +676,7 @@ def todataframe(rsps,epoch=(1980,1,6),**kwargs):
     rsps: response from streaming source call to atl06p endpoint
     """
     # default variables for output dataframe
-    kwargs.setdefault('fields',rsps.keys())
+    kwargs.setdefault('fields',sorted(rsps.keys()))
     # remove record type field and fields that will be converted separately
     for key in ['__rectype','delta_time']:
         try:
