@@ -674,7 +674,7 @@ def toregion (filename, tolerance=0.0):
 #
 #  TO DATAFRAME
 #
-def todataframe(rsps,epoch=(1980,1,6),**kwargs):
+def todataframe(rsps,epoch=ATLAS_SDP_EPOCH,**kwargs):
     """
     rsps: response from streaming source call to atl06p endpoint
     """
@@ -688,7 +688,7 @@ def todataframe(rsps,epoch=(1980,1,6),**kwargs):
             pass
     # flatten SlideRule Responses to fields of interest
     delta_time = numpy.array(rsps['delta_time']).astype('timedelta64[s]')
-    atlas_sdp_epoch = numpy.datetime64(datetime.datetime(*epoch))
+    atlas_sdp_epoch = numpy.datetime64(epoch)
     flattened = {key:rsps[key] for key in kwargs['fields']}
     flattened['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
     # Build Dataframe of SlideRule Responses
