@@ -28,6 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import requests
+import numpy
 import json
 import struct
 import ctypes
@@ -52,7 +53,6 @@ request_timeout = (10, 60) # (connection, read) in seconds
 
 logger = logging.getLogger(__name__)
 
-recdef_lock = threading.Lock()
 recdef_table = {}
 
 gps_epoch = datetime(1980, 1, 6)
@@ -63,6 +63,14 @@ eventformats = {
     "JSON":     1
 }
 
+eventlogger = {
+    0: logger.debug,
+    1: logger.info,
+    2: logger.warning,
+    3: logger.error,
+    4: logger.critical
+}
+
 datatypes = {
     "TEXT":     0,
     "REAL":     1,
@@ -71,19 +79,35 @@ datatypes = {
 }
 
 basictypes = {
-    "INT8":     { "fmt": 'b', "size": 1 },
-    "INT16":    { "fmt": 'h', "size": 2 },
-    "INT32":    { "fmt": 'i', "size": 4 },
-    "INT64":    { "fmt": 'q', "size": 8 },
-    "UINT8":    { "fmt": 'B', "size": 1 },
-    "UINT16":   { "fmt": 'H', "size": 2 },
-    "UINT32":   { "fmt": 'I', "size": 4 },
-    "UINT64":   { "fmt": 'Q', "size": 8 },
-    "BITFIELD": { "fmt": 'x', "size": 0 },    # unsupported
-    "FLOAT":    { "fmt": 'f', "size": 4 },
-    "DOUBLE":   { "fmt": 'd', "size": 8 },
-    "TIME8":    { "fmt": 'Q', "size": 8 },
-    "STRING":   { "fmt": 's', "size": 1 }
+    "INT8":     { "fmt": 'b', "size": 1, "nptype": numpy.int8 },
+    "INT16":    { "fmt": 'h', "size": 2, "nptype": numpy.int16 },
+    "INT32":    { "fmt": 'i', "size": 4, "nptype": numpy.int32 },
+    "INT64":    { "fmt": 'q', "size": 8, "nptype": numpy.int64 },
+    "UINT8":    { "fmt": 'B', "size": 1, "nptype": numpy.uint8 },
+    "UINT16":   { "fmt": 'H', "size": 2, "nptype": numpy.uint16 },
+    "UINT32":   { "fmt": 'I', "size": 4, "nptype": numpy.uint32 },
+    "UINT64":   { "fmt": 'Q', "size": 8, "nptype": numpy.uint64 },
+    "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte },    # unsupported
+    "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
+    "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
+    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.byte },
+    "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte }
+}
+
+codedtype2str = {
+    0:  "INT8",
+    1:  "INT16",
+    2:  "INT32",
+    3:  "INT64",
+    4:  "UINT8",
+    5:  "UINT16",
+    6:  "UINT32",
+    7:  "UINT64",
+    8:  "BITFIELD",
+    9:  "FLOAT",
+    10: "DOUBLE",
+    11: "TIME8",
+    12: "STRING"
 }
 
 ###############################################################################
@@ -132,12 +156,9 @@ def __clrserv(serv):
 #
 def __populate(rectype):
     global recdef_table
-    with recdef_lock:
-        need_to_populate = rectype not in recdef_table
-    if need_to_populate:
-        recdef = source("definition", {"rectype" : rectype})
-        with recdef_lock:
-            recdef_table[rectype] = recdef
+    if rectype not in recdef_table:
+        recdef_table[rectype] = source("definition", {"rectype" : rectype})
+    return recdef_table[rectype]
 
 #
 #  __decode
@@ -152,12 +173,8 @@ def __decode(rectype, rawdata):
     # initialize record
     rec = { "__rectype": rectype }
 
-    # populate record definition (if needed) #
-    __populate(rectype)
-
-    # get record definition
-    with recdef_lock:
-        recdef = recdef_table[rectype]
+    # get/populate record definition #
+    recdef = __populate(rectype)
 
     # iterate through each field in definition
     for fieldname in recdef.keys():
@@ -211,12 +228,7 @@ def __decode(rectype, rawdata):
         else:
 
             # populate record definition (if needed) #
-            __populate(ftype)
-
-            # decode record
-            subrec = {}
-            with recdef_lock:
-                subrecdef = recdef_table[ftype]
+            subrecdef = __populate(ftype)
 
             # check if array
             is_array = not (elems == 1)
@@ -305,7 +317,7 @@ def __parse(stream, callbacks):
 #
 def __logeventrec(rec):
     if verbose:
-        logger.critical('%s' % (rec["attr"]))
+        eventlogger[rec['level']]('%s' % (rec["attr"]))
 
 ###############################################################################
 # APIs
@@ -415,3 +427,13 @@ def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
         return str(utc_timestamp)
     else:
         return utc_timestamp
+
+#
+# GET DEFINITION
+#
+def get_definition (rectype, fieldname):
+    recdef = __populate(rectype)
+    if fieldname in recdef and recdef[fieldname]["type"] in basictypes:
+        return basictypes[recdef[fieldname]["type"]]
+    else:
+        return {}

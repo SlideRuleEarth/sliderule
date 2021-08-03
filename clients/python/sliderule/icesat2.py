@@ -50,12 +50,6 @@ SERVER_SCALE_FACTOR = 6
 # create logger
 logger = logging.getLogger(__name__)
 
-# output dictionary keys
-keys = ['segment_id','spot','delta_time','lat','lon','h_mean','dh_fit_dx','dh_fit_dy','rgt','cycle']
-
-# output variable data types
-dtypes = ['i','u1','f','f','f','f','f','f','f','u2','u2']
-
 # default maximum number of resources to process in one request
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
@@ -198,34 +192,6 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
 ###############################################################################
 
 #
-#  __flatten_atl06
-#
-def __flatten_atl06(rsps):
-    """
-    rsps: array of responses from streaming source call to atl06 endpoint
-    """
-    global keys, dtypes
-    # total length of flattened response
-    flatten = numpy.sum([len(r['elevation']) for i,r in enumerate(rsps)]).astype(numpy.int)
-    # python dictionary with flattened variables
-    flattened = {}
-    for key,dtype in zip(keys,dtypes):
-        flattened[key] = numpy.zeros((flatten),dtype=dtype)
-
-    # counter variable for flattening responses
-    c = 0
-    # flatten response
-    for i,r in enumerate(rsps):
-        for j,v in enumerate(r['elevation']):
-            # add each variable
-            for key,dtype in zip(keys,dtypes):
-                flattened[key][c] = numpy.array(v[key],dtype=dtype)
-            # add to counter
-            c += 1
-
-    return flattened
-
-#
 #  __get_values
 #
 def __get_values(data, dtype, size):
@@ -235,24 +201,8 @@ def __get_values(data, dtype, size):
     size:   bytes in data
     """
 
-    codedtype2nptype = {
-        0:  numpy.int8,     # INT8
-        1:  numpy.int16,    # INT16
-        2:  numpy.int32,    # INT32
-        3:  numpy.int64,    # INT64
-        4:  numpy.uint8,    # UINT8
-        5:  numpy.uint16,   # UINT16
-        6:  numpy.uint32,   # UINT32
-        7:  numpy.uint64,   # UINT64
-        8:  numpy.byte,     # BITFIELD
-        9:  numpy.single,   # FLOAT
-        10: numpy.double,   # DOUBLE
-        11: numpy.byte,     # TIME8
-        12: numpy.byte      # STRING
-    }
-
     raw = bytes(data)
-    datatype = codedtype2nptype[dtype]
+    datatype = sliderule.basictypes[sliderule.codedtype2nptype[dtype]]["nptype"]
     num_elements = int(size / numpy.dtype(datatype).itemsize)
     slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
@@ -315,6 +265,32 @@ def __query_servers(max_workers):
     return max_workers
 
 #
+#  __todataframe
+#
+def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_ley="lat"):
+
+    # Check Empty Columns
+    if len(columns) <= 0:
+        return geopandas.pd.DataFrame()
+
+    # Generate Time Column
+    delta_time = columns[delta_time_key].astype('timedelta64[s]')
+    atlas_sdp_epoch = numpy.datetime64(ATLAS_SDP_EPOCH)
+    columns['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
+    del columns[delta_time_key]
+
+    # Generate Geometry Column
+    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_ley])
+    del columns[lon_key]
+    del columns[lat_ley]
+
+    # Build and Return GeoDataFrame (default geometry is crs="EPSG:4326")
+    df = geopandas.pd.DataFrame(columns)
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry)
+    return gdf
+
+
+#
 #  __atl06
 #
 def __atl06 (parm, resource, asset, track, as_numpy):
@@ -331,19 +307,38 @@ def __atl06 (parm, resource, asset, track, as_numpy):
     rsps = sliderule.source("atl06", rqst, stream=True)
 
     # Flatten Responses
-    if as_numpy:
-        rsps = __flatten_atl06(rsps)
+    columns = {}
+    if len(rsps) <= 0:
+        logger.debug("no response returned for %s", resource)
+    elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
+        logger.debug("invalid response returned for %s: %s", resource, rsps[0]['__rectype'])
     else:
-        flattened = {}
-        if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl06rec' or rsps[0]['__rectype'] == 'atl06rec-compact'):
-            for element in rsps[0]["elevation"][0].keys():
-                flattened[element] = [rsps[r]["elevation"][i][element] for r in range(len(rsps)) for i in range(len(rsps[r]["elevation"]))]
-        else: # Unrecognized
-            logger.debug("unable to process resource %s: no elements", resource)
-        rsps = flattened
+        # Determine Record Type
+        if rsps[0]['__rectype'] == 'atl06rec':
+            rectype = 'atl06rec.elevation'
+        else:
+            rectype = 'atl06rec-compact.elevation'
+        # Count Rows
+        num_rows = 0
+        for rsp in rsps:
+            num_rows += len(rsp["elevation"])
+        # Build Columns
+        for field in rsps[0]["elevation"][0].keys():
+            fielddef = sliderule.get_definition(rectype, field)
+            if len(fielddef) > 0:
+                columns[field] = numpy.zeros(num_rows, fielddef["nptype"])
+        # Populate Columns
+        elev_cnt = 0
+        for rsp in rsps:
+            for elevation in rsp["elevation"]:
+                for field in elevation.keys():
+                    if field in columns:
+                        columns[field][elev_cnt] = elevation[field]
+                elev_cnt += 1
 
-    # Return Responses
-    return rsps
+    # Return GeoDataFrame
+    return __todataframe(columns, "delta_time", "lon", "lat")
+
 
 #
 #  __atl03s
@@ -362,18 +357,56 @@ def __atl03s (parm, resource, asset, track):
     rsps = sliderule.source("atl03s", rqst, stream=True)
 
     # Flatten Responses
-    flattened = {}
-    if (len(rsps) > 0) and (rsps[0]['__rectype'] == 'atl03rec'):
-        for element in rsps[0].keys():
-            if type(rsps[0][element]) == tuple:
-                flattened[element] = [rsps[r][element][i] for r in range(len(rsps)) for i in range(2)]
-            elif type(rsps[0][element]) == int:
-                flattened[element] = [rsps[r][element] for r in range(len(rsps)) for i in range(2)]
-    else: # Unrecognized
-        logger.debug("unable to process resource %s: no elements", resource)
+    columns = {}
+    if len(rsps) <= 0:
+        logger.debug("no response returned for %s", resource)
+    elif rsps[0]['__rectype'] != 'atl03rec':
+        logger.debug("invalid response returned for %s: %s", resource, rsps[0]['__rectype'])
+    else:
+        # Count Rows
+        num_rows = 0
+        for rsp in rsps:
+            num_rows += len(rsp["data"])
+        # Build Columns
+        for rsp in rsps:
+            if len(rsp["data"]) > 0:
+                # Allocate Columns
+                for field in rsp.keys():
+                    fielddef = sliderule.get_definition("atl03rec", field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.zeros(num_rows, fielddef["nptype"])
+                for field in rsp["data"][0].keys():
+                    fielddef = sliderule.get_definition("atl03rec.photons", field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.zeros(num_rows, fielddef["nptype"])
+                break
+        # Populate Columns
+        ph_cnt = 0
+        for rsp in rsps:
+            ph_index = 0
+            left_cnt = rsp["count"][0]
+            for photon in rsp["data"]:
+                for field in rsp.keys():
+                    if field in columns:
+                        if field == "count":
+                            if ph_index < left_cnt:
+                                columns[field][ph_cnt] = 0
+                            else:
+                                columns[field][ph_cnt] = 1
+                        elif type(rsp[field]) is tuple:
+                            columns[field][ph_cnt] = rsp[field][0]
+                        else:
+                            columns[field][ph_cnt] = rsp[field]
+                for field in photon.keys():
+                    if field in columns:
+                        columns[field][ph_cnt] = photon[field]
+                ph_cnt += 1
+                ph_index += 1
+        # Rename Count Column to Pair Column
+        columns["pair"] = columns.pop("count")
 
-    # Return Responses
-    return flattened
+    # Return GeoDataFrame
+    return __todataframe(columns, "delta_time", "longitude", "latitude")
 
 #
 #  __parallelize
@@ -388,7 +421,7 @@ def __parallelize(function, parm, resources, max_workers, block, *args):
     if block:
 
         # Make Parallel Processing Requests
-        results = {}
+        results = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(function, parm, resource, *args) for resource in resources]
 
@@ -399,19 +432,15 @@ def __parallelize(function, parm, resources, max_workers, block, *args):
                 result = future.result()
                 if len(result) > 0:
                     logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
-                    if len(results) == 0:
-                        results = result
-                    else:
-                        for element in result:
-                            if element not in results:
-                                logger.error("Unable to construct results with element: %s", element)
-                                continue
-                            results[element] += result[element]
+                    results.append(result)
                 else:
                     logger.error("No results returned for resource %d of %d", result_cnt, len(resources))
 
-        # Return Results
-        return results
+        # Return DataFrame
+        if len(results) > 0:
+            return geopandas.pd.concat(results)
+        else:
+            return geopandas.pd.DataFrame()
 
     # For Non-Blocking Calls
     else:
@@ -552,7 +581,7 @@ def atl03s (parm, resource, asset="atlas-s3", track=0):
 def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True):
 
     try:
-        resources = __query_resources(parm, version)
+        resources = __query_resources(parm, version)[0:1]
         max_workers = __query_servers(max_workers)
         return __parallelize(__atl03s, parm, resources, max_workers, block, asset, track)
     except RuntimeError as e:
@@ -670,30 +699,3 @@ def toregion (filename, tolerance=0.0):
 
     # return region #
     return regions
-
-#
-#  TO DATAFRAME
-#
-def todataframe(rsps,epoch=ATLAS_SDP_EPOCH,**kwargs):
-    """
-    rsps: response from streaming source call to atl06p endpoint
-    """
-    # default variables for output dataframe
-    kwargs.setdefault('fields',sorted(rsps.keys()))
-    # remove record type field and fields that will be converted separately
-    for key in ['__rectype','delta_time']:
-        try:
-            kwargs['fields'].remove(key)
-        except ValueError:
-            pass
-    # flatten SlideRule Responses to fields of interest
-    delta_time = numpy.array(rsps['delta_time']).astype('timedelta64[s]')
-    atlas_sdp_epoch = numpy.datetime64(epoch)
-    flattened = {key:rsps[key] for key in kwargs['fields']}
-    flattened['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
-    # Build Dataframe of SlideRule Responses
-    df = geopandas.pd.DataFrame(flattened)
-    # default geometry is crs="EPSG:4326"
-    geometry = geopandas.points_from_xy(rsps['lon'],rsps['lat'])
-    gdf = geopandas.GeoDataFrame(df,geometry=geometry)
-    return gdf

@@ -36,29 +36,28 @@ def process_atl06_algorithm(parms, asset, max_workers, subset=False):
 
     # Request ATL06 Data
     if not subset:
-        rsps = icesat2.atl06p(parms, asset, 0, False, max_workers)
+        gdf = icesat2.atl06p(parms, asset, 0, False, max_workers)
     else:
-        rsps = icesat2.atl03sp(parms, asset, 0, max_workers)
+        gdf = icesat2.atl03sp(parms, asset, 0, max_workers)
 
     # Latch Stop Time
     perf_stop = time.perf_counter()
 
     # Build DataFrame of SlideRule Responses
-    df = pd.DataFrame(rsps)
-    num_elevations = len(df)
+    num_elevations = len(gdf)
 
     # Display Statistics
     perf_duration = perf_stop - perf_start
     print("Completed in {:.3f} seconds of wall-clock time".format(perf_duration))
     if num_elevations > 0:
-        print("Reference Ground Tracks: {}".format(df["rgt"].unique()))
-        print("Cycles: {}".format(df["cycle"].unique()))
-        print("Received {} elevations".format(len(df)))
+        print("Reference Ground Tracks: {}".format(gdf["rgt"].unique()))
+        print("Cycles: {}".format(gdf["cycle"].unique()))
+        print("Received {} elevations".format(num_elevations))
     else:
         print("No elevations were returned")
 
     # Return DataFrame
-    return df
+    return gdf
 
 ###############################################################################
 # MAIN
@@ -69,6 +68,8 @@ if __name__ == '__main__':
     url = ["127.0.0.1"]
     asset = "atlas-local"
     max_workers = 0
+
+    logging.basicConfig(level=logging.INFO)
 
     # Region of Interest #
     region_filename = sys.argv[1]
@@ -99,7 +100,7 @@ if __name__ == '__main__':
             url = [url]
 
     # Configure SlideRule #
-    icesat2.init(url, True)
+    icesat2.init(url, False)
 
     # Build ATL06 Request #
     parms = {
@@ -114,10 +115,14 @@ if __name__ == '__main__':
     }
 
     # Get ATL06 Elevations
-    atl06 = process_atl06_algorithm(parms, asset, max_workers)
+#    atl06 = process_atl06_algorithm(parms, asset, max_workers)
 
     # Get ATL03 Subsetted Segments
     atl03 = process_atl06_algorithm(parms, asset, max_workers, subset=True)
+    print(atl03)
+    print("LEN", len(atl03))
+    print("PAIR", atl03["pair"].unique())
+    sys.exit()
 
     # Check Results Present
     if len(atl06) == 0:
@@ -142,21 +147,21 @@ if __name__ == '__main__':
     # Plot ATL06 Ground Tracks
     ax1 = plt.subplot(231,projection=cartopy.crs.PlateCarree())
     ax1.set_title("Zoomed ATL06 Ground Tracks")
-    ax1.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, c=atl06["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax1.scatter(atl06.geometry.x, atl06.geometry.y, s=2.5, c=atl06["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax1.set_extent(extent,crs=cartopy.crs.PlateCarree())
     ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
     # Plot ATL03 Ground Tracks
     ax2 = plt.subplot(232,projection=cartopy.crs.PlateCarree())
     ax2.set_title("Subsetted ATL03 Ground Tracks")
-    ax2.scatter(atl03["lon"].values, atl03["lat"].values, s=2.5, c=atl03["count"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax2.scatter(atl03.geometry.x, atl03.geometry.y, s=2.5, c=atl03["count"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax2.set_extent(extent,crs=cartopy.crs.PlateCarree())
     ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
     # Plot Global View
     ax3 = plt.subplot(233,projection=cartopy.crs.PlateCarree())
     ax3.set_title("Global Reference")
-    ax3.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax3.scatter(atl06.geometry.x, atl06.geometry.y, s=2.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax3.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
     ax3.add_feature(cartopy.feature.LAKES)
     ax3.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
@@ -175,13 +180,6 @@ if __name__ == '__main__':
     ax6 = plt.subplot(236)
     atl06.hist("rms_misfit", bins=100, ax=ax6)
     ax6.set_title("RMS of Fit")
-
-    # Plot Time of Measurement per ATL06 Ground Tracks
-    #ax6 = plt.subplot(236,projection=cartopy.crs.PlateCarree())
-    #ax6.set_title("Time of Measurement")
-    #ax6.scatter(atl06["lon"].values, atl06["lat"].values, s=2.5, c=atl06["delta_time"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
-    #ax6.set_extent(extent,crs=cartopy.crs.PlateCarree())
-    #ax6.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
     # Show Plot
     plt.show()
