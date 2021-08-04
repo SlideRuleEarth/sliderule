@@ -288,7 +288,6 @@ def test_version ():
     success = success and ('duration' in rsps['server'])
     success = success and ('packages' in rsps['server'])
     success = success and ('.' in rsps['server']['version'])
-    success = success and ('v' in rsps['server']['commit'])
     success = success and ('-g' in rsps['server']['commit'])
     success = success and (':' in rsps['server']['launch'])
     success = success and (rsps['server']['duration'] > 0)
@@ -296,7 +295,6 @@ def test_version ():
     success = success and ('version' in rsps['icesat2'])
     success = success and ('commit' in rsps['icesat2'])
     success = success and ('.' in rsps['icesat2']['version'])
-    success = success and ('v' in rsps['icesat2']['commit'])
     success = success and ('-g' in rsps['icesat2']['commit'])
 
     if success:
