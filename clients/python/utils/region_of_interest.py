@@ -131,14 +131,12 @@ if __name__ == '__main__':
     # Plot ATL06 Ground Tracks
     ax1 = plt.subplot(231)
     ax1.set_title("Zoomed ATL06 Ground Tracks")
-#    ax1.set_aspect('equal')
     atl06.plot(ax=ax1, column='h_mean', cmap='plasma', markersize=0.5)
     ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2)
 
     # Plot ATL06 Along Track Slope
     ax2 = plt.subplot(232)
     ax2.set_title("Zoomed ATL06 Along Track Slope")
-#    ax2.set_aspect('equal')
     atl06.plot(ax=ax2, column='dh_fit_dx', cmap='inferno', markersize=0.5)
     ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2)
 

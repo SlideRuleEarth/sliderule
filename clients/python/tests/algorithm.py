@@ -77,14 +77,53 @@ def expread(resource, asset):
     return df
 
 #
+# ATL03 Photon Cloud Request
+#
+def phread(resource, asset):
+
+    # Build Region Poly
+    region = [
+        { "lat": -80.75, "lon": -70.00 },
+        { "lat": -81.00, "lon": -70.00 },
+        { "lat": -81.00, "lon": -65.00 },
+        { "lat": -80.75, "lon": -65.00 },
+        { "lat": -80.75, "lon": -70.00 }
+    ]
+
+    # Build ATL06 Request
+    parms = { "poly": region,
+              "cnf": icesat2.CNF_SURFACE_HIGH,
+              "ats": 20.0,
+              "cnt": 10,
+              "len": 40.0,
+              "res": 20.0,
+              "maxi": 1 }
+
+    # Request ATL06 Data
+    perf_start = time.perf_counter()
+    process_start = time.process_time()
+    gdf = icesat2.atl03s(parms, resource, asset, track=1)
+    perf_stop = time.perf_counter()
+    process_stop = time.process_time()
+    perf_duration = perf_stop - perf_start
+    process_duration = process_stop - process_start
+
+    # Return DataFrame
+    print("Completed in {:.3f} seconds of wall-clock time, and {:.3f} seconds of processing time". format(perf_duration, process_duration))
+    print("Reference Ground Tracks: {} to {}".format(min(gdf["rgt"]), max(gdf["rgt"])))
+    print("Cycle: {} to {}".format(min(gdf["cycle"]), max(gdf["cycle"])))
+    print("Retrieved {} points from SlideRule".format(len(gdf["height"])))
+    return gdf
+
+#
 # Plot Actual vs Expected
 #
-def plotresults(act, exp, atl06_present):
+def plotresults(act, exp, ph):
     # Create Plot
     fig = plt.figure(num=None, figsize=(12, 6))
 
     # Plot Ground Tracks
-    ax1 = plt.subplot(121,projection=cartopy.crs.PlateCarree())
+    ax1 = plt.subplot(131,projection=cartopy.crs.PlateCarree())
     ax1.set_title("Ground Tracks")
     ax1.scatter(act.geometry.x, act.geometry.y, s=1.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
     ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
@@ -93,13 +132,18 @@ def plotresults(act, exp, atl06_present):
     ax1.gridlines(xlocs=np.arange(-180.,181.,60.), ylocs=np.arange(-90.,91.,30.))
 
     # Plot Elevations
-    ax2 = plt.subplot(122)
+    ax2 = plt.subplot(132)
     ax2.set_title("Along Track Elevations")
-    track1 = act[act["spot"].isin([1, 2])].sort_values(by=['time'])
-    ax2.plot(track1["time"].values, track1["h_mean"].values, linewidth=1.0, color='b')
-    if atl06_present:
-        standard = exp.sort_values(by=['time'])
-        ax2.plot(standard["time"].values, standard["h_mean"].values, linewidth=1.0, color='g')
+    gt1r = act[act["gt"] == icesat2.GT1R].sort_values(by=['time'])
+    ax2.plot(gt1r["time"].values, gt1r["h_mean"].values, linewidth=1.0, color='b', zorder=3)
+    standard = exp.sort_values(by=['time'])
+    ax2.plot(standard["time"].values, standard["h_mean"].values, linewidth=1.0, color='g', zorder=2)
+
+    # Plot Photon Cloud
+    ax3 = plt.subplot(133)
+    ax3.set_title("Photon Cloud")
+    gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
+    ax3.scatter(gt1r.geometry.x, gt1r["height"].values, s=0.1, color='b')
 
     # Show Plot
     plt.show()
@@ -113,6 +157,7 @@ if __name__ == '__main__':
     url = ["127.0.0.1"]
     atl03_asset = "atlas-local"
     atl06_asset = "atlas-local"
+    resource = "_20181019065445_03150111_003_01.h5"
 
     # configure logging
     logging.basicConfig(level=logging.INFO)
@@ -131,16 +176,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
         atl06_asset = sys.argv[3]
 
-    # Set Resource #
-    atl06_present = True
-    resource = "_20181019065445_03150111_003_01.h5"
-    if len(sys.argv) > 4:
-        resource = sys.argv[4]
-        atl06_present = False
-
     # Bypass service discovery if url supplied
-    if len(sys.argv) > 5:
-        if sys.argv[5] == "bypass":
+    if len(sys.argv) > 4:
+        if sys.argv[4] == "bypass":
             url = [url]
 
     # Initialize Icesat2 Package #
@@ -150,10 +188,10 @@ if __name__ == '__main__':
     act = algoexec("ATL03"+resource, atl03_asset)
 
     # Read ATL06 Expected Results
-    if atl06_present:
-        exp = expread("ATL06"+resource, atl06_asset)
-    else:
-        exp = None
+    exp = expread("ATL06"+resource, atl06_asset)
+
+    # Read ATL03 Photon Cloud
+    ph = phread("ATL03"+resource, atl03_asset)
 
     # Plot Actual vs. Expected
-    plotresults(act, exp, atl06_present)
+    plotresults(act, exp, ph)

@@ -77,6 +77,8 @@ GT3L = 50
 GT3R = 60
 STRONG_SPOTS = (1, 3, 5)
 WEAK_SPOTS = (2, 4, 6)
+LEFT_PAIR = 0
+RIGHT_PAIR = 1
 
 # gps-based epoch for delta times #
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
