@@ -17,9 +17,6 @@
 import sys
 import logging
 import time
-import json
-import pandas as pd
-import numpy as np
 import cartopy
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -29,16 +26,13 @@ from sliderule import icesat2
 # LOCAL FUNCTIONS
 ###############################################################################
 
-def process_atl06_algorithm(parms, asset, max_workers, subset=False):
+def process_atl06_algorithm(parms, asset, max_workers):
 
     # Latch Start Time
     perf_start = time.perf_counter()
 
     # Request ATL06 Data
-    if not subset:
-        gdf = icesat2.atl06p(parms, asset, track=0, max_workers=max_workers)
-    else:
-        gdf = icesat2.atl03sp(parms, asset, track=0, max_workers=max_workers)
+    gdf = icesat2.atl06p(parms, asset, track=0, max_workers=max_workers)
 
     # Latch Stop Time
     perf_stop = time.perf_counter()
@@ -117,16 +111,10 @@ if __name__ == '__main__':
     # Get ATL06 Elevations
     atl06 = process_atl06_algorithm(parms, asset, max_workers)
 
-    # Get ATL03 Subsetted Segments
-#    atl03 = process_atl06_algorithm(parms, asset, max_workers, subset=True)
-
     # Check Results Present
     if len(atl06) == 0:
         print("No ATL06 data available")
         sys.exit()
-#    elif len(atl03) == 0:
-#        print("No ATL03 data available")
-#        sys.exit()
 
     # Calculate Extent
     lons = [p["lon"] for p in region]
@@ -141,18 +129,18 @@ if __name__ == '__main__':
     box_lat = [e["lat"] for e in region]
 
     # Plot ATL06 Ground Tracks
-    ax1 = plt.subplot(231,projection=cartopy.crs.PlateCarree())
+    ax1 = plt.subplot(231)
     ax1.set_title("Zoomed ATL06 Ground Tracks")
-    ax1.scatter(atl06.geometry.x, atl06.geometry.y, s=2.5, c=atl06["h_mean"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
-    ax1.set_extent(extent,crs=cartopy.crs.PlateCarree())
-    ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
+#    ax1.set_aspect('equal')
+    atl06.plot(ax=ax1, column='h_mean', cmap='plasma', markersize=0.5)
+    ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2)
 
-    # Plot ATL03 Ground Tracks
-#    ax2 = plt.subplot(232,projection=cartopy.crs.PlateCarree())
-#    ax2.set_title("Subsetted ATL03 Ground Tracks")
-#    ax2.scatter(atl03.geometry.x, atl03.geometry.y, s=2.5, c=atl03["rgt"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
-#    ax2.set_extent(extent,crs=cartopy.crs.PlateCarree())
-#    ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
+    # Plot ATL06 Along Track Slope
+    ax2 = plt.subplot(232)
+    ax2.set_title("Zoomed ATL06 Along Track Slope")
+#    ax2.set_aspect('equal')
+    atl06.plot(ax=ax2, column='dh_fit_dx', cmap='inferno', markersize=0.5)
+    ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2)
 
     # Plot Global View
     ax3 = plt.subplot(233,projection=cartopy.crs.PlateCarree())

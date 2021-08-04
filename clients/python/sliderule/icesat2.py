@@ -69,6 +69,14 @@ SRT_LAND_ICE = 3
 SRT_INLAND_WATER = 4
 ALL_ROWS = -1
 MAX_COORDS_IN_POLYGON = 16384
+GT1L = 10
+GT1R = 20
+GT2L = 30
+GT2R = 40
+GT3L = 50
+GT3R = 60
+STRONG_SPOTS = (1, 3, 5)
+WEAK_SPOTS = (2, 4, 6)
 
 # gps-based epoch for delta times #
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
