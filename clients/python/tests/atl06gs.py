@@ -64,10 +64,7 @@ if __name__ == '__main__':
               "maxi": 10 }
 
     # Request ATL06 Data
-    rsps = icesat2.atl06(parms, "ATL03_"+resource, atl03_asset, as_numpy=False)
-
-    # Build DataFrame of SlideRule Response #
-    sliderule = pd.DataFrame(rsps)
+    sliderule = icesat2.atl06(parms, "ATL03_"+resource, atl03_asset)
 
     # Display Status of SlideRule Processing #
     print("\nSliderule")
@@ -146,6 +143,10 @@ if __name__ == '__main__':
     print("\nASAS")
     print("-----")
     print("Received {} elevations".format(len(nsidc)))
+
+    # Add Lat and Lon Columns to SlideRule DataFrame
+    sliderule["lon"] = sliderule.geometry.x
+    sliderule["lat"] = sliderule.geometry.y
 
     # Initialize Error Variables #
     diff_set = ["h_mean", "lat", "lon"]

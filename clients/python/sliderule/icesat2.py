@@ -202,7 +202,7 @@ def __get_values(data, dtype, size):
     """
 
     raw = bytes(data)
-    datatype = sliderule.basictypes[sliderule.codedtype2nptype[dtype]]["nptype"]
+    datatype = sliderule.basictypes[sliderule.codedtype2str[dtype]]["nptype"]
     num_elements = int(size / numpy.dtype(datatype).itemsize)
     slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
@@ -544,7 +544,7 @@ def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name
 def atl06 (parm, resource, asset="atlas-s3", track=0):
 
     try:
-        return __atl06(parm, resource, asset, track)
+        return __atl06(parm, resource, asset, track)[0]
     except RuntimeError as e:
         logger.critical(e)
         return {}
@@ -568,7 +568,7 @@ def atl06p(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=
 def atl03s (parm, resource, asset="atlas-s3", track=0):
 
     try:
-        return __atl03s(parm, resource, asset, track)
+        return __atl03s(parm, resource, asset, track)[0]
     except RuntimeError as e:
         logger.critical(e)
         return {}
