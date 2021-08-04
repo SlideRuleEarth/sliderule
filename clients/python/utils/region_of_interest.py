@@ -36,9 +36,9 @@ def process_atl06_algorithm(parms, asset, max_workers, subset=False):
 
     # Request ATL06 Data
     if not subset:
-        gdf = icesat2.atl06p(parms, asset, 0, False, max_workers)
+        gdf = icesat2.atl06p(parms, asset, track=0, max_workers=max_workers)
     else:
-        gdf = icesat2.atl03sp(parms, asset, 0, max_workers)
+        gdf = icesat2.atl03sp(parms, asset, track=0, max_workers=max_workers)
 
     # Latch Stop Time
     perf_stop = time.perf_counter()
@@ -115,22 +115,18 @@ if __name__ == '__main__':
     }
 
     # Get ATL06 Elevations
-#    atl06 = process_atl06_algorithm(parms, asset, max_workers)
+    atl06 = process_atl06_algorithm(parms, asset, max_workers)
 
     # Get ATL03 Subsetted Segments
-    atl03 = process_atl06_algorithm(parms, asset, max_workers, subset=True)
-    print(atl03)
-    print("LEN", len(atl03))
-    print("PAIR", atl03["pair"].unique())
-    sys.exit()
+#    atl03 = process_atl06_algorithm(parms, asset, max_workers, subset=True)
 
     # Check Results Present
     if len(atl06) == 0:
         print("No ATL06 data available")
         sys.exit()
-    elif len(atl03) == 0:
-        print("No ATL03 data available")
-        sys.exit()
+#    elif len(atl03) == 0:
+#        print("No ATL03 data available")
+#        sys.exit()
 
     # Calculate Extent
     lons = [p["lon"] for p in region]
@@ -152,11 +148,11 @@ if __name__ == '__main__':
     ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
     # Plot ATL03 Ground Tracks
-    ax2 = plt.subplot(232,projection=cartopy.crs.PlateCarree())
-    ax2.set_title("Subsetted ATL03 Ground Tracks")
-    ax2.scatter(atl03.geometry.x, atl03.geometry.y, s=2.5, c=atl03["count"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
-    ax2.set_extent(extent,crs=cartopy.crs.PlateCarree())
-    ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
+#    ax2 = plt.subplot(232,projection=cartopy.crs.PlateCarree())
+#    ax2.set_title("Subsetted ATL03 Ground Tracks")
+#    ax2.scatter(atl03.geometry.x, atl03.geometry.y, s=2.5, c=atl03["rgt"], cmap='winter_r', zorder=3, transform=cartopy.crs.PlateCarree())
+#    ax2.set_extent(extent,crs=cartopy.crs.PlateCarree())
+#    ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
 
     # Plot Global View
     ax3 = plt.subplot(233,projection=cartopy.crs.PlateCarree())

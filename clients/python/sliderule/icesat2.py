@@ -293,7 +293,7 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_ley="
 #
 #  __atl06
 #
-def __atl06 (parm, resource, asset, track, as_numpy):
+def __atl06 (parm, resource, asset, track):
 
     # Build ATL06 Request
     rqst = {
@@ -336,8 +336,8 @@ def __atl06 (parm, resource, asset, track, as_numpy):
                         columns[field][elev_cnt] = elevation[field]
                 elev_cnt += 1
 
-    # Return GeoDataFrame
-    return __todataframe(columns, "delta_time", "lon", "lat")
+    # Return Response
+    return __todataframe(columns, "delta_time", "lon", "lat"), resource
 
 
 #
@@ -405,13 +405,13 @@ def __atl03s (parm, resource, asset, track):
         # Rename Count Column to Pair Column
         columns["pair"] = columns.pop("count")
 
-    # Return GeoDataFrame
-    return __todataframe(columns, "delta_time", "longitude", "latitude")
+    # Return Response
+    return __todataframe(columns, "delta_time", "longitude", "latitude"), resource
 
 #
 #  __parallelize
 #
-def __parallelize(function, parm, resources, max_workers, block, *args):
+def __parallelize(max_workers, block, function, parm, resources, *args):
 
     # Check Max Workers
     if max_workers <= 0:
@@ -429,14 +429,12 @@ def __parallelize(function, parm, resources, max_workers, block, *args):
             result_cnt = 0
             for future in concurrent.futures.as_completed(futures):
                 result_cnt += 1
-                result = future.result()
+                result, resource = future.result()
                 if len(result) > 0:
-                    logger.info("Results returned for %d out of %d resources", result_cnt, len(resources))
                     results.append(result)
-                else:
-                    logger.error("No results returned for resource %d of %d", result_cnt, len(resources))
+                logger.info("%d points returned for %s (%d out of %d resources)", len(result), resource, result_cnt, len(resources))
 
-        # Return DataFrame
+        # Return Results
         if len(results) > 0:
             return geopandas.pd.concat(results)
         else:
@@ -543,10 +541,10 @@ def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name
 #
 #  ATL06
 #
-def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
+def atl06 (parm, resource, asset="atlas-s3", track=0):
 
     try:
-        return __atl06(parm, resource, asset, track, as_numpy)
+        return __atl06(parm, resource, asset, track)
     except RuntimeError as e:
         logger.critical(e)
         return {}
@@ -554,12 +552,12 @@ def atl06 (parm, resource, asset="atlas-s3", track=0, as_numpy=False):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atlas-s3", track=0, as_numpy=False, max_workers=0, version='004', block=True):
+def atl06p(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True):
 
     try:
         resources = __query_resources(parm, version)
         max_workers = __query_servers(max_workers)
-        return __parallelize(__atl06, parm, resources, max_workers, block, asset, track, as_numpy)
+        return __parallelize(max_workers, block, __atl06, parm, resources, asset, track)
     except RuntimeError as e:
         logger.critical(e)
         return {}
@@ -581,9 +579,9 @@ def atl03s (parm, resource, asset="atlas-s3", track=0):
 def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True):
 
     try:
-        resources = __query_resources(parm, version)[0:1]
+        resources = __query_resources(parm, version)
         max_workers = __query_servers(max_workers)
-        return __parallelize(__atl03s, parm, resources, max_workers, block, asset, track)
+        return __parallelize(max_workers, block, __atl03s, parm, resources, asset, track)
     except RuntimeError as e:
         logger.critical(e)
         return {}
