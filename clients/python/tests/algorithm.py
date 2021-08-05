@@ -93,6 +93,7 @@ def phread(resource, asset):
     # Build ATL06 Request
     parms = { "poly": region,
               "cnf": icesat2.CNF_SURFACE_HIGH,
+              "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy"],
               "ats": 20.0,
               "cnt": 10,
               "len": 40.0,
@@ -143,7 +144,7 @@ def plotresults(act, exp, ph):
     ax3 = plt.subplot(133)
     ax3.set_title("Photon Cloud")
     gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
-    ax3.scatter(gt1r.geometry.x, gt1r["height"].values, s=0.1, color='b')
+    ax3.scatter(gt1r.geometry.x, gt1r["height"].values, c=gt1r["info"], cmap='winter_r', s=0.1)
 
     # Show Plot
     plt.show()
@@ -157,7 +158,7 @@ if __name__ == '__main__':
     url = ["127.0.0.1"]
     atl03_asset = "atlas-local"
     atl06_asset = "atlas-local"
-    resource = "_20181019065445_03150111_003_01.h5"
+    resource = "_20181019065445_03150111_004_01.h5"
 
     # configure logging
     logging.basicConfig(level=logging.INFO)

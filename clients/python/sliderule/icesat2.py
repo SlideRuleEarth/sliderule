@@ -336,7 +336,7 @@ def __atl06 (parm, resource, asset, track):
         for field in rsps[0]["elevation"][0].keys():
             fielddef = sliderule.get_definition(rectype, field)
             if len(fielddef) > 0:
-                columns[field] = numpy.zeros(num_rows, fielddef["nptype"])
+                columns[field] = numpy.empty(num_rows, fielddef["nptype"])
         # Populate Columns
         elev_cnt = 0
         for rsp in rsps:
@@ -384,11 +384,11 @@ def __atl03s (parm, resource, asset, track):
                 for field in rsp.keys():
                     fielddef = sliderule.get_definition("atl03rec", field)
                     if len(fielddef) > 0:
-                        columns[field] = numpy.zeros(num_rows, fielddef["nptype"])
+                        columns[field] = numpy.empty(num_rows, fielddef["nptype"])
                 for field in rsp["data"][0].keys():
                     fielddef = sliderule.get_definition("atl03rec.photons", field)
                     if len(fielddef) > 0:
-                        columns[field] = numpy.zeros(num_rows, fielddef["nptype"])
+                        columns[field] = numpy.empty(num_rows, fielddef["nptype"])
                 break
         # Populate Columns
         ph_cnt = 0
@@ -618,6 +618,10 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["DYNAM
         rsps = sliderule.source("h5", rqst, stream=True)
     except RuntimeError as e:
         logger.critical(e)
+        return numpy.empty(0)
+
+    # Check if Data Returned
+    if len(rsps) <= 0:
         return numpy.empty(0)
 
     # Build Record Data
