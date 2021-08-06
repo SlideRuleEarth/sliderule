@@ -82,16 +82,7 @@ def expread(resource, asset):
 #
 # ATL03 Photon Cloud Request
 #
-def phread(resource, asset):
-
-    # Build Region Poly
-    region = [
-        { "lat": -80.75, "lon": -70.00 },
-        { "lat": -81.00, "lon": -70.00 },
-        { "lat": -81.00, "lon": -65.00 },
-        { "lat": -80.75, "lon": -65.00 },
-        { "lat": -80.75, "lon": -70.00 }
-    ]
+def phread(resource, asset, region):
 
     # Build ATL06 Request
     parms = { "poly": region,
@@ -122,33 +113,44 @@ def phread(resource, asset):
 #
 # Plot Actual vs Expected
 #
-def plotresults(act, exp, ph):
+def plotresults(act, exp, ph, region):
+
+    # Build Box
+    box_lon = [coord["lon"] for coord in region]
+    box_lat = [coord["lat"] for coord in region]
+
     # Create Plot
-    fig = plt.figure(num=None, figsize=(12, 6))
+    fig = plt.figure(num=None, figsize=(16, 10))
 
     # Plot Ground Tracks
-    ax1 = plt.subplot(131,projection=cartopy.crs.PlateCarree())
+    ax1 = plt.subplot(131,projection=cartopy.crs.SouthPolarStereo())
+    ax1.gridlines()
     ax1.set_title("Ground Tracks")
-    ax1.scatter(act.geometry.x, act.geometry.y, s=1.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
+    ax1.plot(act.geometry.x, act.geometry.y, linewidth=0.5, color='r', zorder=2, transform=cartopy.crs.Geodetic())
+    ax1.plot(box_lon, box_lat, linewidth=1.5, color='b', zorder=3, transform=cartopy.crs.Geodetic())
     ax1.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
     ax1.add_feature(cartopy.feature.LAKES)
-    ax1.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
-    ax1.gridlines(xlocs=np.arange(-180.,181.,60.), ylocs=np.arange(-90.,91.,30.))
+    ax1.set_xmargin(1.0)
+    ax1.set_ymargin(1.0)
 
     # Plot Elevations
     ax2 = plt.subplot(132)
     ax2.set_title("Along Track Elevations")
-    gt1r = act[act["gt"] == icesat2.GT1R]
-    ax2.scatter(gt1r["time"].values, gt1r["h_mean"].values, s=0.5, color='b', zorder=3)
+    act_gt1r = act[act["gt"] == icesat2.GT1R]
+    ax2.scatter(act_gt1r["time"].values, act_gt1r["h_mean"].values, s=0.5, color='b', zorder=3)
     ax2.scatter(exp["time"].values, exp["h_mean"].values, s=1.5, color='g', zorder=2)
 
     # Plot Photon Cloud
     ax3 = plt.subplot(133)
     ax3.set_title("Photon Cloud")
-    gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
-    ax3.scatter(gt1r.geometry.x, gt1r["height"].values, c=gt1r["info"], cmap='winter_r', s=0.1)
+    ph_gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
+    ax3.scatter(ph_gt1r["time"], ph_gt1r["height"].values, c=ph_gt1r["info"], cmap='winter_r', s=0.1)
+    act_gt1r = act_gt1r[(act_gt1r.geometry.y > min(box_lat)) & (act_gt1r.geometry.y < max(box_lat))]
+    act_gt1r = act_gt1r[(act_gt1r.geometry.x > min(box_lon)) & (act_gt1r.geometry.x < max(box_lon))]
+    ax3.scatter(act_gt1r["time"], act_gt1r["h_mean"].values, color='r', s=0.5)
 
     # Show Plot
+    fig.tight_layout()
     plt.show()
 
 ###############################################################################
@@ -160,7 +162,15 @@ if __name__ == '__main__':
     url = ["127.0.0.1"]
     atl03_asset = "atlas-local"
     atl06_asset = "atlas-local"
-    resource = "_20181019065445_03150111_004_01.h5"
+    resource = "20181019065445_03150111_004_01"
+    photon_cloud_region = [
+        { "lat": -80.75, "lon": -70.00 },
+        { "lat": -81.00, "lon": -70.00 },
+        { "lat": -81.00, "lon": -65.00 },
+        { "lat": -80.75, "lon": -65.00 },
+        { "lat": -80.75, "lon": -70.00 }
+    ]
+
 
     # configure logging
     logging.basicConfig(level=logging.INFO)
@@ -184,17 +194,21 @@ if __name__ == '__main__':
         if sys.argv[4] == "bypass":
             url = [url]
 
+    # Set Resource #
+    if len(sys.argv) > 5:
+        resource = sys.argv[5]
+
     # Initialize Icesat2 Package #
     icesat2.init(url, True)
 
     # Execute SlideRule Algorithm
-    act = algoexec("ATL03"+resource, atl03_asset)
+    act = algoexec("ATL03_"+resource+".h5", atl03_asset)
 
     # Read ATL06 Expected Results
-    exp = expread("ATL06"+resource, atl06_asset)
+    exp = expread("ATL06_"+resource+".h5", atl06_asset)
 
     # Read ATL03 Photon Cloud
-    ph = phread("ATL03"+resource, atl03_asset)
+    ph = phread("ATL03_"+resource+".h5", atl03_asset, photon_cloud_region)
 
     # Plot Actual vs. Expected
-    plotresults(act, exp, ph)
+    plotresults(act, exp, ph, photon_cloud_region)
