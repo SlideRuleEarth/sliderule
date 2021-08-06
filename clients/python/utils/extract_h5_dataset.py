@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     # Configure Logging #
     logging.basicConfig(level=logging.INFO)
-    
+
     # Set URL #
     url = ["127.0.0.1"]
     if len(sys.argv) > 1:
@@ -43,12 +43,12 @@ if __name__ == '__main__':
 
     # Set Subset #
     col         = 0
-    startrow    = 13665185
-    numrows     = 89624
+    startrow    = 0
+    numrows     = -1
     if len(sys.argv) > 7:
-        col         = int(sys.argv[6])
-        startrow    = int(sys.argv[7])
-        numrows     = int(sys.argv[8])
+        col         = int(sys.argv[6]) # 0
+        startrow    = int(sys.argv[7]) # 13665185
+        numrows     = int(sys.argv[8]) # 89624
 
     # Configure SlideRule #
     icesat2.init(url, True)

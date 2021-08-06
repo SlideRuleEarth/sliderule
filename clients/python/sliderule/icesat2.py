@@ -284,10 +284,9 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_ley="
         return geopandas.pd.DataFrame()
 
     # Generate Time Column
-    delta_time = columns[delta_time_key].astype('timedelta64[s]')
+    delta_time = (columns[delta_time_key]*1000000.0).astype('timedelta64[us]')
     atlas_sdp_epoch = numpy.datetime64(ATLAS_SDP_EPOCH)
     columns['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
-    del columns[delta_time_key]
 
     # Generate Geometry Column
     geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_ley])

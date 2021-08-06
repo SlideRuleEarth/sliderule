@@ -415,6 +415,7 @@ def set_rqst_timeout (timeout):
         request_timeout = timeout
     else:
         raise TypeError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+
 #
 # GPS2UTC
 #

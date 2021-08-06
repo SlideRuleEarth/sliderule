@@ -41,7 +41,7 @@ def algoexec(resource, asset):
     process_duration = process_stop - process_start
 
     # Check Results #
-    if len(gdf["h_mean"]) != 622412:
+    if len(gdf["h_mean"]) != 622423:
         print("Failed atl06-sr algorithm test - incorrect number of points returned: ", len(gdf["h_mean"]))
     else:
         print("Passed atl06-sr algorithm test")
@@ -64,10 +64,13 @@ def expread(resource, asset):
 
     # Build Dataframe of SlideRule Responses
     df = pd.DataFrame(data=list(zip(heights, delta_time)), index=delta_time, columns=["h_mean", "delta_time"])
-    df['time'] = pd.to_datetime(np.datetime64(icesat2.ATLAS_SDP_EPOCH) + delta_time.astype('timedelta64[s]'))
+    df['time'] = pd.to_datetime(np.datetime64(icesat2.ATLAS_SDP_EPOCH) + (delta_time * 1000000.0).astype('timedelta64[us]'))
+
+    # Filter Bad Elevations #
+    df = df[df["h_mean"] < 4000]
 
     # Check Results #
-    if len(df.values) != 121753:
+    if len(df.values) != 117080:
         print("Failed h5 retrieval test - insufficient points returned: ", len(df.values))
     else:
         print("Passed h5 retrieval test")
@@ -135,10 +138,9 @@ def plotresults(act, exp, ph):
     # Plot Elevations
     ax2 = plt.subplot(132)
     ax2.set_title("Along Track Elevations")
-    gt1r = act[act["gt"] == icesat2.GT1R].sort_values(by=['time'])
-    ax2.plot(gt1r["time"].values, gt1r["h_mean"].values, linewidth=1.0, color='b', zorder=3)
-    standard = exp.sort_values(by=['time'])
-    ax2.plot(standard["time"].values, standard["h_mean"].values, linewidth=1.0, color='g', zorder=2)
+    gt1r = act[act["gt"] == icesat2.GT1R]
+    ax2.scatter(gt1r["time"].values, gt1r["h_mean"].values, s=0.5, color='b', zorder=3)
+    ax2.scatter(exp["time"].values, exp["h_mean"].values, s=1.5, color='g', zorder=2)
 
     # Plot Photon Cloud
     ax3 = plt.subplot(133)
