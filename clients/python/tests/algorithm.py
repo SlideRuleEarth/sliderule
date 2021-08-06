@@ -87,7 +87,8 @@ def phread(resource, asset, region):
     # Build ATL06 Request
     parms = { "poly": region,
               "cnf": icesat2.CNF_SURFACE_HIGH,
-              "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy"],
+              "pass_invalid": True,
+              "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"],
               "ats": 20.0,
               "cnt": 10,
               "len": 40.0,
@@ -147,7 +148,8 @@ def plotresults(act, exp, ph, region):
     ax3 = plt.subplot(133)
     ax3.set_title("Photon Cloud")
     ph_gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
-    ax3.scatter(ph_gt1r["time"], ph_gt1r["height"].values, c=ph_gt1r["info"], cmap='winter_r', s=0.1)
+    colormap = np.array(['c','b','g','g','y'])
+    ax3.scatter(ph_gt1r["time"], ph_gt1r["height"].values, c=colormap[ph_gt1r["info"]], s=0.2)
     act_gt1r = act_gt1r[(act_gt1r.geometry.y > min(box_lat)) & (act_gt1r.geometry.y < max(box_lat))]
     act_gt1r = act_gt1r[(act_gt1r.geometry.x > min(box_lon)) & (act_gt1r.geometry.x < max(box_lon))]
     ax3.scatter(act_gt1r["time"], act_gt1r["h_mean"].values, color='r', s=0.5)
