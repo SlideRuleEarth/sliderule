@@ -119,6 +119,9 @@ def plotresults(act, exp, ph, region):
     box_lon = [coord["lon"] for coord in region]
     box_lat = [coord["lat"] for coord in region]
 
+    # Sort Results by Time
+    act = act.sort_values(by=['delta_time'])
+
     # Create Plot
     fig = plt.figure(num=None, figsize=(16, 10))
 
