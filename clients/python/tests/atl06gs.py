@@ -28,8 +28,7 @@ if __name__ == '__main__':
     # Default Parameters #
     error_threshold = 1.0
     url = ["127.0.0.1"]
-    atl03_asset = "atlas-local"
-    atl06_asset = "atlas-local"
+    asset = "atlas-local"
     resource = "20210114170723_03311012_004_01.h5"
     region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                {"lon": 114.29798416287946, "lat": -70.08880029415151},
@@ -43,8 +42,7 @@ if __name__ == '__main__':
     # Set URL #
     if len(sys.argv) > 1:
         url = sys.argv[1]
-        atl03_asset = "atlas-s3"
-        atl06_asset = "atlas-s3"
+        asset = "atlas-s3"
 
     # Bypass Service Discovery #
     if len(sys.argv) > 2:
@@ -64,7 +62,7 @@ if __name__ == '__main__':
               "maxi": 10 }
 
     # Request ATL06 Data
-    sliderule = icesat2.atl06(parms, "ATL03_"+resource, atl03_asset)
+    sliderule = icesat2.atl06(parms, "ATL03_"+resource, asset)
 
     # Display Status of SlideRule Processing #
     print("\nSliderule")
@@ -94,7 +92,7 @@ if __name__ == '__main__':
         geodatasets.append({"dataset": prefix+"longitude", "startrow": 0, "numrows": -1})
 
     # Read lat,lon from resource
-    geocoords = icesat2.h5p(geodatasets, "ATL06_"+resource, atl06_asset)
+    geocoords = icesat2.h5p(geodatasets, "ATL06_"+resource, asset)
 
     # Build list of the subsetted h_li datasets to read
     hidatasets = []
@@ -118,7 +116,7 @@ if __name__ == '__main__':
         hidatasets.append({"dataset": prefix+"segment_id", "startrow": startrow, "numrows": numrows, "prefix": prefix})
 
     # Read h_li from resource
-    hivalues = icesat2.h5p(hidatasets, "ATL06_"+resource, atl06_asset)
+    hivalues = icesat2.h5p(hidatasets, "ATL06_"+resource, asset)
 
     # Build Results #
     atl06 = {"h_mean": [], "lat": [], "lon": [], "segment_id": [], "spot": []}
