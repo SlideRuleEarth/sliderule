@@ -1,10 +1,10 @@
 #
 # Connects to SlideRule server node at provided url and prints the metrics
 # associated with the queried attribute.
-# 
-# This bypasses service discovery and goes directly to the server node.  
-# 
-# Use query_services.py to get list of server node IP addresses 
+#
+# This bypasses service discovery and goes directly to the server node.
+#
+# Use query_services.py to get list of server node IP addresses
 #
 import sys
 import logging
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     # Build Metric Request
     rqst = {
-        "attr": attr 
+        "attr": attr
     }
 
     # Retrieve Metrics

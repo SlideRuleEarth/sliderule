@@ -39,6 +39,7 @@ import numpy
 import geopandas
 from shapely.geometry.multipolygon import MultiPolygon
 import sliderule
+from sliderule import version
 
 ###############################################################################
 # GLOBALS
@@ -710,3 +711,12 @@ def toregion (filename, tolerance=0.0):
 
     # return region #
     return regions
+
+#
+# GET VERSION
+#
+def get_version ():
+
+    rsps = sliderule.source("version", {})
+    rsps["client"] = {"version": version.full_version}
+    return rsps
