@@ -148,8 +148,8 @@ def plotresults(act, exp, ph, region):
     ax3 = plt.subplot(133)
     ax3.set_title("Photon Cloud")
     ph_gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
-    colormap = np.array(['c','b','g','g','y'])
-    ax3.scatter(ph_gt1r["time"], ph_gt1r["height"].values, c=colormap[ph_gt1r["info"]], s=0.2)
+    colormap = np.array(['c','b','g','g','y']) # noise, ground, canopy, top of canopy, unclassified
+    ax3.scatter(ph_gt1r["time"], ph_gt1r["height"].values, c=colormap[ph_gt1r["info"]], s=1.5)
     act_gt1r = act_gt1r[(act_gt1r.geometry.y > min(box_lat)) & (act_gt1r.geometry.y < max(box_lat))]
     act_gt1r = act_gt1r[(act_gt1r.geometry.x > min(box_lon)) & (act_gt1r.geometry.x < max(box_lon))]
     ax3.scatter(act_gt1r["time"], act_gt1r["h_mean"].values, color='r', s=0.5)
@@ -165,8 +165,7 @@ def plotresults(act, exp, ph, region):
 if __name__ == '__main__':
 
     url = ["127.0.0.1"]
-    atl03_asset = "atlas-local"
-    atl06_asset = "atlas-local"
+    asset = "atlas-local"
     resource = "20181019065445_03150111_004_01"
     photon_cloud_region = [
         { "lat": -80.75, "lon": -70.00 },
@@ -176,44 +175,38 @@ if __name__ == '__main__':
         { "lat": -80.75, "lon": -70.00 }
     ]
 
-
     # configure logging
     logging.basicConfig(level=logging.INFO)
 
     # Set URL #
     if len(sys.argv) > 1:
         url = sys.argv[1]
-        atl03_asset = "atlas-s3"
-        atl06_asset = "atlas-s3"
+        asset = "atlas-s3"
 
-    # Set ATL03 Asset #
+    # Set Asset #
     if len(sys.argv) > 2:
-        atl03_asset = sys.argv[2]
-
-    # Set ATL06 Asset #
-    if len(sys.argv) > 3:
-        atl06_asset = sys.argv[3]
+        asset = sys.argv[2]
 
     # Bypass service discovery if url supplied
-    if len(sys.argv) > 4:
-        if sys.argv[4] == "bypass":
+    if len(sys.argv) > 3:
+        if sys.argv[3] == "bypass":
             url = [url]
 
     # Set Resource #
-    if len(sys.argv) > 5:
-        resource = sys.argv[5]
+    if len(sys.argv) > 4:
+        resource = sys.argv[4]
 
     # Initialize Icesat2 Package #
     icesat2.init(url, True)
 
     # Execute SlideRule Algorithm
-    act = algoexec("ATL03_"+resource+".h5", atl03_asset)
+    act = algoexec("ATL03_"+resource+".h5", asset)
 
     # Read ATL06 Expected Results
-    exp = expread("ATL06_"+resource+".h5", atl06_asset)
+    exp = expread("ATL06_"+resource+".h5", asset)
 
     # Read ATL03 Photon Cloud
-    ph = phread("ATL03_"+resource+".h5", atl03_asset, photon_cloud_region)
+    ph = phread("ATL03_"+resource+".h5", asset, photon_cloud_region)
 
     # Plot Actual vs. Expected
     plotresults(act, exp, ph, photon_cloud_region)
