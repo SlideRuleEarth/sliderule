@@ -2,31 +2,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -110,7 +110,7 @@ class Dictionary
         unsigned int maxChain;
         double hashLoad;
         unsigned int currIndex;
-        
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -185,7 +185,7 @@ Dictionary<T>::~Dictionary(void)
 
 /*----------------------------------------------------------------------------
  * add
- * 
+ *
  *  if not unique then old data is automatically deleted and overwritten
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -194,7 +194,7 @@ bool Dictionary<T>::add(const char* key, T& data, bool unique)
     assert(key);
 
     bool status = true;
-    
+
     /* Insert Entry into Dictionary */
     unsigned int index = getNode(key);
     if(index == NULL_INDEX)
@@ -274,14 +274,14 @@ T& Dictionary<T>::get(const char* key)
 
 /*----------------------------------------------------------------------------
  * find
- * 
+ *
  *  returns false if key not in dictionary, else returns true
  *----------------------------------------------------------------------------*/
 template <class T>
 bool Dictionary<T>::find(const char* key, T* data)
 {
     bool found = false;
-    
+
     if(key != NULL)
     {
         unsigned int index = getNode(key);
@@ -291,7 +291,7 @@ bool Dictionary<T>::find(const char* key, T* data)
             if(data) *data = hashTable[index].data;
         }
     }
-    
+
     return found;
 }
 
@@ -413,7 +413,7 @@ int Dictionary<T>::getKeys (char*** keys)
 
 /*----------------------------------------------------------------------------
  * clear
- * 
+ *
  *  deletes everything in the dictionary
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -442,7 +442,7 @@ template <class T>
 const char* Dictionary<T>::first (T* data)
 {
     const char* key = NULL;
-    
+
     currIndex = 0;
     while(currIndex < hashSize)
     {
@@ -465,7 +465,7 @@ template <class T>
 const char* Dictionary<T>::next (T* data)
 {
     const char* key = NULL;
-    
+
     while(++currIndex < hashSize)
     {
         if(hashTable[currIndex].chain != EMPTY_ENTRY)
@@ -507,14 +507,14 @@ template <class T>
 const char* Dictionary<T>::last (T* data)
 {
     const char* key = NULL;
-    
+
     currIndex = hashSize - 1;
     while(currIndex < hashSize)
     {
         if(hashTable[currIndex].chain != EMPTY_ENTRY)
         {
             if(data) *data = hashTable[currIndex].data;
-            key = hashTable[currIndex].key;    
+            key = hashTable[currIndex].key;
             break;
         }
         currIndex--;
@@ -569,7 +569,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
 
 /*----------------------------------------------------------------------------
  * []
- * 
+ *
  *  indexed by key
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -604,7 +604,7 @@ unsigned int Dictionary<T>::hashKey(const char *key)
 
 /*----------------------------------------------------------------------------
  * getNode
- * 
+ *
  *  must be called from locked context
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -620,8 +620,7 @@ unsigned int Dictionary<T>::getNode(const char* key)
         while(index != NULL_INDEX && hashTable[index].chain != EMPTY_ENTRY)
         {
             /* Compare Hash Key to Key */
-            int i;
-            for(i = 0; i < MAX_KEY_SIZE; i++)
+            for(int i = 0; i < MAX_KEY_SIZE; i++)
             {
                 if(hashTable[index].key[i] != key[i])
                 {
@@ -633,10 +632,10 @@ unsigned int Dictionary<T>::getNode(const char* key)
                 {
                     /* If there is no difference AND key is at null, return match */
                     return index;
-                }                
+                }
             }
-            
-            /* Check for Exhausted Key Search */
+
+            /* Missing Null Terminator */
             if(i == MAX_KEY_SIZE) break;
         }
     }
@@ -668,7 +667,7 @@ void Dictionary<T>::addNode (const char* key, T& data, unsigned int hash, bool r
         tmp_key[len] = '\0';
         new_key = tmp_key;
     }
-    
+
     /* Add Entry Directly to Hash */
     if(hashTable[curr_index].chain == EMPTY_ENTRY)
     {
@@ -766,7 +765,7 @@ template <class T>
 void Dictionary<T>::freeNode(unsigned int hash_index)
 {
     (void)hash_index;
-}   
+}
 
 /******************************************************************************
  * MANAGED DICTIONARY METHODS
@@ -799,7 +798,7 @@ MgDictionary<T, is_array>::~MgDictionary(void)
  *----------------------------------------------------------------------------*/
 template <class T, bool is_array>
 void MgDictionary<T, is_array>::freeNode(unsigned int hash_index)
-{   
+{
     if(!is_array)   delete Dictionary<T>::hashTable[hash_index].data;
     else            delete [] Dictionary<T>::hashTable[hash_index].data;
 }
