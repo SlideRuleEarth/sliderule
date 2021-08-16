@@ -16,8 +16,8 @@ local monitor_name = parm["monitor"]
 local monitor = core.getbyname(monitor_name)
 
 msgs = {}
-if monitor then 
-    msgs = monitor:cat(1)
+if monitor then
+    msgs = monitor:cat(1) --  1: LOCAL mode
 end
 
 return json.encode(msgs)
