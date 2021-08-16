@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -123,7 +123,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     assert(data_info);
     assert(asset);
     assert(resource);
-    assert(dataset);    
+    assert(dataset);
 
     /* Clear Data Info */
     LocalLib::set(data_info, 0, sizeof(dataset_info_t));
@@ -172,7 +172,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
         metaMutex.lock();
         {
             if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData))
-            {            
+            {
                 meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
             }
         }
@@ -238,7 +238,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
 
         /* Rethrow Error */
         throw RunTimeException(CRITICAL, "%s (%s)", e.what(), dataset);
-    }    
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -384,7 +384,7 @@ bool H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* cache, lon
     uint64_t prev_line_pos = (pos & ~line_mask) - 1;
     bool check_prev = pos > prev_line_pos; // checks for rollover
 
-    if( cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry) || 
+    if( cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry) ||
         (check_prev && cache->find(prev_line_pos, cache_t::MATCH_NEAREST_UNDER, entry)) )
     {
         if((pos >= entry->pos) && ((pos + size) <= (entry->pos + entry->size)))
@@ -438,7 +438,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
     uint64_t value;
     switch(size)
     {
-        case 8:     
+        case 8:
         {
             value = *(uint64_t*)data_ptr;
             #ifdef __be__
@@ -447,7 +447,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
             break;
         }
 
-        case 4:     
+        case 4:
         {
             value = *(uint32_t*)data_ptr;
             #ifdef __be__
@@ -504,7 +504,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     {
         throw RunTimeException(CRITICAL, "missing data dimension information");
     }
-    
+
     /* Calculate Size of Data Row (note dimension starts at 1) */
     uint64_t row_size = metaData.typesize;
     for(int d = 1; d < metaData.ndims; d++)
@@ -541,7 +541,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     data_info->elements = buffer_size / metaData.typesize;
     data_info->datasize = buffer_size;
     data_info->data     = buffer;
-    data_info->numrows  = datasetNumRows; 
+    data_info->numrows  = datasetNumRows;
 
     if      (metaData.ndims == 0)   data_info->numcols = 0;
     else if (metaData.ndims == 1)   data_info->numcols = 1;
@@ -576,7 +576,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     {
         data_info->datatype = RecordObject::STRING;
     }
-    
+
     /* Calculate Buffer Start */
     uint64_t buffer_offset = row_size * datasetStartRow;
 
@@ -630,13 +630,13 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                 dataChunkBufferSize = metaData.chunkelements * metaData.typesize;
                 dataChunkBuffer = new uint8_t [dataChunkBufferSize];
 
-                /* 
+                /*
                  * Prefectch and Set Data Size Hint
                  *  If reading all of the data from the start of the data segment in the file
-                 *  past where the desired subset is consistutes only a 2x increase in the 
+                 *  past where the desired subset is consistutes only a 2x increase in the
                  *  overall data that would be read, then prefetch the entire block from the
                  *  beginning and set the size hint to the L1 cache line size.
-                 */ 
+                 */
                 dataSizeHint = buffer_size;
                 if(buffer_offset < (uint64_t)buffer_size)
                 {
@@ -854,9 +854,9 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         int bytes_read = readDirectBlock(&heap_info, heap_info.starting_blk_size, root_blk_addr, hdr_flags, dlvl);
         if(errorChecking && (bytes_read > heap_info.starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);            
+            throw RunTimeException(CRITICAL, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
         }
-        pos += heap_info.starting_blk_size;        
+        pos += heap_info.starting_blk_size;
     }
     else
     {
@@ -864,13 +864,13 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         int bytes_read = readIndirectBlock(&heap_info, 0, root_blk_addr, hdr_flags, dlvl);
         if(errorChecking && (bytes_read > heap_info.starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);            
+            throw RunTimeException(CRITICAL, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
         }
-        pos += bytes_read;        
+        pos += bytes_read;
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -906,7 +906,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         print2term("Direct Block [%d,%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, block_size, (unsigned long)starting_position);
         print2term("----------------\n");
     }
-    
+
     /* Read Block Header */
     if(!verbose)
     {
@@ -950,7 +950,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         pos += data_read;
         data_left -= data_read;
 
-        /* Update Number of Objects Read 
+        /* Update Number of Objects Read
          *  There are often more links in a heap than managed objects
          *  therefore, the number of objects cannot be used to know when
          *  to stop reading links.
@@ -977,7 +977,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     pos += data_left;
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1013,7 +1013,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
         print2term("Indirect Block [%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, (unsigned long)starting_position);
         print2term("----------------\n");
     }
-    
+
     /* Read Block Header */
     if(!verbose)
     {
@@ -1050,7 +1050,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
         if      (row == 0)  row_block_size = heap_info->starting_blk_size;
         else if (row == 1)  row_block_size = heap_info->starting_blk_size;
         else                row_block_size = heap_info->starting_blk_size * (0x2 << (row - 2));
-        
+
         /* Process Entries in Row */
         for(int entry = 0; entry < heap_info->table_width; entry++)
         {
@@ -1074,7 +1074,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                     int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
                     if(errorChecking && (bytes_read > row_block_size))
                     {
-                        throw RunTimeException(CRITICAL, "direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);            
+                        throw RunTimeException(CRITICAL, "direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
                 }
             }
@@ -1096,7 +1096,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                     int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
                     if(errorChecking && (bytes_read > row_block_size))
                     {
-                        throw RunTimeException(CRITICAL, "indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);            
+                        throw RunTimeException(CRITICAL, "indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
                 }
             }
@@ -1111,7 +1111,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1136,7 +1136,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
         {
             throw RunTimeException(CRITICAL, "invalid b-tree signature: 0x%llX", (unsigned long long)signature);
         }
-        
+
         uint8_t node_type = (uint8_t)readField(1, &pos);
         if(node_type != 1)
         {
@@ -1193,7 +1193,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
 
         /* Check Inclusion */
         if ((data_key1  >= child_key1 && data_key1  <  child_key2) ||
-            (data_key2  >= child_key1 && data_key2  <  child_key2) || 
+            (data_key2  >= child_key1 && data_key2  <  child_key2) ||
             (child_key1 >= data_key1  && child_key1 <= data_key2)  ||
             (child_key2 >  data_key1  && child_key2 <  data_key2))
         {
@@ -1226,7 +1226,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                         throw RunTimeException(CRITICAL, "invalid location to read data: %ld, %lu", (unsigned long)chunk_offset, (unsigned long)buffer_offset);
                     }
                 }
-                
+
                 /* Calculate Chunk Index - offset into chunk buffer to read from */
                 uint64_t chunk_index = 0;
                 if(buffer_offset > chunk_offset)
@@ -1349,7 +1349,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
     node.row_key = node.slice[0];
 
     /* Return Copy of Node */
-    return node;    
+    return node;
 }
 
 /*----------------------------------------------------------------------------
@@ -1371,7 +1371,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         {
             throw RunTimeException(CRITICAL, "invalid symbol table signature: 0x%llX", (unsigned long long)signature);
         }
-        
+
         uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 1)
         {
@@ -1441,7 +1441,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1484,7 +1484,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     /* Read Option Time Fields */
     uint8_t obj_hdr_flags = (uint8_t)readField(1, &pos);
     if(obj_hdr_flags & FILE_STATS_BIT)
-    {        
+    {
         if(!verbose)
         {
             pos += 16; // move past time fields
@@ -1531,7 +1531,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     /* Read Header Messages */
     uint64_t size_of_chunk0 = readField(1 << (obj_hdr_flags & SIZE_OF_CHUNK_0_MASK), &pos);
     uint64_t end_of_hdr = pos + size_of_chunk0;
-    pos += readMessages (pos, end_of_hdr, obj_hdr_flags, dlvl);    
+    pos += readMessages (pos, end_of_hdr, obj_hdr_flags, dlvl);
 
     /* Verify Checksum */
     uint64_t check_sum = readField(4, &pos);
@@ -1541,7 +1541,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1554,7 +1554,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
 
     uint64_t starting_position = pos;
 
-    while(pos < end) 
+    while(pos < end)
     {
         /* Read Message Info */
         uint8_t     msg_type    = (uint8_t)readField(1, &pos);
@@ -1570,7 +1570,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
         int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
         if(errorChecking && (bytes_read != msg_size))
         {
-            throw RunTimeException(CRITICAL, "header message different size than specified: %d != %d", bytes_read, msg_size);            
+            throw RunTimeException(CRITICAL, "header message different size than specified: %d != %d", bytes_read, msg_size);
         }
 
         /* Check if Dataset Found */
@@ -1589,12 +1589,12 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
     {
         if(pos != end)
         {
-            throw RunTimeException(CRITICAL, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);            
+            throw RunTimeException(CRITICAL, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);
         }
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1618,7 +1618,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
             throw RunTimeException(CRITICAL, "invalid header version: %d", (int)version);
         }
 
-        uint8_t reserved0 = (uint8_t)readField(1, &pos); 
+        uint8_t reserved0 = (uint8_t)readField(1, &pos);
         if(reserved0 != 0)
         {
             throw RunTimeException(CRITICAL, "invalid reserved field: %d", (int)reserved0);
@@ -1664,7 +1664,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     pos += readMessagesV1(pos, end_of_hdr, H5LITE_CUSTOM_V1_FLAG, dlvl);
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1682,7 +1682,7 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
         uint16_t    msg_type    = (uint16_t)readField(2, &pos);
         uint16_t    msg_size    = (uint16_t)readField(2, &pos);
         uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
-        
+
         /* Reserved Bytes */
         if(!errorChecking)
         {
@@ -1705,7 +1705,7 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
         if((bytes_read % 8) > 0) bytes_read += 8 - (bytes_read % 8);
         if(errorChecking && (bytes_read != msg_size))
         {
-            throw RunTimeException(CRITICAL, "message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);            
+            throw RunTimeException(CRITICAL, "message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);
         }
 
         /* Check if Dataset Found */
@@ -1721,18 +1721,18 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
 
     /* Move Past Gap */
     if(pos < end) pos = end;
-    
+
     /* Check Size */
     if(errorChecking)
     {
         if(pos != end)
         {
-            throw RunTimeException(CRITICAL, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);            
+            throw RunTimeException(CRITICAL, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);
         }
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1759,7 +1759,7 @@ int H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos,
             {
                 print2term("Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)msg_type, (int)size, (unsigned long)pos);
             }
-            
+
             return size;
         }
     }
@@ -1840,7 +1840,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1907,7 +1907,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1952,7 +1952,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         case FIXED_POINT_TYPE:
         {
             metaData.signedval = ((databits & 0x08) >> 3) == 1;
-            
+
             if(!verbose)
             {
                 pos += 4;
@@ -2010,7 +2010,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             break;
         }
 
-        default: 
+        default:
         {
             if(errorChecking)
             {
@@ -2021,7 +2021,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2081,7 +2081,7 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2154,7 +2154,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         throw RunTimeException(CRITICAL, "invalid link name length of length: %d", (int)link_name_len_of_len);
     }
-    
+
     uint64_t link_name_len = readField(link_name_len_of_len, &pos);
     if(verbose)
     {
@@ -2215,7 +2215,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2401,7 +2401,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;    
+    uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2494,7 +2494,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         if(signature != H5_HEAP_SIGNATURE_LE)
         {
             throw RunTimeException(CRITICAL, "invalid heap signature: 0x%llX", (unsigned long long)signature);
-        }            
+        }
 
         uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
@@ -2521,7 +2521,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             if(signature != H5_TREE_SIGNATURE_LE)
             {
                 throw RunTimeException(CRITICAL, "invalid group b-tree signature: 0x%llX", (unsigned long long)signature);
-            }            
+            }
 
             uint8_t node_type = (uint8_t)readField(1, &pos);
             if(node_type != 0)
@@ -2596,7 +2596,7 @@ void H5FileBuffer::parseDataset (void)
 
     /* Build Path to Dataset */
     while(true)
-    {        
+    {
         datasetPath.add(gptr);                      // add group to dataset path
         char* nptr = StringLib::find(gptr, '/');    // look for next group marker
         if(nptr == NULL) break;                     // if not found, then exit
@@ -2689,7 +2689,7 @@ int H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
     strm.next_in = input;
 
     /* Decompress Chunk */
-    do 
+    do
     {
         strm.avail_out = output_size;
         strm.next_out = output;
@@ -2826,7 +2826,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
         {
             /* Allocate Column Buffer */
             int tbuf_size = info.datasize / info.numcols;
-            uint8_t* tbuf = new uint8_t [tbuf_size]; 
+            uint8_t* tbuf = new uint8_t [tbuf_size];
 
             /* Copy Column into Buffer */
             int tbuf_row_size = info.datasize / info.numrows;
@@ -2844,8 +2844,8 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             info.datasize = tbuf_size;
             info.elements = info.elements / info.numcols;
         }
-        
-        /* Perform Integer Type Transaltion */        
+
+        /* Perform Integer Type Transaltion */
         if(valtype == RecordObject::INTEGER)
         {
             /* Allocate Buffer of Integers */
@@ -2915,8 +2915,8 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             info.data = (uint8_t*)tbuf;
             info.datasize = sizeof(int) * info.elements;
         }
-        
-        /* Perform Integer Type Transaltion */        
+
+        /* Perform Integer Type Transaltion */
         if(valtype == RecordObject::REAL)
         {
             /* Allocate Buffer of Integers */
@@ -3017,7 +3017,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, const char* start_group)
 {
     (void)max_depth;
- 
+
     bool status = true;
 
     try

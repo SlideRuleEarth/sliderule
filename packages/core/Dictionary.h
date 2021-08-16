@@ -634,9 +634,6 @@ unsigned int Dictionary<T>::getNode(const char* key)
                     return index;
                 }
             }
-
-            /* Missing Null Terminator */
-            if(i == MAX_KEY_SIZE) break;
         }
     }
 
