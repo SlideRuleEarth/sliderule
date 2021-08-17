@@ -1,6 +1,6 @@
-# h5lite-python
+# binding-python
 
-A python module for reading H5 data
+Python bindings for the sliderule library.
 
 ## Prerequisites
 

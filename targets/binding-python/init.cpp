@@ -68,7 +68,7 @@ namespace py = pybind11;
  * Bindings
  ******************************************************************************/
 
-PYBIND11_MODULE(sliderule, m)
+PYBIND11_MODULE(srpybin, m)
 {
     initcore();
 

@@ -11,11 +11,11 @@
 #
 # 3. Copy this script to the <repo>/build directory and run there
 #    OR setup the PYTHONPATH to point to the <repo>/build directory
-#    OR install the sliderule.cpython-xxx-.so to a Python system folder
+#    OR install the srpybin.cpython-xxx-.so to a Python system folder
 #
 
 import sys
-import sliderule
+import srpybin
 
 ###############################################################################
 # DATA
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     result = True
 
     # Open H5Coro File #
-    h5file = sliderule.h5coro(resource, format, path, region, endpoint)
+    h5file = srpybin.h5coro(resource, format, path, region, endpoint)
 
     # Run Tests #
     for test in range(100000):

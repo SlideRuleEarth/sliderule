@@ -211,14 +211,14 @@ if(${PYTHON_BINDINGS})
 
     # binding-python #
     find_package(pybind11 REQUIRED)
-    pybind11_add_module(sliderule
+    pybind11_add_module(srpybin
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyH5Coro.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/init.cpp)
-    target_include_directories (sliderule PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)
-    target_link_libraries (sliderule PUBLIC slideruleLib)
-    set_target_properties (sliderule PROPERTIES PREFIX "")
-    set_target_properties (sliderule PROPERTIES CXX_STANDARD ${CXX_VERSION})
-    install (TARGETS sliderule DESTINATION ${INSTALLDIR}/lib)
+    target_include_directories (srpybin PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)
+    target_link_libraries (srpybin PUBLIC slideruleLib)
+    set_target_properties (srpybin PROPERTIES PREFIX "")
+    set_target_properties (srpybin PROPERTIES CXX_STANDARD ${CXX_VERSION})
+    install (TARGETS srpybin DESTINATION ${INSTALLDIR}/lib)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
