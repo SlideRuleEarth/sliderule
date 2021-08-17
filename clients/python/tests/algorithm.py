@@ -181,7 +181,7 @@ if __name__ == '__main__':
     # Set URL #
     if len(sys.argv) > 1:
         url = sys.argv[1]
-        asset = "atlas-s3"
+        asset = "nsidc-s3"
 
     # Set Asset #
     if len(sys.argv) > 2:
