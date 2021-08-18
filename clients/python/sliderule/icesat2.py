@@ -276,13 +276,19 @@ def __query_servers(max_workers):
     return max_workers
 
 #
+#  __emptyframe
+#
+def __emptyframe():
+    return geopandas.pd.DataFrame()
+
+#
 #  __todataframe
 #
 def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_ley="lat"):
 
     # Check Empty Columns
     if len(columns) <= 0:
-        return geopandas.pd.DataFrame()
+        return __emptyframe()
 
     # Generate Time Column
     delta_time = (columns[delta_time_key]*1000000.0).astype('timedelta64[us]')
@@ -448,7 +454,7 @@ def __parallelize(max_workers, block, function, parm, resources, *args):
         if len(results) > 0:
             return geopandas.pd.concat(results)
         else:
-            return geopandas.pd.DataFrame()
+            return __emptyframe()
 
     # For Non-Blocking Calls
     else:
@@ -557,20 +563,22 @@ def atl06 (parm, resource, asset="atlas-s3", track=0):
         return __atl06(parm, resource, asset, track)[0]
     except RuntimeError as e:
         logger.critical(e)
-        return {}
+        return __emptyframe()
 
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True):
+def atl06p(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True, resources=None):
 
     try:
-        resources = __query_resources(parm, version)
+        if resources == None:
+            resources = __query_resources(parm, version)
         max_workers = __query_servers(max_workers)
         return __parallelize(max_workers, block, __atl06, parm, resources, asset, track)
     except RuntimeError as e:
         logger.critical(e)
-        return {}
+        return __emptyframe()
+
 
 #
 #  Subsetted ATL03
@@ -581,20 +589,21 @@ def atl03s (parm, resource, asset="atlas-s3", track=0):
         return __atl03s(parm, resource, asset, track)[0]
     except RuntimeError as e:
         logger.critical(e)
-        return {}
+        return __emptyframe()
 
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True):
+def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True, resources=None):
 
     try:
-        resources = __query_resources(parm, version)
+        if resources == None:
+            resources = __query_resources(parm, version)
         max_workers = __query_servers(max_workers)
         return __parallelize(max_workers, block, __atl03s, parm, resources, asset, track)
     except RuntimeError as e:
         logger.critical(e)
-        return {}
+        return __emptyframe()
 
 #
 #  H5
