@@ -278,6 +278,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
         {
             cacheIndex++;
             cacheFiles.remove(cacheLookUp[key]);
+            cacheLookUp.add(key, cacheIndex);
             const char* cache_key = StringLib::duplicate(key);
             cacheFiles.add(cacheIndex, cache_key);
             found_in_cache = true;
