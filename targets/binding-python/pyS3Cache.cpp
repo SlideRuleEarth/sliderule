@@ -56,7 +56,7 @@ pyS3Cache::pyS3Cache (const std::string &_cache_root, const int _max_files)
 }
 
 /*--------------------------------------------------------------------
- * Constructor
+ * Destructor
  *--------------------------------------------------------------------*/
 pyS3Cache::~pyS3Cache (void)
 {

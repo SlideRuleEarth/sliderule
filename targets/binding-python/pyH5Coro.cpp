@@ -68,7 +68,7 @@ pyH5Coro::pyH5Coro (const std::string &_resource, const std::string &format, con
 }
 
 /*--------------------------------------------------------------------
- * Constructor
+ * Destructor
  *--------------------------------------------------------------------*/
 pyH5Coro::~pyH5Coro (void)
 {

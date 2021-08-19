@@ -213,6 +213,7 @@ if(${PYTHON_BINDINGS})
     find_package(pybind11 REQUIRED)
     pybind11_add_module(srpybin
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyH5Coro.cpp
+        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyLua.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyS3Cache.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/init.cpp)
     target_include_directories (srpybin PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)

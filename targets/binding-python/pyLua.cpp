@@ -30,97 +30,47 @@
  */
 
 /******************************************************************************
- INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-
-#ifdef __aws__
-#include "aws.h"
-#endif
-
-#ifdef __ccsds__
-#include "ccsds.h"
-#endif
-
-#ifdef __h5__
-#include "h5.h"
-#endif
-
-#ifdef __legacy__
-#include "legacy.h"
-#endif
-
-#ifdef __netsvc__
-#include "netsvc.h"
-#endif
-
 #include <pybind11/pybind11.h>
-#include "pyH5Coro.h"
+#include "core.h"
 #include "pyLua.h"
-#include "pyS3Cache.h"
 
 /******************************************************************************
- * Namespaces
+ * NAMESPACES
  ******************************************************************************/
 
 namespace py = pybind11;
 
 /******************************************************************************
- * Bindings
+ * pyLua Class
  ******************************************************************************/
 
-PYBIND11_MODULE(srpybin, m)
+/*--------------------------------------------------------------------
+ * Constructor
+ *--------------------------------------------------------------------*/
+pyLua::pyLua (const std::string &scriptpath, const std::string &scriptarg)
 {
-    initcore();
+    LuaEngine engine(scriptpath.c_str(), scriptarg.c_str(), ORIGIN, NULL, true);
+    bool status = engine.executeEngine(MAX_RUNTIME_MS);
+    if(status)  luaResult = StringLib::duplicate(engine.getResult());
+    else        luaResult = NULL;
+}
 
-    #ifdef __aws__
-        initaws();
-    #endif
+/*--------------------------------------------------------------------
+ * Destructor
+ *--------------------------------------------------------------------*/
+pyLua::~pyLua (void)
+{
+    if(luaResult) delete [] luaResult;
+}
 
-    #ifdef __ccsds__
-        initccsds();
-    #endif
-
-    #ifdef __h5__
-        inith5();
-    #endif
-
-    #ifdef __legacy__
-        initlegacy();
-    #endif
-
-    #ifdef __netsvc__
-        initnetsvc();
-    #endif
-
-    m.doc() = "Python bindings for SlideRule on-demand data processing framework";
-
-    py::class_<pyH5Coro>(m, "h5coro")
-
-        .def(py::init<const std::string &,      // _resource
-                      const std::string &,      // format
-                      const std::string &,      // path
-                      const std::string &,      // region
-                      const std::string &>())   // endpoint
-
-        .def("read", &pyH5Coro::read, "reads dataset from file",
-            py::arg("dataset"),
-            py::arg("col") = 0,
-            py::arg("startrow") = 0,
-            py::arg("numrows") = -1)
-
-        .def("readp", &pyH5Coro::readp, "parallel read of datasets from file");
-
-    py::class_<pyS3Cache>(m, "s3cache")
-
-        .def(py::init<const std::string &,      // _cache_root
-                      const int>());            // _max_files
-
-    py::class_<pyLua>(m, "lua")
-
-        .def(py::init<const std::string &,      // scriptpath
-                      const std::string &>());  // scriptarg
-
-    m.attr("all") = (long)-1;
+/*--------------------------------------------------------------------
+ * Destructor
+ *--------------------------------------------------------------------*/
+const char* pyLua::result (void)
+{
+    if(luaResult)   return luaResult;
+    else            return "";
 }
