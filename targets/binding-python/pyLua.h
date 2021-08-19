@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
+#include "LuaEngine.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -57,6 +58,7 @@ class pyLua
 
     private:
         static const int MAX_RUNTIME_MS = 10000; // 10 seconds
+        LuaEngine* luaEngine;
         const char* luaResult;
 };
 

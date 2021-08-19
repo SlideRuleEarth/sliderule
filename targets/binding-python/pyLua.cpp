@@ -52,9 +52,9 @@ namespace py = pybind11;
  *--------------------------------------------------------------------*/
 pyLua::pyLua (const std::string &scriptpath, const std::string &scriptarg)
 {
-    LuaEngine engine(scriptpath.c_str(), scriptarg.c_str(), ORIGIN, NULL, true);
-    bool status = engine.executeEngine(MAX_RUNTIME_MS);
-    if(status)  luaResult = StringLib::duplicate(engine.getResult());
+    luaEngine = new LuaEngine(scriptpath.c_str(), scriptarg.c_str(), ORIGIN, NULL, true);
+    bool status = luaEngine->executeEngine(MAX_RUNTIME_MS);
+    if(status)  luaResult = StringLib::duplicate(luaEngine->getResult());
     else        luaResult = NULL;
 }
 
@@ -63,6 +63,7 @@ pyLua::pyLua (const std::string &scriptpath, const std::string &scriptarg)
  *--------------------------------------------------------------------*/
 pyLua::~pyLua (void)
 {
+    delete luaEngine;
     if(luaResult) delete [] luaResult;
 }
 
