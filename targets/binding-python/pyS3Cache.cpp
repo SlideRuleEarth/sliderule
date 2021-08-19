@@ -29,18 +29,13 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __py_h5coro__
-#define __py_h5coro__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
-
-#include "H5Coro.h"
-#include "RecordObject.h"
-#include "Asset.h"
+#include "S3CacheIODriver.h"
+#include "pyS3Cache.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -49,39 +44,20 @@
 namespace py = pybind11;
 
 /******************************************************************************
- * pyH5Coro Class
+ * pyS3Cache Class
  ******************************************************************************/
 
-class pyH5Coro
+/*--------------------------------------------------------------------
+ * Constructor
+ *--------------------------------------------------------------------*/
+pyS3Cache::pyS3Cache (const std::string &_cache_root, const int _max_files)
 {
-    public:
-                            pyH5Coro    (const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint);
-                            ~pyH5Coro   (void);
-        py::list*           read        (const std::string &datasetname, long col, long startrow, long numrows);
-        const py::dict*     readp       (const py::list& datasets);
+    S3CacheIODriver::createCache(_cache_root.c_str(), _max_files);
+}
 
-    private:
-
-        typedef struct {
-            std::string     dataset;
-            int             col;
-            int             startrow;
-            int             numrows;
-            Thread*         pid;
-            H5Coro::info_t  info;
-            py::list*       result;
-            pyH5Coro*       file;
-        } read_rqst_t;
-
-
-        py::list*           tolist      (H5Coro::info_t* info);
-        static void*        read_thread (void* parm);
-
-        static Mutex        pyMut;
-
-        std::string         resource;
-        Asset*              asset;
-        H5Coro::context_t   context;
-};
-
-#endif /* __py_h5coro__ */
+/*--------------------------------------------------------------------
+ * Constructor
+ *--------------------------------------------------------------------*/
+pyS3Cache::~pyS3Cache (void)
+{
+}

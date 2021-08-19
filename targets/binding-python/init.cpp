@@ -57,6 +57,7 @@
 
 #include <pybind11/pybind11.h>
 #include "pyH5Coro.h"
+#include "pyS3Cache.h"
 
 /******************************************************************************
  * Namespaces
@@ -111,4 +112,9 @@ PYBIND11_MODULE(srpybin, m)
         .def("readp", &pyH5Coro::readp, "parallel read of datasets from file");
 
     m.attr("all") = (long)-1;
+
+    py::class_<pyS3Cache>(m, "s3cache")
+
+        .def(py::init<const std::string &,      // _cache_root
+                      const int>());            // _max_files
 }

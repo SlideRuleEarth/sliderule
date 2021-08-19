@@ -74,7 +74,7 @@ MgOrdering<const char*, okey_t, true> S3CacheIODriver::cacheFiles;
  *----------------------------------------------------------------------------*/
 void S3CacheIODriver::init (void)
 {
-    cacheRoot = StringLib::duplicate(DEFAULT_CACHE_ROOT);
+    cacheRoot = NULL;
     cacheMaxSize = DEFAULT_MAX_CACHE_FILES;
 }
 /*----------------------------------------------------------------------------
@@ -86,71 +86,18 @@ Asset::IODriver* S3CacheIODriver::create (const Asset* _asset)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreateCache - s3cache(<root>, <max_files>)
+ * luaCreateCache - s3cache(<root>, [<max_files>])
  *----------------------------------------------------------------------------*/
 int S3CacheIODriver::luaCreateCache(lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        const char* cache_root  = LuaObject::getLuaString(L, 1);
+        const char* cache_root  = LuaObject::getLuaString(L, 1, true, DEFAULT_CACHE_ROOT);
         int         max_files   = LuaObject::getLuaInteger(L, 2, true, DEFAULT_MAX_CACHE_FILES);
 
         /* Create Cache */
-        cacheMut.lock();
-        {
-            /* Set Cache Root */
-            if(cacheRoot) delete [] cacheRoot;
-            cacheRoot = StringLib::duplicate(cache_root);
-
-            /* Create Cache Directory (if it doesn't exist) */
-            mkdir(cacheRoot, 0700);
-
-            /* Set Maximum Number of Files */
-            cacheMaxSize = max_files;
-
-            /* Clear Out Cache Lookup Table and Files */
-            cacheLookUp.clear();
-            cacheFiles.clear();
-
-            /* Traverse Directory and Build Cache (if it does exist) */
-            DIR *dir;
-            if((dir = opendir(cacheRoot)) != NULL)
-            {
-                int file_count = 0;
-                struct dirent *ent;
-                while((ent = readdir(dir)) != NULL)
-                {
-                    if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
-                    {
-                        if(file_count++ < cacheMaxSize)
-                        {
-                            char cache_filepath[MAX_STR_SIZE];
-                            StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
-
-                            /* Reformat Filename to Key */
-                            SafeString key("%s", ent->d_name);
-                            key.replace("#", PATH_DELIMETER_STR);
-
-                            /* Add File to Cache */
-                            cacheIndex++;
-                            cacheLookUp.add(key.getString(), cacheIndex);
-                            const char* cache_key = StringLib::duplicate(key.getString());
-                            cacheFiles.add(cacheIndex, cache_key);
-                            mlog(CRITICAL, "Caching %s for S3 retrieval", key.getString());
-                        }
-                    }
-                }
-                closedir(dir);
-
-                /* Log Status */
-                if(file_count > 0)
-                {
-                    mlog(CRITICAL, "Loaded %ld of %d files into S3 cache", cacheFiles.length(), file_count);
-                }
-            }
-        }
-        cacheMut.unlock();
+        createCache(cache_root, max_files);
 
         /* Get Object and Write to File */
         return LuaObject::returnLuaStatus(L, true);
@@ -163,10 +110,83 @@ int S3CacheIODriver::luaCreateCache(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * createCache
+ *----------------------------------------------------------------------------*/
+int S3CacheIODriver::createCache (const char* cache_root, int max_files)
+{
+    int file_count = 0;
+
+    cacheMut.lock();
+    {
+        /* Create Cache Directory (if it doesn't exist) */
+        int ret = mkdir(cache_root, 0700);
+        if(ret == -1 && errno != EEXIST)
+        {
+            cacheMut.unlock();
+            throw RunTimeException(CRITICAL, "Failed to create cache directory %s: %s", cache_root, strerror(errno));
+        }
+
+        /* Set Cache Root */
+        if(cacheRoot) delete [] cacheRoot;
+        cacheRoot = StringLib::duplicate(cache_root);
+
+        /* Set Maximum Number of Files */
+        cacheMaxSize = max_files;
+
+        /* Clear Out Cache Lookup Table and Files */
+        cacheLookUp.clear();
+        cacheFiles.clear();
+
+        /* Traverse Directory and Build Cache (if it does exist) */
+        DIR *dir;
+        if((dir = opendir(cacheRoot)) != NULL)
+        {
+            struct dirent *ent;
+            while((ent = readdir(dir)) != NULL)
+            {
+                if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
+                {
+                    if(file_count++ < cacheMaxSize)
+                    {
+                        char cache_filepath[MAX_STR_SIZE];
+                        StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
+
+                        /* Reformat Filename to Key */
+                        SafeString key("%s", ent->d_name);
+                        key.replace("#", PATH_DELIMETER_STR);
+
+                        /* Add File to Cache */
+                        cacheIndex++;
+                        cacheLookUp.add(key.getString(), cacheIndex);
+                        const char* cache_key = StringLib::duplicate(key.getString());
+                        cacheFiles.add(cacheIndex, cache_key);
+                        mlog(CRITICAL, "Caching %s for S3 retrieval", key.getString());
+                    }
+                }
+            }
+            closedir(dir);
+
+            /* Log Status */
+            if(file_count > 0)
+            {
+                mlog(CRITICAL, "Loaded %ld of %d files into S3 cache", cacheFiles.length(), file_count);
+            }
+        }
+    }
+    cacheMut.unlock();
+
+    return file_count;
+}
+
+/*----------------------------------------------------------------------------
  * ioOpen
  *----------------------------------------------------------------------------*/
 void S3CacheIODriver::ioOpen (const char* resource)
 {
+    /* Check if Cache Created */
+    if(cacheRoot == NULL) throw RunTimeException(CRITICAL, "cache has not been created yet");
+
+    /* Create Path to Resource */
     SafeString resourcepath("%s/%s", asset->getPath(), resource);
 
     /* Allocate Bucket String */

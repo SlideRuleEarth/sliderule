@@ -29,18 +29,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __py_h5coro__
-#define __py_h5coro__
+#ifndef __py_s3cache__
+#define __py_s3cache__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
-
-#include "H5Coro.h"
-#include "RecordObject.h"
-#include "Asset.h"
+#include "S3CacheIODriver.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -52,36 +49,11 @@ namespace py = pybind11;
  * pyH5Coro Class
  ******************************************************************************/
 
-class pyH5Coro
+class pyS3Cache
 {
     public:
-                            pyH5Coro    (const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint);
-                            ~pyH5Coro   (void);
-        py::list*           read        (const std::string &datasetname, long col, long startrow, long numrows);
-        const py::dict*     readp       (const py::list& datasets);
-
-    private:
-
-        typedef struct {
-            std::string     dataset;
-            int             col;
-            int             startrow;
-            int             numrows;
-            Thread*         pid;
-            H5Coro::info_t  info;
-            py::list*       result;
-            pyH5Coro*       file;
-        } read_rqst_t;
-
-
-        py::list*           tolist      (H5Coro::info_t* info);
-        static void*        read_thread (void* parm);
-
-        static Mutex        pyMut;
-
-        std::string         resource;
-        Asset*              asset;
-        H5Coro::context_t   context;
+        pyS3Cache   (const std::string &_cache_root, const int _max_files);
+        ~pyS3Cache  (void);
 };
 
-#endif /* __py_h5coro__ */
+#endif /* __py_s3cache__ */
