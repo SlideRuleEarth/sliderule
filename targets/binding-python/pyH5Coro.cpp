@@ -173,7 +173,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             result->append(data_ptr[i]);
         }
     }
-    else if(info->datatype == RecordObject::INT64 || info->datatype == RecordObject::UINT64)
+    else if(info->datatype == RecordObject::UINT64)
     {
         uint64_t* data_ptr = (uint64_t*)info->data;
         for(int i = 0; i < info->elements; i++)
@@ -181,7 +181,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             result->append(data_ptr[i]);
         }
     }
-    else if(info->datatype == RecordObject::INT32 || info->datatype == RecordObject::UINT32)
+    else if(info->datatype == RecordObject::UINT32)
     {
         uint32_t* data_ptr = (uint32_t*)info->data;
         for(int i = 0; i < info->elements; i++)
@@ -189,7 +189,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             result->append(data_ptr[i]);
         }
     }
-    else if(info->datatype == RecordObject::INT16 || info->datatype == RecordObject::UINT16)
+    else if(info->datatype == RecordObject::UINT16)
     {
         uint16_t* data_ptr = (uint16_t*)info->data;
         for(int i = 0; i < info->elements; i++)
@@ -197,14 +197,46 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             result->append(data_ptr[i]);
         }
     }
-    else if(info->datatype == RecordObject::INT8 || info->datatype == RecordObject::UINT8)
+    else if(info->datatype == RecordObject::UINT8)
     {
         uint8_t* data_ptr = (uint8_t*)info->data;
         for(int i = 0; i < info->elements; i++)
         {
             result->append(data_ptr[i]);
         }
+    }else if(info->datatype == RecordObject::INT64)
+    {
+        uint64_t* data_ptr = (int64_t*)info->data;
+        for(int i = 0; i < info->elements; i++)
+        {
+            result->append(data_ptr[i]);
+        }
     }
+    else if(info->datatype == RecordObject::INT32)
+    {
+        uint32_t* data_ptr = (int32_t*)info->data;
+        for(int i = 0; i < info->elements; i++)
+        {
+            result->append(data_ptr[i]);
+        }
+    }
+    else if(info->datatype == RecordObject::INT16)
+    {
+        uint16_t* data_ptr = (int16_t*)info->data;
+        for(int i = 0; i < info->elements; i++)
+        {
+            result->append(data_ptr[i]);
+        }
+    }
+    else if(info->datatype == RecordObject::INT8)
+    {
+        uint8_t* data_ptr = (int8_t*)info->data;
+        for(int i = 0; i < info->elements; i++)
+        {
+            result->append(data_ptr[i]);
+        }
+    }
+
 
     return result;
 }
