@@ -284,7 +284,7 @@ def __emptyframe():
 #
 #  __todataframe
 #
-def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_ley="lat"):
+def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", index_key="time"):
 
     # Check Empty Columns
     if len(columns) <= 0:
@@ -296,12 +296,21 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_ley="
     columns['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
 
     # Generate Geometry Column
-    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_ley])
+    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
     del columns[lon_key]
-    del columns[lat_ley]
+    del columns[lat_key]
+
+    # Create Pandas DataFrame object
+    df = geopandas.pd.DataFrame(columns)
+    
+    # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
+    # Can do this during DataFrame creation, but this allows input argument for desired column
+    df.set_index(index_key, inplace=True)
+
+    # Sort values for reproducible output despite async processing
+    df.sort_index(inplace=True)
 
     # Build and Return GeoDataFrame (default geometry is crs="EPSG:4326")
-    df = geopandas.pd.DataFrame(columns)
     gdf = geopandas.GeoDataFrame(df, geometry=geometry)
     return gdf
 
