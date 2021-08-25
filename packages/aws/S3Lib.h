@@ -64,6 +64,7 @@ class S3Lib
         typedef struct {
             Aws::S3::S3Client*          s3_client;
             CredentialStore::Credential credential;
+            const char*                 asset_name;
             int32_t                     reference_count;
             bool                        decommissioned;
         } client_t;

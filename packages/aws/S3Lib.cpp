@@ -71,6 +71,7 @@ void S3Lib::deinit (void)
         while(key != NULL)
         {
             delete client->s3_client;
+            delete [] client->asset_name;
             delete client;
             key = clients.next(&client);
         }
@@ -85,62 +86,59 @@ S3Lib::client_t* S3Lib::createClient (const Asset* asset)
 {
     client_t* client = NULL;
 
-    /* Try to Get Existing Client */
+    /* Get Latest Credentials */
+    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
+
     clientsMut.lock();
     {
+        /* Try to Get Existing Client */
         if(clients.find(asset->getName(), &client))
         {
             client->reference_count++;
         }
-    }
-    clientsMut.unlock();
 
-    /* Get Latest Credentials */
-    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
-
-    /* Check Need for New Client */
-    if( (client == NULL) || // could not find an existing client
-        (client->credential.provided && (client->credential.expirationGps < latest_credential.expirationGps)) ) // existing client has outdated credentials
-    {
-        /* Destroy Old Client */
-        if(client)
+        /* Check Need for New Client */
+        if( (client == NULL) || // could not find an existing client
+            (client->credential.provided && (client->credential.expirationGps < latest_credential.expirationGps)) ) // existing client has outdated credentials
         {
-            client->decommissioned = true;
-            destroyClient(client);
-        }
+            /* Destroy Old Client */
+            if(client)
+            {
+                client->decommissioned = true;
+                destroyClient(client);
+            }
 
-        /* Create Client */
-        client = new client_t;
-        client->credential = latest_credential;
-        client->reference_count = 1;
-        client->decommissioned = false;
+            /* Create Client */
+            client = new client_t;
+            client->credential = latest_credential;
+            client->asset_name = StringLib::duplicate(asset->getName());
+            client->reference_count = 1;
+            client->decommissioned = false;
 
-        /* Create S3 Client Configuration */
-        Aws::Client::ClientConfiguration client_config;
-        client_config.endpointOverride = asset->getEndpoint();
-        client_config.region = asset->getRegion();
+            /* Create S3 Client Configuration */
+            Aws::Client::ClientConfiguration client_config;
+            client_config.endpointOverride = asset->getEndpoint();
+            client_config.region = asset->getRegion();
 
-        /* Create S3 Client */
-        if(client->credential.provided)
-        {
-            const Aws::String accessKeyId(client->credential.accessKeyId);
-            const Aws::String secretAccessKey(client->credential.secretAccessKey);
-            const Aws::String sessionToken(client->credential.sessionToken);
-            Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
-            client->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
-        }
-        else
-        {
-            client->s3_client = new Aws::S3::S3Client(client_config);
-        }
+            /* Create S3 Client */
+            if(client->credential.provided)
+            {
+                const Aws::String accessKeyId(client->credential.accessKeyId);
+                const Aws::String secretAccessKey(client->credential.secretAccessKey);
+                const Aws::String sessionToken(client->credential.sessionToken);
+                Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
+                client->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
+            }
+            else
+            {
+                client->s3_client = new Aws::S3::S3Client(client_config);
+            }
 
-        /* Register New Client */
-        clientsMut.lock();
-        {
+            /* Register New Client */
             clients.add(asset->getName(), client);
         }
-        clientsMut.unlock();
     }
+    clientsMut.unlock();
 
     /* Return Client */
     return client;
@@ -159,7 +157,9 @@ void S3Lib::destroyClient (S3Lib::client_t* client)
         client->reference_count--;
         if(client->decommissioned && (client->reference_count == 0))
         {
+            clients.remove(client->asset_name);
             delete client->s3_client;
+            delete [] client->asset_name;
             delete client;
         }
     }

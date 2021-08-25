@@ -119,7 +119,6 @@ class CredentialStore
                     expiration = StringLib::duplicate(c.expiration);
                     expirationGps = c.expirationGps;
                 }
-
         };
 
         /*--------------------------------------------------------------------
