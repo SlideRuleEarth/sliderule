@@ -124,12 +124,12 @@ bool CredentialStore::put (const char* host, Credential& credential)
             }
             else
             {
-                mlog(CRITICAL, "Null expiration time supplied to credential for %s\n", host);
+                mlog(CRITICAL, "Null expiration time supplied to credential for %s", host);
             }
         }
         else
         {
-            mlog(CRITICAL, "Unable to register credential metric for %s\n", host);
+            mlog(CRITICAL, "Unable to register credential metric for %s", host);
         }
     }
     credentialLock.unlock();

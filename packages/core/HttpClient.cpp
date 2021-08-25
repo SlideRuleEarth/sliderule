@@ -145,7 +145,7 @@ void* HttpClient::requestThread(void* parm)
     int content_length = StringLib::size(connection->data, MAX_RQST_DATA_LEN);
     if(content_length == MAX_RQST_DATA_LEN)
     {
-        mlog(ERROR, "Http request data exceeds maximum allowed size: %d > %d\n", content_length, MAX_RQST_DATA_LEN);
+        mlog(ERROR, "Http request data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_DATA_LEN);
     }
     else
     {
@@ -184,7 +184,7 @@ void* HttpClient::requestThread(void* parm)
         else
         {
             /* Invalid Request */
-            mlog(ERROR, "Invalid HTTP request - raw requests cannot be null\n");
+            mlog(ERROR, "Invalid HTTP request - raw requests cannot be null");
             connection->status = RQST_INVALID;
             return NULL; // no memory allocated at this point
         }
@@ -300,7 +300,7 @@ void* HttpClient::requestThread(void* parm)
                         int post_status = connection->outq->postCopy(rsps_data, rsps_size);
                         if(post_status <= 0)
                         {
-                            mlog(CRITICAL, "Failed to post response: %d\n", post_status);
+                            mlog(CRITICAL, "Failed to post response: %d", post_status);
                             connection->status = RSPS_FAILED_TO_POST;
                             done = true;
                         }
@@ -338,7 +338,7 @@ void* HttpClient::requestThread(void* parm)
     int term_status = connection->outq->postCopy("", 0);
     if(term_status < 0)
     {
-        mlog(CRITICAL, "Failed to post terminator in http client: %d\n", term_status);
+        mlog(CRITICAL, "Failed to post terminator in http client: %d", term_status);
         connection->status = RSPS_FAILED_TO_POST;
     }
 

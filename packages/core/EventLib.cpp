@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -47,10 +47,10 @@
  ******************************************************************************/
 
 /*
- * These objects are declared outside of the EventLib header file so that 
+ * These objects are declared outside of the EventLib header file so that
  * the corresponding RecordObject and MsgQ headers are not needed in the
  * EventLib header, which creates a cyclic dependency.
- */ 
+ */
 static Publisher* outq;
 
 static RecordObject::fieldDef_t rec_def[] =
@@ -109,7 +109,7 @@ void EventLib::init (const char* eventq)
     /* Create Thread Global */
     trace_key = Thread::createGlobal();
     Thread::setGlobal(trace_key, (void*)ORIGIN);
-    
+
     /* Set Default Event Level */
     log_level = INFO;
     trace_level = CRITICAL;
@@ -186,12 +186,12 @@ const char* EventLib::lvl2str (event_level_t lvl)
     switch(lvl)
     {
         case DEBUG:     return "DEBUG";
-        case INFO:      return "INFO"; 
+        case INFO:      return "INFO";
         case WARNING:   return "WARNING";
         case ERROR:     return "ERROR";
         case CRITICAL:  return "CRITICAL";
         default:        return NULL;
-    }    
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -202,10 +202,10 @@ const char* EventLib::type2str (type_t type)
     switch(type)
     {
         case LOG:       return "LOG";
-        case TRACE:     return "TRACE"; 
+        case TRACE:     return "TRACE";
         case METRIC:    return "METRIC";
         default:        return NULL;
-    }    
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -214,7 +214,7 @@ const char* EventLib::type2str (type_t type)
 uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...)
 {
     event_t event;
-    
+
     /* Return Here If Nothing to Do */
     if(lvl < trace_level) return parent;
 
@@ -256,7 +256,7 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
 void EventLib::stopTrace(uint32_t id, event_level_t lvl)
 {
     event_t event;
-   
+
     /* Return Here If Nothing to Do */
     if(lvl < trace_level) return;
 
@@ -372,7 +372,7 @@ int32_t EventLib::registerMetric (const char* metric_attr, const char* name_fmt,
             ids = new Dictionary<int32_t>(MAX_METRICS, 1.0);
             if(!metric_ids.add(metric.attr, ids, true))
             {
-                mlog(WARNING, "Failed to add attribute to metrics: %s\n", metric.attr);
+                mlog(WARNING, "Failed to add attribute to metrics: %s", metric.attr);
             }
         }
 
@@ -381,7 +381,7 @@ int32_t EventLib::registerMetric (const char* metric_attr, const char* name_fmt,
             /* Register Metric Id */
             if(!metric_vals.add(metric.id, metric))
             {
-                mlog(CRITICAL, "Failed to regsiter id for metric %s\n", metric.name);
+                mlog(CRITICAL, "Failed to regsiter id for metric %s", metric.name);
                 ids->remove(metric.name);
                 metric.id = INVALID_METRIC;
                 delete [] metric.name;
@@ -399,7 +399,7 @@ int32_t EventLib::registerMetric (const char* metric_attr, const char* name_fmt,
             }
             catch(const RunTimeException& e)
             {
-                mlog(e.level(), "Failed to add metric %s\n", metric.name);
+                mlog(e.level(), "Failed to add metric %s", metric.name);
                 metric.id = INVALID_METRIC;
                 delete [] metric.name;
                 delete [] metric.attr;
@@ -419,14 +419,14 @@ void EventLib::updateMetric (int32_t id, double value)
 {
     metric_mut.lock();
     {
-        try 
+        try
         {
             metric_t& metric = metric_vals[id];
             metric.value = value;
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Failed to update metric %d: %s\n", id, e.what());
+            mlog(e.level(), "Failed to update metric %d: %s", id, e.what());
         }
     }
     metric_mut.unlock();
@@ -446,7 +446,7 @@ void EventLib::incrementMetric (int32_t id)
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Failed to increment metric %d: %s\n", id, e.what());
+            mlog(e.level(), "Failed to increment metric %d: %s", id, e.what());
         }
     }
     metric_mut.unlock();
@@ -515,7 +515,7 @@ void EventLib::iterateMetric (const char* metric_attr, metric_func_t cb, void* p
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failed to iterate metrics for %s: %s\n", metric_attr, e.what());
+        mlog(e.level(), "Failed to iterate metrics for %s: %s", metric_attr, e.what());
     }
 }
 
