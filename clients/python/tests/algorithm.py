@@ -120,9 +120,6 @@ def plotresults(act, exp, ph, region):
     box_lon = [coord["lon"] for coord in region]
     box_lat = [coord["lat"] for coord in region]
 
-    # Sort Results by Time
-    act = act.sort_values(by=['delta_time'])
-
     # Create Plot
     fig = plt.figure(num=None, figsize=(16, 10))
 
@@ -141,7 +138,7 @@ def plotresults(act, exp, ph, region):
     ax2 = plt.subplot(132)
     ax2.set_title("Along Track Elevations")
     act_gt1r = act[act["gt"] == icesat2.GT1R]
-    ax2.scatter(act_gt1r["time"].values, act_gt1r["h_mean"].values, s=0.5, color='b', zorder=3)
+    ax2.scatter(act_gt1r.index.values, act_gt1r["h_mean"].values, s=0.5, color='b', zorder=3)
     ax2.scatter(exp["time"].values, exp["h_mean"].values, s=1.5, color='g', zorder=2)
 
     # Plot Photon Cloud
@@ -149,10 +146,10 @@ def plotresults(act, exp, ph, region):
     ax3.set_title("Photon Cloud")
     ph_gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
     colormap = np.array(['c','b','g','g','y']) # noise, ground, canopy, top of canopy, unclassified
-    ax3.scatter(ph_gt1r["time"], ph_gt1r["height"].values, c=colormap[ph_gt1r["info"]], s=1.5)
+    ax3.scatter(ph_gt1r.index.values, ph_gt1r["height"].values, c=colormap[ph_gt1r["info"]], s=1.5)
     act_gt1r = act_gt1r[(act_gt1r.geometry.y > min(box_lat)) & (act_gt1r.geometry.y < max(box_lat))]
     act_gt1r = act_gt1r[(act_gt1r.geometry.x > min(box_lon)) & (act_gt1r.geometry.x < max(box_lon))]
-    ax3.scatter(act_gt1r["time"], act_gt1r["h_mean"].values, color='r', s=0.5)
+    ax3.scatter(act_gt1r.index.values, act_gt1r["h_mean"].values, color='r', s=0.5)
 
     # Show Plot
     fig.tight_layout()
