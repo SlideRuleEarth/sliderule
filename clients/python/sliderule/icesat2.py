@@ -302,16 +302,18 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
 
     # Create Pandas DataFrame object
     df = geopandas.pd.DataFrame(columns)
-    
+
+    # Build GeoDataFrame (default geometry is crs="EPSG:4326")
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry)
+
     # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
     # Can do this during DataFrame creation, but this allows input argument for desired column
-    df.set_index(index_key, inplace=True)
+    gdf.set_index(index_key, inplace=True)
 
     # Sort values for reproducible output despite async processing
-    df.sort_index(inplace=True)
+    gdf.sort_index(inplace=True)
 
-    # Build and Return GeoDataFrame (default geometry is crs="EPSG:4326")
-    gdf = geopandas.GeoDataFrame(df, geometry=geometry)
+    # Return GeoDataFrame
     return gdf
 
 
@@ -461,7 +463,7 @@ def __parallelize(max_workers, block, function, parm, resources, *args):
 
         # Return Results
         if len(results) > 0:
-            return geopandas.pd.concat(results)
+            return geopandas.pd.concat(results, sort=True)
         else:
             return __emptyframe()
 
