@@ -50,7 +50,7 @@
  *----------------------------------------------------------------------------*/
 
 Mutex S3Lib::clientsMut;
-Dictionary<S3Lib::client_t> S3Lib::clients(STARTING_NUM_CLIENTS);
+Dictionary<S3Lib::client_t*> S3Lib::clients(STARTING_NUM_CLIENTS);
 
 /*----------------------------------------------------------------------------
  * init
@@ -66,11 +66,12 @@ void S3Lib::deinit (void)
 {
     clientsMut.lock();
     {
-        client_t client;
+        client_t* client;
         const char* key = clients.first(&client);
         while(key != NULL)
         {
-            if(client.s3_client) delete client.s3_client;
+            delete client->s3_client;
+            delete client;
             key = clients.next(&client);
         }
     }
@@ -80,68 +81,60 @@ void S3Lib::deinit (void)
 /*----------------------------------------------------------------------------
  * createClient
  *----------------------------------------------------------------------------*/
-Aws::S3::S3Client* S3Lib::createClient (const Asset* asset)
+S3Lib::client_t* S3Lib::createClient (const Asset* asset)
 {
-    client_t client = { .s3_client = NULL, .expiration_gps = 0L };
-    bool new_s3_client = false;
+    client_t* client = NULL;
 
     /* Try to Get Existing Client */
     clientsMut.lock();
     {
-        clients.find(asset->getName(), &client);
+        if(clients.find(asset->getName(), &client))
+        {
+            client->reference_count++;
+        }
     }
     clientsMut.unlock();
 
-    /* Look Up Credentials */
-    CredentialStore::Credential credential = CredentialStore::get(asset->getPath());
-    if(credential.expiration)
-    {
-        /* Calculate Time to Live */
-        int64_t now = TimeLib::gettimems();
-        double time_to_live = (double)(credential.expirationGps - now) / 1000.0; // seconds
-        if(time_to_live > 0.0)
-        {
-            /* Check for New Credentials*/
-            if(credential.expirationGps > client.expiration_gps)
-            {
-                /* Build Credentials */
-                const Aws::String accessKeyId(credential.accessKeyId);
-                const Aws::String secretAccessKey(credential.secretAccessKey);
-                const Aws::String sessionToken(credential.sessionToken);
-                Aws::Auth::AWSCredentials credentials(accessKeyId, secretAccessKey, sessionToken);
+    /* Get Latest Credentials */
+    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
 
-                /* Create S3 Client Configuration */
-                Aws::Client::ClientConfiguration client_config;
-                client_config.endpointOverride = asset->getEndpoint();
-                client_config.region = asset->getRegion();
-
-                /* Create S3 Client */
-                if(client.s3_client) delete client.s3_client;
-                client.s3_client = new Aws::S3::S3Client(credentials, client_config);
-                client.expiration_gps = credential.expirationGps;
-                new_s3_client = true;
-            }
-        }
-        else
-        {
-            mlog(CRITICAL, "Credentials have expired for asset: %s (%.3lf)\n", asset->getName(), time_to_live);
-        }
-    }
-    else if(client.s3_client == NULL)
+    /* Check Need for New Client */
+    if( (client == NULL) || // could not find an existing client
+        (client->credential.provided && (client->credential.expirationGps < latest_credential.expirationGps)) ) // existing client has outdated credentials
     {
+        /* Destroy Old Client */
+        if(client)
+        {
+            client->decommissioned = true;
+            destroyClient(client);
+        }
+
+        /* Create Client */
+        client = new client_t;
+        client->credential = latest_credential;
+        client->reference_count = 1;
+        client->decommissioned = false;
+
         /* Create S3 Client Configuration */
         Aws::Client::ClientConfiguration client_config;
         client_config.endpointOverride = asset->getEndpoint();
         client_config.region = asset->getRegion();
 
         /* Create S3 Client */
-        client.s3_client = new Aws::S3::S3Client(client_config);
-        new_s3_client = true;
-    }
+        if(client->credential.provided)
+        {
+            const Aws::String accessKeyId(client->credential.accessKeyId);
+            const Aws::String secretAccessKey(client->credential.secretAccessKey);
+            const Aws::String sessionToken(client->credential.sessionToken);
+            Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
+            client->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
+        }
+        else
+        {
+            client->s3_client = new Aws::S3::S3Client(client_config);
+        }
 
-    /* Register New Client */
-    if(new_s3_client)
-    {
+        /* Register New Client */
         clientsMut.lock();
         {
             clients.add(asset->getName(), client);
@@ -149,6 +142,26 @@ Aws::S3::S3Client* S3Lib::createClient (const Asset* asset)
         clientsMut.unlock();
     }
 
-    /* Return S3 Client */
-    return client.s3_client;
+    /* Return Client */
+    return client;
+}
+
+/*----------------------------------------------------------------------------
+ * destroyClient
+ *----------------------------------------------------------------------------*/
+void S3Lib::destroyClient (S3Lib::client_t* client)
+{
+    assert(client);
+    assert(client->reference_count > 0);
+
+    clientsMut.lock();
+    {
+        client->reference_count--;
+        if(client->decommissioned && (client->reference_count == 0))
+        {
+            delete client->s3_client;
+            delete client;
+        }
+    }
+    clientsMut.unlock();
 }

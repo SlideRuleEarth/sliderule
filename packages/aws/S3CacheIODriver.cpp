@@ -307,10 +307,10 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     const Aws::String file_name = cache_filepath.getString();
 
     /* Create Transfer Configuration */
-    Aws::S3::S3Client* s3Client = S3Lib::createClient(asset);
+    S3Lib::client_t* client = S3Lib::createClient(asset);
     auto thread_executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(ALLOC_TAG, 4);
     Aws::Transfer::TransferManagerConfiguration transfer_config(thread_executor.get());
-    std::shared_ptr<Aws::S3::S3Client> transfer_client(s3Client);
+    std::shared_ptr<Aws::S3::S3Client> transfer_client(client->s3_client);
     transfer_config.s3Client = transfer_client;
 
     /* Create Transfer Manager */
@@ -322,6 +322,11 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     /* Wait for Download to Complete */
     transfer_handle->WaitUntilFinished();
     auto transfer_status = transfer_handle->GetStatus();
+
+    /* Clean Up Transfer Configuration */
+    S3Lib::destroyClient(client);
+
+    /* Handle Status */
     if(transfer_status != Aws::Transfer::TransferStatus::COMPLETED)
     {
         mlog(CRITICAL, "Failed to transfer S3 object: %d", (int)transfer_status);

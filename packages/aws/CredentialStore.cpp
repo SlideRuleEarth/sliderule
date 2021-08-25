@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -132,7 +132,7 @@ bool CredentialStore::put (const char* host, Credential& credential)
             mlog(CRITICAL, "Unable to register credential metric for %s\n", host);
         }
     }
-    credentialLock.unlock();    
+    credentialLock.unlock();
 
     return status;
 }
@@ -151,7 +151,7 @@ int CredentialStore::luaGet(lua_State* L)
         Credential credential = CredentialStore::get(host);
 
         /* Return Credentials */
-        if(credential.accessKeyId)
+        if(credential.provided)
         {
             lua_newtable(L);
 
@@ -166,7 +166,7 @@ int CredentialStore::luaGet(lua_State* L)
             lua_pushstring(L, SESSION_TOKEN_STR);
             lua_pushstring(L, credential.sessionToken);
             lua_settable(L, -3);
- 
+
             lua_pushstring(L, EXPIRATION_STR);
             lua_pushstring(L, credential.expiration);
             lua_settable(L, -3);
@@ -183,7 +183,7 @@ int CredentialStore::luaGet(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaPut - csput(<host>, <credential table>)
+ * luaPut - csput(<asset>, <credential table>)
  *----------------------------------------------------------------------------*/
 int CredentialStore::luaPut(lua_State* L)
 {
@@ -192,36 +192,48 @@ int CredentialStore::luaPut(lua_State* L)
     try
     {
         /* Get Host */
-        const char* host = LuaObject::getLuaString(L, 1);
-
-        /* Initialize Credentials */
-        Credential credential;
+        const char* asset = LuaObject::getLuaString(L, 1);
 
         /* Get Credentials */
+        const char* access_key_id_str = NULL;
+        const char* secret_access_key_str = NULL;
+        const char* session_token_str = NULL;
+        const char* expiration_str = NULL;
         int index = 2;
         if(lua_type(L, index) == LUA_TTABLE)
         {
             lua_getfield(L, index, ACCESS_KEY_ID_STR);
-            credential.accessKeyId = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            access_key_id_str = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
 
             lua_getfield(L, index, SECRET_ACCESS_KEY_STR);
-            credential.secretAccessKey = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            secret_access_key_str = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
 
             lua_getfield(L, index, SESSION_TOKEN_STR);
-            credential.sessionToken = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            session_token_str = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
 
             lua_getfield(L, index, EXPIRATION_STR);
-            credential.expiration = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            expiration_str  = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
-
-            credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, "Must supply table");
         }
 
+        /* Populate Credentials */
+        Credential credential;
+        credential.provided = true;
+        credential.accessKeyId = StringLib::duplicate(access_key_id_str);
+        credential.secretAccessKey = StringLib::duplicate(secret_access_key_str);
+        credential.sessionToken = StringLib::duplicate(session_token_str);
+        credential.expiration = StringLib::duplicate(expiration_str);
+        credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
+
         /* Put Credentials */
-        status = CredentialStore::put(host, credential);
+        status = CredentialStore::put(asset, credential);
     }
     catch(const RunTimeException& e)
     {

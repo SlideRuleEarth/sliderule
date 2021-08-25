@@ -108,16 +108,24 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     object_request.SetRange(s3_rqst_range.getString());
 
     /* Make Request */
-    Aws::S3::S3Client* s3Client = S3Lib::createClient(asset);
-    Aws::S3::Model::GetObjectOutcome response = s3Client->GetObject(object_request);
-    if(response.IsSuccess())
+    S3Lib::client_t* client = S3Lib::createClient(asset);
+    Aws::S3::Model::GetObjectOutcome response = client->s3_client->GetObject(object_request);
+    bool status = response.IsSuccess();
+
+    /* Read Response */
+    if(status)
     {
         bytes_read = (int64_t)response.GetResult().GetContentLength();
         std::streambuf* sbuf = response.GetResult().GetBody().rdbuf();
         std::istream reader(sbuf);
         reader.read((char*)data, bytes_read);
     }
-    else
+
+    /* Clean Up Client */
+    S3Lib::destroyClient(client);
+
+    /* Handle Errors or Return Bytes Read */
+    if(!status)
     {
         throw RunTimeException(CRITICAL, "failed to read S3 data: %s", response.GetError().GetMessage().c_str());
     }
