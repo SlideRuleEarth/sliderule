@@ -101,6 +101,7 @@ if __name__ == '__main__':
         "poly": region,
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_HIGH,
+        "atl08_class": ["atl08_ground"],
         "ats": 10.0,
         "cnt": 10,
         "len": 40.0,
