@@ -291,7 +291,7 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
         return __emptyframe()
 
     # Generate Time Column
-    delta_time = (columns[delta_time_key]*1000000.0).astype('timedelta64[us]')
+    delta_time = (columns[delta_time_key]*1e9).astype('timedelta64[ns]')
     atlas_sdp_epoch = numpy.datetime64(ATLAS_SDP_EPOCH)
     columns['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
 
