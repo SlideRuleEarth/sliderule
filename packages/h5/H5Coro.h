@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -55,11 +55,11 @@ class H5FileBuffer
 
         static const long ALL_ROWS  = -1;
         static const int MAX_NDIMS  = 2;
-    
+
         /*--------------------------------------------------------------------
         * Typedefs
         *--------------------------------------------------------------------*/
-        
+
         typedef struct {
             int                         elements;   // number of elements in dataset
             int                         typesize;   // number of bytes per element
@@ -70,7 +70,7 @@ class H5FileBuffer
             int                         numcols;    // number of columns - anything past the second dimension is grouped together
             int                         numrows;    // number of rows - includes all dimensions after the first as a single row
         } dataset_info_t;
-    
+
         /*--------------------------------------------------------------------
         * I/O Context (subclass)
         *--------------------------------------------------------------------*/
@@ -109,7 +109,7 @@ class H5FileBuffer
         * Constants
         *--------------------------------------------------------------------*/
 
-        /* 
+        /*
          * Assuming:
          *  50 regions of interest
          *  100 granuels per region
@@ -118,7 +118,7 @@ class H5FileBuffer
          * Then:
          *  15000 datasets are needed
          *  30MB of data is used
-         */ 
+         */
 
         static const long       MAX_META_STORE          = 150000;
         static const long       MAX_META_FILENAME       = 88; // must be multiple of 8
@@ -131,12 +131,12 @@ class H5FileBuffer
          *  ~2Gbits/second --> 8MB (L1 LINESIZE)
          */
 
-        static const long       IO_CACHE_L1_LINESIZE    = 0x100000; // 1MB cache line
-        static const long       IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
+        static const int64_t    IO_CACHE_L1_LINESIZE    = 0x100000; // 1MB cache line
+        static const int64_t    IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
         static const long       IO_CACHE_L1_ENTRIES     = 157; // cache lines per dataset
 
-        static const long       IO_CACHE_L2_LINESIZE    = 0x8000000; // 128MB cache line
-        static const long       IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
+        static const int64_t    IO_CACHE_L2_LINESIZE    = 0x8000000; // 128MB cache line
+        static const int64_t    IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
         static const long       IO_CACHE_L2_ENTRIES     = 17; // cache lines per dataset
 
         static const long       STR_BUFF_SIZE           = 128;
@@ -150,11 +150,11 @@ class H5FileBuffer
         static const uint64_t   H5_TREE_SIGNATURE_LE    = 0x45455254LL; // binary tree version 1
         static const uint64_t   H5_HEAP_SIGNATURE_LE    = 0x50414548LL; // local heap
         static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
-        
+
         static const uint8_t    H5LITE_CUSTOM_V1_FLAG   = 0x80; // used to indicate version 1 object header (reserved)
 
         static const int64_t    UNKNOWN_VALUE           = -1; // initial setting for variables prior to being set
-        
+
         /*--------------------------------------------------------------------
         * Typedefs
         *--------------------------------------------------------------------*/
@@ -252,16 +252,16 @@ class H5FileBuffer
         } meta_entry_t;
 
         typedef Table<meta_entry_t, uint64_t> meta_repo_t;
-        
+
        /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
-        
+
         void                tearDown            (void);
 
         int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
         uint8_t*            ioRequest           (int64_t size, uint64_t* pos, int64_t hint=IO_CACHE_L1_LINESIZE, bool* cached=NULL);
-        bool                ioCheckCache        (int64_t size, uint64_t pos, cache_t* cache, long line_mask, cache_entry_t* entry);
+        bool                ioCheckCache        (int64_t size, uint64_t pos, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
         static uint64_t     ioHashL1            (uint64_t key);
         static uint64_t     ioHashL2            (uint64_t key);
 
@@ -269,7 +269,7 @@ class H5FileBuffer
         uint64_t            readField           (int64_t size, uint64_t* pos);
         void                readDataset         (dataset_info_t* _data_info);
 
-        uint64_t            readSuperblock      (void);        
+        uint64_t            readSuperblock      (void);
         int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readDirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readIndirectBlock   (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
@@ -312,7 +312,7 @@ class H5FileBuffer
         static Mutex        metaMutex;
 
         /* Class Data */
-        const char*         datasetName;            // holds buffer of dataset name that datasetPath points back into 
+        const char*         datasetName;            // holds buffer of dataset name that datasetPath points back into
         const char*         datasetPrint;           // holds untouched dataset name string used for displaying the name
         List<const char*>   datasetPath;
         uint64_t            datasetStartRow;
@@ -329,7 +329,7 @@ class H5FileBuffer
 
         /* File Info */
         uint8_t*            dataChunkBuffer;        // buffer for reading uncompressed chunk
-        int64_t             dataChunkBufferSize;    // dataChunkElements * dataInfo->typesize 
+        int64_t             dataChunkBufferSize;    // dataChunkElements * dataInfo->typesize
         int                 highestDataLevel;       // high water mark for traversing dataset path
         int64_t             dataSizeHint;
 
@@ -346,7 +346,7 @@ struct H5Coro
     /*--------------------------------------------------------------------
      * Constants
      *--------------------------------------------------------------------*/
-    
+
     static const long ALL_ROWS = H5FileBuffer::ALL_ROWS;
     static const long ALL_COLS = -1L;
 

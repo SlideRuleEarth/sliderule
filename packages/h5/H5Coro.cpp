@@ -337,33 +337,41 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
             throw RunTimeException(CRITICAL, "failed to read at least %ld bytes of data: %ld", size, entry.size);
         }
 
-        ioContext->mut.lock();
+        /* Select Cache */
+        cache_t* cache = NULL;
+        if(entry.size <= IO_CACHE_L1_LINESIZE)
         {
-            /* Select Cache */
-            cache_t* cache = &ioContext->l2;
-            if(entry.size <= IO_CACHE_L1_LINESIZE)
-            {
-                cache = &ioContext->l1;
-            }
-
-            /* Ensure Room in Cache */
-            if(cache->isfull())
-            {
-                cache_entry_t oldest_entry;
-                uint64_t oldest_pos = cache->first(&oldest_entry);
-                if(oldest_pos != (uint64_t)INVALID_KEY) delete [] oldest_entry.data;
-                cache->remove(oldest_pos);
-            }
-
-            /* Add Cache Entry */
-            cache->add(file_position, entry);
-            if(cached) *cached = true;
-
-            /* Increment Stats */
-            ioContext->read_rqsts++;
-            ioContext->bytes_read += entry.size;
+            cache = &ioContext->l1;
         }
-        ioContext->mut.unlock();
+        else if(entry.size <= IO_CACHE_L2_LINESIZE)
+        {
+            cache = &ioContext->l2;
+        }
+
+        /* Cache Entry */
+        if(cache)
+        {
+            ioContext->mut.lock();
+            {
+                /* Ensure Room in Cache */
+                if(cache->isfull())
+                {
+                    cache_entry_t oldest_entry;
+                    uint64_t oldest_pos = cache->first(&oldest_entry);
+                    if(oldest_pos != (uint64_t)INVALID_KEY) delete [] oldest_entry.data;
+                    cache->remove(oldest_pos);
+                }
+
+                /* Add Cache Entry */
+                cache->add(file_position, entry);
+                if(cached) *cached = true;
+
+                /* Increment Stats */
+                ioContext->read_rqsts++;
+                ioContext->bytes_read += entry.size;
+            }
+            ioContext->mut.unlock();
+        }
 
         /* Set Buffer to I/O Cached Buffer */
         buffer = entry.data;
@@ -379,7 +387,7 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
 /*----------------------------------------------------------------------------
  * ioCheckCache
  *----------------------------------------------------------------------------*/
-bool H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* cache, long line_mask, cache_entry_t* entry)
+bool H5FileBuffer::ioCheckCache (int64_t size, uint64_t pos, cache_t* cache, uint64_t line_mask, cache_entry_t* entry)
 {
     uint64_t prev_line_pos = (pos & ~line_mask) - 1;
     bool check_prev = pos > prev_line_pos; // checks for rollover
