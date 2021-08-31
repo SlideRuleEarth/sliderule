@@ -285,10 +285,6 @@ int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 
     /* Perform Read */
     int64_t bytes_read = ioDriver->ioRead(data, size, pos);
-    if(bytes_read < size)
-    {
-        throw RunTimeException(CRITICAL, "failed to read %ld bytes of data: %ld", size, bytes_read);
-    }
 
     /* Characterize Performance */
     if(H5_CHARACTERIZE_IO)
@@ -346,6 +342,12 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
         {
             delete [] entry.data;
             throw; // rethrow exception
+        }
+
+        /* Check Enough Data was Read */
+        if(entry.size < size)
+        {
+            throw RunTimeException(CRITICAL, "failed to read %ld bytes of data: %ld", size, entry.size);
         }
 
         /* Select Cache */
