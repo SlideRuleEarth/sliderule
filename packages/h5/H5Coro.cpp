@@ -285,6 +285,10 @@ int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 
     /* Perform Read */
     int64_t bytes_read = ioDriver->ioRead(data, size, pos);
+    if(bytes_read < size)
+    {
+        throw RunTimeException(CRITICAL, "failed to read %ld bytes of data: %ld", size, bytes_read);
+    }
 
     /* Characterize Performance */
     if(H5_CHARACTERIZE_IO)
@@ -301,23 +305,26 @@ int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
  *----------------------------------------------------------------------------*/
 uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, bool* cached)
 {
+    assert(cached);
+
     cache_entry_t entry;
     uint8_t* buffer = NULL;
     int64_t buffer_offset = 0;
     uint64_t file_position = *pos;
 
     /* Initialize Cached Variable */
-    if(cached) *cached = false;
+    *cached = false;
 
+    /* Attempt to fulfill data request from I/O cache */
     ioContext->mut.lock();
     {
-        /* Attempt to fulfill data request I/O cache */
         if( ioCheckCache (size, file_position, &ioContext->l1, IO_CACHE_L1_MASK, &entry) ||
             ioCheckCache (size, file_position, &ioContext->l2, IO_CACHE_L2_MASK, &entry) )
         {
             /* Set Buffer and Offset to Start of Requested Data */
             buffer = entry.data;
             buffer_offset = file_position - entry.pos;
+            *cached = true;
         }
     }
     ioContext->mut.unlock();
@@ -329,12 +336,16 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
         int64_t read_size = MAX(size, hint);
 
         /* Read into Cache */
-        entry.data = new uint8_t [read_size];
-        entry.pos = file_position;
-        entry.size = ioRead(entry.data, read_size, entry.pos);
-        if(entry.size < size)
+        try
         {
-            throw RunTimeException(CRITICAL, "failed to read at least %ld bytes of data: %ld", size, entry.size);
+            entry.data = new uint8_t [read_size];
+            entry.pos = file_position;
+            entry.size = ioRead(entry.data, read_size, entry.pos);
+        }
+        catch (const RunTimeException& e)
+        {
+            delete [] entry.data;
+            throw; // rethrow exception
         }
 
         /* Select Cache */
@@ -343,17 +354,20 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
         {
             cache = &ioContext->l1;
         }
-        else // if(entry.size <= IO_CACHE_L2_LINESIZE)
+        else
         {
             cache = &ioContext->l2;
         }
 
         /* Cache Entry */
-        if(cache)
+        ioContext->mut.lock();
         {
-            ioContext->mut.lock();
+            if(cache)
             {
-                /* Ensure Room in Cache */
+                /* Ensure Room in Cache
+                 *
+                 * TODO - this is not thread safe - cannot delete data until we know there
+                 * isn't another thread using it */
                 if(cache->isfull())
                 {
                     cache_entry_t oldest_entry;
@@ -363,15 +377,14 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
                 }
 
                 /* Add Cache Entry */
-                cache->add(file_position, entry);
-                if(cached) *cached = true;
-
-                /* Increment Stats */
-                ioContext->read_rqsts++;
-                ioContext->bytes_read += entry.size;
+                *cached = cache->add(file_position, entry);
             }
-            ioContext->mut.unlock();
+
+            /* Increment Stats */
+            ioContext->read_rqsts++;
+            ioContext->bytes_read += entry.size;
         }
+        ioContext->mut.unlock();
 
         /* Set Buffer to I/O Cached Buffer */
         buffer = entry.data;
@@ -427,8 +440,10 @@ void H5FileBuffer::readByteArray (uint8_t* data, int64_t size, uint64_t* pos)
 {
     assert(data);
 
-    uint8_t* byte_ptr = ioRequest(size, pos);
+    bool cached;
+    uint8_t* byte_ptr = ioRequest(size, pos, IO_CACHE_L1_LINESIZE, &cached);
     LocalLib::copy(data, byte_ptr, size);
+    if(!cached) delete [] byte_ptr;
 }
 
 /*----------------------------------------------------------------------------
@@ -439,11 +454,14 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
     assert(pos);
     assert(size > 0);
 
+    bool cached;
+    uint64_t value;
+    bool exception = false;
+
     /* Request Data from I/O */
-    uint8_t* data_ptr = ioRequest(size, pos);
+    uint8_t* data_ptr = ioRequest(size, pos, IO_CACHE_L1_LINESIZE, &cached);
 
     /*  Read Field Value */
-    uint64_t value;
     switch(size)
     {
         case 8:
@@ -481,12 +499,16 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         default:
         {
-            throw RunTimeException(CRITICAL, "invalid field size: %ld", (long)size);
+            exception = true;
         }
     }
 
+    /* Free Uncached Memory */
+    if(!cached) delete [] data_ptr;
+
     /* Return Field Value */
-    return value;
+    if(exception)   throw RunTimeException(CRITICAL, "invalid field (size = %ld)", (long)size);
+    else            return value;
 }
 
 /*----------------------------------------------------------------------------
@@ -613,9 +635,11 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
             case COMPACT_LAYOUT:
             case CONTIGUOUS_LAYOUT:
             {
+                bool cached;
                 uint64_t data_addr = metaData.address + buffer_offset;
-                uint8_t* data_ptr = ioRequest(buffer_size, &data_addr);
+                uint8_t* data_ptr = ioRequest(buffer_size, &data_addr, IO_CACHE_L1_LINESIZE, &cached);
                 LocalLib::copy(buffer, data_ptr, buffer_size);
+                if(!cached) delete [] data_ptr;
                 break;
             }
 
@@ -649,8 +673,16 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                 if(buffer_offset < (uint64_t)buffer_size)
                 {
                     bool cached;
-                    ioRequest(0, &metaData.address, buffer_offset + buffer_size, &cached);
-                    if(cached) dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    uint8_t* prefetched_bytes = ioRequest(0, &metaData.address, buffer_offset + buffer_size, &cached);
+                    if(cached)
+                    {
+                        dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    }
+                    else
+                    {
+                        mlog(CRITICAL, "Prefetched bytes were not cached: %ld bytes at 0x%lX\n", buffer_offset + buffer_size, metaData.address - (buffer_offset + buffer_size));
+                        delete [] prefetched_bytes;
+                    }
                 }
 
                 /* Read B-Tree */
@@ -1270,8 +1302,6 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                     /* Read Data into Chunk Buffer */
                     bool cached;
                     uint8_t* chunk_ptr = ioRequest(curr_node.chunk_size, &child_addr, dataSizeHint, &cached);
-                    if(cached) dataSizeHint = IO_CACHE_L1_LINESIZE;
-
                     if((chunk_bytes == dataChunkBufferSize) && (!metaData.filter[SHUFFLE_FILTER]))
                     {
                         /* Inflate Directly into Data Buffer */
@@ -1293,6 +1323,10 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                             LocalLib::copy(&buffer[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
                         }
                     }
+
+                    /* Handle Caching */
+                    if(cached)  dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    else        delete [] chunk_ptr;
                 }
                 else /* no supported filters */
                 {
@@ -1311,8 +1345,9 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                     /* Read Data into Data Buffer */
                     bool cached;
                     uint8_t* chunk_ptr = ioRequest(curr_node.chunk_size, &child_addr, dataSizeHint, &cached);
-                    if(cached) dataSizeHint = IO_CACHE_L1_LINESIZE;
                     LocalLib::copy(&buffer[buffer_index], &chunk_ptr[chunk_index], chunk_bytes);
+                    if(cached)  dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    else        delete [] chunk_ptr;
                 }
             }
         }
