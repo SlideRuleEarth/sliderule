@@ -274,6 +274,5 @@ void initlegacy (void)
  *----------------------------------------------------------------------------*/
 void deinitlegacy (void)
 {
-    delete ccsdsCmds;
     delete cmdProc;
 }

@@ -343,7 +343,7 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
         {
             cache = &ioContext->l1;
         }
-        else if(entry.size <= IO_CACHE_L2_LINESIZE)
+        else // if(entry.size <= IO_CACHE_L2_LINESIZE)
         {
             cache = &ioContext->l2;
         }

@@ -67,7 +67,6 @@ clean:
 distclean:
 	- rm -Rf build
 
-testcase=
 testmem:
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
 
