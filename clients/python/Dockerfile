@@ -22,6 +22,7 @@ RUN pip3 install --no-cache-dir --no-binary=cartopy \
         geopandas \
         ipykernel \
         ipywidgets \
+        ipyleaflet \
         matplotlib \
         numpy \
         pandas \
