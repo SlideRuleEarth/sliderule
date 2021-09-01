@@ -486,11 +486,7 @@ char* StringLib::copy(char* str1, const char* str2, int _size)
     if(str1 && str2 && (_size > 0))
     {
         char* nptr = (char*)memccpy(str1, str2, 0, _size);
-        if(!nptr)
-        {
-            str1[_size - 1] = '\0';
-            print2term("OVERFLOW ON: %s\n", str1);
-        }
+        if(!nptr) str1[_size - 1] = '\0';
     }
     else if(str1 && (_size > 0))
     {

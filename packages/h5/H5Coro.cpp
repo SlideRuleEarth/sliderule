@@ -665,7 +665,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                 dataChunkBuffer = new uint8_t [dataChunkBufferSize];
 
                 /*
-                 * Prefectch and Set Data Size Hint
+                 * Prefetch and Set Data Size Hint
                  *  If reading all of the data from the start of the data segment in the file
                  *  past where the desired subset is consistutes only a 2x increase in the
                  *  overall data that would be read, then prefetch the entire block from the
