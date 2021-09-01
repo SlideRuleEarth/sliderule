@@ -99,7 +99,7 @@ S3Lib::client_t* S3Lib::createClient (const Asset* asset)
 
         /* Check Need for New Client */
         if( (client == NULL) || // could not find an existing client
-            (client->credential.provided && (client->credential.expirationGps < latest_credential.expirationGps)) ) // existing client has outdated credentials
+            (latest_credential.provided && (client->credential.expirationGps < latest_credential.expirationGps)) ) // existing client has outdated credentials
         {
             /* Destroy Old Client */
             if(client)
