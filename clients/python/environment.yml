@@ -8,6 +8,7 @@ dependencies:
   - cartopy
   - ipykernel
   - ipywidgets
+  - ipyleaflet
   - matplotlib
   - numpy
   - pandas
