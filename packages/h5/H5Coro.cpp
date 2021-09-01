@@ -98,7 +98,8 @@ H5FileBuffer::io_context_t::~io_context_t (void)
         uint64_t key = l1.first(&entry);
         while(key != INVALID_KEY)
         {
-            if(entry.data) delete [] entry.data;
+            assert(entry.data);
+            delete [] entry.data;
             key = l1.next(&entry);
         }
     }
@@ -109,9 +110,17 @@ H5FileBuffer::io_context_t::~io_context_t (void)
         uint64_t key = l2.first(&entry);
         while(key != INVALID_KEY)
         {
-            if(entry.data) delete [] entry.data;
+            assert(entry.data);
+            delete [] entry.data;
             key = l2.next(&entry);
         }
+    }
+
+    /* Empty Garbage Collector */
+    for(int i = 0; i < gc.length(); i++)
+    {
+        assert(gc[i].data);
+        delete [] gc[i].data;
     }
 }
 
@@ -366,16 +375,26 @@ uint8_t* H5FileBuffer::ioRequest (int64_t size, uint64_t* pos, int64_t hint, boo
         {
             if(cache)
             {
-                /* Ensure Room in Cache
-                 *
-                 * TODO - this is not thread safe - cannot delete data until we know there
-                 * isn't another thread using it */
+                /* Ensure Room in Cache */
                 if(cache->isfull())
                 {
                     cache_entry_t oldest_entry;
                     uint64_t oldest_pos = cache->first(&oldest_entry);
-                    if(oldest_pos != (uint64_t)INVALID_KEY) delete [] oldest_entry.data;
-                    cache->remove(oldest_pos);
+                    if(oldest_pos != (uint64_t)INVALID_KEY)
+                    {
+                        if(ioContext->gc.length() == 0)
+                        {
+                            /* Alter only on first occurrence */
+                            mlog(CRITICAL, "Cache overflow on %s", datasetPrint);
+                        }
+                        ioContext->gc.add(oldest_entry);
+                        cache->remove(oldest_pos);
+                    }
+                    else
+                    {
+                        ioContext->mut.unlock();
+                        throw RunTimeException(CRITICAL, "failed to make room in cache for %s", datasetPrint);
+                    }
                 }
 
                 /* Add Cache Entry */

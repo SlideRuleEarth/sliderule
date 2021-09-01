@@ -313,6 +313,7 @@ int LuaObject::luaDelete (lua_State* L)
                 {
                     /* Delete Object */
                     delete lua_obj;
+                    user_data->luaObj = NULL;
                 }
                 else
                 {

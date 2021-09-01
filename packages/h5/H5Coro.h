@@ -53,8 +53,9 @@ class H5FileBuffer
         * Constants
         *--------------------------------------------------------------------*/
 
-        static const long ALL_ROWS  = -1;
-        static const int MAX_NDIMS  = 2;
+        static const long ALL_ROWS      = -1;
+        static const int MAX_NDIMS      = 2;
+        static const int GC_BLOCK_SIZE  = 16;
 
         /*--------------------------------------------------------------------
         * Typedefs
@@ -82,11 +83,13 @@ class H5FileBuffer
         } cache_entry_t;
 
         typedef Table<cache_entry_t, uint64_t> cache_t;
+        typedef List<cache_entry_t, GC_BLOCK_SIZE> dangling_t;
 
         struct io_context_t
         {
             cache_t     l1; // level 1 cache
             cache_t     l2; // level 2 cache
+            dangling_t  gc; // garbage collected memory
             Mutex       mut; // cache mutex
 
             uint64_t    read_rqsts;
