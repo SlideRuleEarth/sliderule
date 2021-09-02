@@ -287,7 +287,7 @@ int LuaLibraryMsg::lmsg_create (lua_State* L)
 
     /* Return recUserData_t to Lua */
     luaL_getmetatable(L, LUA_RECMETANAME);
-    lua_setmetatable(L, -2);    /* associates the publisher meta table with the publisher user data */
+    lua_setmetatable(L, -2);    /* associates the record meta table with the record user data */
     return 1;                   /* returns msg_data which is already on stack */
 }
 

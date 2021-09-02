@@ -95,7 +95,7 @@ end
 --------------------------------------------------------------------------------------
 local function sendCommand (cmdstr, q, cs, echo)
 
-    ccsds_cmd = msg.create(cmdstr)
+    local ccsds_cmd = msg.create(cmdstr)
     if cs then ccsds_cmd = setChecksum(ccsds_cmd, cs) end
     if echo then printPacket(ccsds_cmd:serialize(), 32) end
     q:sendrecord(ccsds_cmd)
