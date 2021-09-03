@@ -129,21 +129,22 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     LocalLib::set(data_info, 0, sizeof(dataset_info_t));
 
     /* Initialize Class Data */
-    ioDriver            = NULL;
-    ioContextLocal      = true;
-    ioContext           = NULL;
-    ioBucket            = NULL;
-    dataChunkBuffer     = NULL;
-    datasetName         = StringLib::duplicate(dataset);
-    datasetPrint        = StringLib::duplicate(dataset);
-    datasetStartRow     = startrow;
-    datasetNumRows      = numrows;
-    errorChecking       = _error_checking;
-    verbose             = _verbose;
-    ioKey               = NULL;
-    dataChunkBufferSize = 0;
-    highestDataLevel    = 0;
-    dataSizeHint        = 0;
+    ioDriver                = NULL;
+    ioContextLocal          = true;
+    ioContext               = NULL;
+    ioBucket                = NULL;
+    dataChunkBuffer         = NULL;
+    dataChunkFilterBuffer   = NULL;
+    datasetName             = StringLib::duplicate(dataset);
+    datasetPrint            = StringLib::duplicate(dataset);
+    datasetStartRow         = startrow;
+    datasetNumRows          = numrows;
+    errorChecking           = _error_checking;
+    verbose                 = _verbose;
+    ioKey                   = NULL;
+    dataChunkBufferSize     = 0;
+    highestDataLevel        = 0;
+    dataSizeHint            = 0;
 
     /* Process File */
     try
@@ -273,6 +274,7 @@ void H5FileBuffer::tearDown (void)
 
     /* Delete Chunk Buffer */
     if(dataChunkBuffer) delete [] dataChunkBuffer;
+    if(dataChunkFilterBuffer) delete [] dataChunkFilterBuffer;
 }
 
 /*----------------------------------------------------------------------------
@@ -681,6 +683,7 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
                 /* Allocate Data Chunk Buffer */
                 dataChunkBufferSize = metaData.chunkelements * metaData.typesize;
                 dataChunkBuffer = new uint8_t [dataChunkBufferSize];
+                dataChunkFilterBuffer = new uint8_t [dataChunkBufferSize * FILTER_SIZE_SCALE];
 
                 /*
                  * Prefetch and Set Data Size Hint
@@ -1313,18 +1316,23 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 /* Read Chunk */
                 if(metaData.filter[DEFLATE_FILTER])
                 {
-                    /* Read Data into Chunk Buffer */
-                    uint8_t* chunk_buffer = new uint8_t [curr_node.chunk_size];
-                    ioRequest(&child_addr, curr_node.chunk_size, chunk_buffer, dataSizeHint, true);
+                    /* Check Current Node Chunk Size */
+                    if(curr_node.chunk_size > (dataChunkBufferSize * FILTER_SIZE_SCALE))
+                    {
+                        throw RunTimeException(CRITICAL, "Compressed chunk size exceeds buffer: %u > %lu", curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
+                    }
+
+                    /* Read Data into Chunk Filter Buffer (holds the compressed data) */
+                    ioRequest(&child_addr, curr_node.chunk_size, dataChunkFilterBuffer, dataSizeHint, true);
                     if((chunk_bytes == dataChunkBufferSize) && (!metaData.filter[SHUFFLE_FILTER]))
                     {
                         /* Inflate Directly into Data Buffer */
-                        inflateChunk(chunk_buffer, curr_node.chunk_size, &buffer[buffer_index], chunk_bytes);
+                        inflateChunk(dataChunkFilterBuffer, curr_node.chunk_size, &buffer[buffer_index], chunk_bytes);
                     }
                     else
                     {
                         /* Inflate into Data Chunk Buffer */
-                        inflateChunk(chunk_buffer, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
+                        inflateChunk(dataChunkFilterBuffer, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
 
                         if(metaData.filter[SHUFFLE_FILTER])
                         {
@@ -1340,7 +1348,6 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
 
                     /* Handle Caching */
                     dataSizeHint = IO_CACHE_L1_LINESIZE;
-                    delete [] chunk_buffer;
                 }
                 else /* no supported filters */
                 {

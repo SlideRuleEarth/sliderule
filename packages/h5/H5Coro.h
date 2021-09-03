@@ -136,6 +136,7 @@ class H5FileBuffer
         static const long       IO_CACHE_L2_ENTRIES     = 17; // cache lines per dataset
 
         static const long       STR_BUFF_SIZE           = 128;
+        static const long       FILTER_SIZE_SCALE       = 1; // maximum factor for dataChunkFilterBuffer
 
         static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
         static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
@@ -325,6 +326,7 @@ class H5FileBuffer
 
         /* File Info */
         uint8_t*            dataChunkBuffer;        // buffer for reading uncompressed chunk
+        uint8_t*            dataChunkFilterBuffer;  // buffer for reading compressed chunk
         int64_t             dataChunkBufferSize;    // dataChunkElements * dataInfo->typesize
         int                 highestDataLevel;       // high water mark for traversing dataset path
         int64_t             dataSizeHint;
