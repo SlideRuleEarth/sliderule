@@ -55,7 +55,6 @@ class H5FileBuffer
 
         static const long ALL_ROWS      = -1;
         static const int MAX_NDIMS      = 2;
-        static const int GC_BLOCK_SIZE  = 16;
 
         /*--------------------------------------------------------------------
         * Typedefs
@@ -83,17 +82,12 @@ class H5FileBuffer
         } cache_entry_t;
 
         typedef Table<cache_entry_t, uint64_t> cache_t;
-        typedef List<cache_entry_t, GC_BLOCK_SIZE> dangling_t;
 
         struct io_context_t
         {
             cache_t     l1; // level 1 cache
             cache_t     l2; // level 2 cache
-            dangling_t  gc; // garbage collected memory
             Mutex       mut; // cache mutex
-
-            uint64_t    read_rqsts;
-            uint64_t    bytes_read;
 
             io_context_t    (void);
             ~io_context_t   (void);
@@ -135,10 +129,10 @@ class H5FileBuffer
          */
 
         static const int64_t    IO_CACHE_L1_LINESIZE    = 0x100000; // 1MB cache line
-        static const int64_t    IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
+        static const uint64_t   IO_CACHE_L1_MASK        = 0x0FFFFF; // lower inverse of buffer size
         static const long       IO_CACHE_L1_ENTRIES     = 157; // cache lines per dataset
 
-        static const int64_t    IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
+        static const uint64_t   IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
         static const long       IO_CACHE_L2_ENTRIES     = 17; // cache lines per dataset
 
         static const long       STR_BUFF_SIZE           = 128;
@@ -262,8 +256,8 @@ class H5FileBuffer
         void                tearDown            (void);
 
         int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
-        uint8_t*            ioRequest           (int64_t size, uint64_t* pos, int64_t hint, bool* cached);
-        bool                ioCheckCache        (int64_t size, uint64_t pos, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
+        void                ioRequest           (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);
+        bool                ioCheckCache        (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
         static uint64_t     ioHashL1            (uint64_t key);
         static uint64_t     ioHashL2            (uint64_t key);
 
