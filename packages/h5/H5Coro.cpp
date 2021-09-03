@@ -404,7 +404,6 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                     uint64_t oldest_pos = cache->first(&oldest_entry);
                     if(oldest_pos != (uint64_t)INVALID_KEY)
                     {
-                        mlog(CRITICAL, "Cache <%lx> overflow on %s", cache_selection, datasetPrint);
                         delete [] oldest_entry.data;
                         cache->remove(oldest_pos);
                     }
