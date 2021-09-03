@@ -487,7 +487,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
     assert(size > 0);
     assert(size <= 8);
 
-    uint64_t value;
+    uint64_t value = 0;
     uint8_t data_ptr[8];
 
     /* Request Data from I/O */
