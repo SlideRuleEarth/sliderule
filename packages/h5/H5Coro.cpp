@@ -382,16 +382,13 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
 
             /* Select Cache */
             cache_t* cache = NULL;
-            uint64_t cache_selection = 0;
             if(entry.size <= IO_CACHE_L1_LINESIZE)
             {
                 cache = &ioContext->l1;
-                cache_selection = IO_CACHE_L1_MASK;
             }
             else
             {
                 cache = &ioContext->l2;
-                cache_selection = IO_CACHE_L2_MASK;
             }
 
             /* Cache Entry */
