@@ -27,10 +27,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import copy
+import datetime
 import ipywidgets
 import ipyleaflet
 import numpy as np
 from traitlets.utils.bunch import Bunch
+import tkinter.filedialog
+import IPython.display
+import sliderule.io
 
 class widgets:
     def __init__(self):
@@ -205,34 +210,104 @@ class widgets:
             disabled=False,
         )
 
-# calculate centroid of polygon
-def centroid(x,y):
-    npts = len(x)
-    area,cx,cy = (0.0,0.0,0.0)
-    for i in range(npts-1):
-        SA = x[i]*y[i+1] - x[i+1]*y[i]
-        area += SA
-        cx += (x[i] + x[i+1])*SA
-        cy += (y[i] + y[i+1])*SA
-    cx /= 3.0*area
-    cy /= 3.0*area
-    return (cx,cy)
+        # button and label for output file selection
+        self.file = copy.copy(self.filename)
+        self.savebutton = ipywidgets.Button(
+            description="Save As"
+        )
+        self.savelabel = ipywidgets.Text(
+            value=self.file,
+            disabled=False
+        )
+        # connect fileselect button with action
+        self.savebutton.on_click(self.saveas_file)
+        self.savelabel.observe(self.set_savefile)
+        # create hbox of file selection
+        self.filesaver = ipywidgets.HBox([
+            self.savebutton,
+            self.savelabel
+        ])
 
-# determine if polygon winding is counter-clockwise
-def winding(x,y):
-    npts = len(x)
-    wind = np.sum([(x[i+1] - x[i])*(y[i+1] + y[i]) for i in range(npts - 1)])
-    return wind
+        # button and label for input file selection
+        self.loadbutton = ipywidgets.Button(
+            description="File select"
+        )
+        self.loadlabel = ipywidgets.Text(
+            value='',
+            disabled=False
+        )
+        # connect fileselect button with action
+        self.loadbutton.on_click(self.select_file)
+        self.loadlabel.observe(self.set_loadfile)
+        # create hbox of file selection
+        self.fileloader = ipywidgets.HBox([
+            self.loadbutton,
+            self.loadlabel
+        ])
 
-# extract coordinates from a sliderule region
-def coordinates(polygon):
-    npts = len(polygon)
-    x = np.zeros((npts))
-    y = np.zeros((npts))
-    for i,p in enumerate(polygon):
-        x[i] = p['lon']
-        y[i] = p['lat']
-    return (x,y)
+    def saveas_file(self, b):
+        """function for file save
+        """
+        IPython.display.clear_output()
+        root = tkinter.Tk()
+        root.withdraw()
+        root.call('wm', 'attributes', '.', '-topmost', True)
+        filetypes = (("HDF5 file", "*.h5"),
+            ("netCDF file", "*.nc"),
+            ("All Files", "*.*"))
+        b.files = tkinter.filedialog.asksaveasfilename(
+            initialfile=self.file,
+            defaultextension='h5',
+            filetypes=filetypes)
+        self.savelabel.value = b.files
+        self.file = b.files
+        return self
+
+    def set_savefile(self, sender):
+        self.file = self.savelabel.value
+
+    def select_file(self, b):
+        """function for file selection
+        """
+        IPython.display.clear_output()
+        root = tkinter.Tk()
+        root.withdraw()
+        root.call('wm', 'attributes', '.', '-topmost', True)
+        filetypes = (("HDF5 file", "*.h5"),
+            ("netCDF file", "*.nc"),
+            ("All Files", "*.*"))
+        b.files = tkinter.filedialog.askopenfilename(
+            defaultextension='h5',
+            filetypes=filetypes,
+            multiple=False)
+        self.loadlabel.value = b.files
+        self.file = b.files
+        return self
+
+    def set_loadfile(self, sender):
+        self.file = self.loadlabel.value
+
+    @property
+    def filename(self):
+        """default input and output file string
+        """
+        # get sliderule submission time
+        now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        args = (now, self.release.value)
+        return "ATL06-SR_{0}_{1}.h5".format(*args)
+
+    @property
+    def format(self):
+        """return the file format from file string
+        """
+        hdf = ('h5','hdf5','hdf')
+        netcdf = ('nc','netcdf','nc3')
+        if self.file.endswith(hdf):
+            return 'hdf'
+        elif self.file.endswith(netcdf):
+            return 'netcdf'
+        else:
+            return ''
 
 # define projections for ipyleaflet tiles
 projections = Bunch(
@@ -400,14 +475,14 @@ class leaflet:
     # keep track of rectangles and polygons drawn on map
     def handle_draw(self, obj, action, geo_json):
         lon,lat = np.transpose(geo_json['geometry']['coordinates'])
-        cx,cy = centroid(lon,lat)
-        wind = winding(lon,lat)
+        cx,cy = sliderule.io.centroid(lon,lat)
+        wind = sliderule.io.winding(lon,lat)
         # set winding to counter-clockwise
         if (wind > 0):
             lon = lon[::-1]
             lat = lat[::-1]
         # create sliderule region from list
-        region = [{'lon':ln,'lat':lt} for ln,lt in np.c_[lon,lat]]
+        region = sliderule.io.to_region(lon,lat)
         # append coordinates to list
         if (action == 'created'):
             self.regions.append(region)
