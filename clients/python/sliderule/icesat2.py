@@ -246,8 +246,8 @@ def __query_resources(parm, version):
     # Make CMR Request #
     resources = cmr(polygon, time_start, time_end, version)
     if(len(resources) > max_requested_resources):
-        logger.info("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
-        logger.info("Consider using icesat2.set_max_resources to set a higher limit")
+        logger.warning("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
+        logger.warning("Consider using icesat2.set_max_resources to set a higher limit")
         resources = []
     else:
         logger.info("Identified %d resources to process", len(resources))
@@ -483,11 +483,10 @@ def __parallelize(max_workers, block, function, parm, resources, *args):
 #
 #  INIT
 #
-def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max_errors=3):
+def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max_errors=3, loglevel=logging.CRITICAL):
     if verbose:
-        logging.basicConfig(level=logging.INFO)
-    else:
-        logging.basicConfig(level=logging.CRITICAL)
+        loglevel = logging.INFO
+    logging.basicConfig(level=loglevel)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
     sliderule.set_max_errors(max_errors)
