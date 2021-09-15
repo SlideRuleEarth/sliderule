@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "H5Api.h"
+#include "H5Coro.h"
 #include "Asset.h"
 
 /******************************************************************************
@@ -116,7 +116,7 @@ class H5File: public LuaObject
 
         Asset*              asset;
         const char*         resource;
-        H5Api::context_t    context;
+        H5Coro::context_t    context;
 };
 
 #endif  /* __h5_file__ */

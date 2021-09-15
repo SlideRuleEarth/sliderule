@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -39,7 +39,7 @@
 #include "StringLib.h"
 #include "EventLib.h"
 #include "Asset.h"
-#include "H5Api.h"
+#include "H5Coro.h"
 
 /******************************************************************************
  * H5Array TEMPLATE
@@ -54,7 +54,7 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const Asset* asset, const char* resource, const char* dataset, H5Api::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Api::ALL_ROWS);
+                H5Array     (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
@@ -77,19 +77,19 @@ class H5Array
 
 /*----------------------------------------------------------------------------
  * Constructor
- * 
+ *
  *  Note that the "name" class member (along with everthing else) is initialized
- *  after the call to H5Api::read(...).  This is on purpose because the H5Api::read
+ *  after the call to H5Coro::read(...).  This is on purpose because the H5Coro::read
  *  can throw an exception.  It will clean up all memory it uses, but any memory
  *  allocated by H5Array will not get cleaned up.  If any memory is allocated
- *  before the H5Api::read call, then the call would need to be in a try-except
- *  block and would have to handle cleaning up that memory and rethrowing the 
- *  exception; the ordering of the statements below is preferred over that. 
+ *  before the H5Coro::read call, then the call would need to be in a try-except
+ *  block and would have to handle cleaning up that memory and rethrowing the
+ *  exception; the ordering of the statements below is preferred over that.
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* dataset, H5Api::context_t* context, long col, long startrow, long numrows)
+H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context, long col, long startrow, long numrows)
 {
-    H5Api::info_t info = H5Api::read(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
+    H5Coro::info_t info = H5Coro::read(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
     name = StringLib::duplicate(dataset);
     data = (T*)info.data;
     size = info.elements;
@@ -115,6 +115,7 @@ bool H5Array<T>::trim(long offset)
     if((offset >= 0) && (offset < size))
     {
         pointer = data + offset;
+        size = size - offset;
         return true;
     }
     else

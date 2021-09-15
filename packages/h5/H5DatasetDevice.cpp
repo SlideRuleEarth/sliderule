@@ -70,7 +70,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 7, true, RecordObject::DYNAMIC);
         long            col             = getLuaInteger(L, 8, true, 0);
         long            startrow        = getLuaInteger(L, 9, true, 0);
-        long            numrows         = getLuaInteger(L, 10, true, H5Api::ALL_ROWS);
+        long            numrows         = getLuaInteger(L, 10, true, H5Coro::ALL_ROWS);
 
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
@@ -110,7 +110,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
 {
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Api
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     /* Set Record */
     recObj = new RecordObject(recType);
@@ -138,7 +138,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     /* Read File */
     try
     {
-        H5Api::info_t info = H5Api::read(asset, resource, dataName, datatype, col, startrow, numrows);
+        H5Coro::info_t info = H5Coro::read(asset, resource, dataName, datatype, col, startrow, numrows);
         recData->datatype = (uint32_t)info.datatype;
         dataBuffer = info.data;
         dataSize = info.datasize;

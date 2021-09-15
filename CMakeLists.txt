@@ -42,8 +42,6 @@ option (ENABLE_COMPAT "Use C++11 for compatibility with older compilers" OFF)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
-option (ENABLE_HDF5_LIB "Use the standard HDF5 library instead of the internal implementation" OFF)
-option (ENABLE_H5_REST_VOL "Install and use the REST VOL plugin with the HDF5 library" OFF)
 
 # Package Options #
 

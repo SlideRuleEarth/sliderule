@@ -125,13 +125,13 @@ void* H5File::readThread (void* parm)
     dataset_info_t* info = (dataset_info_t*)parm;
 
     /* Declare and Initialize Results */
-    H5Api::info_t results;
+    H5Coro::info_t results;
     results.data = NULL;
 
     try
     {
         /* Read Dataset */
-        results = H5Api::read(info->h5file->asset, info->h5file->resource, info->dataset, info->valtype, info->col, info->startrow, info->numrows, &(info->h5file->context));
+        results = H5Coro::read(info->h5file->asset, info->h5file->resource, info->dataset, info->valtype, info->col, info->startrow, info->numrows, &(info->h5file->context));
     }
     catch (const RunTimeException& e)
     {
@@ -228,7 +228,7 @@ int H5File::luaRead (lua_State* L)
                     lua_pop(L, 1);
 
                     lua_getfield(L, -1, "numrows");
-                    numrows = getLuaInteger(L, -1, true, H5Api::ALL_ROWS);
+                    numrows = getLuaInteger(L, -1, true, H5Coro::ALL_ROWS);
                     lua_pop(L, 1);
                 }
                 else
@@ -301,7 +301,7 @@ int H5File::luaTraverse (lua_State* L)
         const char* group_path = getLuaString(L, 3, true, NULL);
 
         /* Traverse File */
-        status = H5Api::traverse(lua_obj->asset, lua_obj->resource, max_depth, group_path);
+        status = H5Coro::traverse(lua_obj->asset, lua_obj->resource, max_depth, group_path);
     }
     catch(const RunTimeException& e)
     {

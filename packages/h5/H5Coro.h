@@ -348,9 +348,25 @@ struct H5Coro
     static const long ALL_ROWS = H5FileBuffer::ALL_ROWS;
     static const long ALL_COLS = -1L;
 
+    /*--------------------------------------------------------------------
+     * Typedefs
+     *--------------------------------------------------------------------*/
+
     typedef H5FileBuffer::dataset_info_t info_t;
 
     typedef H5FileBuffer::io_context_t context_t;
+
+    typedef struct {
+        const Asset*            asset;
+        const char*             resource;
+        const char*             datasetname;
+        RecordObject::valType_t valtype;
+        long                    col;
+        long                    startrow;
+        long                    numrows;
+        context_t*              context;
+        info_t*                 info; // response
+    } read_rqst_t;
 
     /*--------------------------------------------------------------------
      * Methods
@@ -360,6 +376,18 @@ struct H5Coro
     static void         deinit          (void);
     static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
     static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
+
+    static void         readp           (Cond* complete, info_t* info, const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
+    static void         joinread        (Cond* complete, info_t* info);
+    static void*        reader_thread   (void* parm);
+
+    /*--------------------------------------------------------------------
+     * Data
+     *--------------------------------------------------------------------*/
+
+    static Publisher*   rqstPub;
+    static Thread**     readerPids; // thread pool
+    static int          threadPoolSize;
 };
 
 #endif  /* __h5coro__ */

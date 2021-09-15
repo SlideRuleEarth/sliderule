@@ -26,7 +26,7 @@ If you are a science user interested in processing ICESat-2 data with SlideRule,
    $ make linux
    $ sudo make install
    ```
-   
+
 2. CMake (3.13.0 or greater)
 
 3. For dependencies associated with a specific package, see the package readme at `packages/{package}/{package}.md` for additional installation instructions.
@@ -61,13 +61,7 @@ Options include:
    -DRUNTIMEDIR=[directory]            location for run-time files like plugins, configuration files, and lua scripts
                                        default: /usr/local/etc/sliderule
 
-   -DENABLE_HDF5_LIB=[ON|OFF]          configure H5 package to use the HDF5 library
-                                       default: OFF
-
    -DENABLE_COMPAT=[ON|OFF]            configure build for older tool chains (needed to build on CentOS 7)
-                                       default: OFF
-
-   -DENABLE_H5_REST_VOL=[ON|OFF]       configure H5 package to use REST VOL plugin (requires ENABLE_HDF5_LIB=ON)
                                        default: OFF
 
    -DENABLE_TRACING=[ON|OFF]           compile in trace points
@@ -94,7 +88,7 @@ Options include:
    -DPYTHON_BINDINGS=[ON|OFF]          build python bindings instead of sliderule executable (overrides all other targets)
                                        default: OFF
 
-   -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets except for PYTHON_BINDINGS)     
+   -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets except for PYTHON_BINDINGS)
                                        default: OFF
 ```
 
@@ -105,7 +99,7 @@ Here are some quick steps you can take to setup a basic development environment 
 
 ### 1. Install the base packages needed to build SlideRule
 
-The SlideRule framework is divided up into packages (which are compile-time modules) and plugins (which are run-time modules).  The ___core___ package provides the base functionality of SlideRule and must be compiled.  All other packages and all plugins extend the functionality of SlideRule and are conditionally compiled.  
+The SlideRule framework is divided up into packages (which are compile-time modules) and plugins (which are run-time modules).  The ___core___ package provides the base functionality of SlideRule and must be compiled.  All other packages and all plugins extend the functionality of SlideRule and are conditionally compiled.
 
 Install the basic packages needed to build the core package
 ```bash
@@ -119,12 +113,12 @@ $ sudo apt install curl meld cppcheck valgrind kcachegrind clang clang-tools lco
 
 ### 2. Install a recent version of CMake (>= 3.13.0)
 
-SlideRule uses a relatively recent version of CMake in order to take advantage of some of the later improvements to the tool.  If using Ubuntu 20.04, then the system package is sufficient.  
+SlideRule uses a relatively recent version of CMake in order to take advantage of some of the later improvements to the tool.  If using Ubuntu 20.04, then the system package is sufficient.
 ```bash
 $ sudo apt install cmake
 ```
 
-If using an older version of Ubuntu, or another distribution which has an older version of CMake, then it needs to be manually installed. Navigate to https://cmake.org/download/ and grab the latest stable binary installer for linux and follow the instructions there; or alternatively, use the following commands to get and install cmake version 3.18.1. 
+If using an older version of Ubuntu, or another distribution which has an older version of CMake, then it needs to be manually installed. Navigate to https://cmake.org/download/ and grab the latest stable binary installer for linux and follow the instructions there; or alternatively, use the following commands to get and install cmake version 3.18.1.
 ```bash
 $ cd {Downloads}
 $ wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
@@ -221,8 +215,8 @@ Using a released version of the code, the following Makefile target can be used 
 
 SlideRule is licensed under the 3-clause BSD license found in the LICENSE file at the root of this source tree.
 
-The following SlideRule software components include code sourced from and/or based off of third party software 
-that is distributed under various open source licenses. The appropriate copyright notices are included in the 
+The following SlideRule software components include code sourced from and/or based off of third party software
+that is distributed under various open source licenses. The appropriate copyright notices are included in the
 corresponding source files.
 * `packages/core/LuaEngine.cpp`: partial code sourced from https://www.lua.org/ (MIT license)
 * `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git (MIT license)
