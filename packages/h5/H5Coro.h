@@ -42,6 +42,56 @@
 #include "Asset.h"
 
 /******************************************************************************
+ * HDF5 FUTURE CLASS
+ ******************************************************************************/
+
+class H5Future
+{
+    public:
+
+        /*--------------------------------------------------------------------
+        * Typedefs
+        *--------------------------------------------------------------------*/
+
+        typedef struct {
+            int                         elements;   // number of elements in dataset
+            int                         typesize;   // number of bytes per element
+            int                         datasize;   // total number of bytes in dataset
+            uint8_t*                    data;       // point to allocated data buffer
+            RecordObject::fieldType_t   datatype;   // data type of elements
+            int                         numcols;    // number of columns - anything past the second dimension is grouped together
+            int                         numrows;    // number of rows - includes all dimensions after the first as a single row
+        } info_t;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                H5Future        (void);
+                ~H5Future       (void);
+
+        bool    wait            (void);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        info_t      info;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        bool        valid;      // set to false when error encountered
+        bool        complete;   // set to true when data fully populated
+        Cond        sync;       // signals when data read is complete
+
+        friend class H5FileBuffer;
+};
+
+/******************************************************************************
  * HDF5 FILE BUFFER CLASS
  ******************************************************************************/
 
@@ -60,16 +110,7 @@ class H5FileBuffer
         * Typedefs
         *--------------------------------------------------------------------*/
 
-        typedef struct {
-            int                         elements;   // number of elements in dataset
-            int                         typesize;   // number of bytes per element
-            int                         datasize;   // total number of bytes in dataset
-            uint8_t*                    data;       // point to allocated data buffer
-            /* h5lite specific */
-            RecordObject::fieldType_t   datatype;   // data type of elements
-            int                         numcols;    // number of columns - anything past the second dimension is grouped together
-            int                         numrows;    // number of rows - includes all dimensions after the first as a single row
-        } dataset_info_t;
+        typedef H5Future::info_t info_t;
 
         /*--------------------------------------------------------------------
         * I/O Context (subclass)
@@ -97,7 +138,7 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
 
-                            H5FileBuffer        (dataset_info_t* data_info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
+                            H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
         virtual             ~H5FileBuffer       (void);
 
     protected:
@@ -264,7 +305,7 @@ class H5FileBuffer
 
         void                readByteArray       (uint8_t* data, int64_t size, uint64_t* pos);
         uint64_t            readField           (int64_t size, uint64_t* pos);
-        void                readDataset         (dataset_info_t* _data_info);
+        void                readDataset         (info_t* info);
 
         uint64_t            readSuperblock      (void);
         int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
@@ -336,7 +377,7 @@ class H5FileBuffer
 };
 
 /******************************************************************************
- * HDF5 I/O LITE LIBRARY
+ * HDF5 CLOUD-OPTIMIZED READ-ONLY LIBRARY
  ******************************************************************************/
 
 struct H5Coro
@@ -352,8 +393,7 @@ struct H5Coro
      * Typedefs
      *--------------------------------------------------------------------*/
 
-    typedef H5FileBuffer::dataset_info_t info_t;
-
+    typedef H5Future::info_t info_t;
     typedef H5FileBuffer::io_context_t context_t;
 
     typedef struct {
@@ -365,7 +405,7 @@ struct H5Coro
         long                    startrow;
         long                    numrows;
         context_t*              context;
-        info_t*                 info; // response
+        H5Future*               h5f;
     } read_rqst_t;
 
     /*--------------------------------------------------------------------
@@ -377,8 +417,7 @@ struct H5Coro
     static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
     static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
 
-    static void         readp           (Cond* complete, info_t* info, const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
-    static void         joinread        (Cond* complete, info_t* info);
+    static H5Future*    readp           (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
     static void*        reader_thread   (void* parm);
 
     /*--------------------------------------------------------------------
@@ -386,6 +425,8 @@ struct H5Coro
      *--------------------------------------------------------------------*/
 
     static Publisher*   rqstPub;
+    static Subscriber*  rqstSub;
+    static bool         readerActive;
     static Thread**     readerPids; // thread pool
     static int          threadPoolSize;
 };

@@ -67,6 +67,52 @@
 #define H5_INVALID(var)  (var == (0xFFFFFFFFFFFFFFFFllu >> (64 - (sizeof(var) * 8))))
 
 /******************************************************************************
+ * H5 FUTURE CLASS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+H5Future::H5Future (void)
+{
+    info.elements   = 0;
+    info.typesize   = 0;
+    info.datasize   = 0;
+    info.data       = NULL;
+    info.datatype   = RecordObject::INVALID_FIELD;
+    info.numcols    = 0;
+    info.numrows    = 0;
+
+    complete        = false;
+    valid           = false;
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+H5Future::~H5Future (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * wait
+ *----------------------------------------------------------------------------*/
+bool H5Future::wait (void)
+{
+    sync.lock();
+    {
+        if(!complete)
+        {
+            sync.wait();
+        }
+    }
+    sync.unlock();
+
+    return valid;
+}
+
+
+/******************************************************************************
  * H5 FILE BUFFER CLASS
  ******************************************************************************/
 
@@ -118,15 +164,12 @@ H5FileBuffer::io_context_t::~io_context_t (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
+H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
 {
-    assert(data_info);
+    assert(h5f);
     assert(asset);
     assert(resource);
     assert(dataset);
-
-    /* Clear Data Info */
-    LocalLib::set(data_info, 0, sizeof(dataset_info_t));
 
     /* Initialize Class Data */
     ioDriver                = NULL;
@@ -211,7 +254,7 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
         }
 
         /* Read Dataset */
-        readDataset(data_info);
+        readDataset(info);
 
         /* Add to Meta Repository */
         metaMutex.lock();
@@ -230,9 +273,9 @@ H5FileBuffer::H5FileBuffer (dataset_info_t* data_info, io_context_t* context, co
     catch(const RunTimeException& e)
     {
         /* Clean Up Data Allocations */
-        if(data_info->data) delete [] data_info->data;
-        data_info->data = NULL;
-        data_info->datasize = 0;
+        if(info->data) delete [] info->data;
+        info->data= NULL;
+        info->datasize = 0;
 
         /* Clean Up Class Allocations */
         tearDown();
@@ -535,16 +578,16 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 /*----------------------------------------------------------------------------
  * readDataset
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readDataset (dataset_info_t* data_info)
+void H5FileBuffer::readDataset (info_t* info)
 {
     /* Populate Info Struct */
-    data_info->typesize = metaData.typesize;
-    data_info->elements = 0;
-    data_info->datasize = 0;
-    data_info->data     = NULL;
-    data_info->datatype = RecordObject::INVALID_FIELD;
-    data_info->numrows  = 0;
-    data_info->numcols  = 0;
+    info->typesize = metaData.typesize;
+    info->elements = 0;
+    info->datasize = 0;
+    info->data     = NULL;
+    info->datatype = RecordObject::INVALID_FIELD;
+    info->numrows  = 0;
+    info->numcols  = 0;
 
     /* Sanity Check Data Attributes */
     if(metaData.typesize <= 0)
@@ -589,43 +632,43 @@ void H5FileBuffer::readDataset (dataset_info_t* data_info)
     }
 
     /* Populate Rest of Info Struct */
-    data_info->elements = buffer_size / metaData.typesize;
-    data_info->datasize = buffer_size;
-    data_info->data     = buffer;
-    data_info->numrows  = datasetNumRows;
+    info->elements = buffer_size / metaData.typesize;
+    info->datasize = buffer_size;
+    info->data     = buffer;
+    info->numrows  = datasetNumRows;
 
-    if      (metaData.ndims == 0)   data_info->numcols = 0;
-    else if (metaData.ndims == 1)   data_info->numcols = 1;
-    else if (metaData.ndims >= 2)   data_info->numcols = metaData.dimensions[1];
+    if      (metaData.ndims == 0)   info->numcols = 0;
+    else if (metaData.ndims == 1)   info->numcols = 1;
+    else if (metaData.ndims >= 2)   info->numcols = metaData.dimensions[1];
 
     if(metaData.type == FIXED_POINT_TYPE)
     {
         if(metaData.signedval)
         {
-            if      (metaData.typesize == 1) data_info->datatype = RecordObject::INT8;
-            else if (metaData.typesize == 2) data_info->datatype = RecordObject::INT16;
-            else if (metaData.typesize == 4) data_info->datatype = RecordObject::INT32;
-            else if (metaData.typesize == 8) data_info->datatype = RecordObject::INT64;
+            if      (metaData.typesize == 1) info->datatype = RecordObject::INT8;
+            else if (metaData.typesize == 2) info->datatype = RecordObject::INT16;
+            else if (metaData.typesize == 4) info->datatype = RecordObject::INT32;
+            else if (metaData.typesize == 8) info->datatype = RecordObject::INT64;
             else throw RunTimeException(CRITICAL, "invalid type size for signed integer: %d", metaData.typesize);
         }
         else
         {
-            if      (metaData.typesize == 1) data_info->datatype = RecordObject::UINT8;
-            else if (metaData.typesize == 2) data_info->datatype = RecordObject::UINT16;
-            else if (metaData.typesize == 4) data_info->datatype = RecordObject::UINT32;
-            else if (metaData.typesize == 8) data_info->datatype = RecordObject::UINT64;
+            if      (metaData.typesize == 1) info->datatype = RecordObject::UINT8;
+            else if (metaData.typesize == 2) info->datatype = RecordObject::UINT16;
+            else if (metaData.typesize == 4) info->datatype = RecordObject::UINT32;
+            else if (metaData.typesize == 8) info->datatype = RecordObject::UINT64;
             else throw RunTimeException(CRITICAL, "invalid type size for unsigned integer: %d", metaData.typesize);
         }
     }
     else if(metaData.type == FLOATING_POINT_TYPE)
     {
-        if      (metaData.typesize == 4) data_info->datatype = RecordObject::FLOAT;
-        else if (metaData.typesize == 8) data_info->datatype = RecordObject::DOUBLE;
+        if      (metaData.typesize == 4) info->datatype = RecordObject::FLOAT;
+        else if (metaData.typesize == 8) info->datatype = RecordObject::DOUBLE;
         else throw RunTimeException(CRITICAL, "invalid type size for floating point number: %d", metaData.typesize);
     }
     else if(metaData.type == STRING_TYPE)
     {
-        data_info->datatype = RecordObject::STRING;
+        info->datatype = RecordObject::STRING;
     }
 
     /* Calculate Buffer Start */
@@ -2871,7 +2914,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
     /* Start Trace */
     uint32_t parent_trace_id = EventLib::grabId();
-    uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5lite_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
+    uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
 
     /* Open Resource and Read Dataset */
     H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, true, H5_VERBOSE);
@@ -3094,4 +3137,82 @@ bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, 
 
     /* Return Status */
     return status;
+}
+
+
+/*----------------------------------------------------------------------------
+ * readp
+ *----------------------------------------------------------------------------*/
+H5Future* H5Coro::readp (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL)
+{
+    read_rqst_t rqst = {
+        .asset          = asset,
+        .resource       = StringLib::duplicate(resource),
+        .datasetname    = StringLib::duplicate(datasetname),
+        .valtype        = valtype,
+        .col            = col,
+        .startrow       = startrow,
+        .numrows        = numrows,
+        .context        = context,
+        .h5f            = new H5Future()
+    };
+
+    int post_status = rqstPub->postCopy(&rqst, sizeof(read_rqst_t), IO_CHECK);
+    if(post_status <= 0)
+    {
+        mlog(CRITICAL, "Failed to post read request for %s/%s: %d", resource, datasetname, post_status);
+        delete [] rqst.resource;
+        delete [] rqst.datasetname;
+        delete rqst.h5f;
+        return NULL;
+    }
+    else
+    {
+        return rqst.h5f;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * reader_thread
+ *----------------------------------------------------------------------------*/
+void* H5Coro::reader_thread (void* parm)
+{
+    (void)parm;
+
+    while(readerActive)
+    {
+        read_rqst_t rqst;
+        int recv_status = rqstSub->receiveCopy(&rqst, sizeof(read_rqst_t), SYS_TIMEOUT);
+        if(recv_status > 0)
+        {
+            bool valid;
+            try
+            {
+                H5Coro::info_t info = read(rqst.asset, rqst.resource, rqst.datasetname, rqst.valtype, rqst.col, rqst.startrow, rqst.numrows, rqst.context);
+                valid = true;
+
+// populate request future....
+
+            }
+            catch(const RunTimeException& e)
+            {
+                (void)e;
+                valid = false;
+            }
+
+            /* Signal Complete */
+            rqst.h5f->sync.lock();
+            {
+                rqst.h5f->valid = valid;
+                rqst.h5f->complete = true;
+                rqst.h5f->sync.signal();
+            }
+            rqst.h5f->sync.unlock();
+        }
+        else if(recv_status != MsgQ::STATE_TIMEOUT)
+        {
+            mlog(CRITICAL, "Failed to receive read request: %d", recv_status);
+            break;
+        }
+    }
 }
