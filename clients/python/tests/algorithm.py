@@ -146,7 +146,7 @@ def plotresults(act, exp, ph, region):
     ax3.set_title("Photon Cloud")
     ph_gt1r = ph[ph["pair"] == icesat2.RIGHT_PAIR]
     colormap = np.array(['c','b','g','g','y']) # noise, ground, canopy, top of canopy, unclassified
-    ax3.scatter(ph_gt1r.index.values, ph_gt1r["height"].values, c=colormap[ph_gt1r["info"]], s=1.5)
+    ax3.scatter(ph_gt1r.index.values, ph_gt1r["height"].values, c=colormap[ph_gt1r["atl08_class"]], s=1.5)
     act_gt1r = act_gt1r[(act_gt1r.geometry.y > min(box_lat)) & (act_gt1r.geometry.y < max(box_lat))]
     act_gt1r = act_gt1r[(act_gt1r.geometry.x > min(box_lon)) & (act_gt1r.geometry.x < max(box_lon))]
     ax3.scatter(act_gt1r.index.values, act_gt1r["h_mean"].values, color='r', s=0.5)
