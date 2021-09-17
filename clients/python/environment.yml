@@ -9,6 +9,7 @@ dependencies:
   - ipykernel
   - ipywidgets
   - ipyleaflet
+  - tk
   - matplotlib
   - numpy
   - pandas

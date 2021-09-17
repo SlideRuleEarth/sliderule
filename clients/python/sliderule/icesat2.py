@@ -278,17 +278,22 @@ def __query_servers(max_workers):
 #
 #  __emptyframe
 #
-def __emptyframe():
-    return geopandas.pd.DataFrame()
+def __emptyframe(**kwargs):
+    # set default keyword arguments
+    kwargs['crs'] = "EPSG:4326"
+    return geopandas.GeoDataFrame(crs=kwargs['crs'])
 
 #
 #  __todataframe
 #
-def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", index_key="time"):
+def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", **kwargs):
+    # set default keyword arguments
+    kwargs['index_key'] = "time"
+    kwargs['crs'] = "EPSG:4326"
 
     # Check Empty Columns
     if len(columns) <= 0:
-        return __emptyframe()
+        return __emptyframe(**kwargs)
 
     # Generate Time Column
     delta_time = (columns[delta_time_key]*1e9).astype('timedelta64[ns]')
@@ -304,11 +309,11 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     df = geopandas.pd.DataFrame(columns)
 
     # Build GeoDataFrame (default geometry is crs="EPSG:4326")
-    gdf = geopandas.GeoDataFrame(df, geometry=geometry)
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
 
     # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
     # Can do this during DataFrame creation, but this allows input argument for desired column
-    gdf.set_index(index_key, inplace=True)
+    gdf.set_index(kwargs['index_key'], inplace=True)
 
     # Sort values for reproducible output despite async processing
     gdf.sort_index(inplace=True)
