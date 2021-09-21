@@ -7,9 +7,9 @@ dependencies:
   - geopandas
   - h5py
   - ipykernel
-  - ipywidgets
-  - ipyleaflet
-  - jupyterlab>=3
+  - ipywidgets>=7.6,<8.0
+  - ipyleaflet>=0.14
+  - jupyterlab=3
   - jupyterlab_widgets
   - matplotlib
   - numpy
