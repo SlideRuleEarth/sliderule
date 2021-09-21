@@ -10,11 +10,13 @@ dependencies:
   - ipywidgets
   - ipyleaflet
   - jupyterlab>=3
+  - jupyterlab_widgets
   - matplotlib
   - numpy
   - pandas
   - pip
   - pyproj
+  - pytables
   - python=3.8
   - requests
   - scipy
