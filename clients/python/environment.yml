@@ -3,22 +3,25 @@ name: sliderule
 channels:
   - conda-forge
 dependencies:
-  - python=3.8
-  - setuptools_scm
   - cartopy
+  - geopandas
+  - h5py
   - ipykernel
-  - ipywidgets
-  - ipyleaflet
-  - tk
+  - ipywidgets>=7.6,<8.0
+  - ipyleaflet>=0.14
+  - jupyterlab=3
+  - jupyterlab_widgets
   - matplotlib
   - numpy
   - pandas
-  - geopandas
-  - h5py
   - pip
   - pyproj
-  - scipy
-  - shapely
+  - pytables
+  - python=3.8
   - requests
+  - scipy
+  - setuptools_scm
+  - shapely
+  - tk
   - pip:
       - -e ./
