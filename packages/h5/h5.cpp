@@ -41,6 +41,7 @@
  ******************************************************************************/
 
 #define LUA_H5_LIBNAME  "h5"
+#define H5CORO_THREAD_POOL_SIZE 30
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -74,7 +75,7 @@ extern "C" {
 void inith5 (void)
 {
     /* Initialize Modules */
-    H5Coro::init();
+    H5Coro::init(H5CORO_THREAD_POOL_SIZE);
     H5DatasetDevice::init();
     H5File::init();
 

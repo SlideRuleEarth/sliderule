@@ -111,6 +111,19 @@ bool H5Future::wait (void)
     return valid;
 }
 
+/*----------------------------------------------------------------------------
+ * finish
+ *----------------------------------------------------------------------------*/
+ void H5Future::finish (bool _valid)
+ {
+    sync.lock();
+    {
+        valid = _valid;
+        complete = true;
+        sync.signal();
+    }
+    sync.unlock();
+ }
 
 /******************************************************************************
  * H5 FILE BUFFER CLASS
@@ -166,7 +179,6 @@ H5FileBuffer::io_context_t::~io_context_t (void)
  *----------------------------------------------------------------------------*/
 H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
 {
-    assert(h5f);
     assert(asset);
     assert(resource);
     assert(dataset);
@@ -2891,11 +2903,27 @@ void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* data
  * HDF5 LITE LIBRARY
  ******************************************************************************/
 
+Publisher*   H5Coro::rqstPub;
+Subscriber*  H5Coro::rqstSub;
+bool         H5Coro::readerActive;
+Thread**     H5Coro::readerPids;
+int          H5Coro::threadPoolSize;
+
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void H5Coro::init (void)
+void H5Coro::init (int num_threads)
 {
+    rqstPub = new Publisher(NULL);
+    rqstSub = new Subscriber(*rqstPub);
+
+    readerActive = true;
+    threadPoolSize = num_threads;
+    readerPids = new Thread* [threadPoolSize];
+    for(int t = 0; t < threadPoolSize; t++)
+    {
+        readerPids[t] = new Thread(reader_thread, NULL);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -2903,6 +2931,15 @@ void H5Coro::init (void)
  *----------------------------------------------------------------------------*/
 void H5Coro::deinit (void)
 {
+    readerActive = false;
+    for(int t = 0; t < threadPoolSize; t++)
+    {
+        delete readerPids[t];
+    }
+    delete [] readerPids;
+
+    delete rqstSub;
+    delete rqstPub;
 }
 
 /*----------------------------------------------------------------------------
@@ -3125,7 +3162,7 @@ bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, 
     {
         /* Open File */
         info_t data_info;
-        H5FileBuffer h5file((H5FileBuffer::dataset_info_t*)&data_info, NULL, asset, resource, start_group, 0, 0, true, true);
+        H5FileBuffer h5file(&data_info, NULL, asset, resource, start_group, 0, 0, true, true);
 
         /* Free Data */
         if(data_info.data) delete [] data_info.data;
@@ -3143,7 +3180,7 @@ bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, 
 /*----------------------------------------------------------------------------
  * readp
  *----------------------------------------------------------------------------*/
-H5Future* H5Coro::readp (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL)
+H5Future* H5Coro::readp (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
 {
     read_rqst_t rqst = {
         .asset          = asset,
@@ -3188,11 +3225,8 @@ void* H5Coro::reader_thread (void* parm)
             bool valid;
             try
             {
-                H5Coro::info_t info = read(rqst.asset, rqst.resource, rqst.datasetname, rqst.valtype, rqst.col, rqst.startrow, rqst.numrows, rqst.context);
+                rqst.h5f->info = read(rqst.asset, rqst.resource, rqst.datasetname, rqst.valtype, rqst.col, rqst.startrow, rqst.numrows, rqst.context);
                 valid = true;
-
-// populate request future....
-
             }
             catch(const RunTimeException& e)
             {
@@ -3201,13 +3235,7 @@ void* H5Coro::reader_thread (void* parm)
             }
 
             /* Signal Complete */
-            rqst.h5f->sync.lock();
-            {
-                rqst.h5f->valid = valid;
-                rqst.h5f->complete = true;
-                rqst.h5f->sync.signal();
-            }
-            rqst.h5f->sync.unlock();
+            rqst.h5f->finish(valid);
         }
         else if(recv_status != MsgQ::STATE_TIMEOUT)
         {
@@ -3215,4 +3243,6 @@ void* H5Coro::reader_thread (void* parm)
             break;
         }
     }
+
+    return NULL;
 }

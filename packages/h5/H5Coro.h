@@ -71,6 +71,7 @@ class H5Future
                 ~H5Future       (void);
 
         bool    wait            (void);
+        void    finish          (bool _valid);
 
         /*--------------------------------------------------------------------
          * Data
@@ -87,8 +88,6 @@ class H5Future
         bool        valid;      // set to false when error encountered
         bool        complete;   // set to true when data fully populated
         Cond        sync;       // signals when data read is complete
-
-        friend class H5FileBuffer;
 };
 
 /******************************************************************************
@@ -412,7 +411,7 @@ struct H5Coro
      * Methods
      *--------------------------------------------------------------------*/
 
-    static void         init            (void);
+    static void         init            (int num_threads);
     static void         deinit          (void);
     static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
     static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
