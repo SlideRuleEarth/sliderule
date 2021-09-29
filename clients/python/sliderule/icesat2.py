@@ -51,6 +51,9 @@ SERVER_SCALE_FACTOR = 6
 # create logger
 logger = logging.getLogger(__name__)
 
+# default asset
+DEFAULT_ASSET="nsidc-s3"
+
 # default maximum number of resources to process in one request
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
@@ -572,7 +575,7 @@ def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name
 #
 #  ATL06
 #
-def atl06 (parm, resource, asset="atlas-s3", track=0):
+def atl06 (parm, resource, asset=DEFAULT_ASSET, track=0):
 
     try:
         return __atl06(parm, resource, asset, track)[0]
@@ -583,7 +586,7 @@ def atl06 (parm, resource, asset="atlas-s3", track=0):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, track=0, max_workers=0, version='004', block=True, resources=None):
 
     try:
         if resources == None:
@@ -598,7 +601,7 @@ def atl06p(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=
 #
 #  Subsetted ATL03
 #
-def atl03s (parm, resource, asset="atlas-s3", track=0):
+def atl03s (parm, resource, asset=DEFAULT_ASSET, track=0):
 
     try:
         return __atl03s(parm, resource, asset, track)[0]
@@ -609,7 +612,7 @@ def atl03s (parm, resource, asset="atlas-s3", track=0):
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block=True, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, track=0, max_workers=0, version='004', block=True, resources=None):
 
     try:
         if resources == None:
@@ -623,7 +626,7 @@ def atl03sp(parm, asset="atlas-s3", track=0, max_workers=0, version='004', block
 #
 #  H5
 #
-def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
+def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
 
     # Baseline Request
     rqst = {
@@ -665,7 +668,7 @@ def h5 (dataset, resource, asset="atlas-s3", datatype=sliderule.datatypes["DYNAM
 #
 #  H5P
 #
-def h5p (datasets, resource, asset="atlas-s3"):
+def h5p (datasets, resource, asset=DEFAULT_ASSET):
 
     # Baseline Request
     rqst = {

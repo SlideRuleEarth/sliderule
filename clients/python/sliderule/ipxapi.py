@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 #
 #  ICEPYX ATL06
 #
-def atl06p(ipx_region, parm, asset="atlas-s3"):
+def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
 
     try:
         version = ipx_region.product_version
@@ -58,7 +58,7 @@ def atl06p(ipx_region, parm, asset="atlas-s3"):
 #
 #  ICEPYX ATL03
 #
-def atl03sp(ipx_region, parm, asset="atlas-s3"):
+def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
 
     try:
         version = ipx_region.product_version

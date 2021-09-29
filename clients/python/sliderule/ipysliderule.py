@@ -42,7 +42,7 @@ class widgets:
         # dropdown menu for setting asset
         self.asset = ipywidgets.Dropdown(
             options=['atlas-local', 'atlas-s3', 'nsidc-s3'],
-            value='atlas-s3',
+            value='nsidc-s3',
             description='Asset:',
             disabled=False,
         )
