@@ -148,7 +148,7 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
     {
         status = true;
         size = h5f->info.elements;
-        data = h5f->info.data;
+        data = (T*)h5f->info.data;
         pointer = data;
     }
     else
