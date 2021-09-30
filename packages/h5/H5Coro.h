@@ -63,6 +63,12 @@ class H5Future
             int                         numrows;    // number of rows - includes all dimensions after the first as a single row
         } info_t;
 
+        typedef enum {
+            INVALID     = -1,
+            TIMEOUT     = 0,
+            COMPLETE    = 1
+        } rc_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -70,7 +76,7 @@ class H5Future
                 H5Future        (void);
                 ~H5Future       (void);
 
-        bool    wait            (void);
+        rc_t    wait            (int timeout); // ms
         void    finish          (bool _valid);
 
         /*--------------------------------------------------------------------

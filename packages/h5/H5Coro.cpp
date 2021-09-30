@@ -97,18 +97,24 @@ H5Future::~H5Future (void)
 /*----------------------------------------------------------------------------
  * wait
  *----------------------------------------------------------------------------*/
-bool H5Future::wait (void)
+H5Future::rc_t H5Future::wait (int timeout)
 {
+    rc_t rc;
+
     sync.lock();
     {
         if(!complete)
         {
-            sync.wait();
+            sync.wait(0, timeout);
         }
+
+        if      (!complete) rc = TIMEOUT;
+        else if (!valid)    rc = INVALID;
+        else                rc = COMPLETE;
     }
     sync.unlock();
 
-    return valid;
+    return rc;
 }
 
 /*----------------------------------------------------------------------------
@@ -3230,7 +3236,7 @@ void* H5Coro::reader_thread (void* parm)
             }
             catch(const RunTimeException& e)
             {
-                (void)e;
+                mlog(e.level(), "Failure reading %s://%s/%s: %s", rqst.asset, rqst.resource, rqst.datasetname, e.what());
                 valid = false;
             }
 

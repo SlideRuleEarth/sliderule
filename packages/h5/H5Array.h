@@ -59,13 +59,14 @@ class H5Array
 
         bool    trim        (long offset);
         T&      operator[]  (long index);
-        bool    join        (int timeout);
+        bool    join        (int timeout, bool throw_exception);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         const char*         name;
+        H5Future*           h5f;
         long                size;
         T*                  data;
         T*                  pointer;
@@ -89,11 +90,11 @@ class H5Array
 template <class T>
 H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context, long col, long startrow, long numrows)
 {
-    H5Coro::info_t info = H5Coro::read(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
-    name = StringLib::duplicate(dataset);
-    data = (T*)info.data;
-    size = info.elements;
-    pointer = data;
+    name    = StringLib::duplicate(dataset);
+    h5f     = H5Coro::readp(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
+    size    = 0;
+    data    = NULL;
+    pointer = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -102,8 +103,9 @@ H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* datase
 template <class T>
 H5Array<T>::~H5Array(void)
 {
-    if(name) delete [] name;
     if(data) delete [] data;
+    if(h5f)  delete h5f;
+    if(name) delete [] name;
 }
 
 /*----------------------------------------------------------------------------
@@ -137,10 +139,33 @@ T& H5Array<T>::operator[](long index)
  * []
  *----------------------------------------------------------------------------*/
 template <class T>
-bool H5Array<T>::join(int timeout)
+bool H5Array<T>::join(int timeout, bool throw_exception)
 {
-    /* Currently Unimplemented */
-    return true;
+    bool status;
+
+    H5Future::rc_t rc = h5f->wait(timeout);
+    if(rc == H5Future::COMPLETE)
+    {
+        status = true;
+        size = h5f->info.elements;
+        data = h5f->info.data;
+        pointer = data;
+    }
+    else
+    {
+        status = false;
+        if(throw_exception)
+        {
+            switch(rc)
+            {
+                case H5Future::INVALID: throw RunTimeException(CRITICAL, "H5Future read failure");
+                case H5Future::TIMEOUT: throw RunTimeException(CRITICAL, "H5Future read timeout");
+                default:                throw RunTimeException(CRITICAL, "H5Future unknown error");
+            }
+        }
+    }
+
+    return status;
 }
 
 #endif  /* __h5_array__ */
