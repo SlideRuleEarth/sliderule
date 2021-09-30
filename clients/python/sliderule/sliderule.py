@@ -350,6 +350,9 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
         except requests.Timeout as e:
             logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))
             __errserv(serv)
+        except requests.exceptions.ChunkedEncodingError as e:
+            logger.error("Unexpected termination of response from endpoint {} ... retrying request".format(url))
+            __errserv(serv)
     return rsps
 
 #
