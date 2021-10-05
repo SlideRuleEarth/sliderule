@@ -26,7 +26,7 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key:
-            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles(ci/environment-${{ matrix.CONDA_ENV }}.yml) }}
+            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles(ci/environment*.yml) }}
 
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
