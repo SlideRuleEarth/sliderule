@@ -1,5 +1,5 @@
 # sliderule-python
-
+[![Tests](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://gke.mybinder.org/v2/gh/ICESat2-SlideRule/sliderule-python/main?urlpath=lab)
 [![badge](https://img.shields.io/static/v1.svg?logo=Jupyter&label=PangeoBinderAWS&message=us-west-2&color=orange)](https://aws-uswest2-binder.pangeo.io/v2/gh/ICESat2-SlideRule/sliderule-python/main?urlpath=lab)
 [![DOI](https://zenodo.org/badge/311384982.svg)](https://zenodo.org/badge/latestdoi/311384982)
@@ -35,7 +35,7 @@ python3 setup.py install
 
 ### Dependencies
 
-To use SlideRule's Python client, the only non-standard packages it depends on are `requests` and `numpy`.  But if you intend on running the example notebooks, please refer to the package requirements listed in `environment.yml` for a full list of dependencies needed by those notebooks.
+Basic functionality of sliderule-python depends on `requests` and `numpy`.  But if you intend on running the example notebooks, please refer to the package requirements listed in `environment.yml` for a full list of recommended python libraries.
 
 ## II. Getting Started Using SlideRule
 

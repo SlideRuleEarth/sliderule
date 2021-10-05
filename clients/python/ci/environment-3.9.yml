@@ -1,0 +1,11 @@
+name: sliderule-ci
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - geopandas
+  - numpy
+  - pip
+  - pytest
+  - requests
+  - setuptools_scm
