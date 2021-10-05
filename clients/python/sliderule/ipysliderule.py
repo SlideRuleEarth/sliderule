@@ -27,6 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 import copy
 import datetime
 import ipywidgets
@@ -223,10 +224,13 @@ class widgets:
         self.savebutton.on_click(self.saveas_file)
         self.savelabel.observe(self.set_savefile)
         # create hbox of file selection
-        self.filesaver = ipywidgets.HBox([
-            self.savebutton,
-            self.savelabel
-        ])
+        if os.environ.get("DISPLAY"):
+            self.filesaver = ipywidgets.HBox([
+                self.savebutton,
+                self.savelabel
+            ])
+        else:
+            self.filesaver = copy.copy(self.savelabel)
 
         # button and label for input file selection
         self.loadbutton = ipywidgets.Button(
@@ -240,10 +244,13 @@ class widgets:
         self.loadbutton.on_click(self.select_file)
         self.loadlabel.observe(self.set_loadfile)
         # create hbox of file selection
-        self.fileloader = ipywidgets.HBox([
-            self.loadbutton,
-            self.loadlabel
-        ])
+        if os.environ.get("DISPLAY"):
+            self.fileloader = ipywidgets.HBox([
+                self.loadbutton,
+                self.loadlabel
+            ])
+        else:
+            self.fileloader = copy.copy(self.loadlabel)
 
     def saveas_file(self, b):
         """function for file save
@@ -457,10 +464,13 @@ class leaflet:
             # keep track of cursor position
             self.map.on_interaction(self.handle_interaction)
         # add control for drawing polygons or bounding boxes
-        draw_control = ipyleaflet.DrawControl(polyline={},circlemarker={})
+        draw_control = ipyleaflet.DrawControl(polyline={},circlemarker={},
+            edit=False)
         shapeOptions = {'color':kwargs['color'],'fill_color':kwargs['color']}
-        draw_control.rectangle = dict(shapeOptions=shapeOptions)
-        draw_control.polygon = dict(shapeOptions=shapeOptions)
+        draw_control.rectangle = dict(shapeOptions=shapeOptions,
+            metric=['km','m'])
+        draw_control.polygon = dict(shapeOptions=shapeOptions,
+            allowIntersection=False,showArea=True,metric=['km','m'])
         # create regions
         self.regions = []
         draw_control.on_draw(self.handle_draw)
@@ -469,12 +479,15 @@ class leaflet:
     # handle cursor movements for label
     def handle_interaction(self, **kwargs):
         if (kwargs.get('type') == 'mousemove'):
+            lat,lon = kwargs.get('coordinates')
+            lon = sliderule.io.wrap_longitudes(lon)
             self.cursor.value = u"""Latitude: {d[0]:8.4f}\u00B0,
-                Longitude: {d[1]:8.4f}\u00B0""".format(d=kwargs.get('coordinates'))
+                Longitude: {d[1]:8.4f}\u00B0""".format(d=[lat,lon])
 
     # keep track of rectangles and polygons drawn on map
     def handle_draw(self, obj, action, geo_json):
         lon,lat = np.transpose(geo_json['geometry']['coordinates'])
+        lon = sliderule.io.wrap_longitudes(lon)
         cx,cy = sliderule.io.centroid(lon,lat)
         wind = sliderule.io.winding(lon,lat)
         # set winding to counter-clockwise
@@ -489,3 +502,4 @@ class leaflet:
         elif (action == 'deleted'):
             self.regions.remove(region)
         return self
+
