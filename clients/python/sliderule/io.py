@@ -173,6 +173,12 @@ def winding(x,y):
     wind = np.sum([(x[i+1] - x[i])*(y[i+1] + y[i]) for i in range(npts - 1)])
     return wind
 
+# fix longitudes to be -180:180
+def wrap_longitudes(lon):
+    phi = np.arctan2(np.sin(lon*np.pi/180.0),np.cos(lon*np.pi/180.0))
+    # convert phi from radians to degrees
+    return phi*180.0/np.pi
+
 # convert coordinates to a sliderule region
 def to_region(lon,lat):
     region = [{'lon':ln,'lat':lt} for ln,lt in np.c_[lon,lat]]
