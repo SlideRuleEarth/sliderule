@@ -1,7 +1,7 @@
 """Tests for sliderule-python icesat2 api."""
 
 import pytest
-from requests.exceptions import ConnectTimeout
+from requests.exceptions import ConnectTimeout, ConnectionError
 import sliderule
 from sliderule import icesat2
 from pathlib import Path
@@ -40,7 +40,7 @@ class TestLocal:
 @pytest.mark.network
 class TestRemote:
     def test_init_badurl(self):
-        with pytest.raises(ConnectTimeout):
+        with pytest.raises( (ConnectTimeout, ConnectionError) ):
             icesat2.init('incorrect.org')
 
     def test_get_version(self):

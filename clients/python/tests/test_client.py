@@ -1,7 +1,7 @@
 """Tests for sliderule-python."""
 
 import pytest
-from requests.exceptions import ConnectTimeout
+from requests.exceptions import ConnectTimeout, ConnectionError
 import sliderule
 
 class TestLocal:
@@ -20,6 +20,6 @@ class TestLocal:
 @pytest.mark.network
 class TestRemote:
     def test_init_badurl(self):
-        with pytest.raises(ConnectTimeout):
+        with pytest.raises( (ConnectTimeout, ConnectionError) ):
             sliderule.set_rqst_timeout((1, 60))
             sliderule.set_url('incorrect.org')
