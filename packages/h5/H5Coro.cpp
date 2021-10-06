@@ -93,6 +93,7 @@ H5Future::H5Future (void)
 H5Future::~H5Future (void)
 {
     wait(IO_PEND);
+    if(info.data) delete [] info.data;
 }
 
 /*----------------------------------------------------------------------------

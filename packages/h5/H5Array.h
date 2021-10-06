@@ -103,7 +103,6 @@ H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* datase
 template <class T>
 H5Array<T>::~H5Array(void)
 {
-    if(data) delete [] data;
     if(h5f)  delete h5f;
     if(name) delete [] name;
 }
