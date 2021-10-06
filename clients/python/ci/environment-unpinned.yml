@@ -2,9 +2,6 @@ name: sliderule-ci
 channels:
   - conda-forge
 dependencies:
-  - python=3.8
-  - geopandas-base
+  - python
   - pip
   - pytest
-  - requests
-  - setuptools_scm
