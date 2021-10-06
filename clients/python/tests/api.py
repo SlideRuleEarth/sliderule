@@ -12,7 +12,7 @@ from sliderule import datatypes
 ###############################################################################
 
 # set resource
-h5file = "ATL03_20181019065445_03150111_003_01.h5"
+h5file = "ATL03_20181019065445_03150111_004_01.h5"
 
 # configure logging
 logging.basicConfig(level=logging.INFO)
@@ -69,15 +69,12 @@ def test_h5 (atl03_asset):
 #
 def test_h5_types (atl03_asset, atl06_asset):
 
-    heights_64 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181019065445_03150111_003_01.h5", atl06_asset)
-    expected_64 = [45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465, 45.82339277, 45.85106103, 45.81983169, 45.81150041, 45.83502945]
-
-    heights_32 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181110092841_06530106_003_01.h5", atl06_asset)
-    expected_32 = [350.76831055, 352.20120239, 352.45202637, 353.35467529, 353.70120239, 352.09786987, 349.70581055, 346.0881958, 342.42398071, 341.35415649]
-
-    bckgrd_32nf = icesat2.h5("/gt1l/bckgrd_atlas/bckgrd_rate", "ATL03_20181016104402_02720106_003_01.h5", atl03_asset)
-    expected_32nf = [29311.68359375, 6385.93652344, 6380.84130859, 28678.95117188, 55349.19921875, 38201.08203125, 19083.43554688, 38045.66796875, 34942.43359375, 38096.26953125]
-
+    heights_64 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181019065445_03150111_004_01.h5", atl06_asset)
+    expected_64 = [45.95665, 45.999374, 46.017857, 46.015575, 46.067562, 46.099796, 46.14037, 46.105526, 46.096024, 46.12297]
+    heights_32 = icesat2.h5("/gt1l/land_ice_segments/h_li", "ATL06_20181110092841_06530106_004_01.h5", atl06_asset)
+    expected_32 = [350.46988, 352.08688, 352.43243, 353.19345, 353.69543, 352.25998, 350.15366, 346.37888, 342.47903, 341.51]
+    bckgrd_32nf = icesat2.h5("/gt1l/bckgrd_atlas/bckgrd_rate", "ATL03_20181016104402_02720106_004_01.h5", atl03_asset)
+    expected_32nf = [29311.684, 6385.937, 6380.8413, 28678.951, 55349.168, 38201.082, 19083.434, 38045.67, 34942.434, 38096.266]
     cmp_error = False
     last_fail = (0,0,0,0)
     for c in zip(heights_64, expected_64, heights_32, expected_32, bckgrd_32nf, expected_32nf):
@@ -96,7 +93,7 @@ def test_h5_types (atl03_asset, atl06_asset):
 def test_variable_length (atl03_asset):
 
     v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", h5file, atl03_asset)
-    if v[0] == 245 and v[1] == 263 and v[2] == 273:
+    if v[0] == 258 and v[1] == 256 and v[2] == 273:
         logging.info("Passed variable length test")
     else:
         logging.error("Failed variable length test: ", v)
@@ -115,14 +112,14 @@ def test_h5p (atl06_asset):
         {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5}
     ]
 
-    rsps = icesat2.h5p(datasets, "ATL06_20181019065445_03150111_003_01.h5", atl06_asset)
+    rsps = icesat2.h5p(datasets, "ATL06_20181019065445_03150111_004_01.h5", atl06_asset)
 
-    expected = {'/gt1l/land_ice_segments/h_li': [45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465],
-                '/gt1r/land_ice_segments/h_li': [45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948],
-                '/gt2r/land_ice_segments/h_li': [45.3146427 , 45.27640582, 45.23608027, 45.21131015, 45.15692304],
-                '/gt2l/land_ice_segments/h_li': [45.35118977, 45.33535027, 45.27195617, 45.21816889, 45.18534204],
-                '/gt3r/land_ice_segments/h_li': [45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806],
-                '/gt3l/land_ice_segments/h_li': [45.29602321, 45.34764226, 45.31430979, 45.31471701, 45.30034622]}
+    expected = {'/gt1l/land_ice_segments/h_li': [45.95665, 45.999374, 46.017857, 46.015575, 46.067562],
+                '/gt1r/land_ice_segments/h_li': [45.980865, 46.02602, 46.02262, 46.03137, 46.073578],
+                '/gt2l/land_ice_segments/h_li': [45.611526, 45.588196, 45.53242, 45.48105, 45.443752],
+                '/gt2r/land_ice_segments/h_li': [45.547, 45.515495, 45.470577, 45.468964, 45.406998],
+                '/gt3l/land_ice_segments/h_li': [45.560867, 45.611183, 45.58064, 45.579746, 45.563858],
+                '/gt3r/land_ice_segments/h_li': [45.39587, 45.43603, 45.412586, 45.40014, 45.41833]}
 
     cmp_error = False
     last_fail = ""
@@ -316,8 +313,8 @@ if __name__ == '__main__':
     # Override server URL from command line
     if len(sys.argv) > 1:
         url = sys.argv[1]
-        atl03_asset = "atlas-s3"
-        atl06_asset = "atlas-s3"
+        atl03_asset = "nsidc-s3"
+        atl06_asset = "nsidc-s3"
 
     # Override asset from command line
     if len(sys.argv) > 2:
