@@ -1,15 +1,4 @@
 requests
-setuptools_scm
 numpy
-ipykernel
-ipywidgets
-ipyleaflet
-tk
-matplotlib
-cartopy
-pandas
 geopandas
-h5py
-pyproj
-scipy
 shapely
