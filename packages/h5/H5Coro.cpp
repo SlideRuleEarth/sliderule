@@ -92,6 +92,7 @@ H5Future::H5Future (void)
  *----------------------------------------------------------------------------*/
 H5Future::~H5Future (void)
 {
+    wait(IO_PEND);
 }
 
 /*----------------------------------------------------------------------------
@@ -206,6 +207,14 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
     dataChunkBufferSize     = 0;
     highestDataLevel        = 0;
     dataSizeHint            = 0;
+
+    /* Initialize Info */
+    info->elements = 0;
+    info->datasize = 0;
+    info->data     = NULL;
+    info->datatype = RecordObject::INVALID_FIELD;
+    info->numrows  = 0;
+    info->numcols  = 0;
 
     /* Process File */
     try
@@ -598,14 +607,8 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::readDataset (info_t* info)
 {
-    /* Populate Info Struct */
+    /* Populate Type Size */
     info->typesize = metaData.typesize;
-    info->elements = 0;
-    info->datasize = 0;
-    info->data     = NULL;
-    info->datatype = RecordObject::INVALID_FIELD;
-    info->numrows  = 0;
-    info->numcols  = 0;
 
     /* Sanity Check Data Attributes */
     if(metaData.typesize <= 0)
@@ -3236,9 +3239,13 @@ void* H5Coro::reader_thread (void* parm)
             }
             catch(const RunTimeException& e)
             {
-                mlog(e.level(), "Failure reading %s://%s/%s: %s", rqst.asset, rqst.resource, rqst.datasetname, e.what());
+                mlog(e.level(), "Failure reading %s://%s/%s: %s", rqst.asset->getName(), rqst.resource, rqst.datasetname, e.what());
                 valid = false;
             }
+
+            /* Free Request */
+            delete [] rqst.resource;
+            delete [] rqst.datasetname;
 
             /* Signal Complete */
             rqst.h5f->finish(valid);
