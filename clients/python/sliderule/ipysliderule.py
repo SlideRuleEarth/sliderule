@@ -28,15 +28,33 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import sys
 import copy
 import datetime
-import ipywidgets
-import ipyleaflet
 import numpy as np
 from traitlets.utils.bunch import Bunch
-import tkinter.filedialog
-import IPython.display
 import sliderule.io
+
+# imports with warnings if not present
+try:
+    import ipywidgets
+except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
+try:
+    import tkinter.filedialog
+except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
+try:
+    import IPython.display
+except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
+
+# imports that raise error if not present
+try:
+    import ipyleaflet
+except ModuleNotFoundError as e:
+    sys.stderr.write("Error: missing required packages. (%s)\n" % (str(e)))
+    raise
 
 class widgets:
     def __init__(self):

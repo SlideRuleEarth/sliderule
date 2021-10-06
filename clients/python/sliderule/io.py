@@ -27,12 +27,21 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
 import warnings
 import datetime
-import scipy.io
 import geopandas
-import h5py
 import numpy as np
+
+# imports with warnings if not present
+try:
+    import scipy.io
+except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
+try:
+    import h5py
+except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
 
 # attributes for ATL06-SR variables
 def get_attributes(**kwargs):
