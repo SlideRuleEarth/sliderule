@@ -36,6 +36,9 @@ import numpy as np
 # imports with warnings if not present
 try:
     import scipy.io
+except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
+try:
     import h5py
 except ModuleNotFoundError as e:
     sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
