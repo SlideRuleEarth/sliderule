@@ -2925,14 +2925,24 @@ int          H5Coro::threadPoolSize;
 void H5Coro::init (int num_threads)
 {
     rqstPub = new Publisher(NULL);
-    rqstSub = new Subscriber(*rqstPub);
 
-    readerActive = true;
-    threadPoolSize = num_threads;
-    readerPids = new Thread* [threadPoolSize];
-    for(int t = 0; t < threadPoolSize; t++)
+    if(num_threads > 0)
     {
-        readerPids[t] = new Thread(reader_thread, NULL);
+        readerActive = true;
+        rqstSub = new Subscriber(*rqstPub);
+        threadPoolSize = num_threads;
+        readerPids = new Thread* [threadPoolSize];
+        for(int t = 0; t < threadPoolSize; t++)
+        {
+            readerPids[t] = new Thread(reader_thread, NULL);
+        }
+    }
+    else
+    {
+        readerActive = false;
+        rqstSub = NULL;
+        threadPoolSize = 0;
+        readerPids = NULL;
     }
 }
 
@@ -2941,14 +2951,17 @@ void H5Coro::init (int num_threads)
  *----------------------------------------------------------------------------*/
 void H5Coro::deinit (void)
 {
-    readerActive = false;
-    for(int t = 0; t < threadPoolSize; t++)
+    if(readerActive)
     {
-        delete readerPids[t];
+        readerActive = false;
+        for(int t = 0; t < threadPoolSize; t++)
+        {
+            delete readerPids[t];
+        }
+        delete [] readerPids;
+        delete rqstSub;
     }
-    delete [] readerPids;
 
-    delete rqstSub;
     delete rqstPub;
 }
 

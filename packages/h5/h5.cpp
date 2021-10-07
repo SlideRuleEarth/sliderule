@@ -41,7 +41,10 @@
  ******************************************************************************/
 
 #define LUA_H5_LIBNAME  "h5"
-#define H5CORO_THREAD_POOL_SIZE 30
+
+#ifndef H5CORO_THREAD_POOL_SIZE
+#define H5CORO_THREAD_POOL_SIZE 128
+#endif
 
 /******************************************************************************
  * LOCAL FUNCTIONS
