@@ -244,7 +244,7 @@ def __query_resources(parm, version):
     if "t0" in parm:
         time_start = parm["t0"]
     if "t1" in parm:
-        time_start = parm["t1"]
+        time_end = parm["t1"]
 
     # Make CMR Request #
     resources = cmr(polygon, time_start, time_end, version)
