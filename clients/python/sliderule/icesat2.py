@@ -284,7 +284,7 @@ def __query_servers(max_workers):
 def __emptyframe(**kwargs):
     # set default keyword arguments
     kwargs['crs'] = "EPSG:4326"
-    return geopandas.GeoDataFrame(crs=kwargs['crs'])
+    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
 
 #
 #  __todataframe
