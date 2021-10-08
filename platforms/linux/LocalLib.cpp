@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -59,6 +59,7 @@
 LocalLib::print_func_t LocalLib::print_func = NULL;
 int LocalLib::io_timeout = IO_DEFAULT_TIMEOUT;
 int LocalLib::io_maxsize = IO_DEFAULT_MAXSIZE;
+fileptr_t LocalLib::memfp = NULL;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -69,6 +70,7 @@ int LocalLib::io_maxsize = IO_DEFAULT_MAXSIZE;
  *----------------------------------------------------------------------------*/
 void LocalLib::init()
 {
+    memfp = fopen("/proc/meminfo", "r");
 }
 
 /*----------------------------------------------------------------------------
@@ -76,6 +78,7 @@ void LocalLib::init()
  *----------------------------------------------------------------------------*/
 void LocalLib::deinit(void)
 {
+    if(memfp) fclose(memfp);
 }
 
 /*----------------------------------------------------------------------------
@@ -255,6 +258,81 @@ double LocalLib::swaplf(double val)
 int LocalLib::nproc (void)
 {
     return get_nprocs();
+}
+
+/*----------------------------------------------------------------------------
+ * memusage
+ *----------------------------------------------------------------------------*/
+double LocalLib::memusage (void)
+{
+    const int BUFSIZE = 128;
+    const char* mem_total_ptr = NULL;
+    const char* mem_available_ptr = NULL;
+    int i = 0;
+    char buffer[BUFSIZE];
+    char *endptr;
+
+    if(memfp)
+    {
+        fseek(memfp, 0, SEEK_SET);
+        int bytes_read = fread(buffer, 1, BUFSIZE - 1, memfp);
+        if(bytes_read > 0)
+        {
+            buffer[bytes_read] = '\0';
+
+            /* Find MemTotal */
+            i = 9; // start after colon
+            while(buffer[i] == ' ') i++; // moves one past space
+            mem_total_ptr = &buffer[i]; // mark start
+            while(buffer[i] != ' ') i++; // stays at first space
+            buffer[i] = '\0'; // mark end
+
+            /* Find MemAvailable */
+            i += 11; // move to colon after MemFree
+            while(buffer[i++] != 'B'); // moves one past MemFree line
+            i += 12;
+            while(buffer[i++] != ':'); // moves one past colon
+            while(buffer[i] == ' ') i++; // moves one past space
+            mem_available_ptr = &buffer[i]; // mark start
+            while(buffer[i] != ' ') i++; // stays at first space
+            buffer[i] = '\0'; // mark end
+
+            /* Convert MemTotal */
+            errno = 0;
+            long mem_total = strtol(mem_total_ptr, &endptr, 10);
+            if( (endptr == mem_total_ptr) ||
+                (errno == ERANGE && (mem_total == LONG_MAX || mem_total == LONG_MIN)) )
+            {
+                return 0.0;
+            }
+
+            /* Convert MemAvailable */
+            errno = 0;
+            long mem_available = strtol(mem_available_ptr, &endptr, 10);
+            if( (endptr == mem_available_ptr) ||
+                (errno == ERANGE && (mem_available == LONG_MAX || mem_available == LONG_MIN)) )
+            {
+                return 0.0;
+            }
+
+            /* Check Values */
+            if(mem_total == 0 || mem_available > mem_total)
+            {
+                return 0.0;
+            }
+
+            /* Calculate Memory Usage */
+            return 1.0 - ((double)mem_available / (double)mem_total);
+        }
+        else
+        {
+            return 0.0;
+        }
+    }
+    else
+    {
+        return 0.0;
+    }
 }
 
 /*----------------------------------------------------------------------------

@@ -62,6 +62,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"healthy",     LuaLibrarySys::lsys_healthy},
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
     {"cwd",         LuaLibrarySys::lsys_cwd},
+    {"memu",        LuaLibrarySys::lsys_memu},
     {"lsdev",       DeviceObject::luaList},
     {NULL,          NULL}
 };
@@ -472,4 +473,14 @@ int LuaLibrarySys::lsys_cwd (lua_State* L)
     {
         return 0;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_memu - memory usage
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_memu (lua_State* L)
+{
+    double m = LocalLib::memusage();
+    lua_pushnumber(L, m);
+    return 1;
 }
