@@ -46,6 +46,9 @@ const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
+const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
+
 SafeString LuaEndpoint::ServerHeader("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
@@ -58,14 +61,18 @@ const char* LuaEndpoint::HITS_METRIC = "hits";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - endpoint()
+ * luaCreate - endpoint([<normal memory threshold>], [<stream memory threshold>])
  *----------------------------------------------------------------------------*/
 int LuaEndpoint::luaCreate (lua_State* L)
 {
     try
     {
+        /* Get Parameters */
+        double normal_mem_thresh = getLuaFloat(L, 1, true, DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD);
+        double stream_mem_thresh = getLuaFloat(L, 2, true, DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD);
+
         /* Create Lua Endpoint */
-        return createLuaObject(L, new LuaEndpoint(L));
+        return createLuaObject(L, new LuaEndpoint(L, normal_mem_thresh, stream_mem_thresh));
     }
     catch(const RunTimeException& e)
     {
@@ -81,9 +88,11 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::LuaEndpoint(lua_State* L):
+LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh):
     EndpointObject(L, LuaMetaName, LuaMetaTable),
-    metricIds(INITIAL_NUM_ENDPOINTS)
+    metricIds(INITIAL_NUM_ENDPOINTS),
+    normalRequestMemoryThreshold(normal_mem_thresh),
+    streamRequestMemoryThreshold(stream_mem_thresh)
 {
 }
 
@@ -124,7 +133,7 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Dispatch Handle Request */
     switch(request->verb)
     {
-        case GET:   lua_endpoint->returnResponse(script_pathname, request->body, rspq, trace_id); break;
+        case GET:   lua_endpoint->normalResponse(script_pathname, request->body, rspq, trace_id); break;
         case POST:  lua_endpoint->streamResponse(script_pathname, request->body, rspq, trace_id); break;
         default:    break;
     }
@@ -154,36 +163,51 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (request_t* request)
 }
 
 /*----------------------------------------------------------------------------
- * returnResponse
+ * normalResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
+void LuaEndpoint::normalResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
+    double mem;
 
-    /* Launch Engine */
-    LuaEngine* engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
-    bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
+    LuaEngine* engine = NULL;
 
-    /* Send Response */
-    if(status)
+    /* Check Memory */
+    if( (normalRequestMemoryThreshold >= 1.0) ||
+        ((mem = LocalLib::memusage()) < normalRequestMemoryThreshold) )
     {
-        const char* result = engine->getResult();
-        if(result)
+        /* Launch Engine */
+        engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
+        bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
+
+        /* Send Response */
+        if(status)
         {
-            int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
-            int header_length = buildheader(header, OK, "text/plain", result_length, NULL, ServerHeader.getString());
-            rspq->postCopy(header, header_length);
-            rspq->postCopy(result, result_length);
+            const char* result = engine->getResult();
+            if(result)
+            {
+                int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
+                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, ServerHeader.getString());
+                rspq->postCopy(header, header_length);
+                rspq->postCopy(result, result_length);
+            }
+            else
+            {
+                int header_length = buildheader(header, Not_Found);
+                rspq->postCopy(header, header_length);
+            }
         }
         else
         {
-            int header_length = buildheader(header, Not_Found);
+            mlog(ERROR, "Failed to execute request: %s", scriptpath);
+            int header_length = buildheader(header, Internal_Server_Error);
             rspq->postCopy(header, header_length);
         }
     }
     else
     {
-        int header_length = buildheader(header, Request_Timeout);
+        mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
+        int header_length = buildheader(header, Service_Unavailable);
         rspq->postCopy(header, header_length);
     }
 
@@ -191,7 +215,7 @@ void LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publ
     rspq->postCopy("", 0);
 
     /* Clean Up */
-    delete engine;
+    if(engine) delete engine;
 }
 
 /*----------------------------------------------------------------------------
@@ -200,27 +224,41 @@ void LuaEndpoint::returnResponse (const char* scriptpath, const char* body, Publ
 void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
+    double mem;
 
-    /* Send Header */
-    int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", ServerHeader.getString());
-    rspq->postCopy(header, header_length);
+    LuaEngine* engine = NULL;
 
-    /* Create Engine */
-    LuaEngine* engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
+    /* Check Memory */
+    if( (streamRequestMemoryThreshold >= 1.0) ||
+        ((mem = LocalLib::memusage()) < streamRequestMemoryThreshold) )
+    {
+        /* Send Header */
+        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", ServerHeader.getString());
+        rspq->postCopy(header, header_length);
 
-    /* Supply and Setup Request Queue */
-    engine->setString(RESPONSE_QUEUE, rspq->getName());
+        /* Create Engine */
+        engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
 
-    /* Execute Engine
-     *  The call to execute the script blocks on completion of the script. The lua state context
-     *  is locked and cannot be accessed until the script completes */
-    engine->executeEngine(IO_PEND);
+        /* Supply and Setup Request Queue */
+        engine->setString(RESPONSE_QUEUE, rspq->getName());
+
+        /* Execute Engine
+        *  The call to execute the script blocks on completion of the script. The lua state context
+        *  is locked and cannot be accessed until the script completes */
+        engine->executeEngine(IO_PEND);
+    }
+    else
+    {
+        mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
+        int header_length = buildheader(header, Service_Unavailable);
+        rspq->postCopy(header, header_length);
+    }
 
     /* End Response */
     rspq->postCopy("", 0);
 
     /* Clean Up */
-    delete engine;
+    if(engine) delete engine;
 }
 
 /*----------------------------------------------------------------------------

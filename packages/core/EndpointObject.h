@@ -79,7 +79,9 @@ class EndpointObject: public LuaObject
             Not_Found = 404,
             Method_Not_Allowed = 405,
             Request_Timeout = 408,
-            Method_Not_Implemented = 501
+            Internal_Server_Error = 500,
+            Method_Not_Implemented = 501,
+            Service_Unavailable = 503
         } code_t;
 
         typedef enum {
