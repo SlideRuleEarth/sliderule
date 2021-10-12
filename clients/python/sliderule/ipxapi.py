@@ -45,6 +45,9 @@ logger = logging.getLogger(__name__)
 #  ICEPYX ATL06
 #
 def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
+    """
+    create a sliderule atl06p query from an icepyx region
+    """
 
     try:
         version = ipx_region.product_version
@@ -52,6 +55,9 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     except:
         logger.critical("must supply an icepyx query as region")
         return icesat2.__emptyframe()
+    # try to get the subsetting region
+    if ipx_region.extent_type in ('bbox','polygon'):
+        parm.update('poly', to_region(ipx_region))
 
     return icesat2.atl06p(parm, asset, version=version, resources=resources)
 
@@ -59,6 +65,9 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
 #  ICEPYX ATL03
 #
 def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
+    """
+    create a sliderule atl03sp query from an icepyx region
+    """
 
     try:
         version = ipx_region.product_version
@@ -66,5 +75,23 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     except:
         logger.critical("must supply an icepyx query as region")
         return icesat2.__emptyframe()
+    # try to get the subsetting region
+    if ipx_region.extent_type in ('bbox','polygon'):
+        parm.update('poly', to_region(ipx_region))
 
     return icesat2.atl03sp(parm, asset, version=version, resources=resources)
+
+def to_region(ipx_region):
+    """
+    extract subsetting extents from an icepyx region
+    """
+    if (ipx_region.extent_type == 'bbox'):
+        bbox = ipx_region.spatial_extent[1]
+        poly = [dict(lon=bbox[1], lat=bbox[2]),
+            dict(lon=bbox[3], lat=bbox[2]),
+            dict(lon=bbox[3], lat=bbox[4]),
+            dict(lon=bbox[1], lat=bbox[4]),
+            dict(lon=bbox[1], lat=bbox[2])]
+    elif (ipx_region.extent_type == 'polygon'):
+        poly = [dict(lon=ln,lat=lt) for ln,lt in zip(*ipx_region.spatial_extent[1])]
+    return poly
