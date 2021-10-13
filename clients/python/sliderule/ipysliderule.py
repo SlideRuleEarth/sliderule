@@ -446,19 +446,23 @@ class leaflet:
         kwargs.setdefault('zoom',False)
         kwargs.setdefault('scale',True)
         kwargs.setdefault('cursor',True)
+        kwargs.setdefault('center',(39,-108))
         kwargs.setdefault('color','green')
         # create basemap in projection
         if (projection == 'Global'):
-            self.map = ipyleaflet.Map(center=(39,-108), zoom=9, max_zoom=15,
+            self.map = ipyleaflet.Map(center=kwargs['center'],
+                zoom=9, max_zoom=15,
                 basemap=ipyleaflet.basemaps.Esri.WorldTopoMap)
             self.map.add_layer(basemaps.GLIMS.glaciers)
         elif (projection == 'North'):
-            self.map = ipyleaflet.Map(center=(90,0), zoom=5, max_zoom=24,
+            self.map = ipyleaflet.Map(center=(90,0),
+                zoom=5, max_zoom=24,
                 basemap=basemaps.Esri.ArcticOceanBase,
                 crs=projections.EPSG5936)
             self.map.add_layer(basemaps.Esri.ArcticOceanReference)
         elif (projection == 'South'):
-            self.map = ipyleaflet.Map(center=(-90,0), zoom=2, max_zoom=9,
+            self.map = ipyleaflet.Map(center=(-90,0),
+                zoom=2, max_zoom=9,
                 basemap=basemaps.Esri.AntarcticBasemap,
                 crs=projections.EPSG3031)
         # add control for zoom

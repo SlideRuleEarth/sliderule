@@ -28,6 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import itertools
+import copy
 import json
 import ssl
 import urllib.request
@@ -166,13 +167,31 @@ def __cmr_filter_urls(search_results):
 
     return urls
 
-def __cmr_search(short_name, version, time_start, time_end, polygon=None):
+def __cmr_granule_polygons(search_results):
+    """Get the polygons for CMR returned granules"""
+    if 'feed' not in search_results or 'entry' not in search_results['feed']:
+        return []
+    granule_polygons = []
+    # for each CMR entry
+    for e in search_results['feed']['entry']:
+        # for each polygon
+        for polys in e['polygons']:
+            coords = [float(i) for i in polys[0].split()]
+            region = [{'lon':x,'lat':y} for y,x in zip(coords[::2],coords[1::2])]
+            granule_polygons.append(region)
+    # return granule polygons in sliderule region format
+    return granule_polygons
+
+def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     """Perform a scrolling CMR query for files matching input criteria."""
+    kwargs.setdefault('polygon',None)
+    kwargs.setdefault('return_polygons',False)
+    # build params
     params = '&short_name={0}'.format(short_name)
     params += __build_version_query_params(version)
     params += '&temporal[]={0},{1}'.format(time_start, time_end)
-    if polygon:
-        params += '&polygon={0}'.format(polygon)
+    if kwargs['polygon']:
+        params += '&polygon={0}'.format(kwargs['polygon'])
     cmr_query_url = CMR_FILE_URL + params
     logger.debug('cmr request={0}\n'.format(cmr_query_url))
 
@@ -182,6 +201,7 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
     ctx.verify_mode = ssl.CERT_NONE
 
     urls = []
+    polys = [] if kwargs['return_polygons'] else None
     while True:
         req = urllib.request.Request(cmr_query_url)
         if cmr_scroll_id:
@@ -198,8 +218,15 @@ def __cmr_search(short_name, version, time_start, time_end, polygon=None):
         if not url_scroll_results:
             break
         urls += url_scroll_results
+        # append granule polygons
+        if kwargs['return_polygons']:
+            polygon_results = __cmr_granule_polygons(search_page)
+            polys.extend(polygon_results)
 
-    return urls
+    if kwargs['return_polygons']:
+        return (urls,polys)
+    else:
+        return urls
 
 ###############################################################################
 # SLIDERULE UTILITIES
@@ -226,28 +253,33 @@ def __get_values(data, dtype, size):
 #
 #  __query_resources
 #
-def __query_resources(parm, version):
+def __query_resources(parm, version, return_polygons=False):
 
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
         logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
         return []
 
+    # submission arguments for cmr
+    kwargs = {}
+    kwargs['version'] = version
+    kwargs['return_polygons'] = return_polygons
     # Pull Out Polygon #
-    polygon = None
     if "poly" in parm:
-        polygon = parm["poly"]
+        kwargs['polygon'] = parm["poly"]
 
     # Pull Out Time Period #
-    time_start = None
-    time_end = None
     if "t0" in parm:
-        time_start = parm["t0"]
+        kwargs['time_start'] = parm["t0"]
     if "t1" in parm:
-        time_end = parm["t1"]
+        kwargs['time_end'] = parm["t1"]
 
     # Make CMR Request #
-    resources = cmr(polygon, time_start, time_end, version)
+    if return_polygons:
+        resources,polygons = cmr(**kwargs)
+    else:
+        resources = cmr(**kwargs)
+    # check that resources are under limit
     if(len(resources) > max_requested_resources):
         logger.warning("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
         logger.warning("Consider using icesat2.set_max_resources to set a higher limit")
@@ -256,7 +288,10 @@ def __query_resources(parm, version):
         logger.info("Identified %d resources to process", len(resources))
 
     # Return Resources #
-    return resources
+    if return_polygons:
+        return (resources,polygons)
+    else:
+        return resources
 
 #
 #  __query_servers
@@ -510,7 +545,7 @@ def set_max_resources (max_resources):
 #
 #  COMMON METADATA REPOSITORY
 #
-def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name='ATL03'):
+def cmr(**kwargs):
     """
     polygon: list of longitude,latitude in counter-clockwise order with first and last point matching;
              - e.g. [ {"lon": -115.43, "lat": 37.40},
@@ -521,16 +556,22 @@ def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name
     time_*: UTC time (i.e. "zulu" or "gmt");
             expressed in the following format: <year>-<month>-<day>T<hour>:<minute>:<second>Z
     """
+    # set default keyword arguments
+    kwargs.setdefault('polygon',None)
+    # set default start time to start of ICESat-2 mission
+    kwargs.setdefault('time_start','2018-10-13T00:00:00Z')
+    # set default stop time to current time
+    kwargs.setdefault('time_end',datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
+    # set default version and product short name
+    kwargs.setdefault('version','004')
+    kwargs.setdefault('short_name','ATL03')
+    # return polygons for each requested granule
+    kwargs.setdefault('return_polygons',False)
+    # copy polygon
+    polygon = copy.copy(kwargs['polygon'])
 
     url_list = []
-
-    # set default start time to start of ICESat-2 mission
-    if not time_start:
-        time_start = '2018-10-13T00:00:00Z'
-    # set default stop time to current time
-    if not time_end:
-        now = datetime.datetime.utcnow()
-        time_end = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    poly_list = []
 
     # issue CMR request
     for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
@@ -547,7 +588,19 @@ def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name
 
         # call into NSIDC routines to make CMR request
         try:
-            url_list = __cmr_search(short_name, version, time_start, time_end, polystr)
+            if kwargs['return_polygons']:
+                url_list,poly_list = __cmr_search(kwargs['short_name'],
+                    kwargs['version'],
+                    kwargs['time_start'],
+                    kwargs['time_end'],
+                    polygon=polystr,
+                    return_polygons=True)
+            else:
+                url_list = __cmr_search(kwargs['short_name'],
+                    kwargs['version'],
+                    kwargs['time_start'],
+                    kwargs['time_end'],
+                    polygon=polystr)
             break # exit loop because cmr search was successful
         except urllib.error.HTTPError as e:
             logger.error('HTTP Request Error: {}'.format(e.reason))
@@ -570,7 +623,10 @@ def cmr (polygon=None, time_start=None, time_end=None, version='004', short_name
         else:
             break # exit here because nothing can be done
 
-    return url_list
+    if kwargs['return_polygons']:
+        return (url_list,poly_list)
+    else:
+        return url_list
 
 #
 #  ATL06
