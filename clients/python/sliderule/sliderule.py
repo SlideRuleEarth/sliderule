@@ -30,6 +30,7 @@
 import requests
 import numpy
 import json
+import time
 import struct
 import ctypes
 import logging
@@ -134,14 +135,17 @@ def __getserv():
 #
 def __errserv(serv):
     global server_table, server_max_errors
+    wait_time = 0
     with server_lock:
         try:
             server_table[serv] += 1
             logger.critical(serv + " encountered consecutive error " + str(server_table[serv]))
             if server_table[serv] > server_max_errors:
                 server_table.pop(serv, None)
+            wait_time = server_table[serv]
         except Exception as e:
             logger.debug(serv + " already removed from table")
+    time.sleep(wait_time)
 
 #
 #  __clrserv
@@ -338,6 +342,7 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
                 rsps = requests.get(url, data=rqst, timeout=request_timeout).json()
             else:
                 data = requests.post(url, data=rqst, timeout=request_timeout, stream=True)
+                data.raise_for_status()
                 rsps = __parse(data, callbacks)
             __clrserv(serv)
             complete = True
@@ -345,7 +350,10 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
             logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
             __errserv(serv)
         except requests.HTTPError as e:
-            logger.error("Invalid HTTP response from endpoint {} ... retrying request".format(url))
+            if e.response.status_code == 503:
+                logger.error("Server experiencing heavy load, stalling on request to {} ... will retry".format(url))
+            else:
+                logger.error("Invalid HTTP response from endpoint {} ... retrying request".format(url))
             __errserv(serv)
         except requests.Timeout as e:
             logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))

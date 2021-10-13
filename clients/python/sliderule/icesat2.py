@@ -46,7 +46,7 @@ from sliderule import version
 ###############################################################################
 
 # configuration
-SERVER_SCALE_FACTOR = 6
+SERVER_SCALE_FACTOR = 3
 
 # create logger
 logger = logging.getLogger(__name__)
