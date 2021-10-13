@@ -83,7 +83,7 @@ class LocalLib
         static print_func_t print_func;
         static int io_timeout;
         static int io_maxsize;
-        static fileptr_t memfp;
+        static int memfd;
 };
 
 #endif  /* __local_lib__ */

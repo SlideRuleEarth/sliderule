@@ -59,7 +59,7 @@
 LocalLib::print_func_t LocalLib::print_func = NULL;
 int LocalLib::io_timeout = IO_DEFAULT_TIMEOUT;
 int LocalLib::io_maxsize = IO_DEFAULT_MAXSIZE;
-fileptr_t LocalLib::memfp = NULL;
+int LocalLib::memfd = -1;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -70,7 +70,7 @@ fileptr_t LocalLib::memfp = NULL;
  *----------------------------------------------------------------------------*/
 void LocalLib::init()
 {
-    memfp = fopen("/proc/meminfo", "r");
+    memfd = open("/proc/meminfo", O_RDONLY);
 }
 
 /*----------------------------------------------------------------------------
@@ -78,7 +78,7 @@ void LocalLib::init()
  *----------------------------------------------------------------------------*/
 void LocalLib::deinit(void)
 {
-    if(memfp) fclose(memfp);
+    if(memfd) close(memfd);
 }
 
 /*----------------------------------------------------------------------------
@@ -272,10 +272,10 @@ double LocalLib::memusage (void)
     char buffer[BUFSIZE];
     char *endptr;
 
-    if(memfp)
+    if(memfd)
     {
-        fseek(memfp, 0, SEEK_SET);
-        int bytes_read = fread(buffer, 1, BUFSIZE - 1, memfp);
+        lseek(memfd, 0, SEEK_SET);
+        int bytes_read = read(memfd, buffer, BUFSIZE - 1);
         if(bytes_read > 0)
         {
             buffer[bytes_read] = '\0';
