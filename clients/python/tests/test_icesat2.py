@@ -51,6 +51,8 @@ class TestRemote:
 
     def test_cmr(self, grandmesa):
         icesat2.init(SERVER)
-        granules = icesat2.cmr(grandmesa, time_start='2018-10-01', time_end='2018-12-01')
+        granules = icesat2.cmr(polygon=grandmesa,
+            time_start='2018-10-01',
+            time_end='2018-12-01')
         assert isinstance(granules, list)
         assert 'ATL03_20181017222812_02950102_004_01.h5' in granules
