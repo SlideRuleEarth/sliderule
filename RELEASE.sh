@@ -1,15 +1,20 @@
 #!/usr/bin/sh
 
 #
-# Typical version identifier is x.y.z, e.g. 1.0.4
+# Acceptable version identifier is x.y.z, e.g. 1.0.4
 # the version number is then prepended with 'v' for
 # the tags annotation in git.
 #
 VERSION=$1
+if [[ "$1" != *"."*"."* ]]; then
+    echo "Invalid version number"
+    exit 1
+fi
 if git tag -l | grep -w v$VERSION; then
-    echo Git tag already exists
+    echo "Git tag already exists"
 	exit 1
 fi
+
 
 #
 # Clean up any previously attempted archives
