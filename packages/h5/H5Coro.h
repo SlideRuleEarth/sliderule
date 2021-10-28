@@ -194,7 +194,9 @@ class H5FileBuffer
         static const uint64_t   H5_HEAP_SIGNATURE_LE    = 0x50414548LL; // local heap
         static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
 
-        static const uint8_t    H5LITE_CUSTOM_V1_FLAG   = 0x80; // used to indicate version 1 object header (reserved)
+        static const uint8_t    H5CORO_CUSTOM_V1_FLAG   = 0x80; // used to indicate version 1 object header (reserved)
+        static const uint8_t    H5CORO_CUSTOM_ATTR_FLAG = 0x40; // used to indicate processing of attribute message
+        static const uint8_t    ATTR_CREATION_TRACK_BIT = 0x04;
 
         static const int64_t    UNKNOWN_VALUE           = -1; // initial setting for variables prior to being set
 
@@ -210,6 +212,7 @@ class H5FileBuffer
             LINK_MSG                = 0x6,
             DATA_LAYOUT_MSG         = 0x8,
             FILTER_MSG              = 0xB,
+            ATTRIBUTE_MSG           = 0xC,
             HEADER_CONT_MSG         = 0x10,
             SYMBOL_TABLE_MSG        = 0x11
         } msg_type_t;
@@ -333,6 +336,7 @@ class H5FileBuffer
         int                 readLinkMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readDataLayoutMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readAttributeMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readSymbolTableMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
 

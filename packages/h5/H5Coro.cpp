@@ -1674,8 +1674,6 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
 {
-    static const int ATTR_CREATION_TRACK_BIT   = 0x04;
-
     uint64_t starting_position = pos;
 
     while(pos < end)
@@ -1785,7 +1783,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
 
     /* Read Header Messages */
-    pos += readMessagesV1(pos, end_of_hdr, H5LITE_CUSTOM_V1_FLAG, dlvl);
+    pos += readMessagesV1(pos, end_of_hdr, H5CORO_CUSTOM_V1_FLAG, dlvl);
 
     /* Return Bytes Read */
     uint64_t ending_position = pos;
@@ -1874,6 +1872,14 @@ int H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos,
         case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
         case DATA_LAYOUT_MSG:   return readDataLayoutMsg(pos, hdr_flags, dlvl);
         case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
+        case ATTRIBUTE_MSG:     if(hdr_flags & H5CORO_CUSTOM_ATTR_FLAG)
+                                {
+                                    return readAttributeMsg(pos, hdr_flags, dlvl);
+                                }
+                                else
+                                {
+                                    return size;
+                                }
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
         case SYMBOL_TABLE_MSG:  return readSymbolTableMsg(pos, hdr_flags, dlvl);
 
@@ -2530,6 +2536,35 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 }
 
 /*----------------------------------------------------------------------------
+ * readAttributeMsg
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    (void)hdr_flags;
+
+    uint64_t starting_position = pos;
+
+    /* Read Message Info */
+    uint64_t version = readField(1, &pos);
+
+    if(errorChecking)
+    {
+        if(version != 1)
+        {
+            throw RunTimeException(CRITICAL, "invalid attribute version: %d", (int)version);
+        }
+    }
+
+    if(verbose)
+    {
+        print2term("\n----------------\n");
+        print2term("Attribute Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Version:                                                         %d\n", (int)version);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * readHeaderContMsg
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
@@ -2551,7 +2586,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Continuation Block */
     pos = hc_offset; // go to continuation block
-    if(hdr_flags & H5LITE_CUSTOM_V1_FLAG)
+    if(hdr_flags & H5CORO_CUSTOM_V1_FLAG)
     {
        uint64_t end_of_chdr = hc_offset + hc_length;
        pos += readMessagesV1 (pos, end_of_chdr, hdr_flags, dlvl);

@@ -141,6 +141,7 @@ const py::dict* pyH5Coro::readp (const py::list& datasets)
         rqst->startrow  = py::cast<int>(PyList_GetItem(entry.ptr(), 2));
         rqst->numrows   = py::cast<int>(PyList_GetItem(entry.ptr(), 3));
         rqst->file      = this;
+        rqst->e_ptr     = NULL;
 
         // workaround for binding to default argument value
         if(rqst->numrows < 0) rqst->numrows = H5Coro::ALL_ROWS;
@@ -163,6 +164,12 @@ const py::dict* pyH5Coro::readp (const py::list& datasets)
     {
         // wait for read to complete
         delete readers[i]->pid;
+
+        // check for exceptions
+        if(readers[i]->e_ptr)
+        {
+            std::rethrow_exception(readers[i]->e_ptr);
+        }
 
         // populate result dictionary
         pyMut.lock();
@@ -284,15 +291,22 @@ void* pyH5Coro::read_thread (void* parm)
 {
     read_rqst_t* rqst = (read_rqst_t*)parm;
 
-    // perform read of dataset
-    rqst->info = H5Coro::read(rqst->file->asset, rqst->file->resource.c_str(), rqst->dataset.c_str(), RecordObject::DYNAMIC, rqst->col, rqst->startrow, rqst->numrows, &rqst->file->context);
-
-    // build dataset array
-    pyMut.lock();
+    try
     {
-        rqst->result = rqst->file->tolist(&rqst->info);
+        // perform read of dataset
+        rqst->info = H5Coro::read(rqst->file->asset, rqst->file->resource.c_str(), rqst->dataset.c_str(), RecordObject::DYNAMIC, rqst->col, rqst->startrow, rqst->numrows, &rqst->file->context);
+
+        // build dataset array
+        pyMut.lock();
+        {
+            rqst->result = rqst->file->tolist(&rqst->info);
+        }
+        pyMut.unlock();
     }
-    pyMut.unlock();
+    catch(...)
+    {
+        rqst->e_ptr = std::current_exception();
+    }
 
     // exit
     return NULL;

@@ -33,7 +33,7 @@ development-config: prep
 
 # python bindings
 python-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(PYTHONCFG) $(ROOT)
 
 # shared library libsliderule.so
 library-config: prep

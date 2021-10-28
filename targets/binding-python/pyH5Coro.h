@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
+#include <stdexcept>
 
 #include "H5Coro.h"
 #include "RecordObject.h"
@@ -64,14 +65,15 @@ class pyH5Coro
     private:
 
         typedef struct {
-            std::string     dataset;
-            int             col;
-            int             startrow;
-            int             numrows;
-            Thread*         pid;
-            H5Coro::info_t  info;
-            py::list*       result;
-            pyH5Coro*       file;
+            std::string         dataset;
+            int                 col;
+            int                 startrow;
+            int                 numrows;
+            Thread*             pid;
+            H5Coro::info_t      info;
+            py::list*           result;
+            pyH5Coro*           file;
+            std::exception_ptr  e_ptr;
         } read_rqst_t;
 
 
