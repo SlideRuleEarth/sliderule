@@ -70,6 +70,12 @@ if __name__ == '__main__':
 
     # Run Meta Test #
     h_li_meta = h5file1.meta("/gt1l/land_ice_segments/h_li")
+    result = result and (h_li_meta['elements'] == 3563)
+    result = result and (h_li_meta['typesize'] == 4)
+    result = result and (h_li_meta['datasize'] == 14252)
+    result = result and (h_li_meta['datatype'] == 'FLOAT')
+    result = result and (h_li_meta['numcols'] == 1)
+    result = result and (h_li_meta['numrows'] == 3563)
     print(h_li_meta)
 
     # Run Single and Parallel Tests #

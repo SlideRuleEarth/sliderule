@@ -93,7 +93,7 @@ py::dict* pyH5Coro::meta (const std::string &datasetname, long col, long startro
     (*result)["elements"] = info.elements;
     (*result)["typesize"] = info.typesize;
     (*result)["datasize"] = info.datasize;
-    (*result)["datatype"] = (int)info.datatype;
+    (*result)["datatype"] = RecordObject::ft2str(info.datatype);
     (*result)["numcols"]  = info.numcols;
     (*result)["numrows"]  = info.numrows;
 
