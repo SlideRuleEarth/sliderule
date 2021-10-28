@@ -104,6 +104,12 @@ PYBIND11_MODULE(srpybin, m)
                       const std::string &,      // region
                       const std::string &>())   // endpoint
 
+        .def("meta", &pyH5Coro::meta, "reads meta information for dataset from file",
+            py::arg("dataset"),
+            py::arg("col") = 0,
+            py::arg("startrow") = 0,
+            py::arg("numrows") = -1)
+
         .def("read", &pyH5Coro::read, "reads dataset from file",
             py::arg("dataset"),
             py::arg("col") = 0,

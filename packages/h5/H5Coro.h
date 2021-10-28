@@ -143,7 +143,7 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
 
-                            H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false);
+                            H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false, bool _meta_only=false);
         virtual             ~H5FileBuffer       (void);
 
     protected:
@@ -362,6 +362,7 @@ class H5FileBuffer
         int                 datasetNumRows;
         bool                errorChecking;
         bool                verbose;
+        bool                metaOnly;
 
         /* I/O Management */
         Asset::IODriver*    ioDriver;
@@ -419,7 +420,7 @@ struct H5Coro
 
     static void         init            (int num_threads);
     static void         deinit          (void);
-    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
+    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL, bool _meta_only=false);
     static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
 
     static H5Future*    readp           (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);

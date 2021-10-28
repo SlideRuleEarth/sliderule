@@ -142,6 +142,11 @@ if (DEFINED MAX_FREE_STACK_SIZE)
     target_compile_definitions (slideruleLib PUBLIC MAX_FREE_STACK_SIZE=${MAX_FREE_STACK_SIZE})
 endif ()
 
+if (DEFINED H5CORO_THREAD_POOL_SIZE)
+    message (STATUS "Setting H5CORO_THREAD_POOL_SIZE to " ${H5CORO_THREAD_POOL_SIZE})
+    target_compile_definitions (slideruleLib PUBLIC H5CORO_THREAD_POOL_SIZE=${H5CORO_THREAD_POOL_SIZE})
+endif ()
+
 # Platform File #
 
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")

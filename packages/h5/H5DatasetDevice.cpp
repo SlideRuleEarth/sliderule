@@ -142,7 +142,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
         recData->datatype = (uint32_t)info.datatype;
         dataBuffer = info.data;
         dataSize = info.datasize;
-        connected = true;
+        connected = dataBuffer != NULL;
     }
     catch (const RunTimeException& e)
     {

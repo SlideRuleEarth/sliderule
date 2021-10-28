@@ -76,6 +76,32 @@ pyH5Coro::~pyH5Coro (void)
 }
 
 /*--------------------------------------------------------------------
+ * meta
+ *--------------------------------------------------------------------*/
+py::dict* pyH5Coro::meta (const std::string &datasetname, long col, long startrow, long numrows)
+{
+    py::dict* result = NULL;
+
+    // workaround for binding to default argument value
+    if(numrows < 0) numrows = H5Coro::ALL_ROWS;
+
+    // perform read of dataset
+    H5Coro::info_t info = H5Coro::read(asset, resource.c_str(), datasetname.c_str(), RecordObject::DYNAMIC, col, startrow, numrows, &context, true);
+
+    // construct meta dictionary
+    result = new py::dict;
+    (*result)["elements"] = info.elements;
+    (*result)["typesize"] = info.typesize;
+    (*result)["datasize"] = info.datasize;
+    (*result)["datatype"] = (int)info.datatype;
+    (*result)["numcols"]  = info.numcols;
+    (*result)["numrows"]  = info.numrows;
+
+    // return dictionary
+    return result;
+}
+
+/*--------------------------------------------------------------------
  * read
  *--------------------------------------------------------------------*/
 py::list* pyH5Coro::read (const std::string &datasetname, long col, long startrow, long numrows)
@@ -164,84 +190,87 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
 {
     py::list* result = new py::list;
 
-    if(info->datatype == RecordObject::DOUBLE)
+    if(info->data)
     {
-        double* data_ptr = (double*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        if(info->datatype == RecordObject::DOUBLE)
         {
-            result->append(data_ptr[i]);
+            double* data_ptr = (double*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::FLOAT)
-    {
-        float* data_ptr = (float*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::FLOAT)
         {
-            result->append(data_ptr[i]);
+            float* data_ptr = (float*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::INT64)
-    {
-        int64_t* data_ptr = (int64_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::INT64)
         {
-            result->append(data_ptr[i]);
+            int64_t* data_ptr = (int64_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::UINT64)
-    {
-        uint64_t* data_ptr = (uint64_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::UINT64)
         {
-            result->append(data_ptr[i]);
+            uint64_t* data_ptr = (uint64_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::INT32)
-    {
-        int32_t* data_ptr = (int32_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::INT32)
         {
-            result->append(data_ptr[i]);
+            int32_t* data_ptr = (int32_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::UINT32)
-    {
-        uint32_t* data_ptr = (uint32_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::UINT32)
         {
-            result->append(data_ptr[i]);
+            uint32_t* data_ptr = (uint32_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::INT16)
-    {
-        int16_t* data_ptr = (int16_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::INT16)
         {
-            result->append(data_ptr[i]);
+            int16_t* data_ptr = (int16_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::UINT16)
-    {
-        uint16_t* data_ptr = (uint16_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::UINT16)
         {
-            result->append(data_ptr[i]);
+            uint16_t* data_ptr = (uint16_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::INT8)
-    {
-        int8_t* data_ptr = (int8_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::INT8)
         {
-            result->append(data_ptr[i]);
+            int8_t* data_ptr = (int8_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
-    }
-    else if(info->datatype == RecordObject::UINT8)
-    {
-        uint8_t* data_ptr = (uint8_t*)info->data;
-        for(int i = 0; i < info->elements; i++)
+        else if(info->datatype == RecordObject::UINT8)
         {
-            result->append(data_ptr[i]);
+            uint8_t* data_ptr = (uint8_t*)info->data;
+            for(int i = 0; i < info->elements; i++)
+            {
+                result->append(data_ptr[i]);
+            }
         }
     }
 

@@ -68,6 +68,10 @@ if __name__ == '__main__':
     # Open H5Coro File #
     h5file1 = srpybin.h5coro(resource1, format, path, region, endpoint)
 
+    # Run Meta Test #
+    h_li_meta = h5file1.meta("/gt1l/land_ice_segments/h_li")
+    print(h_li_meta)
+
     # Run Single and Parallel Tests #
     for test in range(100000):
         if test % 100 == 0:

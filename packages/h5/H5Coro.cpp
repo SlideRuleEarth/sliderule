@@ -185,7 +185,7 @@ H5FileBuffer::io_context_t::~io_context_t (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose)
+H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose, bool _meta_only)
 {
     assert(asset);
     assert(resource);
@@ -204,6 +204,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
     datasetNumRows          = numrows;
     errorChecking           = _error_checking;
     verbose                 = _verbose;
+    metaOnly                = _meta_only;
     ioKey                   = NULL;
     dataChunkBufferSize     = 0;
     highestDataLevel        = 0;
@@ -639,7 +640,7 @@ void H5FileBuffer::readDataset (info_t* info)
     /* Allocate Data Buffer */
     uint8_t* buffer = NULL;
     int64_t buffer_size = row_size * datasetNumRows;
-    if(buffer_size > 0)
+    if(!metaOnly && buffer_size > 0)
     {
         buffer = new uint8_t [buffer_size];
 
@@ -714,7 +715,7 @@ void H5FileBuffer::readDataset (info_t* info)
     }
 
     /* Read Dataset */
-    if(buffer_size > 0)
+    if(!metaOnly && buffer_size > 0)
     {
         switch(metaData.layout)
         {
@@ -2968,7 +2969,7 @@ void H5Coro::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context)
+H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context, bool _meta_only)
 {
     info_t info;
 
@@ -2977,7 +2978,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, true, H5_VERBOSE);
+    H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, true, H5_VERBOSE, _meta_only);
     if(info.data)
     {
         bool data_valid = true;
@@ -3157,7 +3158,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             throw RunTimeException(CRITICAL, "data translation failed for %s: [%d,%d] %d --> %d", datasetname, info.numcols, info.typesize, (int)info.datatype, (int)valtype);
         }
     }
-    else
+    else if(!_meta_only)
     {
         throw RunTimeException(CRITICAL, "failed to read dataset: %s", datasetname);
     }
