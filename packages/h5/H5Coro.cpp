@@ -630,7 +630,7 @@ void H5FileBuffer::readDataset (info_t* info)
     }
 
     /* Get Number of Rows */
-    uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 0;
+    uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 1;
     datasetNumRows = (datasetNumRows == ALL_ROWS) ? first_dimension : datasetNumRows;
     if((datasetStartRow + datasetNumRows) > first_dimension)
     {
@@ -1574,10 +1574,6 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
 {
-    static const int SIZE_OF_CHUNK_0_MASK      = 0x03;
-    static const int STORE_CHANGE_PHASE_BIT    = 0x10;
-    static const int FILE_STATS_BIT            = 0x20;
-
     uint64_t starting_position = pos;
 
     /* Peek at Version / Process Version 1 */
@@ -1872,14 +1868,9 @@ int H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos,
         case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
         case DATA_LAYOUT_MSG:   return readDataLayoutMsg(pos, hdr_flags, dlvl);
         case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
-        case ATTRIBUTE_MSG:     if(hdr_flags & H5CORO_CUSTOM_ATTR_FLAG)
-                                {
-                                    return readAttributeMsg(pos, hdr_flags, dlvl);
-                                }
-                                else
-                                {
-                                    return size;
-                                }
+#ifdef H5CORO_ATTRIBUTE_SUPPORT
+        case ATTRIBUTE_MSG:     return readAttributeMsg(pos, hdr_flags, dlvl, size);
+#endif
         case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
         case SYMBOL_TABLE_MSG:  return readSymbolTableMsg(pos, hdr_flags, dlvl);
 
@@ -2136,6 +2127,28 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 print2term("Mantissa Location:                                               %d\n", (int)mant_location);
                 print2term("Mantissa Size:                                                   %d\n", (int)mant_size);
                 print2term("Exponent Bias:                                                   %d\n", (int)exp_bias);
+            }
+            break;
+        }
+
+        case STRING_TYPE:
+        {
+            if(verbose)
+            {
+                unsigned int padding = databits & 0x0F;
+                unsigned int charset = (databits & 0xF0) >> 4;
+
+                const char* padding_str = "unknown";
+                if(padding == 0) padding_str = "Null Terminate";
+                else if(padding == 1) padding_str = "Null Pad";
+                else if(padding == 2) padding_str = "Space Pad";
+
+                const char* charset_str = "unknown";
+                if(charset == 0) charset_str = "ASCII";
+                else if(charset == 1) charset_str = "UTF-8";
+
+                print2term("Padding Type:                                                    %d %s\n", (int)padding, padding_str);
+                print2term("Character Set:                                                   %d %s\n", (int)charset, charset_str);
             }
             break;
         }
@@ -2538,7 +2551,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 /*----------------------------------------------------------------------------
  * readAttributeMsg
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint64_t size)
 {
     (void)hdr_flags;
 
@@ -2547,21 +2560,112 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Message Info */
     uint64_t version = readField(1, &pos);
 
+    /* Error Check Info */
     if(errorChecking)
     {
+        uint64_t reserved0 = readField(1, &pos);
+
         if(version != 1)
         {
             throw RunTimeException(CRITICAL, "invalid attribute version: %d", (int)version);
         }
+        else if(reserved0 != 0)
+        {
+            throw RunTimeException(CRITICAL, "invalid reserved field: %d", (int)reserved0);
+        }
+    }
+    else
+    {
+        pos += 1;
     }
 
+    /* Get Sizes */
+    uint64_t name_size = readField(2, &pos);
+    uint64_t datatype_size = readField(2, &pos);
+    uint64_t dataspace_size = readField(2, &pos);
+
+    /* Read Attribute Name */
+    if(name_size > STR_BUFF_SIZE)
+    {
+        throw RunTimeException(CRITICAL, "attribute name string exceeded maximum length: %d, 0x%lx\n", name_size, (unsigned long)pos);
+    }
+    uint8_t attr_name[STR_BUFF_SIZE];
+    readByteArray(attr_name, name_size, &pos);
+    pos += (8 - (name_size % 8)) % 8; // align to next 8-byte boundary
+
+    if(errorChecking)
+    {
+        if(attr_name[name_size - 1] != '\0')
+        {
+            attr_name[name_size -1] = '\0';
+            throw RunTimeException(CRITICAL, "attribute name string is not null terminated: %s, 0x%lx\n", attr_name, (unsigned long)pos);
+        }
+    }
+    else
+    {
+        attr_name[name_size -1] = '\0';
+    }
+
+    /* Display Attribute Message Information */
     if(verbose)
     {
         print2term("\n----------------\n");
         print2term("Attribute Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
         print2term("Version:                                                         %d\n", (int)version);
+        print2term("Name:                                                            %s\n", (const char*)attr_name);
+        print2term("Message Size:                                                    %d\n", (int)size);
+        print2term("Datatype Message Bytes:                                          %d\n", (int)datatype_size);
+        print2term("Dataspace Message Bytes:                                         %d\n", (int)dataspace_size);
     }
+
+    /* Shortcut Out if Not Desired Attribute */
+    if( ((dlvl + 1) != datasetPath.length()) ||
+        !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
+    {
+        return size;
+    }
+    else
+    {
+        highestDataLevel = dlvl + 1;
+    }
+
+    /* Read Datatype Message */
+    int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
+    if(errorChecking && datatype_bytes_read != (int)datatype_size)
+    {
+        throw RunTimeException(CRITICAL, "failed to read expected bytes for datatype message: %d != %d\n", (int)datatype_bytes_read, (int)datatype_size);
+    }
+    else
+    {
+        pos += datatype_bytes_read;
+        pos += (8 - (datatype_bytes_read % 8)) % 8; // align to next 8-byte boundary
+    }
+
+    /* Read Dataspace Message */
+    int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
+    if(errorChecking && dataspace_bytes_read != (int)dataspace_size)
+    {
+        throw RunTimeException(CRITICAL, "failed to read expected bytes for dataspace message: %d != %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
+    }
+    else
+    {
+        pos += dataspace_bytes_read;
+        pos += (8 - (dataspace_bytes_read % 8)) % 8; // align to next 8-byte boundary
+    }
+
+    /* Calculate Meta Data */
+    metaData.layout = CONTIGUOUS_LAYOUT;
+    LocalLib::set(metaData.filter, 0, sizeof(metaData.filter));
+    metaData.address = pos;
+    metaData.size = size - (pos - starting_position);
+
+    /* Move to End of Data */
+    pos += metaData.size;
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;
+    return ending_position - starting_position;
 }
 
 /*----------------------------------------------------------------------------

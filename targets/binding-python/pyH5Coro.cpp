@@ -279,6 +279,13 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
                 result->append(data_ptr[i]);
             }
         }
+        else if(info->datatype == RecordObject::STRING)
+        {
+            char* data_ptr = (char*)info->data;
+            data_ptr[info->datasize - 1] = '\0';
+            py::str data_str(data_ptr);
+            result->append(data_str);
+        }
     }
 
     return result;

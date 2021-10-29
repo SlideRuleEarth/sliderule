@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -62,11 +62,11 @@ const int TimeLib::GpsDaysToStartOfYear[TimeLib::MAX_GPS_YEARS] =
     29214,  29580,  29945,  30310,  30675,  31041,  31406,  31771,  32136,  32502,
     32867,  33232,  33597,  33963,  34328,  34693,  35058,  35424,  35789,  36154   };
 
-const int TimeLib::DaysInEachMonth[TimeLib::MONTHS_IN_YEAR] = 
+const int TimeLib::DaysInEachMonth[TimeLib::MONTHS_IN_YEAR] =
 {// J   F   M   A   M   J   J   A   S   O   N   D
     31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31  };
 
-const char* TimeLib::MonthNames[TimeLib::MONTHS_IN_YEAR] = 
+const char* TimeLib::MonthNames[TimeLib::MONTHS_IN_YEAR] =
 {   "January",      "February",     "March",        "April",
     "May",          "June",         "July",         "August",
     "September",    "October",      "November",     "December"  };
@@ -106,7 +106,7 @@ void TimeLib::init(void)
     /* Start Heart Beat */
     try
     {
-#ifdef TIME_USE_HEARTBEAT
+#ifdef TIME_HEARTBEAT
         heartBeat = new Timer(TimeLib::heartbeat, HEARTBEAT_PERIOD_MS);
 #else
         heartBeat = NULL;
@@ -137,14 +137,14 @@ double TimeLib::latchtime(void)
 
 /*----------------------------------------------------------------------------
  * gettimems
- * 
+ *
  *  grabs the current number of ms that have elapsed since gps time epoch
  *----------------------------------------------------------------------------*/
 int64_t TimeLib::gettimems(int64_t now)
 {
     if(now == USE_CURRENT_TIME)
     {
-        #ifdef TIME_USE_HEARTBEAT
+        #ifdef TIME_HEARTBEAT
             return currentTimeMs;
         #else
             int64_t sysnow = LocalLib::time(LocalLib::SYS_CLK);
@@ -162,7 +162,7 @@ int64_t TimeLib::gettimems(int64_t now)
 
 /*----------------------------------------------------------------------------
  * gettime
- * 
+ *
  *  grabs the current GMT system time
  *----------------------------------------------------------------------------*/
 TimeLib::gmt_time_t TimeLib::gettime(int64_t now)
@@ -185,7 +185,7 @@ TimeLib::gmt_time_t TimeLib::gettime(int64_t now)
 
 /*----------------------------------------------------------------------------
  * gps2gmttime
- * 
+ *
  *  converts mechanical milliseconds since GPS epoch to GMT time
  *----------------------------------------------------------------------------*/
 TimeLib::gmt_time_t TimeLib::gps2gmttime(int64_t ms)
@@ -195,7 +195,7 @@ TimeLib::gmt_time_t TimeLib::gps2gmttime(int64_t ms)
 
 /*----------------------------------------------------------------------------
  * cds2gmttime
- * 
+ *
  *  converts from CDS (GPS epoch) format to internal structure representation of GMT
  *----------------------------------------------------------------------------*/
 TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
@@ -290,7 +290,7 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
 
 /*----------------------------------------------------------------------------
  * gmt2date
- * 
+ *
  *  returns date
  *----------------------------------------------------------------------------*/
 TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
@@ -326,8 +326,8 @@ TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
 
 /*----------------------------------------------------------------------------
  * gmt2gpstime
- * 
- *  returns gps time in milliseconds 
+ *
+ *  returns gps time in milliseconds
  *----------------------------------------------------------------------------*/
 int64_t TimeLib::gmt2gpstime (gmt_time_t gmt_time)
 {
@@ -476,7 +476,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
                                                 {
                                                     hour -= hour_adjust;
                                                     minute -= minute_adjust;
-                                                    
+
                                                     if(minute < 0)
                                                     {
                                                         hour -= 1;
@@ -496,7 +496,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
                                                         {
                                                             month = 12;
                                                             year -= 1;
-                                                        }                                                        
+                                                        }
                                                         day = daysinmonth(year, month) + day;
                                                     }
                                                 }
@@ -525,7 +525,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
                                                         {
                                                             month = 1;
                                                             year += 1;
-                                                        }                                                        
+                                                        }
                                                     }
                                                 }
                                             }
@@ -589,14 +589,14 @@ int64_t TimeLib::str2gpstime (const char* time_str)
 int TimeLib::dayofyear(int year, int month, int day_of_month)
 {
     int day_of_year = 0;
-    
+
     for (int m = 1; m < month; m++)
     {
         day_of_year += daysinmonth(year, m);
     }
-    
+
     day_of_year += day_of_month;
-    
+
     return day_of_year;
 }
 

@@ -42,6 +42,7 @@ option (ENABLE_COMPAT "Use C++11 for compatibility with older compilers" OFF)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
+option (ENABLE_H5CORO_ATTRIBUTE_SUPPORT "H5Coro will read and process attribute messages" OFF)
 
 # Package Options #
 
@@ -129,7 +130,7 @@ set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and confi
 
 if (${ENABLE_TIME_HEARTBEAT})
     message (STATUS "Enabling time heartbeat")
-    target_compile_definitions (slideruleLib PUBLIC TIME_USE_HEARTBEAT)
+    target_compile_definitions (slideruleLib PUBLIC TIME_HEARTBEAT)
 endif ()
 
 if (${ENABLE_CUSTOM_ALLOCATOR})
@@ -145,6 +146,11 @@ endif ()
 if (DEFINED H5CORO_THREAD_POOL_SIZE)
     message (STATUS "Setting H5CORO_THREAD_POOL_SIZE to " ${H5CORO_THREAD_POOL_SIZE})
     target_compile_definitions (slideruleLib PUBLIC H5CORO_THREAD_POOL_SIZE=${H5CORO_THREAD_POOL_SIZE})
+endif ()
+
+if (${ENABLE_H5CORO_ATTRIBUTE_SUPPORT})
+    message (STATUS "Enabling support in H5Coro for attribute messages")
+    target_compile_definitions (slideruleLib PUBLIC H5CORO_ATTRIBUTE_SUPPORT)
 endif ()
 
 # Platform File #
