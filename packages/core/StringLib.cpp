@@ -451,7 +451,7 @@ char* StringLib::format(char* dststr, int size, const char* _format, ...)
     if (dststr == NULL) return NULL;
     va_list args;
     va_start(args, _format);
-    int vlen = vsnprintf(dststr, size - 1, _format, args);
+    int vlen = vsnprintf(dststr, size, _format, args);
     int slen = MIN(vlen, size - 1);
     va_end(args);
     if (slen < 1) return NULL;

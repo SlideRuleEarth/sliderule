@@ -164,7 +164,7 @@ class H5FileBuffer
          */
 
         static const long       MAX_META_STORE          = 150000;
-        static const long       MAX_META_FILENAME       = 88; // must be multiple of 8
+        static const long       MAX_META_FILENAME       = 112; // must be multiple of 8
 
         /*
          * Assuming:

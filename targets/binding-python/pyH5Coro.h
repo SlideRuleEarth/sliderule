@@ -58,9 +58,9 @@ class pyH5Coro
     public:
                             pyH5Coro    (const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint);
                             ~pyH5Coro   (void);
-        py::dict*           meta        (const std::string &datasetname, long col, long startrow, long numrows);
-        py::list*           read        (const std::string &datasetname, long col, long startrow, long numrows);
-        const py::dict*     readp       (const py::list& datasets);
+        py::dict            meta        (const std::string &datasetname, long col, long startrow, long numrows);
+        py::list            read        (const std::string &datasetname, long col, long startrow, long numrows);
+        const py::dict      readp       (const py::list& datasets);
 
     private:
 
@@ -71,13 +71,13 @@ class pyH5Coro
             int                 numrows;
             Thread*             pid;
             H5Coro::info_t      info;
-            py::list*           result;
+            py::list            result;
             pyH5Coro*           file;
             std::exception_ptr  e_ptr;
         } read_rqst_t;
 
 
-        py::list*           tolist      (H5Coro::info_t* info);
+        py::list            tolist      (H5Coro::info_t* info);
         static void*        read_thread (void* parm);
 
         static Mutex        pyMut;

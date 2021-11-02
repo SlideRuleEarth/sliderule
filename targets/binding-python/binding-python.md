@@ -79,7 +79,7 @@ The pyH5Coro module contained within the SlideRule Python bindings is a Python w
 * Returns a dictionary of metadata for the dataset
   * __elements__: number of elements in the dataset
   * __typesize__: size in bytes of each element
-  * __dataset__: size in bytes of entire dataset
+  * __datasize__: size in bytes of entire dataset
   * __datatype__: string providing the data type
   * __numcols__: number of columns in the dataset
   * __numros__: number of rows in the dataset

@@ -78,9 +78,9 @@ pyH5Coro::~pyH5Coro (void)
 /*--------------------------------------------------------------------
  * meta
  *--------------------------------------------------------------------*/
-py::dict* pyH5Coro::meta (const std::string &datasetname, long col, long startrow, long numrows)
+py::dict pyH5Coro::meta (const std::string &datasetname, long col, long startrow, long numrows)
 {
-    py::dict* result = NULL;
+    py::dict result;
 
     // workaround for binding to default argument value
     if(numrows < 0) numrows = H5Coro::ALL_ROWS;
@@ -89,13 +89,12 @@ py::dict* pyH5Coro::meta (const std::string &datasetname, long col, long startro
     H5Coro::info_t info = H5Coro::read(asset, resource.c_str(), datasetname.c_str(), RecordObject::DYNAMIC, col, startrow, numrows, &context, true);
 
     // construct meta dictionary
-    result = new py::dict;
-    (*result)["elements"] = info.elements;
-    (*result)["typesize"] = info.typesize;
-    (*result)["datasize"] = info.datasize;
-    (*result)["datatype"] = RecordObject::ft2str(info.datatype);
-    (*result)["numcols"]  = info.numcols;
-    (*result)["numrows"]  = info.numrows;
+    result["elements"] = info.elements;
+    result["typesize"] = info.typesize;
+    result["datasize"] = info.datasize;
+    result["datatype"] = RecordObject::ft2str(info.datatype);
+    result["numcols"]  = info.numcols;
+    result["numrows"]  = info.numrows;
 
     // return dictionary
     return result;
@@ -104,9 +103,9 @@ py::dict* pyH5Coro::meta (const std::string &datasetname, long col, long startro
 /*--------------------------------------------------------------------
  * read
  *--------------------------------------------------------------------*/
-py::list* pyH5Coro::read (const std::string &datasetname, long col, long startrow, long numrows)
+py::list pyH5Coro::read (const std::string &datasetname, long col, long startrow, long numrows)
 {
-    py::list* result;
+    py::list result;
 
     // workaround for binding to default argument value
     if(numrows < 0) numrows = H5Coro::ALL_ROWS;
@@ -127,8 +126,9 @@ py::list* pyH5Coro::read (const std::string &datasetname, long col, long startro
 /*--------------------------------------------------------------------
  * readp
  *--------------------------------------------------------------------*/
-const py::dict* pyH5Coro::readp (const py::list& datasets)
+const py::dict pyH5Coro::readp (const py::list& datasets)
 {
+    py::dict result;
     List<read_rqst_t*> readers;
 
     // traverse list of datasets to read
@@ -151,14 +151,6 @@ const py::dict* pyH5Coro::readp (const py::list& datasets)
         readers.add(rqst);
     }
 
-    // create result dictionary
-    py::dict* result = NULL;
-    pyMut.lock();
-    {
-        result = new py::dict;
-    }
-    pyMut.unlock();
-
     // process results
     for(int i = 0; i < readers.length(); i++)
     {
@@ -175,7 +167,7 @@ const py::dict* pyH5Coro::readp (const py::list& datasets)
         pyMut.lock();
         {
             py::str key(readers[i]->dataset);
-            (*result)[key] = readers[i]->result;
+            result[key] = readers[i]->result;
         }
         pyMut.unlock();
 
@@ -193,9 +185,9 @@ const py::dict* pyH5Coro::readp (const py::list& datasets)
 /*--------------------------------------------------------------------
  * tolist
  *--------------------------------------------------------------------*/
-py::list* pyH5Coro::tolist (H5Coro::info_t* info)
+py::list pyH5Coro::tolist (H5Coro::info_t* info)
 {
-    py::list* result = new py::list;
+    py::list result;
 
     if(info->data)
     {
@@ -204,7 +196,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             double* data_ptr = (double*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::FLOAT)
@@ -212,7 +204,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             float* data_ptr = (float*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::INT64)
@@ -220,7 +212,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             int64_t* data_ptr = (int64_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::UINT64)
@@ -228,7 +220,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             uint64_t* data_ptr = (uint64_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::INT32)
@@ -236,7 +228,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             int32_t* data_ptr = (int32_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::UINT32)
@@ -244,7 +236,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             uint32_t* data_ptr = (uint32_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::INT16)
@@ -252,7 +244,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             int16_t* data_ptr = (int16_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::UINT16)
@@ -260,7 +252,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             uint16_t* data_ptr = (uint16_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::INT8)
@@ -268,7 +260,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             int8_t* data_ptr = (int8_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::UINT8)
@@ -276,7 +268,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             uint8_t* data_ptr = (uint8_t*)info->data;
             for(int i = 0; i < info->elements; i++)
             {
-                result->append(data_ptr[i]);
+                result.append(data_ptr[i]);
             }
         }
         else if(info->datatype == RecordObject::STRING)
@@ -284,7 +276,7 @@ py::list* pyH5Coro::tolist (H5Coro::info_t* info)
             char* data_ptr = (char*)info->data;
             data_ptr[info->datasize - 1] = '\0';
             py::str data_str(data_ptr);
-            result->append(data_str);
+            result.append(data_str);
         }
     }
 
