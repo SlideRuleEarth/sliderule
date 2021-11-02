@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     # Open H5 File #
     asdf = srpybin.h5coro(resource0, format, "/data/ASDF", region, endpoint)
-
+    
     # Run Meta Test #
     meta = asdf.meta("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording")
     result = result and (meta['elements'] == 1878490)
@@ -71,12 +71,9 @@ if __name__ == '__main__':
     v = asdf.read("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording", 0, 57655, 5)
     result = result and check_results(v, small_exp)
 
-    for test in range(100000):
-        if test % 100 == 0:
-            sys.stdout.write(".")
-            sys.stdout.flush()
-        v = asdf.read("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording", 0, 57655, 5)
-        result = result and check_results(v, small_exp)
+    # Read Large Dataset Multiple Times #
+    for test in range(10):
+        v = asdf.read("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording")
 
     # Open H5 File #
     h5file1 = srpybin.h5coro(resource1, format, path, region, endpoint)
