@@ -1201,7 +1201,7 @@ bool RecordObject::str2be (const char* str)
     else if(StringLib::match(str, "FLOATLE"))   return false;
     else if(StringLib::match(str, "DOUBLELE"))  return false;
     else if(StringLib::match(str, "TIME8LE"))   return false;
-    else                                        return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN; // default native
+    else                                        return _IS_BIGENDIAN; // default native
 }
 
 /*----------------------------------------------------------------------------
