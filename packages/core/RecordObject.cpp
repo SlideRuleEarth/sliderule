@@ -1166,21 +1166,23 @@ RecordObject::fieldType_t RecordObject::str2ft (const char* str)
  *----------------------------------------------------------------------------*/
 bool RecordObject::str2be (const char* str)
 {
+    #define _IS_BIGENDIAN ((NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN)
+
          if(StringLib::match(str, "BE"))        return true;
     else if(StringLib::match(str, "LE"))        return false;
-    else if(StringLib::match(str, "INT8"))      return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "INT16"))     return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "INT32"))     return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "INT64"))     return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "UINT8"))     return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "UINT16"))    return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "UINT32"))    return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "UINT64"))    return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "BITFIELD"))  return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "FLOAT"))     return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "DOUBLE"))    return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "TIME8"))     return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
-    else if(StringLib::match(str, "STRING"))    return (NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN;
+    else if(StringLib::match(str, "INT8"))      return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "INT16"))     return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "INT32"))     return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "INT64"))     return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "UINT8"))     return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "UINT16"))    return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "UINT32"))    return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "UINT64"))    return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "BITFIELD"))  return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "FLOAT"))     return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "DOUBLE"))    return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "TIME8"))     return _IS_BIGENDIAN;
+    else if(StringLib::match(str, "STRING"))    return _IS_BIGENDIAN;
     else if(StringLib::match(str, "INT16BE"))   return true;
     else if(StringLib::match(str, "INT32BE"))   return true;
     else if(StringLib::match(str, "INT64BE"))   return true;
