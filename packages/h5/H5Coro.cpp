@@ -2839,6 +2839,32 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             pos = right_sibling;
         }
+
+        /* Read Header Info */
+        if(!errorChecking)
+        {
+            pos += 6;
+        }
+        else
+        {
+            uint32_t signature = (uint32_t)readField(4, &pos);
+            if(signature != H5_TREE_SIGNATURE_LE)
+            {
+                throw RunTimeException(CRITICAL, "invalid group b-tree signature: 0x%llX", (unsigned long long)signature);
+            }
+
+            uint8_t node_type = (uint8_t)readField(1, &pos);
+            if(node_type != 0)
+            {
+                throw RunTimeException(CRITICAL, "only group b-trees supported: %d", node_type);
+            }
+
+            uint8_t node_level = (uint8_t)readField(1, &pos);
+            if(node_level != 0)
+            {
+                throw RunTimeException(CRITICAL, "traversed to non-leaf node: %d", node_level);
+            }
+        }
     }
 
     /* Return Bytes Read */
