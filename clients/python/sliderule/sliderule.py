@@ -379,7 +379,7 @@ def set_url (urls):
                 server_url = "http://" + serv + ":9081"
                 server_table[server_url] = 0
         elif type(urls) == str: # IP address of sliderule's service discovery
-            service_url = "http://" + urls + ":8500/v1/catalog/service/srds?passing"
+            service_url = "http://" + urls + ":8050"
         else:
             raise TypeError('expected ip address or hostname as a string or list of strings')
     # then update server table
@@ -394,9 +394,9 @@ def update_available_servers ():
         if service_url != None:
             server_index = 0
             server_table = {}
-            services = requests.get(service_url, timeout=request_timeout).json()
-            for entry in services:
-                server_url = "http://" + entry["Address"] + ":" + str(entry["ServicePort"])
+            response = requests.get(service_url, data='{"service":"sliderule"}', timeout=request_timeout).json()
+            for entry in response['members']:
+                server_url = "http://" + entry + ":9081"
                 server_table[server_url] = 0
     return len(server_table)
 
