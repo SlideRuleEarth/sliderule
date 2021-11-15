@@ -60,6 +60,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"setlvl",      LuaLibrarySys::lsys_seteventlvl},
     {"getlvl",      LuaLibrarySys::lsys_geteventlvl},
     {"healthy",     LuaLibrarySys::lsys_healthy},
+    {"ipv4",        LuaLibrarySys::lsys_ipv4},
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
     {"cwd",         LuaLibrarySys::lsys_cwd},
     {"memu",        LuaLibrarySys::lsys_memu},
@@ -428,6 +429,15 @@ int LuaLibrarySys::lsys_geteventlvl (lua_State* L)
 int LuaLibrarySys::lsys_healthy (lua_State* L)
 {
     lua_pushboolean(L, checkhealth());
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_ipv4
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_ipv4 (lua_State* L)
+{
+    lua_pushstring(L, SockLib::sockipv4());
     return 1;
 }
 
