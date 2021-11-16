@@ -224,6 +224,8 @@ int netsvc_post (lua_State* L)
     {
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // seconds
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // seconds
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, netsvc_read_data);
         curl_easy_setopt(curl, CURLOPT_READDATA, &rqst);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
