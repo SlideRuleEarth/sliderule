@@ -91,7 +91,7 @@ int H5File::luaCreate(lua_State* L)
 void H5File::init (void)
 {
     int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, NULL, sizeof(h5file_t), recDef, def_elements, 8);
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, NULL, sizeof(h5file_t), recDef, def_elements);
     if(rc != RecordObject::SUCCESS_DEF)
     {
         mlog(CRITICAL, "Failed to define %s: %d", recType, rc);

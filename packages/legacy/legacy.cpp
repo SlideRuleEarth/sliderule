@@ -44,6 +44,7 @@
 struct CCSDS: public CommandableObject
 {
     static const char* NAME;
+    static const int DEFAULT_MAX_FIELDS = 256;
     CCSDS(CommandProcessor* cmd_proc): CommandableObject(cmd_proc, NAME, NAME)
     {
         registerCommand("DEFINE_TELEMETRY", (cmdFunc_t)&CCSDS::defineTelemetryCmd,     5,   "<record type> <id field> <APID> <record size> <max fields>");
@@ -125,7 +126,7 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
     }
     else if(max_fields == 0)
     {
-         max_fields = RecordObject::MAX_FIELDS;
+         max_fields = DEFAULT_MAX_FIELDS;
     }
 
     /* Define Record */
@@ -213,7 +214,7 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     }
     else if(max_fields == 0)
     {
-         max_fields = RecordObject::MAX_FIELDS;
+         max_fields = DEFAULT_MAX_FIELDS;
     }
 
     /* Define Record */

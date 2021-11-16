@@ -91,7 +91,7 @@ int LimitDispatch::luaCreate (lua_State* L)
 LimitDispatch::LimitDispatch (lua_State* L, LimitRecord::limit_t _limit, const char* deepq_name, const char* limitq_name):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
-    LimitRecord::defineRecord(LimitRecord::rec_type, "TYPE", sizeof(LimitRecord::limit_t), LimitRecord::rec_def, LimitRecord::rec_elem, 32);
+    LimitRecord::defineRecord(LimitRecord::rec_type, "TYPE", sizeof(LimitRecord::limit_t), LimitRecord::rec_def, LimitRecord::rec_elem);
 
     limit = _limit;
     logLevel = ERROR;

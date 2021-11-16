@@ -144,7 +144,7 @@ CfsInterface::CfsInterface(CommandProcessor* cmd_proc, const char* obj_name, con
     CommandableObject(cmd_proc, obj_name, TYPE)
 {
     /* Define Packet Statistics Record */
-    PktStats::defineRecord(PktStats::rec_type, "APID", sizeof(pktStats_t), PktStats::rec_def, PktStats::rec_elem, 32);
+    PktStats::defineRecord(PktStats::rec_type, "APID", sizeof(pktStats_t), PktStats::rec_def, PktStats::rec_elem);
 
     /* Initialize APID Statistics */
     LocalLib::set(apidStats, 0, sizeof(apidStats));

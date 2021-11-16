@@ -1579,13 +1579,17 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
  *
  *  returns pointer to record definition in rec_def
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=MAX_FIELDS)
+RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields)
 {
     recordDefErr_t status = SUCCESS_DEF;
     definition_t* def = NULL;
 
     /* Check Maximum Fields */
-    if(num_fields > max_fields)
+    if(max_fields == CALC_MAX_FIELDS)
+    {
+        max_fields = (int)(num_fields * 1.5);
+    }
+    else if(num_fields > max_fields)
     {
         return NUMFIELDERR_DEF;
     }

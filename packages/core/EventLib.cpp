@@ -97,7 +97,7 @@ Table<EventLib::metric_t, int32_t> EventLib::metric_vals(MAX_METRICS);
 void EventLib::init (const char* eventq)
 {
     /* Define Event Record */
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, offsetof(event_t, attr) + 1, rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t), 16);
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, offsetof(event_t, attr) + 1, rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t));
     if(rc != RecordObject::SUCCESS_DEF)
     {
         throw RunTimeException(CRITICAL, "Fatal error: failed to register event record");

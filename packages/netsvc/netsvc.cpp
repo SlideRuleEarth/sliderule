@@ -236,7 +236,7 @@ int netsvc_post (lua_State* L)
         /* Check for errors */
         if(res != CURLE_OK)
         {
-            mlog(CRITICAL, "network services request failed: %s\n", curl_easy_strerror(res));
+            mlog(CRITICAL, "network services request failed: %s", curl_easy_strerror(res));
         }
         else
         {
