@@ -506,7 +506,8 @@ def __parallelize(max_workers, block, function, parm, resources, *args):
 
         # Return Results
         if len(results) > 0:
-            return geopandas.pd.concat(results, sort=True)
+            results.sort(key=lambda result: result.iloc[0]['delta_time'])
+            return geopandas.pd.concat(results)
         else:
             return __emptyframe()
 
