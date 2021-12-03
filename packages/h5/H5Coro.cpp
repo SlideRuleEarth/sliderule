@@ -238,7 +238,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
         }
 
         /* Check Meta Repository */
-        char meta_url[MAX_META_FILENAME];
+        char meta_url[MAX_META_NAME_SIZE];
         metaGetUrl(meta_url, resource, dataset);
         uint64_t meta_key = metaGetKey(meta_url);
         bool meta_found = false;
@@ -246,7 +246,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
         {
             if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData))
             {
-                meta_found = StringLib::match(metaData.url, meta_url, MAX_META_FILENAME);
+                meta_found = StringLib::match(metaData.url, meta_url, MAX_META_NAME_SIZE);
             }
         }
         metaMutex.unlock();
@@ -254,7 +254,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
         if(!meta_found)
         {
             /* Initialize Meta Data */
-            LocalLib::copy(metaData.url, meta_url, MAX_META_FILENAME);
+            LocalLib::copy(metaData.url, meta_url, MAX_META_NAME_SIZE);
             metaData.type           = UNKNOWN_TYPE;
             metaData.typesize       = UNKNOWN_VALUE;
             metaData.fill.fill_ll   = 0LL;
@@ -2131,6 +2131,38 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             break;
         }
 
+        case VARIABLE_LENGTH_TYPE:
+        {
+            throw RunTimeException(CRITICAL, "variable length data types require reading a global heap, which is not yet supported");
+#if 0
+            if(verbose)
+            {
+                unsigned int vt_type = databits & 0xF; // variable length type
+                unsigned int padding = (databits & 0xF0) >> 4;
+                unsigned int charset = (databits & 0xF00) >> 8;
+
+                const char* vt_type_str = "unknown";
+                if(vt_type == 0) vt_type_str = "Sequence";
+                else if(vt_type == 1) vt_type_str = "String";
+
+                const char* padding_str = "unknown";
+                if(padding == 0) padding_str = "Null Terminate";
+                else if(padding == 1) padding_str = "Null Pad";
+                else if(padding == 2) padding_str = "Space Pad";
+
+                const char* charset_str = "unknown";
+                if(charset == 0) charset_str = "ASCII";
+                else if(charset == 1) charset_str = "UTF-8";
+
+                print2term("Variable Type:                                                   %d %s\n", (int)vt_type, vt_type_str);
+                print2term("Padding Type:                                                    %d %s\n", (int)padding, padding_str);
+                print2term("Character Set:                                                   %d %s\n", (int)charset, charset_str);
+            }
+            pos += readDatatypeMsg (pos, hdr_flags, dlvl);
+            break;
+#endif
+        }
+
         case STRING_TYPE:
         {
             if(verbose)
@@ -2632,9 +2664,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Read Datatype Message */
     int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
-    if(errorChecking && datatype_bytes_read != (int)datatype_size)
+    if(errorChecking && datatype_bytes_read > (int)datatype_size)
     {
-        throw RunTimeException(CRITICAL, "failed to read expected bytes for datatype message: %d != %d\n", (int)datatype_bytes_read, (int)datatype_size);
+        throw RunTimeException(CRITICAL, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
     }
     else
     {
@@ -2644,9 +2676,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Read Dataspace Message */
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
-    if(errorChecking && dataspace_bytes_read != (int)dataspace_size)
+    if(errorChecking && dataspace_bytes_read > (int)dataspace_size)
     {
-        throw RunTimeException(CRITICAL, "failed to read expected bytes for dataspace message: %d != %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
+        throw RunTimeException(CRITICAL, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
     else
     {
@@ -3034,7 +3066,7 @@ uint64_t H5FileBuffer::metaGetKey (const char* url)
 {
     uint64_t key_value = 0;
     uint64_t* url_ptr = (uint64_t*)url;
-    for(int i = 0; i < MAX_META_FILENAME; i+=sizeof(uint64_t))
+    for(int i = 0; i < MAX_META_NAME_SIZE; i+=sizeof(uint64_t))
     {
         key_value += *url_ptr;
         url_ptr++;
@@ -3065,11 +3097,11 @@ void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* data
     if(dataset[0] == '/') dataset_name_ptr++;
 
     /* Build URL */
-    LocalLib::set(url, 0, MAX_META_FILENAME);
-    StringLib::format(url, MAX_META_FILENAME, "%s/%s", filename_ptr, dataset_name_ptr);
+    LocalLib::set(url, 0, MAX_META_NAME_SIZE);
+    StringLib::format(url, MAX_META_NAME_SIZE, "%s/%s", filename_ptr, dataset_name_ptr);
 
     /* Check URL Fits (at least 2 null terminators) */
-    if(url[MAX_META_FILENAME - 2] != '\0')
+    if(url[MAX_META_NAME_SIZE - 2] != '\0')
     {
         throw RunTimeException(CRITICAL, "truncated meta repository url: %s", url);
     }

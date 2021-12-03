@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     # Open Small ASDF H5 File #
     asdf_small = srpybin.h5coro(resource0, format, "/data/ASDF", region, endpoint)
-    
+
     # Run Meta Test #
     meta = asdf_small.meta("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording")
     result = result and (meta['elements'] == 1878490)
@@ -79,13 +79,17 @@ if __name__ == '__main__':
     v = asdf_small.read("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording", 0, 57655, 5)
     result = result and check_results(v, small_exp)
 
+    # Read Attribute from Dataset #
+    a = asdf_small.read("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording/sampling_rate")
+    result = result and (a[0] == 100.0)
+
     ###################
-    # TESTSET 1
+    # TESTSET 2
     ###################
 
     # Open Large ASDF H5 File #
     asdf_large = srpybin.h5coro(resource3, format, "/data/ASDF", region, endpoint)
-    
+
     # Read Large Dataset from Small File Multiple Times #
     v = asdf_large.read("/Waveforms/IM.I56H1/IM.I56H1..LWS__2020-12-29T00:00:00__2020-12-29T23:59:59__raw_recording", 0, 30000, 10)
     v = asdf_large.read("/Waveforms/IM.I56H2/IM.I56H2..BDF__2020-01-26T00:00:00__2020-01-29T23:59:59__raw_recording", 0, 600000, 10)

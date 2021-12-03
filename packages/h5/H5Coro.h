@@ -42,6 +42,14 @@
 #include "Asset.h"
 
 /******************************************************************************
+ * HDF5 DEFINES
+ ******************************************************************************/
+
+#ifndef H5CORO_MAXIMUM_NAME_SIZE
+#define H5CORO_MAXIMUM_NAME_SIZE 88
+#endif
+
+/******************************************************************************
  * HDF5 FUTURE CLASS
  ******************************************************************************/
 
@@ -164,7 +172,7 @@ class H5FileBuffer
          */
 
         static const long       MAX_META_STORE          = 150000;
-        static const long       MAX_META_FILENAME       = 112; // must be multiple of 8
+        static const long       MAX_META_NAME_SIZE      = (H5CORO_MAXIMUM_NAME_SIZE & 0xFFF8); // forces size to multiple of 8
 
         /*
          * Assuming:
@@ -282,7 +290,7 @@ class H5FileBuffer
         } fill_t;
 
         typedef struct {
-            char                    url[MAX_META_FILENAME];
+            char                    url[MAX_META_NAME_SIZE];
             data_type_t             type;
             layout_t                layout;
             fill_t                  fill;

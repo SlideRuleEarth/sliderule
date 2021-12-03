@@ -148,6 +148,11 @@ if (DEFINED H5CORO_THREAD_POOL_SIZE)
     target_compile_definitions (slideruleLib PUBLIC H5CORO_THREAD_POOL_SIZE=${H5CORO_THREAD_POOL_SIZE})
 endif ()
 
+if (DEFINED H5CORO_MAXIMUM_NAME_SIZE)
+    message (STATUS "Setting H5CORO_MAXIMUM_NAME_SIZE to " ${H5CORO_MAXIMUM_NAME_SIZE})
+    target_compile_definitions (slideruleLib PUBLIC H5CORO_MAXIMUM_NAME_SIZE=${H5CORO_MAXIMUM_NAME_SIZE})
+endif ()
+
 if (${ENABLE_H5CORO_ATTRIBUTE_SUPPORT})
     message (STATUS "Enabling support in H5Coro for attribute messages")
     target_compile_definitions (slideruleLib PUBLIC H5CORO_ATTRIBUTE_SUPPORT)
