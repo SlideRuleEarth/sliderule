@@ -19,7 +19,6 @@ import logging
 import time
 import cartopy
 import matplotlib.pyplot as plt
-from datetime import datetime
 from sliderule import icesat2
 
 ###############################################################################
