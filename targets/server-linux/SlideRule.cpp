@@ -78,7 +78,10 @@ typedef void (*init_f) (void);
 
 static bool app_immediate_abort = false;
 static bool app_signal_abort = false;
+
+#ifdef CUSTOM_ALLOCATOR
 static std::atomic<uint64_t> allocCount = {0};
+#endif
 
 /******************************************************************************
  EXPORTED FUNCTIONS

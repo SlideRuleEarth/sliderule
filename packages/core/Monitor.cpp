@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -117,7 +117,7 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
     (void)key;
 
     int event_size;
-    char event_buffer[MAX_EVENT_SIZE];    
+    char event_buffer[MAX_EVENT_SIZE];
 
     /* Pull Out Log Message */
     EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
@@ -142,15 +142,15 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
         /* Format Event */
         if(outputFormat == CLOUD)
         {
-            event_size = cloudOutput(event, event_buffer); 
+            event_size = cloudOutput(event, event_buffer);
         }
         else if(outputFormat == TEXT)
         {
-            event_size = textOutput(event, event_buffer); 
+            event_size = textOutput(event, event_buffer);
         }
         else if(outputFormat == JSON)
         {
-            event_size = jsonOutput(event, event_buffer); 
+            event_size = jsonOutput(event, event_buffer);
         }
         else
         {
@@ -184,7 +184,7 @@ int Monitor::textOutput (EventLib::event_t* event, char* event_buffer)
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     double seconds = (double)timeinfo.second + ((double)timeinfo.millisecond / 1000.0);
-    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%04d-%02d-%02dT%02d:%02d:%.03lfZ %s:%s:%s ", 
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%04d-%02d-%02dT%02d:%02d:%.03lfZ %s:%s:%s ",
         timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, seconds,
         event->ipv4, EventLib::lvl2str((event_level_t)event->level), event->name);
 
@@ -203,13 +203,13 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
     char* msg = event_buffer;
 
     /* Populate Message */
-    if(event->attr && event->attr[0] == '{')
+    if(event->attr[0] == '{')
     {
         /* Attribute String with No Quotes */
         msg += StringLib::formats(msg, MAX_EVENT_SIZE,
             "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"type\":\"%s\",\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":%s}\n",
-            event->systime, event->ipv4, event->flags, 
-            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level), 
+            event->systime, event->ipv4, event->flags,
+            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level),
             event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
     }
     else
@@ -217,8 +217,8 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
         /* Attribute String Quoted */
         msg += StringLib::formats(msg, MAX_EVENT_SIZE,
             "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"type\":\"%s\",\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":\"%s\"}\n",
-            event->systime, event->ipv4, event->flags, 
-            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level), 
+            event->systime, event->ipv4, event->flags,
+            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level),
             event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
     }
 
@@ -232,7 +232,7 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
 int Monitor::cloudOutput (EventLib::event_t* event, char* event_buffer)
 {
     /* Populate Message */
-    int msg_len = StringLib::formats(event_buffer, MAX_EVENT_SIZE, "%s:%s %s\n", 
+    int msg_len = StringLib::formats(event_buffer, MAX_EVENT_SIZE, "%s:%s %s\n",
                                     EventLib::lvl2str((event_level_t)event->level), event->name, event->attr);
 
     /* Return Size of Message */
@@ -281,7 +281,7 @@ int Monitor::luaConfig (lua_State* L)
 
 /*----------------------------------------------------------------------------
  * luaTail - :tail(<size>)
- * 
+ *
  *  Note: NOT thread safe; must be called prior to attaching monitor to dispatch
  *----------------------------------------------------------------------------*/
 int Monitor::luaTail (lua_State* L)
