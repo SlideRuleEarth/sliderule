@@ -150,6 +150,7 @@ H5FileBuffer::io_context_t::io_context_t (void):
     l1(IO_CACHE_L1_ENTRIES, ioHashL1),
     l2(IO_CACHE_L2_ENTRIES, ioHashL2)
 {
+    io_request = 0;
     cache_miss = 0;
     l1_cache_add = 0;
     l2_cache_add = 0;
@@ -385,12 +386,15 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
     uint64_t file_position = *pos;
     bool cached = false;
 
-    /* Attempt to fulfill data request from I/O cache
-     *  note that this is only checked if a buffer is supplied;
-     *  otherwise the purpose of the call is to cache the entry */
-    if(buffer)
+    ioContext->mut.lock();
     {
-        ioContext->mut.lock();
+        /* Count I/O Request */
+        ioContext->io_request++;
+
+        /* Attempt to fulfill data request from I/O cache
+        *  note that this is only checked if a buffer is supplied;
+        *  otherwise the purpose of the call is to cache the entry */
+        if(buffer)
         {
             if( ioCheckCache(file_position, size, &ioContext->l1, IO_CACHE_L1_MASK, &entry) ||
                 ioCheckCache(file_position, size, &ioContext->l2, IO_CACHE_L2_MASK, &entry) )
@@ -410,8 +414,8 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                 ioContext->cache_miss++;
             }
         }
-        ioContext->mut.unlock();
     }
+    ioContext->mut.unlock();
 
     /* Read data to fulfill request */
     if(!cached)

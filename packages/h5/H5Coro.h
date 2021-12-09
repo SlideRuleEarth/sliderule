@@ -142,6 +142,7 @@ class H5FileBuffer
             cache_t     l1; // level 1 cache
             cache_t     l2; // level 2 cache
             Mutex       mut; // cache mutex
+            long        io_request;
             long        cache_miss;
             long        l1_cache_add;
             long        l2_cache_add;
