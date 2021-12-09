@@ -183,6 +183,20 @@ const py::dict pyH5Coro::readp (const py::list& datasets)
 }
 
 /*--------------------------------------------------------------------
+ * stat
+ *--------------------------------------------------------------------*/
+py::dict pyH5Coro::stat (void)
+{
+    py::dict stats;
+    stats["cache_miss"]         = context.cache_miss;
+    stats["l1_cache_add"]       = context.l1_cache_add;
+    stats["l2_cache_add"]       = context.l2_cache_add;
+    stats["l1_cache_replace"]   = context.l1_cache_replace;
+    stats["l2_cache_replace"]   = context.l2_cache_replace;
+    return stats;
+}
+
+/*--------------------------------------------------------------------
  * tolist
  *--------------------------------------------------------------------*/
 py::list pyH5Coro::tolist (H5Coro::info_t* info)

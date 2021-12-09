@@ -61,6 +61,7 @@ class pyH5Coro
         py::dict            meta        (const std::string &datasetname, long col, long startrow, long numrows);
         py::list            read        (const std::string &datasetname, long col, long startrow, long numrows);
         const py::dict      readp       (const py::list& datasets);
+        py::dict            stat        (void);
 
     private:
 

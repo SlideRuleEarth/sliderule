@@ -116,7 +116,9 @@ PYBIND11_MODULE(srpybin, m)
             py::arg("startrow") = 0,
             py::arg("numrows") = -1)
 
-        .def("readp", &pyH5Coro::readp, "parallel read of datasets from file");
+        .def("readp", &pyH5Coro::readp, "parallel read of datasets from file")
+
+        .def("stat", &pyH5Coro::stat, "returns statistics");
 
     py::class_<pyS3Cache>(m, "s3cache")
 

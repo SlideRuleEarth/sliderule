@@ -150,6 +150,11 @@ H5FileBuffer::io_context_t::io_context_t (void):
     l1(IO_CACHE_L1_ENTRIES, ioHashL1),
     l2(IO_CACHE_L2_ENTRIES, ioHashL2)
 {
+    cache_miss = 0;
+    l1_cache_add = 0;
+    l2_cache_add = 0;
+    l1_cache_replace = 0;
+    l2_cache_replace = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -244,7 +249,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
         bool meta_found = false;
         metaMutex.lock();
         {
-            if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData))
+            if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData, true))
             {
                 meta_found = StringLib::match(metaData.url, meta_url, MAX_META_NAME_SIZE);
             }
@@ -354,7 +359,7 @@ void H5FileBuffer::tearDown (void)
  *----------------------------------------------------------------------------*/
 int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
-    static int io_reads = 0;
+    static long io_reads = 0;
     static long io_data = 0;
 
     /* Perform Read */
@@ -363,7 +368,7 @@ int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     /* Characterize Performance */
     if(H5_CHARACTERIZE_IO)
     {
-        print2term("ioRead - 0x%08lx [%ld] (%d, %ld) - %s\n", pos, bytes_read, ++io_reads, io_data += bytes_read, datasetPrint);
+        print2term("ioRead - 0x%08lx [%ld] (%ld, %ld) - %s\n", pos, bytes_read, ++io_reads, io_data += bytes_read, datasetPrint);
     }
 
     /* Return Bytes Read */
@@ -398,6 +403,11 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
 
                 /* Copy Data into Buffer */
                 LocalLib::copy(buffer, &entry.data[data_offset], size);
+            }
+            else
+            {
+                /* Count Cache Miss */
+                ioContext->cache_miss++;
             }
         }
         ioContext->mut.unlock();
@@ -454,13 +464,19 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
 
             /* Select Cache */
             cache_t* cache = NULL;
+            long* cache_add = NULL;
+            long* cache_replace = NULL;
             if(entry.size <= IO_CACHE_L1_LINESIZE)
             {
                 cache = &ioContext->l1;
+                cache_add = &ioContext->l1_cache_add;
+                cache_replace = &ioContext->l1_cache_replace;
             }
             else
             {
                 cache = &ioContext->l2;
+                cache_add = &ioContext->l2_cache_add;
+                cache_replace = &ioContext->l2_cache_replace;
             }
 
             /* Cache Entry */
@@ -469,6 +485,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                 /* Ensure Room in Cache */
                 if(cache->isfull())
                 {
+                    /* Replace Oldest Entry */
                     cache_entry_t oldest_entry;
                     uint64_t oldest_pos = cache->first(&oldest_entry);
                     if(oldest_pos != (uint64_t)INVALID_KEY)
@@ -481,6 +498,9 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                         ioContext->mut.unlock();
                         throw RunTimeException(CRITICAL, "failed to make room in cache for %s", datasetPrint);
                     }
+
+                    /* Count Cache Replacement */
+                    (*cache_replace)++;
                 }
 
                 /* Add Cache Entry */
@@ -492,6 +512,9 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                      *  delete what was allocated and move on */
                     delete [] entry.data;
                 }
+
+                /* Count Cache Add */
+                (*cache_add)++;
             }
             ioContext->mut.unlock();
         }
@@ -509,8 +532,8 @@ bool H5FileBuffer::ioCheckCache (uint64_t pos, int64_t size, cache_t* cache, uin
     uint64_t prev_line_pos = (pos & ~line_mask) - 1;
     bool check_prev = pos > prev_line_pos; // checks for rollover
 
-    if( cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry) ||
-        (check_prev && cache->find(prev_line_pos, cache_t::MATCH_NEAREST_UNDER, entry)) )
+    if( cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry, true) ||
+        (check_prev && cache->find(prev_line_pos, cache_t::MATCH_NEAREST_UNDER, entry, true)) )
     {
         if((pos >= entry->pos) && ((pos + size) <= (entry->pos + entry->size)))
         {
