@@ -193,6 +193,7 @@ py::dict pyH5Coro::stat (void)
     stats["cache_miss"]             = context.cache_miss;
     stats["l1_cache_replace"]       = context.l1_cache_replace;
     stats["l2_cache_replace"]       = context.l2_cache_replace;
+    stats["bytes_read"]             = context.bytes_read;
     return stats;
 }
 

@@ -147,6 +147,7 @@ class H5FileBuffer
             long        cache_miss;
             long        l1_cache_replace;
             long        l2_cache_replace;
+            long        bytes_read;
 
             io_context_t    (void);
             ~io_context_t   (void);
@@ -321,7 +322,6 @@ class H5FileBuffer
 
         void                tearDown            (void);
 
-        int64_t             ioRead              (uint8_t* data, int64_t size, uint64_t pos);
         void                ioRequest           (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);
         bool                ioCheckCache        (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
         static uint64_t     ioHashL1            (uint64_t key);

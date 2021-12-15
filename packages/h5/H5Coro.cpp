@@ -56,10 +56,6 @@
 #define H5_EXTRA_DEBUG false
 #endif
 
-#ifndef H5_CHARACTERIZE_IO
-#define H5_CHARACTERIZE_IO false
-#endif
-
 /******************************************************************************
  * MACROS
  ******************************************************************************/
@@ -155,6 +151,7 @@ H5FileBuffer::io_context_t::io_context_t (void):
     cache_miss = 0;
     l1_cache_replace = 0;
     l2_cache_replace = 0;
+    bytes_read = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -356,27 +353,6 @@ void H5FileBuffer::tearDown (void)
 }
 
 /*----------------------------------------------------------------------------
- * ioRead
- *----------------------------------------------------------------------------*/
-int64_t H5FileBuffer::ioRead (uint8_t* data, int64_t size, uint64_t pos)
-{
-    static long io_reads = 0;
-    static long io_data = 0;
-
-    /* Perform Read */
-    int64_t bytes_read = ioDriver->ioRead(data, size, pos);
-
-    /* Characterize Performance */
-    if(H5_CHARACTERIZE_IO)
-    {
-        print2term("ioRead - 0x%08lx [%ld] (%ld, %ld) - %s\n", pos, bytes_read, ++io_reads, io_data += bytes_read, datasetPrint);
-    }
-
-    /* Return Bytes Read */
-    return bytes_read;
-}
-
-/*----------------------------------------------------------------------------
  * ioRequest
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache_the_data)
@@ -440,7 +416,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
         /* Read into Cache */
         try
         {
-            entry.size = ioRead(entry.data, read_size, entry.pos);
+            entry.size = ioDriver->ioRead(entry.data, read_size, entry.pos);
         }
         catch (const RunTimeException& e)
         {
@@ -513,6 +489,24 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                      *  delete what was allocated and move on */
                     delete [] entry.data;
                 }
+
+                /* Count Bytes Read */
+                ioContext->bytes_read += entry.size;
+            }
+            ioContext->mut.unlock();
+        }
+        else // data not being cached
+        {
+            /* Count Bytes Read
+             *  the logic below is repeated to avoid locking the ioContext mutex
+             *  any more than it needs to be locked; the bytes_read could be updated
+             *  in a single place below, but then the ioRequest function would always
+             *  incur an additional mutex lock, whereas here it only occurs an aditional
+             *  time when data isn't being cached (which is rare)
+             */
+            ioContext->mut.unlock();
+            {
+                ioContext->bytes_read += entry.size;
             }
             ioContext->mut.unlock();
         }
