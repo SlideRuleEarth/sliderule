@@ -150,10 +150,9 @@ H5FileBuffer::io_context_t::io_context_t (void):
     l1(IO_CACHE_L1_ENTRIES, ioHashL1),
     l2(IO_CACHE_L2_ENTRIES, ioHashL2)
 {
-    io_request = 0;
+    pre_prefetch_request = 0;
+    post_prefetch_request = 0;
     cache_miss = 0;
-    l1_cache_add = 0;
-    l2_cache_add = 0;
     l1_cache_replace = 0;
     l2_cache_replace = 0;
 }
@@ -202,6 +201,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
     ioContextLocal          = true;
     ioContext               = NULL;
     ioBucket                = NULL;
+    ioPostPrefetch          = false;
     dataChunkBuffer         = NULL;
     dataChunkFilterBuffer   = NULL;
     datasetName             = StringLib::duplicate(dataset);
@@ -385,11 +385,11 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
     int64_t data_offset = 0;
     uint64_t file_position = *pos;
     bool cached = false;
-
     ioContext->mut.lock();
     {
         /* Count I/O Request */
-        ioContext->io_request++;
+        if(ioPostPrefetch) ioContext->post_prefetch_request++;
+        else ioContext->pre_prefetch_request++;
 
         /* Attempt to fulfill data request from I/O cache
         *  note that this is only checked if a buffer is supplied;
@@ -468,18 +468,15 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
 
             /* Select Cache */
             cache_t* cache = NULL;
-            long* cache_add = NULL;
             long* cache_replace = NULL;
             if(entry.size <= IO_CACHE_L1_LINESIZE)
             {
                 cache = &ioContext->l1;
-                cache_add = &ioContext->l1_cache_add;
                 cache_replace = &ioContext->l1_cache_replace;
             }
             else
             {
                 cache = &ioContext->l2;
-                cache_add = &ioContext->l2_cache_add;
                 cache_replace = &ioContext->l2_cache_replace;
             }
 
@@ -516,9 +513,6 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                      *  delete what was allocated and move on */
                     delete [] entry.data;
                 }
-
-                /* Count Cache Add */
-                (*cache_add)++;
             }
             ioContext->mut.unlock();
         }
@@ -781,6 +775,7 @@ void H5FileBuffer::readDataset (info_t* info)
                  *  overall data that would be read, then prefetch the entire block from the
                  *  beginning and set the size hint to the L1 cache line size.
                  */
+                ioPostPrefetch = true;
                 if(buffer_offset < (uint64_t)buffer_size)
                 {
                     ioRequest(&metaData.address, 0, NULL, buffer_offset + buffer_size, true);

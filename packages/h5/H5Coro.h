@@ -142,10 +142,9 @@ class H5FileBuffer
             cache_t     l1; // level 1 cache
             cache_t     l2; // level 2 cache
             Mutex       mut; // cache mutex
-            long        io_request;
+            long        pre_prefetch_request;
+            long        post_prefetch_request;
             long        cache_miss;
-            long        l1_cache_add;
-            long        l2_cache_add;
             long        l1_cache_replace;
             long        l2_cache_replace;
 
@@ -391,6 +390,7 @@ class H5FileBuffer
         char*               ioKey;                  // s3 driver
         io_context_t*       ioContext;
         bool                ioContextLocal;
+        bool                ioPostPrefetch;
 
         /* File Info */
         uint8_t*            dataChunkBuffer;        // buffer for reading uncompressed chunk

@@ -188,12 +188,11 @@ const py::dict pyH5Coro::readp (const py::list& datasets)
 py::dict pyH5Coro::stat (void)
 {
     py::dict stats;
-    stats["io_request"]         = context.io_request;
-    stats["cache_miss"]         = context.cache_miss;
-    stats["l1_cache_add"]       = context.l1_cache_add;
-    stats["l2_cache_add"]       = context.l2_cache_add;
-    stats["l1_cache_replace"]   = context.l1_cache_replace;
-    stats["l2_cache_replace"]   = context.l2_cache_replace;
+    stats["pre_prefetch_request"]   = context.pre_prefetch_request;
+    stats["post_prefetch_request"]  = context.post_prefetch_request;
+    stats["cache_miss"]             = context.cache_miss;
+    stats["l1_cache_replace"]       = context.l1_cache_replace;
+    stats["l2_cache_replace"]       = context.l2_cache_replace;
     return stats;
 }
 
