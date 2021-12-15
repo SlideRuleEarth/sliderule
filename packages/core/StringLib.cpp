@@ -170,15 +170,13 @@ int SafeString::findChar (char c, int start)
 /*----------------------------------------------------------------------------
  * setChar
  *----------------------------------------------------------------------------*/
-bool SafeString::setChar (char c, int index)
+SafeString& SafeString::setChar (char c, int index)
 {
     if(index >= 0 && index < len)
     {
         str[index] = c;
-        return true;
     }
-
-    return false;
+    return *this;
 }
 
 /*----------------------------------------------------------------------------

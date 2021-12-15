@@ -74,7 +74,7 @@ class StringLib
                 long            getLength   (void);
                 void            appendChar  (char c);
                 int             findChar    (char c, int start=0);
-                bool            setChar     (char c, int index);
+                String&         setChar     (char c, int index);
                 bool            replace     (const char* oldtxt, const char* newtxt);
                 List<String>*   split       (char separator, bool strip=true);
                 char            operator[]  (int index);

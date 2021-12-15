@@ -79,19 +79,25 @@ class H5Array
 /*----------------------------------------------------------------------------
  * Constructor
  *
- *  Note that the "name" class member (along with everthing else) is initialized
+ *  Note 1: the "name" class member (along with everthing else) is initialized
  *  after the call to H5Coro::read(...).  This is on purpose because the H5Coro::read
  *  can throw an exception.  It will clean up all memory it uses, but any memory
  *  allocated by H5Array will not get cleaned up.  If any memory is allocated
  *  before the H5Coro::read call, then the call would need to be in a try-except
  *  block and would have to handle cleaning up that memory and rethrowing the
  *  exception; the ordering of the statements below is preferred over that.
+ *
+ *  Note 2: the asset parameter is used to indicate that this should be a null
+ *  array; it is the repsonsibility of the calling function to make sure no
+ *  further calls to this class are performed on a null array other than a join
  *----------------------------------------------------------------------------*/
 template <class T>
 H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context, long col, long startrow, long numrows)
 {
+    if(asset)   h5f = H5Coro::readp(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
+    else        h5f = NULL;
+
     name    = StringLib::duplicate(dataset);
-    h5f     = H5Coro::readp(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
     size    = 0;
     data    = NULL;
     pointer = NULL;
@@ -127,6 +133,8 @@ bool H5Array<T>::trim(long offset)
 
 /*----------------------------------------------------------------------------
  * []
+ *
+ *  Note: intentionally left unsafe for performance reasons
  *----------------------------------------------------------------------------*/
 template <class T>
 T& H5Array<T>::operator[](long index)
@@ -135,32 +143,43 @@ T& H5Array<T>::operator[](long index)
 }
 
 /*----------------------------------------------------------------------------
- * []
+ * join
  *----------------------------------------------------------------------------*/
 template <class T>
 bool H5Array<T>::join(int timeout, bool throw_exception)
 {
     bool status;
 
-    H5Future::rc_t rc = h5f->wait(timeout);
-    if(rc == H5Future::COMPLETE)
+    if(h5f)
     {
-        status = true;
-        size = h5f->info.elements;
-        data = (T*)h5f->info.data;
-        pointer = data;
+        H5Future::rc_t rc = h5f->wait(timeout);
+        if(rc == H5Future::COMPLETE)
+        {
+            status = true;
+            size = h5f->info.elements;
+            data = (T*)h5f->info.data;
+            pointer = data;
+        }
+        else
+        {
+            status = false;
+            if(throw_exception)
+            {
+                switch(rc)
+                {
+                    case H5Future::INVALID: throw RunTimeException(CRITICAL, "H5Future read failure on %s", name);
+                    case H5Future::TIMEOUT: throw RunTimeException(CRITICAL, "H5Future read timeout on %s", name);
+                    default:                throw RunTimeException(CRITICAL, "H5Future unknown error on %s", name);
+                }
+            }
+        }
     }
     else
     {
         status = false;
         if(throw_exception)
         {
-            switch(rc)
-            {
-                case H5Future::INVALID: throw RunTimeException(CRITICAL, "H5Future read failure on %s", name);
-                case H5Future::TIMEOUT: throw RunTimeException(CRITICAL, "H5Future read timeout on %s", name);
-                default:                throw RunTimeException(CRITICAL, "H5Future unknown error on %s", name);
-            }
+            throw RunTimeException(CRITICAL, "H5Future null join on %s", name);
         }
     }
 
