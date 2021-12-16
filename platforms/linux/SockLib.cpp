@@ -476,7 +476,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     /* Handle Errors */
                     if(polllist[i].revents & POLLERR)
                     {
-                        dlog("Poll error detected on server socket [%d]: %s", polllist[i].fd, strerror(errno));
+                        dlog("Poll error [0x%X] detected on server socket [%d]: %s", polllist[i].revents, polllist[i].fd, strerror(errno));
                         cb_stat = -1; // treat like a callback error or disconnect
                     }
                     else if(polllist[i].revents & POLLNVAL)
@@ -498,7 +498,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     {
                         /* Call Back for Disconnect */
                         on_act(polllist[i].fd, IO_DISCONNECT_FLAG, parm);
-                        sockclose(polllist[i].fd);
+                        if(valid_fd) sockclose(polllist[i].fd);
                         valid_fd = false;
                     }
 
