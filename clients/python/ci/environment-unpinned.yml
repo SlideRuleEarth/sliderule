@@ -5,3 +5,4 @@ dependencies:
   - python
   - pip
   - pytest
+  - fiona
