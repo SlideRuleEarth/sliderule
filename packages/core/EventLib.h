@@ -125,6 +125,7 @@ class EventLib
         static  bool            setLvl          (type_t type, event_level_t lvl);
         static  event_level_t   getLvl          (type_t type);
         static  const char*     lvl2str         (event_level_t lvl);
+        static  const char*     lvl2str_lc      (event_level_t lvl);
         static  const char*     type2str        (type_t type);
 
         static uint32_t         startTrace      (uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...) VARG_CHECK(printf, 4, 5);

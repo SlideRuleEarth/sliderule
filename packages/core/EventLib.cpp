@@ -195,6 +195,22 @@ const char* EventLib::lvl2str (event_level_t lvl)
 }
 
 /*----------------------------------------------------------------------------
+ * lvl2str_lc
+ *----------------------------------------------------------------------------*/
+const char* EventLib::lvl2str_lc (event_level_t lvl)
+{
+    switch(lvl)
+    {
+        case DEBUG:     return "debug";
+        case INFO:      return "info";
+        case WARNING:   return "warning";
+        case ERROR:     return "error";
+        case CRITICAL:  return "critical";
+        default:        return NULL;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * type2str
  *----------------------------------------------------------------------------*/
 const char* EventLib::type2str (type_t type)

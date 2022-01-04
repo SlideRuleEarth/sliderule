@@ -272,8 +272,8 @@ int netsvc_post (lua_State* L)
     }
     else
     {
-        /* Return NIL in place of Response String */
-        lua_pushnil(L);
+        /* Error Response String */
+        lua_pushstring(L, "network error");
     }
 
     /* Return Status */

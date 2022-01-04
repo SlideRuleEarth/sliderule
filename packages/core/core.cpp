@@ -116,7 +116,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FMT_JSON",                 Monitor::JSON);
     LuaEngine::setAttrInt   (L, "FMT_CLOUD",                Monitor::CLOUD);
     LuaEngine::setAttrInt   (L, "FMT_RECORD",               Monitor::RECORD);
-    LuaEngine::setAttrStr   (L, "EVENTQ",                 EVENTQ);
+    LuaEngine::setAttrStr   (L, "EVENTQ",                   EVENTQ);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                     RecordObject::REAL);
     LuaEngine::setAttrInt   (L, "INTEGER",                  RecordObject::INTEGER);

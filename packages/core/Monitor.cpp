@@ -231,12 +231,14 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
  *----------------------------------------------------------------------------*/
 int Monitor::cloudOutput (EventLib::event_t* event, char* event_buffer)
 {
+    char* msg = event_buffer;
+
     /* Populate Message */
-    int msg_len = StringLib::formats(event_buffer, MAX_EVENT_SIZE, "%s:%s %s\n",
-                                    EventLib::lvl2str((event_level_t)event->level), event->name, event->attr);
+    msg += StringLib::formats(msg, MAX_EVENT_SIZE, "ip=%s level=%s caller=%s msg=\"%s\"\n",
+        event->ipv4, EventLib::lvl2str_lc((event_level_t)event->level), event->name, event->attr);
 
     /* Return Size of Message */
-    return msg_len + 1;
+    return msg - event_buffer + 1;
 }
 
 /*----------------------------------------------------------------------------
