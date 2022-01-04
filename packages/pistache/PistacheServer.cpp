@@ -178,7 +178,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     uint32_t trace_id = start_trace(CRITICAL, traceId, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
+    mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());
@@ -203,7 +203,7 @@ void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWr
     uint32_t trace_id = start_trace(CRITICAL, traceId, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
+    mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());
@@ -234,7 +234,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     uint32_t trace_id = start_trace(CRITICAL, traceId, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
+    mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());
@@ -286,7 +286,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     uint32_t trace_id = start_trace(CRITICAL, traceId, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
-    mlog(INFO, "request: %s at %s", id_str, request.resource().c_str());
+    mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
     response.headers().add<Http::Header::Server>(ServerHeader.getString());

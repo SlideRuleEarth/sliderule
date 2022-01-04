@@ -160,7 +160,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
                         cacheLookUp.add(key.getString(), cacheIndex);
                         const char* cache_key = StringLib::duplicate(key.getString());
                         cacheFiles.add(cacheIndex, cache_key);
-                        mlog(CRITICAL, "Caching %s for S3 retrieval", key.getString());
+                        mlog(INFO, "Caching %s for S3 retrieval", key.getString());
                     }
                 }
             }
@@ -169,7 +169,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
             /* Log Status */
             if(file_count > 0)
             {
-                mlog(CRITICAL, "Loaded %ld of %d files into S3 cache", cacheFiles.length(), file_count);
+                mlog(INFO, "Loaded %ld of %d files into S3 cache", cacheFiles.length(), file_count);
             }
         }
     }
@@ -292,7 +292,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.getString());
 
     /* Log Operation */
-    mlog(INFO, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.getString());
+    mlog(DEBUG, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.getString());
 
     /* Quick Exit If Cache Hit */
     if(found_in_cache)

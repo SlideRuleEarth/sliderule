@@ -118,7 +118,7 @@ void* LuaEndpoint::requestThread (void* parm)
     uint32_t trace_id = start_trace(INFO, lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
-    mlog(CRITICAL, "%s request at %s to %s", verb2str(request->verb), request->id, script_pathname);
+    mlog(INFO, "%s request at %s to %s", verb2str(request->verb), request->id, script_pathname);
 
     /* Update Metrics */
     int32_t metric_id = lua_endpoint->getMetricId(request->url);

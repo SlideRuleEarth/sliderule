@@ -32,7 +32,7 @@ local id = parm["id"] or 0
 
 asset = core.getbyname(asset_name)
 if not asset then
-    userlog:sendlog(core.INFO, string.format("invalid asset specified: %s", asset_name))
+    userlog:sendlog(core.ERROR, string.format("invalid asset specified: %s", asset_name))
     return
 end
 

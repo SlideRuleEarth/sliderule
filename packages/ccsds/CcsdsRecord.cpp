@@ -72,7 +72,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
     }
     else
     {
-        throw RunTimeException(CRITICAL, "could not find record definition: %s", rec_type);
+        throw RunTimeException(ERROR, "could not find record definition: %s", rec_type);
     }
 
     /* Set Packet Definition */
@@ -86,7 +86,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
     {
         (void)e;
         delete [] recordMemory;
-        throw RunTimeException(CRITICAL, "Could not find definition for CCSDS packet with provided record type");
+        throw RunTimeException(ERROR, "Could not find definition for CCSDS packet with provided record type");
     }
 }
 

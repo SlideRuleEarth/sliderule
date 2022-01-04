@@ -184,7 +184,7 @@ void TcpSocket::closeConnection(void)
 {
     if(sock != INVALID_RC)
     {
-        mlog(CRITICAL, "closing connection on socket: %s %d", ip_addr, port);
+        mlog(INFO, "closing connection on socket: %s %d", ip_addr, port);
         SockLib::sockclose(sock);
         sock = INVALID_RC;
     }
@@ -309,7 +309,7 @@ void* TcpSocket::connectionThread(void* parm)
             /* Check Die On Disconnect */
             if(connected_once && socket->die_on_disconnect)
             {
-                mlog(CRITICAL, "Exiting tcp connection thread for %s:%d... dying on disconnect.", socket->ip_addr, socket->port);
+                mlog(INFO, "Exiting tcp connection thread for %s:%d... dying on disconnect.", socket->ip_addr, socket->port);
                 break;
             }
 
@@ -319,11 +319,11 @@ void* TcpSocket::connectionThread(void* parm)
             /* Handle Connection Outcome */
             if(socket->sock < 0)
             {
-                mlog(CRITICAL, "Unable to establish tcp connection to %s:%d... retrying", socket->ip_addr, socket->port);
+                mlog(INFO, "Unable to establish tcp connection to %s:%d... retrying", socket->ip_addr, socket->port);
             }
             else
             {
-                mlog(CRITICAL, "Connection established to %s:%d", socket->ip_addr, socket->port);
+                mlog(INFO, "Connection established to %s:%d", socket->ip_addr, socket->port);
                 connected_once = true;
             }
         }

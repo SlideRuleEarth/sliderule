@@ -3380,7 +3380,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    mlog(INFO, "Read %d elements (%d bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
+    mlog(DEBUG, "Read %d elements (%d bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
 
     /* Return Info */
     return info;

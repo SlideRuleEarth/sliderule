@@ -340,7 +340,7 @@ int File::readBuffer (void* buf, int len)
         }
         else
         {
-            mlog(CRITICAL, "Opened file %s", fileList[currFile]);
+            mlog(INFO, "Opened file %s", fileList[currFile]);
         }
     }
 
@@ -538,7 +538,7 @@ bool File::openNewFileForWriting(void)
     }
 
     /* Return Success */
-    mlog(CRITICAL, "Opened new file for writing: %s", activeFile);
+    mlog(INFO, "Opened new file for writing: %s", activeFile);
     return true;
 }
 
@@ -570,7 +570,7 @@ int File::createFileListForReading (char* input_string, char** file_list)
                 const char* new_file = glob_buffer.gl_pathv[m];
                 if(file_list)
                 {
-                    mlog(CRITICAL, "Adding %s to file list", new_file);
+                    mlog(INFO, "Adding %s to file list", new_file);
                     file_list[num_files] = StringLib::duplicate(new_file);
                 }
                 num_files++;

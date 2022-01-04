@@ -273,7 +273,7 @@ int H5File::luaRead (lua_State* L)
         }
 
         /* Status Complete */
-        mlog(CRITICAL, "Finished reading %d datasets from %s", pids.length(), lua_obj->asset->getName());
+        mlog(INFO, "Finished reading %d datasets from %s", pids.length(), lua_obj->asset->getName());
 
         /* Terminate Data */
         Publisher outQ(outq_name);

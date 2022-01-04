@@ -222,7 +222,7 @@ int CosmosInterface::tlmActiveHandler(int fd, int flags, void* parm)
         rqst->ci = ci;
         rqst->sub = new Subscriber(ci->tlmQName);
         rqst->sock = new TcpSocket(NULL, fd);
-        mlog(CRITICAL, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
+        mlog(INFO, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
 
         /* Register and Start Connection */
         ci->tlmConnMut.lock();
@@ -252,7 +252,7 @@ int CosmosInterface::cmdActiveHandler(int fd, int flags, void* parm)
         rqst->ci = ci;
         rqst->pub = new Publisher(ci->cmdQName);
         rqst->sock = new TcpSocket(NULL, fd);
-        mlog(CRITICAL, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
+        mlog(INFO, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
 
         /* Register and Start Connection */
         ci->cmdConnMut.lock();
@@ -299,7 +299,7 @@ void* CosmosInterface::telemetryThread (void* parm)
         }
     }
 
-    mlog(INFO, "Terminating connection to %s in %s", rqst->sock->getIpAddr(), ci->getName());
+    mlog(DEBUG, "Terminating connection to %s in %s", rqst->sock->getIpAddr(), ci->getName());
     ci->tlmConnMut.lock();
     {
         // !!! CANNOT access request values after this call !!!

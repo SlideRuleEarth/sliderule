@@ -211,7 +211,7 @@ bool CommandProcessor::executeScript (const char* script_name)
     }
     else
     {
-        mlog(INFO, "Processing file: %s", script_name);
+        mlog(DEBUG, "Processing file: %s", script_name);
     }
 
     /* Build Command List */
@@ -261,7 +261,7 @@ bool CommandProcessor::registerHandler(const char* handle_name, newFunc_t func, 
     handle_entry_t* handle = new handle_entry_t(handle_name, func, numparms, desc, perm);
     handlers.add(handle_name, handle);
 
-    mlog(INFO, "Registered handler: %s", handle_name);
+    mlog(DEBUG, "Registered handler: %s", handle_name);
 
     return true;
 }
@@ -485,7 +485,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
 
     /* Parse Command into Tokens */
     char(*toks)[MAX_CMD_SIZE] = new (char[MAX_CMD_PARAMETERS + 1][MAX_CMD_SIZE]);
-    mlog(INFO, "Received command: %s", cmdstr);
+    mlog(DEBUG, "Received command: %s", cmdstr);
     int totaltoks = StringLib::tokenizeLine(cmdstr, cmdlen, ' ', MAX_CMD_PARAMETERS + 1, toks);
     if(totaltoks > MAX_CMD_PARAMETERS) // unable to determine in more parameters supplied
     {
@@ -564,7 +564,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
         }
         else
         {
-            mlog(INFO, "command %s successfully executed.", echoed_cmd);
+            mlog(DEBUG, "command %s successfully executed.", echoed_cmd);
             status = true;
         }
 
@@ -913,7 +913,7 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
             bool registered = objects.add(obj_name, entry, true);
             if(registered)
             {
-                mlog(INFO, "Object %s created and registered", obj_name);
+                mlog(DEBUG, "Object %s created and registered", obj_name);
             }
             else
             {
@@ -973,7 +973,7 @@ int CommandProcessor::deleteCmd (int argc, char argv[][MAX_CMD_SIZE])
         else
         {
             lockedObjects.add(entry);
-            mlog(INFO, "Locking permanent object %s as a result of request to delete!", obj_name);
+            mlog(DEBUG, "Locking permanent object %s as a result of request to delete!", obj_name);
         }
 
         // Remove object from object list
@@ -1068,7 +1068,7 @@ int CommandProcessor::registerCmd (int argc, char argv[][MAX_CMD_SIZE])
     bool registered = objects.add(obj_name, entry, true);
     if(registered)
     {
-        mlog(INFO, "Object %s now registered", obj_name);
+        mlog(DEBUG, "Object %s now registered", obj_name);
     }
     else
     {

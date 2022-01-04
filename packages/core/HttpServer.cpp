@@ -164,7 +164,7 @@ void* HttpServer::listenerThread(void* parm)
             /* Restart Http Server */
             if(s->active)
             {
-                mlog(CRITICAL, "Attempting to restart http server: %s", s->getName());
+                mlog(INFO, "Attempting to restart http server: %s", s->getName());
                 LocalLib::sleep(3.0); // wait three second to prevent spint
             }
         }
@@ -351,7 +351,7 @@ int HttpServer::onRead(int fd)
                     }
                     else
                     {
-                        mlog(CRITICAL, "Enable to extract endpoint and url: %s", url_str);
+                        mlog(CRITICAL, "Unable to extract endpoint and url: %s", url_str);
                     }
 
                     /* Clean Up Allocated Memory */

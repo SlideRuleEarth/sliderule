@@ -371,7 +371,7 @@ int LuaObject::luaName(lua_State* L)
             {
                 /* Associate Name */
                 lua_obj->ObjectName = StringLib::duplicate(name);
-                mlog(INFO, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
+                mlog(DEBUG, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
                 status = true;
             }
         }

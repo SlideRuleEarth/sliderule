@@ -456,7 +456,7 @@ void* LuaEngine::protectedThread (void* parm)
         }
         else
         {
-            mlog(INFO, "%s executed", p->argc > 0 ? p->argv[0] : "lua script");
+            mlog(DEBUG, "%s executed", p->argc > 0 ? p->argv[0] : "lua script");
         }
 
         /* Set Inactive */
