@@ -167,9 +167,9 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
             {
                 switch(rc)
                 {
-                    case H5Future::INVALID: throw RunTimeException(CRITICAL, "H5Future read failure on %s", name);
-                    case H5Future::TIMEOUT: throw RunTimeException(CRITICAL, "H5Future read timeout on %s", name);
-                    default:                throw RunTimeException(CRITICAL, "H5Future unknown error on %s", name);
+                    case H5Future::INVALID: throw RunTimeException(ERROR, "H5Future read failure on %s", name);
+                    case H5Future::TIMEOUT: throw RunTimeException(ERROR, "H5Future read timeout on %s", name);
+                    default:                throw RunTimeException(ERROR, "H5Future unknown error on %s", name);
                 }
             }
         }

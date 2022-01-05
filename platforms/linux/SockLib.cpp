@@ -430,7 +430,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         if(listen(listen_socket, 1) == 0)
         {
             /* Set Listener in Poll List */
-            dlog("Established listener socket on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
+            //dlog("Established listener socket on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
             num_sockets++; // for listener socket
             polllist[0].fd = listen_socket;
             polllist[0].events = POLLIN; // start out listening for new connections
