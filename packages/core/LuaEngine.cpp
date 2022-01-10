@@ -296,7 +296,7 @@ const char* LuaEngine::sanitize (const char* filename)
     SafeString delimeter("%c", PATH_DELIMETER);
     SafeString safe_filename("%s", filename);
     safe_filename.replace(delimeter.getString(), "_");
-    SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.getString());
+    SafeString safe_pathname("%s%c%s.lua", APIDIR, PATH_DELIMETER, safe_filename.getString());
     return safe_pathname.getString(true);
 }
 
@@ -560,8 +560,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_setglobal(l, LUA_CONFDIR);
 
     /* Set Starting Lua Path */
-    SafeString lpath(CONFDIR);
-    lpath += "/?.lua";
+    SafeString lpath("%s/?.lua;%s/?.lua", CONFDIR, APIDIR);
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)
     lua_pop(l, 1 ); // get rid of the string on the stack we just pushed on line 5
