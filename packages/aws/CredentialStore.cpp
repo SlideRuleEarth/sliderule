@@ -112,7 +112,8 @@ bool CredentialStore::put (const char* host, Credential& credential)
         int32_t metric_id;
         if(!metricIds.find(host, &metric_id))
         {
-            metric_id = EventLib::registerMetric(LIBRARY_NAME, "%s:%s", host, EXPIRATION_GPS_METRIC);
+            printf("HERE: %s|%s|%s\n", LIBRARY_NAME, host, EXPIRATION_GPS_METRIC);
+            metric_id = EventLib::registerMetric(LIBRARY_NAME, EventLib::GAUGE, "%s:%s", host, EXPIRATION_GPS_METRIC);
         }
 
         /* Update Metric */

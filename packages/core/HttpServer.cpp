@@ -395,8 +395,7 @@ int HttpServer::onRead(int fd)
                 }
                 catch(const RunTimeException& e)
                 {
-                    mlog(e.level(), "Http request must supply Content-Length header: %s", e.what());
-                    status = INVALID_RC; // will close socket
+                    connection->request.body_length = 0;
                 }
             }
             else
@@ -407,24 +406,28 @@ int HttpServer::onRead(int fd)
         }
 
         /* Check If Body Complete */
-        if(connection->request.body_length > 0)
+        if((connection->message.getLength() - connection->state.header_index) >= connection->request.body_length)
         {
-            if((connection->message.getLength() - connection->state.header_index) >= connection->request.body_length)
+            /* Get Message Body */
+            if(connection->request.body_length > 0)
             {
-                /* Get Message Body */
                 const char* raw_message = connection->message.getString();
                 connection->request.body = &raw_message[connection->state.header_index];
+            }
+            else
+            {
+                connection->request.body = NULL;
+            }
 
-                /* Handle Request */
-                if(connection->request.endpoint)
-                {
-                    connection->request.response_type = connection->request.endpoint->handleRequest(&connection->request);
-                }
-                else // currently no other types of handers
-                {
-                    mlog(CRITICAL, "Unable to handle unattached request");
-                    status = INVALID_RC; // will close socket
-                }
+            /* Handle Request */
+            if(connection->request.endpoint)
+            {
+                connection->request.response_type = connection->request.endpoint->handleRequest(&connection->request);
+            }
+            else // currently no other types of handers
+            {
+                mlog(CRITICAL, "Unable to handle unattached request");
+                status = INVALID_RC; // will close socket
             }
         }
     }

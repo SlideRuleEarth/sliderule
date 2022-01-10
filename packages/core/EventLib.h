@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "Dictionary.h"
-#include "Table.h"
+#include "List.h"
 
 #include <atomic>
 
@@ -106,10 +106,16 @@ class EventLib
             METRIC  = 0x04
         } type_t;
 
+        typedef enum {
+            COUNTER = 0,
+            GAUGE = 1
+        } subtype_t;
+
         typedef struct {
             int32_t     id;
+            subtype_t   subtype;
             const char* name;
-            const char* attr;
+            const char* category;
             double      value;
         } metric_t;
 
@@ -127,6 +133,7 @@ class EventLib
         static  const char*     lvl2str         (event_level_t lvl);
         static  const char*     lvl2str_lc      (event_level_t lvl);
         static  const char*     type2str        (type_t type);
+        static  const char*     subtype2str     (subtype_t subtype);
 
         static uint32_t         startTrace      (uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...) VARG_CHECK(printf, 4, 5);
         static void             stopTrace       (uint32_t id, event_level_t lvl);
@@ -135,11 +142,11 @@ class EventLib
 
         static void             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...) VARG_CHECK(printf, 4, 5);
 
-        static int32_t          registerMetric  (const char* metric_attr, const char* name_fmt, ...) VARG_CHECK(printf, 2, 3);
-        static void             updateMetric    (int32_t id, double value);
-        static void             incrementMetric (int32_t id);
+        static int32_t          registerMetric  (const char* category, subtype_t subtype, const char* name_fmt, ...) VARG_CHECK(printf, 2, 3);
+        static void             updateMetric    (int32_t id, double value); // for counters
+        static void             incrementMetric (int32_t id); // for gauges
         static void             generateMetric  (int32_t id, event_level_t lvl);
-        static void             iterateMetric   (const char* metric_attr, metric_func_t cb, void* parm);
+        static void             iterateMetric   (const char* category, metric_func_t cb, void* parm);
 
     private:
 
@@ -147,7 +154,8 @@ class EventLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int              sendEvent   (event_t* event, int attr_size);
+        static int              sendEvent       (event_t* event, int attr_size);
+        static void             _iterateMetric  (Dictionary<int32_t>* ids, metric_func_t cb, void* parm);
 
         /*--------------------------------------------------------------------
          * Data
@@ -163,9 +171,8 @@ class EventLib
         static event_level_t metric_level;
 
         static Mutex metric_mut;
-        static std::atomic<int32_t> metric_id;
-        static Dictionary<Dictionary<int32_t>*> metric_ids;
-        static Table<metric_t, int32_t> metric_vals;
+        static Dictionary<Dictionary<int32_t>*> metric_categories;
+        static List<metric_t> metric_vals;
 };
 
 #endif  /* __eventlib__ */

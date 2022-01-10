@@ -310,16 +310,16 @@ int LuaEndpoint::luaMetric (lua_State* L)
         const char* obj_name = lua_obj->getName();
 
         /* Register Metrics */
-        int32_t id = EventLib::registerMetric(obj_name, "%s.%s", endpoint_name, HITS_METRIC);
+        int32_t id = EventLib::registerMetric(obj_name, EventLib::COUNTER, "%s.%s", endpoint_name, HITS_METRIC);
         if(id == EventLib::INVALID_METRIC)
         {
-            throw RunTimeException(CRITICAL, "Registry failed for %s.%s", obj_name, endpoint_name);
+            throw RunTimeException(ERROR, "Registry failed for %s.%s", obj_name, endpoint_name);
         }
 
         /* Add to Metric Ids */
         if(!lua_obj->metricIds.add(endpoint_name, id, true))
         {
-            throw RunTimeException(CRITICAL, "Could not associate metric id to endpoint");
+            throw RunTimeException(ERROR, "Could not associate metric id to endpoint");
         }
 
         /* Set return Status */

@@ -137,8 +137,8 @@ LuaEngine::~LuaEngine(void)
     /* Free Engine Resources */
     if(dInfo)
     {
-        delete [] dInfo->script;
-        delete [] dInfo->arg;
+        if(dInfo->script) delete [] dInfo->script;
+        if(dInfo->arg) delete [] dInfo->arg;
         delete dInfo;
     }
 
