@@ -105,7 +105,7 @@ const char* PistacheServer::sanitize (const char* filename)
     SafeString delimeter("%c", PATH_DELIMETER);
     SafeString safe_filename("%s", filename);
     safe_filename.replace(delimeter.getString(), "_");
-    SafeString safe_pathname("%s%c%s.lua", APIDIR, PATH_DELIMETER, safe_filename.getString());
+    SafeString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.getString());
     return safe_pathname.getString(true);
 }
 

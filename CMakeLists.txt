@@ -127,7 +127,6 @@ endif()
 # Compile Definitions #
 
 set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and configuration scripts")
-set (APIDIR ${RUNTIMEDIR}/api)
 
 if (${ENABLE_TIME_HEARTBEAT})
     message (STATUS "Enabling time heartbeat")
@@ -163,7 +162,6 @@ endif ()
 
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")
 set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${RUNTIMEDIR}\"\n")
-set_property(GLOBAL APPEND PROPERTY platform "#define APIDIR \"${APIDIR}\"\n")
 
 if(${ENABLE_TRACING})
     message (STATUS "Enabling trace points")
