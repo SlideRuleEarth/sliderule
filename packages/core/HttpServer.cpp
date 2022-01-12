@@ -260,7 +260,7 @@ int HttpServer::luaMetric (lua_State* L)
     try
     {
         /* Get Self */
-        HttpServer* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
+        HttpServer* lua_obj = (HttpServer*)getLuaSelf(L, 1);
 
         /* Get Object Name */
         const char* obj_name = lua_obj->getName();
