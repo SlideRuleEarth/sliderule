@@ -53,7 +53,7 @@ SafeString LuaEndpoint::ServerHeader("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
 
-const char* LuaEndpoint::CATCHALL_METRIC = "catchall";
+const char* LuaEndpoint::ALL_ENDPOINTS = "all";
 const char* LuaEndpoint::HITS_METRIC = "hits";
 
 /******************************************************************************
@@ -278,7 +278,7 @@ int32_t LuaEndpoint::getMetricId (const char* endpoint)
 
         try
         {
-            metric_id = metricIds[CATCHALL_METRIC];
+            metric_id = metricIds[ALL_ENDPOINTS];
         }
         catch(const RunTimeException& e2)
         {
@@ -304,7 +304,7 @@ int LuaEndpoint::luaMetric (lua_State* L)
         LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
 
         /* Get Endpoint Name */
-        const char* endpoint_name = getLuaString(L, 2, true, CATCHALL_METRIC);
+        const char* endpoint_name = getLuaString(L, 2, true, ALL_ENDPOINTS);
 
         /* Get Object Name */
         const char* obj_name = lua_obj->getName();

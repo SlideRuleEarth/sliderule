@@ -42,10 +42,13 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* HttpServer::DURATION_METRIC = "duration";
+
 const char* HttpServer::OBJECT_TYPE = "HttpServer";
 const char* HttpServer::LuaMetaName = "HttpServer";
 const struct luaL_Reg HttpServer::LuaMetaTable[] = {
     {"attach",      luaAttach},
+    {"metric",      luaMetric},
     {NULL,          NULL}
 };
 
@@ -95,6 +98,8 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
 
     active = true;
     listenerPid = new Thread(listenerThread, this);
+
+    metricId = EventLib::INVALID_METRIC;
 }
 
 /*----------------------------------------------------------------------------
@@ -237,6 +242,42 @@ int HttpServer::luaAttach (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error attaching handler: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaMetric - :metric(<endpoint name>)
+ *
+ * Note: NOT thread safe, must be called before first request
+ *----------------------------------------------------------------------------*/
+int HttpServer::luaMetric (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        HttpServer* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
+
+        /* Get Object Name */
+        const char* obj_name = lua_obj->getName();
+
+        /* Register Metrics */
+        lua_obj->metricId = EventLib::registerMetric(obj_name, EventLib::COUNTER, "%s", DURATION_METRIC);
+        if(lua_obj->metricId == EventLib::INVALID_METRIC)
+        {
+            throw RunTimeException(ERROR, "Registry failed for %s.%s", obj_name, DURATION_METRIC);
+        }
+
+        /* Set return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating metric: %s", e.what());
     }
 
     /* Return Status */
@@ -605,6 +646,7 @@ int HttpServer::onConnect(int fd)
     connection_t* connection = new connection_t;
     LocalLib::set(&connection->request, 0, sizeof(EndpointObject::request_t));
     LocalLib::set(&connection->state, 0, sizeof(state_t));
+    connection->start_time = TimeLib::latchtime();
 
     /* Register Connection */
     if(connections.add(fd, connection, false))
@@ -632,6 +674,12 @@ int HttpServer::onDisconnect(int fd)
     int status = 0;
 
     connection_t* connection = connections[fd];
+
+    /* Update Metrics */
+    double duration = TimeLib::latchtime() - connection->start_time;
+    EventLib::incrementMetric(metricId, duration);
+
+    /* Remove Connection */
     if(connections.remove(fd))
     {
         /* Clear Out Headers */
@@ -667,4 +715,3 @@ int HttpServer::onDisconnect(int fd)
 
     return status;
 }
-

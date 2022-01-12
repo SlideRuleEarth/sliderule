@@ -449,14 +449,14 @@ void EventLib::updateMetric (int32_t id, double value)
 /*----------------------------------------------------------------------------
  * incrementMetric
  *----------------------------------------------------------------------------*/
-void EventLib::incrementMetric (int32_t id)
+void EventLib::incrementMetric (int32_t id, double value)
 {
     metric_mut.lock();
     {
         try
         {
             metric_t& metric = metric_vals[id];
-            metric.value += 1.0;
+            metric.value += value;
         }
         catch(const RunTimeException& e)
         {

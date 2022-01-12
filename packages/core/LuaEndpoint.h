@@ -65,7 +65,7 @@ class LuaEndpoint: public EndpointObject
         static const int MAX_RESPONSE_TIME_MS = 5000;
         static const int INITIAL_NUM_ENDPOINTS = 32;
         static const char* RESPONSE_QUEUE;
-        static const char* CATCHALL_METRIC;
+        static const char* ALL_ENDPOINTS;
         static const char* HITS_METRIC;
 
         /*--------------------------------------------------------------------

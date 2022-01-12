@@ -65,6 +65,8 @@ class HttpServer: public LuaObject
         static const int STREAM_OVERHEAD_SIZE       = 128; // chunk size, record size, and line breaks
         static const int EXPECTED_MAX_HEADER_FIELDS = 64;
 
+        static const char* DURATION_METRIC;
+
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
@@ -107,6 +109,7 @@ class HttpServer: public LuaObject
             SafeString                  message; // raw request
             EndpointObject::request_t   request;
             state_t                     state;
+            double                      start_time;
         } connection_t;
 
         /*--------------------------------------------------------------------
@@ -124,6 +127,8 @@ class HttpServer: public LuaObject
         char*                           ipAddr;
         int                             port;
 
+        int32_t                         metricId;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -133,6 +138,7 @@ class HttpServer: public LuaObject
         static void         extract             (const char* url, char** endpoint, char** new_url);
 
         static int          luaAttach           (lua_State* L);
+        static int          luaMetric           (lua_State* L);
 
         static int          pollHandler         (int fd, short* events, void* parm);
         static int          activeHandler       (int fd, int flags, void* parm);

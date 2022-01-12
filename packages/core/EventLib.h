@@ -143,8 +143,8 @@ class EventLib
         static void             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...) VARG_CHECK(printf, 4, 5);
 
         static int32_t          registerMetric  (const char* category, subtype_t subtype, const char* name_fmt, ...) VARG_CHECK(printf, 2, 3);
-        static void             updateMetric    (int32_t id, double value); // for counters
-        static void             incrementMetric (int32_t id); // for gauges
+        static void             updateMetric    (int32_t id, double value); // for gauges
+        static void             incrementMetric (int32_t id, double value=1.0); // for counters
         static void             generateMetric  (int32_t id, event_level_t lvl);
         static void             iterateMetric   (const char* category, metric_func_t cb, void* parm);
 
