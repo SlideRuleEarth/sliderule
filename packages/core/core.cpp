@@ -172,6 +172,9 @@ void initcore (void)
     /* Attach OsApi Print Function */
     LocalLib::setPrint(os_print);
 
+    /* Initialize Modules */
+    LuaEndpoint::init();
+
     /* Initialize Default Lua Extensions */
     LuaLibrarySys::lsys_init();
     LuaLibraryMsg::lmsg_init();

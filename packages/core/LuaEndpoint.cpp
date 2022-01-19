@@ -56,9 +56,29 @@ const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
 const char* LuaEndpoint::ALL_ENDPOINTS = "all";
 const char* LuaEndpoint::HITS_METRIC = "hits";
 
+int32_t LuaEndpoint::totalMetricId = EventLib::INVALID_METRIC;
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+bool LuaEndpoint::init (void)
+{
+    bool status = true;
+
+    /* Register Metric */
+    totalMetricId = EventLib::registerMetric(LuaEndpoint::LuaMetaName, EventLib::COUNTER, "%s.%s", ALL_ENDPOINTS, HITS_METRIC);
+    if(totalMetricId == EventLib::INVALID_METRIC)
+    {
+        mlog(ERROR, "Registry failed for %s.%s", ALL_ENDPOINTS, HITS_METRIC);
+        status = false;
+    }
+
+    return status;
+}
 
 /*----------------------------------------------------------------------------
  * luaCreate - endpoint([<normal memory threshold>], [<stream memory threshold>])
@@ -304,7 +324,7 @@ int LuaEndpoint::luaMetric (lua_State* L)
         LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
 
         /* Get Endpoint Name */
-        const char* endpoint_name = getLuaString(L, 2, true, ALL_ENDPOINTS);
+        const char* endpoint_name = getLuaString(L, 2);
 
         /* Get Object Name */
         const char* obj_name = lua_obj->getName();

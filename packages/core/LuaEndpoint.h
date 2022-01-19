@@ -78,7 +78,8 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-       static int          luaCreate       (lua_State* L);
+       static bool         init             (void);
+       static int          luaCreate        (lua_State* L);
 
     protected:
 
@@ -104,6 +105,7 @@ class LuaEndpoint: public EndpointObject
          * Data
          *--------------------------------------------------------------------*/
 
+        static int32_t      totalMetricId;
         Dictionary<int32_t> metricIds;
         double              normalRequestMemoryThreshold;
         double              streamRequestMemoryThreshold;
