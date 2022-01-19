@@ -23,5 +23,6 @@ dependencies:
   - setuptools_scm
   - shapely
   - tk
+  - xyzservices
   - pip:
       - -e ./
