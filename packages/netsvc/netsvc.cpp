@@ -180,15 +180,15 @@ int netsvc_get (lua_State* L)
             /* Return Response String */
             lua_pushlstring(L, total_rsps, total_rsps_index);
             delete [] total_rsps;
-
-            /* Always Cleanup */
-            curl_easy_cleanup(curl);
         }
         else
         {
             /* Return NIL in place of Response String */
             lua_pushnil(L);
         }
+
+        /* Always Cleanup */
+        curl_easy_cleanup(curl);
     }
     else
     {
@@ -264,15 +264,15 @@ int netsvc_post (lua_State* L)
             /* Return Response String */
             lua_pushlstring(L, total_rsps, total_rsps_index);
             delete [] total_rsps;
-
-            /* Always Cleanup */
-            curl_easy_cleanup(curl);
         }
         else
         {
             /* Failed Request */
             lua_pushstring(L, curl_easy_strerror(res));
         }
+
+        /* Always Cleanup */
+        curl_easy_cleanup(curl);
     }
     else
     {
