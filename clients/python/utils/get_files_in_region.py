@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # Query CMR for list of resources
     for i in range(len(regions)):
         region = regions[i]
-        resources = icesat2.cmr(region, short_name=dataset)
+        resources = icesat2.cmr(polygon=region, short_name=dataset)
         print("Region {}: {} points, {} files".format(i, len(region), len(resources)))
         for resource in resources:
             print(resource)
