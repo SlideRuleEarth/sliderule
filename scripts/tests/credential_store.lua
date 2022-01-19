@@ -28,7 +28,7 @@ metrics = sys.metric("CredentialStore")
 display = json.encode(metrics)
 print(display)
 
-runner.check(metrics["mycredentials:exp_gps"] == 1306681214000, "incorrect expiration time")
+runner.check(metrics["CredentialStore.mycredentials:exp_gps"]["value"] == 1306681214000, "incorrect expiration time")
 
 -- Clean Up --
 

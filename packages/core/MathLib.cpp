@@ -1,38 +1,38 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /*
  * TODO:    this module likely includes either code snippets or algorithms
- *          taken from a third party source;  the source is currently 
- *          unknown and needs to be found and referenced. 
+ *          taken from a third party source;  the source is currently
+ *          unknown and needs to be found and referenced.
  */
 
 /******************************************************************************
@@ -125,7 +125,7 @@ MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
         /* Calculate o */
         if(projection == NORTH_POLAR)
         {
-            o = lonrad;        
+            o = lonrad;
         }
         else if(projection == SOUTH_POLAR)
         {
@@ -153,7 +153,7 @@ MathLib::coord_t MathLib::point2coord (const point_t p, proj_t projection)
 {
     coord_t c;
 
-    double latrad = 90.0, lonrad = 0.0;
+    double lonrad = 0.0, latrad = 90.0;
 
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
@@ -187,7 +187,7 @@ MathLib::coord_t MathLib::point2coord (const point_t p, proj_t projection)
             double latradp = atan(r / -2.0);
             latrad = (-2.0 * latradp) - (M_PI / 2.0);
         }
-        
+
         /* Calculate Longitude */
         if(projection == NORTH_POLAR)
         {
@@ -206,49 +206,49 @@ MathLib::coord_t MathLib::point2coord (const point_t p, proj_t projection)
     }
 
     /* Convert to Degress */
-    c.lat = latrad * (180.0 / M_PI);
     c.lon = lonrad * (180.0 / M_PI);
+    c.lat = latrad * (180.0 / M_PI);
 
     return c;
 }
 
 /*----------------------------------------------------------------------------
  * inpoly
- * 
+ *
  * Algorithm based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html;
  * the copyright notice associated with code provided on the website is reproduced
  * below:
- * 
- * 
+ *
+ *
  * Copyright (c) 1970-2003, Wm. Randolph Franklin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
- * software and associated documentation files (the "Software"), to deal in the Software 
- * without restriction, including without limitation the rights to use, copy, modify, 
- * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to 
- * permit persons to whom the Software is furnished to do so, subject to the following 
+ * software and associated documentation files (the "Software"), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following
  * conditions:
  *
- *   Redistributions of source code must retain the above copyright notice, this list of 
+ *   Redistributions of source code must retain the above copyright notice, this list of
  *   conditions and the following disclaimers.
- * 
- *   Redistributions in binary form must reproduce the above copyright notice in the 
- *   documentation and/or other materials provided with the distribution.
- * 
- *   The name of W. Randolph Franklin may not be used to endorse or promote products derived
- *   from this Software without specific prior written permission. 
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR 
- * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE 
- * FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
- * DEALINGS IN THE SOFTWARE. 
+ *   Redistributions in binary form must reproduce the above copyright notice in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ *   The name of W. Randolph Franklin may not be used to endorse or promote products derived
+ *   from this Software without specific prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+ * FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  *----------------------------------------------------------------------------*/
 bool MathLib::inpoly (point_t* poly, int len, point_t point)
 {
     int c = 0;
-    for (int i = 0, j = len - 1; i < len; j = i++) 
+    for (int i = 0, j = len - 1; i < len; j = i++)
     {
         double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x;
         if( ((poly[i].y > point.y) != (poly[j].y > point.y)) && (point.x < x_extent) ) c = !c;

@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -54,7 +54,7 @@ const struct luaL_Reg SpatialIndex::LuaMetaTable[] = {
     {"query",       luaQuery},
     {"display",     luaDisplay},
     {"project",     luaProject},
-    {"sphere",      luaSphere},  
+    {"sphere",      luaSphere},
     {"split",       luaSplit},
     {"intersect",   luaIntersect},
     {"combine",     luaCombine},
@@ -119,7 +119,7 @@ void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rsp
     {
         /* Split Across Radius */
         double split_val = (proj.p0.x + proj.p1.x) / 2.0;
-        
+
         lproj.p0.x = proj.p0.x;
         lproj.p0.y = proj.p0.y;
         lproj.p1.x = split_val;
@@ -134,7 +134,7 @@ void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rsp
     {
         /* Split Across Angle */
         double split_val = (proj.p0.y + proj.p1.y) / 2.0;
-        
+
         lproj.p0.x = proj.p0.x;
         lproj.p0.y = split_val;
         lproj.p1.x = proj.p1.x;
@@ -170,14 +170,14 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
         double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
 
         if(sproj.p0.x <= split_val)  return true;
-        else                        return false;        
+        else                        return false;
     }
     else // odd depth = Angle
     {
         double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
         if(sproj.p0.y <= split_val)  return true;
-        else                        return false;        
+        else                        return false;
     }
 }
 
@@ -201,35 +201,35 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
         double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
 
         if(sproj.p1.x >= split_val)  return true;
-        else                        return false;        
+        else                        return false;
     }
     else // odd depth = Angle
     {
         double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
         if(sproj.p1.y >= split_val)  return true;
-        else                        return false;        
+        else                        return false;
     }
 }
 
 /*----------------------------------------------------------------------------
  * intersect
  *----------------------------------------------------------------------------*/
-bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& span2) 
-{ 
+bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& span2)
+{
     /* Project to Polar polarinates */
     projspan_t polar1 = project(span1);
     projspan_t polar2 = project(span2);
 
     /* Check Intersection in Radius */
     bool xi = ((polar1.p0.x >= polar2.p0.x && polar1.p0.x <= polar2.p1.x) ||
-               (polar1.p1.x >= polar2.p0.x && polar1.p1.x <= polar2.p1.x) || 
+               (polar1.p1.x >= polar2.p0.x && polar1.p1.x <= polar2.p1.x) ||
                (polar2.p0.x >= polar1.p0.x && polar2.p0.x <= polar1.p1.x) ||
                (polar2.p1.x >= polar1.p0.x && polar2.p1.x <= polar1.p1.x));
 
     /* Check Intersection in Angle */
     bool yi = ((polar1.p0.y >= polar2.p0.y && polar1.p0.y <= polar2.p1.y) ||
-               (polar1.p1.y >= polar2.p0.y && polar1.p1.y <= polar2.p1.y) || 
+               (polar1.p1.y >= polar2.p0.y && polar1.p1.y <= polar2.p1.y) ||
                (polar2.p0.y >= polar1.p0.y && polar2.p0.y <= polar1.p1.y) ||
                (polar2.p1.y >= polar1.p0.y && polar2.p1.y <= polar1.p1.y));
 
@@ -246,8 +246,8 @@ spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialsp
 
     /* Project to Polar Coordinates */
     projspan_t polar1 = project(span1);
-    projspan_t polar2 = project(span2);    
-    
+    projspan_t polar2 = project(span2);
+
     /* Combine Spans */
     proj.p0.x = MIN(MIN(MIN(polar1.p0.x, polar2.p0.x), polar1.p1.x), polar2.p1.x);
     proj.p0.y = MIN(MIN(MIN(polar1.p0.y, polar2.p0.y), polar1.p1.y), polar2.p1.y);
@@ -268,8 +268,8 @@ spatialspan_t SpatialIndex::attr2span (Dictionary<double>* attr, bool* provided)
 {
     spatialspan_t span;
     bool status = false;
-    
-    try 
+
+    try
     {
         span.c0.lat = (*attr)["lat0"];
         span.c0.lon = (*attr)["lon0"];
@@ -347,7 +347,7 @@ void SpatialIndex::displayspan (const spatialspan_t& span)
 SpatialIndex::projspan_t SpatialIndex::project (spatialspan_t span)
 {
     projspan_t proj;
-    
+
     proj.p0 = MathLib::coord2point(span.c0, projection);
     proj.p1 = MathLib::coord2point(span.c1, projection);
 
@@ -376,7 +376,7 @@ spatialspan_t SpatialIndex::restore (projspan_t proj)
 }
 
 /*----------------------------------------------------------------------------
- * luaProject: project(<lat>, <lon>)
+ * luaProject: project(<lon>, <lat>)
  *----------------------------------------------------------------------------*/
 int SpatialIndex::luaProject (lua_State* L)
 {
@@ -387,8 +387,8 @@ int SpatialIndex::luaProject (lua_State* L)
 
         /* Get Spherical Coordinates */
         MathLib::coord_t c;
-        c.lat = getLuaFloat(L, 2);
-        c.lon = getLuaFloat(L, 3);
+        c.lon = getLuaFloat(L, 2);
+        c.lat = getLuaFloat(L, 3);
 
         /* Convert Coordinates */
         MathLib::point_t p = MathLib::coord2point(c, lua_obj->projection);
@@ -418,14 +418,14 @@ int SpatialIndex::luaSphere (lua_State* L)
         SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
 
         /* Get Polar Coordinates */
-        MathLib::point_t p; 
+        MathLib::point_t p;
         p.x = getLuaFloat(L, 2);
         p.y = getLuaFloat(L, 3);
 
         /* Convert Coordinates */
         MathLib::coord_t c = MathLib::point2coord(p, lua_obj->projection);
-        lua_pushnumber(L, c.lat);
         lua_pushnumber(L, c.lon);
+        lua_pushnumber(L, c.lat);
 
         /* Return Coordinates */
         return 2;
@@ -542,7 +542,7 @@ int SpatialIndex::luaCombine (lua_State* L)
         LuaEngine::setAttrNum(L, "lon0", span.c0.lon);
         LuaEngine::setAttrNum(L, "lat1", span.c1.lat);
         LuaEngine::setAttrNum(L, "lon1", span.c1.lon);
-        
+
         /* Return Span */
         return 1;
     }

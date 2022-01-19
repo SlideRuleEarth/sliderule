@@ -67,12 +67,12 @@ index = core.spatialindex(asset, pole)
 
 -- Polar Conversion --
 if lat and lon then
-    result["x"], result["y"] = index:project(lat, lon) 
+    result["x"], result["y"] = index:project(lon, lat)
 end
 
 -- Spherical Conversion --
 if x and y then
-    result["lat"], result["lon"] = index:sphere(x, y)
+    result["lon"], result["lat"] = index:sphere(x, y)
 end
 
 -- Split --
