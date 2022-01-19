@@ -56,6 +56,12 @@ except ModuleNotFoundError as e:
     sys.stderr.write("Error: missing required packages. (%s)\n" % (str(e)))
     raise
 
+try:
+    import xyzservices
+except ModuleNotFoundError as e:
+    sys.stderr.write("Error: missing required packages. (%s)\n" % (str(e)))
+    raise
+
 class widgets:
     def __init__(self):
         # dropdown menu for setting asset
@@ -417,18 +423,31 @@ General Bathymetric Chart of the Oceans (GEBCO).
 """
 
 # define background ipyleaflet tiles
-basemaps = Bunch(
-    Esri = Bunch(
-        ArcticOceanBase=dict(name='Esri.ArcticOceanBase',crs=projections.EPSG5936,attribution=esri_attribution,
-            url='http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
-        ),
-        ArcticOceanReference=dict(name='Esri.ArcticOceanReference',crs=projections.EPSG5936,attribution=esri_attribution,
-            url='http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Reference/MapServer/tile/{z}/{y}/{x}',
-        ),
-        AntarcticBasemap=dict(name='Esri.AntarcticBasemap',crs=projections.EPSG3031,attribution=noaa_attribution,
-            url='https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/Antarctic_Basemap/MapServer/tile/{z}/{y}/{x}',
-        )
-    ),
+basemaps = {
+    "Esri": {
+        "ArcticOceanBase": {
+            "name": 'Esri.ArcticOceanBase',
+            "crs": projections.EPSG5936,
+            "attribution": esri_attribution,
+            "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
+        },
+        "ArcticOceanReference": {
+            "name": 'Esri.ArcticOceanReference',
+            "crs": projections.EPSG5936,
+            "attribution": esri_attribution,
+            "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Reference/MapServer/tile/{z}/{y}/{x}'
+        },
+        "AntarcticBasemap": {
+            "name": 'Esri.AntarcticBasemap',
+            "crs": projections.EPSG3031,
+            "attribution":noaa_attribution,
+            "url": 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/Antarctic_Basemap/MapServer/tile/{z}/{y}/{x}'
+        }
+    }
+}
+
+# define background ipyleaflet WMS layers
+layers = Bunch(
     GLIMS = Bunch(
         glaciers = ipyleaflet.WMSLayer(
             attribution=glims_attribution,
@@ -439,6 +458,20 @@ basemaps = Bunch(
     )
 )
 
+# load basemap providers from dict
+# https://github.com/geopandas/xyzservices/blob/main/xyzservices/lib.py
+def _load_dict(data):
+    providers = Bunch()
+    for provider_name in data.keys():
+        provider = data[provider_name]
+        if "url" in provider.keys():
+            providers[provider_name] = xyzservices.lib.TileProvider(provider)
+        else:
+            providers[provider_name] = Bunch(
+                {i: xyzservices.lib.TileProvider(provider[i]) for i in provider.keys()}
+            )
+    return providers
+
 # draw ipyleaflet map
 class leaflet:
     def __init__(self, projection, **kwargs):
@@ -448,22 +481,23 @@ class leaflet:
         kwargs.setdefault('cursor',True)
         kwargs.setdefault('center',(39,-108))
         kwargs.setdefault('color','green')
+        providers = _load_dict(basemaps)
         # create basemap in projection
         if (projection == 'Global'):
             self.map = ipyleaflet.Map(center=kwargs['center'],
                 zoom=9, max_zoom=15,
                 basemap=ipyleaflet.basemaps.Esri.WorldTopoMap)
-            self.map.add_layer(basemaps.GLIMS.glaciers)
+            self.map.add_layer(layers.GLIMS.glaciers)
         elif (projection == 'North'):
             self.map = ipyleaflet.Map(center=(90,0),
                 zoom=5, max_zoom=24,
-                basemap=basemaps.Esri.ArcticOceanBase,
+                basemap=providers.Esri.ArcticOceanBase,
                 crs=projections.EPSG5936)
-            self.map.add_layer(basemaps.Esri.ArcticOceanReference)
+            self.map.add_layer(providers.Esri.ArcticOceanReference)
         elif (projection == 'South'):
             self.map = ipyleaflet.Map(center=(-90,0),
                 zoom=2, max_zoom=9,
-                basemap=basemaps.Esri.AntarcticBasemap,
+                basemap=providers.Esri.AntarcticBasemap,
                 crs=projections.EPSG3031)
         # add control for zoom
         if kwargs['zoom']:
