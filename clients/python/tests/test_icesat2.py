@@ -8,7 +8,6 @@ from pathlib import Path
 import os.path
 
 TESTDIR = Path(__file__).parent
-SERVER = "icesat2sliderule.org"
 
 # Change connection timeout from default 10s to 1s
 sliderule.set_rqst_timeout((1, 60))
@@ -43,14 +42,14 @@ class TestRemote:
         with pytest.raises( (ConnectTimeout, ConnectionError) ):
             icesat2.init('incorrect.org')
 
-    def test_get_version(self):
-        icesat2.init(SERVER)
+    def test_get_version(self, server):
+        icesat2.init(server)
         version = icesat2.get_version()
         assert isinstance(version, dict)
         assert {'icesat2', 'server', 'client'} <= version.keys()
 
-    def test_cmr(self, grandmesa):
-        icesat2.init(SERVER)
+    def test_cmr(self, grandmesa, server):
+        icesat2.init(server)
         granules = icesat2.cmr(polygon=grandmesa,
             time_start='2018-10-01',
             time_end='2018-12-01')
