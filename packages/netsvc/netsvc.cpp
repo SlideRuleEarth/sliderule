@@ -153,40 +153,42 @@ int netsvc_get (lua_State* L)
         /* Perform the request, res will get the return code */
         CURLcode res = curl_easy_perform(curl);
 
-        /* Check for errors */
-        if(res != CURLE_OK)
+        /* Check for Success */
+        if(res == CURLE_OK)
         {
-            mlog(CRITICAL, "network services request failed: %s\n", curl_easy_strerror(res));
+            /* Set Success */
+            status = true;
+
+            /* Get Total Response Size */
+            int total_rsps_size = 0;
+            for(int i = 0; i < rsps_set.length(); i++)
+            {
+                total_rsps_size += rsps_set[i].size;
+            }
+
+            /* Allocate and Populate Total Response */
+            int total_rsps_index = 0;
+            char* total_rsps = new char [total_rsps_size + 1];
+            for(int i = 0; i < rsps_set.length(); i++)
+            {
+                LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
+                total_rsps_index += rsps_set[i].size;
+                delete [] rsps_set[i].data;
+            }
+            total_rsps[total_rsps_index] = '\0';
+
+            /* Return Response String */
+            lua_pushlstring(L, total_rsps, total_rsps_index);
+            delete [] total_rsps;
+
+            /* Always Cleanup */
+            curl_easy_cleanup(curl);
         }
         else
         {
-            status = true;
+            /* Return NIL in place of Response String */
+            lua_pushnil(L);
         }
-
-        /* Get Total Response Size */
-        int total_rsps_size = 0;
-        for(int i = 0; i < rsps_set.length(); i++)
-        {
-            total_rsps_size += rsps_set[i].size;
-        }
-
-        /* Allocate and Populate Total Response */
-        int total_rsps_index = 0;
-        char* total_rsps = new char [total_rsps_size + 1];
-        for(int i = 0; i < rsps_set.length(); i++)
-        {
-            LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
-            total_rsps_index += rsps_set[i].size;
-            delete [] rsps_set[i].data;
-        }
-        total_rsps[total_rsps_index] = '\0';
-
-        /* Return Response String */
-        lua_pushlstring(L, total_rsps, total_rsps_index);
-        delete [] total_rsps;
-
-        /* Always Cleanup */
-        curl_easy_cleanup(curl);
     }
     else
     {
@@ -235,45 +237,47 @@ int netsvc_post (lua_State* L)
         /* Perform the request, res will get the return code */
         CURLcode res = curl_easy_perform(curl);
 
-        /* Check for errors */
-        if(res != CURLE_OK)
+        /* Check for Success */
+        if(res == CURLE_OK)
         {
-            mlog(CRITICAL, "network services request failed: %s", curl_easy_strerror(res));
+            /* Set Successfull */
+            status = true;
+
+            /* Get Total Response Size */
+            int total_rsps_size = 0;
+            for(int i = 0; i < rsps_set.length(); i++)
+            {
+                total_rsps_size += rsps_set[i].size;
+            }
+
+            /* Allocate and Populate Total Response */
+            int total_rsps_index = 0;
+            char* total_rsps = new char [total_rsps_size + 1];
+            for(int i = 0; i < rsps_set.length(); i++)
+            {
+                LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
+                total_rsps_index += rsps_set[i].size;
+                delete [] rsps_set[i].data;
+            }
+            total_rsps[total_rsps_index] = '\0';
+
+            /* Return Response String */
+            lua_pushlstring(L, total_rsps, total_rsps_index);
+            delete [] total_rsps;
+
+            /* Always Cleanup */
+            curl_easy_cleanup(curl);
         }
         else
         {
-            status = true;
+            /* Failed Request */
+            lua_pushstring(L, curl_easy_strerror(res));
         }
-
-        /* Get Total Response Size */
-        int total_rsps_size = 0;
-        for(int i = 0; i < rsps_set.length(); i++)
-        {
-            total_rsps_size += rsps_set[i].size;
-        }
-
-        /* Allocate and Populate Total Response */
-        int total_rsps_index = 0;
-        char* total_rsps = new char [total_rsps_size + 1];
-        for(int i = 0; i < rsps_set.length(); i++)
-        {
-            LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
-            total_rsps_index += rsps_set[i].size;
-            delete [] rsps_set[i].data;
-        }
-        total_rsps[total_rsps_index] = '\0';
-
-        /* Return Response String */
-        lua_pushlstring(L, total_rsps, total_rsps_index);
-        delete [] total_rsps;
-
-        /* Always Cleanup */
-        curl_easy_cleanup(curl);
     }
     else
     {
         /* Error Response String */
-        lua_pushstring(L, "network error");
+        lua_pushstring(L, "unable to initialize net services");
     }
 
     /* Return Status */
