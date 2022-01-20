@@ -8,7 +8,7 @@ dependencies:
   - h5py
   - ipykernel
   - ipywidgets>=7.6,<8.0
-  - ipyleaflet>=0.14
+  - ipyleaflet>=0.15
   - jupyterlab=3
   - jupyterlab_widgets
   - matplotlib
@@ -23,5 +23,6 @@ dependencies:
   - setuptools_scm
   - shapely
   - tk
+  - xyzservices
   - pip:
       - -e ./
