@@ -259,11 +259,18 @@ bool CommandProcessor::executeScript (const char* script_name)
 bool CommandProcessor::registerHandler(const char* handle_name, newFunc_t func, int numparms, const char* desc, bool perm)
 {
     handle_entry_t* handle = new handle_entry_t(handle_name, func, numparms, desc, perm);
-    handlers.add(handle_name, handle);
+    if(handlers.add(handle_name, handle))
+    {
+        mlog(DEBUG, "Registered handler: %s", handle_name);
+        return true;
+    }
+    else
+    {
+        delete handle;
+        mlog(CRITICAL, "Failed to register handler: %s", handle_name);
+        return false;
+    }
 
-    mlog(DEBUG, "Registered handler: %s", handle_name);
-
-    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -348,8 +355,15 @@ int CommandProcessor::setCurrentValue(const char* obj_name, const char* key, voi
     cvt_entry_t* cvt_entry = new cvt_entry_t(data, size);
     cvtCond.lock();
     {
-        currentValueTable.add(keyname, cvt_entry);
-        cvtCond.signal(0, Cond::NOTIFY_ALL);
+        if(currentValueTable.add(keyname, cvt_entry))
+        {
+            cvtCond.signal(0, Cond::NOTIFY_ALL);
+        }
+        else
+        {
+            delete cvt_entry;
+            size = 0;
+        }
     }
     cvtCond.unlock();
 

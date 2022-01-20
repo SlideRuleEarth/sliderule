@@ -79,7 +79,6 @@ class CredentialStore
             };
 
             Credential(const Credential& c) {
-                cleanup();
                 copy(c);
             };
 

@@ -1610,7 +1610,12 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
         {
             assert(data_size > 0);
             def = new definition_t(new_rec_type, id_field, data_size, max_fields);
-            definitions.add(new_rec_type, def);
+            if(!definitions.add(new_rec_type, def))
+            {
+                delete def;
+                def = NULL;
+                status = REGERR_DEF;
+            }
         }
         else
         {

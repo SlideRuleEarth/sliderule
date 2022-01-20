@@ -122,7 +122,8 @@ class RecordObject
             DUPLICATE_DEF   = -1,
             NOTFOUND_DEF    = -2,
             NUMFIELDERR_DEF = -3,
-            FIELDERR_DEF    = -4
+            FIELDERR_DEF    = -4,
+            REGERR_DEF      = -5
         } recordDefErr_t;
 
         /*--------------------------------------------------------------------

@@ -1486,7 +1486,8 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
     }
 
     /* Set Node Key */
-    node.row_key = node.slice[0];
+    if(ndims > 0)   node.row_key = node.slice[0];
+    else            node.row_key = 0;
 
     /* Return Copy of Node */
     return node;
@@ -2858,9 +2859,9 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     while(true)
     {
         uint16_t entries_used = (uint16_t)readField(2, &pos);
-        uint64_t left_sibling = readField(metaData.offsetsize, &pos);
+        uint64_t left_sibling = readField(metaData.offsetsize, &pos); (void)left_sibling;
         uint64_t right_sibling = readField(metaData.offsetsize, &pos);
-        uint64_t key0 = readField(metaData.lengthsize, &pos);
+        uint64_t key0 = readField(metaData.lengthsize, &pos); (void)key0;
         if(verbose && H5_EXTRA_DEBUG)
         {
             print2term("Entries Used:                                                    %d\n", (int)entries_used);

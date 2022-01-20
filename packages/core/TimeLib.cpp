@@ -448,7 +448,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     /* Zulu = <year>-<month>-<day of month>T<hour in day>:<minute in hour>:<second in minute>Z */
     /* Basic = <year>:<month>:<day of month>:<hour in day>:<minute in hour>:<second in minute> */
     /* AWS = <year>-<month>-<day of month> <hour in day>:<minute in hour>:<second in minute>+/-HH:MM */
-    if(zulu_count > 0 || dash_count > 0 || colon_count == 5)
+    if(token_count > 5 && (zulu_count > 0 || dash_count > 0 || colon_count == 5))
     {
         if(StringLib::str2long(token_ptr[0], &year, 10))
         {
@@ -544,7 +544,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
         }
     }
     /* Day of Year = <year>:<day of year>:<hour in day>:<minute in hour>:<second in minute> */
-    else if(colon_count == 4)
+    else if(token_count > 4 && colon_count == 4)
     {
         if(StringLib::str2long(token_ptr[0], &year, 10))
         {

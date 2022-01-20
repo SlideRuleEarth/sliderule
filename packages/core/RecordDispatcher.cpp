@@ -311,7 +311,11 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
             }
 
             /* Replace Dispatch Table Entry */
-            lua_obj->dispatchTable.add(rec_type, new_dispatch);
+            if(!lua_obj->dispatchTable.add(rec_type, new_dispatch))
+            {
+                delete [] new_dispatch.list;
+                throw RunTimeException(CRITICAL, "unable to register dispatch for %s", rec_type_str);
+            }
         }
 
         /* Add Dispatch to List */
