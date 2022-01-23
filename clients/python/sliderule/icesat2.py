@@ -752,13 +752,26 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
 #
 # TO REGION
 #
-def toregion (filename, tolerance=0.0):
-
+def toregion(filename, tolerance=0.0):
     # initialize regions #
     regions = []
-
     # native format #
-    if filename.find(".json") > 1:
+    if isinstance(filename, gpd.GeoDataFrame):
+        polygons = filename
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            polygons = polygons.buffer(tolerance)
+        polygons = polygons.simplify(tolerance)
+        for polygon in polygons.geometry:
+            region = []
+            for coord in list(polygon.exterior.coords):
+                point = {"lon": coord[0], "lat": coord[1]}
+                region.append(point)
+            if len(region) > 0 and len(region) <= MAX_COORDS_IN_POLYGON:
+                regions.append(region)
+            else:
+                logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region), MAX_COORDS_IN_POLYGON)
+    elif filename.find(".json") > 1:
         with open(filename) as regionfile:
             region = json.load(regionfile)["region"]
             regions.append(region)
@@ -779,6 +792,7 @@ def toregion (filename, tolerance=0.0):
                 regions.append(region)
             else:
                 logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region), MAX_COORDS_IN_POLYGON)
+
 
     # determine winding of polygons #
     for r in range(len(regions)):
