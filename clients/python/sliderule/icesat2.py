@@ -755,13 +755,8 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
 def toregion(filename, tolerance=0.0):
     # initialize regions #
     regions = []
-    # native format #
-    if filename.find(".json") > 1:
-        with open(filename) as regionfile:
-            region = json.load(regionfile)["region"]
-            regions.append(region)
     # geodataframe, geojson or shapefile format #
-    elif isinstance(filename, geopandas.GeoDataFrame) or (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
+    if isinstance(filename, geopandas.GeoDataFrame) or (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
         if isinstance(filename, geopandas.GeoDataFrame):
             polygons = filename
         else:
@@ -780,6 +775,13 @@ def toregion(filename, tolerance=0.0):
             else:
                 logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region),
                                MAX_COORDS_IN_POLYGON)
+    # native format #
+    elif filename.find(".json") > 1:
+        with open(filename) as regionfile:
+            region = json.load(regionfile)["region"]
+            regions.append(region)
+    else:
+        raise ImportError("incorrect filetype: please use a .json, .geojson, .shp, or a geodataframe")
 
     # determine winding of polygons #
     for r in range(len(regions)):
