@@ -752,20 +752,15 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
 #
 # TO REGION
 #
-def toregion (filename, tolerance=0.0):
-
+def toregion(filename, tolerance=0.0):
     # initialize regions #
     regions = []
-
-    # native format #
-    if filename.find(".json") > 1:
-        with open(filename) as regionfile:
-            region = json.load(regionfile)["region"]
-            regions.append(region)
-
-    # geojson or shapefile format #
-    elif (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
-        polygons = geopandas.read_file(filename)
+    # geodataframe, geojson or shapefile format #
+    if isinstance(filename, geopandas.GeoDataFrame) or (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
+        if isinstance(filename, geopandas.GeoDataFrame):
+            polygons = filename
+        else:
+            polygons = geopandas.read_file(filename)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             polygons = polygons.buffer(tolerance)
@@ -778,7 +773,15 @@ def toregion (filename, tolerance=0.0):
             if len(region) > 0 and len(region) <= MAX_COORDS_IN_POLYGON:
                 regions.append(region)
             else:
-                logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region), MAX_COORDS_IN_POLYGON)
+                logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region),
+                               MAX_COORDS_IN_POLYGON)
+    # native format #
+    elif filename.find(".json") > 1:
+        with open(filename) as regionfile:
+            region = json.load(regionfile)["region"]
+            regions.append(region)
+    else:
+        raise ImportError("incorrect filetype: please use a .json, .geojson, .shp, or a geodataframe")
 
     # determine winding of polygons #
     for r in range(len(regions)):
