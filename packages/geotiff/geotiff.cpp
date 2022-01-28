@@ -35,6 +35,7 @@
 
 #include "core.h"
 #include "geotiff.h"
+#include <tiffio.h>
 
 /******************************************************************************
  * DEFINES
@@ -57,10 +58,35 @@ int geotiff_read (lua_State* L)
 {
     bool status = false;
 
-    /* Get Parameters */
-    const char* data = LuaObject::getLuaString(L, 1);
+    /* Get Raster Data */
+    const char* raster = LuaObject::getLuaString(L, 1);
+    printf("DATA: %s\n", raster);
 
-    printf("DATA: %s\n", data);
+
+    TIFF* tif = TIFFClientOpen("Memory", "r", (thandle_t)raster,
+                                NULL,   // tiff_Read
+                                NULL,   // tiff_Write
+                                NULL,   // tiff_Seek
+                                NULL,   // tiff_Close
+                                NULL,   // tiff_Size
+                                NULL,   // tiff_Map
+                                NULL);  // tiff_Unmap
+    if (tif)
+    {
+        uint32_t imagelength;
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imagelength);
+        tmsize_t rowlength = TIFFScanlineSize(tif);
+        tdata_t buf = _TIFFmalloc(rowlength);
+        for(uint32_t row = 0; row < imagelength; row++)
+        {
+            TIFFReadScanline(tif, buf, row, 0);
+            uint8_t* byte_ptr = (uint8_t*)buf;
+            printf("[%ld] ", rowlength); for(int i = 0; i < rowlength; i++) printf("%02X ", byte_ptr[i]); printf("\n");
+        }
+        _TIFFfree(buf);
+        TIFFClose(tif);
+    }
+    TIFFClose(tif);
 
     /* Return Status */
     lua_pushboolean(L, status);
