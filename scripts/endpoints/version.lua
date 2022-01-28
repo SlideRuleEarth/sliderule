@@ -24,7 +24,6 @@
 
 local global = require("global")
 local json = require("json")
-local parm = json.decode(arg[1])
 
 version, commit, launch, duration, packages = sys.version()
 
