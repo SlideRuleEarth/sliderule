@@ -43,12 +43,12 @@
 #include "ccsds.h"
 #endif
 
-#ifdef __h5__
-#include "h5.h"
+#ifdef __geotiff__
+#include "geotiff.h"
 #endif
 
-#ifdef __pistache__
-#include "pistache.h"
+#ifdef __h5__
+#include "h5.h"
 #endif
 
 #ifdef __legacy__
@@ -57,6 +57,10 @@
 
 #ifdef __netsvc__
 #include "netsvc.h"
+#endif
+
+#ifdef __pistache__
+#include "pistache.h"
 #endif
 
 #include <stdlib.h>
@@ -274,12 +278,12 @@ int main (int argc, char* argv[])
         initccsds();
     #endif
 
-    #ifdef __h5__
-        inith5();
+    #ifdef __geotiff__
+        initgeotiff();
     #endif
 
-    #ifdef __pistache__
-        initpistache();
+    #ifdef __h5__
+        inith5();
     #endif
 
     #ifdef __legacy__
@@ -288,6 +292,10 @@ int main (int argc, char* argv[])
 
     #ifdef __netsvc__
         initnetsvc();
+    #endif
+
+    #ifdef __pistache__
+        initpistache();
     #endif
 
     /* Load Plug-ins */
@@ -320,6 +328,10 @@ int main (int argc, char* argv[])
     delete [] lua_argv;
 
     /* Full Clean Up */
+    #ifdef __pistache__
+        deinitpistache();
+    #endif
+
     #ifdef __netsvc__
         deinitnetsvc();
     #endif
@@ -328,12 +340,12 @@ int main (int argc, char* argv[])
         deinitlegacy();
     #endif
 
-    #ifdef __pistache__
-        deinitpistache();
-    #endif
-
     #ifdef __h5__
         deinith5();
+    #endif
+
+    #ifdef __geotiff__
+        deinitgeotiff();
     #endif
 
     #ifdef __ccsds__

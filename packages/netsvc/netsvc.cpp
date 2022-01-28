@@ -41,7 +41,7 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_SECURITY_LIBNAME  "netsvc"
+#define LUA_NETSVC_LIBNAME  "netsvc"
 
 /******************************************************************************
  * TYPEDEFS
@@ -313,13 +313,13 @@ void initnetsvc (void)
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_SECURITY_LIBNAME, netsvc_open);
+    LuaEngine::extend(LUA_NETSVC_LIBNAME, netsvc_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_SECURITY_LIBNAME, LIBID);
+    LuaEngine::indicate(LUA_NETSVC_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_SECURITY_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_NETSVC_LIBNAME, LIBID);
 }
 
 void deinitnetsvc (void)
