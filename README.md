@@ -79,6 +79,9 @@ Options include:
    -DUSE_H5_PACKAGE=[ON|OFF]           hdf5 reading/writing
                                        default: ON
 
+   -DUSE_GEOTIFF_PACKAGE=[ON|OFF]      geotiff reading/writing
+                                       default: OFF
+
    -DUSE_PISTACHE_PACKAGE=[ON|OFF]     http server and client
                                        default: OFF
 
@@ -222,6 +225,7 @@ corresponding source files.
 * `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git (MIT license)
 * `scripts/extensions/csv.lua`: code sourced from https://github.com/geoffleyland/lua-csv (MIT license)
 * `packages/core/MathLib.cpp`: point inclusion code based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html (BSD-style license)
+* `scripts/extensions/base64.lua`: base64 encode/decode code based off of https://github.com/iskolbin/lbase64
 
 The following third-party libraries can be linked to by SlideRule:
 * __Lua__: https://www.lua.org/ (MIT license)

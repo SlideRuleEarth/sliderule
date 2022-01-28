@@ -52,41 +52,106 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * geotiff_read
+ * geotiff_ client call-backs
  *----------------------------------------------------------------------------*/
-int geotiff_read (lua_State* L)
+typedef struct {
+    const uint8_t* filebuf;
+    long filesize;
+    long pos;
+} geotiff_t;
+
+static tsize_t geotiff_Read(thandle_t st, tdata_t buffer, tsize_t size)
+{
+    geotiff_t* g = (geotiff_t*)st;
+    tsize_t bytes_left = g->filesize - g->pos;
+    tsize_t bytes_to_read = MIN(bytes_left, size);
+    LocalLib::copy(buffer, &g->filebuf[g->pos], bytes_to_read);
+    return bytes_to_read;
+};
+
+static tsize_t geotiff_Write(thandle_t, tdata_t, tsize_t)
+{
+    return 0;
+};
+
+static toff_t geotiff_Seek(thandle_t st, toff_t pos, int whence)
+{
+    geotiff_t* g = (geotiff_t*)st;
+    if(whence == SEEK_SET)      g->pos = pos;
+    else if(whence == SEEK_CUR) g->pos += pos;
+    else if(whence == SEEK_END) g->pos = g->filesize + pos;
+    return g->pos;
+};
+
+static int geotiff_Close(thandle_t)
+{
+    return 0;
+};
+
+static toff_t geotiff_Size(thandle_t st)
+{
+    geotiff_t* g = (geotiff_t*)st;
+    return g->filesize;
+};
+
+static int geotiff_Map(thandle_t, tdata_t*, toff_t*)
+{
+    return 0;
+};
+
+static void geotiff_Unmap(thandle_t, tdata_t, toff_t)
+{
+    return;
+};
+
+/*----------------------------------------------------------------------------
+ * geotiff_scanline
+ *----------------------------------------------------------------------------*/
+int geotiff_scanline (lua_State* L)
 {
     bool status = false;
 
     /* Get Raster Data */
     const char* raster = LuaObject::getLuaString(L, 1);
-    printf("DATA: %s\n", raster);
+    long imagelength = LuaObject::getLuaInteger(L, 2);
 
+    printf("DATA[%ld]: ", imagelength);
+    uint8_t* bptr = (uint8_t*)raster;
+    for(int i = 0; i < imagelength; i++) printf("%02X ", bptr[i]); printf("\n");
 
-    TIFF* tif = TIFFClientOpen("Memory", "r", (thandle_t)raster,
-                                NULL,   // tiff_Read
-                                NULL,   // tiff_Write
-                                NULL,   // tiff_Seek
-                                NULL,   // tiff_Close
-                                NULL,   // tiff_Size
-                                NULL,   // tiff_Map
-                                NULL);  // tiff_Unmap
-    if (tif)
+    geotiff_t g = {
+        .filebuf = (const uint8_t*)raster,
+        .filesize = imagelength,
+        .pos = 0
+    };
+
+//    TIFF* tif = TIFFOpen("map.tiff", "r");
+    TIFF* tif = TIFFClientOpen("Memory", "r", (thandle_t)&g,
+                                geotiff_Read,
+                                geotiff_Write,
+                                geotiff_Seek,
+                                geotiff_Close,
+                                geotiff_Size,
+                                geotiff_Map,
+                                geotiff_Unmap);
+    if(tif)
     {
-        uint32_t imagelength;
-        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imagelength);
-        tmsize_t rowlength = TIFFScanlineSize(tif);
-        tdata_t buf = _TIFFmalloc(rowlength);
-        for(uint32_t row = 0; row < imagelength; row++)
+        tdata_t buf;
+        tstrip_t strip;
+        tmsize_t size = TIFFStripSize(tif);
+        buf = _TIFFmalloc(size);
+        for (strip = 0; strip < TIFFNumberOfStrips(tif); strip++)
         {
-            TIFFReadScanline(tif, buf, row, 0);
-            uint8_t* byte_ptr = (uint8_t*)buf;
-            printf("[%ld] ", rowlength); for(int i = 0; i < rowlength; i++) printf("%02X ", byte_ptr[i]); printf("\n");
+            TIFFReadEncodedStrip(tif, strip, buf, (tsize_t) -1);
+            uint8_t* byteptr = (uint8_t*)buf;
+            printf("[%ld]: ", size); for(int i = 0; i < size; i++) printf("%02X ", byteptr[i]); printf("\n");
         }
+
         _TIFFfree(buf);
         TIFFClose(tif);
+
+        status = true;
     }
-    TIFFClose(tif);
 
     /* Return Status */
     lua_pushboolean(L, status);
@@ -99,7 +164,7 @@ int geotiff_read (lua_State* L)
 int geotiff_open (lua_State* L)
 {
     static const struct luaL_Reg geotiff_functions[] = {
-        {"read",        geotiff_read},
+        {"scan",        geotiff_scanline},
         {NULL,          NULL}
     };
 

@@ -25,6 +25,7 @@ install (
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/extensions/asset.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/base64.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/console.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/csv.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/global.lua
