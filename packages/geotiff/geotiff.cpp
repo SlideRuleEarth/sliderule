@@ -47,12 +47,8 @@
  * TYPEDEFS
  ******************************************************************************/
 
-/******************************************************************************
- * LOCAL FUNCTIONS
- ******************************************************************************/
-
 /*----------------------------------------------------------------------------
- * geotiff_ client call-backs
+ * geotiff_ call-back parameter
  *----------------------------------------------------------------------------*/
 typedef struct {
     const uint8_t* filebuf;
@@ -60,20 +56,26 @@ typedef struct {
     long pos;
 } geotiff_t;
 
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * geotiff_ client call-backs
+ *----------------------------------------------------------------------------*/
 static tsize_t geotiff_Read(thandle_t st, tdata_t buffer, tsize_t size)
 {
     geotiff_t* g = (geotiff_t*)st;
     tsize_t bytes_left = g->filesize - g->pos;
     tsize_t bytes_to_read = MIN(bytes_left, size);
     LocalLib::copy(buffer, &g->filebuf[g->pos], bytes_to_read);
+    g->pos += bytes_to_read;
     return bytes_to_read;
 };
-
 static tsize_t geotiff_Write(thandle_t, tdata_t, tsize_t)
 {
     return 0;
 };
-
 static toff_t geotiff_Seek(thandle_t st, toff_t pos, int whence)
 {
     geotiff_t* g = (geotiff_t*)st;
@@ -82,23 +84,22 @@ static toff_t geotiff_Seek(thandle_t st, toff_t pos, int whence)
     else if(whence == SEEK_END) g->pos = g->filesize + pos;
     return g->pos;
 };
-
 static int geotiff_Close(thandle_t)
 {
     return 0;
 };
-
 static toff_t geotiff_Size(thandle_t st)
 {
     geotiff_t* g = (geotiff_t*)st;
     return g->filesize;
 };
-
-static int geotiff_Map(thandle_t, tdata_t*, toff_t*)
+static int geotiff_Map(thandle_t st, tdata_t* addr, toff_t* pos)
 {
+    geotiff_t* g = (geotiff_t*)st;
+    *pos = g->pos;
+    *addr = (void*)&g->filebuf[g->pos];
     return 0;
 };
-
 static void geotiff_Unmap(thandle_t, tdata_t, toff_t)
 {
     return;
@@ -115,17 +116,14 @@ int geotiff_scanline (lua_State* L)
     const char* raster = LuaObject::getLuaString(L, 1);
     long imagelength = LuaObject::getLuaInteger(L, 2);
 
-    printf("DATA[%ld]: ", imagelength);
-    uint8_t* bptr = (uint8_t*)raster;
-    for(int i = 0; i < imagelength; i++) printf("%02X ", bptr[i]); printf("\n");
-
+    /* Create LibTIFF Callback Data Structure */
     geotiff_t g = {
         .filebuf = (const uint8_t*)raster,
         .filesize = imagelength,
         .pos = 0
     };
 
-//    TIFF* tif = TIFFOpen("map.tiff", "r");
+    /* Open TIFF via Memory Callbacks */
     TIFF* tif = TIFFClientOpen("Memory", "r", (thandle_t)&g,
                                 geotiff_Read,
                                 geotiff_Write,
@@ -134,23 +132,30 @@ int geotiff_scanline (lua_State* L)
                                 geotiff_Size,
                                 geotiff_Map,
                                 geotiff_Unmap);
+
+
+    /* Read TIFF */
     if(tif)
     {
-        tdata_t buf;
-        tstrip_t strip;
         tmsize_t size = TIFFStripSize(tif);
-        buf = _TIFFmalloc(size);
-        for (strip = 0; strip < TIFFNumberOfStrips(tif); strip++)
+        tdata_t buf = (tdata_t) new uint8_t [size];
+        for(tstrip_t strip = 0; strip < TIFFNumberOfStrips(tif); strip++)
         {
             TIFFReadEncodedStrip(tif, strip, buf, (tsize_t) -1);
             uint8_t* byteptr = (uint8_t*)buf;
             printf("[%ld]: ", size); for(int i = 0; i < size; i++) printf("%02X ", byteptr[i]); printf("\n");
         }
 
-        _TIFFfree(buf);
+        /* Clean Up */
+        delete [] buf;
         TIFFClose(tif);
 
+        /* Set Success */
         status = true;
+    }
+    else
+    {
+        mlog(CRITICAL, "Unable to open memory mapped tiff file");
     }
 
     /* Return Status */
