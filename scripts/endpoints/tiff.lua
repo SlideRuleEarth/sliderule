@@ -16,6 +16,14 @@ local parm = json.decode(arg[1])
 local tiff = base64.decode(parm["raster"])
 local size = parm["imagelength"]
 
-geotiff.scan(tiff, size)
+raster = geotiff.scan(tiff, size)
+rows, cols = raster:dim()
+print("DIM: ", rows, cols)
+for r = 0,rows,1 do
+    for c = 0,cols,1 do
+        io.write(raster:pixel(r, c) and "#" or " ")
+    end
+    io.write("\n")
+end
 
 return json.encode({complete=true})

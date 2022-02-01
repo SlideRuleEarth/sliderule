@@ -353,6 +353,11 @@ int LuaLibraryMsg::lmsg_sendstring (lua_State* L)
     size_t len;
 
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    if(msg_data == NULL)
+    {
+        return luaL_error(L, "invalid message queue");
+    }
+
     const char* str = lua_tolstring(L, 2, &len);        /* get argument */
     int status = msg_data->pub->postCopy(str, len);     /* post string */
     lua_pushboolean(L, status > 0);                     /* push result status */
@@ -372,6 +377,11 @@ int LuaLibraryMsg::lmsg_sendstring (lua_State* L)
 int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
 {
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    if(msg_data == NULL)
+    {
+        return luaL_error(L, "invalid message queue");
+    }
+
     RecordObject* record = NULL;
     bool allocated = false;
 
@@ -418,6 +428,10 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
 {
     /* Get Publisher */
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    if(msg_data == NULL)
+    {
+        return luaL_error(L, "invalid message queue");
+    }
 
     /* Get Event Level */
     event_level_t lvl = INVALID_EVENT_LEVEL;
@@ -476,12 +490,18 @@ int LuaLibraryMsg::lmsg_numsubs (lua_State* L)
 {
     /* Get Publisher */
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    if(msg_data)
+    {
+        /* Get Number of Subscriptions */
+        int subscriptions = msg_data->pub->getSubCnt();
 
-    /* Get Number of Subscriptions */
-    int subscriptions = msg_data->pub->getSubCnt();
-
-    /* Return Results */
-    lua_pushinteger(L, subscriptions);
+        /* Return Results */
+        lua_pushinteger(L, subscriptions);
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
     return 1;
 }
 
@@ -492,16 +512,19 @@ int LuaLibraryMsg::lmsg_deletepub (lua_State* L)
 {
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
 
-    if(msg_data->msgq_name)
+    if(msg_data)
     {
-        delete [] msg_data->msgq_name;
-        msg_data->msgq_name = NULL;
-    }
+        if(msg_data->msgq_name)
+        {
+            delete [] msg_data->msgq_name;
+            msg_data->msgq_name = NULL;
+        }
 
-    if(msg_data->pub)
-    {
-        delete msg_data->pub;
-        msg_data->pub = NULL;
+        if(msg_data->pub)
+        {
+            delete msg_data->pub;
+            msg_data->pub = NULL;
+        }
     }
 
     return 0;
@@ -513,12 +536,19 @@ int LuaLibraryMsg::lmsg_deletepub (lua_State* L)
 int LuaLibraryMsg::lmsg_recvstring (lua_State* L)
 {
     msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
-    int timeoutms = (int)lua_tointeger(L, 2);
-    char str[MAX_STR_SIZE];
-    int strlen = msg_data->sub->receiveCopy(str, MAX_STR_SIZE - 1, timeoutms);
-    if(strlen > 0)
+    if(msg_data)
     {
-        lua_pushlstring(L, str, strlen);
+        int timeoutms = (int)lua_tointeger(L, 2);
+        char str[MAX_STR_SIZE];
+        int strlen = msg_data->sub->receiveCopy(str, MAX_STR_SIZE - 1, timeoutms);
+        if(strlen > 0)
+        {
+            lua_pushlstring(L, str, strlen);
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
     }
     else
     {
@@ -533,6 +563,11 @@ int LuaLibraryMsg::lmsg_recvstring (lua_State* L)
 int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
 {
     msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
+    if(msg_data == NULL)
+    {
+        return luaL_error(L, "invalid message queue");
+    }
+
     int timeoutms = (int)lua_tointeger(L, 2);
     const char* recclass = NULL;
     if(lua_isstring(L, 3))
@@ -608,9 +643,15 @@ int LuaLibraryMsg::lmsg_drain (lua_State* L)
 {
     msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
 
-    msg_data->sub->drain();
-
-    lua_pushboolean(L, true);
+    if(msg_data)
+    {
+        msg_data->sub->drain();
+        lua_pushboolean(L, true);
+    }
+    else
+    {
+        lua_pushboolean(L, false);
+    }
 
     return 1;
 }
@@ -622,16 +663,19 @@ int LuaLibraryMsg::lmsg_deletesub (lua_State* L)
 {
     msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
 
-    if(msg_data->msgq_name)
+    if(msg_data)
     {
-        delete [] msg_data->msgq_name;
-        msg_data->msgq_name = NULL;
-    }
+        if(msg_data->msgq_name)
+        {
+            delete [] msg_data->msgq_name;
+            msg_data->msgq_name = NULL;
+        }
 
-    if(msg_data->sub)
-    {
-        delete msg_data->sub;
-        msg_data->sub = NULL;
+        if(msg_data->sub)
+        {
+            delete msg_data->sub;
+            msg_data->sub = NULL;
+        }
     }
 
     return 0;
@@ -647,7 +691,11 @@ int LuaLibraryMsg::lmsg_deletesub (lua_State* L)
 int LuaLibraryMsg::lmsg_gettype (lua_State* L)
 {
     recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
-    if(rec_data->rec == NULL)
+    if(rec_data == NULL)
+    {
+        return luaL_error(L, "invalid record");
+    }
+    else if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -668,7 +716,11 @@ int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
     recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
     const char* fldname = lua_tostring(L, 2); // get field name
 
-    if(rec_data->rec == NULL)
+    if(rec_data == NULL)
+    {
+        return luaL_error(L, "invalid record");
+    }
+    else if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -709,7 +761,11 @@ int LuaLibraryMsg::lmsg_setfieldvalue (lua_State* L)
     recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
     const char* fldname = lua_tostring(L, 2);  /* get field name */
 
-    if(rec_data->rec == NULL)
+    if(rec_data == NULL)
+    {
+        return luaL_error(L, "invalid record");
+    }
+    else if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -746,7 +802,11 @@ int LuaLibraryMsg::lmsg_setfieldvalue (lua_State* L)
 int LuaLibraryMsg::lmsg_serialize(lua_State* L)
 {
     recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
-    if(rec_data->rec == NULL)
+    if(rec_data == NULL)
+    {
+        return luaL_error(L, "invalid record");
+    }
+    else if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -765,7 +825,11 @@ int LuaLibraryMsg::lmsg_serialize(lua_State* L)
 int LuaLibraryMsg::lmsg_deserialize(lua_State* L)
 {
     recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
-    if(rec_data->rec == NULL)
+    if(rec_data == NULL)
+    {
+        return luaL_error(L, "invalid record");
+    }
+    else if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -785,7 +849,11 @@ int LuaLibraryMsg::lmsg_deserialize(lua_State* L)
 int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
 {
     recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
-    if(rec_data->rec == NULL)
+    if(rec_data == NULL)
+    {
+        return luaL_error(L, "invalid record");
+    }
+    else if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }

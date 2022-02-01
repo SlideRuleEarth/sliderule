@@ -42,82 +42,105 @@
  ******************************************************************************/
 
 #define LUA_GEOTIFF_LIBNAME  "geotiff"
+const char* LUA_GEOTIFF_METANAME  = "geotiff.raster";
 
 /******************************************************************************
- * TYPEDEFS
+ * LIBTIFF CALLBACKS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * geotiff_ call-back parameter
+ * libtiff call-back parameter
  *----------------------------------------------------------------------------*/
 typedef struct {
     const uint8_t* filebuf;
     long filesize;
     long pos;
-} geotiff_t;
-
-/******************************************************************************
- * LOCAL FUNCTIONS
- ******************************************************************************/
+} geotiff_cb_t;
 
 /*----------------------------------------------------------------------------
- * geotiff_ client call-backs
+ * libtiff_read
  *----------------------------------------------------------------------------*/
-static tsize_t geotiff_Read(thandle_t st, tdata_t buffer, tsize_t size)
+static tsize_t libtiff_read(thandle_t st, tdata_t buffer, tsize_t size)
 {
-    geotiff_t* g = (geotiff_t*)st;
+    geotiff_cb_t* g = (geotiff_cb_t*)st;
     tsize_t bytes_left = g->filesize - g->pos;
     tsize_t bytes_to_read = MIN(bytes_left, size);
     LocalLib::copy(buffer, &g->filebuf[g->pos], bytes_to_read);
     g->pos += bytes_to_read;
     return bytes_to_read;
 };
-static tsize_t geotiff_Write(thandle_t, tdata_t, tsize_t)
+
+/*----------------------------------------------------------------------------
+ * libtiff_write
+ *----------------------------------------------------------------------------*/
+static tsize_t libtiff_write(thandle_t, tdata_t, tsize_t)
 {
     return 0;
 };
-static toff_t geotiff_Seek(thandle_t st, toff_t pos, int whence)
+
+/*----------------------------------------------------------------------------
+ * libtiff_seek
+ *----------------------------------------------------------------------------*/
+static toff_t libtiff_seek(thandle_t st, toff_t pos, int whence)
 {
-    geotiff_t* g = (geotiff_t*)st;
+    geotiff_cb_t* g = (geotiff_cb_t*)st;
     if(whence == SEEK_SET)      g->pos = pos;
     else if(whence == SEEK_CUR) g->pos += pos;
     else if(whence == SEEK_END) g->pos = g->filesize + pos;
     return g->pos;
 };
-static int geotiff_Close(thandle_t)
+
+/*----------------------------------------------------------------------------
+ * libtiff_close
+ *----------------------------------------------------------------------------*/
+static int libtiff_close(thandle_t)
 {
     return 0;
 };
-static toff_t geotiff_Size(thandle_t st)
+
+/*----------------------------------------------------------------------------
+ * libtiff_size
+ *----------------------------------------------------------------------------*/
+static toff_t libtiff_size(thandle_t st)
 {
-    geotiff_t* g = (geotiff_t*)st;
+    geotiff_cb_t* g = (geotiff_cb_t*)st;
     return g->filesize;
 };
-static int geotiff_Map(thandle_t st, tdata_t* addr, toff_t* pos)
+
+/*----------------------------------------------------------------------------
+ * libtiff_map
+ *----------------------------------------------------------------------------*/
+static int libtiff_map(thandle_t st, tdata_t* addr, toff_t* pos)
 {
-    geotiff_t* g = (geotiff_t*)st;
+    geotiff_cb_t* g = (geotiff_cb_t*)st;
     *pos = g->pos;
     *addr = (void*)&g->filebuf[g->pos];
     return 0;
 };
-static void geotiff_Unmap(thandle_t, tdata_t, toff_t)
+
+/*----------------------------------------------------------------------------
+ * libtiff_unmap
+ *----------------------------------------------------------------------------*/
+static void libtiff_unmap(thandle_t, tdata_t, toff_t)
 {
     return;
 };
 
-/*----------------------------------------------------------------------------
- * geotiff_scanline
- *----------------------------------------------------------------------------*/
-int geotiff_scanline (lua_State* L)
-{
-    bool status = false;
+/******************************************************************************
+ * GEOTIFF LUA FUNCTIONS
+ ******************************************************************************/
 
+/*----------------------------------------------------------------------------
+ * lua_scanline
+ *----------------------------------------------------------------------------*/
+static int lua_scanline (lua_State* L)
+{
     /* Get Raster Data */
     const char* raster = LuaObject::getLuaString(L, 1);
     long imagelength = LuaObject::getLuaInteger(L, 2);
 
     /* Create LibTIFF Callback Data Structure */
-    geotiff_t g = {
+    geotiff_cb_t g = {
         .filebuf = (const uint8_t*)raster,
         .filesize = imagelength,
         .pos = 0
@@ -125,43 +148,108 @@ int geotiff_scanline (lua_State* L)
 
     /* Open TIFF via Memory Callbacks */
     TIFF* tif = TIFFClientOpen("Memory", "r", (thandle_t)&g,
-                                geotiff_Read,
-                                geotiff_Write,
-                                geotiff_Seek,
-                                geotiff_Close,
-                                geotiff_Size,
-                                geotiff_Map,
-                                geotiff_Unmap);
-
+                                libtiff_read,
+                                libtiff_write,
+                                libtiff_seek,
+                                libtiff_close,
+                                libtiff_size,
+                                libtiff_map,
+                                libtiff_unmap);
 
     /* Read TIFF */
     if(tif)
     {
-        tmsize_t size = TIFFStripSize(tif);
-        tdata_t buf = (tdata_t) new uint8_t [size];
-        for(tstrip_t strip = 0; strip < TIFFNumberOfStrips(tif); strip++)
+        uint32_t cols, rows;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &cols);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &rows);
+
+        /* Create User Data */
+        uint32_t strip_size = TIFFStripSize(tif);
+        uint32_t num_strips = TIFFNumberOfStrips(tif);
+        long size = strip_size * num_strips;
+        if(size > 0 && size < GEOTIFF_MAX_IMAGE_SIZE)
         {
-            TIFFReadEncodedStrip(tif, strip, buf, (tsize_t) -1);
-            uint8_t* byteptr = (uint8_t*)buf;
-            printf("[%ld]: ", size); for(int i = 0; i < size; i++) printf("%02X ", byteptr[i]); printf("\n");
+            /* Allocate Image */
+            geotiff_t* geotiff_data = (geotiff_t*)lua_newuserdata(L, sizeof(geotiff_t) + size);
+            geotiff_data->cols = cols;
+            geotiff_data->rows = rows;
+
+            /* Associate Metatable with Userdata */
+            luaL_getmetatable(L, LUA_GEOTIFF_METANAME);
+            lua_setmetatable(L, -2);
+
+            /* Read Data */
+            for(uint32_t strip = 0; strip < num_strips; strip++)
+            {
+                TIFFReadEncodedStrip(tif, strip, &geotiff_data->image[strip * strip_size], (tsize_t)-1);
+            }
+
+            /* Clean Up */
+            TIFFClose(tif);
         }
-
-        /* Clean Up */
-        delete [] buf;
-        TIFFClose(tif);
-
-        /* Set Success */
-        status = true;
+        else
+        {
+            mlog(CRITICAL, "Invalid raster image size: %ld\n", size);
+            lua_pushnil(L);
+        }
     }
     else
     {
         mlog(CRITICAL, "Unable to open memory mapped tiff file");
+        lua_pushnil(L);
     }
 
-    /* Return Status */
-    lua_pushboolean(L, status);
+    /* Return GeoTIFF */
     return 1;
 }
+
+/*----------------------------------------------------------------------------
+ * lua_dimensions - geotiff:dim() --> rows, cols
+ *----------------------------------------------------------------------------*/
+static int lua_dimensions (lua_State* L)
+{
+    geotiff_t* geotiff_data = (geotiff_t*)luaL_checkudata(L, 1, LUA_GEOTIFF_METANAME);
+    if(geotiff_data)
+    {
+        lua_pushinteger(L, geotiff_data->rows);
+        lua_pushinteger(L, geotiff_data->cols);
+        return 2;
+    }
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lua_pixel - geotiff:pix(r, c) --> on|off
+ *----------------------------------------------------------------------------*/
+static int lua_pixel (lua_State* L)
+{
+    geotiff_t* geotiff_data = (geotiff_t*)luaL_checkudata(L, 1, LUA_GEOTIFF_METANAME);
+    uint32_t r = lua_tointeger(L, 2);
+    uint32_t c = lua_tointeger(L, 3);
+
+    if( geotiff_data && (r < geotiff_data->rows) && (c < geotiff_data->cols) )
+    {
+        lua_pushboolean(L, geotiff_data->image[(r * geotiff_data->cols) + c] == GEOTIFF_PIXEL_ON);
+    }
+    else
+    {
+        lua_pushboolean(L, false);
+    }
+
+    return 1;
+}
+
+/******************************************************************************
+ * GEOTIFF FUNCTIONS
+ ******************************************************************************/
+/*----------------------------------------------------------------------------
+ * geotiff metatable functions
+ *----------------------------------------------------------------------------*/
+const struct luaL_Reg geotiffLibsM [] = {
+    {"dim",         lua_dimensions},
+    {"pixel",       lua_pixel},
+    {NULL, NULL}
+};
 
 /*----------------------------------------------------------------------------
  * geotiff_open
@@ -169,11 +257,17 @@ int geotiff_scanline (lua_State* L)
 int geotiff_open (lua_State* L)
 {
     static const struct luaL_Reg geotiff_functions[] = {
-        {"scan",        geotiff_scanline},
+        {"scan",        lua_scanline},
         {NULL,          NULL}
     };
 
-    /* Set Library */
+    /* Set GeoTIFF Library */
+    luaL_newmetatable(L, LUA_GEOTIFF_METANAME);  /* metatable.__index = metatable */
+    lua_pushvalue(L, -1);                   /* duplicates the metatable */
+    lua_setfield(L, -2, "__index");
+    luaL_setfuncs(L, geotiffLibsM, 0);
+
+    /* Set Package Library */
     luaL_newlib(L, geotiff_functions);
 
     return 1;
