@@ -156,7 +156,7 @@ int GeoTIFFFile::luaCreate (lua_State* L)
 {
     try
     {
-        return createLuaObject(L, create(L));
+        return createLuaObject(L, create(L, 1));
     }
     catch(const RunTimeException& e)
     {
@@ -168,22 +168,22 @@ int GeoTIFFFile::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoTIFFFile* GeoTIFFFile::create (lua_State* L)
+GeoTIFFFile* GeoTIFFFile::create (lua_State* L, int index)
 {
     bbox_t _bbox = {0.0, 0.0, 0.0, 0.0 };
 
     /* Get Image */
-    lua_getfield(L, 1, IMAGE_KEY);
+    lua_getfield(L, index, IMAGE_KEY);
     const char* image = getLuaString(L, -1);
     lua_pop(L, 1);
 
     /* Get Image Length */
-    lua_getfield(L, 1, IMAGELENGTH_KEY);
+    lua_getfield(L, index, IMAGELENGTH_KEY);
     long imagelength = getLuaInteger(L, -1);
     lua_pop(L, 1);
 
     /* Optionally Get Bounding Box */
-    lua_getfield(L, 1, BBOX_KEY);
+    lua_getfield(L, index, BBOX_KEY);
     if(lua_istable(L, -1) && (lua_rawlen(L, -1) == 4))
     {
         lua_rawgeti(L, -1, 1);
@@ -204,7 +204,7 @@ GeoTIFFFile* GeoTIFFFile::create (lua_State* L)
     }
 
     /* Optionally Get Cell Size */
-    lua_getfield(L, 1, CELLSIZE_KEY);
+    lua_getfield(L, index, CELLSIZE_KEY);
     double _cellsize = getLuaFloat(L, -1, true, 0.0);
     lua_pop(L, 1);
 
@@ -442,22 +442,8 @@ int GeoTIFFFile::luaSubset (lua_State* L)
         double lon = getLuaFloat(L, 2);
         double lat = getLuaFloat(L, 3);
 
-        /* Check Inclusion */
-        if( (lon >= lua_obj->bbox.lon_min) &&
-            (lon <= lua_obj->bbox.lon_max) &&
-            (lat >= lua_obj->bbox.lat_min) &&
-            (lat <= lua_obj->bbox.lat_max) )
-        {
-            /* Calculate Row,Col */
-            uint32_t row = (lat - lua_obj->bbox.lat_min) / lua_obj->cellsize;
-            uint32_t col = (lon - lua_obj->bbox.lon_min) / lua_obj->cellsize;
-
-            /* Get Pixel */
-            if((row < lua_obj->rows) && (col < lua_obj->cols))
-            {
-                status = lua_obj->rawPixel(row, col);
-            }
-        }
+        /* Get Inclusion */
+        status = lua_obj->subset(lon, lat);
     }
     catch(const RunTimeException& e)
     {

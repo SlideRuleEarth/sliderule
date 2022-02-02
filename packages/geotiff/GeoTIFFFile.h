@@ -80,7 +80,7 @@ class GeoTIFFFile: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int          luaCreate       (lua_State* L);
-        static GeoTIFFFile* create          (lua_State* L);
+        static GeoTIFFFile* create          (lua_State* L, int index);
 
         virtual             ~GeoTIFFFile    (void);
 
@@ -91,6 +91,23 @@ class GeoTIFFFile: public LuaObject
         bool rawPixel (const uint32_t row, const uint32_t col)
         {
             return raster[(row * cols) + col] == GEOTIFF_PIXEL_ON;
+        }
+
+        bool subset (double lon, double lat)
+        {
+            if( (lon >= bbox.lon_min) &&
+                (lon <= bbox.lon_max) &&
+                (lat >= bbox.lat_min) &&
+                (lat <= bbox.lat_max) )
+            {
+                uint32_t row = (lat - bbox.lat_min) / cellsize;
+                uint32_t col = (lon - bbox.lon_min) / cellsize;
+                if((row < rows) && (col < cols))
+                {
+                    return rawPixel(row, col);
+                }
+            }
+            return false;
         }
 
         uint32_t numRows (void)
