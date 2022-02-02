@@ -24,10 +24,9 @@ function ascii_display(raster)
     end
 end
 
-local tiff = base64.decode(parm["raster"]["image"])
-local size = parm["raster"]["imagelength"]
+parm["raster"]["image"] = base64.decode(parm["raster"]["image"])
 
-raster = geotiff.file(tiff, size)
+raster = geotiff.file(parm["raster"])
 ascii_display(raster)
 
 return json.encode({input=parm})

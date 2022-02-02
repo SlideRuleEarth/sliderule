@@ -43,23 +43,46 @@
  * GEOTIFF CLASS
  ******************************************************************************/
 
+
+// TODO: add bbox as optional parameter with functions to use it
+// have the lua_get_raster use this constructor
+
 class GeoTIFFFile: public LuaObject
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Methods
+         * Constants
          *--------------------------------------------------------------------*/
 
-        const int GEOTIFF_PIXEL_ON = 1;
-        const int GEOTIFF_MAX_IMAGE_SIZE = 4194304; // 4MB
+        static const int GEOTIFF_PIXEL_ON = 1;
+        static const int GEOTIFF_MAX_IMAGE_SIZE = 4194304; // 4MB
+
+        static const char* IMAGE_KEY;
+        static const char* IMAGELENGTH_KEY;
+        static const char* DIMENSION_KEY;
+        static const char* BBOX_KEY;
+        static const char* CELLSIZE_KEY;
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            double lon_min;
+            double lat_min;
+            double lon_max;
+            double lat_max;
+        } bbox_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate   (lua_State* L);
-        static GeoTIFFFile* create      (const char* image, long imagelength);
+        static int          luaCreate       (lua_State* L);
+        static GeoTIFFFile* create          (lua_State* L);
+
+        virtual             ~GeoTIFFFile    (void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -93,8 +116,7 @@ class GeoTIFFFile: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoTIFFFile     (lua_State* L, const char* image, long imagelength);
-        virtual         ~GeoTIFFFile    (void);
+        GeoTIFFFile (lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize);
 
     private:
 
@@ -105,13 +127,18 @@ class GeoTIFFFile: public LuaObject
         uint32_t    rows;
         uint32_t    cols;
         uint8_t*    raster;
+        bbox_t      bbox;
+        double      cellsize;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int luaDimensions    (lua_State* L);
+        static int luaBoundingBox   (lua_State* L);
+        static int luaCellSize      (lua_State* L);
         static int luaPixel         (lua_State* L);
+        static int luaSubset        (lua_State* L);
 };
 
 #endif  /* __geotiff_file__ */

@@ -44,9 +44,18 @@
 const char* GeoTIFFFile::LuaMetaName = "GeoTIFFFile";
 const struct luaL_Reg GeoTIFFFile::LuaMetaTable[] = {
     {"dim",         luaDimensions},
+    {"bbox",        luaBoundingBox},
+    {"cell",        luaCellSize},
     {"pixel",       luaPixel},
     {NULL,          NULL}
 };
+
+const char* GeoTIFFFile::IMAGE_KEY = "image";
+const char* GeoTIFFFile::IMAGELENGTH_KEY = "imagelength";
+const char* GeoTIFFFile::DIMENSION_KEY = "dimension";
+const char* GeoTIFFFile::BBOX_KEY = "bbox";
+const char* GeoTIFFFile::CELLSIZE_KEY = "cellsize";
+
 
 /******************************************************************************
  * FILE STATIC LIBTIFF METHODS
@@ -135,18 +144,19 @@ static void libtiff_unmap(thandle_t, tdata_t, toff_t)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - file(<image>, <imagelength>)
+ * luaCreate - file(
+ *  {
+ *      image=<image>,
+ *      imagelength=<imagelength>,
+ *      [bbox=<<lon_min>, <lat_min>, <lon_max>, <lat_max>>,
+ *      cellsize=<cell size>]
+ *  })
  *----------------------------------------------------------------------------*/
 int GeoTIFFFile::luaCreate (lua_State* L)
 {
     try
     {
-        /* Get Parameters */
-        const char* image   = getLuaString(L, 1);
-        long imagelength    = getLuaInteger(L, 2);
-
-        /* Create Record bridge */
-        return createLuaObject(L, new GeoTIFFFile(L, image, imagelength));
+        return createLuaObject(L, create(L));
     }
     catch(const RunTimeException& e)
     {
@@ -158,9 +168,56 @@ int GeoTIFFFile::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoTIFFFile* GeoTIFFFile::create (const char* image, long imagelength)
+GeoTIFFFile* GeoTIFFFile::create (lua_State* L)
 {
-    return new GeoTIFFFile(NULL, image, imagelength);
+    bbox_t _bbox = {0.0, 0.0, 0.0, 0.0 };
+
+    /* Get Image */
+    lua_getfield(L, 1, IMAGE_KEY);
+    const char* image = getLuaString(L, -1);
+    lua_pop(L, 1);
+
+    /* Get Image Length */
+    lua_getfield(L, 1, IMAGELENGTH_KEY);
+    long imagelength = getLuaInteger(L, -1);
+    lua_pop(L, 1);
+
+    /* Optionally Get Bounding Box */
+    lua_getfield(L, 1, BBOX_KEY);
+    if(lua_istable(L, -1) && (lua_rawlen(L, -1) == 4))
+    {
+        lua_rawgeti(L, -1, 1);
+        _bbox.lon_min = getLuaFloat(L, -1);
+        lua_pop(L, 1);
+
+        lua_rawgeti(L, -1, 2);
+        _bbox.lat_min = getLuaFloat(L, -1);
+        lua_pop(L, 1);
+
+        lua_rawgeti(L, -1, 3);
+        _bbox.lon_max = getLuaFloat(L, -1);
+        lua_pop(L, 1);
+
+        lua_rawgeti(L, -1, 4);
+        _bbox.lat_max = getLuaFloat(L, -1);
+        lua_pop(L, 1);
+    }
+
+    /* Optionally Get Cell Size */
+    lua_getfield(L, 1, CELLSIZE_KEY);
+    double _cellsize = getLuaFloat(L, -1, true, 0.0);
+    lua_pop(L, 1);
+
+    /* Create GeoTIFF File */
+    return new GeoTIFFFile(L, image, imagelength, _bbox, _cellsize);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoTIFFFile::~GeoTIFFFile(void)
+{
+    if(raster) delete [] raster;
 }
 
 /******************************************************************************
@@ -170,7 +227,7 @@ GeoTIFFFile* GeoTIFFFile::create (const char* image, long imagelength)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength):
+GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(image);
@@ -179,6 +236,8 @@ GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength):
     rows = 0;
     cols = 0;
     raster = NULL;
+    bbox = _bbox;
+    cellsize = _cellsize;
 
     /* Create LibTIFF Callback Data Structure */
     geotiff_cb_t g = {
@@ -232,14 +291,6 @@ GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength):
     }
 }
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoTIFFFile::~GeoTIFFFile(void)
-{
-    if(raster) delete [] raster;
-}
-
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -259,9 +310,8 @@ int GeoTIFFFile::luaDimensions (lua_State* L)
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->rows);
-        num_ret++;
         lua_pushinteger(L, lua_obj->cols);
-        num_ret++;
+        num_ret += 2;
 
         /* Set Return Status */
         status = true;
@@ -276,7 +326,68 @@ int GeoTIFFFile::luaDimensions (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaPixel - :pix(r, c) --> on|off
+ * luaBoundingBox - :bbox() --> (lon_min, lat_min, lon_max, lat_max)
+ *----------------------------------------------------------------------------*/
+int GeoTIFFFile::luaBoundingBox(lua_State* L)
+{
+    bool status = false;
+    int num_ret = 1;
+
+    try
+    {
+        /* Get Self */
+        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+
+        /* Set Return Values */
+        lua_pushinteger(L, lua_obj->bbox.lon_min);
+        lua_pushinteger(L, lua_obj->bbox.lat_min);
+        lua_pushinteger(L, lua_obj->bbox.lon_max);
+        lua_pushinteger(L, lua_obj->bbox.lat_max);
+        num_ret += 4;
+
+        /* Set Return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting bounding box: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_ret);
+}
+
+/*----------------------------------------------------------------------------
+ * luaCellSize - :cell() --> cell size
+ *----------------------------------------------------------------------------*/
+int GeoTIFFFile::luaCellSize(lua_State* L)
+{
+    bool status = false;
+    int num_ret = 1;
+
+    try
+    {
+        /* Get Self */
+        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+
+        /* Set Return Values */
+        lua_pushnumber(L, lua_obj->cellsize);
+        num_ret += 1;
+
+        /* Set Return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting cell size: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_ret);
+}
+
+/*----------------------------------------------------------------------------
+ * luaPixel - :pixel(r, c) --> on|off
  *----------------------------------------------------------------------------*/
 int GeoTIFFFile::luaPixel (lua_State* L)
 {
@@ -313,4 +424,46 @@ int GeoTIFFFile::luaPixel (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSubset - :subset(lon, lat) --> in|out
+ *----------------------------------------------------------------------------*/
+int GeoTIFFFile::luaSubset (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+
+        /* Get Coordinates */
+        double lon = getLuaFloat(L, 2);
+        double lat = getLuaFloat(L, 3);
+
+        /* Check Inclusion */
+        if( (lon >= lua_obj->bbox.lon_min) &&
+            (lon <= lua_obj->bbox.lon_max) &&
+            (lat >= lua_obj->bbox.lat_min) &&
+            (lat <= lua_obj->bbox.lat_max) )
+        {
+            /* Calculate Row,Col */
+            uint32_t row = (lat - lua_obj->bbox.lat_min) / lua_obj->cellsize;
+            uint32_t col = (lon - lua_obj->bbox.lon_min) / lua_obj->cellsize;
+
+            /* Get Pixel */
+            if((row < lua_obj->rows) && (col < lua_obj->cols))
+            {
+                status = lua_obj->rawPixel(row, col);
+            }
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error subsetting: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }
