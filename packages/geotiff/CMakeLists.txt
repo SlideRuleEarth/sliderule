@@ -14,6 +14,7 @@ if (TIFF_FOUND)
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/geotiff.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/GeoTIFFFile.cpp
     )
 
     target_include_directories (slideruleLib
@@ -25,6 +26,7 @@ if (TIFF_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/geotiff.h
+            ${CMAKE_CURRENT_LIST_DIR}/GeoTIFFFile.h
         DESTINATION
             ${INCDIR}
     )
