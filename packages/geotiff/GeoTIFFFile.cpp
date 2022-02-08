@@ -179,7 +179,7 @@ GeoTIFFFile* GeoTIFFFile::create (lua_State* L, int index)
 
     /* Get Image Length */
     lua_getfield(L, index, IMAGELENGTH_KEY);
-    long imagelength = getLuaInteger(L, -1);
+    size_t imagelength = (size_t)getLuaInteger(L, -1);
     lua_pop(L, 1);
 
     /* Optionally Get Bounding Box */
@@ -208,8 +208,11 @@ GeoTIFFFile* GeoTIFFFile::create (lua_State* L, int index)
     double _cellsize = getLuaFloat(L, -1, true, 0.0);
     lua_pop(L, 1);
 
+    /* Convert Image from Base64 to Binary */
+    std::string tiff = MathLib::b64decode(image, imagelength);
+
     /* Create GeoTIFF File */
-    return new GeoTIFFFile(L, image, imagelength, _bbox, _cellsize);
+    return new GeoTIFFFile(L, tiff.c_str(), tiff.size(), _bbox, _cellsize);
 }
 
 /*----------------------------------------------------------------------------

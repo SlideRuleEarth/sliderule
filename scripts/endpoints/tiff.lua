@@ -24,8 +24,6 @@ function ascii_display(raster)
     end
 end
 
-parm["raster"]["image"] = base64.decode(parm["raster"]["image"])
-
 raster = geotiff.file(parm["raster"])
 ascii_display(raster)
 
