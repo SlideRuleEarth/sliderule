@@ -100,8 +100,9 @@ class GeoTIFFFile: public LuaObject
                 (lat >= bbox.lat_min) &&
                 (lat <= bbox.lat_max) )
             {
-                uint32_t row = (lat - bbox.lat_min) / cellsize;
+                uint32_t row = (bbox.lat_max - lat) / cellsize;
                 uint32_t col = (lon - bbox.lon_min) / cellsize;
+
                 if((row < rows) && (col < cols))
                 {
                     return rawPixel(row, col);

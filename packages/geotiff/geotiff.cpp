@@ -35,6 +35,7 @@
 
 #include "core.h"
 #include "geotiff.h"
+#include <tiffio.h>
 
 /******************************************************************************
  * DEFINES
@@ -69,6 +70,9 @@ int geotiff_open (lua_State* L)
 extern "C" {
 void initgeotiff (void)
 {
+    /* Initialize LibTIFF */
+    TIFFSetWarningHandler(NULL); // turns off warnings
+
     /* Extend Lua */
     LuaEngine::extend(LUA_GEOTIFF_LIBNAME, geotiff_open);
 

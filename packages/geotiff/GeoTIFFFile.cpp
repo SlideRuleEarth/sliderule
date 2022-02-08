@@ -202,10 +202,11 @@ GeoTIFFFile* GeoTIFFFile::create (lua_State* L, int index)
         _bbox.lat_max = getLuaFloat(L, -1);
         lua_pop(L, 1);
     }
+    lua_pop(L, 1);
 
     /* Optionally Get Cell Size */
     lua_getfield(L, index, CELLSIZE_KEY);
-    double _cellsize = getLuaFloat(L, -1, true, 0.0);
+    double _cellsize = getLuaFloat(L, -1);
     lua_pop(L, 1);
 
     /* Convert Image from Base64 to Binary */
