@@ -158,6 +158,90 @@ class widgets:
             disabled=False
         )
 
+        # selection for ATL03 quality flags
+        quality_options = [
+            'atl03_nominal',
+            'atl03_possible_afterpulse',
+            'atl03_possible_impulse_response',
+            'atl03_possible_tep'
+        ]
+        self.quality = ipywidgets.SelectMultiple(
+            value=['atl03_nominal'],
+            options=quality_options,
+            description='Quality:',
+            disabled=False
+        )
+
+        # slider for setting for YAPC kNN
+        self.yapc_knn = ipywidgets.IntSlider(
+            value=0,
+            min=0,
+            max=20,
+            step=1,
+            description='YAPC kNN:',
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d'
+        )
+
+        # slider for setting for YAPC height window
+        self.yapc_win_h = ipywidgets.FloatSlider(
+            value=3.0,
+            min=0.1,
+            max=100,
+            step=0.1,
+            description='YAPC h window:',
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='0.1f'
+        )
+
+        # slider for setting for YAPC along-track distance window
+        self.yapc_win_x = ipywidgets.FloatSlider(
+            value=21.0,
+            min=0.1,
+            max=100,
+            step=0.1,
+            description='YAPC x window:',
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='0.1f'
+        )
+
+        # slider for setting for YAPC minimum photon events
+        self.yapc_min_ph = ipywidgets.IntSlider(
+            value=4,
+            min=0,
+            max=20,
+            step=1,
+            description='YAPC Minimum PE:',
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d'
+        )
+
+        # slider for setting for YAPC weights for fit
+        self.yapc_weight = ipywidgets.IntSlider(
+            value=80,
+            min=0,
+            max=255,
+            step=1,
+            description='YAPC Weight:',
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d'
+        )
+
         # slider for setting maximum number of iterations
         # (not including initial least-squares-fit selection)
         self.iteration = ipywidgets.IntSlider(
