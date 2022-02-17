@@ -32,6 +32,9 @@ import sys
 import copy
 import datetime
 import numpy as np
+import geopandas as gpd
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 from traitlets.utils.bunch import Bunch
 import sliderule.io
 
@@ -52,6 +55,19 @@ except ModuleNotFoundError as e:
 # imports that raise error if not present
 try:
     import ipyleaflet
+except ModuleNotFoundError as e:
+    sys.stderr.write("Error: missing required packages. (%s)\n" % (str(e)))
+    raise
+
+# imports that raise error if not present
+try:
+    from mapclassify import classify
+except ModuleNotFoundError as e:
+    sys.stderr.write("Error: missing required packages. (%s)\n" % (str(e)))
+    raise
+
+try:
+    import branca as bc
 except ModuleNotFoundError as e:
     sys.stderr.write("Error: missing required packages. (%s)\n" % (str(e)))
     raise
@@ -477,7 +493,7 @@ class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
         kwargs.setdefault('zoom',False)
-        kwargs.setdefault('scale',True)
+        kwargs.setdefault('scale',False)
         kwargs.setdefault('cursor',True)
         kwargs.setdefault('center',(39,-108))
         kwargs.setdefault('color','green')
@@ -559,3 +575,83 @@ class leaflet:
             self.regions.remove(region)
         return self
 
+    # add geodataframe data to leaflet map
+    def GeoData(self, gdf, **kwargs):
+        kwargs.setdefault('column_name', 'h_mean')
+        kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('vmin', None)
+        kwargs.setdefault('vmax', None)
+        kwargs.setdefault('radius', 1.0)
+        kwargs.setdefault('fillOpacity', 0.5)
+        kwargs.setdefault('weight', 3.0)
+        kwargs.setdefault('stride', None)
+        kwargs.setdefault('max_plot_points', 10000)
+        if kwargs['stride'] is not None:
+            stride = np.copy(kwargs['stride'])
+        if (gdf.shape[0] > kwargs['max_plot_points']):
+            stride = int(gdf.shape[0]//kwargs['max_plot_points'])
+        else:
+            stride = 1
+        # extract column from geodataframe
+        column_name = copy.copy(kwargs['column_name'])
+        column = gpd.GeoDataFrame(gdf[column_name][::stride],
+            geometry=gdf['geometry'][::stride])
+        # set colorbar limits to 2-98 percentile
+        # if not using a defined plot range
+        clim = gdf[column_name].quantile((0.02, 0.98)).values
+        if kwargs['vmin'] is None:
+            vmin = clim[0]
+        else:
+            vmin = np.copy(kwargs['vmin'])
+        if kwargs['vmax'] is None:
+            vmax = clim[-1]
+        else:
+            vmax = np.copy(kwargs['vmax'])
+        # number of bins
+        bins = np.linspace(vmin, vmax, 257)[1:]
+        # classify bins for column
+        binning = classify(np.asarray(column[column_name]), "UserDefined", bins=bins)
+        # create colors for each point in the dataframe
+        column["__plottable_color"] = np.apply_along_axis(colors.to_hex, 1,
+            cm.get_cmap(kwargs['cmap'], 256)(binning.yb))
+        # leaflet map point stype
+        point_style= {key:kwargs[key] for key in ['radius','fillOpacity','weight']}
+        # convert to GeoJSON object and add to map
+        geo = ipyleaflet.GeoJSON(data=column.__geo_interface__,
+            point_style=point_style, style_callback=self.style_callback)
+        self.map.add_layer(geo)
+        # add colorbar
+        self.add_colorbar(column_name=column_name, cmap=kwargs['cmap'],
+            vmin=vmin, vmax=vmax)
+
+    # functional call for setting colors of each point
+    def style_callback(self, x):
+        return {
+            "fillColor": x["properties"]["__plottable_color"],
+            "color": x["properties"]["__plottable_color"],
+        }
+
+    # add colorbar widget to leaflet map
+    def add_colorbar(self, **kwargs):
+        kwargs.setdefault('column_name', 'h_mean')
+        kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('decimals', 2)
+        kwargs.setdefault('vmin', None)
+        kwargs.setdefault('vmax', None)
+        cmap = copy.copy(cm.get_cmap(kwargs['cmap']))
+        color_array = np.apply_along_axis(colors.to_hex, 1, cmap(range(cmap.N)))
+        colorbar = bc.colormap.LinearColormap(color_array,
+            vmin=np.around(kwargs['vmin'],kwargs['decimals']),
+            vmax=np.around(kwargs['vmax'],kwargs['decimals']),
+            caption=kwargs['column_name'])
+        # create output widget
+        output = ipywidgets.widgets.Output(
+            layout=dict(height='50px')
+        )
+        root = ipyleaflet.WidgetControl(widget=output,
+            transparent_bg=True, position="topright")
+        with output:
+            IPython.display.clear_output()
+            IPython.display.display(colorbar)
+        # add colormap
+        self.map.add_control(root)

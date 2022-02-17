@@ -3,6 +3,7 @@ name: sliderule
 channels:
   - conda-forge
 dependencies:
+  - branca
   - cartopy
   - geopandas
   - h5py
@@ -11,6 +12,7 @@ dependencies:
   - ipyleaflet>=0.15
   - jupyterlab=3
   - jupyterlab_widgets
+  - mapclassify
   - matplotlib
   - numpy
   - pandas
