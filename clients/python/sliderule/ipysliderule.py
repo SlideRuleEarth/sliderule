@@ -68,13 +68,19 @@ except ModuleNotFoundError as e:
     raise
 
 class widgets:
-    def __init__(self):
+    def __init__(self, **kwargs):
+        # set default keyword options
+        kwargs.setdefault('style', {})
+        # set style
+        self.style = copy.copy(kwargs['style'])
+
         # dropdown menu for setting asset
         self.asset = ipywidgets.Dropdown(
             options=['atlas-local', 'atlas-s3', 'nsidc-s3'],
             value='nsidc-s3',
             description='Asset:',
             disabled=False,
+            style=self.style,
         )
 
         # dropdown menu for setting data release
@@ -83,6 +89,7 @@ class widgets:
             value='004',
             description='Release:',
             disabled=False,
+            style=self.style,
         )
 
         # dropdown menu for setting surface type
@@ -99,6 +106,7 @@ class widgets:
             value='Land',
             description='Surface Type:',
             disabled=False,
+            style=self.style,
         )
 
         # slider for setting length of ATL06-SR segment in meters
@@ -112,7 +120,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # slider for setting step distance for successive segments in meters
@@ -126,7 +135,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # slider for setting confidence level for PE selection
@@ -141,7 +151,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # selection for land surface classifications
@@ -155,7 +166,8 @@ class widgets:
         self.land_class = ipywidgets.SelectMultiple(
             options=land_options,
             description='Land Class:',
-            disabled=False
+            disabled=False,
+            style=self.style,
         )
 
         # selection for ATL03 quality flags
@@ -169,7 +181,8 @@ class widgets:
             value=['atl03_nominal'],
             options=quality_options,
             description='Quality:',
-            disabled=False
+            disabled=False,
+            style=self.style,
         )
 
         # slider for setting for YAPC kNN
@@ -183,7 +196,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # slider for setting for YAPC height window
@@ -197,7 +211,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='0.1f'
+            readout_format='0.1f',
+            style=self.style,
         )
 
         # slider for setting for YAPC along-track distance window
@@ -211,7 +226,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='0.1f'
+            readout_format='0.1f',
+            style=self.style,
         )
 
         # slider for setting for YAPC minimum photon events
@@ -225,7 +241,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # slider for setting for YAPC weights for fit
@@ -239,7 +256,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # slider for setting maximum number of iterations
@@ -254,7 +272,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # slider for setting minimum along track spread
@@ -268,7 +287,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='0.1f'
+            readout_format='0.1f',
+            style=self.style,
         )
         # slider for setting minimum photon event (PE) count
         self.count = ipywidgets.IntSlider(
@@ -281,7 +301,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='d'
+            readout_format='d',
+            style=self.style,
         )
 
         # slider for setting minimum height of PE window in meters
@@ -295,7 +316,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='0.1f'
+            readout_format='0.1f',
+            style=self.style,
         )
 
         # slider for setting maximum robust dispersion in meters
@@ -309,7 +331,8 @@ class widgets:
             continuous_update=False,
             orientation='horizontal',
             readout=True,
-            readout_format='0.1f'
+            readout_format='0.1f',
+            style=self.style,
         )
 
         # dropdown menu for setting map projection for polygons
@@ -322,6 +345,62 @@ class widgets:
             value='Global',
             description='Projection:',
             disabled=False,
+            style=self.style,
+        )
+
+        # dropdown menu for selecting variable to draw on map
+        variable_list = ['h_mean', 'h_sigma', 'dh_fit_dx', 'dh_fit_dy',
+            'rms_misfit', 'w_surface_window_final', 'delta_time',
+            'cycle', 'rgt']
+        self.variable = ipywidgets.Dropdown(
+            options=variable_list,
+            value='h_mean',
+            description='Variable:',
+            disabled=False,
+            style=self.style,
+        )
+
+        # all listed colormaps in matplotlib version
+        cmap_set = set(cm.datad.keys()) | set(cm.cmaps_listed.keys())
+        # colormaps available in this program
+        # (no reversed, qualitative or miscellaneous)
+        self.cmaps_listed = {}
+        self.cmaps_listed['Perceptually Uniform Sequential'] = [
+            'viridis','plasma','inferno','magma','cividis']
+        self.cmaps_listed['Sequential'] = ['Greys','Purples',
+            'Blues','Greens','Oranges','Reds','YlOrBr','YlOrRd',
+            'OrRd','PuRd','RdPu','BuPu','GnBu','PuBu','YlGnBu',
+            'PuBuGn','BuGn','YlGn']
+        self.cmaps_listed['Sequential (2)'] = ['binary','gist_yarg',
+            'gist_gray','gray','bone','pink','spring','summer',
+            'autumn','winter','cool','Wistia','hot','afmhot',
+            'gist_heat','copper']
+        self.cmaps_listed['Diverging'] = ['PiYG','PRGn','BrBG',
+            'PuOr','RdGy','RdBu','RdYlBu','RdYlGn','Spectral',
+            'coolwarm', 'bwr','seismic']
+        self.cmaps_listed['Cyclic'] = ['twilight',
+            'twilight_shifted','hsv']
+        # create list of available colormaps in program
+        cmap_list = []
+        for val in self.cmaps_listed.values():
+            cmap_list.extend(val)
+        # reduce colormaps to available in program and matplotlib
+        cmap_set &= set(cmap_list)
+        # dropdown menu for setting colormap
+        self.cmap = ipywidgets.Dropdown(
+            options=sorted(cmap_set),
+            value='viridis',
+            description='Colormap:',
+            disabled=False,
+            style=self.style,
+        )
+
+        # Reverse the colormap
+        self.reverse = ipywidgets.Checkbox(
+            value=False,
+            description='Reverse Colormap',
+            disabled=False,
+            style=self.style,
         )
 
         # button and label for output file selection
@@ -428,6 +507,15 @@ class widgets:
             return 'netcdf'
         else:
             return ''
+
+    @property
+    def _r(self):
+        cmap_reverse_flag = '_r' if self.reverse.value else ''
+        return cmap_reverse_flag
+
+    @property
+    def colormap(self):
+        return self.cmap.value + self._r
 
 # define projections for ipyleaflet tiles
 projections = Bunch(
@@ -620,6 +708,8 @@ class leaflet:
         self.regions = []
         draw_control.on_draw(self.handle_draw)
         self.map.add_control(draw_control)
+        # initiate data and colorbars
+        self.data = None
         self.colorbar = None
 
     # handle cursor movements for label
@@ -647,6 +737,9 @@ class leaflet:
             self.regions.append(region)
         elif (action == 'deleted'):
             self.regions.remove(region)
+        # remove any prior instances of a data layer
+        if (action == 'deleted') and self.data is not None:
+            self.map.remove_layer(self.data)
         return self
 
     # add geodataframe data to leaflet map
@@ -661,6 +754,9 @@ class leaflet:
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('colorbar', True)
+        # remove any prior instances of a data layer
+        if self.data is not None:
+            self.map.remove_layer(self.data)
         if kwargs['stride'] is not None:
             stride = np.copy(kwargs['stride'])
         elif (gdf.shape[0] > kwargs['max_plot_points']):
@@ -691,9 +787,9 @@ class leaflet:
         # leaflet map point style
         point_style= {key:kwargs[key] for key in ['radius','fillOpacity','weight']}
         # convert to GeoJSON object and add to map
-        geo = ipyleaflet.GeoJSON(data=column.__geo_interface__,
+        self.data = ipyleaflet.GeoJSON(data=column.__geo_interface__,
             point_style=point_style, style_callback=self.style_callback)
-        self.map.add_layer(geo)
+        self.map.add_layer(self.data)
         # add colorbar
         if kwargs['colorbar']:
             self.add_colorbar(column_name=column_name, cmap=kwargs['cmap'], norm=norm)
@@ -718,8 +814,9 @@ class leaflet:
         # remove any prior instances of a colorbar
         if self.colorbar is not None:
             self.map.remove_control(self.colorbar)
-        # create matplotlib colorbar
+        # colormap for colorbar
         cmap = copy.copy(cm.get_cmap(kwargs['cmap']))
+        # create matplotlib colorbar
         _, ax = plt.subplots(figsize=(kwargs['width'], kwargs['height']))
         cbar = matplotlib.colorbar.ColorbarBase(ax, cmap=cmap,
             norm=kwargs['norm'], alpha=kwargs['alpha'],
