@@ -143,6 +143,11 @@ def get_attributes(**kwargs):
     attrs['gt']['valid_min'] = 10
     attrs['gt']['valid_max'] = 60
     attrs['gt']['coordinates'] = coordinates
+    # ground track
+    attrs['distance'] = {}
+    attrs['distance']['units'] = "meters"
+    attrs['distance']['long_name'] = "Along track distance from equator"
+    attrs['distance']['coordinates'] = coordinates
     # spot
     attrs['spot'] = {}
     attrs['spot']['long_name'] = "ATLAS spot number"
@@ -344,7 +349,7 @@ def to_hdf(gdf, filename, **kwargs):
     df[lon_key] = gdf['geometry'].values.x
     # get geodataframe coordinate system
     if gdf.crs:
-        kwargs['crs'] = gdf.crs
+        kwargs['crs'] = str(gdf.crs)
     # output to HDF5 format
     if (kwargs['driver'].lower() == 'pytables'):
         kwargs.pop('driver')

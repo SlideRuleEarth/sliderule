@@ -57,7 +57,7 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
         return icesat2.__emptyframe()
     # try to get the subsetting region
     if ipx_region.extent_type in ('bbox','polygon'):
-        parm.update('poly', to_region(ipx_region))
+        parm.update({'poly': to_region(ipx_region)})
 
     return icesat2.atl06p(parm, asset, version=version, resources=resources)
 
@@ -77,7 +77,7 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
         return icesat2.__emptyframe()
     # try to get the subsetting region
     if ipx_region.extent_type in ('bbox','polygon'):
-        parm.update('poly', to_region(ipx_region))
+        parm.update({'poly': to_region(ipx_region)})
 
     return icesat2.atl03sp(parm, asset, version=version, resources=resources)
 
@@ -87,11 +87,11 @@ def to_region(ipx_region):
     """
     if (ipx_region.extent_type == 'bbox'):
         bbox = ipx_region.spatial_extent[1]
-        poly = [dict(lon=bbox[1], lat=bbox[2]),
-            dict(lon=bbox[3], lat=bbox[2]),
-            dict(lon=bbox[3], lat=bbox[4]),
-            dict(lon=bbox[1], lat=bbox[4]),
-            dict(lon=bbox[1], lat=bbox[2])]
+        poly = [dict(lon=bbox[0], lat=bbox[1]),
+                dict(lon=bbox[2], lat=bbox[1]),
+                dict(lon=bbox[2], lat=bbox[3]),
+                dict(lon=bbox[0], lat=bbox[3]),
+                dict(lon=bbox[0], lat=bbox[1])]
     elif (ipx_region.extent_type == 'polygon'):
         poly = [dict(lon=ln,lat=lt) for ln,lt in zip(*ipx_region.spatial_extent[1])]
     return poly

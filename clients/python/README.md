@@ -11,27 +11,10 @@ Detailed [documentation](http://icesat2sliderule.org/rtd/) on installing and usi
 ## I. Installing the SlideRule Python Client
 
 ```bash
-pip install sliderule
+conda install -c conda-forge sliderule
 ```
 
-#### Alternate Method 1: Development PIP install
-```bash
-pip install git+https://github.com/ICESat2-SlideRule/sliderule-python
-```
-
-#### Alternate Method 2: Development install from repository
-```bash
-git clone https://github.com/ICESat2-SlideRule/sliderule-python.git
-cd sliderule-python
-conda env create -f environment.yml
-```
-
-#### Alternate Method 3: Manual install or update from repository:
-```bash
-git clone https://github.com/ICESat2-SlideRule/sliderule-python.git
-cd sliderule-python
-python3 setup.py install
-```
+For alternate methods to install SlideRule, including options for developers, please see the [installation instructions](http://icesat2sliderule.org/rtd/getting_started/Install.html) on icesat2sliderule.org.
 
 ### Dependencies
 
@@ -41,12 +24,11 @@ Basic functionality of sliderule-python depends on `requests` and `numpy`.  But 
 
 SlideRule is a C++/Lua framework for on-demand data processing. It is a science data processing service that runs in the cloud and responds to REST API calls to process and return science results.
 
-While SlideRule can be accessed by any http client (e.g. curl) by making GET and POST requests to the SlideRule service, the python packages in this repository provide higher level access by hiding the GET and POST requests inside python function calls that accept and return basic python variable types (e.g. dictionaries, lists, numbers).
+While SlideRule can be accessed by any http client (e.g. curl) by making GET and POST requests to the SlideRule service, the python packages in this repository provide higher level access by hiding the GET and POST requests inside python function calls that accept and return python variable types.
 
 Example usage:
 ```python
 # import
-import pandas as pd
 from sliderule import icesat2
 
 # initialize
@@ -70,10 +52,7 @@ parms = {
 }
 
 # make request
-rsps = icesat2.atl06p(parms, "atlas-local")
-
-# analyze response
-df = pd.DataFrame(rsps)
+rsps = icesat2.atl06p(parms, "nsidc-s3")
 ```
 
 More extensive examples in the form of Jupyter Notebooks can be found in the [examples](examples/) folder.

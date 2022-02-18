@@ -38,7 +38,13 @@ import concurrent.futures
 import warnings
 import numpy
 import geopandas
+import uuid
+import base64
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 from shapely.geometry.multipolygon import MultiPolygon
+from shapely.geometry import Polygon
 import sliderule
 from sliderule import version
 
@@ -58,6 +64,9 @@ DEFAULT_ASSET="nsidc-s3"
 # default maximum number of resources to process in one request
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
+
+# default maximum number of workers used for one request
+DEFAULT_MAX_WORKERS = 30
 
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
@@ -300,15 +309,18 @@ def __query_servers(max_workers):
 
     # Update Available Servers #
     num_servers = sliderule.update_available_servers()
-    if max_workers <= 0:
-        max_workers = num_servers * SERVER_SCALE_FACTOR
+    full_load = num_servers * SERVER_SCALE_FACTOR
 
     # Check if Servers are Available #
-    if max_workers <= 0:
+    if full_load <= 0:
         logger.error("There are no servers available to fulfill this request")
         return 0
-    else:
-        logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
+
+    # Set Workers #
+    if max_workers <= 0 or max_workers > full_load:
+        max_workers = full_load
+
+    logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
 
     # Return Number of Workers #
     return max_workers
@@ -363,13 +375,12 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
 #
 #  __atl06
 #
-def __atl06 (parm, resource, asset, track):
+def __atl06 (parm, resource, asset):
 
     # Build ATL06 Request
     rqst = {
         "atl03-asset" : asset,
         "resource": resource,
-        "track": track,
         "parms": parm
     }
 
@@ -413,13 +424,12 @@ def __atl06 (parm, resource, asset, track):
 #
 #  __atl03s
 #
-def __atl03s (parm, resource, asset, track):
+def __atl03s (parm, resource, asset):
 
     # Build ATL06 Request
     rqst = {
         "atl03-asset" : asset,
         "resource": resource,
-        "track": track,
         "parms": parm
     }
 
@@ -481,44 +491,39 @@ def __atl03s (parm, resource, asset, track):
 #
 #  __parallelize
 #
-def __parallelize(max_workers, block, function, parm, resources, *args):
+def __parallelize(max_workers, callback, function, parm, resources, *args):
 
     # Check Max Workers
     if max_workers <= 0:
-        return {}
+        return None
 
-    # For Blocking Calls
-    if block:
-
-        # Make Parallel Processing Requests
+    # Check Callback
+    if callback == None:
         results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(function, parm, resource, *args) for resource in resources]
 
-            # Wait for Results
-            result_cnt = 0
-            for future in concurrent.futures.as_completed(futures):
-                result_cnt += 1
-                result, resource = future.result()
-                if len(result) > 0:
+    # Make Parallel Processing Requests
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(function, parm, resource, *args) for resource in resources]
+
+        # Wait for Results
+        result_cnt = 0
+        for future in concurrent.futures.as_completed(futures):
+            result_cnt += 1
+            result, resource = future.result()
+            if len(result) > 0:
+                if callback == None:
                     results.append(result)
-                logger.info("%d points returned for %s (%d out of %d resources)", len(result), resource, result_cnt, len(resources))
+                else:
+                    callback(resource, result)
+            logger.info("%d points returned for %s (%d out of %d resources)", len(result), resource, result_cnt, len(resources))
 
-        # Return Results
+    # Return Results
+    if callback == None:
         if len(results) > 0:
             results.sort(key=lambda result: result.iloc[0]['delta_time'])
             return geopandas.pd.concat(results)
         else:
             return __emptyframe()
-
-    # For Non-Blocking Calls
-    else:
-
-        # Create Thread Pool
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-
-        # Return List of Futures for Parallel Processing Request
-        return [executor.submit(function, parm, resource, *args) for resource in resources]
 
 ###############################################################################
 # APIs
@@ -632,10 +637,10 @@ def cmr(**kwargs):
 #
 #  ATL06
 #
-def atl06 (parm, resource, asset=DEFAULT_ASSET, track=0):
+def atl06 (parm, resource, asset=DEFAULT_ASSET):
 
     try:
-        return __atl06(parm, resource, asset, track)[0]
+        return __atl06(parm, resource, asset)[0]
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -643,13 +648,13 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET, track=0):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, track=0, max_workers=0, version='004', block=True, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version='004', callback=None, resources=None):
 
     try:
         if resources == None:
             resources = __query_resources(parm, version)
         max_workers = __query_servers(max_workers)
-        return __parallelize(max_workers, block, __atl06, parm, resources, asset, track)
+        return __parallelize(max_workers, callback, __atl06, parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -658,10 +663,10 @@ def atl06p(parm, asset=DEFAULT_ASSET, track=0, max_workers=0, version='004', blo
 #
 #  Subsetted ATL03
 #
-def atl03s (parm, resource, asset=DEFAULT_ASSET, track=0):
+def atl03s (parm, resource, asset=DEFAULT_ASSET):
 
     try:
-        return __atl03s(parm, resource, asset, track)[0]
+        return __atl03s(parm, resource, asset)[0]
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -669,13 +674,13 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET, track=0):
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, track=0, max_workers=0, version='004', block=True, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version='004', callback=None, resources=None):
 
     try:
         if resources == None:
             resources = __query_resources(parm, version)
         max_workers = __query_servers(max_workers)
-        return __parallelize(max_workers, block, __atl03s, parm, resources, asset, track)
+        return __parallelize(max_workers, callback, __atl03s, parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -752,52 +757,140 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
 #
 # TO REGION
 #
-def toregion(filename, tolerance=0.0):
-    # initialize regions #
-    regions = []
-    # geodataframe, geojson or shapefile format #
-    if isinstance(filename, geopandas.GeoDataFrame) or (filename.find(".geojson") > 1) or (filename.find(".shp") > 1):
-        if isinstance(filename, geopandas.GeoDataFrame):
-            polygons = filename
-        else:
-            polygons = geopandas.read_file(filename)
+def toregion(source, tolerance=0.0, cellsize=0.01):
+    # create:
+    #   gdf - geodataframe
+    #   inp_lyr - input layer
+    if isinstance(source, geopandas.GeoDataFrame):
+        # user provided GeoDataFrame instead of a file
+        gdf = source
+
+        # create input layer
+        proj = osr.SpatialReference()
+        proj.ImportFromEPSG(4326)
+        rast_ogr_ds = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
+        inp_lyr = rast_ogr_ds.CreateLayer('poly', srs=proj)
+
+        # add polygons to input layer
+        for polygon in gdf.geometry:
+            geom = ogr.CreateGeometryFromWkt(polygon.wkt)
+            feat = ogr.Feature(inp_lyr.GetLayerDefn())
+            feat.SetGeometryDirectly(geom)
+            inp_lyr.CreateFeature(feat)
+
+    elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
+        # create lat/lon lists
+        if len(source) == 4: # bounding box
+            lons = [source[0], source[2], source[2], source[0], source[0]]
+            lats = [source[1], source[1], source[3], source[3], source[1]]
+        elif len(source) > 4: # polygon list
+            lons = [source[i] for i in range(1,len(source),2)]
+            lats = [source[i] for i in range(0,len(source),2)]
+
+        # create geodataframe
+        p = Polygon([point for point in zip(lons, lats)])
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs="EPSG:4326")
+
+        # create input layer
+        proj = osr.SpatialReference()
+        proj.ImportFromEPSG(4326)
+        rast_ogr_ds = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
+        inp_lyr = rast_ogr_ds.CreateLayer('poly', srs=proj)
+
+        # add polygons to input layer
+        for polygon in gdf.geometry:
+            geom = ogr.CreateGeometryFromWkt(polygon.wkt)
+            feat = ogr.Feature(inp_lyr.GetLayerDefn())
+            feat.SetGeometryDirectly(geom)
+            inp_lyr.CreateFeature(feat)
+
+    elif isinstance(source, str) and ((source.find(".geojson") > 1) or (source.find(".shp") > 1)):
+        # create geodataframe
+        gdf = geopandas.read_file(source)
+
+        # create input driver
+        if (source.find(".geojson") > 1):
+            inp_driver = ogr.GetDriverByName('GeoJSON')
+        else: # (source.find(".shp") > 1)
+            inp_driver = ogr.GetDriverByName('ESRI Shapefile')
+
+        # create input layer
+        inp_source = inp_driver.Open(source, 0)
+        inp_lyr = inp_source.GetLayer()
+
+    else:
+        raise TypeError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
+
+    # get extent of raster
+    x_min, x_max, y_min, y_max = inp_lyr.GetExtent()
+    x_ncells = int((x_max - x_min) / cellsize)
+    y_ncells = int((y_max - y_min) / cellsize)
+
+    # setup raster output
+    out_driver = gdal.GetDriverByName('GTiff')
+    out_filename = str(uuid.uuid4())
+    out_source = out_driver.Create('/vsimem/' + out_filename, x_ncells, y_ncells, 1, gdal.GDT_Byte, options = [ 'COMPRESS=DEFLATE' ])
+    out_source.SetGeoTransform((x_min, cellsize, 0, y_max, 0, -cellsize))
+    out_source.SetProjection(inp_lyr.GetSpatialRef().ExportToWkt())
+    out_lyr = out_source.GetRasterBand(1)
+    out_lyr.SetNoDataValue(200)
+
+    # rasterize
+    gdal.RasterizeLayer(out_source, [1], inp_lyr, burn_values=[1])
+
+    # close the data sources
+    inp_source = None
+    rast_ogr_ds = None
+    out_source = None
+
+    # read out raster data
+    f = gdal.VSIFOpenL('/vsimem/' + out_filename, 'rb')
+    gdal.VSIFSeekL(f, 0, 2)  # seek to end
+    size = gdal.VSIFTellL(f)
+    gdal.VSIFSeekL(f, 0, 0)  # seek to beginning
+    raster = gdal.VSIFReadL(1, size, f)
+    gdal.VSIFCloseL(f)
+
+    # simplify polygon
+    if(tolerance > 0.0):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            polygons = polygons.buffer(tolerance)
-        polygons = polygons.simplify(tolerance)
-        for polygon in polygons.geometry:
-            region = []
-            for coord in list(polygon.exterior.coords):
-                point = {"lon": coord[0], "lat": coord[1]}
-                region.append(point)
-            if len(region) > 0 and len(region) <= MAX_COORDS_IN_POLYGON:
-                regions.append(region)
-            else:
-                logger.warning("dropping polygon with unsupported length: %d (max is %d)", len(region),
-                               MAX_COORDS_IN_POLYGON)
-    # native format #
-    elif filename.find(".json") > 1:
-        with open(filename) as regionfile:
-            region = json.load(regionfile)["region"]
-            regions.append(region)
-    else:
-        raise ImportError("incorrect filetype: please use a .json, .geojson, .shp, or a geodataframe")
+            gdf = gdf.buffer(tolerance)
+            gdf = gdf.simplify(tolerance)
 
-    # determine winding of polygons #
-    for r in range(len(regions)):
-        region = regions[r]
-        #              (x2          -        x1)        *        (y2          +        y1)
-        wind = sum([(region[i+1]["lon"] - region[i]["lon"]) * (region[i+1]["lat"] + region[i]["lat"]) for i in range(len(region) - 1)])
-        if wind > 0:
-            # reverse direction (make counter-clockwise) #
-            ccw_region = []
-            for i in range(len(region), 0, -1):
-                ccw_region.append(region[i - 1])
-            # replace region with counter-clockwise version #
-            regions[r] = ccw_region
+    # generate polygon
+    hull = gdf.unary_union.convex_hull
+    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
+
+    # determine winding of polygon #
+    #              (x2               -    x1)             *    (y2               +    y1)
+    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
+    if wind > 0:
+        # reverse direction (make counter-clockwise) #
+        ccw_poly = []
+        for i in range(len(polygon), 0, -1):
+            ccw_poly.append(polygon[i - 1])
+        # replace region with counter-clockwise version #
+        polygon = ccw_poly
+
+    # TODO: if more than one poly... come up with query_polys - an optimal list of polygons to use with CMR
+    # ... it is only useful with raster
+
+    # encode image in base64
+    b64image = base64.b64encode(raster).decode('UTF-8')
 
     # return region #
-    return regions
+    return {
+        0: polygon, # for backward compatibility
+        "poly": polygon, # convex hull of polygons
+        "raster": {
+            "image": b64image, # geotiff image
+            "imagelength": len(b64image), # encoded image size of geotiff
+            "dimension": (y_ncells, x_ncells), # rows x cols
+            "bbox": (x_min, y_min, x_max, y_max), # lon1, lat1 x lon2, lat2
+            "cellsize": cellsize # in degrees
+        }
+    }
 
 #
 # GET VERSION

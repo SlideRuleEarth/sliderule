@@ -25,13 +25,13 @@ from sliderule import icesat2
 # LOCAL FUNCTIONS
 ###############################################################################
 
-def process_atl06_algorithm(parms, asset, max_workers):
+def process_atl06_algorithm(parms, asset):
 
     # Latch Start Time
     perf_start = time.perf_counter()
 
     # Request ATL06 Data
-    gdf = icesat2.atl06p(parms, asset, track=0, max_workers=max_workers)
+    gdf = icesat2.atl06p(parms, asset)
 
     # Latch Stop Time
     perf_stop = time.perf_counter()
@@ -60,19 +60,12 @@ if __name__ == '__main__':
 
     url = ["127.0.0.1"]
     asset = "atlas-local"
-    max_workers = 0
 
     logging.basicConfig(level=logging.INFO)
 
     # Region of Interest #
     region_filename = sys.argv[1]
-    regions = icesat2.toregion(region_filename)
-    if(len(regions) > 1):
-        print("Warning - {} regions detected, only first region supplied will be processed".format(len(regions)))
-    elif(len(regions) < 1):
-        print("Error - no valid regions supplied")
-        exit()
-    region = regions[0]
+    region = icesat2.toregion(region_filename)
 
     # Set URL #
     if len(sys.argv) > 2:
@@ -83,13 +76,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
         asset = sys.argv[3]
 
-    # Set Maximum Workers #
-    if len(sys.argv) > 4:
-        max_workers = int(sys.argv[4])
-
     # Bypass service discovery if url supplied
-    if len(sys.argv) > 5:
-        if sys.argv[5] == "bypass":
+    if len(sys.argv) > 4:
+        if sys.argv[4] == "bypass":
             url = [url]
 
     # Configure SlideRule #
@@ -97,7 +86,8 @@ if __name__ == '__main__':
 
     # Build ATL06 Request #
     parms = {
-        "poly": region,
+        "poly": region["poly"],
+        "raster": region["raster"],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_HIGH,
         "atl08_class": ["atl08_ground"],
@@ -109,7 +99,7 @@ if __name__ == '__main__':
     }
 
     # Get ATL06 Elevations
-    atl06 = process_atl06_algorithm(parms, asset, max_workers)
+    atl06 = process_atl06_algorithm(parms, asset)
 
     # Check Results Present
     if len(atl06) == 0:
@@ -117,28 +107,26 @@ if __name__ == '__main__':
         sys.exit()
 
     # Calculate Extent
-    lons = [p["lon"] for p in region]
-    lats = [p["lat"] for p in region]
+    lons = [p["lon"] for p in region["poly"]]
+    lats = [p["lat"] for p in region["poly"]]
     lon_margin = (max(lons) - min(lons)) * 0.1
     lat_margin = (max(lats) - min(lats)) * 0.1
     extent = (min(lons) - lon_margin, max(lons) + lon_margin, min(lats) - lat_margin, max(lats) + lat_margin)
 
     # Create Plot
     fig = plt.figure(num=None, figsize=(24, 12))
-    box_lon = [e["lon"] for e in region]
-    box_lat = [e["lat"] for e in region]
 
     # Plot ATL06 Ground Tracks
     ax1 = plt.subplot(231)
     ax1.set_title("Zoomed ATL06 Ground Tracks")
     atl06.plot(ax=ax1, column='h_mean', cmap='plasma', markersize=0.5)
-    ax1.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2)
+    ax1.plot(lons, lats, linewidth=1.5, color='r', zorder=2)
 
     # Plot ATL06 Along Track Slope
     ax2 = plt.subplot(232)
     ax2.set_title("Zoomed ATL06 Along Track Slope")
     atl06.plot(ax=ax2, column='dh_fit_dx', cmap='inferno', markersize=0.5)
-    ax2.plot(box_lon, box_lat, linewidth=1.5, color='r', zorder=2)
+    ax2.plot(lons, lats, linewidth=1.5, color='r', zorder=2)
 
     # Plot Global View
     ax3 = plt.subplot(233,projection=cartopy.crs.PlateCarree())

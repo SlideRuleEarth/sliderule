@@ -2,6 +2,7 @@ import sys
 from datetime import date
 from sliderule import ipxapi
 from sliderule import icesat2
+from sliderule import io
 import matplotlib.pyplot as plt
 import icepyx
 
@@ -86,10 +87,10 @@ if __name__ == '__main__':
     icesat2.init(scfg["url"], verbose=True)
 
     # generate sliderule atl06 elevations
-    # parms["poly"] = icesat2.toregion(icfg["spatial_extent"])[0]
+    # parms["poly"] = icesat2.toregion(icfg["spatial_extent"])["poly"]
     atl06_sr = ipxapi.atl06p(iregion, parms, scfg["asset"])
 
-    # Create Plot
+    # create plot
     f, ax = plt.subplots()
     vmin, vmax = atl06_sr['h_mean'].quantile((0.02, 0.98))
     atl06_sr.plot(ax=ax, column='h_mean', cmap='inferno', s=0.1, vmin=vmin, vmax=vmax)
