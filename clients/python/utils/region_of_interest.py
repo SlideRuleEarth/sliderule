@@ -17,7 +17,7 @@
 import sys
 import logging
 import time
-import cartopy
+import geopandas as gpd
 import matplotlib.pyplot as plt
 from sliderule import icesat2
 
@@ -129,12 +129,14 @@ if __name__ == '__main__':
     ax2.plot(lons, lats, linewidth=1.5, color='r', zorder=2)
 
     # Plot Global View
-    ax3 = plt.subplot(233,projection=cartopy.crs.PlateCarree())
+    ax3 = plt.subplot(233)
     ax3.set_title("Global Reference")
-    ax3.scatter(atl06.geometry.x, atl06.geometry.y, s=2.5, color='r', zorder=3, transform=cartopy.crs.PlateCarree())
-    ax3.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
-    ax3.add_feature(cartopy.feature.LAKES)
-    ax3.set_extent((-180,180,-90,90),crs=cartopy.crs.PlateCarree())
+    world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+    world.plot(ax=ax3, color='0.8', edgecolor='black')
+    atl06.plot(ax=ax3, marker='o', color='red', markersize=2.5, zorder=3)
+    ax3.set_xlim(-180,180)
+    ax3.set_ylim(-90,90)
+    ax3.set_aspect('equal', adjustable='box')
 
     # Plot Number of Fit Photons per ATL06 Ground Tracks
     ax4 = plt.subplot(234)

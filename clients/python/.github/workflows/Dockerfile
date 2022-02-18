@@ -162,7 +162,7 @@ RUN wget -q https://download.osgeo.org/proj/proj-${PROJ_VERSION}.tar.gz && \
 
 WORKDIR /home/sliderule
 
-RUN pip3 install --no-cache-dir --no-binary=cartopy \
+RUN pip3 install --no-cache-dir \
         cython \
         geopandas \
         h5py \
@@ -181,8 +181,7 @@ RUN pip3 install --no-cache-dir --no-binary=cartopy \
         shapely \
         tables \
         tk \
-        xyzservices \
-        cartopy
+        xyzservices
 
 COPY . .
 
