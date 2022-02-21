@@ -32,8 +32,8 @@ class TestLocal:
 
     def test_toregion(self):
         region = icesat2.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
-        assert len(region["poly"][0]) == 5 # 5 coordinate pairs
-        assert {'lon', 'lat'} <= region["poly"].keys()
+        assert len(region["poly"]) == 5 # 5 coordinate pairs
+        assert {'lon', 'lat'} <= region["poly"][0].keys()
 
 @pytest.mark.network
 class TestRemote:
