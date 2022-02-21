@@ -27,13 +27,13 @@ class TestLocal:
             icesat2.init()
 
     def test_toregion_empty_raises(self):
-        with pytest.raises(TypeError, match=('filename')):
+        with pytest.raises(TypeError, match=('source')):
             region = icesat2.toregion()
 
     def test_toregion(self):
         region = icesat2.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         assert len(region["poly"]) == 5 # 5 coordinate pairs
-        assert {'lon', 'lat'} <= region["poly"].keys()
+        assert {'lon', 'lat'} <= region["poly"][0].keys()
 
 @pytest.mark.network
 class TestRemote:
