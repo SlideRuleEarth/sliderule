@@ -2,4 +2,3 @@ requests
 numpy
 geopandas
 shapely
-gdal
