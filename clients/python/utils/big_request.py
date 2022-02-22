@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     # atl06 processing request
     perf_start = time.perf_counter()
-    icesat2.atl06p(parms, cfg["asset"], max_workers=cfg["max_workers"], callback=lambda resource, result : hdf5writer.run(resource, result))
+    icesat2.atl06p(parms, cfg["asset"], max_workers=cfg["max_workers"], callback=lambda resource, result, index, total : hdf5writer.run(resource, result, index, total))
     print("Completed in {:.3f} seconds of wall-clock time".format(time.perf_counter() - perf_start))
 
     # close hdf5 file

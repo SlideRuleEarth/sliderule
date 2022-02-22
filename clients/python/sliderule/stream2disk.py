@@ -1,6 +1,7 @@
 import geopandas
 import h5py
 import datetime
+from sliderule import io
 
 class Hdf5Writer:
 
@@ -28,7 +29,7 @@ class Hdf5Writer:
             self.h5file.attrs['poly_x'] = lon.copy()
             self.h5file.attrs['poly_y'] = lat.copy()
 
-    def run(self, resource, result):
+    def run(self, resource, result, index, total):
         grp = self.h5file.create_group(resource[:-3])
         # convert geodataframe to pandas dataframe
         df = geopandas.pd.DataFrame(result.drop(columns='geometry'))

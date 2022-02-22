@@ -502,6 +502,7 @@ def __parallelize(max_workers, callback, function, parm, resources, *args):
         results = []
 
     # Make Parallel Processing Requests
+    total_resources = len(resources)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(function, parm, resource, *args) for resource in resources]
 
@@ -514,8 +515,8 @@ def __parallelize(max_workers, callback, function, parm, resources, *args):
                 if callback == None:
                     results.append(result)
                 else:
-                    callback(resource, result)
-            logger.info("%d points returned for %s (%d out of %d resources)", len(result), resource, result_cnt, len(resources))
+                    callback(resource, result, result_cnt, total_resources)
+            logger.info("%d points returned for %s (%d out of %d resources)", len(result), resource, result_cnt, total_resources)
 
     # Return Results
     if callback == None:
