@@ -12,6 +12,8 @@ RUN apt-get update -y && \
         cmake \
         gcc \
         git \
+        tcl-dev \
+        tk-dev \
         wget \
         unzip && \
     apt-get clean
@@ -160,10 +162,53 @@ RUN wget -q https://download.osgeo.org/proj/proj-${PROJ_VERSION}.tar.gz && \
     make --quiet install && \
     make clean
 
+# use latest GDAL
+ENV CPPFLAGS="-I/usr/local/include"
+ENV LDFLAGS="-L/usr/local/lib"
+ENV HDF5_CFLAGS="--enable-hl --enable-shared"
+ENV HDF5_INCLUDE="/usr/local/include"
+ENV HDF5_LIBS="/usr/local/lib"
+ENV GDAL_VERSION=3.4.1
+RUN wget -q https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz && \
+    tar -xzf gdal-${GDAL_VERSION}.tar.gz && \
+    cd gdal-${GDAL_VERSION} && \
+    ./configure --quiet \
+        --disable-debug \
+        --disable-static \
+        --with-hdf5=/usr/local \
+        --with-netcdf=/usr/local \
+        --with-curl=/usr/local/bin/curl-config \
+        --with-crypto=/usr/local \
+        --with-geos=/usr/local/bin/geos-config \
+        --with-geotiff \
+        --with-hide-internal-symbols=yes \
+        --with-liblzma=/usr/local \
+        --with-libtiff=/usr/local \
+        --with-libz=/usr/local \
+        --with-jpeg=/usr/local \
+        --with-openjpeg \
+        --with-png=/usr/local \
+        --with-proj=/usr/local \
+        --with-sqlite3=/usr/local \
+        --with-proj=/usr/local \
+        --with-rename-internal-libgeotiff-symbols=yes \
+        --with-rename-internal-libtiff-symbols=yes \
+        --with-threads=yes \
+        --without-hdf4 \
+        --without-idb \
+        --without-jpeg12 \
+        --without-perl \
+        --without-python \
+        --prefix=/usr/local && \
+    make --quiet --jobs=${JOBS} && \
+    make --quiet install && \
+    make clean
+
 WORKDIR /home/sliderule
 
 RUN pip3 install --no-cache-dir \
         cython \
+        gdal==${GDAL_VERSION} \
         geopandas \
         h5py \
         ipykernel \
@@ -190,4 +235,5 @@ RUN --mount=source=.git,target=.git,type=bind \
 
 USER sliderule
 
-CMD ["bash"]
+EXPOSE 9999
+ENTRYPOINT ["jupyter-lab", "--ip=0.0.0.0", "--port=9999", "--allow-root"]
