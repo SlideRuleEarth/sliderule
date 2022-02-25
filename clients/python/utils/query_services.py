@@ -23,7 +23,7 @@ if __name__ == '__main__':
         service = sys.argv[2]
 
     # Query Services #
-    response = requests.get("http://"+ipaddr, data='{"service":"%s"}'%(service)).json()
+    response = requests.get("http://"+ipaddr+"/discovery/", data='{"service":"%s"}'%(service)).json()
 
     # Display Services #
     print(json.dumps(response, indent=2))

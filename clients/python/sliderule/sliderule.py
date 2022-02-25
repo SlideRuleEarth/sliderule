@@ -379,7 +379,7 @@ def set_url (urls):
                 server_url = "http://" + serv
                 server_table[server_url] = 0
         elif type(urls) == str: # IP address of sliderule's service discovery
-            service_url = "http://" + urls
+            service_url = "http://" + urls + "/discovery/"
         else:
             raise TypeError('expected ip address or hostname as a string or list of strings')
     # then update server table
