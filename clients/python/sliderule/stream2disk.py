@@ -1,7 +1,9 @@
 import geopandas
 import h5py
 import datetime
+import numpy
 from sliderule import io
+from sliderule import icesat2
 
 class Hdf5Writer:
 
@@ -51,3 +53,43 @@ class Hdf5Writer:
 
     def __del__(self):
         self.finish()
+
+
+class Hdf5Reader:
+
+    def __init__(self, filename):
+        self.filename = filename
+        self.parameters = {}
+
+        # open file
+        h5file = h5py.File(self.filename, mode='r')
+
+        # read in attributes
+        for attr in h5file.attrs:
+            self.parameters[attr] = h5file.attrs[attr]
+
+        # read in datasets
+        results = []
+        for _,group in h5file.items():
+            d = {}
+            # populate columns
+            for key,data in group.items():
+                d[key] = data[:]
+            # generate time column
+            delta_time = (d['delta_time']*1e9).astype('timedelta64[ns]')
+            atlas_sdp_epoch = numpy.datetime64(icesat2.ATLAS_SDP_EPOCH)
+            d['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
+            # generate geometry column
+            geometry = geopandas.points_from_xy(d['longitude'],d['latitude'])
+            # build DataFrame
+            df = geopandas.pd.DataFrame(d)
+            # build GeoDataFrame
+            gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=group.attrs['crs'])
+            # add to result list
+            results.append(gdf)
+
+        # build final GeoDataFrame
+        self.gdf = geopandas.pd.concat(results)
+
+        # close hdf5 file
+        h5file.close()
