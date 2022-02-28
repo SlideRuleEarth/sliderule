@@ -823,6 +823,9 @@ class leaflet:
             self.crs = 'EPSG:3031'
         # initiate layers list
         self.layers = []
+        # initialize selected feature
+        self.selected_feature = {}
+        self.selected_callback = None
         # add control for zoom
         if kwargs['zoom']:
             zoom_slider = ipywidgets.IntSlider(description='Zoom level:',
@@ -1029,6 +1032,7 @@ class leaflet:
                 position='bottomright')
             self.geojson.on_hover(self.handle_hover)
             self.geojson.on_msg(self.handle_mouseout)
+            self.geojson.on_click(self.handle_click)
         # add colorbar
         if kwargs['colorbar']:
             self.add_colorbar(column_name=column_name, cmap=kwargs['cmap'], norm=norm)
@@ -1057,6 +1061,16 @@ class leaflet:
             self.tooltip.layout.height = "0px"
             self.tooltip.layout.visibility = 'hidden'
             self.map.remove_control(self.hover_control)
+
+    # functional calls for click events
+    def handle_click(self, feature, **kwargs):
+        if "properties" in feature:
+            self.selected_feature = feature["properties"]
+        if self.selected_callback != None:
+            self.selected_callback(feature)
+
+    def add_selected_callback(self, callback):
+        self.selected_callback = callback
 
     # add colorbar widget to leaflet map
     def add_colorbar(self, **kwargs):
