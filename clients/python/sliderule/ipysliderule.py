@@ -465,7 +465,7 @@ class widgets:
         if (self.projection.value == 'Global'):
             layer_options = ['3DEP','RGI']
         elif (self.projection.value == 'North'):
-            layer_options = ['ESRI imagery']
+            layer_options = ['ESRI imagery','ArcticDEM']
         elif (self.projection.value == 'South'):
             layer_options = ['LIMA','MOA','RAMP']
         self.layers.options=layer_options
@@ -584,6 +584,14 @@ projections = Bunch(
                 [-2623285.8808999992907047,-2623285.8808999992907047],
                 [6623285.8803000003099442,6623285.8803000003099442]
             ]
+        ),
+        ArcticDEM=dict(
+            name='EPSG:5936',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=90 +lat_ts=90 +lon_0=-150 +k=0.994
+                +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs""",
+            bounds=[[-1647720.5069000013,-2101522.3853999963],
+                [5476281.493099999,5505635.614600004]]
         )
     )
     ,
@@ -691,6 +699,7 @@ usgs_antarctic_attribution = """
 U.S. Geological Survey (USGS), British Antarctic Survey (BAS),
 National Aeronautics and Space Administration (NASA)
 """
+pgc_attribution = """Esri, PGC, UMN, NSF, NGA, DigitalGlobe"""
 
 # define background ipyleaflet tile providers
 providers = {
@@ -768,6 +777,16 @@ layers = Bunch(
             transparent=True,
             url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
             crs=projections.EPSG3031.RAMP
+        )
+    ),
+    PGC = Bunch(
+        ArcticDEM = ipyleaflet.WMSLayer(
+            attribution=pgc_attribution,
+            layers="0",
+            format='image/png',
+            transparent=True,
+            url='http://elevation2.arcgis.com/arcgis/services/Polar/ArcticDEM/ImageServer/WMSserver',
+            crs=projections.EPSG5936.ArcticDEM
         )
     )
 )
@@ -885,6 +904,8 @@ class leaflet:
                     self.map.add_layer(layers.USGS.Elevation)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.add_layer(basemaps.Esri.ArcticImagery)
+                elif isinstance(layer,str) and (layer == 'ArcticDEM'):
+                    self.map.add_layer(layers.PGC.ArcticDEM)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
                     self.map.add_layer(layers.USGS.LIMA)
                 elif isinstance(layer,str) and (layer == 'MOA'):
@@ -917,6 +938,8 @@ class leaflet:
                     self.map.remove_layer(layers.USGS.Elevation)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.remove_layer(basemaps.Esri.ArcticImagery)
+                elif isinstance(layer,str) and (layer == 'ArcticDEM'):
+                    self.map.remove_layer(layers.PGC.ArcticDEM)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
                     self.map.remove_layer(layers.USGS.LIMA)
                 elif isinstance(layer,str) and (layer == 'MOA'):
