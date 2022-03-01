@@ -208,6 +208,18 @@ def from_region(polygon):
         y[i] = p['lat']
     return (x,y)
 
+# convert geodataframe vector object to a list of sliderule regions
+def from_geodataframe(gdf):
+    # verify that geodataframe is in latitude/longitude
+    geodataframe = gdf.to_crs(epsg=4326)
+    # create a list of regions
+    regions = []
+    # for each region
+    for geometry in geodataframe['geometry']:
+        regions.append([{'lon':ln,'lat':lt} for ln,lt in geometry.exterior.coords])
+    # return the list of regions
+    return regions
+
 # output geodataframe to netCDF (version 3)
 def to_nc(gdf, filename, **kwargs):
     # set default keyword arguments
