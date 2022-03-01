@@ -406,7 +406,7 @@ class widgets:
         )
 
         # selection for adding layers to map
-        layer_options = ['3DEP','RGI']
+        layer_options = ['3DEP','ESRI imagery','RGI']
         self.layers = ipywidgets.SelectMultiple(
             options=layer_options,
             description='Add Layers:',
@@ -463,7 +463,7 @@ class widgets:
         """function for updating available map layers
         """
         if (self.projection.value == 'Global'):
-            layer_options = ['3DEP','RGI']
+            layer_options = ['3DEP','ESRI imagery','RGI']
         elif (self.projection.value == 'North'):
             layer_options = ['ESRI imagery','ArcticDEM']
         elif (self.projection.value == 'South'):
@@ -899,6 +899,8 @@ class leaflet:
                     self.map.add_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.add_layer(layers.USGS.Elevation)
+                elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
+                    self.map.add_layer(xyzservices.providers.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.add_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
@@ -933,6 +935,8 @@ class leaflet:
                     self.map.remove_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.remove_layer(layers.USGS.Elevation)
+                elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
+                    self.map.remove_layer(xyzservices.providers.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.remove_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
@@ -995,7 +999,7 @@ class leaflet:
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('tooltip', True)
-        kwargs.setdefault('fields', ['h_mean', 'h_sigma',
+        kwargs.setdefault('fields', ['index', 'h_mean', 'h_sigma',
             'dh_fit_dx', 'rms_misfit', 'w_surface_window_final',
             'delta_time', 'cycle', 'rgt', 'gt'])
         kwargs.setdefault('colorbar', True)
@@ -1012,6 +1016,7 @@ class leaflet:
         geodataframe = gdf[slice(None,None,stride)]
         column_name = copy.copy(kwargs['column_name'])
         geodataframe['data'] = geodataframe[column_name]
+        geodataframe['index'] = geodataframe.index
         # set colorbar limits to 2-98 percentile
         # if not using a defined plot range
         clim = gdf[column_name].quantile((0.02, 0.98)).values
@@ -1068,7 +1073,7 @@ class leaflet:
         self.tooltip.value = '<br>'.join(['<b>{0}:</b> {1}'.format(field,
             feature["properties"][field]) for field in self.fields])
         self.tooltip.layout.width = "220px"
-        self.tooltip.layout.height = "260px"
+        self.tooltip.layout.height = "300px"
         self.tooltip.layout.visibility = 'visible'
         self.map.add_control(self.hover_control)
 
