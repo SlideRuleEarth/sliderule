@@ -30,7 +30,9 @@
 import os
 import sys
 import copy
+import logging
 import datetime
+import traceback
 import numpy as np
 import geopandas as gpd
 import matplotlib.cm as cm
@@ -403,6 +405,18 @@ class widgets:
             style=self.style,
         )
 
+        # selection for adding layers to map
+        layer_options = ['3DEP','ESRI imagery','RGI']
+        self.layers = ipywidgets.SelectMultiple(
+            options=layer_options,
+            description='Add Layers:',
+            disabled=False,
+            style=self.style,
+        )
+
+        # watch widgets for changes
+        self.projection.observe(self.set_layers)
+
         # button and label for output file selection
         self.file = copy.copy(self.filename)
         self.savebutton = ipywidgets.Button(
@@ -443,6 +457,19 @@ class widgets:
             ])
         else:
             self.fileloader = copy.copy(self.loadlabel)
+
+    # function for setting available map layers
+    def set_layers(self, sender):
+        """function for updating available map layers
+        """
+        if (self.projection.value == 'Global'):
+            layer_options = ['3DEP','ESRI imagery','RGI']
+        elif (self.projection.value == 'North'):
+            layer_options = ['ESRI imagery','ArcticDEM']
+        elif (self.projection.value == 'South'):
+            layer_options = ['LIMA','MOA','RAMP']
+        self.layers.options=layer_options
+        self.layers.value=[]
 
     def saveas_file(self, b):
         """function for file save
@@ -520,70 +547,139 @@ class widgets:
 # define projections for ipyleaflet tiles
 projections = Bunch(
     # Alaska Polar Stereographic (WGS84)
-    EPSG5936=dict(
-        name='EPSG5936',
-        custom=True,
-        proj4def="""+proj=stere +lat_0=90 +lat_ts=90 +lon_0=-150 +k=0.994
-            +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs""",
-        origin=[-2.8567784109255e+07, 3.2567784109255e+07],
-        resolutions=[
-            238810.813354,
-            119405.406677,
-            59702.7033384999,
-            29851.3516692501,
-            14925.675834625,
-            7462.83791731252,
-            3731.41895865639,
-            1865.70947932806,
-            932.854739664032,
-            466.427369832148,
-            233.213684916074,
-            116.60684245803701,
-            58.30342122888621,
-            29.151710614575396,
-            14.5758553072877,
-            7.28792765351156,
-            3.64396382688807,
-            1.82198191331174,
-            0.910990956788164,
-            0.45549547826179,
-            0.227747739130895,
-            0.113873869697739,
-            0.05693693484887,
-            0.028468467424435
-        ],
-        bounds=[
-            [-2623285.8808999992907047,-2623285.8808999992907047],
-            [6623285.8803000003099442,6623285.8803000003099442]
-        ]
+    EPSG5936=Bunch(
+        Basemap=dict(
+            name='EPSG:5936',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=90 +lat_ts=90 +lon_0=-150 +k=0.994
+                +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs""",
+            origin=[-2.8567784109255e+07, 3.2567784109255e+07],
+            resolutions=[
+                238810.813354,
+                119405.406677,
+                59702.7033384999,
+                29851.3516692501,
+                14925.675834625,
+                7462.83791731252,
+                3731.41895865639,
+                1865.70947932806,
+                932.854739664032,
+                466.427369832148,
+                233.213684916074,
+                116.60684245803701,
+                58.30342122888621,
+                29.151710614575396,
+                14.5758553072877,
+                7.28792765351156,
+                3.64396382688807,
+                1.82198191331174,
+                0.910990956788164,
+                0.45549547826179,
+                0.227747739130895,
+                0.113873869697739,
+                0.05693693484887,
+                0.028468467424435
+            ],
+            bounds=[
+                [-2623285.8808999992907047,-2623285.8808999992907047],
+                [6623285.8803000003099442,6623285.8803000003099442]
+            ]
+        ),
+        ArcticDEM=dict(
+            name='EPSG:5936',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=90 +lat_ts=90 +lon_0=-150 +k=0.994
+                +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs""",
+            bounds=[[-1647720.5069000013,-2101522.3853999963],
+                [5476281.493099999,5505635.614600004]]
+        )
     )
     ,
     # Polar Stereographic South (WGS84)
-    EPSG3031=dict(
-        name='EPSG3031',
-        custom=True,
-        proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
-            +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs""",
-        origin=[-3.06361E7, 3.0636099999999993E7],
-        resolutions=[
-            67733.46880027094,
-            33866.73440013547,
-            16933.367200067736,
-            8466.683600033868,
-            4233.341800016934,
-            2116.670900008467,
-            1058.3354500042335,
-            529.1677250021168,
-            264.5838625010584,
-        ],
-        bounds=[
-            [-4524583.19363305,-4524449.487765655],
-            [4524449.4877656475,4524583.193633042]
-        ]
+    EPSG3031 = Bunch(
+        Basemap = dict(
+            name='EPSG:3031',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
+                +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs""",
+            origin=[-3.06361E7, 3.0636099999999993E7],
+            resolutions=[
+                67733.46880027094,
+                33866.73440013547,
+                16933.367200067736,
+                8466.683600033868,
+                4233.341800016934,
+                2116.670900008467,
+                1058.3354500042335,
+                529.1677250021168,
+                264.5838625010584,
+            ],
+            bounds=[
+                [-4524583.19363305,-4524449.487765655],
+                [4524449.4877656475,4524583.193633042]
+            ]
+        ),
+        Imagery = dict(
+            name='EPSG:3031',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
+                +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs""",
+            origin=[-3.369955099203E7,3.369955101703E7],
+            resolutions=[238810.81335399998,
+                119405.40667699999,
+                59702.70333849987,
+                29851.351669250063,
+                14925.675834625032,
+                7462.837917312516,
+                3731.4189586563907,
+                1865.709479328063,
+                932.8547396640315,
+                466.42736983214803,
+                233.21368491607402,
+                116.60684245803701,
+                58.30342122888621,
+                29.151710614575396,
+                14.5758553072877,
+                7.28792765351156,
+                3.64396382688807,
+                1.82198191331174,
+                0.910990956788164,
+                0.45549547826179,
+                0.227747739130895,
+                0.113873869697739,
+                0.05693693484887,
+                0.028468467424435
+            ],
+            bounds=[
+                [-9913957.327914657,-5730886.461772691],
+                [9913957.327914657,5730886.461773157]
+            ]
+        ),
+        LIMA = dict(
+            name='EPSG:3031',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
+                +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs""",
+            bounds=[[-2668275,-2294665],[2813725,2362335]]
+        ),
+        MOA = dict(
+            name='EPSG:3031',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
+                +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs""",
+            bounds=[[-3174450,-2816050],[2867175,2406325]]
+        ),
+        RAMP = dict(
+            name='EPSG:3031',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
+                +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs""",
+            bounds=[[-3174462.5,-2611137.5],[2867162.5,2406487.5]]
+        )
     )
 )
 
-# attributions for the different basemaps
+# attributions for the different basemaps and images
 glims_attribution = """
 Imagery reproduced from GLIMS and NSIDC (2005, updated 2018):
 Global Land Ice Measurements from Space glacier database. (doi:10.7265/N5V98602)
@@ -598,39 +694,99 @@ Imagery provided by NOAA National Centers for Environmental Information (NCEI);
 International Bathymetric Chart of the Southern Ocean (IBCSO);
 General Bathymetric Chart of the Oceans (GEBCO).
 """
+usgs_3dep_attribution = """USGS National Map 3D Elevation Program (3DEP)"""
+usgs_antarctic_attribution = """
+U.S. Geological Survey (USGS), British Antarctic Survey (BAS),
+National Aeronautics and Space Administration (NASA)
+"""
+pgc_attribution = """Esri, PGC, UMN, NSF, NGA, DigitalGlobe"""
 
-# define background ipyleaflet tiles
-basemaps = {
+# define background ipyleaflet tile providers
+providers = {
     "Esri": {
         "ArcticOceanBase": {
             "name": 'Esri.ArcticOceanBase',
-            "crs": projections.EPSG5936,
+            "crs": projections.EPSG5936.Basemap,
             "attribution": esri_attribution,
             "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
         },
+        "ArcticImagery": {
+            "name": 'Esri.ArcticImagery',
+            "crs": projections.EPSG5936.Basemap,
+            "attribution": "Earthstar Geographics",
+            "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Imagery/MapServer/tile/{z}/{y}/{x}'
+        },
         "ArcticOceanReference": {
             "name": 'Esri.ArcticOceanReference',
-            "crs": projections.EPSG5936,
+            "crs": projections.EPSG5936.Basemap,
             "attribution": esri_attribution,
             "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Reference/MapServer/tile/{z}/{y}/{x}'
         },
         "AntarcticBasemap": {
             "name": 'Esri.AntarcticBasemap',
-            "crs": projections.EPSG3031,
+            "crs": projections.EPSG3031.Basemap,
             "attribution":noaa_attribution,
             "url": 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/Antarctic_Basemap/MapServer/tile/{z}/{y}/{x}'
-        }
+        },
+        "AntarcticImagery": {
+            "name": 'Esri.AntarcticImagery',
+            "crs": projections.EPSG3031.Imagery,
+            "attribution": "Earthstar Geographics",
+            "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Antarctic_Imagery/MapServer/tile/{z}/{y}/{x}'
+        },
     }
 }
 
 # define background ipyleaflet WMS layers
 layers = Bunch(
     GLIMS = Bunch(
-        glaciers = ipyleaflet.WMSLayer(
+        Glaciers = ipyleaflet.WMSLayer(
             attribution=glims_attribution,
             layers='GLIMS_GLACIERS',
             format='image/png',
             url='https://www.glims.org/mapservice'
+        )
+    ),
+    USGS = Bunch(
+        Elevation = ipyleaflet.WMSLayer(
+            attribution=usgs_3dep_attribution,
+            layers="3DEPElevation:Hillshade Gray",
+            format='image/png',
+            url='https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer?',
+        ),
+        LIMA = ipyleaflet.WMSLayer(
+            attribution=usgs_antarctic_attribution,
+            layers="LIMA_Full_1km",
+            format='image/png',
+            transparent=True,
+            url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
+            crs=projections.EPSG3031.LIMA
+        ),
+        MOA = ipyleaflet.WMSLayer(
+            attribution=usgs_antarctic_attribution,
+            layers="MOA_125_HP1_090_230",
+            format='image/png',
+            transparent=True,
+            url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
+            crs=projections.EPSG3031.MOA
+        ),
+        RAMP = ipyleaflet.WMSLayer(
+            attribution=usgs_antarctic_attribution,
+            layers="Radarsat_Mosaic",
+            format='image/png',
+            transparent=True,
+            url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
+            crs=projections.EPSG3031.RAMP
+        )
+    ),
+    PGC = Bunch(
+        ArcticDEM = ipyleaflet.WMSLayer(
+            attribution=pgc_attribution,
+            layers="0",
+            format='image/png',
+            transparent=True,
+            url='http://elevation2.arcgis.com/arcgis/services/Polar/ArcticDEM/ImageServer/WMSserver',
+            crs=projections.EPSG5936.ArcticDEM
         )
     )
 )
@@ -649,33 +805,43 @@ def _load_dict(data):
             )
     return providers
 
+# create traitlets of basemap providers
+basemaps = _load_dict(providers)
+
 # draw ipyleaflet map
 class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
+        kwargs.setdefault('attribution',False)
         kwargs.setdefault('zoom',False)
         kwargs.setdefault('scale',False)
         kwargs.setdefault('cursor',True)
         kwargs.setdefault('center',(39,-108))
         kwargs.setdefault('color','green')
-        providers = _load_dict(basemaps)
         # create basemap in projection
         if (projection == 'Global'):
             self.map = ipyleaflet.Map(center=kwargs['center'],
                 zoom=9, max_zoom=15,
+                attribution_control=kwargs['attribution'],
                 basemap=ipyleaflet.basemaps.Esri.WorldTopoMap)
-            self.map.add_layer(layers.GLIMS.glaciers)
+            self.crs = 'EPSG:3857'
         elif (projection == 'North'):
             self.map = ipyleaflet.Map(center=(90,0),
                 zoom=5, max_zoom=24,
-                basemap=providers.Esri.ArcticOceanBase,
-                crs=projections.EPSG5936)
-            self.map.add_layer(providers.Esri.ArcticOceanReference)
+                attribution_control=kwargs['attribution'],
+                basemap=basemaps.Esri.ArcticOceanBase,
+                crs=projections.EPSG5936.Basemap)
+            self.map.add_layer(basemaps.Esri.ArcticOceanReference)
+            self.crs = 'EPSG:5936'
         elif (projection == 'South'):
             self.map = ipyleaflet.Map(center=(-90,0),
                 zoom=2, max_zoom=9,
-                basemap=providers.Esri.AntarcticBasemap,
-                crs=projections.EPSG3031)
+                attribution_control=kwargs['attribution'],
+                basemap=basemaps.Esri.AntarcticBasemap,
+                crs=projections.EPSG3031.Basemap)
+            self.crs = 'EPSG:3031'
+        # initiate layers list
+        self.layers = []
         # add control for zoom
         if kwargs['zoom']:
             zoom_slider = ipywidgets.IntSlider(description='Zoom level:',
@@ -692,7 +858,7 @@ class leaflet:
         if kwargs['cursor']:
             self.cursor = ipywidgets.Label()
             label_control = ipyleaflet.WidgetControl(widget=self.cursor,
-                position='bottomright')
+                position='bottomleft')
             self.map.add_control(label_control)
             # keep track of cursor position
             self.map.on_interaction(self.handle_interaction)
@@ -709,8 +875,84 @@ class leaflet:
         draw_control.on_draw(self.handle_draw)
         self.map.add_control(draw_control)
         # initiate data and colorbars
-        self.data = None
+        self.geojson = None
+        self.tooltip = None
+        self.hover_control = None
+        self.fields = []
         self.colorbar = None
+
+    # add map layers
+    def add_layer(self, **kwargs):
+        kwargs.setdefault('layers', [])
+        # verify layers are iterable
+        if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
+            kwargs['layers'] = [kwargs['layers']]
+        # add each layer to map
+        for layer in kwargs['layers']:
+            # try to add the layer
+            try:
+                if isinstance(layer,xyzservices.TileProvider):
+                    self.map.add_layer(layer)
+                elif isinstance(layer,dict):
+                    self.map.add_layer(_load_dict(layer))
+                elif isinstance(layer,str) and (layer == 'RGI'):
+                    self.map.add_layer(layers.GLIMS.Glaciers)
+                elif isinstance(layer,str) and (layer == '3DEP'):
+                    self.map.add_layer(layers.USGS.Elevation)
+                elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
+                    self.map.add_layer(xyzservices.providers.Esri.WorldImagery)
+                elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
+                    self.map.add_layer(basemaps.Esri.ArcticImagery)
+                elif isinstance(layer,str) and (layer == 'ArcticDEM'):
+                    self.map.add_layer(layers.PGC.ArcticDEM)
+                elif isinstance(layer,str) and (layer == 'LIMA'):
+                    self.map.add_layer(layers.USGS.LIMA)
+                elif isinstance(layer,str) and (layer == 'MOA'):
+                    self.map.add_layer(layers.USGS.MOA)
+                elif isinstance(layer,str) and (layer == 'RAMP'):
+                    self.map.add_layer(layers.USGS.RAMP)
+                # try to add to layers attribute
+                self.layers.append(layer)
+            except ipyleaflet.LayerException as e:
+                logging.info(f"Layer {layer} already on map")
+                pass
+
+    # remove map layers
+    def remove_layer(self, **kwargs):
+        kwargs.setdefault('layers', [])
+        # verify layers are iterable
+        if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
+            kwargs['layers'] = [kwargs['layers']]
+        # remove each layer to map
+        for layer in kwargs['layers']:
+            # try to remove layer from map
+            try:
+                if isinstance(layer,xyzservices.TileProvider):
+                    self.map.remove_layer(layer)
+                elif isinstance(layer,dict):
+                    self.map.remove_layer(_load_dict(layer))
+                elif isinstance(layer,str) and (layer == 'RGI'):
+                    self.map.remove_layer(layers.GLIMS.Glaciers)
+                elif isinstance(layer,str) and (layer == '3DEP'):
+                    self.map.remove_layer(layers.USGS.Elevation)
+                elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
+                    self.map.remove_layer(xyzservices.providers.Esri.WorldImagery)
+                elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
+                    self.map.remove_layer(basemaps.Esri.ArcticImagery)
+                elif isinstance(layer,str) and (layer == 'ArcticDEM'):
+                    self.map.remove_layer(layers.PGC.ArcticDEM)
+                elif isinstance(layer,str) and (layer == 'LIMA'):
+                    self.map.remove_layer(layers.USGS.LIMA)
+                elif isinstance(layer,str) and (layer == 'MOA'):
+                    self.map.remove_layer(layers.USGS.MOA)
+                elif isinstance(layer,str) and (layer == 'RAMP'):
+                    self.map.remove_layer(layers.USGS.RAMP)
+                # try to remove fromo layers attribute
+                self.layers.remove(layer)
+            except Exception as e:
+                logging.critical(f"Could not remove layer {layer}")
+                logging.error(traceback.format_exc())
+                pass
 
     # handle cursor movements for label
     def handle_interaction(self, **kwargs):
@@ -738,8 +980,11 @@ class leaflet:
         elif (action == 'deleted'):
             self.regions.remove(region)
         # remove any prior instances of a data layer
-        if (action == 'deleted') and self.data is not None:
-            self.map.remove_layer(self.data)
+        if (action == 'deleted') and self.geojson is not None:
+            self.map.remove_layer(self.geojson)
+        # remove any prior instances of a colorbar
+        if (action == 'deleted') and self.colorbar is not None:
+            self.map.remove_control(self.colorbar)
         return self
 
     # add geodataframe data to leaflet map
@@ -753,20 +998,25 @@ class leaflet:
         kwargs.setdefault('weight', 3.0)
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
+        kwargs.setdefault('tooltip', True)
+        kwargs.setdefault('fields', ['index', 'h_mean', 'h_sigma',
+            'dh_fit_dx', 'rms_misfit', 'w_surface_window_final',
+            'delta_time', 'cycle', 'rgt', 'gt'])
         kwargs.setdefault('colorbar', True)
         # remove any prior instances of a data layer
-        if self.data is not None:
-            self.map.remove_layer(self.data)
+        if self.geojson is not None:
+            self.map.remove_layer(self.geojson)
         if kwargs['stride'] is not None:
             stride = np.copy(kwargs['stride'])
         elif (gdf.shape[0] > kwargs['max_plot_points']):
             stride = int(gdf.shape[0]//kwargs['max_plot_points'])
         else:
             stride = 1
-        # extract column from geodataframe
+        # sliced geodataframe for plotting
+        geodataframe = gdf[slice(None,None,stride)]
         column_name = copy.copy(kwargs['column_name'])
-        column = gpd.GeoDataFrame(gdf[column_name][::stride],
-            geometry=gdf['geometry'][::stride])
+        geodataframe['data'] = geodataframe[column_name]
+        geodataframe['index'] = geodataframe.index
         # set colorbar limits to 2-98 percentile
         # if not using a defined plot range
         clim = gdf[column_name].quantile((0.02, 0.98)).values
@@ -780,26 +1030,61 @@ class leaflet:
             vmax = np.copy(kwargs['vmax'])
         # normalize data to be within vmin and vmax
         norm = colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
-        normalized = norm(column[column_name])
+        normalized = norm(geodataframe['data'])
         # create HEX colors for each point in the dataframe
-        column["__plottable_color"] = np.apply_along_axis(colors.to_hex, 1,
+        geodataframe["color"] = np.apply_along_axis(colors.to_hex, 1,
             cm.get_cmap(kwargs['cmap'], 256)(normalized))
         # leaflet map point style
-        point_style= {key:kwargs[key] for key in ['radius','fillOpacity','weight']}
-        # convert to GeoJSON object and add to map
-        self.data = ipyleaflet.GeoJSON(data=column.__geo_interface__,
+        point_style = {key:kwargs[key] for key in ['radius','fillOpacity','weight']}
+        # convert to GeoJSON object
+        self.geojson = ipyleaflet.GeoJSON(data=geodataframe.__geo_interface__,
             point_style=point_style, style_callback=self.style_callback)
-        self.map.add_layer(self.data)
+        # add GeoJSON object to map
+        self.map.add_layer(self.geojson)
+        # fields for tooltip views
+        if kwargs['fields'] is None:
+            self.fields = geodataframe.columns.drop(
+                [geodataframe.geometry.name, "data", "color"])
+        else:
+            self.fields = copy.copy(kwargs['fields'])
+        # add hover tooltips
+        if kwargs['tooltip']:
+            self.tooltip = ipywidgets.HTML()
+            self.tooltip.layout.margin = "0px 20px 20px 20px"
+            self.tooltip.layout.visibility = 'hidden'
+            # create widget for hover tooltips
+            self.hover_control = ipyleaflet.WidgetControl(widget=self.tooltip,
+                position='bottomright')
+            self.geojson.on_hover(self.handle_hover)
+            self.geojson.on_msg(self.handle_mouseout)
         # add colorbar
         if kwargs['colorbar']:
             self.add_colorbar(column_name=column_name, cmap=kwargs['cmap'], norm=norm)
 
     # functional call for setting colors of each point
-    def style_callback(self, x):
+    def style_callback(self, feature):
         return {
-            "fillColor": x["properties"]["__plottable_color"],
-            "color": x["properties"]["__plottable_color"],
+            "fillColor": feature["properties"]["color"],
+            "color": feature["properties"]["color"],
         }
+
+    # functional calls for hover events
+    def handle_hover(self, feature, **kwargs):
+        self.tooltip.value = '<br>'.join(['<b>{0}:</b> {1}'.format(field,
+            feature["properties"][field]) for field in self.fields])
+        self.tooltip.layout.width = "220px"
+        self.tooltip.layout.height = "300px"
+        self.tooltip.layout.visibility = 'visible'
+        self.map.add_control(self.hover_control)
+
+    def handle_mouseout(self, _, content, buffers):
+        event_type = content.get('type', '')
+        if event_type == 'mouseout':
+            self.tooltip.value = ''
+            self.tooltip.layout.width = "0px"
+            self.tooltip.layout.height = "0px"
+            self.tooltip.layout.visibility = 'hidden'
+            self.map.remove_control(self.hover_control)
 
     # add colorbar widget to leaflet map
     def add_colorbar(self, **kwargs):
