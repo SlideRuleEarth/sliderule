@@ -843,7 +843,6 @@ class leaflet:
         # initiate layers list
         self.layers = []
         # initialize selected feature
-        self.selected_feature = {}
         self.selected_callback = None
         # add control for zoom
         if kwargs['zoom']:
@@ -1092,8 +1091,6 @@ class leaflet:
 
     # functional calls for click events
     def handle_click(self, feature, **kwargs):
-        if "properties" in feature:
-            self.selected_feature = feature["properties"]
         if self.selected_callback != None:
             self.selected_callback(feature)
 
