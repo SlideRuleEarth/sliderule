@@ -982,9 +982,11 @@ class leaflet:
         # remove any prior instances of a data layer
         if (action == 'deleted') and self.geojson is not None:
             self.map.remove_layer(self.geojson)
+            self.geojson = None
         # remove any prior instances of a colorbar
         if (action == 'deleted') and self.colorbar is not None:
             self.map.remove_control(self.colorbar)
+            self.colorbar = None
         return self
 
     # add geodataframe data to leaflet map
@@ -999,7 +1001,7 @@ class leaflet:
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('tooltip', True)
-        kwargs.setdefault('fields', ['index', 'h_mean', 'h_sigma',
+        kwargs.setdefault('fields', ['h_mean', 'h_sigma',
             'dh_fit_dx', 'rms_misfit', 'w_surface_window_final',
             'delta_time', 'cycle', 'rgt', 'gt'])
         kwargs.setdefault('colorbar', True)
@@ -1016,7 +1018,6 @@ class leaflet:
         geodataframe = gdf[slice(None,None,stride)]
         column_name = copy.copy(kwargs['column_name'])
         geodataframe['data'] = geodataframe[column_name]
-        geodataframe['index'] = geodataframe.index
         # set colorbar limits to 2-98 percentile
         # if not using a defined plot range
         clim = gdf[column_name].quantile((0.02, 0.98)).values
@@ -1070,7 +1071,9 @@ class leaflet:
 
     # functional calls for hover events
     def handle_hover(self, feature, **kwargs):
-        self.tooltip.value = '<br>'.join(['<b>{0}:</b> {1}'.format(field,
+        # combine html strings for hover tooltip
+        self.tooltip.value = '<b>{0}:</b> {1}<br>'.format('id',feature['id'])
+        self.tooltip.value += '<br>'.join(['<b>{0}:</b> {1}'.format(field,
             feature["properties"][field]) for field in self.fields])
         self.tooltip.layout.width = "220px"
         self.tooltip.layout.height = "300px"
