@@ -82,6 +82,7 @@ class widgets:
             options=['atlas-local', 'atlas-s3', 'nsidc-s3'],
             value='nsidc-s3',
             description='Asset:',
+            description_tooltip="Asset: Location for SlideRule to get the data",
             disabled=False,
             style=self.style,
         )
@@ -91,6 +92,7 @@ class widgets:
             options=['003', '004'],
             value='004',
             description='Release:',
+            description_tooltip="Release: ICESat-2 data release",
             disabled=False,
             style=self.style,
         )
@@ -108,6 +110,9 @@ class widgets:
             options=surface_type_options,
             value='Land',
             description='Surface Type:',
+            description_tooltip=("Surface Type: ATL03 surface type for confidence "
+                "classification\n\t0: land\n\t1: ocean\n\t2: sea ice\n\t"
+                "3: land ice\n\t4: inland water"),
             disabled=False,
             style=self.style,
         )
@@ -119,6 +124,7 @@ class widgets:
             max=200,
             step=5,
             description='Length:',
+            description_tooltip="Length: length of ATL06 segments in meters",
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -134,6 +140,7 @@ class widgets:
             max=200,
             step=5,
             description='Step:',
+            description_tooltip="Step: step distance for successive ATL06 segments in meters",
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -150,6 +157,9 @@ class widgets:
             max=4,
             step=1,
             description='Confidence:',
+            description_tooltip=("Confidence: ATL03 confidence level for surface "
+                "type\n\t0: background\n\t1: within 10m\n\t2: low\n\t3: medium\n\t"
+                "4: high"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -169,6 +179,9 @@ class widgets:
         self.land_class = ipywidgets.SelectMultiple(
             options=land_options,
             description='Land Class:',
+            description_tooltip=("Land Class: ATL08 land classification "
+                "for photons\n\t0: noise\n\t1: ground\n\t2: canopy\n\t"
+                "3: top of canopy\n\t4: unclassified"),
             disabled=False,
             style=self.style,
         )
@@ -184,6 +197,11 @@ class widgets:
             value=['atl03_nominal'],
             options=quality_options,
             description='Quality:',
+            description_tooltip=("Quality: ATL03 photon quality "
+                "classification\n\t0: nominal\n\t"
+                "1: possible afterpulse\n\t"
+                "2: possible impulse response\n\t"
+                "3: possible TEP"),
             disabled=False,
             style=self.style,
         )
@@ -195,6 +213,9 @@ class widgets:
             max=20,
             step=1,
             description='YAPC kNN:',
+            description_tooltip=("YAPC kNN: number of nearest "
+                "neighbors to use\n\t0: automatic selection "
+                "of the number of neighbors"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -210,6 +231,8 @@ class widgets:
             max=100,
             step=0.1,
             description='YAPC h window:',
+            description_tooltip=("YAPC h window: window height "
+                "used to filter the nearest neighbors"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -225,6 +248,8 @@ class widgets:
             max=100,
             step=0.1,
             description='YAPC x window:',
+            description_tooltip=("YAPC x window: window width "
+                "used to filter the nearest neighbors"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -240,6 +265,8 @@ class widgets:
             max=20,
             step=1,
             description='YAPC Minimum PE:',
+            description_tooltip=("YAPC Minimum PE: minimum number of "
+                "photons needed in an extent to calculate a YAPC score"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -255,6 +282,8 @@ class widgets:
             max=255,
             step=1,
             description='YAPC Weight:',
+            description_tooltip=("YAPC Weight: minimum YAPC classification "
+                "score of a photon to be used in the processing request"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -271,6 +300,8 @@ class widgets:
             max=20,
             step=1,
             description='Iterations:',
+            description_tooltip=("Iterations: maximum number of iterations, "
+                "not including initial least-squares-fit selection"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -286,6 +317,8 @@ class widgets:
             max=100,
             step=0.1,
             description='Spread:',
+            description_tooltip=("Spread: minimum along track spread "
+                "for valid segments in meters"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -300,6 +333,8 @@ class widgets:
             max=50,
             step=1,
             description='PE Count:',
+            description_tooltip=("PE Count: minimum number of photon events "
+                "needed for valid segment fits"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -315,6 +350,8 @@ class widgets:
             max=10,
             step=0.1,
             description='Window:',
+            description_tooltip=("Window: minimum height the refined "
+                "photon-selection window can shrink in meters"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -330,6 +367,7 @@ class widgets:
             max=10,
             step=0.1,
             description='Sigma:',
+            description_tooltip="Sigma: maximum robust dispersion in meters",
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -347,6 +385,10 @@ class widgets:
             options=projection_list,
             value='Global',
             description='Projection:',
+            description_tooltip=("Projection: leaflet map projection\n\t"
+                "Global: Web Mercator (EPSG:3857)\n\t"
+                "Alaska Polar Stereographic (EPSG:5936)\n\t"
+                "South: Polar Stereographic South (EPSG:3031)"),
             disabled=False,
             style=self.style,
         )
@@ -359,6 +401,7 @@ class widgets:
             options=variable_list,
             value='h_mean',
             description='Variable:',
+            description_tooltip="Variable: variable to display on leaflet map",
             disabled=False,
             style=self.style,
         )
@@ -394,6 +437,8 @@ class widgets:
             options=sorted(cmap_set),
             value='viridis',
             description='Colormap:',
+            description_tooltip=("Colormap: matplotlib colormaps "
+                "for displayed variable"),
             disabled=False,
             style=self.style,
         )
@@ -402,15 +447,19 @@ class widgets:
         self.reverse = ipywidgets.Checkbox(
             value=False,
             description='Reverse Colormap',
+            description_tooltip=("Reverse Colormap: reverse matplotlib "
+                "colormap for displayed variable"),
             disabled=False,
             style=self.style,
         )
 
         # selection for adding layers to map
-        layer_options = ['3DEP','ESRI imagery','RGI']
+        layer_options = ['3DEP','ASTER GDEM','ESRI imagery','RGI']
         self.layers = ipywidgets.SelectMultiple(
             options=layer_options,
             description='Add Layers:',
+            description_tooltip=("Add Layers: contextual layers "
+                "to add to leaflet map"),
             disabled=False,
             style=self.style,
         )
@@ -464,7 +513,7 @@ class widgets:
         """function for updating available map layers
         """
         if (self.projection.value == 'Global'):
-            layer_options = ['3DEP','ESRI imagery','RGI']
+            layer_options = ['3DEP','ASTER GDEM','ESRI imagery','RGI']
         elif (self.projection.value == 'North'):
             layer_options = ['ESRI imagery','ArcticDEM']
         elif (self.projection.value == 'South'):
@@ -701,6 +750,11 @@ U.S. Geological Survey (USGS), British Antarctic Survey (BAS),
 National Aeronautics and Space Administration (NASA)
 """
 pgc_attribution = """Esri, PGC, UMN, NSF, NGA, DigitalGlobe"""
+nasa_attribution = """
+Imagery provided by services from the Global Imagery Browse Services (GIBS),
+operated by the NASA/GSFC/Earth Science Data and Information System
+with funding provided by NASA/HQ.
+"""
 
 # define background ipyleaflet tile providers
 providers = {
@@ -735,6 +789,13 @@ providers = {
             "attribution": "Earthstar Geographics",
             "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Antarctic_Imagery/MapServer/tile/{z}/{y}/{x}'
         },
+    },
+    "NASAGIBS": {
+        "ASTER_GDEM_Greyscale_Shaded_Relief": {
+            "name": "NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief",
+            "attribution": nasa_attribution,
+            "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/ASTER_GDEM_Greyscale_Shaded_Relief/default/GoogleMapsCompatible_Level12/{z}/{y}/{x}.jpg",
+        }
     }
 }
 
@@ -902,6 +963,8 @@ class leaflet:
                     self.map.add_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.add_layer(layers.USGS.Elevation)
+                elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
+                    self.map.add_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
                     self.map.add_layer(xyzservices.providers.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
@@ -938,6 +1001,8 @@ class leaflet:
                     self.map.remove_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.remove_layer(layers.USGS.Elevation)
+                elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
+                    self.map.remove_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
                     self.map.remove_layer(xyzservices.providers.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
@@ -985,9 +1050,11 @@ class leaflet:
         # remove any prior instances of a data layer
         if (action == 'deleted') and self.geojson is not None:
             self.map.remove_layer(self.geojson)
+            self.geojson = None
         # remove any prior instances of a colorbar
         if (action == 'deleted') and self.colorbar is not None:
             self.map.remove_control(self.colorbar)
+            self.colorbar = None
         return self
 
     # add geodataframe data to leaflet map
@@ -1074,7 +1141,9 @@ class leaflet:
 
     # functional calls for hover events
     def handle_hover(self, feature, **kwargs):
-        self.tooltip.value = '<br>'.join(['<b>{0}:</b> {1}'.format(field,
+        # combine html strings for hover tooltip
+        self.tooltip.value = '<b>{0}:</b> {1}<br>'.format('id',feature['id'])
+        self.tooltip.value += '<br>'.join(['<b>{0}:</b> {1}'.format(field,
             feature["properties"][field]) for field in self.fields])
         self.tooltip.layout.width = "220px"
         self.tooltip.layout.height = "300px"
