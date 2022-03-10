@@ -28,6 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import io
 import sys
 import copy
 import logging
@@ -1120,12 +1121,14 @@ class leaflet:
             label=kwargs['column_name'])
         cbar.solids.set_rasterized(True)
         cbar.ax.tick_params(which='both', width=1, direction='in')
+        # save colorbar to in-memory png object
+        png = io.BytesIO()
+        plt.savefig(png, bbox_inches='tight', format='png')
+        png.seek(0)
         # create output widget
-        output = ipywidgets.widgets.Output()
+        output = ipywidgets.Image(value=png.getvalue(), format='png')
         self.colorbar = ipyleaflet.WidgetControl(widget=output,
             transparent_bg=True, position=kwargs['position'])
-        with output:
-            IPython.display.clear_output()
-            plt.show()
         # add colorbar
         self.map.add_control(self.colorbar)
+        plt.close()
