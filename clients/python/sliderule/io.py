@@ -521,7 +521,7 @@ def read_pytables(filename, **kwargs):
     # get geodataframe coordinate system from attributes
     fileID = geopandas.pd.HDFStore(filename, mode='r')
     if getattr(fileID.root._v_attrs, 'crs'):
-        kwargs['crs'] = fileID.root._v_attrs.crs
+        kwargs['crs'] = str(fileID.root._v_attrs.crs)
     # Closing the HDF5 file
     fileID.close()
     # build and return GeoDataFrame
@@ -546,7 +546,7 @@ def read_h5py(filename, **kwargs):
         h5[key] = val[:].squeeze()
     # get geodataframe coordinate system from attributes
     if 'crs' in fileID.attrs.keys():
-        kwargs['crs'] = fileID.attrs['crs']
+        kwargs['crs'] = str(fileID.attrs['crs'])
     # Closing the HDF5 file
     fileID.close()
     # Closing the netCDF file
