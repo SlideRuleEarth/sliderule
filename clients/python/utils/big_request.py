@@ -7,7 +7,7 @@ import sys
 import time
 import logging
 from sliderule import icesat2
-from sliderule.stream2disk import Hdf5Writer
+from sliderule.stream2disk import Hdf5Writer, Hdf5Reader
 
 def parse_command_line(args, cfg):
     i = 1
@@ -40,9 +40,10 @@ if __name__ == '__main__':
 
     # set script defaults
     cfg = {
+        "run": 'write',
         "url": 'icesat2sliderule.org',
         "asset": 'nsidc-s3',
-        "outfile": 'atl06.hdf5',
+        "filename": 'atl06.hdf5',
         "max_workers": 0,
         "max_resources": 100000
     }
@@ -65,16 +66,24 @@ if __name__ == '__main__':
     parse_command_line(sys.argv, cfg)
     parse_command_line(sys.argv, parms)
 
-    # configure SlideRule
-    icesat2.init(cfg["url"], False, cfg["max_resources"], loglevel=logging.INFO)
 
-    # create hdf5 writer
-    hdf5writer = Hdf5Writer(cfg["outfile"], parms)
+    if cfg["run"] == 'write':
+        # configure SlideRule
+        icesat2.init(cfg["url"], False, cfg["max_resources"], loglevel=logging.INFO)
 
-    # atl06 processing request
-    perf_start = time.perf_counter()
-    icesat2.atl06p(parms, cfg["asset"], max_workers=cfg["max_workers"], callback=lambda resource, result, index, total : hdf5writer.run(resource, result, index, total))
-    print("Completed in {:.3f} seconds of wall-clock time".format(time.perf_counter() - perf_start))
+        # create hdf5 writer
+        hdf5writer = Hdf5Writer(cfg["filename"], parms)
 
-    # close hdf5 file
-    hdf5writer.finish()
+        # atl06 processing request
+        perf_start = time.perf_counter()
+        icesat2.atl06p(parms, cfg["asset"], max_workers=cfg["max_workers"], callback=lambda resource, result, index, total : hdf5writer.run(resource, result, index, total))
+        print("Completed in {:.3f} seconds of wall-clock time".format(time.perf_counter() - perf_start))
+
+        # close hdf5 file
+        hdf5writer.finish()
+
+    elif cfg["run"] == 'read':
+        # create hdf5 reader
+        hdf5reader = Hdf5Reader(cfg["filename"])
+        # display GeoDataFrame
+        print(hdf5reader.gdf.describe())

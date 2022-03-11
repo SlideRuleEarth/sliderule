@@ -376,10 +376,10 @@ def set_url (urls):
         server_table = {}
         if type(urls) == list: # hardcoded list of sliderule server IP addresses
             for serv in urls:
-                server_url = "http://" + serv + ":9081"
+                server_url = "http://" + serv
                 server_table[server_url] = 0
         elif type(urls) == str: # IP address of sliderule's service discovery
-            service_url = "http://" + urls + ":8050"
+            service_url = "http://" + urls + "/discovery/"
         else:
             raise TypeError('expected ip address or hostname as a string or list of strings')
     # then update server table
@@ -396,7 +396,7 @@ def update_available_servers ():
             server_table = {}
             response = requests.get(service_url, data='{"service":"sliderule"}', timeout=request_timeout).json()
             for entry in response['members']:
-                server_url = "http://" + entry + ":9081"
+                server_url = "http://" + entry
                 server_table[server_url] = 0
     return len(server_table)
 

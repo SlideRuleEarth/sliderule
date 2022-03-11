@@ -28,6 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import io
 import sys
 import copy
 import logging
@@ -903,6 +904,8 @@ class leaflet:
             self.crs = 'EPSG:3031'
         # initiate layers list
         self.layers = []
+        # initialize selected feature
+        self.selected_callback = None
         # add control for zoom
         if kwargs['zoom']:
             zoom_slider = ipywidgets.IntSlider(description='Zoom level:',
@@ -1066,7 +1069,7 @@ class leaflet:
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('tooltip', True)
-        kwargs.setdefault('fields', ['h_mean', 'h_sigma',
+        kwargs.setdefault('fields', ['index', 'h_mean', 'h_sigma',
             'dh_fit_dx', 'rms_misfit', 'w_surface_window_final',
             'delta_time', 'cycle', 'rgt', 'gt'])
         kwargs.setdefault('colorbar', True)
@@ -1083,6 +1086,7 @@ class leaflet:
         geodataframe = gdf[slice(None,None,stride)]
         column_name = copy.copy(kwargs['column_name'])
         geodataframe['data'] = geodataframe[column_name]
+        geodataframe['index'] = geodataframe.index
         # set colorbar limits to 2-98 percentile
         # if not using a defined plot range
         clim = gdf[column_name].quantile((0.02, 0.98)).values
@@ -1123,6 +1127,7 @@ class leaflet:
                 position='bottomright')
             self.geojson.on_hover(self.handle_hover)
             self.geojson.on_msg(self.handle_mouseout)
+            self.geojson.on_click(self.handle_click)
         # add colorbar
         if kwargs['colorbar']:
             self.add_colorbar(column_name=column_name, cmap=kwargs['cmap'], norm=norm)
@@ -1154,6 +1159,14 @@ class leaflet:
             self.tooltip.layout.visibility = 'hidden'
             self.map.remove_control(self.hover_control)
 
+    # functional calls for click events
+    def handle_click(self, feature, **kwargs):
+        if self.selected_callback != None:
+            self.selected_callback(feature)
+
+    def add_selected_callback(self, callback):
+        self.selected_callback = callback
+
     # add colorbar widget to leaflet map
     def add_colorbar(self, **kwargs):
         kwargs.setdefault('column_name', 'h_mean')
@@ -1177,12 +1190,14 @@ class leaflet:
             label=kwargs['column_name'])
         cbar.solids.set_rasterized(True)
         cbar.ax.tick_params(which='both', width=1, direction='in')
+        # save colorbar to in-memory png object
+        png = io.BytesIO()
+        plt.savefig(png, bbox_inches='tight', format='png')
+        png.seek(0)
         # create output widget
-        output = ipywidgets.widgets.Output()
+        output = ipywidgets.Image(value=png.getvalue(), format='png')
         self.colorbar = ipyleaflet.WidgetControl(widget=output,
             transparent_bg=True, position=kwargs['position'])
-        with output:
-            IPython.display.clear_output()
-            plt.show()
         # add colorbar
         self.map.add_control(self.colorbar)
+        plt.close()

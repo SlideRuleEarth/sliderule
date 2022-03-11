@@ -12,6 +12,7 @@ dependencies:
   - jupyterlab=3
   - jupyterlab_widgets
   - matplotlib
+  - ipympl
   - numpy
   - pandas
   - pip

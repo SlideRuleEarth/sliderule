@@ -201,6 +201,9 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     params += '&temporal[]={0},{1}'.format(time_start, time_end)
     if kwargs['polygon']:
         params += '&polygon={0}'.format(kwargs['polygon'])
+    if kwargs['name_filter']:
+        params += '&options[producer_granule_id][pattern]=true'
+        params += '&producer_granule_id[]=' + kwargs['name_filter']
     cmr_query_url = CMR_FILE_URL + params
     logger.debug('cmr request={0}\n'.format(cmr_query_url))
 
@@ -269,7 +272,7 @@ def __query_resources(parm, version, return_polygons=False):
         logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
         return []
 
-    # submission arguments for cmr
+    # Submission Arguments for CRM #
     kwargs = {}
     kwargs['version'] = version
     kwargs['return_polygons'] = return_polygons
@@ -283,12 +286,30 @@ def __query_resources(parm, version, return_polygons=False):
     if "t1" in parm:
         kwargs['time_end'] = parm["t1"]
 
+    # Build Filters #
+    name_filter_enabled = False
+    rgt_filter = '????'
+    if "rgt" in parm:
+        rgt_filter = f'{parm["rgt"]}'.zfill(4)
+        name_filter_enabled = True
+    cycle_filter = '??'
+    if "cycle" in parm:
+        cycle_filter = f'{parm["cycle"]}'.zfill(2)
+        name_filter_enabled = True
+    region_filter = '??'
+    if "region" in parm:
+        region_filter = f'{parm["region"]}'.zfill(2)
+        name_filter_enabled = True
+    if name_filter_enabled:
+        kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
+
     # Make CMR Request #
     if return_polygons:
         resources,polygons = cmr(**kwargs)
     else:
         resources = cmr(**kwargs)
-    # check that resources are under limit
+
+    # Check Resources are Under Limit #
     if(len(resources) > max_requested_resources):
         logger.warning("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
         logger.warning("Consider using icesat2.set_max_resources to set a higher limit")
@@ -574,6 +595,9 @@ def cmr(**kwargs):
     kwargs.setdefault('short_name','ATL03')
     # return polygons for each requested granule
     kwargs.setdefault('return_polygons',False)
+    # set default name filter
+    kwargs.setdefault('name_filter', None)
+
     # copy polygon
     polygon = copy.copy(kwargs['polygon'])
 
@@ -601,13 +625,15 @@ def cmr(**kwargs):
                     kwargs['time_start'],
                     kwargs['time_end'],
                     polygon=polystr,
-                    return_polygons=True)
+                    return_polygons=True,
+                    name_filter=kwargs['name_filter'])
             else:
                 url_list = __cmr_search(kwargs['short_name'],
                     kwargs['version'],
                     kwargs['time_start'],
                     kwargs['time_end'],
-                    polygon=polystr)
+                    polygon=polystr,
+                    name_filter=kwargs['name_filter'])
             break # exit loop because cmr search was successful
         except urllib.error.HTTPError as e:
             logger.error('HTTP Request Error: {}'.format(e.reason))
