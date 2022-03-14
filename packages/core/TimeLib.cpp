@@ -384,8 +384,7 @@ int64_t TimeLib::str2gpstime (const char* time_str)
 
     /* Determine format of time string and copy into buffer */
     int i;
-    int tok = 1;
-    int token_count = 0;
+    int token_count = 1;
     int colon_count = 0;
     int dash_count = 0;
     int space_count = 0;
@@ -425,11 +424,10 @@ int64_t TimeLib::str2gpstime (const char* time_str)
 
         if(is_delim)
         {
-            token_count++;
             if(token_count < max_token_count)
             {
                 time_buf[i] = '\0';
-                token_ptr[tok++] = &time_buf[i+1];
+                token_ptr[token_count++] = &time_buf[i+1];
             }
         }
     }
