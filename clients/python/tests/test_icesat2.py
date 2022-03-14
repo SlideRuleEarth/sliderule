@@ -39,7 +39,7 @@ class TestLocal:
 class TestRemote:
     def test_init_badurl(self):
         with pytest.raises( (ConnectTimeout, ConnectionError) ):
-            icesat2.init('incorrect.org')
+            icesat2.init('incorrect.org:8877')
 
     def test_get_version(self, server):
         icesat2.init(server)

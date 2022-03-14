@@ -22,4 +22,4 @@ class TestRemote:
     def test_init_badurl(self):
         with pytest.raises( (ConnectTimeout, ConnectionError) ):
             sliderule.set_rqst_timeout((1, 60))
-            sliderule.set_url('incorrect.org')
+            sliderule.set_url('incorrect.org:8877')
