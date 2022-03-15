@@ -98,7 +98,7 @@ PistacheClient::PistacheClient(lua_State* L,  const char* outq_name, size_t num_
     }
 
     /* Set Number of Threads */
-    auto opts = Http::Client::options().threads(num_threads).maxConnectionsPerHost(8);
+    auto opts = Http::Experimental::Client::options().threads(num_threads).maxConnectionsPerHost(8);
     client.init(opts);
 }
 
