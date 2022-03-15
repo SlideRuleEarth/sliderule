@@ -4,7 +4,7 @@ local json = require("json")
 
 -- Unit Test --
 
-script = core.script("health", "")
+script = core.script("api/health", "")
 
 local total_time_allowed = 5
 while script:active() and total_time_allowed > 0 do
