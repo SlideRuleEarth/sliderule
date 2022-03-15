@@ -52,10 +52,11 @@ namespace py = pybind11;
 class pyCredentialStore
 {
     public:
-        pyCredentialStore   (const std::string &_asset);
-        ~pyCredentialStore  (void);
+                    pyCredentialStore   (const std::string &_asset);
+                    ~pyCredentialStore  (void);
         
-        bool    provide     (const py::dict& credentials);
+        bool        provide             (const py::dict& credentials);
+        py::dict    retrieve            (const std::string &_asset);
         
     private:
         const char* asset;

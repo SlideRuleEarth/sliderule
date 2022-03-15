@@ -59,6 +59,7 @@
 #include "pyH5Coro.h"
 #include "pyLua.h"
 #include "pyS3Cache.h"
+#include "pyCredentialStore.h"
 
 /******************************************************************************
  * Namespaces
@@ -124,6 +125,16 @@ PYBIND11_MODULE(srpybin, m)
 
         .def(py::init<const std::string &,      // _cache_root
                       const int>());            // _max_files
+
+    py::class_<pyCredentialStore>(m, "credentials")
+
+        .def(py::init<const std::string &>())   // _asset
+
+        .def("provide", &pyCredentialStore::provide, "provide credentials for an asset",
+            py::arg("credential"))
+        
+        .def("retrieve", &pyCredentialStore::retrieve, "retrieve credentials for an asset",
+            py::arg("asset"));
 
     py::class_<pyLua>(m, "lua")
 

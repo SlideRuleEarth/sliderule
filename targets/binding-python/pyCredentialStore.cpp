@@ -85,3 +85,23 @@ bool pyCredentialStore::provide (const py::dict& credentials)
 
     return CredentialStore::put(asset, credential); 
 }
+
+/*--------------------------------------------------------------------
+ * provide
+ *--------------------------------------------------------------------*/
+py::dict pyCredentialStore::retrieve (const std::string &_asset)
+{
+    py::dict results;
+    
+    CredentialStore::Credential credential = CredentialStore::get(_asset.c_str());
+    
+    if(credential.provided)
+    {
+        results[py::str("accessKeyId")] = credential.accessKeyId;
+        results[py::str("secretAccessKey")] = credential.secretAccessKey;
+        results[py::str("sessionToken")] = credential.sessionToken;
+        results[py::str("expiration")] = credential.expiration;
+    }
+    
+    return results;
+}
