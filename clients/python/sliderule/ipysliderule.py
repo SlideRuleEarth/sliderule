@@ -470,6 +470,7 @@ class widgets:
         # single plot widgets
         # selection for reference ground track
         self.rgt = ipywidgets.Text(
+            value='0',
             description="RGT:",
             description_tooltip="RGT: Reference Ground Track to plot",
             disabled=False
