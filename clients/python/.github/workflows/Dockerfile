@@ -212,6 +212,7 @@ RUN pip3 install --no-cache-dir \
         geopandas \
         h5py \
         ipykernel \
+        ipympl \
         ipywidgets \
         ipyleaflet \
         jupyterlab==3 \
@@ -219,13 +220,13 @@ RUN pip3 install --no-cache-dir \
         matplotlib \
         numpy \
         pandas \
-        pyproj \
         requests \
         scipy \
         setuptools_scm \
         shapely \
         tables \
         tk \
+        traitlets \
         xyzservices
 
 COPY . .

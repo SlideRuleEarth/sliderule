@@ -467,6 +467,32 @@ class widgets:
         # watch widgets for changes
         self.projection.observe(self.set_layers)
 
+        # single plot widgets
+        # selection for reference ground track
+        self.rgt = ipywidgets.Text(
+            description="RGT:",
+            description_tooltip="RGT: Reference Ground Track to plot",
+            disabled=False
+        )
+
+        # cycle input text box
+        self.cycle = ipywidgets.Text(
+            value='0',
+            description='Cycle:',
+            description_tooltip="Cycle: Orbital cycle to plot",
+            disabled=False
+        )
+
+        # selection for ground track
+        ground_track_options = ["gt1l","gt1r","gt2l","gt2r","gt3l","gt3r"]
+        self.ground_track = ipywidgets.Dropdown(
+            options=ground_track_options,
+            value='gt1l',
+            description="Track:",
+            description_tooltip="Track: Ground Track to plot",
+            disabled=False
+        )
+
         # button and label for output file selection
         self.file = copy.copy(self.filename)
         self.savebutton = ipywidgets.Button(
@@ -593,6 +619,108 @@ class widgets:
     @property
     def colormap(self):
         return self.cmap.value + self._r
+
+    # click handler for individual photons
+    def click_handler(self, feature):
+        """handler for leaflet map clicks
+        """
+        GT = {"10":"gt1l","20":"gt1r","30":"gt2l","40":"gt2r","50":"gt3l","60":"gt3r"}
+        try:
+            self.rgt.value = str(feature["properties"]["rgt"])
+            self.cycle.value = str(feature["properties"]["cycle"])
+            self.ground_track.value = GT[str(feature["properties"]["gt"])]
+        except Exception as e:
+            return
+        else:
+            return self
+
+    @property
+    def RGT(self):
+        """extract and verify Reference Ground Tracks (RGTs)
+        """
+        # extract RGT
+        try:
+            rgt = int(self.rgt.value)
+        except:
+            logging.critical(f"RGT {self.rgt.value} is invalid")
+            return "0"
+        # verify ground track values
+        if (rgt >= 1) and (rgt <= 1387):
+            return self.rgt.value
+        else:
+            logging.critical(f"RGT {self.rgt.value} is outside available range")
+            return "0"
+
+    @property
+    def GT(self):
+        """extract Ground Tracks (GTs)
+        """
+        ground_track_dict = dict(gt1l=10,gt1r=20,gt2l=30,gt2r=40,gt3l=50,gt3r=60)
+        return ground_track_dict[self.ground_track.value]
+
+    @property
+    def orbital_cycle(self):
+        """extract and verify ICESat-2 orbital cycles
+        """
+        #-- number of GPS seconds between the GPS epoch and ATLAS SDP epoch
+        atlas_sdp_gps_epoch = 1198800018.0
+        #-- number of GPS seconds since the GPS epoch for first ATLAS data point
+        atlas_gps_start_time = atlas_sdp_gps_epoch + 24710205.39202261
+        epoch1 = datetime.datetime(1980, 1, 6, 0, 0, 0)
+        epoch2 = datetime.datetime(1970, 1, 1, 0, 0, 0)
+        #-- get the total number of seconds since the start of ATLAS and now
+        delta_time_epochs = (epoch2 - epoch1).total_seconds()
+        atlas_UNIX_start_time = atlas_gps_start_time - delta_time_epochs
+        present_time = datetime.datetime.now().timestamp()
+        #-- divide total time by cycle length to get the maximum number of orbital cycles
+        ncycles = np.ceil((present_time - atlas_UNIX_start_time) / (86400 * 91))
+        all_cycles = [str(c + 1) for c in range(ncycles)]
+        if (self.cycle.value in all_cycles):
+            return self.cycle.value
+        else:
+            logging.critical(f"Cycle {self.cycle.value} is outside available range")
+            return "0"
+
+    def show(self, gdf, **kwargs):
+        """Creates along-track plots of SlideRule outputs
+        """
+        # default keyword arguments
+        kwargs.setdefault('cycle_start', 3)
+        kwargs.setdefault('column_name', 'h_mean')
+        # variable to plot
+        column = kwargs['column_name']
+        # reference ground track and ground track
+        RGT = int(self.RGT)
+        GT = int(self.GT)
+        # skip plot creation if no values are entered
+        if (RGT == 0) or (GT == 0):
+            return
+        # create figure axis
+        fig,ax = plt.subplots(num=1, figsize=(8,6))
+        # for each unique cycles
+        for cycle in gdf['cycle'].unique():
+            # skip cycles with significant off pointing
+            if (cycle < kwargs['cycle_start']):
+                continue
+            # reduce data frame to RGT, ground track and cycle
+            df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
+                (gdf['cycle'] == cycle)]
+            if not any(df[column].values):
+                continue
+            # plot reduced data frame
+            ax.plot(df['distance'].values, df[column].values,
+                marker='.', lw=0,
+                label='Cycle {0:0.0f}'.format(cycle))
+        # add axes labels
+        ax.set_xlabel('Along-Track Distance [m]')
+        ax.set_ylabel(f'SlideRule {column}')
+        # create legend
+        lgd = ax.legend(frameon=False)
+        lgd.get_frame().set_alpha(1.0)
+        for line in lgd.get_lines():
+            line.set_linewidth(6)
+        # show the figure
+        plt.tight_layout()
 
 # define projections for ipyleaflet tiles
 projections = Bunch(
@@ -828,7 +956,7 @@ layers = Bunch(
             attribution=usgs_antarctic_attribution,
             layers="MOA_125_HP1_090_230",
             format='image/png',
-            transparent=True,
+            transparent=False,
             url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
             crs=projections.EPSG3031.MOA
         ),
@@ -836,7 +964,7 @@ layers = Bunch(
             attribution=usgs_antarctic_attribution,
             layers="Radarsat_Mosaic",
             format='image/png',
-            transparent=True,
+            transparent=False,
             url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
             crs=projections.EPSG3031.RAMP
         )
@@ -966,7 +1094,7 @@ class leaflet:
                 elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
                     self.map.add_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
-                    self.map.add_layer(xyzservices.providers.Esri.WorldImagery)
+                    self.map.add_layer(ipyleaflet.basemaps.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.add_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
@@ -1004,7 +1132,7 @@ class leaflet:
                 elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
                     self.map.remove_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
-                    self.map.remove_layer(xyzservices.providers.Esri.WorldImagery)
+                    self.map.remove_layer(ipyleaflet.basemaps.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.remove_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
@@ -1069,7 +1197,7 @@ class leaflet:
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('tooltip', True)
-        kwargs.setdefault('fields', ['index', 'h_mean', 'h_sigma',
+        kwargs.setdefault('fields', ['h_mean', 'h_sigma',
             'dh_fit_dx', 'rms_misfit', 'w_surface_window_final',
             'delta_time', 'cycle', 'rgt', 'gt'])
         kwargs.setdefault('colorbar', True)
@@ -1086,7 +1214,6 @@ class leaflet:
         geodataframe = gdf[slice(None,None,stride)]
         column_name = copy.copy(kwargs['column_name'])
         geodataframe['data'] = geodataframe[column_name]
-        geodataframe['index'] = geodataframe.index
         # set colorbar limits to 2-98 percentile
         # if not using a defined plot range
         clim = gdf[column_name].quantile((0.02, 0.98)).values
