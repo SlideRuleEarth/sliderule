@@ -36,6 +36,7 @@ import datetime
 import traceback
 import numpy as np
 import geopandas as gpd
+import matplotlib.lines
 import matplotlib.cm as cm
 import matplotlib.colorbar
 import matplotlib.pyplot as plt
@@ -674,20 +675,27 @@ class widgets:
         atlas_UNIX_start_time = atlas_gps_start_time - delta_time_epochs
         present_time = datetime.datetime.now().timestamp()
         #-- divide total time by cycle length to get the maximum number of orbital cycles
-        ncycles = np.ceil((present_time - atlas_UNIX_start_time) / (86400 * 91))
-        all_cycles = [str(c + 1) for c in range(ncycles)]
+        nc = np.ceil((present_time - atlas_UNIX_start_time) / (86400 * 91)).astype('i')
+        all_cycles = [str(c + 1) for c in range(nc)]
         if (self.cycle.value in all_cycles):
             return self.cycle.value
         else:
             logging.critical(f"Cycle {self.cycle.value} is outside available range")
             return "0"
 
-    def show(self, gdf, **kwargs):
-        """Creates along-track plots of SlideRule outputs
+    def plot(self, gdf, **kwargs):
+        """Creates plots of SlideRule outputs
         """
         # default keyword arguments
-        kwargs.setdefault('cycle_start', 3)
+        kwargs.setdefault('ax', None)
+        kwargs.setdefault('kind', 'cycles')
+        kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('legend', False)
         kwargs.setdefault('column_name', 'h_mean')
+        kwargs.setdefault('atl03', None)
+        kwargs.setdefault('classification', None)
+        kwargs.setdefault('segments', True)
+        kwargs.setdefault('cycle_start', 3)
         # variable to plot
         column = kwargs['column_name']
         # reference ground track and ground track
@@ -697,31 +705,96 @@ class widgets:
         if (RGT == 0) or (GT == 0):
             return
         # create figure axis
-        fig,ax = plt.subplots(num=1, figsize=(8,6))
-        # for each unique cycles
-        for cycle in gdf['cycle'].unique():
-            # skip cycles with significant off pointing
-            if (cycle < kwargs['cycle_start']):
-                continue
-            # reduce data frame to RGT, ground track and cycle
-            df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
-                (gdf['cycle'] == cycle)]
-            if not any(df[column].values):
-                continue
-            # plot reduced data frame
-            ax.plot(df['distance'].values, df[column].values,
-                marker='.', lw=0,
-                label='Cycle {0:0.0f}'.format(cycle))
-        # add axes labels
-        ax.set_xlabel('Along-Track Distance [m]')
-        ax.set_ylabel(f'SlideRule {column}')
+        if kwargs['ax'] is None:
+            fig,ax = plt.subplots(num=1, figsize=(8,6))
+        else:
+            ax = kwargs['ax']
+        # list of legend elements
+        legend_elements = []
+        # different plot types
+        # cycle: along-track plot showing all available cycles
+        # scatter: plot showing a single cycle possibly with ATL03
+        if (kwargs['kind'] == 'cycles'):
+            # for each unique cycles
+            for cycle in gdf['cycle'].unique():
+                # skip cycles with significant off pointing
+                if (cycle < kwargs['cycle_start']):
+                    continue
+                # reduce data frame to RGT, ground track and cycle
+                df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
+                    (gdf['cycle'] == cycle)]
+                if not any(df[column].values):
+                    continue
+                # plot reduced data frame
+                l, = ax.plot(df['distance'].values,
+                    df[column].values, marker='.', lw=0, ms=1.5)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color=l.get_color(), lw=6,
+                    label='Cycle {0:0.0f}'.format(cycle)))
+            # add axes labels
+            ax.set_xlabel('Along-Track Distance [m]')
+            ax.set_ylabel(f'SlideRule {column}')
+        elif (kwargs['kind'] == 'scatter'):
+            if (kwargs['classification'] == 'atl08'):
+                # noise, ground, canopy, top of canopy, unclassified
+                colormap = np.array(['c','b','g','g','y'])
+                classes = ['noise','ground','canopy','toc','unclassified']
+                sc = ax.scatter(kwargs['atl03'].index.values,
+                    kwargs['atl03']["height"].values,
+                    c=colormap[kwargs['atl03']["atl08_class"]],
+                    s=1.5, rasterized=True)
+                for i,lab in enumerate(classes):
+                    element = matplotlib.lines.Line2D([0], [0],
+                        color=colormap[i], lw=6, label=lab)
+                    legend_elements.append(element)
+            elif (kwargs['classification'] == 'yapc'):
+                sc = ax.scatter(kwargs['atl03'].index.values,
+                    kwargs['atl03']["height"].values,
+                    c=kwargs['atl03']["yapc_score"],
+                    cmap=kwargs['cmap'],
+                    s=1.5, rasterized=True)
+                plt.colorbar(sc)
+            elif (kwargs['classification'] == 'atl03'):
+                # background, buffer, low, medium, high
+                colormap = np.array(['y','c','b','g','m'])
+                confidences = ['background','buffer','low','medium','high']
+                atl03 = kwargs['atl03'][kwargs['atl03']["atl03_cnf"] >= 0]
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                    c=colormap[atl03["atl03_cnf"]],
+                    s=1.5, rasterized=True)
+                for i,lab in enumerate(confidences):
+                    element = matplotlib.lines.Line2D([0], [0],
+                        color=colormap[i], lw=6, label=lab)
+                    legend_elements.append(element)
+            elif (kwargs['atl03'] is not None):
+                # plot all available ATL03 points as gray
+                sc = ax.scatter(kwargs['atl03'].index.values,
+                    kwargs['atl03']["height"].values,
+                    c='0.4', s=0.5, rasterized=True)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color=sc.get_color(), lw=6,
+                    label='ATL03'))
+            if kwargs['segments']:
+                cycle = int(self.orbital_cycle)
+                df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
+                    (gdf['cycle'] == cycle)]
+                # plot reduced data frame
+                sc = ax.scatter(df.index.values, df["h_mean"].values,
+                    c='red', s=2.5, rasterized=True)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color='red', lw=6, label='ATL06-SR'))
+            # add title and axes labels
+            ax.set_title("Photon Cloud")
+            ax.set_xlabel('UTC')
+            ax.set_ylabel('Height (m)')
         # create legend
-        lgd = ax.legend(frameon=False)
-        lgd.get_frame().set_alpha(1.0)
-        for line in lgd.get_lines():
-            line.set_linewidth(6)
-        # show the figure
-        plt.tight_layout()
+        if kwargs['legend']:
+            lgd = ax.legend(handles=legend_elements, loc=3, frameon=True)
+            lgd.get_frame().set_alpha(1.0)
+            lgd.get_frame().set_edgecolor('white')
+        if kwargs['ax'] is None:
+            # show the figure
+            plt.tight_layout()
 
 # define projections for ipyleaflet tiles
 projections = Bunch(
