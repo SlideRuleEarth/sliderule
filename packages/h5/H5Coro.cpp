@@ -782,6 +782,94 @@ void H5FileBuffer::readDataset (info_t* info)
 
                 /* Read B-Tree */
                 readBTreeV1(metaData.address, buffer, buffer_size, buffer_offset);
+                
+                /* Check Need to Flatten Chunks */
+                bool flatten = false;
+                for(int d = 1; d < metaData.ndims; d++)
+                {
+                    if(metaData.chunkdims[d] != metaData.dimensions[d])
+                    {
+                        flatten = true;
+                        break;
+                    }
+                }
+                
+                /* Flatten Chunks - Place Dataset in Row Order*/
+                if(flatten)
+                {
+                    /* New Flattened Buffer */
+                    uint8_t* fbuf = new uint8_t[buffer_size];
+                    uint64_t bi = 0; // index into source buffer
+
+                    /* Build Number of Each Chunk per Dimension */
+                    uint64_t cdimnum[MAX_NDIMS * 2];
+                    for(int i = 0; i < metaData.ndims; i++)
+                    {
+                        cdimnum[i] = metaData.dimensions[i] / metaData.chunkdims[i];
+                        cdimnum[i + metaData.ndims] = metaData.chunkdims[i];
+                    }
+
+                    /* Build Size of Each Chunk per Flattened Dimension */
+                    uint64_t cdimsizes[FLAT_NDIMS];
+                    cdimsizes[0] = metaData.chunkdims[0] * metaData.typesize; // number of chunk rows
+                    for(int i = 1; i < metaData.ndims; i++)
+                    {
+                        cdimsizes[0] *= cdimnum[i]; // number of columns of chunks
+                        cdimsizes[0] *= metaData.chunkdims[i]; // number of columns in chunks
+                    }
+                    cdimsizes[1] = metaData.typesize;
+                    for(int i = 1; i < metaData.ndims; i++)
+                    {
+                        cdimsizes[1] *= metaData.chunkdims[i]; // number of columns in chunks
+                    }
+                    cdimsizes[2] = metaData.typesize;
+                    for(int i = 1; i < metaData.ndims; i++)
+                    {
+                        cdimsizes[2] *= cdimnum[i]; // number of columns of chunks
+                        cdimsizes[2] *= metaData.chunkdims[i]; // number of columns in chunks
+                    }
+
+                    /* Initialize Loop Variables */
+                    int ci = FLAT_NDIMS - 1; // chunk dimension index
+                    uint64_t dimi[MAX_NDIMS * 2]; // chunk dimension indices
+                    LocalLib::set(dimi, 0, sizeof(dimi));
+                    
+                    /* Loop Through Each Chunk */
+                    while(true)
+                    {
+
+                        /* Calculate Start Position */
+                        uint64_t start = 0;
+                        for(int i = 0; i < FLAT_NDIMS; i++)
+                        {
+                            start += dimi[i] * cdimsizes[i];
+                        }
+
+                        /* Copy Into New Buffer */
+                        for(uint64_t k = 0; k < cdimsizes[1]; k++)
+                        {
+                            fbuf[start + k] = buffer[bi++];
+                        }
+                        
+                        /* Update Indices */
+                        dimi[ci]++;
+                        while(dimi[ci] == cdimnum[ci])
+                        {
+                            dimi[ci--] = 0;
+                            if(ci < 0) break;
+                            else dimi[ci]++;
+                        }
+                        
+                        /* Check Exit Condition */
+                        if(ci < 0) break;
+                        else ci = FLAT_NDIMS - 1;
+                    }
+                    
+                    /* Replace Buffer */
+                    delete [] buffer;
+                    info->data = fbuf;
+                }
+                
                 break;
             }
 
@@ -1323,6 +1411,9 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
             print2term("Filter Mask:                                                     0x%x | 0x%x\n", (unsigned int)curr_node.filter_mask, (unsigned int)next_node.filter_mask);
             print2term("Chunk Key:                                                       %lu | %lu\n", (unsigned long)child_key1, (unsigned long)child_key2);
             print2term("Data Key:                                                        %lu | %lu\n", (unsigned long)data_key1, (unsigned long)data_key2);
+            print2term("Slice:                                                           ");
+            for(int s = 0; s < metaData.ndims; s++) print2term("%lu ", (unsigned long)curr_node.slice[s]);
+            print2term("\n");
             print2term("Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
         }
 
@@ -1344,6 +1435,10 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 for(int i = 0; i < metaData.ndims; i++)
                 {
                     uint64_t slice_size = curr_node.slice[i] * metaData.typesize;
+                    for(int k = 0; k < i; k++)
+                    {
+                        slice_size *= metaData.chunkdims[k];
+                    }
                     for(int j = i + 1; j < metaData.ndims; j++)
                     {
                         slice_size *= metaData.dimensions[j];
@@ -1387,6 +1482,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 /* Display Info */
                 if(verbose && H5_EXTRA_DEBUG)
                 {
+                    print2term("Chunk Offset:                                                    %ld (%ld)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
                     print2term("Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
                     print2term("Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
                 }
@@ -2476,14 +2572,13 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             metaData.address = readField(metaData.offsetsize, &pos);
 
             /* Read Dimensions */
-            uint64_t chunk_dim[MAX_NDIMS];
             if(chunk_num_dim > 0)
             {
                 metaData.chunkelements = 1;
                 for(int d = 0; d < chunk_num_dim; d++)
                 {
-                    chunk_dim[d] = (uint32_t)readField(4, &pos);
-                    metaData.chunkelements *= chunk_dim[d];
+                    metaData.chunkdims[d] = (uint32_t)readField(4, &pos);
+                    metaData.chunkelements *= metaData.chunkdims[d];
                 }
             }
 
@@ -2497,7 +2592,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 print2term("Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
                 for(int d = 0; d < chunk_num_dim; d++)
                 {
-                    print2term("Chunk Dimension %d:                                               %d\n", d, (int)chunk_dim[d]);
+                    print2term("Chunk Dimension %d:                                               %d\n", d, (int)metaData.chunkdims[d]);
                 }
             }
 

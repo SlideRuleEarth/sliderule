@@ -1,32 +1,31 @@
 local runner = require("test_executive")
 local console = require("console")
+local td = runner.rootdir(arg[0]) .. "../tests"
 
-asset = core.asset("local", "file", "/data/ATLAS", "empty.index")
+asset = core.asset("local", "file", td, "empty.index")
 
 -- Unit Test --
 
 print('\n------------------\nTest01: File\n------------------')
 
-f1 = h5.file(asset, "ATL03_20200304065203_10470605_003_01.h5")
-runner.check(f1:dir(2, "gt2l"), "failed to traverse hdf5 file")
+f1 = h5.file(asset, "h5ex_d_gzip.h5")
+--runner.check(f1:dir(1, "/DS1"), "failed to traverse hdf5 file")
 
 rsps1 = msg.subscribe("h5testq")
-f1:read({{dataset="ancillary_data/atlas_sdp_gps_epoch", valtype=core.REAL}}, "h5testq")
+f1:read({{dataset="DS1", col=2}}, "h5testq")
 recdata = rsps1:recvrecord(3000)
-data = string.char( recdata:getvalue("data[0]"),
-                    recdata:getvalue("data[1]"),
-                    recdata:getvalue("data[2]"),
-                    recdata:getvalue("data[3]"),
-                    recdata:getvalue("data[4]"),
-                    recdata:getvalue("data[5]"),
-                    recdata:getvalue("data[6]"),
-                    recdata:getvalue("data[7]") )
-epoch = string.unpack("d", data)
-runner.check(epoch == 1198800018.0, "failed to read correct epoch")
+data0 = string.unpack("i", string.char(recdata:getvalue("data[0]"), recdata:getvalue("data[1]"), recdata:getvalue("data[2]"), recdata:getvalue("data[3]")))
+data1 = string.unpack("i", string.char(recdata:getvalue("data[4]"), recdata:getvalue("data[5]"), recdata:getvalue("data[6]"), recdata:getvalue("data[7]")))
+data2 = string.unpack("i", string.char(recdata:getvalue("data[8]"), recdata:getvalue("data[9]"), recdata:getvalue("data[10]"), recdata:getvalue("data[11]")))
+data3 = string.unpack("i", string.char(recdata:getvalue("data[12]"), recdata:getvalue("data[13]"), recdata:getvalue("data[14]"), recdata:getvalue("data[15]")))
+
+
+print("Data", data0, data1, data2, data3)
+--[[
+--runner.check(epoch == 1198800018.0, "failed to read correct epoch")
 
 rsps1:destroy()
 f1:destroy()
-
 
 print('\n------------------\nTest02: Read Dataset\n------------------')
 
@@ -91,7 +90,7 @@ end
 
 f:close()
 os.remove(segment_file)
-
+--]]
 -- Report Results --
 
 runner.report()

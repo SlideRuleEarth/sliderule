@@ -118,6 +118,7 @@ class H5FileBuffer
 
         static const long ALL_ROWS      = -1;
         static const int MAX_NDIMS      = 2;
+        static const int FLAT_NDIMS     = 3;
 
         /*--------------------------------------------------------------------
         * Typedefs
@@ -310,6 +311,7 @@ class H5FileBuffer
             int                     lengthsize; // size of "length" fields in h5 files
             uint64_t                dimensions[MAX_NDIMS];
             uint64_t                chunkelements; // number of data elements per chunk
+            uint64_t                chunkdims[MAX_NDIMS]; // dimension of each chunk
             uint64_t                address;
             int64_t                 size;
         } meta_entry_t;
