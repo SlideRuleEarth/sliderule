@@ -16,9 +16,11 @@ PYTHONCFG += -DUSE_H5_PACKAGE=ON
 PYTHONCFG += -DUSE_AWS_PACKAGE=ON
 PYTHONCFG += -DUSE_LEGACY_PACKAGE=ON
 PYTHONCFG += -DUSE_CCSDS_PACKAGE=ON
+PYTHONCFG += -DUSE_GEOTIFF_PACKAGE=ON
 PYTHONCFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
 PYTHONCFG += -DH5CORO_THREAD_POOL_SIZE=0
 PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
+PYTHONCFG += -DSHARED_LIBRARY=ON
 
 all: default-build
 
@@ -37,7 +39,7 @@ development-config: prep
 
 # python bindings
 python-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(PYTHONCFG) $(ROOT)
+	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
 
 # shared library libsliderule.so
 library-config: prep

@@ -233,6 +233,7 @@ if(${PYTHON_BINDINGS})
     pybind11_add_module(srpybin
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyH5Coro.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyLua.cpp
+        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyPlugin.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyCredentialStore.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/pyS3Cache.cpp
         ${PROJECT_SOURCE_DIR}/targets/binding-python/init.cpp)

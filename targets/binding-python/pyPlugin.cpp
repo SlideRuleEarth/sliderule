@@ -34,10 +34,11 @@
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <dlfcn.h>
 #include "StringLib.h"
-#include "TimeLib.h"
-#include "CredentialStore.h"
-#include "pyCredentialStore.h"
+#include "pyPlugin.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -46,62 +47,53 @@
 namespace py = pybind11;
 
 /******************************************************************************
- * pyCredentialStore Class
+ * TYPEDEFS
+ ******************************************************************************/
+
+typedef void (*init_f) (void);
+
+/******************************************************************************
+ * pyPlugin Class
  ******************************************************************************/
 
 /*--------------------------------------------------------------------
  * Constructor
  *--------------------------------------------------------------------*/
-pyCredentialStore::pyCredentialStore (const std::string &_asset)
+pyPlugin::pyPlugin (const std::string &_plugin)
 {
-    asset = StringLib::duplicate(_asset.c_str());
+    /* Get Plugin Name */
+    char plugin_buf[MAX_STR_SIZE];
+    StringLib::copy(plugin_buf, _plugin.c_str(), _plugin.length());
+    char* plugin_name = StringLib::find(plugin_buf, '/', false) + 1;
+    char* plugin_ext = StringLib::find(plugin_buf, '.', true);
+    *plugin_ext = '\0';
+
+    /* Load Plugin */
+    void* plugin = dlopen(_plugin.c_str(), RTLD_NOW);
+    if(plugin)
+    {
+        /* Call plugin initialization function */
+        char init_func[MAX_STR_SIZE];
+        StringLib::format(init_func, MAX_STR_SIZE, "init%s", plugin_name);
+        init_f init = (init_f)dlsym(plugin, init_func);
+        if(init)
+        {
+            init();
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, "cannot find initialization function %s: %s\n", init_func, dlerror());
+        }
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, "cannot load %s: %s\n", plugin_name, dlerror());
+    }
 }
 
 /*--------------------------------------------------------------------
  * Destructor
  *--------------------------------------------------------------------*/
-pyCredentialStore::~pyCredentialStore (void)
+pyPlugin::~pyPlugin (void)
 {
-    if(asset) delete [] asset;
-}
-
-/*--------------------------------------------------------------------
- * provide
- *--------------------------------------------------------------------*/
-bool pyCredentialStore::provide (const py::dict& credentials)
-{
-    PyObject* accessKeyId = PyUnicode_AsEncodedString(PyObject_Repr(PyDict_GetItem(credentials.ptr(), py::str("accessKeyId").ptr())), "utf-8", "~E~");
-    PyObject* secretAccessKey = PyUnicode_AsEncodedString(PyObject_Repr(PyDict_GetItem(credentials.ptr(), py::str("secretAccessKey").ptr())), "utf-8", "~E~");
-    PyObject* sessionToken = PyUnicode_AsEncodedString(PyObject_Repr(PyDict_GetItem(credentials.ptr(), py::str("sessionToken").ptr())), "utf-8", "~E~");
-    PyObject* expiration = PyUnicode_AsEncodedString(PyObject_Repr(PyDict_GetItem(credentials.ptr(), py::str("expiration").ptr())), "utf-8", "~E~");
-   
-    CredentialStore::Credential credential;
-    credential.provided = true;
-    credential.accessKeyId = StringLib::duplicate(PyBytes_AS_STRING(accessKeyId));
-    credential.secretAccessKey = StringLib::duplicate(PyBytes_AS_STRING(secretAccessKey));
-    credential.sessionToken = StringLib::duplicate(PyBytes_AS_STRING(sessionToken));
-    credential.expiration = StringLib::duplicate(PyBytes_AS_STRING(expiration));
-    credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
-
-    return CredentialStore::put(asset, credential); 
-}
-
-/*--------------------------------------------------------------------
- * provide
- *--------------------------------------------------------------------*/
-py::dict pyCredentialStore::retrieve (void)
-{
-    py::dict results;
-    
-    CredentialStore::Credential credential = CredentialStore::get(asset);
-    
-    if(credential.provided)
-    {
-        results[py::str("accessKeyId")] = credential.accessKeyId;
-        results[py::str("secretAccessKey")] = credential.secretAccessKey;
-        results[py::str("sessionToken")] = credential.sessionToken;
-        results[py::str("expiration")] = credential.expiration;
-    }
-    
-    return results;
 }

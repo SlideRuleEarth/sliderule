@@ -29,15 +29,14 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __py_credentialstore__
-#define __py_credentialstore__
+#ifndef __py_plugin__
+#define __py_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
-#include "CredentialStore.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -49,17 +48,11 @@ namespace py = pybind11;
  * pyS3Cache Class
  ******************************************************************************/
 
-class pyCredentialStore
+class pyPlugin
 {
     public:
-                    pyCredentialStore   (const std::string &_asset);
-                    ~pyCredentialStore  (void);
-        
-        bool        provide             (const py::dict& credentials);
-        py::dict    retrieve            (void);
-        
-    private:
-        const char* asset;
+        pyPlugin    (const std::string &_plugin);
+        ~pyPlugin   (void);
 };
 
-#endif /* __py_credentialstore__ */
+#endif /* __py_plugin__ */

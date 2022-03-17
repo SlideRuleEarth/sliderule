@@ -60,6 +60,7 @@
 #include "pyLua.h"
 #include "pyS3Cache.h"
 #include "pyCredentialStore.h"
+#include "pyPlugin.h"
 
 /******************************************************************************
  * Namespaces
@@ -133,13 +134,16 @@ PYBIND11_MODULE(srpybin, m)
         .def("provide", &pyCredentialStore::provide, "provide credentials for an asset",
             py::arg("credential"))
         
-        .def("retrieve", &pyCredentialStore::retrieve, "retrieve credentials for an asset",
-            py::arg("asset"));
+        .def("retrieve", &pyCredentialStore::retrieve, "retrieve credentials for an asset");
 
     py::class_<pyLua>(m, "lua")
 
         .def(py::init<const std::string &,      // scriptpath
                       const std::string &>());  // scriptarg
+
+    py::class_<pyPlugin>(m, "plugin")
+
+        .def(py::init<const std::string &>());  // full path to plugin
 
     m.attr("all") = (long)-1;
 }
