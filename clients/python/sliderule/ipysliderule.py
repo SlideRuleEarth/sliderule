@@ -98,6 +98,24 @@ class widgets:
             style=self.style,
         )
 
+        # multiple select for photon classification
+        class_options = ['atl03','quality','atl08','yapc']
+        self.classification = ipywidgets.SelectMultiple(
+            options=class_options,
+            value=['atl03','atl08'],
+            description='Classification:',
+            description_tooltip=("Classification: Photon classification "
+                "\n\tatl03: surface confidence"
+                "\n\tquality: photon quality"
+                "\n\tatl08: land classification"
+                "\n\tyapc: yet another photon classifier"),
+            disabled=False,
+            style=self.style,
+        )
+
+        # watch classification widgets for changes
+        self.classification.observe(self.set_classification)
+
         # dropdown menu for setting surface type
         # 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
         surface_type_options = [
@@ -117,6 +135,158 @@ class widgets:
             disabled=False,
             style=self.style,
         )
+        self.surface_type.layout.display = 'inline-flex'
+
+        # slider for setting confidence level for PE selection
+        # eventually would be good to switch this to a IntRangeSlider with value=[0,4]
+        self.confidence = ipywidgets.IntSlider(
+            value=4,
+            min=0,
+            max=4,
+            step=1,
+            description='Confidence:',
+            description_tooltip=("Confidence: ATL03 confidence level for surface "
+                "type\n\t0: background\n\t1: within 10m\n\t2: low\n\t3: medium\n\t"
+                "4: high"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.confidence.layout.display = 'inline-flex'
+
+        # selection for land surface classifications
+        land_options = [
+            'atl08_noise',
+            'atl08_ground',
+            'atl08_canopy',
+            'atl08_top_of_canopy',
+            'atl08_unclassified'
+        ]
+        self.land_class = ipywidgets.SelectMultiple(
+            options=land_options,
+            description='Land Class:',
+            description_tooltip=("Land Class: ATL08 land classification "
+                "for photons\n\t0: noise\n\t1: ground\n\t2: canopy\n\t"
+                "3: top of canopy\n\t4: unclassified"),
+            disabled=False,
+            style=self.style,
+        )
+        self.land_class.layout.display = 'inline-flex'
+
+        # selection for ATL03 quality flags
+        quality_options = [
+            'atl03_nominal',
+            'atl03_possible_afterpulse',
+            'atl03_possible_impulse_response',
+            'atl03_possible_tep'
+        ]
+        self.quality = ipywidgets.SelectMultiple(
+            value=['atl03_nominal'],
+            options=quality_options,
+            description='Quality:',
+            description_tooltip=("Quality: ATL03 photon quality "
+                "classification\n\t0: nominal\n\t"
+                "1: possible afterpulse\n\t"
+                "2: possible impulse response\n\t"
+                "3: possible TEP"),
+            disabled=False,
+            style=self.style,
+        )
+        self.quality.layout.display = 'none'
+
+        # slider for setting for YAPC kNN
+        self.yapc_knn = ipywidgets.IntSlider(
+            value=0,
+            min=0,
+            max=20,
+            step=1,
+            description='YAPC kNN:',
+            description_tooltip=("YAPC kNN: number of nearest "
+                "neighbors to use\n\t0: automatic selection "
+                "of the number of neighbors"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.yapc_knn.layout.display = 'none'
+
+        # slider for setting for YAPC height window
+        self.yapc_win_h = ipywidgets.FloatSlider(
+            value=3.0,
+            min=0.1,
+            max=100,
+            step=0.1,
+            description='YAPC h window:',
+            description_tooltip=("YAPC h window: window height "
+                "used to filter the nearest neighbors"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='0.1f',
+            style=self.style,
+        )
+        self.yapc_win_h.layout.display = 'none'
+
+        # slider for setting for YAPC along-track distance window
+        self.yapc_win_x = ipywidgets.FloatSlider(
+            value=21.0,
+            min=0.1,
+            max=100,
+            step=0.1,
+            description='YAPC x window:',
+            description_tooltip=("YAPC x window: window width "
+                "used to filter the nearest neighbors"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='0.1f',
+            style=self.style,
+        )
+        self.yapc_win_x.layout.display = 'none'
+
+        # slider for setting for YAPC minimum photon events
+        self.yapc_min_ph = ipywidgets.IntSlider(
+            value=4,
+            min=0,
+            max=20,
+            step=1,
+            description='YAPC Minimum PE:',
+            description_tooltip=("YAPC Minimum PE: minimum number of "
+                "photons needed in an extent to calculate a YAPC score"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.yapc_min_ph.layout.display = 'none'
+
+        # slider for setting for YAPC weights for fit
+        self.yapc_weight = ipywidgets.IntSlider(
+            value=80,
+            min=0,
+            max=255,
+            step=1,
+            description='YAPC Weight:',
+            description_tooltip=("YAPC Weight: minimum YAPC classification "
+                "score of a photon to be used in the processing request"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.yapc_weight.layout.display = 'none'
 
         # slider for setting length of ATL06-SR segment in meters
         self.length = ipywidgets.IntSlider(
@@ -142,149 +312,6 @@ class widgets:
             step=5,
             description='Step:',
             description_tooltip="Step: step distance for successive ATL06 segments in meters",
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # slider for setting confidence level for PE selection
-        # eventually would be good to switch this to a IntRangeSlider with value=[0,4]
-        self.confidence = ipywidgets.IntSlider(
-            value=4,
-            min=0,
-            max=4,
-            step=1,
-            description='Confidence:',
-            description_tooltip=("Confidence: ATL03 confidence level for surface "
-                "type\n\t0: background\n\t1: within 10m\n\t2: low\n\t3: medium\n\t"
-                "4: high"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # selection for land surface classifications
-        land_options = [
-            'atl08_noise',
-            'atl08_ground',
-            'atl08_canopy',
-            'atl08_top_of_canopy',
-            'atl08_unclassified'
-        ]
-        self.land_class = ipywidgets.SelectMultiple(
-            options=land_options,
-            description='Land Class:',
-            description_tooltip=("Land Class: ATL08 land classification "
-                "for photons\n\t0: noise\n\t1: ground\n\t2: canopy\n\t"
-                "3: top of canopy\n\t4: unclassified"),
-            disabled=False,
-            style=self.style,
-        )
-
-        # selection for ATL03 quality flags
-        quality_options = [
-            'atl03_nominal',
-            'atl03_possible_afterpulse',
-            'atl03_possible_impulse_response',
-            'atl03_possible_tep'
-        ]
-        self.quality = ipywidgets.SelectMultiple(
-            value=['atl03_nominal'],
-            options=quality_options,
-            description='Quality:',
-            description_tooltip=("Quality: ATL03 photon quality "
-                "classification\n\t0: nominal\n\t"
-                "1: possible afterpulse\n\t"
-                "2: possible impulse response\n\t"
-                "3: possible TEP"),
-            disabled=False,
-            style=self.style,
-        )
-
-        # slider for setting for YAPC kNN
-        self.yapc_knn = ipywidgets.IntSlider(
-            value=0,
-            min=0,
-            max=20,
-            step=1,
-            description='YAPC kNN:',
-            description_tooltip=("YAPC kNN: number of nearest "
-                "neighbors to use\n\t0: automatic selection "
-                "of the number of neighbors"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC height window
-        self.yapc_win_h = ipywidgets.FloatSlider(
-            value=3.0,
-            min=0.1,
-            max=100,
-            step=0.1,
-            description='YAPC h window:',
-            description_tooltip=("YAPC h window: window height "
-                "used to filter the nearest neighbors"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='0.1f',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC along-track distance window
-        self.yapc_win_x = ipywidgets.FloatSlider(
-            value=21.0,
-            min=0.1,
-            max=100,
-            step=0.1,
-            description='YAPC x window:',
-            description_tooltip=("YAPC x window: window width "
-                "used to filter the nearest neighbors"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='0.1f',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC minimum photon events
-        self.yapc_min_ph = ipywidgets.IntSlider(
-            value=4,
-            min=0,
-            max=20,
-            step=1,
-            description='YAPC Minimum PE:',
-            description_tooltip=("YAPC Minimum PE: minimum number of "
-                "photons needed in an extent to calculate a YAPC score"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC weights for fit
-        self.yapc_weight = ipywidgets.IntSlider(
-            value=80,
-            min=0,
-            max=255,
-            step=1,
-            description='YAPC Weight:',
-            description_tooltip=("YAPC Weight: minimum YAPC classification "
-                "score of a photon to be used in the processing request"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -469,6 +496,17 @@ class widgets:
         self.projection.observe(self.set_layers)
 
         # single plot widgets
+        self.plot_kind = ipywidgets.Dropdown(
+            options=['cycles','scatter'],
+            value='scatter',
+            description='Plot Kind:',
+            description_tooltip=("Plot Kind: single track plot kind"
+                "\n\tcycles: along-track plot showing all available cycles"
+                "\n\tscatter: plot showing a single cycle possibly with ATL03"),
+            disabled=False,
+            style=self.style,
+        )
+
         # selection for reference ground track
         self.rgt = ipywidgets.Text(
             value='0',
@@ -494,6 +532,9 @@ class widgets:
             description_tooltip="Track: Ground Track to plot",
             disabled=False
         )
+
+        # watch plot kind widgets for changes
+        self.plot_kind.observe(self.set_plot_kind)
 
         # button and label for output file selection
         self.file = copy.copy(self.filename)
@@ -536,6 +577,41 @@ class widgets:
         else:
             self.fileloader = copy.copy(self.loadlabel)
 
+    # function for setting photon classifications
+    def set_classification(self, sender):
+        """function for setting photon classifications
+        """
+        # atl03 photon confidence level
+        if ('atl03' in self.classification.value):
+            self.surface_type.layout.display = 'inline-flex'
+            self.confidence.layout.display = 'inline-flex'
+        else:
+            self.surface_type.layout.display = 'none'
+            self.confidence.layout.display = 'none'
+        # atl03 photon quality flags
+        if ('quality' in self.classification.value):
+            self.quality.layout.display = 'inline-flex'
+        else:
+            self.quality.layout.display = 'none'
+        # atl08 land classification flags
+        if ('atl08' in self.classification.value):
+            self.land_class.layout.display = 'inline-flex'
+        else:
+            self.land_class.layout.display = 'none'
+        # yet another photon classifier (YAPC)
+        if ('yapc' in self.classification.value):
+            self.yapc_knn.layout.display = 'inline-flex'
+            self.yapc_win_h.layout.display = 'inline-flex'
+            self.yapc_win_x.layout.display = 'inline-flex'
+            self.yapc_min_ph.layout.display = 'inline-flex'
+            self.yapc_weight.layout.display = 'inline-flex'
+        else:
+            self.yapc_knn.layout.display = 'none'
+            self.yapc_win_h.layout.display = 'none'
+            self.yapc_win_x.layout.display = 'none'
+            self.yapc_min_ph.layout.display = 'none'
+            self.yapc_weight.layout.display = 'none'
+
     # function for setting available map layers
     def set_layers(self, sender):
         """function for updating available map layers
@@ -548,6 +624,16 @@ class widgets:
             layer_options = ['LIMA','MOA','RAMP']
         self.layers.options=layer_options
         self.layers.value=[]
+
+    # function for setting single track plot kind
+    def set_plot_kind(self, sender):
+        """function for setting single track plot kind
+        """
+        # atl03 photon confidence level
+        if (self.plot_kind.value == 'scatter'):
+            self.cycle.layout.display = 'inline-flex'
+        elif (self.plot_kind.value == 'cycles'):
+            self.cycle.layout.display = 'none'
 
     def saveas_file(self, b):
         """function for file save
@@ -636,6 +722,49 @@ class widgets:
         else:
             return self
 
+    # build sliderule parameters using latest values from widget
+    def build(self, **parms):
+        # default parameters for all cases
+        # length of ATL06-SR segment in meters
+        parms["len"] = self.length.value
+        # step distance for successive ATL06-SR segments in meters
+        parms["res"] = self.step.value
+        # maximum iterations, not including initial least-squares-fit selection
+        parms["maxi"] = self.iteration.value
+        # minimum along track spread
+        parms["ats"] = self.spread.value
+        # minimum PE count
+        parms["cnt"] = self.count.value
+        # minimum height of PE window in meters
+        parms["H_min_win"] = self.window.value
+        # maximum robust dispersion in meters
+        parms["sigma_r_max"] = self.sigma.value
+        # photon classification
+        # atl03 photon confidence level
+        if ('atl03' in self.classification.value):
+            # surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
+            parms["srt"] = self.surface_type.index
+            # confidence level for PE selection
+            parms["cnf"] = self.confidence.value
+        # atl03 photon quality flags
+        if ('quality' in self.classification.value):
+            # confidence level for PE selection
+            parms["quality_ph"] = list(self.quality.value)
+        # atl08 land classification flags
+        if ('atl08' in self.classification.value):
+            # ATL08 land surface classifications
+            parms["atl08_class"] = list(self.land_class.value)
+        # yet another photon classifier (YAPC)
+        if ('yapc' in self.classification.value):
+            parms["yapc"] = {}
+            parms["yapc"]["score"] = self.yapc_weight.value
+            parms["yapc"]["knn"] = self.yapc_knn.value
+            parms["yapc"]["min_ph"] = self.yapc_min_ph.value
+            parms["yapc"]["win_h"] = self.yapc_win_h.value
+            parms["yapc"]["win_x"] = self.yapc_win_x.value
+        # return the parameter dictionary
+        return parms
+
     @property
     def RGT(self):
         """extract and verify Reference Ground Tracks (RGTs)
@@ -712,7 +841,7 @@ class widgets:
         # list of legend elements
         legend_elements = []
         # different plot types
-        # cycle: along-track plot showing all available cycles
+        # cycles: along-track plot showing all available cycles
         # scatter: plot showing a single cycle possibly with ATL03
         if (kwargs['kind'] == 'cycles'):
             # for each unique cycles
