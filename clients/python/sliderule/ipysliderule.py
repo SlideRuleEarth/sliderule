@@ -90,8 +90,8 @@ class widgets:
 
         # dropdown menu for setting data release
         self.release = ipywidgets.Dropdown(
-            options=['003', '004'],
-            value='004',
+            options=['003', '004','005'],
+            value='005',
             description='Release:',
             description_tooltip="Release: ICESat-2 data release",
             disabled=False,
