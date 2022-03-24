@@ -141,7 +141,7 @@ class widgets:
         # eventually would be good to switch this to a IntRangeSlider with value=[0,4]
         self.confidence = ipywidgets.IntSlider(
             value=4,
-            min=0,
+            min=-2,
             max=4,
             step=1,
             description='Confidence:',
@@ -482,7 +482,7 @@ class widgets:
         )
 
         # selection for adding layers to map
-        layer_options = ['3DEP','ASTER GDEM','ESRI imagery','RGI']
+        layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS']
         self.layers = ipywidgets.SelectMultiple(
             options=layer_options,
             description='Add Layers:',
@@ -585,9 +585,11 @@ class widgets:
         if ('atl03' in self.classification.value):
             self.surface_type.layout.display = 'inline-flex'
             self.confidence.layout.display = 'inline-flex'
+            self.confidence.layout.value = 4
         else:
             self.surface_type.layout.display = 'none'
             self.confidence.layout.display = 'none'
+            self.confidence.layout.value = -2
         # atl03 photon quality flags
         if ('quality' in self.classification.value):
             self.quality.layout.display = 'inline-flex'
@@ -617,7 +619,7 @@ class widgets:
         """function for updating available map layers
         """
         if (self.projection.value == 'Global'):
-            layer_options = ['3DEP','ASTER GDEM','ESRI imagery','RGI']
+            layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS']
         elif (self.projection.value == 'North'):
             layer_options = ['ESRI imagery','ArcticDEM']
         elif (self.projection.value == 'South'):
@@ -764,6 +766,60 @@ class widgets:
             parms["yapc"]["win_x"] = self.yapc_win_x.value
         # return the parameter dictionary
         return parms
+
+    # update values from widget using sliderule parameters dictionary
+    def set_values(self, parms):
+        # default parameters for all cases
+        # length of ATL06-SR segment in meters
+        if ('len' in parms.keys()):
+            self.length.value = parms["len"]
+        # step distance for successive ATL06-SR segments in meters
+        if ('res' in parms.keys()):
+            self.step.value = parms["res"]
+        # maximum iterations, not including initial least-squares-fit selection
+        if ('maxi' in parms.keys()):
+            self.iteration.value = parms["maxi"]
+        # minimum along track spread
+        if ('ats' in parms.keys()):
+            self.spread.value = parms["ats"]
+        # minimum PE count
+        if ('cnt' in parms.keys()):
+            self.count.value = parms["cnt"]
+        # minimum height of PE window in meters
+        if ('H_min_win' in parms.keys()):
+            self.window.value = parms["H_min_win"]
+        # maximum robust dispersion in meters
+        if ('sigma_r_max' in parms.keys()):
+            self.sigma.value = parms["sigma_r_max"]
+        # photon classification
+        # atl03 photon confidence level
+        # surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
+        if ('srt' in parms.keys()):
+            self.surface_type.index = parms["srt"]
+        # confidence level for PE selection
+        if ('cnf' in parms.keys()):
+            self.confidence.value = parms["cnf"]
+        # atl03 photon quality flags
+        if ('quality_ph' in parms.keys()):
+            # confidence level for PE selection
+            self.quality.value = parms["quality_ph"]
+        # atl08 land classification flags
+        if ('atl08_class' in parms.keys()):
+            # ATL08 land surface classifications
+            self.land_class.value = parms["atl08_class"]
+        # yet another photon classifier (YAPC)
+        if ('yapc' in parms.keys()) and ('score' in parms['yapc'].keys()):
+            self.yapc_weight.value = parms["yapc"]["score"]
+        if ('yapc' in parms.keys()) and ('knn' in parms['yapc'].keys()):
+            self.yapc_knn.value = parms["yapc"]["knn"]
+        if ('yapc' in parms.keys()) and ('min_ph' in parms['yapc'].keys()):
+            self.yapc_min_ph.value = parms["yapc"]["min_ph"]
+        if ('yapc' in parms.keys()) and ('win_h' in parms['yapc'].keys()):
+            self.yapc_win_h.value = parms["yapc"]["win_h"]
+        if ('yapc' in parms.keys()) and ('win_x' in parms['yapc'].keys()):
+            self.yapc_win_x.value = parms["yapc"]["win_x"]
+        # update values
+        return self
 
     @property
     def RGT(self):
@@ -1134,6 +1190,7 @@ providers = {
 layers = Bunch(
     GLIMS = Bunch(
         Glaciers = ipyleaflet.WMSLayer(
+            name="GLIMS_GLACIERS",
             attribution=glims_attribution,
             layers='GLIMS_GLACIERS',
             format='image/png',
@@ -1142,12 +1199,14 @@ layers = Bunch(
     ),
     USGS = Bunch(
         Elevation = ipyleaflet.WMSLayer(
+            name="3DEPElevation",
             attribution=usgs_3dep_attribution,
             layers="3DEPElevation:Hillshade Gray",
             format='image/png',
             url='https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer?',
         ),
         LIMA = ipyleaflet.WMSLayer(
+            name="LIMA",
             attribution=usgs_antarctic_attribution,
             layers="LIMA_Full_1km",
             format='image/png',
@@ -1156,6 +1215,7 @@ layers = Bunch(
             crs=projections.EPSG3031.LIMA
         ),
         MOA = ipyleaflet.WMSLayer(
+            name="MOA_125_HP1_090_230",
             attribution=usgs_antarctic_attribution,
             layers="MOA_125_HP1_090_230",
             format='image/png',
@@ -1164,6 +1224,7 @@ layers = Bunch(
             crs=projections.EPSG3031.MOA
         ),
         RAMP = ipyleaflet.WMSLayer(
+            name="Radarsat_Mosaic",
             attribution=usgs_antarctic_attribution,
             layers="Radarsat_Mosaic",
             format='image/png',
@@ -1174,6 +1235,7 @@ layers = Bunch(
     ),
     PGC = Bunch(
         ArcticDEM = ipyleaflet.WMSLayer(
+            name="ArcticDEM",
             attribution=pgc_attribution,
             layers="0",
             format='image/png',
@@ -1206,9 +1268,10 @@ class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
         kwargs.setdefault('attribution',False)
-        kwargs.setdefault('zoom',False)
-        kwargs.setdefault('scale',False)
-        kwargs.setdefault('cursor',True)
+        kwargs.setdefault('zoom_control',False)
+        kwargs.setdefault('scale_control',False)
+        kwargs.setdefault('cursor_control',True)
+        kwargs.setdefault('layer_control',True)
         kwargs.setdefault('center',(39,-108))
         kwargs.setdefault('color','green')
         # create basemap in projection
@@ -1233,28 +1296,29 @@ class leaflet:
                 basemap=basemaps.Esri.AntarcticBasemap,
                 crs=projections.EPSG3031.Basemap)
             self.crs = 'EPSG:3031'
-        # initiate layers list
-        self.layers = []
-        # initialize selected feature
-        self.selected_callback = None
+        # add control for layers
+        if kwargs['layer_control']:
+            self.layer_control = ipyleaflet.LayersControl(position='topleft')
+            self.map.add_control(self.layer_control)
+            self.layers = self.map.layers
         # add control for zoom
-        if kwargs['zoom']:
+        if kwargs['zoom_control']:
             zoom_slider = ipywidgets.IntSlider(description='Zoom level:',
                 min=self.map.min_zoom, max=self.map.max_zoom, value=self.map.zoom)
             ipywidgets.jslink((zoom_slider, 'value'), (self.map, 'zoom'))
             zoom_control = ipyleaflet.WidgetControl(widget=zoom_slider,
                 position='topright')
             self.map.add_control(zoom_control)
-        # add scale bar
-        if kwargs['scale']:
+        # add control for spatial scale bar
+        if kwargs['scale_control']:
             scale_control = ipyleaflet.ScaleControl(position='topright')
             self.map.add_control(scale_control)
-        # add label for cursor position
-        if kwargs['cursor']:
+        # add control for cursor position
+        if kwargs['cursor_control']:
             self.cursor = ipywidgets.Label()
-            label_control = ipyleaflet.WidgetControl(widget=self.cursor,
+            cursor_control = ipyleaflet.WidgetControl(widget=self.cursor,
                 position='bottomleft')
-            self.map.add_control(label_control)
+            self.map.add_control(cursor_control)
             # keep track of cursor position
             self.map.on_interaction(self.handle_interaction)
         # add control for drawing polygons or bounding boxes
@@ -1269,12 +1333,36 @@ class leaflet:
         self.regions = []
         draw_control.on_draw(self.handle_draw)
         self.map.add_control(draw_control)
-        # initiate data and colorbars
+        # initialize data and colorbars
         self.geojson = None
         self.tooltip = None
-        self.hover_control = None
         self.fields = []
         self.colorbar = None
+        # initialize hover control
+        self.hover_control = None
+        # initialize selected feature
+        self.selected_callback = None
+
+    # add sliderule regions to map
+    def add_region(self, regions, **kwargs):
+        kwargs.setdefault('color','green')
+        kwargs.setdefault('fillOpacity',0.8)
+        kwargs.setdefault('weight',4)
+        # for each sliderule region
+        for region in regions:
+            locations = [(p['lat'],p['lon']) for p in region]
+            polygon = ipyleaflet.Polygon(
+                locations=locations,
+                color=kwargs['color'],
+                fill_color=kwargs['color'],
+                opacity=kwargs['fillOpacity'],
+                weight=kwargs['weight'],
+            )
+            # add region to map
+            self.map.add_layer(polygon)
+            # add to regions list
+            self.regions.append(region)
+        return self
 
     # add map layers
     def add_layer(self, **kwargs):
@@ -1290,7 +1378,7 @@ class leaflet:
                     self.map.add_layer(layer)
                 elif isinstance(layer,dict):
                     self.map.add_layer(_load_dict(layer))
-                elif isinstance(layer,str) and (layer == 'RGI'):
+                elif isinstance(layer,str) and (layer == 'GLIMS'):
                     self.map.add_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.add_layer(layers.USGS.Elevation)
@@ -1308,8 +1396,6 @@ class leaflet:
                     self.map.add_layer(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.add_layer(layers.USGS.RAMP)
-                # try to add to layers attribute
-                self.layers.append(layer)
             except ipyleaflet.LayerException as e:
                 logging.info(f"Layer {layer} already on map")
                 pass
@@ -1328,7 +1414,7 @@ class leaflet:
                     self.map.remove_layer(layer)
                 elif isinstance(layer,dict):
                     self.map.remove_layer(_load_dict(layer))
-                elif isinstance(layer,str) and (layer == 'RGI'):
+                elif isinstance(layer,str) and (layer == 'GLIMS'):
                     self.map.remove_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.remove_layer(layers.USGS.Elevation)
@@ -1346,8 +1432,6 @@ class leaflet:
                     self.map.remove_layer(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.remove_layer(layers.USGS.RAMP)
-                # try to remove fromo layers attribute
-                self.layers.remove(layer)
             except Exception as e:
                 logging.critical(f"Could not remove layer {layer}")
                 logging.error(traceback.format_exc())
