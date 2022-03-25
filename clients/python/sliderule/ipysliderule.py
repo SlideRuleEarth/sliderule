@@ -98,6 +98,20 @@ class widgets:
             style=self.style,
         )
 
+        self.start_date = ipywidgets.DatePicker(
+            value=datetime.datetime(2018,10,13,0,0,0),
+            description='Start Date',
+            description_tooltip="Start Date: Starting date for CMR queries",
+            disabled=False
+        )
+
+        self.end_date = ipywidgets.DatePicker(
+            value=datetime.datetime.now(),
+            description='End Date',
+            description_tooltip="End Date: Ending date for CMR queries",
+            disabled=False
+        )
+
         # multiple select for photon classification
         class_options = ['atl03','quality','atl08','yapc']
         self.classification = ipywidgets.SelectMultiple(
@@ -496,6 +510,7 @@ class widgets:
         self.projection.observe(self.set_layers)
 
         # single plot widgets
+        # single plot kind
         self.plot_kind = ipywidgets.Dropdown(
             options=['cycles','scatter'],
             value='scatter',
@@ -505,6 +520,19 @@ class widgets:
                 "\n\tscatter: plot showing a single cycle possibly with ATL03"),
             disabled=False,
             style=self.style,
+        )
+
+        # single plot ATL03 classification
+        self.plot_classification = ipywidgets.Dropdown(
+            options = ["atl03", "atl08", "yapc", "none"],
+            value = "atl08",
+            description = "Classification",
+            description_tooltip=("Classification: Photon classification "
+                "\n\tatl03: surface confidence"
+                "\n\tquality: photon quality"
+                "\n\tatl08: land classification"
+                "\n\tyapc: yet another photon classifier"),
+            disabled = False,
         )
 
         # selection for reference ground track
@@ -537,7 +565,7 @@ class widgets:
         self.plot_kind.observe(self.set_plot_kind)
 
         # button and label for output file selection
-        self.file = copy.copy(self.filename)
+        self.file = copy.copy(self.atl06_filename)
         self.savebutton = ipywidgets.Button(
             description="Save As"
         )
@@ -614,6 +642,45 @@ class widgets:
             self.yapc_min_ph.layout.display = 'none'
             self.yapc_weight.layout.display = 'none'
 
+    def set_atl03_defaults(self):
+        # default photon classifications
+        class_options = ['atl03','atl08','yapc']
+        self.classification.value = class_options
+        # default ATL03 confidence
+        self.confidence.value = -2
+        # set land class options
+        land_options = [
+            'atl08_noise',
+            'atl08_ground',
+            'atl08_canopy',
+            'atl08_top_of_canopy',
+            'atl08_unclassified'
+        ]
+        self.land_class.value = land_options
+        # set default ATL03 length
+        self.length.value = 20
+        # update variable list for ATL03 variables
+        variable_list = ['atl03_cnf', 'atl08_class', 'cycle', 'delta_time',
+            'distance', 'height', 'pair', 'quality_ph', 'rgt', 'sc_orient',
+            'segment_dist', 'segment_id', 'track', 'yapc_score']
+        self.variable.options = variable_list
+        self.variable.value = 'height'
+        # set default filename
+        self.file = copy.copy(self.atl03_filename)
+        self.savelabel.value = self.file
+
+    @property
+    def time_start(self):
+        """start time in ISO format
+        """
+        return self.start_date.value.isoformat()
+
+    @property
+    def time_end(self):
+        """end time in ISO format
+        """
+        return self.end_date.value.isoformat()
+
     # function for setting available map layers
     def set_layers(self, sender):
         """function for updating available map layers
@@ -680,7 +747,16 @@ class widgets:
         self.file = self.loadlabel.value
 
     @property
-    def filename(self):
+    def atl03_filename(self):
+        """default input and output file string
+        """
+        # get sliderule submission time
+        now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        args = (now, self.release.value)
+        return "ATL03-SR_{0}_{1}.h5".format(*args)
+
+    @property
+    def atl06_filename(self):
         """default input and output file string
         """
         # get sliderule submission time
@@ -711,7 +787,22 @@ class widgets:
         return self.cmap.value + self._r
 
     # click handler for individual photons
-    def click_handler(self, feature):
+    def atl03_click_handler(self, feature):
+        """handler for leaflet map clicks
+        """
+        GT = {"10":"gt1l","20":"gt1r","30":"gt2l","40":"gt2r","50":"gt3l","60":"gt3r"}
+        try:
+            self.rgt.value = str(feature["properties"]["rgt"])
+            self.cycle.value = str(feature["properties"]["cycle"])
+            gt = 20*(feature["properties"]["track"]-1) + 10*feature["properties"]["pair"]
+            self.ground_track.value = GT[str(gt)]
+        except Exception as e:
+            return
+        else:
+            return self
+
+    # click handler for individual segments
+    def atl06_click_handler(self, feature):
         """handler for leaflet map clicks
         """
         GT = {"10":"gt1l","20":"gt1r","30":"gt2l","40":"gt2r","50":"gt3l","60":"gt3r"}
@@ -724,8 +815,40 @@ class widgets:
         else:
             return self
 
-    # build sliderule parameters using latest values from widget
-    def build(self, **parms):
+    # build sliderule ATL03 parameters using latest values from widget
+    def build_atl03(self, **parms):
+        # classification and checks
+        # still return photon segments that fail checks
+        parms["pass_invalid"] = True
+        # default parameters for all cases
+        parms["len"] = self.length.value
+        # photon classification
+        # atl03 photon confidence level
+        if ('atl03' in self.classification.value):
+            # surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
+            parms["srt"] = self.surface_type.index
+            # confidence level for PE selection
+            parms["cnf"] = self.confidence.value
+        # atl03 photon quality flags
+        if ('quality' in self.classification.value):
+            # confidence level for PE selection
+            parms["quality_ph"] = list(self.quality.value)
+        # atl08 land classification flags
+        if ('atl08' in self.classification.value):
+            # ATL08 land surface classifications
+            parms["atl08_class"] = list(self.land_class.value)
+        # yet another photon classifier (YAPC)
+        if ('yapc' in self.classification.value):
+            parms["yapc"] = {}
+            parms["yapc"]["knn"] = self.yapc_knn.value
+            parms["yapc"]["min_ph"] = self.yapc_min_ph.value
+            parms["yapc"]["win_h"] = self.yapc_win_h.value
+            parms["yapc"]["win_x"] = self.yapc_win_x.value
+        # return the parameter dictionary
+        return parms
+
+    # build sliderule ATL06 parameters using latest values from widget
+    def build_atl06(self, **parms):
         # default parameters for all cases
         # length of ATL06-SR segment in meters
         parms["len"] = self.length.value
@@ -846,6 +969,20 @@ class widgets:
         return ground_track_dict[self.ground_track.value]
 
     @property
+    def PT(self):
+        """extract Pair Tracks (PTs)
+        """
+        pair_track_dict = dict(gt1l=1,gt1r=1,gt2l=2,gt2r=2,gt3l=3,gt3r=3)
+        return pair_track_dict[self.ground_track.value]
+
+    @property
+    def LR(self):
+        """extract Left-Right from Pair Tracks (PTs)
+        """
+        lr_track_dict = dict(gt1l=0,gt1r=1,gt2l=0,gt2r=1,gt3l=0,gt3r=1)
+        return lr_track_dict[self.ground_track.value]
+
+    @property
     def orbital_cycle(self):
         """extract and verify ICESat-2 orbital cycles
         """
@@ -868,7 +1005,7 @@ class widgets:
             logging.critical(f"Cycle {self.cycle.value} is outside available range")
             return "0"
 
-    def plot(self, gdf, **kwargs):
+    def plot(self, gdf=None, **kwargs):
         """Creates plots of SlideRule outputs
         """
         # default keyword arguments
@@ -920,22 +1057,33 @@ class widgets:
             ax.set_xlabel('Along-Track Distance [m]')
             ax.set_ylabel(f'SlideRule {column}')
         elif (kwargs['kind'] == 'scatter'):
+            # extract pair track parameters
+            LR = int(self.LR)
+            PT = int(self.PT)
+            # extract orbital cycle parameters
+            cycle = int(self.orbital_cycle)
+            if (kwargs['atl03'] is not None):
+                # reduce ATL03 data frame to RGT, ground track and cycle
+                atl03 = kwargs['atl03'][(kwargs['atl03']['rgt'] == RGT) &
+                    (kwargs['atl03']['track'] == PT) &
+                    (kwargs['atl03']['pair'] == LR) &
+                    (kwargs['atl03']['cycle'] == cycle)]
             if (kwargs['classification'] == 'atl08'):
                 # noise, ground, canopy, top of canopy, unclassified
                 colormap = np.array(['c','b','g','g','y'])
                 classes = ['noise','ground','canopy','toc','unclassified']
-                sc = ax.scatter(kwargs['atl03'].index.values,
-                    kwargs['atl03']["height"].values,
-                    c=colormap[kwargs['atl03']["atl08_class"]],
+                sc = ax.scatter(atl03.index.values,
+                    atl03["height"].values,
+                    c=colormap[atl03["atl08_class"].values.astype('i')],
                     s=1.5, rasterized=True)
                 for i,lab in enumerate(classes):
                     element = matplotlib.lines.Line2D([0], [0],
                         color=colormap[i], lw=6, label=lab)
                     legend_elements.append(element)
             elif (kwargs['classification'] == 'yapc'):
-                sc = ax.scatter(kwargs['atl03'].index.values,
-                    kwargs['atl03']["height"].values,
-                    c=kwargs['atl03']["yapc_score"],
+                sc = ax.scatter(atl03.index.values,
+                    atl03["height"].values,
+                    c=atl03["yapc_score"],
                     cmap=kwargs['cmap'],
                     s=1.5, rasterized=True)
                 plt.colorbar(sc)
@@ -943,9 +1091,10 @@ class widgets:
                 # background, buffer, low, medium, high
                 colormap = np.array(['y','c','b','g','m'])
                 confidences = ['background','buffer','low','medium','high']
-                atl03 = kwargs['atl03'][kwargs['atl03']["atl03_cnf"] >= 0]
+                # reduce data frame to photon classified for surface
+                atl03 = atl03[atl03["atl03_cnf"] >= 0]
                 sc = ax.scatter(atl03.index.values, atl03["height"].values,
-                    c=colormap[atl03["atl03_cnf"]],
+                    c=colormap[atl03["atl03_cnf"].values.astype('i')],
                     s=1.5, rasterized=True)
                 for i,lab in enumerate(confidences):
                     element = matplotlib.lines.Line2D([0], [0],
@@ -953,14 +1102,11 @@ class widgets:
                     legend_elements.append(element)
             elif (kwargs['atl03'] is not None):
                 # plot all available ATL03 points as gray
-                sc = ax.scatter(kwargs['atl03'].index.values,
-                    kwargs['atl03']["height"].values,
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
                     c='0.4', s=0.5, rasterized=True)
                 legend_elements.append(matplotlib.lines.Line2D([0], [0],
-                    color=sc.get_color(), lw=6,
-                    label='ATL03'))
+                    color='0.4', lw=6, label='ATL03'))
             if kwargs['segments']:
-                cycle = int(self.orbital_cycle)
                 df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
                     (gdf['cycle'] == cycle)]
                 # plot reduced data frame
