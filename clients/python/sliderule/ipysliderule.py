@@ -794,7 +794,7 @@ class widgets:
         try:
             self.rgt.value = str(feature["properties"]["rgt"])
             self.cycle.value = str(feature["properties"]["cycle"])
-            gt = 20*(feature["properties"]["track"]-1) + 10*feature["properties"]["pair"]
+            gt = 20*feature["properties"]["track"] + 10*feature["properties"]["pair"] - 10
             self.ground_track.value = GT[str(gt)]
         except Exception as e:
             return
