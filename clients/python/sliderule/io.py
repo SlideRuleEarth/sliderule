@@ -44,7 +44,7 @@ try:
 except ModuleNotFoundError as e:
     sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
 
-# attributes for ATL06-SR variables
+# attributes for ATL06-SR and ATL03 variables
 def get_attributes(**kwargs):
     # set default keyword arguments
     kwargs.setdefault('lon_key','longitude')
@@ -105,7 +105,6 @@ def get_attributes(**kwargs):
     # along track slope
     attrs['dh_fit_dx'] = {}
     attrs['dh_fit_dx']['units'] = "meters/meters"
-    attrs['dh_fit_dx']['contentType'] = "modelResult"
     attrs['dh_fit_dx']['long_name'] = "Along Track Slope"
     attrs['dh_fit_dx']['coordinates'] = coordinates
     # across track slope
@@ -135,6 +134,8 @@ def get_attributes(**kwargs):
     # RGT
     attrs['rgt'] = {}
     attrs['rgt']['long_name'] = "Reference Ground Track"
+    attrs['rgt']['valid_min'] = 1
+    attrs['rgt']['valid_max'] = 1387
     attrs['rgt']['coordinates'] = coordinates
     # ground track
     attrs['gt'] = {}
@@ -144,7 +145,7 @@ def get_attributes(**kwargs):
     attrs['gt']['valid_min'] = 10
     attrs['gt']['valid_max'] = 60
     attrs['gt']['coordinates'] = coordinates
-    # ground track
+    # along-track distance
     attrs['distance'] = {}
     attrs['distance']['units'] = "meters"
     attrs['distance']['long_name'] = "Along track distance from equator"
@@ -152,22 +153,120 @@ def get_attributes(**kwargs):
     # spot
     attrs['spot'] = {}
     attrs['spot']['long_name'] = "ATLAS spot number"
-    attrs['spot']['coordinates'] = "latitude longitude"
     attrs['spot']['valid_min'] = 1
     attrs['spot']['valid_max'] = 6
     attrs['spot']['coordinates'] = coordinates
     # pflags
     attrs['pflags'] = {}
     attrs['pflags']['long_name'] = "Processing Flags"
-    attrs['pflags']['coordinates'] = "latitude longitude"
     attrs['pflags']['flag_values'] = [0, 1, 2, 4]
     attrs['pflags']['flag_meanings'] = ("valid, spread too short, "
         "too few photons, max iterations reached")
     attrs['pflags']['valid_min'] = 0
     attrs['pflags']['valid_max'] = 4
     attrs['pflags']['coordinates'] = coordinates
+    # ATL03 specific variables
+    # segment_dist
+    attrs['segment_dist'] = {}
+    attrs['segment_dist']['units'] = 'meters'
+    attrs['segment_dist']['long_name'] = ("Along track distance "
+        "from equator for segment")
+    attrs['segment_dist']['coordinates'] = coordinates
+    # distance
+    attrs['distance'] = {}
+    attrs['distance']['units'] = 'meters'
+    attrs['distance']['long_name'] = ("Along track distance "
+        "from segment center")
+    attrs['distance']['coordinates'] = coordinates
+    # sc_orient
+    attrs['sc_orient'] = {}
+    attrs['sc_orient']['long_name'] = "Spacecraft Orientation"
+    attrs['sc_orient']['flag_values'] = [0, 1, 2]
+    attrs['sc_orient']['flag_meanings'] = "backward forward transition"
+    attrs['sc_orient']['valid_min'] = 0
+    attrs['sc_orient']['valid_max'] = 2
+    attrs['sc_orient']['coordinates'] = coordinates
+    # track
+    attrs['track'] = {}
+    attrs['track']['long_name'] = "Pair track identifier"
+    attrs['track']['flag_values'] = [1, 2, 3]
+    attrs['track']['flag_meanings'] = "PT1, PT2, PT3"
+    attrs['track']['valid_min'] = 1
+    attrs['track']['valid_max'] = 3
+    attrs['track']['coordinates'] = coordinates
+    # pair
+    attrs['pair'] = {}
+    attrs['pair']['long_name'] = "left-right identifier of pair track"
+    attrs['pair']['flag_values'] = [0, 1]
+    attrs['pair']['flag_meanings'] = "left, right"
+    attrs['pair']['valid_min'] = 1
+    attrs['pair']['valid_max'] = 3
+    attrs['pair']['coordinates'] = coordinates
+    # photon height
+    attrs['height'] = {}
+    attrs['height']['units'] = "meters"
+    attrs['height']['long_name'] = "Photon Height"
+    attrs['height']['coordinates'] = coordinates
+    # photon height
+    attrs['height'] = {}
+    attrs['height']['units'] = "meters"
+    attrs['height']['long_name'] = "Photon Height"
+    attrs['height']['coordinates'] = coordinates
+    # quality_ph
+    attrs['quality_ph'] = {}
+    attrs['quality_ph']['long_name'] = "Photon Quality"
+    attrs['quality_ph']['flag_values'] = [0, 1, 2, 3]
+    attrs['quality_ph']['flag_meanings'] = ("nominal possible_afterpulse "
+        "possible_impulse_response_effect possible_tep")
+    attrs['quality_ph']['valid_min'] = 1
+    attrs['quality_ph']['valid_max'] = 3
+    attrs['quality_ph']['coordinates'] = coordinates
+    # atl03_cnf
+    attrs['atl03_cnf'] = {}
+    attrs['atl03_cnf']['long_name'] = "Photon Signal Confidence"
+    attrs['atl03_cnf']['flag_values'] = [-2, 1, 0, 1, 2, 3, 4]
+    attrs['atl03_cnf']['flag_meanings'] = ("possible_tep "
+        "not_considered noise buffer low medium high")
+    attrs['atl03_cnf']['valid_min'] = -2
+    attrs['atl03_cnf']['valid_max'] = 3
+    attrs['atl03_cnf']['coordinates'] = coordinates
+    # atl08_class
+    attrs['atl08_class'] = {}
+    attrs['atl08_class']['long_name'] = "ATL08 Photon Classification"
+    attrs['atl08_class']['flag_values'] = [0, 1, 2, 3, 4]
+    attrs['atl08_class']['flag_meanings'] = ("noise "
+        "ground canopy top_of_canopy unclassified")
+    attrs['atl08_class']['valid_min'] = 0
+    attrs['atl08_class']['valid_max'] = 4
+    attrs['atl08_class']['coordinates'] = coordinates
+    # yapc_score
+    attrs['yapc_score'] = {}
+    attrs['yapc_score']['units'] = "1"
+    attrs['yapc_score']['long_name'] = "YAPC Photon Weight"
+    attrs['yapc_score']['valid_min'] = 0
+    attrs['yapc_score']['valid_max'] = 255
+    attrs['yapc_score']['coordinates'] = coordinates
     # return the attributes for the sliderule variables
     return attrs
+
+# PURPOSE: encoder for creating the file attributes
+def attributes_encoder(attr):
+    """Custom encoder for creating file attributes in Python 3"""
+    if isinstance(attr, (bytes, bytearray)):
+        return attr.decode('utf-8')
+    if isinstance(attr, (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32,
+        np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
+        return int(attr)
+    elif isinstance(attr, (np.float_, np.float16, np.float32, np.float64)):
+        return float(attr)
+    elif isinstance(attr, (np.ndarray)):
+        return attr.tolist()
+    elif isinstance(attr, (np.bool_)):
+        return bool(attr)
+    elif isinstance(attr, (np.void)):
+        return None
+    else:
+        return attr
 
 # calculate centroid of polygon
 def centroid(x,y):
@@ -220,25 +319,6 @@ def from_geodataframe(gdf):
         regions.append([{'lon':ln,'lat':lt} for ln,lt in geometry.exterior.coords])
     # return the list of regions
     return regions
-
-# PURPOSE: encoder for creating the file attributes
-def attributes_encoder(attr):
-    """Custom encoder for creating file attributes in Python 3"""
-    if isinstance(attr, (bytes, bytearray)):
-        return attr.decode('utf-8')
-    if isinstance(attr, (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32,
-        np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
-        return int(attr)
-    elif isinstance(attr, (np.float_, np.float16, np.float32, np.float64)):
-        return float(attr)
-    elif isinstance(attr, (np.ndarray)):
-        return attr.tolist()
-    elif isinstance(attr, (np.bool_)):
-        return bool(attr)
-    elif isinstance(attr, (np.void)):
-        return None
-    else:
-        return attr
 
 # output request parameters to JSON
 def to_json(filename, **kwargs):
@@ -408,7 +488,7 @@ def from_nc(filename, **kwargs):
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('return_polygon',False)
+    kwargs.setdefault('region_regions',False)
     # open netCDF3 file object (64-bit offset format)
     fileID = scipy.io.netcdf.netcdf_file(filename, 'r', version=2)
     warnings.filterwarnings("ignore")
@@ -474,7 +554,7 @@ def from_nc(filename, **kwargs):
     gdf.set_index(kwargs['index_key'], inplace=True)
     gdf.sort_index(inplace=True)
     # if not returning the query parameters or polygon
-    if not (kwargs['return_parameters'] or kwargs['return_polygon']):
+    if not (kwargs['return_parameters'] or kwargs['region_regions']):
         # return geodataframe
         return gdf
     # create tuple with returns
@@ -483,8 +563,8 @@ def from_nc(filename, **kwargs):
     if kwargs['return_parameters']:
         # add parameters to output tuple
         output += (parms,)
-    # if returning the parameters
-    if kwargs['return_polygon']:
+    # if returning the regions
+    if kwargs['region_regions']:
         # add regions to output tuple
         output += (regions,)
     # return the combined tuple
@@ -670,7 +750,7 @@ def from_hdf(filename, **kwargs):
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('return_polygon',False)
+    kwargs.setdefault('region_regions',False)
     if (kwargs['driver'].lower() == 'pytables'):
         kwargs.pop('driver')
         # return GeoDataFrame from pytables
@@ -687,7 +767,7 @@ def read_pytables(filename, **kwargs):
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('return_polygon',False)
+    kwargs.setdefault('region_regions',False)
     # open pytables HDF5 to read pandas dataframe
     df = geopandas.pd.read_hdf(filename, **kwargs)
     # generate geometry column
@@ -732,7 +812,7 @@ def read_pytables(filename, **kwargs):
         geometry=geometry, crs=kwargs['crs'])
     gdf.sort_index(inplace=True)
     # if not returning the query parameters or polygon
-    if not (kwargs['return_parameters'] or kwargs['return_polygon']):
+    if not (kwargs['return_parameters'] or kwargs['region_regions']):
         # return geodataframe
         return gdf
     # create tuple with returns
@@ -741,8 +821,8 @@ def read_pytables(filename, **kwargs):
     if kwargs['return_parameters']:
         # add parameters to output tuple
         output += (parms,)
-    # if returning the parameters
-    if kwargs['return_polygon']:
+    # if returning the regions
+    if kwargs['region_regions']:
         # add regions to output tuple
         output += (regions,)
     # return the combined tuple
@@ -756,7 +836,7 @@ def read_h5py(filename, **kwargs):
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('return_polygon',False)
+    kwargs.setdefault('region_regions',False)
     # open HDF5 file object
     fileID = h5py.File(filename, mode='r')
     # input dictionary for input variables
@@ -815,7 +895,7 @@ def read_h5py(filename, **kwargs):
     gdf.set_index(kwargs['index_key'], inplace=True)
     gdf.sort_index(inplace=True)
     # if not returning the query parameters or polygon
-    if not (kwargs['return_parameters'] or kwargs['return_polygon']):
+    if not (kwargs['return_parameters'] or kwargs['region_regions']):
         # return geodataframe
         return gdf
     # create tuple with returns
@@ -824,8 +904,8 @@ def read_h5py(filename, **kwargs):
     if kwargs['return_parameters']:
         # add parameters to output tuple
         output += (parms,)
-    # if returning the polygon
-    if kwargs['return_polygon']:
+    # if returning the regions
+    if kwargs['region_regions']:
         # add regions to output tuple
         output += (regions,)
     # return the combined tuple
