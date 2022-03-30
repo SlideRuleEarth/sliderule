@@ -36,6 +36,7 @@ import datetime
 import traceback
 import numpy as np
 import geopandas as gpd
+import matplotlib.lines
 import matplotlib.cm as cm
 import matplotlib.colorbar
 import matplotlib.pyplot as plt
@@ -89,13 +90,45 @@ class widgets:
 
         # dropdown menu for setting data release
         self.release = ipywidgets.Dropdown(
-            options=['003', '004'],
-            value='004',
+            options=['003', '004','005'],
+            value='005',
             description='Release:',
             description_tooltip="Release: ICESat-2 data release",
             disabled=False,
             style=self.style,
         )
+
+        self.start_date = ipywidgets.DatePicker(
+            value=datetime.datetime(2018,10,13,0,0,0),
+            description='Start Date',
+            description_tooltip="Start Date: Starting date for CMR queries",
+            disabled=False
+        )
+
+        self.end_date = ipywidgets.DatePicker(
+            value=datetime.datetime.now(),
+            description='End Date',
+            description_tooltip="End Date: Ending date for CMR queries",
+            disabled=False
+        )
+
+        # multiple select for photon classification
+        class_options = ['atl03','quality','atl08','yapc']
+        self.classification = ipywidgets.SelectMultiple(
+            options=class_options,
+            value=['atl03','atl08'],
+            description='Classification:',
+            description_tooltip=("Classification: Photon classification "
+                "\n\tatl03: surface confidence"
+                "\n\tquality: photon quality"
+                "\n\tatl08: land classification"
+                "\n\tyapc: yet another photon classifier"),
+            disabled=False,
+            style=self.style,
+        )
+
+        # watch classification widgets for changes
+        self.classification.observe(self.set_classification)
 
         # dropdown menu for setting surface type
         # 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
@@ -116,6 +149,158 @@ class widgets:
             disabled=False,
             style=self.style,
         )
+        self.surface_type.layout.display = 'inline-flex'
+
+        # slider for setting confidence level for PE selection
+        # eventually would be good to switch this to a IntRangeSlider with value=[0,4]
+        self.confidence = ipywidgets.IntSlider(
+            value=4,
+            min=-2,
+            max=4,
+            step=1,
+            description='Confidence:',
+            description_tooltip=("Confidence: ATL03 confidence level for surface "
+                "type\n\t0: background\n\t1: within 10m\n\t2: low\n\t3: medium\n\t"
+                "4: high"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.confidence.layout.display = 'inline-flex'
+
+        # selection for land surface classifications
+        land_options = [
+            'atl08_noise',
+            'atl08_ground',
+            'atl08_canopy',
+            'atl08_top_of_canopy',
+            'atl08_unclassified'
+        ]
+        self.land_class = ipywidgets.SelectMultiple(
+            options=land_options,
+            description='Land Class:',
+            description_tooltip=("Land Class: ATL08 land classification "
+                "for photons\n\t0: noise\n\t1: ground\n\t2: canopy\n\t"
+                "3: top of canopy\n\t4: unclassified"),
+            disabled=False,
+            style=self.style,
+        )
+        self.land_class.layout.display = 'inline-flex'
+
+        # selection for ATL03 quality flags
+        quality_options = [
+            'atl03_nominal',
+            'atl03_possible_afterpulse',
+            'atl03_possible_impulse_response',
+            'atl03_possible_tep'
+        ]
+        self.quality = ipywidgets.SelectMultiple(
+            value=['atl03_nominal'],
+            options=quality_options,
+            description='Quality:',
+            description_tooltip=("Quality: ATL03 photon quality "
+                "classification\n\t0: nominal\n\t"
+                "1: possible afterpulse\n\t"
+                "2: possible impulse response\n\t"
+                "3: possible TEP"),
+            disabled=False,
+            style=self.style,
+        )
+        self.quality.layout.display = 'none'
+
+        # slider for setting for YAPC kNN
+        self.yapc_knn = ipywidgets.IntSlider(
+            value=0,
+            min=0,
+            max=20,
+            step=1,
+            description='YAPC kNN:',
+            description_tooltip=("YAPC kNN: number of nearest "
+                "neighbors to use\n\t0: automatic selection "
+                "of the number of neighbors"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.yapc_knn.layout.display = 'none'
+
+        # slider for setting for YAPC height window
+        self.yapc_win_h = ipywidgets.FloatSlider(
+            value=3.0,
+            min=0.1,
+            max=100,
+            step=0.1,
+            description='YAPC h window:',
+            description_tooltip=("YAPC h window: window height "
+                "used to filter the nearest neighbors"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='0.1f',
+            style=self.style,
+        )
+        self.yapc_win_h.layout.display = 'none'
+
+        # slider for setting for YAPC along-track distance window
+        self.yapc_win_x = ipywidgets.FloatSlider(
+            value=21.0,
+            min=0.1,
+            max=100,
+            step=0.1,
+            description='YAPC x window:',
+            description_tooltip=("YAPC x window: window width "
+                "used to filter the nearest neighbors"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='0.1f',
+            style=self.style,
+        )
+        self.yapc_win_x.layout.display = 'none'
+
+        # slider for setting for YAPC minimum photon events
+        self.yapc_min_ph = ipywidgets.IntSlider(
+            value=4,
+            min=0,
+            max=20,
+            step=1,
+            description='YAPC Minimum PE:',
+            description_tooltip=("YAPC Minimum PE: minimum number of "
+                "photons needed in an extent to calculate a YAPC score"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.yapc_min_ph.layout.display = 'none'
+
+        # slider for setting for YAPC weights for fit
+        self.yapc_weight = ipywidgets.IntSlider(
+            value=80,
+            min=0,
+            max=255,
+            step=1,
+            description='YAPC Weight:',
+            description_tooltip=("YAPC Weight: minimum YAPC classification "
+                "score of a photon to be used in the processing request"),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d',
+            style=self.style,
+        )
+        self.yapc_weight.layout.display = 'none'
 
         # slider for setting length of ATL06-SR segment in meters
         self.length = ipywidgets.IntSlider(
@@ -141,149 +326,6 @@ class widgets:
             step=5,
             description='Step:',
             description_tooltip="Step: step distance for successive ATL06 segments in meters",
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # slider for setting confidence level for PE selection
-        # eventually would be good to switch this to a IntRangeSlider with value=[0,4]
-        self.confidence = ipywidgets.IntSlider(
-            value=4,
-            min=0,
-            max=4,
-            step=1,
-            description='Confidence:',
-            description_tooltip=("Confidence: ATL03 confidence level for surface "
-                "type\n\t0: background\n\t1: within 10m\n\t2: low\n\t3: medium\n\t"
-                "4: high"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # selection for land surface classifications
-        land_options = [
-            'atl08_noise',
-            'atl08_ground',
-            'atl08_canopy',
-            'atl08_top_of_canopy',
-            'atl08_unclassified'
-        ]
-        self.land_class = ipywidgets.SelectMultiple(
-            options=land_options,
-            description='Land Class:',
-            description_tooltip=("Land Class: ATL08 land classification "
-                "for photons\n\t0: noise\n\t1: ground\n\t2: canopy\n\t"
-                "3: top of canopy\n\t4: unclassified"),
-            disabled=False,
-            style=self.style,
-        )
-
-        # selection for ATL03 quality flags
-        quality_options = [
-            'atl03_nominal',
-            'atl03_possible_afterpulse',
-            'atl03_possible_impulse_response',
-            'atl03_possible_tep'
-        ]
-        self.quality = ipywidgets.SelectMultiple(
-            value=['atl03_nominal'],
-            options=quality_options,
-            description='Quality:',
-            description_tooltip=("Quality: ATL03 photon quality "
-                "classification\n\t0: nominal\n\t"
-                "1: possible afterpulse\n\t"
-                "2: possible impulse response\n\t"
-                "3: possible TEP"),
-            disabled=False,
-            style=self.style,
-        )
-
-        # slider for setting for YAPC kNN
-        self.yapc_knn = ipywidgets.IntSlider(
-            value=0,
-            min=0,
-            max=20,
-            step=1,
-            description='YAPC kNN:',
-            description_tooltip=("YAPC kNN: number of nearest "
-                "neighbors to use\n\t0: automatic selection "
-                "of the number of neighbors"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC height window
-        self.yapc_win_h = ipywidgets.FloatSlider(
-            value=3.0,
-            min=0.1,
-            max=100,
-            step=0.1,
-            description='YAPC h window:',
-            description_tooltip=("YAPC h window: window height "
-                "used to filter the nearest neighbors"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='0.1f',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC along-track distance window
-        self.yapc_win_x = ipywidgets.FloatSlider(
-            value=21.0,
-            min=0.1,
-            max=100,
-            step=0.1,
-            description='YAPC x window:',
-            description_tooltip=("YAPC x window: window width "
-                "used to filter the nearest neighbors"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='0.1f',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC minimum photon events
-        self.yapc_min_ph = ipywidgets.IntSlider(
-            value=4,
-            min=0,
-            max=20,
-            step=1,
-            description='YAPC Minimum PE:',
-            description_tooltip=("YAPC Minimum PE: minimum number of "
-                "photons needed in an extent to calculate a YAPC score"),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='d',
-            style=self.style,
-        )
-
-        # slider for setting for YAPC weights for fit
-        self.yapc_weight = ipywidgets.IntSlider(
-            value=80,
-            min=0,
-            max=255,
-            step=1,
-            description='YAPC Weight:',
-            description_tooltip=("YAPC Weight: minimum YAPC classification "
-                "score of a photon to be used in the processing request"),
             disabled=False,
             continuous_update=False,
             orientation='horizontal',
@@ -454,7 +496,7 @@ class widgets:
         )
 
         # selection for adding layers to map
-        layer_options = ['3DEP','ASTER GDEM','ESRI imagery','RGI']
+        layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS']
         self.layers = ipywidgets.SelectMultiple(
             options=layer_options,
             description='Add Layers:',
@@ -467,8 +509,63 @@ class widgets:
         # watch widgets for changes
         self.projection.observe(self.set_layers)
 
+        # single plot widgets
+        # single plot kind
+        self.plot_kind = ipywidgets.Dropdown(
+            options=['cycles','scatter'],
+            value='scatter',
+            description='Plot Kind:',
+            description_tooltip=("Plot Kind: single track plot kind"
+                "\n\tcycles: along-track plot showing all available cycles"
+                "\n\tscatter: plot showing a single cycle possibly with ATL03"),
+            disabled=False,
+            style=self.style,
+        )
+
+        # single plot ATL03 classification
+        self.plot_classification = ipywidgets.Dropdown(
+            options = ["atl03", "atl08", "yapc", "none"],
+            value = "atl08",
+            description = "Classification",
+            description_tooltip=("Classification: Photon classification "
+                "\n\tatl03: surface confidence"
+                "\n\tquality: photon quality"
+                "\n\tatl08: land classification"
+                "\n\tyapc: yet another photon classifier"),
+            disabled = False,
+        )
+
+        # selection for reference ground track
+        self.rgt = ipywidgets.Text(
+            value='0',
+            description="RGT:",
+            description_tooltip="RGT: Reference Ground Track to plot",
+            disabled=False
+        )
+
+        # cycle input text box
+        self.cycle = ipywidgets.Text(
+            value='0',
+            description='Cycle:',
+            description_tooltip="Cycle: Orbital cycle to plot",
+            disabled=False
+        )
+
+        # selection for ground track
+        ground_track_options = ["gt1l","gt1r","gt2l","gt2r","gt3l","gt3r"]
+        self.ground_track = ipywidgets.Dropdown(
+            options=ground_track_options,
+            value='gt1l',
+            description="Track:",
+            description_tooltip="Track: Ground Track to plot",
+            disabled=False
+        )
+
+        # watch plot kind widgets for changes
+        self.plot_kind.observe(self.set_plot_kind)
+
         # button and label for output file selection
-        self.file = copy.copy(self.filename)
+        self.file = copy.copy(self.atl06_filename)
         self.savebutton = ipywidgets.Button(
             description="Save As"
         )
@@ -508,18 +605,104 @@ class widgets:
         else:
             self.fileloader = copy.copy(self.loadlabel)
 
+    # function for setting photon classifications
+    def set_classification(self, sender):
+        """function for setting photon classifications
+        """
+        # atl03 photon confidence level
+        if ('atl03' in self.classification.value):
+            self.surface_type.layout.display = 'inline-flex'
+            self.confidence.layout.display = 'inline-flex'
+            self.confidence.layout.value = 4
+        else:
+            self.surface_type.layout.display = 'none'
+            self.confidence.layout.display = 'none'
+            self.confidence.layout.value = -2
+        # atl03 photon quality flags
+        if ('quality' in self.classification.value):
+            self.quality.layout.display = 'inline-flex'
+        else:
+            self.quality.layout.display = 'none'
+        # atl08 land classification flags
+        if ('atl08' in self.classification.value):
+            self.land_class.layout.display = 'inline-flex'
+        else:
+            self.land_class.layout.display = 'none'
+        # yet another photon classifier (YAPC)
+        if ('yapc' in self.classification.value):
+            self.yapc_knn.layout.display = 'inline-flex'
+            self.yapc_win_h.layout.display = 'inline-flex'
+            self.yapc_win_x.layout.display = 'inline-flex'
+            self.yapc_min_ph.layout.display = 'inline-flex'
+            self.yapc_weight.layout.display = 'inline-flex'
+        else:
+            self.yapc_knn.layout.display = 'none'
+            self.yapc_win_h.layout.display = 'none'
+            self.yapc_win_x.layout.display = 'none'
+            self.yapc_min_ph.layout.display = 'none'
+            self.yapc_weight.layout.display = 'none'
+
+    def set_atl03_defaults(self):
+        # default photon classifications
+        class_options = ['atl03','atl08','yapc']
+        self.classification.value = class_options
+        # default ATL03 confidence
+        self.confidence.value = -2
+        # set land class options
+        land_options = [
+            'atl08_noise',
+            'atl08_ground',
+            'atl08_canopy',
+            'atl08_top_of_canopy',
+            'atl08_unclassified'
+        ]
+        self.land_class.value = land_options
+        # set default ATL03 length
+        self.length.value = 20
+        # update variable list for ATL03 variables
+        variable_list = ['atl03_cnf', 'atl08_class', 'cycle', 'delta_time',
+            'distance', 'height', 'pair', 'quality_ph', 'rgt', 'sc_orient',
+            'segment_dist', 'segment_id', 'track', 'yapc_score']
+        self.variable.options = variable_list
+        self.variable.value = 'height'
+        # set default filename
+        self.file = copy.copy(self.atl03_filename)
+        self.savelabel.value = self.file
+
+    @property
+    def time_start(self):
+        """start time in ISO format
+        """
+        return self.start_date.value.isoformat()
+
+    @property
+    def time_end(self):
+        """end time in ISO format
+        """
+        return self.end_date.value.isoformat()
+
     # function for setting available map layers
     def set_layers(self, sender):
         """function for updating available map layers
         """
         if (self.projection.value == 'Global'):
-            layer_options = ['3DEP','ASTER GDEM','ESRI imagery','RGI']
+            layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS']
         elif (self.projection.value == 'North'):
             layer_options = ['ESRI imagery','ArcticDEM']
         elif (self.projection.value == 'South'):
             layer_options = ['LIMA','MOA','RAMP']
         self.layers.options=layer_options
         self.layers.value=[]
+
+    # function for setting single track plot kind
+    def set_plot_kind(self, sender):
+        """function for setting single track plot kind
+        """
+        # atl03 photon confidence level
+        if (self.plot_kind.value == 'scatter'):
+            self.cycle.layout.display = 'inline-flex'
+        elif (self.plot_kind.value == 'cycles'):
+            self.cycle.layout.display = 'none'
 
     def saveas_file(self, b):
         """function for file save
@@ -564,7 +747,16 @@ class widgets:
         self.file = self.loadlabel.value
 
     @property
-    def filename(self):
+    def atl03_filename(self):
+        """default input and output file string
+        """
+        # get sliderule submission time
+        now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        args = (now, self.release.value)
+        return "ATL03-SR_{0}_{1}.h5".format(*args)
+
+    @property
+    def atl06_filename(self):
         """default input and output file string
         """
         # get sliderule submission time
@@ -593,6 +785,347 @@ class widgets:
     @property
     def colormap(self):
         return self.cmap.value + self._r
+
+    # click handler for individual photons
+    def atl03_click_handler(self, feature):
+        """handler for leaflet map clicks
+        """
+        GT = {"10":"gt1l","20":"gt1r","30":"gt2l","40":"gt2r","50":"gt3l","60":"gt3r"}
+        try:
+            self.rgt.value = str(feature["properties"]["rgt"])
+            self.cycle.value = str(feature["properties"]["cycle"])
+            gt = 20*feature["properties"]["track"] + 10*feature["properties"]["pair"] - 10
+            self.ground_track.value = GT[str(gt)]
+        except Exception as e:
+            return
+        else:
+            return self
+
+    # click handler for individual segments
+    def atl06_click_handler(self, feature):
+        """handler for leaflet map clicks
+        """
+        GT = {"10":"gt1l","20":"gt1r","30":"gt2l","40":"gt2r","50":"gt3l","60":"gt3r"}
+        try:
+            self.rgt.value = str(feature["properties"]["rgt"])
+            self.cycle.value = str(feature["properties"]["cycle"])
+            self.ground_track.value = GT[str(feature["properties"]["gt"])]
+        except Exception as e:
+            return
+        else:
+            return self
+
+    # build sliderule ATL03 parameters using latest values from widget
+    def build_atl03(self, **parms):
+        # classification and checks
+        # still return photon segments that fail checks
+        parms["pass_invalid"] = True
+        # default parameters for all cases
+        parms["len"] = self.length.value
+        # photon classification
+        # atl03 photon confidence level
+        if ('atl03' in self.classification.value):
+            # surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
+            parms["srt"] = self.surface_type.index
+            # confidence level for PE selection
+            parms["cnf"] = self.confidence.value
+        # atl03 photon quality flags
+        if ('quality' in self.classification.value):
+            # confidence level for PE selection
+            parms["quality_ph"] = list(self.quality.value)
+        # atl08 land classification flags
+        if ('atl08' in self.classification.value):
+            # ATL08 land surface classifications
+            parms["atl08_class"] = list(self.land_class.value)
+        # yet another photon classifier (YAPC)
+        if ('yapc' in self.classification.value):
+            parms["yapc"] = {}
+            parms["yapc"]["knn"] = self.yapc_knn.value
+            parms["yapc"]["min_ph"] = self.yapc_min_ph.value
+            parms["yapc"]["win_h"] = self.yapc_win_h.value
+            parms["yapc"]["win_x"] = self.yapc_win_x.value
+        # return the parameter dictionary
+        return parms
+
+    # build sliderule ATL06 parameters using latest values from widget
+    def build_atl06(self, **parms):
+        # default parameters for all cases
+        # length of ATL06-SR segment in meters
+        parms["len"] = self.length.value
+        # step distance for successive ATL06-SR segments in meters
+        parms["res"] = self.step.value
+        # maximum iterations, not including initial least-squares-fit selection
+        parms["maxi"] = self.iteration.value
+        # minimum along track spread
+        parms["ats"] = self.spread.value
+        # minimum PE count
+        parms["cnt"] = self.count.value
+        # minimum height of PE window in meters
+        parms["H_min_win"] = self.window.value
+        # maximum robust dispersion in meters
+        parms["sigma_r_max"] = self.sigma.value
+        # photon classification
+        # atl03 photon confidence level
+        if ('atl03' in self.classification.value):
+            # surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
+            parms["srt"] = self.surface_type.index
+            # confidence level for PE selection
+            parms["cnf"] = self.confidence.value
+        # atl03 photon quality flags
+        if ('quality' in self.classification.value):
+            # confidence level for PE selection
+            parms["quality_ph"] = list(self.quality.value)
+        # atl08 land classification flags
+        if ('atl08' in self.classification.value):
+            # ATL08 land surface classifications
+            parms["atl08_class"] = list(self.land_class.value)
+        # yet another photon classifier (YAPC)
+        if ('yapc' in self.classification.value):
+            parms["yapc"] = {}
+            parms["yapc"]["score"] = self.yapc_weight.value
+            parms["yapc"]["knn"] = self.yapc_knn.value
+            parms["yapc"]["min_ph"] = self.yapc_min_ph.value
+            parms["yapc"]["win_h"] = self.yapc_win_h.value
+            parms["yapc"]["win_x"] = self.yapc_win_x.value
+        # return the parameter dictionary
+        return parms
+
+    # update values from widget using sliderule parameters dictionary
+    def set_values(self, parms):
+        # default parameters for all cases
+        # length of ATL06-SR segment in meters
+        if ('len' in parms.keys()):
+            self.length.value = parms["len"]
+        # step distance for successive ATL06-SR segments in meters
+        if ('res' in parms.keys()):
+            self.step.value = parms["res"]
+        # maximum iterations, not including initial least-squares-fit selection
+        if ('maxi' in parms.keys()):
+            self.iteration.value = parms["maxi"]
+        # minimum along track spread
+        if ('ats' in parms.keys()):
+            self.spread.value = parms["ats"]
+        # minimum PE count
+        if ('cnt' in parms.keys()):
+            self.count.value = parms["cnt"]
+        # minimum height of PE window in meters
+        if ('H_min_win' in parms.keys()):
+            self.window.value = parms["H_min_win"]
+        # maximum robust dispersion in meters
+        if ('sigma_r_max' in parms.keys()):
+            self.sigma.value = parms["sigma_r_max"]
+        # photon classification
+        # atl03 photon confidence level
+        # surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
+        if ('srt' in parms.keys()):
+            self.surface_type.index = parms["srt"]
+        # confidence level for PE selection
+        if ('cnf' in parms.keys()):
+            self.confidence.value = parms["cnf"]
+        # atl03 photon quality flags
+        if ('quality_ph' in parms.keys()):
+            # confidence level for PE selection
+            self.quality.value = parms["quality_ph"]
+        # atl08 land classification flags
+        if ('atl08_class' in parms.keys()):
+            # ATL08 land surface classifications
+            self.land_class.value = parms["atl08_class"]
+        # yet another photon classifier (YAPC)
+        if ('yapc' in parms.keys()) and ('score' in parms['yapc'].keys()):
+            self.yapc_weight.value = parms["yapc"]["score"]
+        if ('yapc' in parms.keys()) and ('knn' in parms['yapc'].keys()):
+            self.yapc_knn.value = parms["yapc"]["knn"]
+        if ('yapc' in parms.keys()) and ('min_ph' in parms['yapc'].keys()):
+            self.yapc_min_ph.value = parms["yapc"]["min_ph"]
+        if ('yapc' in parms.keys()) and ('win_h' in parms['yapc'].keys()):
+            self.yapc_win_h.value = parms["yapc"]["win_h"]
+        if ('yapc' in parms.keys()) and ('win_x' in parms['yapc'].keys()):
+            self.yapc_win_x.value = parms["yapc"]["win_x"]
+        # update values
+        return self
+
+    @property
+    def RGT(self):
+        """extract and verify Reference Ground Tracks (RGTs)
+        """
+        # extract RGT
+        try:
+            rgt = int(self.rgt.value)
+        except:
+            logging.critical(f"RGT {self.rgt.value} is invalid")
+            return "0"
+        # verify ground track values
+        if (rgt >= 1) and (rgt <= 1387):
+            return self.rgt.value
+        else:
+            logging.critical(f"RGT {self.rgt.value} is outside available range")
+            return "0"
+
+    @property
+    def GT(self):
+        """extract Ground Tracks (GTs)
+        """
+        ground_track_dict = dict(gt1l=10,gt1r=20,gt2l=30,gt2r=40,gt3l=50,gt3r=60)
+        return ground_track_dict[self.ground_track.value]
+
+    @property
+    def PT(self):
+        """extract Pair Tracks (PTs)
+        """
+        pair_track_dict = dict(gt1l=1,gt1r=1,gt2l=2,gt2r=2,gt3l=3,gt3r=3)
+        return pair_track_dict[self.ground_track.value]
+
+    @property
+    def LR(self):
+        """extract Left-Right from Pair Tracks (PTs)
+        """
+        lr_track_dict = dict(gt1l=0,gt1r=1,gt2l=0,gt2r=1,gt3l=0,gt3r=1)
+        return lr_track_dict[self.ground_track.value]
+
+    @property
+    def orbital_cycle(self):
+        """extract and verify ICESat-2 orbital cycles
+        """
+        #-- number of GPS seconds between the GPS epoch and ATLAS SDP epoch
+        atlas_sdp_gps_epoch = 1198800018.0
+        #-- number of GPS seconds since the GPS epoch for first ATLAS data point
+        atlas_gps_start_time = atlas_sdp_gps_epoch + 24710205.39202261
+        epoch1 = datetime.datetime(1980, 1, 6, 0, 0, 0)
+        epoch2 = datetime.datetime(1970, 1, 1, 0, 0, 0)
+        #-- get the total number of seconds since the start of ATLAS and now
+        delta_time_epochs = (epoch2 - epoch1).total_seconds()
+        atlas_UNIX_start_time = atlas_gps_start_time - delta_time_epochs
+        present_time = datetime.datetime.now().timestamp()
+        #-- divide total time by cycle length to get the maximum number of orbital cycles
+        nc = np.ceil((present_time - atlas_UNIX_start_time) / (86400 * 91)).astype('i')
+        all_cycles = [str(c + 1) for c in range(nc)]
+        if (self.cycle.value in all_cycles):
+            return self.cycle.value
+        else:
+            logging.critical(f"Cycle {self.cycle.value} is outside available range")
+            return "0"
+
+    def plot(self, gdf=None, **kwargs):
+        """Creates plots of SlideRule outputs
+        """
+        # default keyword arguments
+        kwargs.setdefault('ax', None)
+        kwargs.setdefault('kind', 'cycles')
+        kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('legend', False)
+        kwargs.setdefault('column_name', 'h_mean')
+        kwargs.setdefault('atl03', None)
+        kwargs.setdefault('classification', None)
+        kwargs.setdefault('segments', True)
+        kwargs.setdefault('cycle_start', 3)
+        # variable to plot
+        column = kwargs['column_name']
+        # reference ground track and ground track
+        RGT = int(self.RGT)
+        GT = int(self.GT)
+        # skip plot creation if no values are entered
+        if (RGT == 0) or (GT == 0):
+            return
+        # create figure axis
+        if kwargs['ax'] is None:
+            fig,ax = plt.subplots(num=1, figsize=(8,6))
+        else:
+            ax = kwargs['ax']
+        # list of legend elements
+        legend_elements = []
+        # different plot types
+        # cycles: along-track plot showing all available cycles
+        # scatter: plot showing a single cycle possibly with ATL03
+        if (kwargs['kind'] == 'cycles'):
+            # for each unique cycles
+            for cycle in gdf['cycle'].unique():
+                # skip cycles with significant off pointing
+                if (cycle < kwargs['cycle_start']):
+                    continue
+                # reduce data frame to RGT, ground track and cycle
+                df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
+                    (gdf['cycle'] == cycle)]
+                if not any(df[column].values):
+                    continue
+                # plot reduced data frame
+                l, = ax.plot(df['distance'].values,
+                    df[column].values, marker='.', lw=0, ms=1.5)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color=l.get_color(), lw=6,
+                    label='Cycle {0:0.0f}'.format(cycle)))
+            # add axes labels
+            ax.set_xlabel('Along-Track Distance [m]')
+            ax.set_ylabel(f'SlideRule {column}')
+        elif (kwargs['kind'] == 'scatter'):
+            # extract pair track parameters
+            LR = int(self.LR)
+            PT = int(self.PT)
+            # extract orbital cycle parameters
+            cycle = int(self.orbital_cycle)
+            if (kwargs['atl03'] is not None):
+                # reduce ATL03 data frame to RGT, ground track and cycle
+                atl03 = kwargs['atl03'][(kwargs['atl03']['rgt'] == RGT) &
+                    (kwargs['atl03']['track'] == PT) &
+                    (kwargs['atl03']['pair'] == LR) &
+                    (kwargs['atl03']['cycle'] == cycle)]
+            if (kwargs['classification'] == 'atl08'):
+                # noise, ground, canopy, top of canopy, unclassified
+                colormap = np.array(['c','b','g','g','y'])
+                classes = ['noise','ground','canopy','toc','unclassified']
+                sc = ax.scatter(atl03.index.values,
+                    atl03["height"].values,
+                    c=colormap[atl03["atl08_class"].values.astype('i')],
+                    s=1.5, rasterized=True)
+                for i,lab in enumerate(classes):
+                    element = matplotlib.lines.Line2D([0], [0],
+                        color=colormap[i], lw=6, label=lab)
+                    legend_elements.append(element)
+            elif (kwargs['classification'] == 'yapc'):
+                sc = ax.scatter(atl03.index.values,
+                    atl03["height"].values,
+                    c=atl03["yapc_score"],
+                    cmap=kwargs['cmap'],
+                    s=1.5, rasterized=True)
+                plt.colorbar(sc)
+            elif (kwargs['classification'] == 'atl03'):
+                # background, buffer, low, medium, high
+                colormap = np.array(['y','c','b','g','m'])
+                confidences = ['background','buffer','low','medium','high']
+                # reduce data frame to photon classified for surface
+                atl03 = atl03[atl03["atl03_cnf"] >= 0]
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                    c=colormap[atl03["atl03_cnf"].values.astype('i')],
+                    s=1.5, rasterized=True)
+                for i,lab in enumerate(confidences):
+                    element = matplotlib.lines.Line2D([0], [0],
+                        color=colormap[i], lw=6, label=lab)
+                    legend_elements.append(element)
+            elif (kwargs['atl03'] is not None):
+                # plot all available ATL03 points as gray
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                    c='0.4', s=0.5, rasterized=True)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color='0.4', lw=6, label='ATL03'))
+            if kwargs['segments']:
+                df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
+                    (gdf['cycle'] == cycle)]
+                # plot reduced data frame
+                sc = ax.scatter(df.index.values, df["h_mean"].values,
+                    c='red', s=2.5, rasterized=True)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color='red', lw=6, label='ATL06-SR'))
+            # add title and axes labels
+            ax.set_title("Photon Cloud")
+            ax.set_xlabel('UTC')
+            ax.set_ylabel('Height (m)')
+        # create legend
+        if kwargs['legend']:
+            lgd = ax.legend(handles=legend_elements, loc=3, frameon=True)
+            lgd.get_frame().set_alpha(1.0)
+            lgd.get_frame().set_edgecolor('white')
+        if kwargs['ax'] is None:
+            # show the figure
+            plt.tight_layout()
 
 # define projections for ipyleaflet tiles
 projections = Bunch(
@@ -803,6 +1336,7 @@ providers = {
 layers = Bunch(
     GLIMS = Bunch(
         Glaciers = ipyleaflet.WMSLayer(
+            name="GLIMS_GLACIERS",
             attribution=glims_attribution,
             layers='GLIMS_GLACIERS',
             format='image/png',
@@ -811,12 +1345,14 @@ layers = Bunch(
     ),
     USGS = Bunch(
         Elevation = ipyleaflet.WMSLayer(
+            name="3DEPElevation",
             attribution=usgs_3dep_attribution,
             layers="3DEPElevation:Hillshade Gray",
             format='image/png',
             url='https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer?',
         ),
         LIMA = ipyleaflet.WMSLayer(
+            name="LIMA",
             attribution=usgs_antarctic_attribution,
             layers="LIMA_Full_1km",
             format='image/png',
@@ -825,24 +1361,27 @@ layers = Bunch(
             crs=projections.EPSG3031.LIMA
         ),
         MOA = ipyleaflet.WMSLayer(
+            name="MOA_125_HP1_090_230",
             attribution=usgs_antarctic_attribution,
             layers="MOA_125_HP1_090_230",
             format='image/png',
-            transparent=True,
+            transparent=False,
             url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
             crs=projections.EPSG3031.MOA
         ),
         RAMP = ipyleaflet.WMSLayer(
+            name="Radarsat_Mosaic",
             attribution=usgs_antarctic_attribution,
             layers="Radarsat_Mosaic",
             format='image/png',
-            transparent=True,
+            transparent=False,
             url='https://nimbus.cr.usgs.gov/arcgis/services/Antarctica/USGS_EROS_Antarctica_Reference/MapServer/WmsServer',
             crs=projections.EPSG3031.RAMP
         )
     ),
     PGC = Bunch(
         ArcticDEM = ipyleaflet.WMSLayer(
+            name="ArcticDEM",
             attribution=pgc_attribution,
             layers="0",
             format='image/png',
@@ -875,9 +1414,10 @@ class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
         kwargs.setdefault('attribution',False)
-        kwargs.setdefault('zoom',False)
-        kwargs.setdefault('scale',False)
-        kwargs.setdefault('cursor',True)
+        kwargs.setdefault('zoom_control',False)
+        kwargs.setdefault('scale_control',False)
+        kwargs.setdefault('cursor_control',True)
+        kwargs.setdefault('layer_control',True)
         kwargs.setdefault('center',(39,-108))
         kwargs.setdefault('color','green')
         # create basemap in projection
@@ -902,28 +1442,29 @@ class leaflet:
                 basemap=basemaps.Esri.AntarcticBasemap,
                 crs=projections.EPSG3031.Basemap)
             self.crs = 'EPSG:3031'
-        # initiate layers list
-        self.layers = []
-        # initialize selected feature
-        self.selected_callback = None
+        # add control for layers
+        if kwargs['layer_control']:
+            self.layer_control = ipyleaflet.LayersControl(position='topleft')
+            self.map.add_control(self.layer_control)
+            self.layers = self.map.layers
         # add control for zoom
-        if kwargs['zoom']:
+        if kwargs['zoom_control']:
             zoom_slider = ipywidgets.IntSlider(description='Zoom level:',
                 min=self.map.min_zoom, max=self.map.max_zoom, value=self.map.zoom)
             ipywidgets.jslink((zoom_slider, 'value'), (self.map, 'zoom'))
             zoom_control = ipyleaflet.WidgetControl(widget=zoom_slider,
                 position='topright')
             self.map.add_control(zoom_control)
-        # add scale bar
-        if kwargs['scale']:
+        # add control for spatial scale bar
+        if kwargs['scale_control']:
             scale_control = ipyleaflet.ScaleControl(position='topright')
             self.map.add_control(scale_control)
-        # add label for cursor position
-        if kwargs['cursor']:
+        # add control for cursor position
+        if kwargs['cursor_control']:
             self.cursor = ipywidgets.Label()
-            label_control = ipyleaflet.WidgetControl(widget=self.cursor,
+            cursor_control = ipyleaflet.WidgetControl(widget=self.cursor,
                 position='bottomleft')
-            self.map.add_control(label_control)
+            self.map.add_control(cursor_control)
             # keep track of cursor position
             self.map.on_interaction(self.handle_interaction)
         # add control for drawing polygons or bounding boxes
@@ -938,12 +1479,36 @@ class leaflet:
         self.regions = []
         draw_control.on_draw(self.handle_draw)
         self.map.add_control(draw_control)
-        # initiate data and colorbars
+        # initialize data and colorbars
         self.geojson = None
         self.tooltip = None
-        self.hover_control = None
         self.fields = []
         self.colorbar = None
+        # initialize hover control
+        self.hover_control = None
+        # initialize selected feature
+        self.selected_callback = None
+
+    # add sliderule regions to map
+    def add_region(self, regions, **kwargs):
+        kwargs.setdefault('color','green')
+        kwargs.setdefault('fillOpacity',0.8)
+        kwargs.setdefault('weight',4)
+        # for each sliderule region
+        for region in regions:
+            locations = [(p['lat'],p['lon']) for p in region]
+            polygon = ipyleaflet.Polygon(
+                locations=locations,
+                color=kwargs['color'],
+                fill_color=kwargs['color'],
+                opacity=kwargs['fillOpacity'],
+                weight=kwargs['weight'],
+            )
+            # add region to map
+            self.map.add_layer(polygon)
+            # add to regions list
+            self.regions.append(region)
+        return self
 
     # add map layers
     def add_layer(self, **kwargs):
@@ -959,14 +1524,14 @@ class leaflet:
                     self.map.add_layer(layer)
                 elif isinstance(layer,dict):
                     self.map.add_layer(_load_dict(layer))
-                elif isinstance(layer,str) and (layer == 'RGI'):
+                elif isinstance(layer,str) and (layer == 'GLIMS'):
                     self.map.add_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.add_layer(layers.USGS.Elevation)
                 elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
                     self.map.add_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
-                    self.map.add_layer(xyzservices.providers.Esri.WorldImagery)
+                    self.map.add_layer(ipyleaflet.basemaps.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.add_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
@@ -977,8 +1542,6 @@ class leaflet:
                     self.map.add_layer(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.add_layer(layers.USGS.RAMP)
-                # try to add to layers attribute
-                self.layers.append(layer)
             except ipyleaflet.LayerException as e:
                 logging.info(f"Layer {layer} already on map")
                 pass
@@ -997,14 +1560,14 @@ class leaflet:
                     self.map.remove_layer(layer)
                 elif isinstance(layer,dict):
                     self.map.remove_layer(_load_dict(layer))
-                elif isinstance(layer,str) and (layer == 'RGI'):
+                elif isinstance(layer,str) and (layer == 'GLIMS'):
                     self.map.remove_layer(layers.GLIMS.Glaciers)
                 elif isinstance(layer,str) and (layer == '3DEP'):
                     self.map.remove_layer(layers.USGS.Elevation)
                 elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
                     self.map.remove_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
-                    self.map.remove_layer(xyzservices.providers.Esri.WorldImagery)
+                    self.map.remove_layer(ipyleaflet.basemaps.Esri.WorldImagery)
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
                     self.map.remove_layer(basemaps.Esri.ArcticImagery)
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
@@ -1015,8 +1578,6 @@ class leaflet:
                     self.map.remove_layer(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
                     self.map.remove_layer(layers.USGS.RAMP)
-                # try to remove fromo layers attribute
-                self.layers.remove(layer)
             except Exception as e:
                 logging.critical(f"Could not remove layer {layer}")
                 logging.error(traceback.format_exc())
@@ -1069,7 +1630,7 @@ class leaflet:
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('tooltip', True)
-        kwargs.setdefault('fields', ['index', 'h_mean', 'h_sigma',
+        kwargs.setdefault('fields', ['h_mean', 'h_sigma',
             'dh_fit_dx', 'rms_misfit', 'w_surface_window_final',
             'delta_time', 'cycle', 'rgt', 'gt'])
         kwargs.setdefault('colorbar', True)
@@ -1086,7 +1647,6 @@ class leaflet:
         geodataframe = gdf[slice(None,None,stride)]
         column_name = copy.copy(kwargs['column_name'])
         geodataframe['data'] = geodataframe[column_name]
-        geodataframe['index'] = geodataframe.index
         # set colorbar limits to 2-98 percentile
         # if not using a defined plot range
         clim = gdf[column_name].quantile((0.02, 0.98)).values

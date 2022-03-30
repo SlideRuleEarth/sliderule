@@ -28,6 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import sys
+import json
 import warnings
 import datetime
 import geopandas
@@ -43,7 +44,7 @@ try:
 except ModuleNotFoundError as e:
     sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
 
-# attributes for ATL06-SR variables
+# attributes for ATL06-SR and ATL03 variables
 def get_attributes(**kwargs):
     # set default keyword arguments
     kwargs.setdefault('lon_key','longitude')
@@ -104,7 +105,6 @@ def get_attributes(**kwargs):
     # along track slope
     attrs['dh_fit_dx'] = {}
     attrs['dh_fit_dx']['units'] = "meters/meters"
-    attrs['dh_fit_dx']['contentType'] = "modelResult"
     attrs['dh_fit_dx']['long_name'] = "Along Track Slope"
     attrs['dh_fit_dx']['coordinates'] = coordinates
     # across track slope
@@ -134,6 +134,8 @@ def get_attributes(**kwargs):
     # RGT
     attrs['rgt'] = {}
     attrs['rgt']['long_name'] = "Reference Ground Track"
+    attrs['rgt']['valid_min'] = 1
+    attrs['rgt']['valid_max'] = 1387
     attrs['rgt']['coordinates'] = coordinates
     # ground track
     attrs['gt'] = {}
@@ -143,7 +145,7 @@ def get_attributes(**kwargs):
     attrs['gt']['valid_min'] = 10
     attrs['gt']['valid_max'] = 60
     attrs['gt']['coordinates'] = coordinates
-    # ground track
+    # along-track distance
     attrs['distance'] = {}
     attrs['distance']['units'] = "meters"
     attrs['distance']['long_name'] = "Along track distance from equator"
@@ -151,22 +153,120 @@ def get_attributes(**kwargs):
     # spot
     attrs['spot'] = {}
     attrs['spot']['long_name'] = "ATLAS spot number"
-    attrs['spot']['coordinates'] = "latitude longitude"
     attrs['spot']['valid_min'] = 1
     attrs['spot']['valid_max'] = 6
     attrs['spot']['coordinates'] = coordinates
     # pflags
     attrs['pflags'] = {}
     attrs['pflags']['long_name'] = "Processing Flags"
-    attrs['pflags']['coordinates'] = "latitude longitude"
     attrs['pflags']['flag_values'] = [0, 1, 2, 4]
     attrs['pflags']['flag_meanings'] = ("valid, spread too short, "
         "too few photons, max iterations reached")
     attrs['pflags']['valid_min'] = 0
     attrs['pflags']['valid_max'] = 4
     attrs['pflags']['coordinates'] = coordinates
+    # ATL03 specific variables
+    # segment_dist
+    attrs['segment_dist'] = {}
+    attrs['segment_dist']['units'] = 'meters'
+    attrs['segment_dist']['long_name'] = ("Along track distance "
+        "from equator for segment")
+    attrs['segment_dist']['coordinates'] = coordinates
+    # distance
+    attrs['distance'] = {}
+    attrs['distance']['units'] = 'meters'
+    attrs['distance']['long_name'] = ("Along track distance "
+        "from segment center")
+    attrs['distance']['coordinates'] = coordinates
+    # sc_orient
+    attrs['sc_orient'] = {}
+    attrs['sc_orient']['long_name'] = "Spacecraft Orientation"
+    attrs['sc_orient']['flag_values'] = [0, 1, 2]
+    attrs['sc_orient']['flag_meanings'] = "backward forward transition"
+    attrs['sc_orient']['valid_min'] = 0
+    attrs['sc_orient']['valid_max'] = 2
+    attrs['sc_orient']['coordinates'] = coordinates
+    # track
+    attrs['track'] = {}
+    attrs['track']['long_name'] = "Pair track identifier"
+    attrs['track']['flag_values'] = [1, 2, 3]
+    attrs['track']['flag_meanings'] = "PT1, PT2, PT3"
+    attrs['track']['valid_min'] = 1
+    attrs['track']['valid_max'] = 3
+    attrs['track']['coordinates'] = coordinates
+    # pair
+    attrs['pair'] = {}
+    attrs['pair']['long_name'] = "left-right identifier of pair track"
+    attrs['pair']['flag_values'] = [0, 1]
+    attrs['pair']['flag_meanings'] = "left, right"
+    attrs['pair']['valid_min'] = 1
+    attrs['pair']['valid_max'] = 3
+    attrs['pair']['coordinates'] = coordinates
+    # photon height
+    attrs['height'] = {}
+    attrs['height']['units'] = "meters"
+    attrs['height']['long_name'] = "Photon Height"
+    attrs['height']['coordinates'] = coordinates
+    # photon height
+    attrs['height'] = {}
+    attrs['height']['units'] = "meters"
+    attrs['height']['long_name'] = "Photon Height"
+    attrs['height']['coordinates'] = coordinates
+    # quality_ph
+    attrs['quality_ph'] = {}
+    attrs['quality_ph']['long_name'] = "Photon Quality"
+    attrs['quality_ph']['flag_values'] = [0, 1, 2, 3]
+    attrs['quality_ph']['flag_meanings'] = ("nominal possible_afterpulse "
+        "possible_impulse_response_effect possible_tep")
+    attrs['quality_ph']['valid_min'] = 1
+    attrs['quality_ph']['valid_max'] = 3
+    attrs['quality_ph']['coordinates'] = coordinates
+    # atl03_cnf
+    attrs['atl03_cnf'] = {}
+    attrs['atl03_cnf']['long_name'] = "Photon Signal Confidence"
+    attrs['atl03_cnf']['flag_values'] = [-2, 1, 0, 1, 2, 3, 4]
+    attrs['atl03_cnf']['flag_meanings'] = ("possible_tep "
+        "not_considered noise buffer low medium high")
+    attrs['atl03_cnf']['valid_min'] = -2
+    attrs['atl03_cnf']['valid_max'] = 3
+    attrs['atl03_cnf']['coordinates'] = coordinates
+    # atl08_class
+    attrs['atl08_class'] = {}
+    attrs['atl08_class']['long_name'] = "ATL08 Photon Classification"
+    attrs['atl08_class']['flag_values'] = [0, 1, 2, 3, 4]
+    attrs['atl08_class']['flag_meanings'] = ("noise "
+        "ground canopy top_of_canopy unclassified")
+    attrs['atl08_class']['valid_min'] = 0
+    attrs['atl08_class']['valid_max'] = 4
+    attrs['atl08_class']['coordinates'] = coordinates
+    # yapc_score
+    attrs['yapc_score'] = {}
+    attrs['yapc_score']['units'] = "1"
+    attrs['yapc_score']['long_name'] = "YAPC Photon Weight"
+    attrs['yapc_score']['valid_min'] = 0
+    attrs['yapc_score']['valid_max'] = 255
+    attrs['yapc_score']['coordinates'] = coordinates
     # return the attributes for the sliderule variables
     return attrs
+
+# PURPOSE: encoder for creating the file attributes
+def attributes_encoder(attr):
+    """Custom encoder for creating file attributes in Python 3"""
+    if isinstance(attr, (bytes, bytearray)):
+        return attr.decode('utf-8')
+    if isinstance(attr, (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32,
+        np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
+        return int(attr)
+    elif isinstance(attr, (np.float_, np.float16, np.float32, np.float64)):
+        return float(attr)
+    elif isinstance(attr, (np.ndarray)):
+        return attr.tolist()
+    elif isinstance(attr, (np.bool_)):
+        return bool(attr)
+    elif isinstance(attr, (np.void)):
+        return None
+    else:
+        return attr
 
 # calculate centroid of polygon
 def centroid(x,y):
@@ -215,10 +315,82 @@ def from_geodataframe(gdf):
     # create a list of regions
     regions = []
     # for each region
-    for geometry in geodataframe['geometry']:
+    for geometry in geodataframe.geometry:
         regions.append([{'lon':ln,'lat':lt} for ln,lt in geometry.exterior.coords])
     # return the list of regions
     return regions
+
+# output request parameters to JSON
+def to_json(filename, **kwargs):
+    # set default keyword arguments
+    kwargs.setdefault('parameters',None)
+    kwargs.setdefault('regions',[])
+    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('verbose',False)
+    # add each parameter as an attribute
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
+    output = {}
+    # for each adjustable sliderule parameter
+    for p in SRparams:
+        # try to convert the parameter if available
+        try:
+            output[p] = attributes_encoder(kwargs['parameters'][p])
+        except:
+            pass
+    # save CRS to JSON
+    crs = geopandas.tools.crs.CRS.from_string(kwargs['crs'])
+    output['crs'] = crs.to_string()
+    # save each region following GeoJSON specification
+    output['type'] = 'FeatureCollection'
+    output['features'] = []
+    for i,poly in enumerate(kwargs['regions']):
+        lon, lat = from_region(poly)
+        lon = attributes_encoder(lon)
+        lat = attributes_encoder(lat)
+        geometry=dict(type="polygon", coordinates=[])
+        geometry['coordinates'].append([[ln,lt] for ln,lt in zip(lon,lat)])
+        output['features'].append(dict(type="Feature", geometry=geometry))
+    # dump the attributes to a JSON file
+    with open(filename, 'w') as fid:
+        json.dump(output, fid)
+    # print the filename and dictionary structure
+    if kwargs['verbose']:
+        print(filename)
+        print(list(output.keys()))
+
+# read request parameters and regions from JSON
+def from_json(filename, **kwargs):
+    # set default keyword arguments
+    kwargs.setdefault('verbose',False)
+    # load the JSON file
+    with open(filename, 'r') as fid:
+        attributes = json.load(fid)
+    # print the filename and dictionary structure
+    if kwargs['verbose']:
+        print(filename)
+        print(list(attributes.keys()))
+    # try to get the sliderule adjustable parameters
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
+    parms = {}
+    # for each adjustable sliderule parameter
+    for p in SRparams:
+        # read the parameter if available
+        try:
+            parms[p] = attributes[p]
+        except:
+            pass
+    # create a list of regions
+    regions = []
+    # for each feature in the JSON file
+    for feature in attributes['features']:
+        # for each coordinate set in the feature
+        for coords in feature['geometry']['coordinates']:
+            # append to sliderule regions
+            regions.append([{'lon':ln,'lat':lt} for ln,lt in coords])
+    # return the sliderule parameters and regions
+    return (parms, regions)
 
 # output geodataframe to netCDF (version 3)
 def to_nc(gdf, filename, **kwargs):
@@ -233,6 +405,7 @@ def to_nc(gdf, filename, **kwargs):
     attributes = get_attributes()
     # open netCDF3 file object (64-bit offset format)
     fileID = scipy.io.netcdf.netcdf_file(filename, 'w', version=2)
+    warnings.filterwarnings("ignore")
     # convert geodataframe to pandas dataframe
     df = geopandas.pd.DataFrame(gdf.drop(columns='geometry'))
     # append latitude and longitude as columns
@@ -273,10 +446,19 @@ def to_nc(gdf, filename, **kwargs):
         fileID.geospatial_ellipsoid = \
             attributes['geospatial_ellipsoid']
     # add each parameter as an attribute
-    SRparams = ['H_min_win', 'atl08_class', 'ats', 'cnf', 'cnt', 'len',
-        'maxi', 'res', 'sigma_r_max', 'srt', 'version', 'commit']
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
     # for each adjustable sliderule parameter
     for p in SRparams:
+        # try to get the parameter if available
+        try:
+            attr = attributes_encoder(kwargs['parameters'][p])
+            setattr(fileID, p, json.dumps(attr))
+        except:
+            # if empty or unavailable
+            pass
+    # for each version parameter
+    for p in ['version', 'commit']:
         # try to get the parameter if available
         try:
             setattr(fileID, p, kwargs['parameters'][p])
@@ -285,15 +467,18 @@ def to_nc(gdf, filename, **kwargs):
             pass
     # save each region as a list attribute
     for i,poly in enumerate(kwargs['regions']):
-        lon,lat = from_region(poly)
-        setattr(fileID, 'poly{0:d}_x'.format(i), lon)
-        setattr(fileID, 'poly{0:d}_y'.format(i), lat)
+        lon, lat = from_region(poly)
+        lon = attributes_encoder(lon)
+        lat = attributes_encoder(lat)
+        setattr(fileID, 'poly{0:d}_x'.format(i), json.dumps(lon))
+        setattr(fileID, 'poly{0:d}_y'.format(i), json.dumps(lat))
     # Output netCDF structure information
     if kwargs['verbose']:
         print(filename)
         print(list(fileID.variables.keys()))
     # Closing the netCDF file
     fileID.close()
+    warnings.filterwarnings("default")
 
 # input geodataframe from netCDF (version 3)
 def from_nc(filename, **kwargs):
@@ -302,6 +487,8 @@ def from_nc(filename, **kwargs):
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
+    kwargs.setdefault('return_parameters',False)
+    kwargs.setdefault('region_regions',False)
     # open netCDF3 file object (64-bit offset format)
     fileID = scipy.io.netcdf.netcdf_file(filename, 'r', version=2)
     warnings.filterwarnings("ignore")
@@ -318,6 +505,34 @@ def from_nc(filename, **kwargs):
     # get geodataframe coordinate system
     if getattr(fileID, 'crs'):
         kwargs['crs'] = fileID.crs.decode('utf-8')
+    # parameter attributes to read
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
+    # for each adjustable sliderule parameter
+    parms = {}
+    for p in SRparams:
+        # try to get the parameter if available
+        try:
+            parms[p] = json.loads(getattr(fileID, p))
+        except:
+            # if empty or unavailable
+            pass
+    # read each region from list attribute
+    regions = []
+    # counter variable for reading polygon attributes
+    i = 0
+    while True:
+        # attempt to get x and y coordinates for query polygon
+        try:
+            x = json.loads(getattr(fileID, 'poly{0:d}_x'.format(i)))
+            y = json.loads(getattr(fileID, 'poly{0:d}_y'.format(i)))
+        except:
+            break
+        else:
+            # convert x and y coordinates into sliderule region
+            regions.append(to_region(x, y))
+            # add to polygon counter
+            i += 1
     # Closing the netCDF file
     fileID.close()
     warnings.filterwarnings("default")
@@ -338,8 +553,22 @@ def from_nc(filename, **kwargs):
     # set index
     gdf.set_index(kwargs['index_key'], inplace=True)
     gdf.sort_index(inplace=True)
-    # return geodataframe
-    return gdf
+    # if not returning the query parameters or polygon
+    if not (kwargs['return_parameters'] or kwargs['region_regions']):
+        # return geodataframe
+        return gdf
+    # create tuple with returns
+    output = (gdf,)
+    # if returning the parameters
+    if kwargs['return_parameters']:
+        # add parameters to output tuple
+        output += (parms,)
+    # if returning the regions
+    if kwargs['region_regions']:
+        # add regions to output tuple
+        output += (regions,)
+    # return the combined tuple
+    return output
 
 # output geodataframe to HDF5
 def to_hdf(gdf, filename, **kwargs):
@@ -399,10 +628,19 @@ def write_pytables(df, filename, attributes, **kwargs):
         fileID.root._v_attrs.geospatial_ellipsoid = \
             attributes['geospatial_ellipsoid']
     # add each parameter as an attribute
-    SRparams = ['H_min_win', 'atl08_class', 'ats', 'cnf', 'cnt', 'len',
-        'maxi', 'res', 'sigma_r_max', 'srt', 'version', 'commit']
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
     # for each adjustable sliderule parameter
     for p in SRparams:
+        # try to get the parameter if available
+        try:
+            attr = attributes_encoder(kwargs['parameters'][p])
+            setattr(fileID.root._v_attrs, p, json.dumps(attr))
+        except:
+            # if empty or unavailable
+            pass
+    # for each version parameter
+    for p in ['version', 'commit']:
         # try to get the parameter if available
         try:
             setattr(fileID.root._v_attrs, p, kwargs['parameters'][p])
@@ -411,9 +649,11 @@ def write_pytables(df, filename, attributes, **kwargs):
             pass
     # save each region as a list attribute
     for i,poly in enumerate(kwargs['regions']):
-        lon,lat = from_region(poly)
-        setattr(fileID.root._v_attrs, 'poly{0:d}_x'.format(i), lon)
-        setattr(fileID.root._v_attrs, 'poly{0:d}_y'.format(i), lat)
+        lon, lat = from_region(poly)
+        lon = attributes_encoder(lon)
+        lat = attributes_encoder(lat)
+        setattr(fileID.root._v_attrs, 'poly{0:d}_x'.format(i), json.dumps(lon))
+        setattr(fileID.root._v_attrs, 'poly{0:d}_y'.format(i), json.dumps(lat))
     # Output HDF5 structure information
     if kwargs['verbose']:
         print(filename)
@@ -469,10 +709,19 @@ def write_h5py(df, filename, attributes, **kwargs):
         fileID.attrs['geospatial_ellipsoid'] = \
             attributes['geospatial_ellipsoid']
     # add each parameter as an attribute
-    SRparams = ['H_min_win', 'atl08_class', 'ats', 'cnf', 'cnt', 'len',
-        'maxi', 'res', 'sigma_r_max', 'srt', 'version', 'commit']
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
     # for each adjustable sliderule parameter
     for p in SRparams:
+        # try to get the parameter if available
+        try:
+            attr = attributes_encoder(kwargs['parameters'][p])
+            fileID.attrs[p] = json.dumps(attr)
+        except:
+            # if empty or unavailable
+            pass
+    # for each version parameter
+    for p in ['version', 'commit']:
         # try to get the parameter if available
         try:
             fileID.attrs[p] = kwargs['parameters'][p]
@@ -481,9 +730,11 @@ def write_h5py(df, filename, attributes, **kwargs):
             pass
     # save each region as a list attribute
     for i,poly in enumerate(kwargs['regions']):
-        lon,lat = from_region(poly)
-        fileID.attrs['poly{0:d}_x'.format(i)] = lon.copy()
-        fileID.attrs['poly{0:d}_y'.format(i)] = lat.copy()
+        lon, lat = from_region(poly)
+        lon = attributes_encoder(lon)
+        lat = attributes_encoder(lat)
+        fileID.attrs['poly{0:d}_x'.format(i)] = json.dumps(lon)
+        fileID.attrs['poly{0:d}_y'.format(i)] = json.dumps(lat)
     # Output HDF5 structure information
     if kwargs['verbose']:
         print(filename)
@@ -498,6 +749,8 @@ def from_hdf(filename, **kwargs):
     kwargs.setdefault('crs','EPSG:4326')
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
+    kwargs.setdefault('return_parameters',False)
+    kwargs.setdefault('region_regions',False)
     if (kwargs['driver'].lower() == 'pytables'):
         kwargs.pop('driver')
         # return GeoDataFrame from pytables
@@ -513,6 +766,8 @@ def read_pytables(filename, **kwargs):
     kwargs.setdefault('crs','EPSG:4326')
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
+    kwargs.setdefault('return_parameters',False)
+    kwargs.setdefault('region_regions',False)
     # open pytables HDF5 to read pandas dataframe
     df = geopandas.pd.read_hdf(filename, **kwargs)
     # generate geometry column
@@ -522,13 +777,56 @@ def read_pytables(filename, **kwargs):
     fileID = geopandas.pd.HDFStore(filename, mode='r')
     if getattr(fileID.root._v_attrs, 'crs'):
         kwargs['crs'] = str(fileID.root._v_attrs.crs)
+    # parameter attributes to read
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
+    # for each adjustable sliderule parameter
+    parms = {}
+    for p in SRparams:
+        # try to get the parameter if available
+        try:
+            parms[p] = json.loads(getattr(fileID.root._v_attrs,p))
+        except:
+            # if empty or unavailable
+            pass
+    # read each region from list attribute
+    regions = []
+    # counter variable for reading polygon attributes
+    i = 0
+    while True:
+        # attempt to get x and y coordinates for query polygon
+        try:
+            x = json.loads(getattr(fileID.root._v_attrs,'poly{0:d}_x'.format(i)))
+            y = json.loads(getattr(fileID.root._v_attrs,'poly{0:d}_y'.format(i)))
+        except:
+            break
+        else:
+            # convert x and y coordinates into sliderule region
+            regions.append(to_region(x,y))
+            # add to polygon counter
+            i += 1
     # Closing the HDF5 file
     fileID.close()
     # build and return GeoDataFrame
     gdf = geopandas.GeoDataFrame(df.drop(columns=[lon_key,lat_key]),
         geometry=geometry, crs=kwargs['crs'])
     gdf.sort_index(inplace=True)
-    return gdf
+    # if not returning the query parameters or polygon
+    if not (kwargs['return_parameters'] or kwargs['region_regions']):
+        # return geodataframe
+        return gdf
+    # create tuple with returns
+    output = (gdf,)
+    # if returning the parameters
+    if kwargs['return_parameters']:
+        # add parameters to output tuple
+        output += (parms,)
+    # if returning the regions
+    if kwargs['region_regions']:
+        # add regions to output tuple
+        output += (regions,)
+    # return the combined tuple
+    return output
 
 # read pandas dataframe from h5py HDF5
 def read_h5py(filename, **kwargs):
@@ -537,6 +835,8 @@ def read_h5py(filename, **kwargs):
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
+    kwargs.setdefault('return_parameters',False)
+    kwargs.setdefault('region_regions',False)
     # open HDF5 file object
     fileID = h5py.File(filename, mode='r')
     # input dictionary for input variables
@@ -547,9 +847,35 @@ def read_h5py(filename, **kwargs):
     # get geodataframe coordinate system from attributes
     if 'crs' in fileID.attrs.keys():
         kwargs['crs'] = str(fileID.attrs['crs'])
+    # parameter attributes to read
+    SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
+        'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
+    # for each adjustable sliderule parameter
+    parms = {}
+    for p in SRparams:
+        # try to get the parameter if available
+        try:
+            parms[p] = json.loads(fileID.attrs[p])
+        except:
+            # if empty or unavailable
+            pass
+    # read each region from list attribute
+    regions = []
+    # counter variable for reading polygon attributes
+    i = 0
+    while True:
+        # attempt to get x and y coordinates for query polygon
+        try:
+            x = json.loads(fileID.attrs['poly{0:d}_x'.format(i)])
+            y = json.loads(fileID.attrs['poly{0:d}_y'.format(i)])
+        except:
+            break
+        else:
+            # convert x and y coordinates into sliderule region
+            regions.append(to_region(x,y))
+            # add to polygon counter
+            i += 1
     # Closing the HDF5 file
-    fileID.close()
-    # Closing the netCDF file
     fileID.close()
     # Generate Time Column
     delta_time = (h5['delta_time']*1e9).astype('timedelta64[ns]')
@@ -568,8 +894,22 @@ def read_h5py(filename, **kwargs):
     # set index
     gdf.set_index(kwargs['index_key'], inplace=True)
     gdf.sort_index(inplace=True)
-    # return geodataframe
-    return gdf
+    # if not returning the query parameters or polygon
+    if not (kwargs['return_parameters'] or kwargs['region_regions']):
+        # return geodataframe
+        return gdf
+    # create tuple with returns
+    output = (gdf,)
+    # if returning the parameters
+    if kwargs['return_parameters']:
+        # add parameters to output tuple
+        output += (parms,)
+    # if returning the regions
+    if kwargs['region_regions']:
+        # add regions to output tuple
+        output += (regions,)
+    # return the combined tuple
+    return output
 
 # output formats wrapper
 def to_file(gdf, filename, format='hdf', **kwargs):
