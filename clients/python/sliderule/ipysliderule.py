@@ -90,7 +90,7 @@ class widgets:
 
         # dropdown menu for setting data release
         self.release = ipywidgets.Dropdown(
-            options=['003', '004','005'],
+            options=['003', '004', '005'],
             value='005',
             description='Release:',
             description_tooltip="Release: ICESat-2 data release",
@@ -608,6 +608,7 @@ class widgets:
     # function for setting photon classifications
     def set_classification(self, sender):
         """function for setting photon classifications
+        and updating the visibility of widgets
         """
         # atl03 photon confidence level
         if ('atl03' in self.classification.value):
@@ -643,6 +644,8 @@ class widgets:
             self.yapc_weight.layout.display = 'none'
 
     def set_atl03_defaults(self):
+        """sets the default widget parameters for ATL03 requests
+        """
         # default photon classifications
         class_options = ['atl03','atl08','yapc']
         self.classification.value = class_options
@@ -667,6 +670,28 @@ class widgets:
         self.variable.value = 'height'
         # set default filename
         self.file = copy.copy(self.atl03_filename)
+        self.savelabel.value = self.file
+
+    def set_atl06_defaults(self):
+        """sets the default widget parameters for ATL06 requests
+        """
+        # default photon classifications
+        class_options = ['atl03','atl08']
+        self.classification.value = class_options
+        # default ATL06-SR confidence
+        self.confidence.value = 4
+        # set land class options
+        self.land_class.value = []
+        # set default ATL06-SR length
+        self.length.value = 40
+        # update variable list for ATL06-SR variables
+        variable_list = ['h_mean', 'h_sigma', 'dh_fit_dx', 'dh_fit_dy',
+            'rms_misfit', 'w_surface_window_final', 'delta_time',
+            'cycle', 'rgt']
+        self.variable.options = variable_list
+        self.variable.value = 'h_mean'
+        # set default filename
+        self.file = copy.copy(self.atl06_filename)
         self.savelabel.value = self.file
 
     @property
@@ -723,6 +748,8 @@ class widgets:
         return self
 
     def set_savefile(self, sender):
+        """return filename from saveas function
+        """
         self.file = self.savelabel.value
 
     def select_file(self, b):
@@ -744,6 +771,8 @@ class widgets:
         return self
 
     def set_loadfile(self, sender):
+        """return filename from file select function
+        """
         self.file = self.loadlabel.value
 
     @property
@@ -779,11 +808,15 @@ class widgets:
 
     @property
     def _r(self):
+        """return string for reversed Matplotlib colormaps
+        """
         cmap_reverse_flag = '_r' if self.reverse.value else ''
         return cmap_reverse_flag
 
     @property
     def colormap(self):
+        """return string for Matplotlib colormaps
+        """
         return self.cmap.value + self._r
 
     # click handler for individual photons
@@ -817,6 +850,12 @@ class widgets:
 
     # build sliderule ATL03 parameters using latest values from widget
     def build_atl03(self, **parms):
+        """Build a SlideRule parameters dictionary for making ATL03 requests
+
+        Parameters
+        ----------
+        parms : dict, dictionary of SlideRule parameters to update
+        """
         # classification and checks
         # still return photon segments that fail checks
         parms["pass_invalid"] = True
@@ -849,6 +888,12 @@ class widgets:
 
     # build sliderule ATL06 parameters using latest values from widget
     def build_atl06(self, **parms):
+        """Build a SlideRule parameters dictionary for making ATL06 requests
+
+        Parameters
+        ----------
+        parms : dict, dictionary of SlideRule parameters to update
+        """
         # default parameters for all cases
         # length of ATL06-SR segment in meters
         parms["len"] = self.length.value
@@ -892,6 +937,12 @@ class widgets:
 
     # update values from widget using sliderule parameters dictionary
     def set_values(self, parms):
+        """Set widget values using a SlideRule parameters dictionary
+
+        Parameters
+        ----------
+        parms : dict, dictionary of SlideRule parameters
+        """
         # default parameters for all cases
         # length of ATL06-SR segment in meters
         if ('len' in parms.keys()):
@@ -1007,12 +1058,38 @@ class widgets:
 
     def plot(self, gdf=None, **kwargs):
         """Creates plots of SlideRule outputs
+
+        Parameters
+        ----------
+        gdf : obj, ATL06-SR GeoDataFrame
+        ax : obj, matplotlib axes object
+        kind : str, kind of plot to produce
+
+            - 'scatter' : scatter plot of along-track heights
+            - 'cycles' : time series plot for each orbital cycle
+        cmap : str, matplotlib colormap
+        title: str, title to use for the plot
+        legend: bool, title to use for the plot
+        legend_label: str, legend label type for 'cycles' plot
+        legend_frameon: bool, use a background patch for legend
+        column_name: str, GeoDataFrame column for 'cycles' plot
+        atl03: obj, ATL03 GeoDataFrame for 'scatter' plot
+        classification: str, ATL03 photon classification for scatter plot
+
+            - 'atl03' : ATL03 photon confidence
+            - 'atl08' : ATL08 photon-level land classification
+            - 'yapc' : Yet Another Photon Classification photon-density
+            - 'none' : no classification of photons
+        cycle_start: int, beginning cycle for 'cycles' plot
         """
         # default keyword arguments
         kwargs.setdefault('ax', None)
         kwargs.setdefault('kind', 'cycles')
         kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('title', None)
         kwargs.setdefault('legend', False)
+        kwargs.setdefault('legend_label','date')
+        kwargs.setdefault('legend_frameon',True)
         kwargs.setdefault('column_name', 'h_mean')
         kwargs.setdefault('atl03', None)
         kwargs.setdefault('classification', None)
@@ -1029,6 +1106,8 @@ class widgets:
         # create figure axis
         if kwargs['ax'] is None:
             fig,ax = plt.subplots(num=1, figsize=(8,6))
+            fig.set_facecolor('white')
+            fig.canvas.header_visible = False
         else:
             ax = kwargs['ax']
         # list of legend elements
@@ -1050,9 +1129,13 @@ class widgets:
                 # plot reduced data frame
                 l, = ax.plot(df['distance'].values,
                     df[column].values, marker='.', lw=0, ms=1.5)
+                # create legend element for cycle
+                if (kwargs['legend_label'] == 'date'):
+                    label = df.index[0].strftime('%Y-%m-%d')
+                elif (kwargs['legend_label'] == 'cycle'):
+                    label = 'Cycle {0:0.0f}'.format(cycle)
                 legend_elements.append(matplotlib.lines.Line2D([0], [0],
-                    color=l.get_color(), lw=6,
-                    label='Cycle {0:0.0f}'.format(cycle)))
+                    color=l.get_color(), lw=6, label=label))
             # add axes labels
             ax.set_xlabel('Along-Track Distance [m]')
             ax.set_ylabel(f'SlideRule {column}')
@@ -1072,8 +1155,7 @@ class widgets:
                 # noise, ground, canopy, top of canopy, unclassified
                 colormap = np.array(['c','b','g','g','y'])
                 classes = ['noise','ground','canopy','toc','unclassified']
-                sc = ax.scatter(atl03.index.values,
-                    atl03["height"].values,
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
                     c=colormap[atl03["atl08_class"].values.astype('i')],
                     s=1.5, rasterized=True)
                 for i,lab in enumerate(classes):
@@ -1114,13 +1196,18 @@ class widgets:
                     c='red', s=2.5, rasterized=True)
                 legend_elements.append(matplotlib.lines.Line2D([0], [0],
                     color='red', lw=6, label='ATL06-SR'))
-            # add title and axes labels
-            ax.set_title("Photon Cloud")
+            # add axes labels
             ax.set_xlabel('UTC')
             ax.set_ylabel('Height (m)')
+        # add title
+        if kwargs['title']:
+            ax.set_title(kwargs['title'])
         # create legend
         if kwargs['legend']:
-            lgd = ax.legend(handles=legend_elements, loc=3, frameon=True)
+            lgd = ax.legend(handles=legend_elements, loc=3,
+                frameon=kwargs['legend_frameon'])
+        # set legend frame to solid white
+        if kwargs['legend'] and kwargs['legend_frameon']:
             lgd.get_frame().set_alpha(1.0)
             lgd.get_frame().set_edgecolor('white')
         if kwargs['ax'] is None:
@@ -1395,6 +1482,8 @@ layers = Bunch(
 # load basemap providers from dict
 # https://github.com/geopandas/xyzservices/blob/main/xyzservices/lib.py
 def _load_dict(data):
+    """Creates a xyzservices TileProvider object from a dictionary
+    """
     providers = Bunch()
     for provider_name in data.keys():
         provider = data[provider_name]
@@ -1491,6 +1580,8 @@ class leaflet:
 
     # add sliderule regions to map
     def add_region(self, regions, **kwargs):
+        """adds SlideRule region polygons to leaflet maps
+        """
         kwargs.setdefault('color','green')
         kwargs.setdefault('fillOpacity',0.8)
         kwargs.setdefault('weight',4)
@@ -1512,6 +1603,8 @@ class leaflet:
 
     # add map layers
     def add_layer(self, **kwargs):
+        """wrapper function for adding selected layers to leaflet maps
+        """
         kwargs.setdefault('layers', [])
         # verify layers are iterable
         if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
@@ -1548,6 +1641,8 @@ class leaflet:
 
     # remove map layers
     def remove_layer(self, **kwargs):
+        """wrapper function for removing selected layers from leaflet maps
+        """
         kwargs.setdefault('layers', [])
         # verify layers are iterable
         if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
@@ -1585,6 +1680,8 @@ class leaflet:
 
     # handle cursor movements for label
     def handle_interaction(self, **kwargs):
+        """callback for handling mouse motion and setting location label
+        """
         if (kwargs.get('type') == 'mousemove'):
             lat,lon = kwargs.get('coordinates')
             lon = sliderule.io.wrap_longitudes(lon)
@@ -1593,6 +1690,9 @@ class leaflet:
 
     # keep track of rectangles and polygons drawn on map
     def handle_draw(self, obj, action, geo_json):
+        """callback for handling draw events and interactively
+        creating SlideRule region objects
+        """
         lon,lat = np.transpose(geo_json['geometry']['coordinates'])
         lon = sliderule.io.wrap_longitudes(lon)
         cx,cy = sliderule.io.centroid(lon,lat)
@@ -1620,20 +1720,39 @@ class leaflet:
 
     # add geodataframe data to leaflet map
     def GeoData(self, gdf, **kwargs):
+        """Creates scatter plots of GeoDataFrames on leaflet maps
+
+        Parameters
+        ----------
+        column_name : str, GeoDataFrame column to plot
+        cmap : str, matplotlib colormap
+        vmin : float, minimum value for normalization
+        vmax : float, maximum value for normalization
+        norm : obj, matplotlib color normalization object
+        radius : float, radius of scatter plot markers
+        fillOpacity : float, opacity of scatter plot markers
+        weight : float, weight of scatter plot markers
+        stride : int, number between successive array elements
+        max_plot_points : int, total number of plot markers to render
+        tooltip : bool, show hover tooltips
+        fields : list, GeoDataFrame fields to show in hover tooltips
+        colorbar : bool, show colorbar for rendered variable
+        position : str, position of colorbar on leaflet map
+        """
         kwargs.setdefault('column_name', 'h_mean')
         kwargs.setdefault('cmap', 'viridis')
         kwargs.setdefault('vmin', None)
         kwargs.setdefault('vmax', None)
+        kwargs.setdefault('norm', None)
         kwargs.setdefault('radius', 1.0)
         kwargs.setdefault('fillOpacity', 0.5)
         kwargs.setdefault('weight', 3.0)
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('tooltip', True)
-        kwargs.setdefault('fields', ['h_mean', 'h_sigma',
-            'dh_fit_dx', 'rms_misfit', 'w_surface_window_final',
-            'delta_time', 'cycle', 'rgt', 'gt'])
+        kwargs.setdefault('fields', self.default_atl06_fields())
         kwargs.setdefault('colorbar', True)
+        kwargs.setdefault('position', 'topright')
         # remove any prior instances of a data layer
         if self.geojson is not None:
             self.map.remove_layer(self.geojson)
@@ -1658,8 +1777,12 @@ class leaflet:
             vmax = clim[-1]
         else:
             vmax = np.copy(kwargs['vmax'])
+        # create matplotlib normalization
+        if kwargs['norm'] is None:
+            norm = colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
+        else:
+            norm = copy.copy(kwargs['norm'])
         # normalize data to be within vmin and vmax
-        norm = colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
         normalized = norm(geodataframe['data'])
         # create HEX colors for each point in the dataframe
         geodataframe["color"] = np.apply_along_axis(colors.to_hex, 1,
@@ -1690,10 +1813,14 @@ class leaflet:
             self.geojson.on_click(self.handle_click)
         # add colorbar
         if kwargs['colorbar']:
-            self.add_colorbar(column_name=column_name, cmap=kwargs['cmap'], norm=norm)
+            self.add_colorbar(column_name=column_name,
+                cmap=kwargs['cmap'], norm=norm,
+                position=kwargs['position'])
 
     # functional call for setting colors of each point
     def style_callback(self, feature):
+        """callback for setting marker colors
+        """
         return {
             "fillColor": feature["properties"]["color"],
             "color": feature["properties"]["color"],
@@ -1701,6 +1828,8 @@ class leaflet:
 
     # functional calls for hover events
     def handle_hover(self, feature, **kwargs):
+        """callback for creating hover tooltips
+        """
         # combine html strings for hover tooltip
         self.tooltip.value = '<b>{0}:</b> {1}<br>'.format('id',feature['id'])
         self.tooltip.value += '<br>'.join(['<b>{0}:</b> {1}'.format(field,
@@ -1711,6 +1840,8 @@ class leaflet:
         self.map.add_control(self.hover_control)
 
     def handle_mouseout(self, _, content, buffers):
+        """callback for removing hover tooltips upon mouseout
+        """
         event_type = content.get('type', '')
         if event_type == 'mouseout':
             self.tooltip.value = ''
@@ -1721,14 +1852,31 @@ class leaflet:
 
     # functional calls for click events
     def handle_click(self, feature, **kwargs):
+        """callback for handling mouse clicks
+        """
         if self.selected_callback != None:
             self.selected_callback(feature)
 
     def add_selected_callback(self, callback):
+        """set callback for handling mouse clicks
+        """
         self.selected_callback = callback
 
     # add colorbar widget to leaflet map
     def add_colorbar(self, **kwargs):
+        """Creates colorbars on leaflet maps
+
+        Parameters
+        ----------
+        column_name : str, GeoDataFrame column to plot
+        cmap : str, matplotlib colormap
+        norm : obj, matplotlib color normalization object
+        alpha : float, opacity of colormap
+        orientation : str, orientation of colorbar
+        position : str, position of colorbar on leaflet map
+        width : float, width of colorbar
+        height : float, height of colorbar
+        """
         kwargs.setdefault('column_name', 'h_mean')
         kwargs.setdefault('cmap', 'viridis')
         kwargs.setdefault('norm', None)
@@ -1761,3 +1909,17 @@ class leaflet:
         # add colorbar
         self.map.add_control(self.colorbar)
         plt.close()
+
+    @staticmethod
+    def default_atl03_fields():
+        """List of ATL03 tooltip fields
+        """
+        return ['atl03_cnf', 'atl08_class', 'cycle', 'delta_time', 'height',
+            'pair', 'rgt', 'segment_id', 'track', 'yapc_score']
+
+    @staticmethod
+    def default_atl06_fields():
+        """List of ATL06-SR tooltip fields
+        """
+        return ['cycle', 'delta_time', 'dh_fit_dx', 'gt', 'h_mean',
+            'h_sigma', 'rgt', 'rms_misfit', 'w_surface_window_final']
