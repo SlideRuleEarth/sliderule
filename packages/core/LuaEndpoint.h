@@ -42,6 +42,7 @@
 #include "Dictionary.h"
 #include "MsgQ.h"
 #include "LuaObject.h"
+#include "RecordObject.h"
 
 /******************************************************************************
  * PISTACHE SERVER CLASS
@@ -58,21 +59,43 @@ class LuaEndpoint: public EndpointObject
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
+        static const char* EndpointExceptionRecType;
+        static const RecordObject::fieldDef_t EndpointExceptionRecDef[];
+        
         static const double DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD;
         static const double DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD;
 
         static const int MAX_SOURCED_RESPONSE_SIZE = 1048576; // 1M
         static const int MAX_RESPONSE_TIME_MS = 5000;
         static const int INITIAL_NUM_ENDPOINTS = 32;
+        static const int MAX_EXCEPTION_TEXT_SIZE = 256;
         static const char* RESPONSE_QUEUE;
         static const char* ALL_ENDPOINTS;
         static const char* HITS_METRIC;
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        /* Response Exception Code Enumeration */
+        typedef enum {
+            TIMEOUT = 0,
+            RESOURE_DOES_NOT_EXIST = 1,
+            EMPTY_SUBSET = 2,
+            PROCESSING_ERROR = 3
+        } response_code_t;
+        
+        /* Response Exception Record */
+        typedef struct {
+            int32_t code;
+            char    text[MAX_EXCEPTION_TEXT_SIZE];
+        } response_exception_t;
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static SafeString ServerHeader;
+        static SafeString serverHead;
 
         /*--------------------------------------------------------------------
          * Methods

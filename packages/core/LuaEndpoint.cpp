@@ -46,10 +46,16 @@ const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+const char* LuaEndpoint::EndpointExceptionRecType = "epexcept";
+const RecordObject::fieldDef_t LuaEndpoint::EndpointExceptionRecDef[] = {
+    {"code",        RecordObject::INT32,    offsetof(response_exception_t, code), 1,                        NULL, NATIVE_FLAGS},
+    {"text",        RecordObject::STRING,   offsetof(response_exception_t, text), MAX_EXCEPTION_TEXT_SIZE,  NULL, NATIVE_FLAGS}
+};
+
 const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
 const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 
-SafeString LuaEndpoint::ServerHeader("sliderule/%s", LIBID);
+SafeString LuaEndpoint::serverHead("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
 
@@ -74,6 +80,13 @@ bool LuaEndpoint::init (void)
     if(totalMetricId == EventLib::INVALID_METRIC)
     {
         mlog(ERROR, "Registry failed for %s.%s", ALL_ENDPOINTS, HITS_METRIC);
+        status = false;
+    }
+
+    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(EndpointExceptionRecType, "code", sizeof(response_exception_t), EndpointExceptionRecDef, sizeof(EndpointExceptionRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", EndpointExceptionRecType, rc);
         status = false;
     }
 
@@ -207,7 +220,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, const char* body, Publ
             if(result)
             {
                 int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
-                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, ServerHeader.getString());
+                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.getString());
                 rspq->postCopy(header, header_length);
                 rspq->postCopy(result, result_length);
             }
@@ -253,7 +266,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publ
         ((mem = LocalLib::memusage()) < streamRequestMemoryThreshold) )
     {
         /* Send Header */
-        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", ServerHeader.getString());
+        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.getString());
         rspq->postCopy(header, header_length);
 
         /* Create Engine */

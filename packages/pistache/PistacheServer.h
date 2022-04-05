@@ -68,7 +68,7 @@ class PistacheServer: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static StringLib::String ServerHeader;
+        static StringLib::String serverHead;
 
         /*--------------------------------------------------------------------
          * Types

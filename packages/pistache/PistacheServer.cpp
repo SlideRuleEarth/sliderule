@@ -50,7 +50,7 @@ const struct luaL_Reg PistacheServer::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-StringLib::String PistacheServer::ServerHeader("sliderule/%s", LIBID);
+StringLib::String PistacheServer::serverHead("sliderule/%s", LIBID);
 
 const char* PistacheServer::RESPONSE_QUEUE = "rspq";
 
@@ -181,7 +181,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(ServerHeader.getString());
+    response.headers().add<Http::Header::Server>(serverHead.getString());
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Send Response */
@@ -206,7 +206,7 @@ void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWr
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(ServerHeader.getString());
+    response.headers().add<Http::Header::Server>(serverHead.getString());
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Build Response */
@@ -237,7 +237,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(ServerHeader.getString());
+    response.headers().add<Http::Header::Server>(serverHead.getString());
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Launch Engine */
@@ -289,7 +289,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(ServerHeader.getString());
+    response.headers().add<Http::Header::Server>(serverHead.getString());
     response.headers().add<Http::Header::ContentType>(MIME(Application, OctetStream));
 
     /* Create Engine */
