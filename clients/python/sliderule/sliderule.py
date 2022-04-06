@@ -48,6 +48,8 @@ server_table = {}
 server_index = 0
 server_max_errors = 3
 
+max_retries_per_request = 5
+
 verbose = False
 
 request_timeout = (10, 60) # (connection, read) in seconds
@@ -70,6 +72,13 @@ eventlogger = {
     2: logger.warning,
     3: logger.error,
     4: logger.critical
+}
+
+handleexcept = {
+    0: {"name": "ERROR",                    "fatal": True,  "expected": False },
+    1: {"name": "TIMEOUT",                  "fatal": False, "expected": True },
+    2: {"name": "RESOURCE_DOES_NOT_EXIST",  "fatal": True,  "expected": True },
+    3: {"name": "EMPTY_SUBSET",             "fatal": True,  "expected": True }
 }
 
 datatypes = {
@@ -110,6 +119,14 @@ codedtype2str = {
     11: "TIME8",
     12: "STRING"
 }
+
+###############################################################################
+# CLASSES
+###############################################################################
+
+class TransientError(Exception):
+    """Processing exception that can be retried"""
+    pass
 
 ###############################################################################
 # UTILITIES
@@ -323,6 +340,19 @@ def __logeventrec(rec):
     if verbose:
         eventlogger[rec['level']]('%s' % (rec["attr"]))
 
+#
+#  __raiseexceptrec
+#
+def __raiseexceptrec(rec):
+    rc = rec["code"]
+    if rc in handleexcept:
+        if verbose:
+            logger.info("Exception <%d>: %s", rc, rec["text"])
+        if not handleexcept[rc]["expected"]:
+            logger.critical("Unexpected error: %s:", handleexcept[rc]["name"])
+        if not handleexcept[rc]["fatal"]:
+            raise TransientError()
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -330,11 +360,13 @@ def __logeventrec(rec):
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
+def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}):
     rqst = json.dumps(parm)
     complete = False
+    retries = max_retries_per_request
     rsps = []
-    while not complete:
+    while (not complete) and (retries > 0):
+        retries -= 1        
         serv = __getserv() # it throws a RuntimeError that must be caught by calling function
         try:
             url  = '%s/source/%s' % (serv, api)
@@ -361,6 +393,9 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec}):
         except requests.exceptions.ChunkedEncodingError as e:
             logger.error("Unexpected termination of response from endpoint {} ... retrying request".format(url))
             __errserv(serv)
+        except TransientError as e:
+            logger.warning("Recoverable error occurred at {} ... retrying request".format(url))
+            # do not mark server as having an error
     return rsps
 
 #
