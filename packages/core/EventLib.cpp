@@ -101,7 +101,7 @@ void EventLib::init (const char* eventq)
     RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, offsetof(event_t, attr) + 1, rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t));
     if(rc != RecordObject::SUCCESS_DEF)
     {
-        throw RunTimeException(CRITICAL, "Fatal error: failed to register event record");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Fatal error: failed to register event record");
     }
 
     /* Calculate Size of Record Type */

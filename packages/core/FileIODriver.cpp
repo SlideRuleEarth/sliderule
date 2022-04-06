@@ -64,7 +64,7 @@ void FileIODriver::ioOpen (const char* resource)
     ioFile = fopen(filepath.getString(), "r");
     if(ioFile == NULL)
     {
-        throw RunTimeException(CRITICAL, "failed to open resource");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");
     }
 }
 
@@ -85,7 +85,7 @@ int64_t FileIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     /* Seek to New Position */
     if(fseek(ioFile, pos, SEEK_SET) != 0)
     {
-        throw RunTimeException(CRITICAL, "failed to go to I/O position: 0x%lx", pos);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to go to I/O position: 0x%lx", pos);
     }
 
     /* Read Data */

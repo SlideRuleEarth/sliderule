@@ -206,7 +206,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "invalid memory allocation in record creation");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid memory allocation in record creation");
         }
 
         /* Allocate Record Memory */
@@ -222,7 +222,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
     }
     else
     {
-        throw RunTimeException(CRITICAL, "could not locate record definition %s", rec_type);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "could not locate record definition %s", rec_type);
     }
 }
 
@@ -250,12 +250,12 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "buffer passed in not large enough to populate record");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "buffer passed in not large enough to populate record");
         }
     }
     else
     {
-        throw RunTimeException(CRITICAL, "buffer did not contain defined record");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "buffer did not contain defined record");
     }
 }
 
@@ -523,7 +523,7 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
     if(f.flags & POINTER)
     {
         field_t ptr_field = getPointedToField(f, false, element);
-        if(val == NULL) throw RunTimeException(CRITICAL, "Cannot null existing pointer!");
+        if(val == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Cannot null existing pointer!");
         else            setValueText(ptr_field, val);
     }
     else if(val_type == TEXT)
@@ -571,7 +571,7 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueReal(field_t f, const double val, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, "Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -642,7 +642,7 @@ void RecordObject::setValueReal(field_t f, const double val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueInteger(field_t f, const long val, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, "Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -770,7 +770,7 @@ const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
  *----------------------------------------------------------------------------*/
 double RecordObject::getValueReal(field_t f, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, "Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -831,7 +831,7 @@ double RecordObject::getValueReal(field_t f, int element)
  *----------------------------------------------------------------------------*/
 long RecordObject::getValueInteger(field_t f, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, "Out of range access");
+    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -1465,13 +1465,13 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         // Check Offset
         if(f.offset == 0 && !allow_null)
         {
-            throw RunTimeException(CRITICAL, "Attempted to dereference null pointer field!");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Attempted to dereference null pointer field!");
         }
         else if(f.offset > ((memoryAllocated - recordDefinition->type_size) * 8))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
-            throw RunTimeException(CRITICAL, "Pointer access exceeded size of memory allocated!");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Pointer access exceeded size of memory allocated!");
         }
     }
 
@@ -1537,7 +1537,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
                 /* Get Element */
                 if(!StringLib::str2long(element_str, &element))
                 {
-                    throw RunTimeException(CRITICAL, "Invalid array element!");
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid array element!");
                 }
             }
         }
@@ -1713,8 +1713,8 @@ RecordObject::definition_t* RecordObject::getDefinition(const char* rec_type)
 RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, int size)
 {
     /* Check Parameters */
-    if(buffer == NULL) throw RunTimeException(CRITICAL, "Null buffer used to retrieve record definition");
-    else if(size <= 0) throw RunTimeException(CRITICAL, "Zero length buffer used to retrieve record definition");
+    if(buffer == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Null buffer used to retrieve record definition");
+    else if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Zero length buffer used to retrieve record definition");
 
     /* Find Null Terminator */
     int i;
@@ -1729,7 +1729,7 @@ RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, i
     /* Check Null Terminator */
     if(i == size)
     {
-        throw RunTimeException(CRITICAL, "Record buffer does not contain record type");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Record buffer does not contain record type");
     }
 
     /* Get Record Definitions */
@@ -1760,11 +1760,11 @@ RecordInterface::RecordInterface(unsigned char* buffer, int size): RecordObject(
                 memoryOwner = false;
                 memoryAllocated = size;
             }
-            else throw RunTimeException(CRITICAL, "Unable to differentiate the record type from record data");
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to differentiate the record type from record data");
         }
-        else throw RunTimeException(CRITICAL, "Buffer passed in not large enough to populate record");
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "Buffer passed in not large enough to populate record");
     }
-    else throw RunTimeException(CRITICAL, "Could not find a definition that matches the record buffer");
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Could not find a definition that matches the record buffer");
 }
 
 /*----------------------------------------------------------------------------

@@ -299,7 +299,7 @@ int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
         int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
-            throw RunTimeException(CRITICAL, "failed to parse time string %s", gmt_str);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse time string %s", gmt_str);
         }
 
         /* Set Start Time */
@@ -333,7 +333,7 @@ int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
         int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
-            throw RunTimeException(CRITICAL, "failed to parse time string %s", gmt_str);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse time string %s", gmt_str);
         }
 
         /* Set Stop Time */

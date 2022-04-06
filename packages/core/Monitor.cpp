@@ -299,13 +299,13 @@ int Monitor::luaTail (lua_State* L)
         int tail_size = getLuaInteger(L, 2);
         if(tail_size <= 0 || tail_size > MAX_TAIL_SIZE)
         {
-            throw RunTimeException(CRITICAL, "Invalid tail size: %d", tail_size);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid tail size: %d", tail_size);
         }
 
         /* Check if Tail Exists */
         if(lua_obj->eventTailArray)
         {
-            throw RunTimeException(CRITICAL, "Event tail already exists");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Event tail already exists");
         }
 
         /* Create Event Tail */
@@ -346,7 +346,7 @@ int Monitor::luaCat (lua_State* L)
         /* Check if Tail Exists */
         if(!lua_obj->eventTailArray)
         {
-            throw RunTimeException(CRITICAL, "Event tail does not exists");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Event tail does not exists");
         }
 
         /* Setup Cat */

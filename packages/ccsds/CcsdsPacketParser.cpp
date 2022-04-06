@@ -77,7 +77,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
         CcsdsPacket::type_t pkt_type = str2pkttype(type_str);
         if(pkt_type == CcsdsPacket::INVALID_PACKET)
         {
-            throw RunTimeException(CRITICAL, "invalid packet type: %s", type_str);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid packet type: %s", type_str);
         }
 
         /* Create Packet Parser */
@@ -257,7 +257,7 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         /* Check APID */
         if(apid < 0 && apid > CCSDS_NUM_APIDS)
         {
-            throw RunTimeException(CRITICAL, "invalid apid: %04X", (unsigned int)apid);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid apid: %04X", (unsigned int)apid);
         }
 
         /* Create Statistics Table */

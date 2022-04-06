@@ -220,7 +220,7 @@ int CredentialStore::luaPut(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "Must supply table");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply table");
         }
 
         /* Populate Credentials */

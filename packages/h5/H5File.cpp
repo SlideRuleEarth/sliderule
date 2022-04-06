@@ -233,7 +233,7 @@ int H5File::luaRead (lua_State* L)
                 }
                 else
                 {
-                    throw RunTimeException(CRITICAL, "expecting dataset entry");
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "expecting dataset entry");
                 }
 
                 /* Start Thread */
@@ -254,7 +254,7 @@ int H5File::luaRead (lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "expecting list of datasets");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "expecting list of datasets");
         }
     }
     catch(const RunTimeException& e)

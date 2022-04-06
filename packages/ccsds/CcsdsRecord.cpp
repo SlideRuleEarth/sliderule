@@ -72,7 +72,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
     }
     else
     {
-        throw RunTimeException(ERROR, "could not find record definition: %s", rec_type);
+        throw RunTimeException(ERROR, RTE_ERROR, "could not find record definition: %s", rec_type);
     }
 
     /* Set Packet Definition */
@@ -86,7 +86,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
     {
         (void)e;
         delete [] recordMemory;
-        throw RunTimeException(ERROR, "Could not find definition for CCSDS packet with provided record type");
+        throw RunTimeException(ERROR, RTE_ERROR, "Could not find definition for CCSDS packet with provided record type");
     }
 }
 
@@ -112,7 +112,7 @@ CcsdsRecord::CcsdsRecord(unsigned char* buffer, int size): RecordObject()
     }
     else
     {
-        throw RunTimeException(CRITICAL, "Could not convert buffer to valid CCSDS packet");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Could not convert buffer to valid CCSDS packet");
     }
 }
 
@@ -383,7 +383,7 @@ CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size): Ccs
     }
     else
     {
-        throw RunTimeException(CRITICAL, "Could not create CCSDS record interface using buffer provided");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Could not create CCSDS record interface using buffer provided");
     }
 }
 

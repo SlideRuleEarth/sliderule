@@ -46,7 +46,7 @@ const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* LuaEndpoint::EndpointExceptionRecType = "epexcept";
+const char* LuaEndpoint::EndpointExceptionRecType = "exceptrec";
 const RecordObject::fieldDef_t LuaEndpoint::EndpointExceptionRecDef[] = {
     {"code",        RecordObject::INT32,    offsetof(response_exception_t, code), 1,                        NULL, NATIVE_FLAGS},
     {"text",        RecordObject::STRING,   offsetof(response_exception_t, text), MAX_EXCEPTION_TEXT_SIZE,  NULL, NATIVE_FLAGS}
@@ -346,13 +346,13 @@ int LuaEndpoint::luaMetric (lua_State* L)
         int32_t id = EventLib::registerMetric(obj_name, EventLib::COUNTER, "%s.%s", endpoint_name, HITS_METRIC);
         if(id == EventLib::INVALID_METRIC)
         {
-            throw RunTimeException(ERROR, "Registry failed for %s.%s", obj_name, endpoint_name);
+            throw RunTimeException(ERROR, RTE_ERROR, "Registry failed for %s.%s", obj_name, endpoint_name);
         }
 
         /* Add to Metric Ids */
         if(!lua_obj->metricIds.add(endpoint_name, id, true))
         {
-            throw RunTimeException(ERROR, "Could not associate metric id to endpoint");
+            throw RunTimeException(ERROR, RTE_ERROR, "Could not associate metric id to endpoint");
         }
 
         /* Set return Status */

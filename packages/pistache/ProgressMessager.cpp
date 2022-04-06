@@ -135,7 +135,7 @@ int ProgressMessager::luaPost (lua_State* L)
         int post_status = lua_obj->rspQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);
         if(post_status <= 0)
         {
-            throw RunTimeException(CRITICAL, "Failed to post progress message: %d", post_status);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to post progress message: %d", post_status);
         }
 
         /* Success */

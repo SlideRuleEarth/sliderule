@@ -44,9 +44,10 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RunTimeException::RunTimeException(event_level_t _lvl, const char* _errmsg, ...):
+RunTimeException::RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...):
     std::runtime_error("RunTimeException"),
-    lvl(_lvl)
+    lvl(_lvl),
+    rc(_rc)
 {
     errmsg[0] = '\0';
 
@@ -74,3 +75,11 @@ event_level_t RunTimeException::level(void) const
 { 
     return lvl; 
 };
+
+/*----------------------------------------------------------------------------
+ * code
+ *----------------------------------------------------------------------------*/
+int RunTimeException::code (void) const
+{
+    return rc;
+}

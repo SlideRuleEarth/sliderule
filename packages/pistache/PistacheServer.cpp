@@ -394,7 +394,7 @@ int PistacheServer::luaRoute(lua_State* L)
         /* Check Action */
         if(action != GET && action != POST && action != PUT)
         {
-            throw RunTimeException(CRITICAL, "Invalid action: %d", action);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid action: %d", action);
         }
 
         /* Get URL */

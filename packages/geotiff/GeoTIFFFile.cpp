@@ -418,7 +418,7 @@ int GeoTIFFFile::luaPixel (lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "invalid index provided <%d, %d>", r, c);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid index provided <%d, %d>", r, c);
         }
     }
     catch(const RunTimeException& e)

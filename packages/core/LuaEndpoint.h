@@ -77,14 +77,6 @@ class LuaEndpoint: public EndpointObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        /* Response Exception Code Enumeration */
-        typedef enum {
-            TIMEOUT = 0,
-            RESOURE_DOES_NOT_EXIST = 1,
-            EMPTY_SUBSET = 2,
-            PROCESSING_ERROR = 3
-        } response_code_t;
-        
         /* Response Exception Record */
         typedef struct {
             int32_t code;

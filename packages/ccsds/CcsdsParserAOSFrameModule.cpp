@@ -81,11 +81,11 @@ int CcsdsParserAOSFrameModule::luaCreate (lua_State* L)
             sync_size = (int)StringLib::size(sync_str);
             if(sync_size <= 0 || ((sync_size / 2) + offset) > strip || sync_size % 2 != 0)
             {
-                throw RunTimeException(CRITICAL, "sync marker is an invalid length: %d", sync_size);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "sync marker is an invalid length: %d", sync_size);
             }
             else if(sync_size > MAX_STR_SIZE)
             {
-                throw RunTimeException(CRITICAL, "sync marker is too long: %d", sync_size);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "sync marker is too long: %d", sync_size);
             }
             sync_size /= 2;
 
@@ -98,7 +98,7 @@ int CcsdsParserAOSFrameModule::luaCreate (lua_State* L)
                 unsigned long val;
                 if(!StringLib::str2ulong(numstr, &val))
                 {
-                    throw RunTimeException(CRITICAL, "unable to parse sync marker at %d: %s", i, numstr);
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse sync marker at %d: %s", i, numstr);
                 }
 
                 sync_marker[i / 2] = (uint8_t)val;

@@ -79,7 +79,7 @@ int CsvDispatch::luaCreate (lua_State* L)
         /* Check Column Table */
         if(_columns == NULL)
         {
-            throw RunTimeException(CRITICAL, "must supply table of column names");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table of column names");
         }
 
         /* Create Report Dispatch */

@@ -123,7 +123,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
         if(ret == -1 && errno != EEXIST)
         {
             cacheMut.unlock();
-            throw RunTimeException(CRITICAL, "Failed to create cache directory %s: %s", cache_root, strerror(errno));
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create cache directory %s: %s", cache_root, strerror(errno));
         }
 
         /* Set Cache Root */
@@ -184,7 +184,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
 void S3CacheIODriver::ioOpen (const char* resource)
 {
     /* Check if Cache Created */
-    if(cacheRoot == NULL) throw RunTimeException(CRITICAL, "cache has not been created yet");
+    if(cacheRoot == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "cache has not been created yet");
 
     /* Create Path to Resource */
     SafeString resourcepath("%s/%s", asset->getPath(), resource);
@@ -219,7 +219,7 @@ void S3CacheIODriver::ioOpen (const char* resource)
     delete [] bucket;
 
     /* Check if File Opened */
-    if(ioFile == NULL) throw RunTimeException(CRITICAL, "failed to open resource");
+    if(ioFile == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");
 }
 
 /*----------------------------------------------------------------------------
@@ -239,7 +239,7 @@ int64_t S3CacheIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     /* Seek to New Position */
     if(fseek(ioFile, pos, SEEK_SET) != 0)
     {
-        throw RunTimeException(CRITICAL, "failed to go to I/O position: 0x%lx", pos);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to go to I/O position: 0x%lx", pos);
     }
 
     /* Read Data */

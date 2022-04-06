@@ -361,7 +361,7 @@ T& Table<T,K>::get(K key, match_t match, bool resort)
     }
 
     /* Throw Exception When Not Found */
-    throw RunTimeException(CRITICAL, "key not found");
+    throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
 }
 
 /*----------------------------------------------------------------------------

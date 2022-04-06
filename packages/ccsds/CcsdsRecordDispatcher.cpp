@@ -56,7 +56,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         /* Check Number of Threads */
         if(num_threads < 1)
         {
-            throw RunTimeException(CRITICAL, "invalid number of threads supplied (must be >= 1)");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of threads supplied (must be >= 1)");
         }
 
         /* Set Key Mode */
@@ -65,7 +65,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         calcFunc_t  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
-            throw RunTimeException(CRITICAL, "Invalid key mode specified: %s", key_mode_str);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid key mode specified: %s", key_mode_str);
         }
         else if(key_mode == FIELD_KEY_MODE)
         {

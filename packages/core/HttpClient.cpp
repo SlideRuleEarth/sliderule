@@ -375,7 +375,7 @@ int HttpClient::luaRequest (lua_State* L)
         EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
         if(verb == EndpointObject::UNRECOGNIZED)
         {
-            throw RunTimeException(CRITICAL, "Invalid verb: %s", verb_str);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid verb: %s", verb_str);
         }
 
         /* Allocate and Initialize Connection */

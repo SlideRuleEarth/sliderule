@@ -129,7 +129,7 @@ long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltv
     }
     else
     {
-        throw RunTimeException(CRITICAL, "must supply an integer for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply an integer for parameter #%d", parm);
     }
 }
 
@@ -151,7 +151,7 @@ double LuaObject::getLuaFloat (lua_State* L, int parm, bool optional, double dfl
     }
     else
     {
-        throw RunTimeException(CRITICAL, "must supply a floating point number for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a floating point number for parameter #%d", parm);
     }
 }
 
@@ -173,7 +173,7 @@ bool LuaObject::getLuaBoolean (lua_State* L, int parm, bool optional, bool dfltv
     }
     else
     {
-        throw RunTimeException(CRITICAL, "must supply a boolean for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a boolean for parameter #%d", parm);
     }
 }
 
@@ -195,7 +195,7 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
     }
     else
     {
-        throw RunTimeException(CRITICAL, "must supply a string for parameter #%d", parm);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a string for parameter #%d", parm);
     }
 }
 
@@ -330,7 +330,7 @@ int LuaObject::luaDelete (lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "unable to retrieve user data");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to retrieve user data");
         }
     }
     catch(const RunTimeException& e)
@@ -378,7 +378,7 @@ int LuaObject::luaName(lua_State* L)
         globalMut.unlock();
 
         /* Check for Errors */
-        if(!status) throw RunTimeException(CRITICAL, "Unable to register name: %s", name);
+        if(!status) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to register name: %s", name);
 
         /* Return Name */
         lua_pushstring(L, lua_obj->ObjectName);
@@ -497,7 +497,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
     luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
     if(!user_data)
     {
-        throw RunTimeException(CRITICAL, "failed to allocate new user data");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
     }
 
     /* Bump Reference Count */
@@ -526,7 +526,7 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
         }
         else
         {
-            throw RunTimeException(CRITICAL, "%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
         }
     }
     else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
@@ -535,7 +535,7 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
     }
     else
     {
-        throw RunTimeException(CRITICAL, "calling object method from something not an object");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
     }
 
     return lua_obj;
@@ -557,16 +557,16 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
             }
             else
             {
-                throw RunTimeException(CRITICAL, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
             }
         }
         else
         {
-            throw RunTimeException(CRITICAL, "object method called on emtpy object");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "object method called on emtpy object");
         }
     }
     else
     {
-        throw RunTimeException(CRITICAL, "calling object method from something not an object");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
     }
 }

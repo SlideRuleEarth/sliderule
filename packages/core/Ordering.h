@@ -232,7 +232,7 @@ T& Ordering<T,K>::get(K key, searchMode_t smode)
     }
 
     if (found)  return curr->data;
-    else        throw RunTimeException(CRITICAL, "key not found");
+    else        throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
 }
 
 /*----------------------------------------------------------------------------

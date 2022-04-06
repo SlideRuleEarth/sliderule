@@ -123,7 +123,7 @@ int LuaScript::luaActive (lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "engine does not exist");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
         }
     }
     catch(const RunTimeException& e)
@@ -155,7 +155,7 @@ int LuaScript::luaResult (lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "engine does not exist");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
         }
     }
     catch(const RunTimeException& e)

@@ -82,12 +82,12 @@ pyPlugin::pyPlugin (const std::string &_plugin)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "cannot find initialization function %s: %s\n", init_func, dlerror());
+            throw RunTimeException(CRITICAL, RTE_ERROR, "cannot find initialization function %s: %s\n", init_func, dlerror());
         }
     }
     else
     {
-        throw RunTimeException(CRITICAL, "cannot load %s: %s\n", plugin_name, dlerror());
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cannot load %s: %s\n", plugin_name, dlerror());
     }
 }
 

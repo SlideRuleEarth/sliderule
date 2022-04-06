@@ -75,7 +75,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
         {
-            throw RunTimeException(CRITICAL, "unrecognized file access specified: %d", _role);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unrecognized file access specified: %d", _role);
         }
 
         /* Return Dispatch Object */

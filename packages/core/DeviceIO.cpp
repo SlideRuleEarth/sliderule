@@ -154,7 +154,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
         /* Check Device Exists */
         if(!lua_obj->device)
         {
-            throw RunTimeException(CRITICAL, "device invalid... unable to execute command!");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "device invalid... unable to execute command!");
         }
 
         /* Wait for Device */
@@ -167,7 +167,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
         /* Check Success */
         if(!lua_obj->device->isConnected(number_of_connections))
         {
-            throw RunTimeException(CRITICAL, "timeout occurred waiting for connection on device");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "timeout occurred waiting for connection on device");
         }
 
         /* Set Success */
@@ -208,7 +208,7 @@ int DeviceIO::luaConfigBlock(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "invalid block configuration specified");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid block configuration specified");
         }
 
         /* Set Success */

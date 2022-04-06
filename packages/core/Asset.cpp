@@ -86,7 +86,7 @@ int Asset::luaCreate (lua_State* L)
         driverMut.unlock();
 
         /* Check Driver */
-        if(_driver == NULL) throw RunTimeException(CRITICAL, "Failed to find I/O driver for %s", _attributes.format);
+        if(_driver == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find I/O driver for %s", _attributes.format);
 
         /* Return Asset Object */
         return createLuaObject(L, new Asset(L, _attributes, _driver));

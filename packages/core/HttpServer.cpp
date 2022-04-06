@@ -269,7 +269,7 @@ int HttpServer::luaMetric (lua_State* L)
         lua_obj->metricId = EventLib::registerMetric(obj_name, EventLib::COUNTER, "%s", DURATION_METRIC);
         if(lua_obj->metricId == EventLib::INVALID_METRIC)
         {
-            throw RunTimeException(ERROR, "Registry failed for %s.%s", obj_name, DURATION_METRIC);
+            throw RunTimeException(ERROR, RTE_ERROR, "Registry failed for %s.%s", obj_name, DURATION_METRIC);
         }
 
         /* Set return Status */

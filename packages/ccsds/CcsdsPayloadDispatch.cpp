@@ -242,7 +242,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, "invalid APID specified: %04X", (uint16_t)apid);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid APID specified: %04X", (uint16_t)apid);
         }
 
         /* Set Success */

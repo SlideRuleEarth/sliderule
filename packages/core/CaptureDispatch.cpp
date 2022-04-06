@@ -193,7 +193,7 @@ int CaptureDispatch::luaCapture (lua_State* L)
             cap->cond.unlock();
             if(!status)
             {
-                throw RunTimeException(CRITICAL, "timed out waiting to capture field");
+                throw RunTimeException(CRITICAL, RTE_ERROR, "timed out waiting to capture field");
             }
 
             /* Delete Capture */

@@ -88,14 +88,14 @@ int ReportDispatch::luaCreate (lua_State* L)
         if(file_format == INVALID_FORMAT)
         {
             mlog(CRITICAL, "Invalid file format provided: %s", format_str);
-            throw RunTimeException(CRITICAL, "parameter error");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "parameter error");
         }
 
         /* Check Buffer Size */
         if(buffer_size < 0)
         {
             mlog(CRITICAL, "Invalid size provided for buffer: %ld", buffer_size);
-            throw RunTimeException(CRITICAL, "parameter error");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "parameter error");
         }
 
         /* Parse Header Columns */
@@ -348,7 +348,7 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key)
     {
         name    = record->getValueText(record->getField("NAME"));
         value   = record->getValueText(record->getField("TEXT"));
-        if(!name || !value) throw RunTimeException(CRITICAL, "received incomplete metric");
+        if(!name || !value) throw RunTimeException(CRITICAL, RTE_ERROR, "received incomplete metric");
     }
     catch(const RunTimeException& e)
     {
@@ -475,7 +475,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
         if(display == INVALID_DISPLAY)
         {
             mlog(CRITICAL, "Invalid index display selected: %s", display_str);
-            throw RunTimeException(CRITICAL, "parameter error");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "parameter error");
         }
 
         /* Set Display Type */

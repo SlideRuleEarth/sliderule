@@ -80,7 +80,7 @@ void S3IODriver::ioOpen (const char* resource)
     ioKey = ioBucket;
     while(*ioKey != '\0' && *ioKey != '/') ioKey++;
     if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, "invalid S3 url: %s", resource);
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
     ioKey++;
 }
 
@@ -127,7 +127,7 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     /* Handle Errors or Return Bytes Read */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, "failed to read S3 data: %s", response.GetError().GetMessage().c_str());
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read S3 data: %s", response.GetError().GetMessage().c_str());
     }
 
     return bytes_read;

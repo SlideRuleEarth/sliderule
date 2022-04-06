@@ -146,7 +146,7 @@ int PistacheClient::luaRequest(lua_State* L)
         /* Check Action */
         if(action != PistacheServer::GET && action != PistacheServer::POST && action != PistacheServer::PUT)
         {
-            throw RunTimeException(CRITICAL, "Invalid action: %d", action);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid action: %d", action);
         }
 
         /* Get URL */
