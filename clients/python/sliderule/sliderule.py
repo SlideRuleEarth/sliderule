@@ -347,7 +347,7 @@ def __raiseexceptrec(rec):
     rc = rec["code"]
     if rc in handleexcept:
         if verbose:
-            logger.info("Exception <%d>: %s", rc, rec["text"])
+            logger.info("%s exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
         if not handleexcept[rc]["expected"]:
             logger.critical("Unexpected error: %s:", handleexcept[rc]["name"])
         if not handleexcept[rc]["fatal"]:
