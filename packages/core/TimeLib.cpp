@@ -172,7 +172,7 @@ TimeLib::gmt_time_t TimeLib::gettime(int64_t now)
     GetSystemTime(&systime);
     gmt_time_t gmttime;
     gmttime.year = systime.wYear;
-    gmttime.day = dayofyear(systime.wYear, systime.wMonth, systime.wDay);
+    gmttime.doy = dayofyear(systime.wYear, systime.wMonth, systime.wDay);
     gmttime.hour = systime.wHour;
     gmttime.minute = systime.wMinute;
     gmttime.second = systime.wSecond;
