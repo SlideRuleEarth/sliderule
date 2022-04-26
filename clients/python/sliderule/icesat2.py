@@ -93,9 +93,59 @@ STRONG_SPOTS = (1, 3, 5)
 WEAK_SPOTS = (2, 4, 6)
 LEFT_PAIR = 0
 RIGHT_PAIR = 1
+SC_BACKWARD = 0
+SC_FORWARD = 1
 
 # gps-based epoch for delta times #
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
+
+###############################################################################
+# ICESAT2 UTILITIES
+###############################################################################
+
+#
+# __calcspot
+#
+def __calcspot(sc_orient, track, pair):
+
+    # spacecraft in forward orientation
+    if sc_orient == SC_BACKWARD:
+        if track == 1:
+            if pair == LEFT_PAIR:
+                return 5
+            elif pair == RIGHT_PAIR:
+                return 6
+        elif track == 2:
+            if pair == LEFT_PAIR:
+                return 3
+            elif pair == RIGHT_PAIR:
+                return 4
+        elif track == 3:
+            if pair == LEFT_PAIR:
+                return 1
+            elif pair == RIGHT_PAIR:
+                return 2
+
+    # spacecraft in backward orientation
+    elif sc_orient == SC_FORWARD:
+        if track == 1:
+            if pair == LEFT_PAIR:
+                return 2
+            elif pair == RIGHT_PAIR:
+                return 1
+        elif track == 2:
+            if pair == LEFT_PAIR:
+                return 4
+            elif pair == RIGHT_PAIR:
+                return 3
+        elif track == 3:
+            if pair == LEFT_PAIR:
+                return 6
+            elif pair == RIGHT_PAIR:
+                return 5
+
+    # unknown spot
+    return 0
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -506,8 +556,17 @@ def __atl03s (parm, resource, asset):
         # Rename Count Column to Pair Column
         columns["pair"] = columns.pop("count")
 
-    # Return Response
-    return __todataframe(columns, "delta_time", "longitude", "latitude"), resource
+        # Create DataFrame
+        df = __todataframe(columns, "delta_time", "longitude", "latitude")
+
+        # Calculate Spot Column
+        df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+
+        # Return Response
+        return df, resource
+
+    # Error Case
+    return __emptyframe(), resource
 
 #
 #  __parallelize
