@@ -61,6 +61,9 @@ logger = logging.getLogger(__name__)
 # default asset
 DEFAULT_ASSET="nsidc-s3"
 
+# default standard data product version
+DEFAULT_ICESAT2_SDP_VERSION='005'
+
 # default maximum number of resources to process in one request
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
@@ -650,7 +653,7 @@ def cmr(**kwargs):
     # set default stop time to current time
     kwargs.setdefault('time_end',datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
     # set default version and product short name
-    kwargs.setdefault('version','004')
+    kwargs.setdefault('version', DEFAULT_ICESAT2_SDP_VERSION)
     kwargs.setdefault('short_name','ATL03')
     # return polygons for each requested granule
     kwargs.setdefault('return_polygons',False)
@@ -734,7 +737,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version='004', callback=None, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
 
     try:
         if resources == None:
@@ -760,7 +763,7 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version='004', callback=None, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
 
     try:
         if resources == None:
