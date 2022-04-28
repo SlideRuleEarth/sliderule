@@ -50,6 +50,35 @@ class TestAlgorithm:
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488673
 
+    def test_atl08(self, server, asset):
+        icesat2.init(server)
+        resource = "ATL03_20181213075606_11560106_004_01.h5"
+        track = 1
+        region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+                   {"lon": -107.7677425431139, "lat": 38.90611184543033},
+                   {"lon": -107.7818591266989, "lat": 39.26613714985466},
+                   {"lon": -108.3605610678553, "lat": 39.25086131372244},
+                   {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+        parms = { "poly": region,
+                  "track": track,
+                  "cnf": 0,
+                  "pass_invalid": True,
+                  "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"],
+                  "ats": 10.0,
+                  "cnt": 5,
+                  "len": 20.0,
+                  "res": 20.0,
+                  "maxi": 1 }
+        gdf = icesat2.atl03s(parms, resource, asset)
+        assert min(gdf["rgt"]) == 1156
+        assert min(gdf["cycle"]) == 1
+        assert len(gdf["height"]) == 241125
+        assert len(gdf[gdf["atl08_class"] == 0]) == 30295
+        assert len(gdf[gdf["atl08_class"] == 1]) == 122759
+        assert len(gdf[gdf["atl08_class"] == 2]) == 53723
+        assert len(gdf[gdf["atl08_class"] == 3]) == 18298
+        assert len(gdf[gdf["atl08_class"] == 4]) == 16050
+
     def test_gs(self, server, asset):
         icesat2.init(server)
         resource_prefix = "20210114170723_03311012_004_01.h5"
