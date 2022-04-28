@@ -1,6 +1,9 @@
 """Tests for sliderule icesat2 atl06-sr algorithm."""
 
 import pytest
+from pyproj import Transformer
+from shapely.geometry import Polygon, Point
+import pandas as pd
 from requests.exceptions import ConnectTimeout, ConnectionError
 import sliderule
 from sliderule import icesat2
@@ -46,3 +49,144 @@ class TestAlgorithm:
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488673
+
+    def test_gs(self, server, asset):
+        icesat2.init(server)
+        resource_prefix = "20210114170723_03311012_004_01.h5"
+        region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
+                   {"lon": 114.29798416287946, "lat": -70.08880029415151},
+                   {"lon": 112.05139144652648, "lat": -74.18128224472123},
+                   {"lon": 126.62732471857403, "lat": -74.37827832634999},
+                   {"lon": 126.54560629670780, "lat": -70.28232209449946} ]
+
+        # Make ATL06-SR Processing Request
+        parms = { "poly": region,
+                  "cnf": 4,
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 2.0,
+                  "res": 1.0,
+                  "dist_in_seg": True,
+                  "maxi": 10 }
+        sliderule = icesat2.atl06(parms, "ATL03_"+resource_prefix, asset)
+
+        # Project Region to Polygon #
+        transformer = Transformer.from_crs(4326, 3857) # GPS to Web Mercator
+        pregion = []
+        for point in region:
+            ppoint = transformer.transform(point["lat"], point["lon"])
+            pregion.append(ppoint)
+        polygon = Polygon(pregion)
+
+        # Read lat,lon from resource
+        tracks = ["1l", "1r", "2l", "2r", "3l", "3r"]
+        geodatasets = [{"dataset": "/orbit_info/sc_orient"}]
+        for track in tracks:
+            prefix = "/gt"+track+"/land_ice_segments/"
+            geodatasets.append({"dataset": prefix+"latitude", "startrow": 0, "numrows": -1})
+            geodatasets.append({"dataset": prefix+"longitude", "startrow": 0, "numrows": -1})
+        geocoords = icesat2.h5p(geodatasets, "ATL06_"+resource_prefix, asset)
+
+        # Build list of the subsetted h_li datasets to read
+        hidatasets = []
+        for track in tracks:
+            prefix = "/gt"+track+"/land_ice_segments/"
+            startrow = -1
+            numrows = -1
+            index = 0
+            for index in range(len(geocoords[prefix+"latitude"])):
+                lat = geocoords[prefix+"latitude"][index]
+                lon = geocoords[prefix+"longitude"][index]
+                c = transformer.transform(lat, lon)
+                point = Point(c[0], c[1])
+                intersect = point.within(polygon)
+                if startrow == -1 and intersect:
+                    startrow = index
+                elif startrow != -1 and not intersect:
+                    numrows = index - startrow
+                    break
+            hidatasets.append({"dataset": prefix+"h_li", "startrow": startrow, "numrows": numrows, "prefix": prefix})
+            hidatasets.append({"dataset": prefix+"segment_id", "startrow": startrow, "numrows": numrows, "prefix": prefix})
+
+        # Read h_li from resource
+        hivalues = icesat2.h5p(hidatasets, "ATL06_"+resource_prefix, asset)
+
+        # Build Results #
+        atl06 = {"h_mean": [], "lat": [], "lon": [], "segment_id": [], "spot": []}
+        prefix2spot = { "/gt1l/land_ice_segments/": {0: 5, 1: 2},
+                        "/gt1r/land_ice_segments/": {0: 6, 1: 1},
+                        "/gt2l/land_ice_segments/": {0: 3, 1: 4},
+                        "/gt2r/land_ice_segments/": {0: 4, 1: 3},
+                        "/gt3l/land_ice_segments/": {0: 1, 1: 6},
+                        "/gt3r/land_ice_segments/": {0: 2, 1: 5} }
+        for entry in hidatasets:
+            if "h_li" in entry["dataset"]:
+                atl06["h_mean"] += hivalues[entry["prefix"]+"h_li"].tolist()
+                atl06["lat"] += geocoords[entry["prefix"]+"latitude"][entry["startrow"]:entry["startrow"]+entry["numrows"]].tolist()
+                atl06["lon"] += geocoords[entry["prefix"]+"longitude"][entry["startrow"]:entry["startrow"]+entry["numrows"]].tolist()
+                atl06["segment_id"] += hivalues[entry["prefix"]+"segment_id"].tolist()
+                atl06["spot"] += [prefix2spot[entry["prefix"]][geocoords["/orbit_info/sc_orient"][0]] for i in range(entry["numrows"])]
+
+        # Build DataFrame of ATL06 NSIDC Data #
+        nsidc = pd.DataFrame(atl06)
+
+        # Add Lat and Lon Columns to SlideRule DataFrame
+        sliderule["lon"] = sliderule.geometry.x
+        sliderule["lat"] = sliderule.geometry.y
+
+        # Initialize Error Variables #
+        diff_set = ["h_mean", "lat", "lon"]
+        errors = {}
+        total_error = {}
+        segments = {}
+        orphans = {"segment_id": [], "h_mean": [], "lat": [], "lon": []}
+
+        # Create Segment Sets #
+        for index, row in nsidc.iterrows():
+            segment_id = row["segment_id"]
+            # Create Difference Row for Segment ID #
+            if segment_id not in segments:
+                segments[segment_id] = {}
+                for spot in [1, 2, 3, 4, 5, 6]:
+                    segments[segment_id][spot] = {}
+                    for process in ["sliderule", "nsidc", "difference"]:
+                        segments[segment_id][spot][process] = {}
+                        for element in diff_set:
+                            segments[segment_id][spot][process][element] = 0.0
+            for element in diff_set:
+                segments[segment_id][row["spot"]]["nsidc"][element] = row[element]
+        for index, row in sliderule.iterrows():
+            segment_id = row["segment_id"]
+            if segment_id not in segments:
+                orphans["segment_id"].append(segment_id)
+            else:
+                for element in diff_set:
+                    segments[segment_id][row["spot"]]["sliderule"][element] = row[element]
+                    segments[segment_id][row["spot"]]["difference"][element] = segments[segment_id][row["spot"]]["sliderule"][element] - segments[segment_id][row["spot"]]["nsidc"][element]
+
+        # Flatten Segment Sets to just Differences #
+        error_threshold = 1.0
+        for element in diff_set:
+            errors[element] = []
+            total_error[element] = 0.0
+            for segment_id in segments:
+                for spot in [1, 2, 3, 4, 5, 6]:
+                    error = segments[segment_id][spot]["difference"][element]
+                    if(abs(error) > error_threshold):
+                        orphans[element].append(error)
+                    else:
+                        errors[element].append(error)
+                        total_error[element] += abs(error)
+
+        # Asserts
+        assert min(sliderule["rgt"]) == 331
+        assert min(sliderule["cycle"]) == 10
+        assert len(sliderule) == 55367
+        assert len(nsidc) == 55691
+        assert len(orphans["segment_id"]) == 1671
+        assert len(orphans["h_mean"]) == 204
+        assert len(orphans["lat"]) == 204
+        assert len(orphans["lon"]) == 204
+        assert abs(total_error["h_mean"] - 1723.8) < 0.1
+        assert abs(total_error["lat"] - 0.045071) < 0.001
+        assert abs(total_error["lon"] - 0.022374) < 0.001
