@@ -36,6 +36,7 @@ local datasets = parm["datasets"]
 
 asset = core.getbyname(asset_name)
 if not asset then
+    local userlog = msg.publish(rspq)
     userlog:sendlog(core.INFO, string.format("invalid asset specified: %s", asset_name))
     return
 end
