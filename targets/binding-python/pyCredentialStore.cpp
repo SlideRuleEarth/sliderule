@@ -74,16 +74,26 @@ bool pyCredentialStore::provide (const py::dict& credentials)
     PyObject* secretAccessKey = PyUnicode_AsEncodedString(PyObject_Repr(PyDict_GetItem(credentials.ptr(), py::str("secretAccessKey").ptr())), "utf-8", "~E~");
     PyObject* sessionToken = PyUnicode_AsEncodedString(PyObject_Repr(PyDict_GetItem(credentials.ptr(), py::str("sessionToken").ptr())), "utf-8", "~E~");
     PyObject* expiration = PyUnicode_AsEncodedString(PyObject_Repr(PyDict_GetItem(credentials.ptr(), py::str("expiration").ptr())), "utf-8", "~E~");
-   
+
+    SafeString _accessKeyId("%s", PyBytes_AS_STRING(accessKeyId));
+    SafeString _secretAccessKey("%s", PyBytes_AS_STRING(secretAccessKey));
+    SafeString _sessionToken("%s", PyBytes_AS_STRING(sessionToken));
+    SafeString _expiration("%s", PyBytes_AS_STRING(expiration));
+
+    _accessKeyId.replace("'", "");
+    _secretAccessKey.replace("'", "");
+    _sessionToken.replace("'", "");
+    _expiration.replace("'", "");
+
     CredentialStore::Credential credential;
     credential.provided = true;
-    credential.accessKeyId = StringLib::duplicate(PyBytes_AS_STRING(accessKeyId));
-    credential.secretAccessKey = StringLib::duplicate(PyBytes_AS_STRING(secretAccessKey));
-    credential.sessionToken = StringLib::duplicate(PyBytes_AS_STRING(sessionToken));
-    credential.expiration = StringLib::duplicate(PyBytes_AS_STRING(expiration));
+    credential.accessKeyId = _accessKeyId.getString(true);
+    credential.secretAccessKey = _secretAccessKey.getString(true);
+    credential.sessionToken = _sessionToken.getString(true);
+    credential.expiration = _expiration.getString(true);
     credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
 
-    return CredentialStore::put(asset, credential); 
+    return CredentialStore::put(asset, credential);
 }
 
 /*--------------------------------------------------------------------
@@ -92,9 +102,9 @@ bool pyCredentialStore::provide (const py::dict& credentials)
 py::dict pyCredentialStore::retrieve (void)
 {
     py::dict results;
-    
+
     CredentialStore::Credential credential = CredentialStore::get(asset);
-    
+
     if(credential.provided)
     {
         results[py::str("accessKeyId")] = credential.accessKeyId;
@@ -102,6 +112,6 @@ py::dict pyCredentialStore::retrieve (void)
         results[py::str("sessionToken")] = credential.sessionToken;
         results[py::str("expiration")] = credential.expiration;
     }
-    
+
     return results;
 }

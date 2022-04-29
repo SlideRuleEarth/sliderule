@@ -38,8 +38,9 @@ if not asset then
 end
 
 f = h5.dataset(core.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
-r = core.reader(f, rspq)
-
-r:waiton() -- waits until reader completes
+if f:connected() then
+    r = core.reader(f, rspq)
+    r:waiton() -- waits until reader completes
+end
 
 return

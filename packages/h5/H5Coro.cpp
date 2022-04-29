@@ -782,7 +782,7 @@ void H5FileBuffer::readDataset (info_t* info)
 
                 /* Read B-Tree */
                 readBTreeV1(metaData.address, buffer, buffer_size, buffer_offset);
-                
+
                 /* Check Need to Flatten Chunks */
                 bool flatten = false;
                 for(int d = 1; d < metaData.ndims; d++)
@@ -793,7 +793,7 @@ void H5FileBuffer::readDataset (info_t* info)
                         break;
                     }
                 }
-                
+
                 /* Flatten Chunks - Place Dataset in Row Order*/
                 if(flatten)
                 {
@@ -833,7 +833,7 @@ void H5FileBuffer::readDataset (info_t* info)
                     int ci = FLAT_NDIMS - 1; // chunk dimension index
                     uint64_t dimi[MAX_NDIMS * 2]; // chunk dimension indices
                     LocalLib::set(dimi, 0, sizeof(dimi));
-                    
+
                     /* Loop Through Each Chunk */
                     while(true)
                     {
@@ -850,7 +850,7 @@ void H5FileBuffer::readDataset (info_t* info)
                         {
                             fbuf[start + k] = buffer[bi++];
                         }
-                        
+
                         /* Update Indices */
                         dimi[ci]++;
                         while(dimi[ci] == cdimnum[ci])
@@ -859,17 +859,17 @@ void H5FileBuffer::readDataset (info_t* info)
                             if(ci < 0) break;
                             else dimi[ci]++;
                         }
-                        
+
                         /* Check Exit Condition */
                         if(ci < 0) break;
                         else ci = FLAT_NDIMS - 1;
                     }
-                    
+
                     /* Replace Buffer */
                     delete [] buffer;
                     info->data = fbuf;
                 }
-                
+
                 break;
             }
 
