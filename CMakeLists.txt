@@ -32,7 +32,6 @@ endif()
 
 # Project Options #
 
-option (PACKAGE_FOR_DEBIAN "Create debian installation package using cpack" OFF)
 option (PYTHON_BINDINGS "Create Python bindings, including h5lite module" OFF)
 option (SHARED_LIBRARY "Create shared library instead of sliderule binary" OFF)
 
@@ -228,49 +227,10 @@ install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
 
 if(${PYTHON_BINDINGS})
 
-    # binding-python #
-    find_package(pybind11 REQUIRED)
-    pybind11_add_module(srpybin
-        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyH5Coro.cpp
-        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyLua.cpp
-        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyPlugin.cpp
-        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyCredentialStore.cpp
-        ${PROJECT_SOURCE_DIR}/targets/binding-python/pyS3Cache.cpp
-        ${PROJECT_SOURCE_DIR}/targets/binding-python/init.cpp)
-    target_include_directories (srpybin PRIVATE ${PROJECT_SOURCE_DIR}/targets/binding-python)
-    target_link_libraries (srpybin PUBLIC slideruleLib)
-    set_target_properties (srpybin PROPERTIES PREFIX "")
-    set_target_properties (srpybin PROPERTIES CXX_STANDARD ${CXX_VERSION})
-    install (TARGETS srpybin DESTINATION ${INSTALLDIR}/lib)
+    add_subdirectory (targets/binding-python)
 
 elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
-    # server-linux #
-    add_executable (sliderule ${PROJECT_SOURCE_DIR}/targets/server-linux/SlideRule.cpp)
-    set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
-    set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
-    set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
-    set_target_properties (sliderule PROPERTIES CXX_STANDARD ${CXX_VERSION})
-    target_link_libraries (sliderule PUBLIC slideruleLib)
-    install (TARGETS sliderule DESTINATION ${INSTALLDIR}/bin)
+    add_subdirectory (targets/server-linux)
 
 endif()
-
-# Debian Package #
-
-if(${PACKAGE_FOR_DEBIAN})
-    set (CPACK_GENERATOR "DEB")
-    set (CPACK_DEBIAN_PACKAGE_MAINTAINER "JP Swinski") # required
-    set (CPACK_DEBIAN_PACKAGE_DESCRIPTION "a framework for on-demand science data processing")
-    set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-    string (REGEX MATCHALL "[0123456789]+" SLIDERULE_VERSION_NUMBERS "${TGTVER}")
-    list (GET SLIDERULE_VERSION_NUMBERS 0 CPACK_PACKAGE_VERSION_MAJOR)
-    list (GET SLIDERULE_VERSION_NUMBERS 1 CPACK_PACKAGE_VERSION_MINOR)
-    list (GET SLIDERULE_VERSION_NUMBERS 2 CPACK_PACKAGE_VERSION_PATCH)
-    set (SLIDERULE_PACKAGE_VERSION "sliderule-VERSION.deb")
-    string (REGEX REPLACE "VERSION" "${TGTVER}" SLIDERULE_PACKAGE_VERSION "${SLIDERULE_PACKAGE_VERSION}")
-    set (CPACK_DEBIAN_FILE_NAME ${SLIDERULE_PACKAGE_VERSION})
-    include (CPack)
-endif()
-
-

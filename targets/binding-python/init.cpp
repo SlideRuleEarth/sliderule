@@ -55,6 +55,10 @@
 #include "netsvc.h"
 #endif
 
+#ifdef __icesat2__
+#include "icesat2.h"
+#endif
+
 #include <pybind11/pybind11.h>
 #include "pyH5Coro.h"
 #include "pyLua.h"
@@ -96,6 +100,10 @@ PYBIND11_MODULE(srpybin, m)
         initnetsvc();
     #endif
 
+    #ifdef __icesat2__
+        initicesat2();
+    #endif
+
     m.doc() = "Python bindings for SlideRule on-demand data processing framework";
 
     py::class_<pyH5Coro>(m, "h5coro")
@@ -133,7 +141,7 @@ PYBIND11_MODULE(srpybin, m)
 
         .def("provide", &pyCredentialStore::provide, "provide credentials for an asset",
             py::arg("credential"))
-        
+
         .def("retrieve", &pyCredentialStore::retrieve, "retrieve credentials for an asset");
 
     py::class_<pyLua>(m, "lua")
