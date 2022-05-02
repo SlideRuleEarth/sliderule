@@ -76,7 +76,7 @@
 #define CompileTimeAssert(Condition, Message) typedef char Message[(Condition) ? 1 : -1]
 #endif
 
-#ifdef GCC_VERSION
+#ifdef __GNUC__
 #define VARG_CHECK(f, a, b) __attribute__((format(f, a, b)))
 #else
 #define VARG_CHECK(f, a, b)

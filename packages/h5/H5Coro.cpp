@@ -2731,7 +2731,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     /* Read Attribute Name */
     if(name_size > STR_BUFF_SIZE)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %d, 0x%lx\n", name_size, (unsigned long)pos);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", (unsigned long)name_size, (unsigned long)pos);
     }
     uint8_t attr_name[STR_BUFF_SIZE];
     readByteArray(attr_name, name_size, &pos);

@@ -190,7 +190,7 @@ class Publisher: public MsgQ
         int     postRef         (void* data, int size, int timeout=IO_CHECK);
         int     postCopy        (const void* data, int size, int timeout=IO_CHECK);
         int     postCopy        (const void* data, int size, const void* secondary_data, int secondary_size, int timeout=IO_CHECK);
-        int     postString      (const char* format_string, ...) VARG_CHECK(printf, 2, 3);
+        int     postString      (const char* format_string, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
 
     private:
 
