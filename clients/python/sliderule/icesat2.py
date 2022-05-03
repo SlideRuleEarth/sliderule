@@ -115,9 +115,9 @@ def __calcspot(sc_orient, track, pair):
     if sc_orient == SC_BACKWARD:
         if track == 1:
             if pair == LEFT_PAIR:
-                return 5
+                return 1
             elif pair == RIGHT_PAIR:
-                return 6
+                return 2
         elif track == 2:
             if pair == LEFT_PAIR:
                 return 3
@@ -125,17 +125,17 @@ def __calcspot(sc_orient, track, pair):
                 return 4
         elif track == 3:
             if pair == LEFT_PAIR:
-                return 1
+                return 5
             elif pair == RIGHT_PAIR:
-                return 2
+                return 6
 
     # spacecraft in backward orientation
     elif sc_orient == SC_FORWARD:
         if track == 1:
             if pair == LEFT_PAIR:
-                return 2
+                return 6
             elif pair == RIGHT_PAIR:
-                return 1
+                return 5
         elif track == 2:
             if pair == LEFT_PAIR:
                 return 4
@@ -143,9 +143,9 @@ def __calcspot(sc_orient, track, pair):
                 return 3
         elif track == 3:
             if pair == LEFT_PAIR:
-                return 6
+                return 2
             elif pair == RIGHT_PAIR:
-                return 5
+                return 1
 
     # unknown spot
     return 0
