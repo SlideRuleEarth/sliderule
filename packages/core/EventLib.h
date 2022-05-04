@@ -72,7 +72,7 @@ class EventLib
          *--------------------------------------------------------------------*/
 
         static const int MAX_NAME_SIZE = 32;
-        static const int MAX_ATTR_SIZE = 512;
+        static const int MAX_ATTR_SIZE = 1024;
         static const int MAX_METRICS = 128;
         static const int32_t INVALID_METRIC = -1;
 
