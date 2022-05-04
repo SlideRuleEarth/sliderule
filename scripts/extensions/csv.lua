@@ -263,7 +263,7 @@ end
 
 
 --- If the user hasn't specified a separator, try to work out what it is.
-function guess_separator(buffer, f)
+local function guess_separator(buffer, f)
   local best_separator, lowest_diff = "", math.huge
   for _, s in ipairs(separator_candidates) do
     local ok, diff = pcall(function() return try_separator(buffer, s, f) end)
@@ -352,7 +352,7 @@ local function separated_values_iterator(buffer, parameters)
                      guess_separator(buffer, separated_values_iterator)).."\n\r])"
   local line_start = 1
   local line = 1
-  local field_count, fields, starts, nonblanks = 0, {}, {}
+  local field_count, fields, starts, nonblanks = 0, {}, {}, nil
   local header, header_read
   local field_start_line, field_start_column
   local record_count = 0
@@ -440,7 +440,7 @@ local function separated_values_iterator(buffer, parameters)
           end
         end
       end
-      field_count, fields, starts, nonblanks = 0, {}, {}
+      field_count, fields, starts, nonblanks = 0, {}, {}, nil
     end
 
     -- If we *really* didn't find a separator then we're done.

@@ -133,11 +133,11 @@ Function:   compare
  Purpose:   do a binary comparison of two arbitrary strings
    Notes:   necessary to work around strings created from userdata
 ]]
-local function compare(str1, str2)
+local function compare(str1, str2, errmsg)
     results[context]["asserts"] = results[context]["asserts"] + 1
     local status = true
-    bytes1 = {string.byte(str1, 0, -1)}
-    bytes2 = {string.byte(str2, 0, -1)}
+    local bytes1 = {string.byte(str1, 0, -1)}
+    local bytes2 = {string.byte(str2, 0, -1)}
     if #bytes1 ~= #bytes2 then
         print("Strings are of unequal length: " .. tostring(#bytes1) .. " ~= " .. tostring(#bytes2))
         print(str1, str2)
