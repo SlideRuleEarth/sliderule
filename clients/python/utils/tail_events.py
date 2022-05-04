@@ -1,10 +1,10 @@
 #
-# Connects to SlideRule server node at provided url and prints the last 
-# 1K log messages to local terminal.  
-# 
-# This bypasses service discovery and goes directly to the server node.  
-# 
-# Use query_services.py to get list of server node IP addresses 
+# Connects to SlideRule server node at provided url and prints the last
+# 1K log messages to local terminal.
+#
+# This bypasses service discovery and goes directly to the server node.
+#
+# Use query_services.py to get list of server node IP addresses
 #
 import sys
 import logging
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     # Build Logging Request
     rqst = {
-        "monitor": monitor 
+        "monitor": monitor
     }
 
     # Retrieve logs

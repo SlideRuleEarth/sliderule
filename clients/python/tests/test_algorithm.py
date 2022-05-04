@@ -142,12 +142,12 @@ class TestAlgorithm:
 
         # Build Results #
         atl06 = {"h_mean": [], "lat": [], "lon": [], "segment_id": [], "spot": []}
-        prefix2spot = { "/gt1l/land_ice_segments/": {0: 5, 1: 2},
-                        "/gt1r/land_ice_segments/": {0: 6, 1: 1},
+        prefix2spot = { "/gt1l/land_ice_segments/": {0: 1, 1: 6},
+                        "/gt1r/land_ice_segments/": {0: 2, 1: 5},
                         "/gt2l/land_ice_segments/": {0: 3, 1: 4},
                         "/gt2r/land_ice_segments/": {0: 4, 1: 3},
-                        "/gt3l/land_ice_segments/": {0: 1, 1: 6},
-                        "/gt3r/land_ice_segments/": {0: 2, 1: 5} }
+                        "/gt3l/land_ice_segments/": {0: 5, 1: 2},
+                        "/gt3r/land_ice_segments/": {0: 6, 1: 1} }
         for entry in hidatasets:
             if "h_li" in entry["dataset"]:
                 atl06["h_mean"] += hivalues[entry["prefix"]+"h_li"].tolist()
