@@ -1512,7 +1512,7 @@ class leaflet:
         # create basemap in projection
         if (projection == 'Global'):
             self.map = ipyleaflet.Map(center=kwargs['center'],
-                zoom=9, max_zoom=15,
+                zoom=9, max_zoom=15, world_copy_jump=True,
                 attribution_control=kwargs['attribution'],
                 basemap=ipyleaflet.basemaps.Esri.WorldTopoMap)
             self.crs = 'EPSG:3857'
