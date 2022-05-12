@@ -19,6 +19,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/LuaInterpreter.cpp
         ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryCmd.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/UT_List.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UT_Table.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.cpp
@@ -49,6 +50,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/StatisticRecord.h
         ${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.h
         ${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.h
+        ${CMAKE_CURRENT_LIST_DIR}/UT_List.h
         ${CMAKE_CURRENT_LIST_DIR}/UT_Table.h
         ${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.h
     DESTINATION

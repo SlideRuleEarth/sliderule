@@ -44,6 +44,7 @@ end
 
 if __legacy__ then
     runner.script(td .. "message_queue.lua")
+    runner.script(td .. "list.lua")
     runner.script(td .. "dictionary.lua")
     runner.script(td .. "table.lua")
     runner.script(td .. "timelib.lua")

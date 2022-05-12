@@ -254,8 +254,9 @@ void initlegacy (void)
     cmdProc->registerHandler("LUA_INTERPRETER",             LuaInterpreter::createUnsafeObject,            -1,  "<input stream: msgq mode | STDIN: stdin mode | FILE: file mode> [additional lua arguments]");
     cmdProc->registerHandler("LUA_SAFE_INTERPRETER",        LuaInterpreter::createSafeObject,              -1,  "<input stream: msgq mode | STDIN: stdin mode | FILE: file mode> [additional lua arguments]");
     cmdProc->registerHandler("PUBLISHER_PROCESSOR",         CcsdsPublisherProcessorModule::createObject,    1,  "<output stream>", true);
-    cmdProc->registerHandler("UT_MSGQ",                     UT_MsgQ::createObject,                          0,  "");
     cmdProc->registerHandler("UT_DICTIONARY",               UT_Dictionary::createObject,                    0,  "");
+    cmdProc->registerHandler("UT_LIST",                     UT_List::createObject,                          0,  "");
+    cmdProc->registerHandler("UT_MSGQ",                     UT_MsgQ::createObject,                          0,  "");
     cmdProc->registerHandler("UT_TABLE"  ,                  UT_Table::createObject,                         0,  "");
     cmdProc->registerHandler("UT_TIMELIB",                  UT_TimeLib::createObject,                       0,  "");
 
