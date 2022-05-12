@@ -156,8 +156,14 @@ int netsvc_get (lua_State* L)
         /* Check for Success */
         if(res == CURLE_OK)
         {
-            /* Set Success */
-            status = true;
+            /* Get HTTP Code */
+            long http_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if(http_code == 200)
+            {
+                /* Set Successfull */
+                status = true;
+            }
 
             /* Get Total Response Size */
             int total_rsps_size = 0;
@@ -240,8 +246,14 @@ int netsvc_post (lua_State* L)
         /* Check for Success */
         if(res == CURLE_OK)
         {
-            /* Set Successfull */
-            status = true;
+            /* Get HTTP Code */
+            long http_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if(http_code == 200)
+            {
+                /* Set Successfull */
+                status = true;
+            }
 
             /* Get Total Response Size */
             int total_rsps_size = 0;
