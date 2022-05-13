@@ -61,7 +61,7 @@ class LuaEndpoint: public EndpointObject
 
         static const char* EndpointExceptionRecType;
         static const RecordObject::fieldDef_t EndpointExceptionRecDef[];
-        
+
         static const double DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD;
         static const double DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD;
 
@@ -102,7 +102,7 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaEndpoint     (lua_State* L, double normal_mem_thresh, double stream_mem_thresh);
+                            LuaEndpoint     (lua_State* L, double normal_mem_thresh, double stream_mem_thresh, event_level_t lvl);
         virtual             ~LuaEndpoint    (void);
 
         static void*        requestThread   (void* parm);
@@ -124,6 +124,7 @@ class LuaEndpoint: public EndpointObject
         Dictionary<int32_t> metricIds;
         double              normalRequestMemoryThreshold;
         double              streamRequestMemoryThreshold;
+        event_level_t       logLevel;
 };
 
 #endif  /* __lua_endpoint__ */

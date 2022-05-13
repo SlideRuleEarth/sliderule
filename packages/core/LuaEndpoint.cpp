@@ -103,9 +103,10 @@ int LuaEndpoint::luaCreate (lua_State* L)
         /* Get Parameters */
         double normal_mem_thresh = getLuaFloat(L, 1, true, DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD);
         double stream_mem_thresh = getLuaFloat(L, 2, true, DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD);
+        event_level_t lvl = (event_level_t)getLuaInteger(L, 3, true, INFO);
 
         /* Create Lua Endpoint */
-        return createLuaObject(L, new LuaEndpoint(L, normal_mem_thresh, stream_mem_thresh));
+        return createLuaObject(L, new LuaEndpoint(L, normal_mem_thresh, stream_mem_thresh, lvl));
     }
     catch(const RunTimeException& e)
     {
@@ -121,11 +122,12 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh):
+LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh, event_level_t lvl):
     EndpointObject(L, LuaMetaName, LuaMetaTable),
     metricIds(INITIAL_NUM_ENDPOINTS),
     normalRequestMemoryThreshold(normal_mem_thresh),
-    streamRequestMemoryThreshold(stream_mem_thresh)
+    streamRequestMemoryThreshold(stream_mem_thresh),
+    logLevel(lvl)
 {
 }
 
@@ -151,7 +153,7 @@ void* LuaEndpoint::requestThread (void* parm)
     uint32_t trace_id = start_trace(INFO, lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"url\":\"%s\"}", request->id, verb2str(request->verb), request->url);
 
     /* Log Request */
-    mlog(INFO, "%s %s: %s", verb2str(request->verb), request->url, request->body);
+    mlog(lua_endpoint->logLevel, "%s %s: %s", verb2str(request->verb), request->url, request->body);
 
     /* Update Metrics */
     int32_t metric_id = lua_endpoint->getMetricId(request->url);
