@@ -59,7 +59,7 @@ SafeString LuaEndpoint::serverHead("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
 
-const char* LuaEndpoint::ALL_ENDPOINTS = "all";
+const char* LuaEndpoint::UNREGISTERED_ENDPOINT = "untracked";
 const char* LuaEndpoint::HITS_METRIC = "hits";
 
 int32_t LuaEndpoint::totalMetricId = EventLib::INVALID_METRIC;
@@ -76,10 +76,10 @@ bool LuaEndpoint::init (void)
     bool status = true;
 
     /* Register Metric */
-    totalMetricId = EventLib::registerMetric(LuaEndpoint::LuaMetaName, EventLib::COUNTER, "%s.%s", ALL_ENDPOINTS, HITS_METRIC);
+    totalMetricId = EventLib::registerMetric(LuaEndpoint::LuaMetaName, EventLib::COUNTER, "%s.%s", UNREGISTERED_ENDPOINT, HITS_METRIC);
     if(totalMetricId == EventLib::INVALID_METRIC)
     {
-        mlog(ERROR, "Registry failed for %s.%s", ALL_ENDPOINTS, HITS_METRIC);
+        mlog(ERROR, "Registry failed for %s.%s", UNREGISTERED_ENDPOINT, HITS_METRIC);
         status = false;
     }
 
@@ -313,7 +313,7 @@ int32_t LuaEndpoint::getMetricId (const char* endpoint)
 
         try
         {
-            metric_id = metricIds[ALL_ENDPOINTS];
+            metric_id = metricIds[UNREGISTERED_ENDPOINT];
         }
         catch(const RunTimeException& e2)
         {
