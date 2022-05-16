@@ -46,9 +46,24 @@ logger = logging.getLogger(__name__)
 #
 def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     """
-    create a sliderule atl06p query from an icepyx region
-    """
+    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  The list of granules to be processed is identified by the ipx_region object.
 
+    See the `atl06p <../api_reference/icesat2.html#atl06p>`_ function for more details.
+
+    Parameters
+    ----------
+        ipx_region: Query
+                    icepyx region object defining the query of granules to be processed
+        parm:       dict
+                    parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+        asset:      str
+                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+
+    Returns
+    -------
+    GeoDataFrame
+        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+    """
     try:
         version = ipx_region.product_version
         resources = ipx_region.avail_granules(ids=True)[0]
@@ -66,9 +81,24 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
 #
 def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     """
-    create a sliderule atl03sp query from an icepyx region
-    """
+    Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.
 
+    See the `atl03sp <../api_reference/icesat2.html#atl03sp>`_ function for more details.
+
+    Parameters
+    ----------
+        ipx_region: Query
+                    icepyx region object defining the query of granules to be processed
+        parms:      dict
+                    parameters used to configure ATL03 subsetting (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+        asset:      str
+                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+
+    Returns
+    -------
+    list
+        ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
+    """
     try:
         version = ipx_region.product_version
         resources = ipx_region.avail_granules(ids=True)[0]
@@ -83,7 +113,18 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
 
 def to_region(ipx_region):
     """
-    extract subsetting extents from an icepyx region
+    Extract subsetting extents from an icepyx region
+
+    Parameters
+    ----------
+        ipx_region: Query
+                    icepyx region object defining the query of granules to be processed
+
+    Returns
+    -------
+    list
+        polygon definining region of interest (can be passed into `icesat2` api functions)
+
     """
     if (ipx_region.extent_type == 'bbox'):
         bbox = ipx_region.spatial_extent[1]
