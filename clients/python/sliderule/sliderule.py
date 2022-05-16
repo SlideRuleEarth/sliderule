@@ -361,12 +361,44 @@ def __raiseexceptrec(rec):
 #  SOURCE
 #
 def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}):
+    '''
+    Perform API call to SlideRule service
+
+    Parameters
+    ----------
+        api:        str
+                    name of the SlideRule endpoint
+        parm:       dict
+                    dictionary of request parameters
+        stream:     bool
+                    whether the request is a **normal** service or a **stream** service (see `De-serialization <./SlideRule.html#de-serialization>`_ for more details)
+        callbacks:  dict
+                    record type callbacks (advanced use)
+
+    Returns
+    -------
+    bytearray
+        response data
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_url("icesat2sliderule.org")
+        >>> rqst = {
+        ...     "time": "NOW",
+        ...     "input": "NOW",
+        ...     "output": "GPS"
+        ... }
+        >>> rsps = sliderule.source("time", rqst)
+        >>> print(rsps)
+        {'time': 1300556199523.0, 'format': 'GPS'}
+    '''
     rqst = json.dumps(parm)
     complete = False
     retries = max_retries_per_request
     rsps = []
     while (not complete) and (retries > 0):
-        retries -= 1        
+        retries -= 1
         serv = __getserv() # it throws a RuntimeError that must be caught by calling function
         try:
             url  = '%s/source/%s' % (serv, api)
@@ -400,10 +432,21 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'e
 
 #
 #  SET_URL
-#   - you either pass in a single ip address or hostname which is used for service discovery
-#   - OR you pass in a list of ip address or hostnames which are treated as a fixed list of servers
 #
 def set_url (urls):
+    '''
+    Configure sliderule package with URL of service
+
+    Parameters
+    ----------
+        urls:   str
+                IP address or hostname of SlideRule service (note, there is a special case where the url is provided as a list of strings instead of just a string; when a list is provided, the client hardcodes the set of servers that are used to process requests to the exact set provided; this is used for testing and for local installations and can be ignored by most users)
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_url("service.my-sliderule-server.org")
+    '''
     global server_table, server_index, service_url
     with server_lock:
         service_url = None
@@ -424,6 +467,21 @@ def set_url (urls):
 #  UPDATE_AVAIABLE_SERVERS
 #
 def update_available_servers ():
+    '''
+    Causes the SlideRule Python client to refresh the list of available processing nodes. This is useful when performing large processing requests where there is time for auto-scaling to change the number of nodes running.
+
+    This function does nothing if the client has been initialized with a hardcoded list of servers.
+
+    Returns
+    -------
+    int
+        the number of available processing nodes
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.update_available_servers()
+    '''
     global server_table, server_index, service_url
     with server_lock:
         if service_url != None:
@@ -439,6 +497,33 @@ def update_available_servers ():
 #  SET_VERBOSE
 #
 def set_verbose (enable):
+    '''
+    Configure sliderule package for verbose logging
+
+    Parameters
+    ----------
+        enable:     bool
+                    whether or not user level log messages received from SlideRule generate a Python log message
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_verbose(True)
+
+        The default behavior of Python log messages is for them to be displayed to standard output.
+        If you want more control over the behavior of the log messages being display, create and configure a Python log handler as shown below:
+
+        >>> # import packages
+        >>> import logging
+        >>> from sliderule import sliderule
+        >>> # Configure Logging
+        >>> sliderule_logger = logging.getLogger("sliderule.sliderule")
+        >>> sliderule_logger.setLevel(logging.INFO)
+        >>> # Create Console Output
+        >>> ch = logging.StreamHandler()
+        >>> ch.setLevel(logging.INFO)
+        >>> sliderule_logger.addHandler(ch)
+    '''
     global verbose
     verbose = (enable == True)
 
@@ -446,6 +531,21 @@ def set_verbose (enable):
 #  SET_MAX_ERRORS
 #
 def set_max_errors (max_errors):
+    '''
+    Configure sliderule package's maximum number of errors per node setting.  When the client makes a request to a processing node, if there is an error, it will retry the request to a different processing node (if available), but will keep the original processing node in the list of available nodes and increment the number of errors associated with it.  But if a processing node accumulates up to the **max_errors** number of errors, then the node is removed from the list of available nodes and will not be used in future processing requests.
+
+    A call to ``update_available_servers`` or ``set_url`` is needed to restore a removed node to the list of available servers.
+
+    Parameters
+    ----------
+        max_errors:     int
+                        sets the maximum number of errors per node
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_max_errors(3)
+    '''
     global server_max_errors
     if max_errors > 0:
         server_max_errors = max_errors
@@ -456,6 +556,21 @@ def set_max_errors (max_errors):
 # SET_REQUEST_TIMEOUT
 #
 def set_rqst_timeout (timeout):
+    '''
+    Sets the TCP/IP connection and reading timeouts for future requests made to sliderule servers.
+    Setting it lower means the client will failover more quickly, but may generate false positives if a processing request stalls or takes a long time returning data.
+    Setting it higher means the client will wait longer before designating it a failed request which in the presence of a persistent failure means it will take longer for the client to remove the node from its available servers list.
+
+    Parameters
+    ----------
+        timeout:    tuple
+                    (<connection timeout in seconds>, <read timeout in seconds>)
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_rqst_timeout((10, 60))
+    '''
     global request_timeout
     if type(timeout) == tuple:
         request_timeout = timeout
@@ -466,6 +581,29 @@ def set_rqst_timeout (timeout):
 # GPS2UTC
 #
 def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
+    '''
+    Convert a GPS based time returned from SlideRule into a UTC time.
+
+    Parameters
+    ----------
+        gps_time:   int
+                    number of seconds since GPS epoch (January 6, 1980)
+        as_str:     bool
+                    if True, returns the time as a string; if False, returns the time as datatime object
+        epoch:      datetime
+                    the epoch used in the conversion, defaults to GPS epoch (Jan 6, 1980)
+
+    Returns
+    -------
+    datetime
+        UTC time (i.e. GMT, or Zulu time)
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.gps2utc(1235331234)
+        '2019-02-27 19:34:03'
+    '''
     gps_time = epoch + timedelta(seconds=gps_time)
     tai_time = gps_time + timedelta(seconds=19)
     tai_timestamp = (tai_time - tai_epoch).total_seconds()
@@ -479,6 +617,28 @@ def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
 # GET DEFINITION
 #
 def get_definition (rectype, fieldname):
+    '''
+    Get the underlying format specification of a field in a return record.
+
+    Parameters
+    ----------
+    rectype:    str
+                the name of the type of the record (i.e. "atl03rec")
+    fieldname:  str
+                the name of the record field (i.e. "cycle")
+
+    Returns
+    -------
+    dict
+        description of each field; see the `sliderule.basictypes` variable for different field types
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_url("icesat2sliderule.org")
+        >>> sliderule.get_definition("atl03rec", "cycle")
+        {'fmt': 'H', 'size': 2, 'nptype': <class 'numpy.uint16'>}
+    '''
     recdef = __populate(rectype)
     if fieldname in recdef and recdef[fieldname]["type"] in basictypes:
         return basictypes[recdef[fieldname]["type"]]
