@@ -373,15 +373,6 @@ def __query_resources(parm, version, return_polygons=False):
         return resources
 
 #
-#  __query_servers
-#
-def __query_servers():
-
-
-    # Return Number of Workers #
-    return num_servers
-
-#
 #  __emptyframe
 #
 def __emptyframe(**kwargs):
@@ -853,8 +844,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     try:
         if resources == None:
             resources = __query_resources(parm, version)
-        max_workers = __query_servers()
-        return __parallelize(max_workers, callback, __atl06, parm, resources, asset)
+        return __parallelize(callback, __atl06, parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -920,8 +910,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     try:
         if resources == None:
             resources = __query_resources(parm, version)
-        max_workers = __query_servers()
-        return __parallelize(max_workers, callback, __atl03s, parm, resources, asset)
+        return __parallelize(callback, __atl03s, parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
