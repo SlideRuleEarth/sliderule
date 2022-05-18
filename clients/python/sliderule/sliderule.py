@@ -30,7 +30,6 @@
 import requests
 import numpy
 import json
-import time
 import struct
 import ctypes
 import logging
@@ -42,12 +41,11 @@ from datetime import datetime, timedelta
 ###############################################################################
 
 service_url = None
-
-server_lock = threading.Lock()
+server_lock = threading.Condition()
 server_table = {}
-server_index = 0
-server_max_errors = 3
 
+max_errors_per_server = 3
+max_pending_per_server = 3
 max_retries_per_request = 5
 
 verbose = False
@@ -135,42 +133,58 @@ class TransientError(Exception):
 #
 #  get the ip address of an available sliderule server
 #
-def __getserv():
-    global server_table, server_index
-    serv = ""
+def __getserv(stream):
+    global server_table
     with server_lock:
-        server_list = list(server_table.keys())
-        num_server_tables = len(server_list)
-        if num_server_tables == 0:
+        try:
+            server_available = False
+            while not server_available:
+                serv = min(server_table.items(), key=lambda x:x[1]["pending"])[0]
+                if stream:
+                    if server_table[serv]["pending"] < max_pending_per_server:
+                        server_table[serv]["pending"] += 1
+                        server_available = True
+                    else:
+                        if not server_lock.wait(1.0):
+                            logger.debug("Timeout occurred waiting for thread to be notified")
+                else:
+                    server_available = True
+        except:
             raise RuntimeError('No available urls')
-        server_index = (server_index + 1) % num_server_tables
-        serv = server_list[server_index]
     return serv
 
 #
 #  __errserv
 #
-def __errserv(serv):
-    global server_table, server_max_errors
-    wait_time = 0
+def __errserv(serv, stream):
+    global server_table, max_errors_per_server
     with server_lock:
         try:
-            server_table[serv] += 1
-            logger.critical(serv + " encountered consecutive error " + str(server_table[serv]))
-            if server_table[serv] > server_max_errors:
+            if stream:
+                server_table[serv]["pending"] -= 1
+            server_table[serv]["errors"] += 1
+            logger.warning(serv + " encountered consecutive error " + str(server_table[serv]["errors"]))
+            if server_table[serv]["errors"] > max_errors_per_server:
+                logger.critical("Removing " + serv + " from list of available servers due to too many consecutive errors")
                 server_table.pop(serv, None)
-            wait_time = server_table[serv]
         except Exception as e:
             logger.debug(serv + " already removed from table")
-    time.sleep(wait_time)
+        finally:
+            if stream:
+                server_lock.notify()
 
 #
 #  __clrserv
 #
-def __clrserv(serv):
+def __clrserv(serv, stream):
     global server_table
     with server_lock:
-        server_table[serv] = 0
+        try:
+            if stream:
+                server_table[serv]["pending"] -= 1
+            server_table[serv]["errors"] = 0
+        finally:
+            server_lock.notify()
 
 #
 #  __populate
@@ -399,7 +413,7 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'e
     rsps = []
     while (not complete) and (retries > 0):
         retries -= 1
-        serv = __getserv() # it throws a RuntimeError that must be caught by calling function
+        serv = __getserv(stream) # it throws a RuntimeError that must be caught by calling function
         try:
             url  = '%s/source/%s' % (serv, api)
             if not stream:
@@ -408,26 +422,30 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'e
                 data = requests.post(url, data=rqst, timeout=request_timeout, stream=True)
                 data.raise_for_status()
                 rsps = __parse(data, callbacks)
-            __clrserv(serv)
+            __clrserv(serv, stream)
             complete = True
         except requests.ConnectionError as e:
             logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
-            __errserv(serv)
+            __errserv(serv, stream)
+        except requests.Timeout as e:
+            logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))
+            __errserv(serv, stream)
+        except requests.exceptions.ChunkedEncodingError as e:
+            logger.error("Unexpected termination of response from endpoint {} ... retrying request".format(url))
+            __errserv(serv, stream)
         except requests.HTTPError as e:
             if e.response.status_code == 503:
                 logger.error("Server experiencing heavy load, stalling on request to {} ... will retry".format(url))
+                __clrserv(serv, stream)
             else:
                 logger.error("Invalid HTTP response from endpoint {} ... retrying request".format(url))
-            __errserv(serv)
-        except requests.Timeout as e:
-            logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))
-            __errserv(serv)
-        except requests.exceptions.ChunkedEncodingError as e:
-            logger.error("Unexpected termination of response from endpoint {} ... retrying request".format(url))
-            __errserv(serv)
+                __errserv(serv, stream)
         except TransientError as e:
             logger.warning("Recoverable error occurred at {} ... retrying request".format(url))
-            # do not mark server as having an error
+            __clrserv(serv, stream)
+        except:
+            __errserv(serv, stream)
+            raise
     return rsps
 
 #
@@ -440,22 +458,22 @@ def set_url (urls):
     Parameters
     ----------
         urls:   str
-                IP address or hostname of SlideRule service (note, there is a special case where the url is provided as a list of strings instead of just a string; when a list is provided, the client hardcodes the set of servers that are used to process requests to the exact set provided; this is used for testing and for local installations and can be ignored by most users)
+                IP address or hostname of SlideRule service (note, there is a special case where the url is provided as a list of strings
+                instead of just a string; when a list is provided, the client hardcodes the set of servers that are used to process requests
+                to the exact set provided; this is used for testing and for local installations and can be ignored by most users)
 
     Examples
     --------
         >>> import sliderule
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
-    global server_table, server_index, service_url
+    global server_table, service_url
     with server_lock:
         service_url = None
-        server_index = 0
         server_table = {}
         if type(urls) == list: # hardcoded list of sliderule server IP addresses
             for serv in urls:
-                server_url = "http://" + serv
-                server_table[server_url] = 0
+                server_table["http://" + serv] = {"pending": 0, "errors": 0}
         elif type(urls) == str: # IP address of sliderule's service discovery
             service_url = "http://" + urls + "/discovery/"
         else:
@@ -468,7 +486,8 @@ def set_url (urls):
 #
 def update_available_servers ():
     '''
-    Causes the SlideRule Python client to refresh the list of available processing nodes. This is useful when performing large processing requests where there is time for auto-scaling to change the number of nodes running.
+    Causes the SlideRule Python client to refresh the list of available processing nodes. This is useful when performing large processing
+    requests where there is time for auto-scaling to change the number of nodes running.
 
     This function does nothing if the client has been initialized with a hardcoded list of servers.
 
@@ -482,16 +501,16 @@ def update_available_servers ():
         >>> import sliderule
         >>> sliderule.update_available_servers()
     '''
-    global server_table, server_index, service_url
+    global server_table, service_url
     with server_lock:
         if service_url != None:
-            server_index = 0
             server_table = {}
             response = requests.get(service_url, data='{"service":"sliderule"}', timeout=request_timeout).json()
             for entry in response['members']:
-                server_url = "http://" + entry
-                server_table[server_url] = 0
-    return len(server_table)
+                server_table["http://" + entry] = {"pending": 0, "errors": 0}
+        num_servers = len(server_table)
+        max_workers = num_servers * max_pending_per_server
+    return (num_servers, max_workers)
 
 #
 #  SET_VERBOSE
@@ -532,7 +551,11 @@ def set_verbose (enable):
 #
 def set_max_errors (max_errors):
     '''
-    Configure sliderule package's maximum number of errors per node setting.  When the client makes a request to a processing node, if there is an error, it will retry the request to a different processing node (if available), but will keep the original processing node in the list of available nodes and increment the number of errors associated with it.  But if a processing node accumulates up to the **max_errors** number of errors, then the node is removed from the list of available nodes and will not be used in future processing requests.
+    Configure sliderule package's maximum number of errors per node setting.  When the client makes a request to a processing node,
+    if there is an error, it will retry the request to a different processing node (if available), but will keep the original processing
+    node in the list of available nodes and increment the number of errors associated with it.  But if a processing node accumulates up
+    to the **max_errors** number of errors, then the node is removed from the list of available nodes and will not be used in future
+    processing requests.
 
     A call to ``update_available_servers`` or ``set_url`` is needed to restore a removed node to the list of available servers.
 
@@ -541,16 +564,51 @@ def set_max_errors (max_errors):
         max_errors:     int
                         sets the maximum number of errors per node
 
+    Raises
+    ------
+    TypeError
+        max_errors must be a positive integer
+
     Examples
     --------
         >>> import sliderule
         >>> sliderule.set_max_errors(3)
     '''
-    global server_max_errors
+    global max_errors_per_server
     if max_errors > 0:
-        server_max_errors = max_errors
+        max_errors_per_server = max_errors
     else:
         raise TypeError('max errors must be greater than zero')
+
+#
+#  SET_MAX_PENDING
+#
+def set_max_pending (max_pending):
+    '''
+    Configure sliderule package's maximum number of pending requests per node setting.  When the client makes a request, it first finds the processing
+    node with the fewest requests in progress (i.e. pending), and sends the request to that node.  If the node with the fewest pending requests has
+    `max_pending` requests, it will wait until a processing node becomes available with less than `max_pending` requests.
+
+    Parameters
+    ----------
+        max_pending:    int
+                        sets the maximum number of pending requests per node
+
+    Raises
+    ------
+    TypeError
+        max_pending must be a positive integer
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_max_pending(1)
+    '''
+    global max_pending_per_server
+    if max_pending > 0:
+        max_pending_per_server = max_pending
+    else:
+        raise TypeError('max pending must be greater than zero')
 
 #
 # SET_REQUEST_TIMEOUT

@@ -52,9 +52,6 @@ from sliderule import version
 # GLOBALS
 ###############################################################################
 
-# configuration
-SERVER_SCALE_FACTOR = 3
-
 # create logger
 logger = logging.getLogger(__name__)
 
@@ -69,7 +66,7 @@ DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # default maximum number of workers used for one request
-DEFAULT_MAX_WORKERS = 30
+DEFAULT_MAX_WORKERS_PER_NODE = 3
 
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
@@ -364,8 +361,7 @@ def __query_resources(parm, version, return_polygons=False):
 
     # Check Resources are Under Limit #
     if(len(resources) > max_requested_resources):
-        logger.warning("Exceeded maximum requested resources: %d (current max is %d)", len(resources), max_requested_resources)
-        logger.warning("Consider using icesat2.set_max_resources to set a higher limit")
+        logger.error("Exceeded maximum requested resources: %d (current max is %d)\nConsider using icesat2.set_max_resources to set a higher limit.", len(resources), max_requested_resources)
         resources = []
     else:
         logger.info("Identified %d resources to process", len(resources))
@@ -379,25 +375,11 @@ def __query_resources(parm, version, return_polygons=False):
 #
 #  __query_servers
 #
-def __query_servers(max_workers):
+def __query_servers():
 
-    # Update Available Servers #
-    num_servers = sliderule.update_available_servers()
-    full_load = num_servers * SERVER_SCALE_FACTOR
-
-    # Check if Servers are Available #
-    if full_load <= 0:
-        logger.error("There are no servers available to fulfill this request")
-        return 0
-
-    # Set Workers #
-    if max_workers <= 0 or max_workers > full_load:
-        max_workers = full_load
-
-    logger.info("Allocating %d workers across %d processing nodes", max_workers, num_servers)
 
     # Return Number of Workers #
-    return max_workers
+    return num_servers
 
 #
 #  __emptyframe
@@ -574,11 +556,15 @@ def __atl03s (parm, resource, asset):
 #
 #  __parallelize
 #
-def __parallelize(max_workers, callback, function, parm, resources, *args):
+def __parallelize(callback, function, parm, resources, *args):
 
-    # Check Max Workers
-    if max_workers <= 0:
-        return None
+    # Update Available Servers #
+    num_servers, max_workers = sliderule.update_available_servers()
+
+    # Check if Servers are Available #
+    if num_servers <= 0:
+        logger.error("There are no servers available to fulfill this request")
+        return __emptyframe()
 
     # Check Callback
     if callback == None:
@@ -836,7 +822,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  Unlike the `atl06 <#atl06>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -854,8 +840,6 @@ def atl06p(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=D
                         parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
         asset:          str
                         data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
-        max_workers:    int
-                        the number of threads to use when making concurrent requests to SlideRule (when set to 0, the number of threads is automatically and optimally determined based on the number of SlideRule server nodes available)
         version:        str
                         the version of the ATL03 data to use for processing
         callback:       bool
@@ -869,7 +853,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=D
     try:
         if resources == None:
             resources = __query_resources(parm, version)
-        max_workers = __query_servers(max_workers)
+        max_workers = __query_servers()
         return __parallelize(max_workers, callback, __atl06, parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
@@ -905,7 +889,7 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -923,8 +907,6 @@ def atl03sp(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=
                         parameters used to configure ATL03 subsetting (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
         asset:          str
                         data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
-        max_workers:    int
-                        the number of threads to use when making concurrent requests to SlideRule (when set to 0, the number of threads is automatically and optimally determined based on the number of SlideRule server nodes available)
         version:        str
                         the version of the ATL03 data to return
         callback:       bool
@@ -938,7 +920,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, max_workers=DEFAULT_MAX_WORKERS, version=
     try:
         if resources == None:
             resources = __query_resources(parm, version)
-        max_workers = __query_servers(max_workers)
+        max_workers = __query_servers()
         return __parallelize(max_workers, callback, __atl03s, parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
