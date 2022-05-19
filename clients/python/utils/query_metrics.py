@@ -31,7 +31,7 @@ if __name__ == '__main__':
         url = [sys.argv[1]]
 
     # Override monitor name
-    attr = "LuaEndpoint"
+    attr = "SourceEndpoint"
     if len(sys.argv) > 2:
         attr = sys.argv[2]
 

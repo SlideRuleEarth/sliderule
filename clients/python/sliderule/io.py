@@ -488,7 +488,7 @@ def from_nc(filename, **kwargs):
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('region_regions',False)
+    kwargs.setdefault('return_regions',False)
     # open netCDF3 file object (64-bit offset format)
     fileID = scipy.io.netcdf.netcdf_file(filename, 'r', version=2)
     warnings.filterwarnings("ignore")
@@ -554,7 +554,7 @@ def from_nc(filename, **kwargs):
     gdf.set_index(kwargs['index_key'], inplace=True)
     gdf.sort_index(inplace=True)
     # if not returning the query parameters or polygon
-    if not (kwargs['return_parameters'] or kwargs['region_regions']):
+    if not (kwargs['return_parameters'] or kwargs['return_regions']):
         # return geodataframe
         return gdf
     # create tuple with returns
@@ -564,7 +564,7 @@ def from_nc(filename, **kwargs):
         # add parameters to output tuple
         output += (parms,)
     # if returning the regions
-    if kwargs['region_regions']:
+    if kwargs['return_regions']:
         # add regions to output tuple
         output += (regions,)
     # return the combined tuple
@@ -750,7 +750,7 @@ def from_hdf(filename, **kwargs):
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('region_regions',False)
+    kwargs.setdefault('return_regions',False)
     if (kwargs['driver'].lower() == 'pytables'):
         kwargs.pop('driver')
         # return GeoDataFrame from pytables
@@ -767,7 +767,7 @@ def read_pytables(filename, **kwargs):
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('region_regions',False)
+    kwargs.setdefault('return_regions',False)
     # open pytables HDF5 to read pandas dataframe
     df = geopandas.pd.read_hdf(filename, **kwargs)
     # generate geometry column
@@ -812,7 +812,7 @@ def read_pytables(filename, **kwargs):
         geometry=geometry, crs=kwargs['crs'])
     gdf.sort_index(inplace=True)
     # if not returning the query parameters or polygon
-    if not (kwargs['return_parameters'] or kwargs['region_regions']):
+    if not (kwargs['return_parameters'] or kwargs['return_regions']):
         # return geodataframe
         return gdf
     # create tuple with returns
@@ -822,7 +822,7 @@ def read_pytables(filename, **kwargs):
         # add parameters to output tuple
         output += (parms,)
     # if returning the regions
-    if kwargs['region_regions']:
+    if kwargs['return_regions']:
         # add regions to output tuple
         output += (regions,)
     # return the combined tuple
@@ -836,7 +836,7 @@ def read_h5py(filename, **kwargs):
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
     kwargs.setdefault('return_parameters',False)
-    kwargs.setdefault('region_regions',False)
+    kwargs.setdefault('return_regions',False)
     # open HDF5 file object
     fileID = h5py.File(filename, mode='r')
     # input dictionary for input variables
@@ -895,7 +895,7 @@ def read_h5py(filename, **kwargs):
     gdf.set_index(kwargs['index_key'], inplace=True)
     gdf.sort_index(inplace=True)
     # if not returning the query parameters or polygon
-    if not (kwargs['return_parameters'] or kwargs['region_regions']):
+    if not (kwargs['return_parameters'] or kwargs['return_regions']):
         # return geodataframe
         return gdf
     # create tuple with returns
@@ -905,7 +905,7 @@ def read_h5py(filename, **kwargs):
         # add parameters to output tuple
         output += (parms,)
     # if returning the regions
-    if kwargs['region_regions']:
+    if kwargs['return_regions']:
         # add regions to output tuple
         output += (regions,)
     # return the combined tuple

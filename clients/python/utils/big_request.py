@@ -44,7 +44,6 @@ if __name__ == '__main__':
         "url": 'icesat2sliderule.org',
         "asset": 'nsidc-s3',
         "filename": 'atl06.hdf5',
-        "max_workers": 0,
         "max_resources": 100000
     }
 
@@ -65,7 +64,6 @@ if __name__ == '__main__':
     # get command line parameters
     parse_command_line(sys.argv, cfg)
     parse_command_line(sys.argv, parms)
-
 
     if cfg["run"] == 'write':
         # configure SlideRule
