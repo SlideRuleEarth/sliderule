@@ -511,17 +511,17 @@ def __atl03s (parm, resource, asset):
         ph_cnt = 0
         for rsp in rsps:
             ph_index = 0
+            pair = 0
             left_cnt = rsp["count"][0]
             for photon in rsp["data"]:
+                if ph_index >= left_cnt:
+                    pair = 1
                 for field in rsp.keys():
                     if field in columns:
                         if field == "count":
-                            if ph_index < left_cnt:
-                                columns[field][ph_cnt] = 0
-                            else:
-                                columns[field][ph_cnt] = 1
+                            columns[field][ph_cnt] = pair
                         elif type(rsp[field]) is tuple:
-                            columns[field][ph_cnt] = rsp[field][0]
+                            columns[field][ph_cnt] = rsp[field][pair]
                         else:
                             columns[field][ph_cnt] = rsp[field]
                 for field in photon.keys():
