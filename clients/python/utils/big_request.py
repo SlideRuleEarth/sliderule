@@ -132,11 +132,17 @@ if __name__ == '__main__':
         m = folium.Map(location=[region["poly"][0]["lat"], region["poly"][0]["lon"]], zoom_start=5)
         folium.Choropleth(pregion, line_color='blue', line_weight=1.5).add_to(m)
 
+        # draw containing polygon
+        lons = [p["lon"] for p in region["poly"]]
+        lats = [p["lat"] for p in region["poly"]]
+        points = [(lat, lon) for lat,lon in zip(lats,lons)]
+        folium.PolyLine(points, color="green", weight=2.0, opacity=1).add_to(m)
+
         # draw polygon clusters
         for cluster in region["clusters"]:
             lons = [p["lon"] for p in cluster]
             lats = [p["lat"] for p in cluster]
-            points = [(lon, lat) for lon,lat in zip(lons,lats)]
+            points = [(lat, lon) for lat,lon in zip(lats,lons)]
             folium.PolyLine(points, color="red", weight=2.5, opacity=1).add_to(m)
 
         # display raster
