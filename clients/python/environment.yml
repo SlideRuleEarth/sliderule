@@ -20,10 +20,10 @@ dependencies:
   - pytables
   - python=3.8
   - requests
+  - scikit-learn
   - scipy
   - setuptools_scm
   - shapely
-  - sklearn
   - tk
   - xyzservices
   - pip:
