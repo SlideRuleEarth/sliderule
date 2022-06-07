@@ -45,6 +45,7 @@ from osgeo import ogr
 from osgeo import osr
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
+from sklearn.cluster import KMeans
 import sliderule
 from sliderule import version
 
@@ -263,7 +264,7 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     ctx.verify_mode = ssl.CERT_NONE
 
     urls = []
-    polys = [] if kwargs['return_polygons'] else None
+    polys = []
     while True:
         req = urllib.request.Request(cmr_query_url)
         if cmr_scroll_id:
@@ -283,12 +284,11 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
         # append granule polygons
         if kwargs['return_polygons']:
             polygon_results = __cmr_granule_polygons(search_page)
-            polys.extend(polygon_results)
+        else:
+            polygon_results = [None for _ in url_scroll_results]
+        polys.extend(polygon_results)
 
-    if kwargs['return_polygons']:
-        return (urls,polys)
-    else:
-        return urls
+    return (urls,polys)
 
 ###############################################################################
 # SLIDERULE UTILITIES
@@ -326,8 +326,11 @@ def __query_resources(parm, version, return_polygons=False):
     kwargs = {}
     kwargs['version'] = version
     kwargs['return_polygons'] = return_polygons
+
     # Pull Out Polygon #
-    if "poly" in parm:
+    if "clusters" in parm and len(parm["clusters"]) > 0:
+        kwargs['polygon'] = parm["clusters"]
+    elif "poly" in parm and len(parm["poly"]) > 0:
         kwargs['polygon'] = parm["poly"]
 
     # Pull Out Time Period #
@@ -418,6 +421,27 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     # Return GeoDataFrame
     return gdf
 
+#
+# __gdf2ploy
+#
+def __gdf2poly(gdf):
+    # pull out coordinates
+    hull = gdf.unary_union.convex_hull
+    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
+
+    # determine winding of polygon #
+    #              (x2               -    x1)             *    (y2               +    y1)
+    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
+    if wind > 0:
+        # reverse direction (make counter-clockwise) #
+        ccw_poly = []
+        for i in range(len(polygon), 0, -1):
+            ccw_poly.append(polygon[i - 1])
+        # replace region with counter-clockwise version #
+        polygon = ccw_poly
+
+    # return polygon
+    return polygon
 
 #
 #  __atl06
@@ -655,7 +679,7 @@ def cmr(**kwargs):
     Parameters
     ----------
         polygon:    list
-                    list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons <../user_guide/ICESat-2.html#polygons>`_)
+                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons <../user_guide/ICESat-2.html#polygons>`_), or a list of such lists when the region includes more than one polygon
         time_start: str
                     starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
         time_end:   str
@@ -682,77 +706,87 @@ def cmr(**kwargs):
         >>> granules
         ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', ... 'ATL03_20201111102237_07370902_003_01.h5']
     '''
-    # set default keyword arguments
-    kwargs.setdefault('polygon',None)
+    # set default polygon
+    kwargs.setdefault('polygon', None)
     # set default start time to start of ICESat-2 mission
-    kwargs.setdefault('time_start','2018-10-13T00:00:00Z')
+    kwargs.setdefault('time_start', '2018-10-13T00:00:00Z')
     # set default stop time to current time
-    kwargs.setdefault('time_end',datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
+    kwargs.setdefault('time_end', datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
     # set default version and product short name
     kwargs.setdefault('version', DEFAULT_ICESAT2_SDP_VERSION)
     kwargs.setdefault('short_name','ATL03')
     # return polygons for each requested granule
-    kwargs.setdefault('return_polygons',False)
+    kwargs.setdefault('return_polygons', False)
     # set default name filter
     kwargs.setdefault('name_filter', None)
 
-    # copy polygon
-    polygon = copy.copy(kwargs['polygon'])
+    # return value
+    resources = {} # [<url>] = <polygon>
 
-    url_list = []
-    poly_list = []
+    # create list of polygons
+    polygons = [None]
+    if len(kwargs['polygon']) > 0:
+        if type(kwargs['polygon'][0]) == dict:
+            polygons = [copy.deepcopy(kwargs['polygon'])]
+        elif type(kwargs['polygon'][0] == list):
+            polygons = copy.deepcopy(kwargs['polygon'])
 
-    # issue CMR request
-    for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
+    # iterate through each polygon (or none if none supplied)
+    for polygon in polygons:
+        urls = []
+        polys = []
 
-        # convert polygon list into string
-        polystr = None
-        if polygon:
-            flatpoly = []
-            for p in polygon:
-                flatpoly.append(p["lon"])
-                flatpoly.append(p["lat"])
-            polystr = str(flatpoly)[1:-1]
-            polystr = polystr.replace(" ", "") # remove all spaces as this will be embedded in a url
+        # issue CMR request
+        for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
 
-        # call into NSIDC routines to make CMR request
-        try:
-            if kwargs['return_polygons']:
-                url_list,poly_list = __cmr_search(kwargs['short_name'],
-                    kwargs['version'],
-                    kwargs['time_start'],
-                    kwargs['time_end'],
-                    polygon=polystr,
-                    return_polygons=True,
-                    name_filter=kwargs['name_filter'])
+            # convert polygon list into string
+            polystr = None
+            if polygon:
+                flatpoly = []
+                for p in polygon:
+                    flatpoly.append(p["lon"])
+                    flatpoly.append(p["lat"])
+                polystr = str(flatpoly)[1:-1]
+                polystr = polystr.replace(" ", "") # remove all spaces as this will be embedded in a url
+
+            # call into NSIDC routines to make CMR request
+            try:
+                urls,polys = __cmr_search(kwargs['short_name'],
+                                            kwargs['version'],
+                                            kwargs['time_start'],
+                                            kwargs['time_end'],
+                                            polygon=polystr,
+                                            return_polygons=kwargs['return_polygons'],
+                                            name_filter=kwargs['name_filter'])
+                break # exit loop because cmr search was successful
+            except urllib.error.HTTPError as e:
+                logger.error('HTTP Request Error: {}'.format(e.reason))
+            except RuntimeError as e:
+                logger.error("Runtime Error:", e)
+
+            # simplify polygon
+            if polygon and tolerance:
+                raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
+                shape = MultiPolygon(*raw_multi_polygon)
+                buffered_shape = shape.buffer(tolerance)
+                simplified_shape = buffered_shape.simplify(tolerance)
+                simplified_coords = list(simplified_shape.exterior.coords)
+                logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
+                region = []
+                for coord in simplified_coords:
+                    point = {"lon": coord[0], "lat": coord[1]}
+                    region.insert(0,point)
+                polygon = region
             else:
-                url_list = __cmr_search(kwargs['short_name'],
-                    kwargs['version'],
-                    kwargs['time_start'],
-                    kwargs['time_end'],
-                    polygon=polystr,
-                    name_filter=kwargs['name_filter'])
-            break # exit loop because cmr search was successful
-        except urllib.error.HTTPError as e:
-            logger.error('HTTP Request Error: {}'.format(e.reason))
-        except RuntimeError as e:
-            logger.error("Runtime Error:", e)
+                break # exit here because nothing can be done
 
-        # simplify polygon
-        if polygon and tolerance:
-            raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
-            shape = MultiPolygon(*raw_multi_polygon)
-            buffered_shape = shape.buffer(tolerance)
-            simplified_shape = buffered_shape.simplify(tolerance)
-            simplified_coords = list(simplified_shape.exterior.coords)
-            logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
-            region = []
-            for coord in simplified_coords:
-                point = {"lon": coord[0], "lat": coord[1]}
-                region.insert(0,point)
-            polygon = region
-        else:
-            break # exit here because nothing can be done
+        # populate resources
+        for url, poly in zip(urls, polys):
+            resources[url] = poly
+
+    # build return lists
+    url_list = list(resources.keys())
+    poly_list = list(resources.values())
 
     if kwargs['return_polygons']:
         return (url_list,poly_list)
@@ -1086,7 +1120,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
 #
 # TO REGION
 #
-def toregion(source, tolerance=0.0, cellsize=0.01):
+def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     '''
     Convert a GeoJSON representation of a set of geospatial regions into a list of lat,lon coordinates and raster image recognized by SlideRule
 
@@ -1098,6 +1132,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01):
                     tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
         cellsize:   float
                     size of pixel in degrees used to create the raster image of the polygon
+        clusters:   int
+                    number of clusters of polygons to create when breaking up the request to CMR
 
     Returns
     -------
@@ -1105,6 +1141,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01):
         a raster image and a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule
         region = {
             "poly": [{"lat": <lat1>, "lon": <lon1>, ... }],
+            "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...],
             "raster": {
                 "image": <base64 encoded geotiff image string>,
                 "imagelength": <length of base64 encoded image>,
@@ -1237,30 +1274,35 @@ def toregion(source, tolerance=0.0, cellsize=0.01):
             gdf = gdf.simplify(tolerance)
 
     # generate polygon
-    hull = gdf.unary_union.convex_hull
-    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
+    polygon = __gdf2poly(gdf)
 
-    # determine winding of polygon #
-    #              (x2               -    x1)             *    (y2               +    y1)
-    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
-    if wind > 0:
-        # reverse direction (make counter-clockwise) #
-        ccw_poly = []
-        for i in range(len(polygon), 0, -1):
-            ccw_poly.append(polygon[i - 1])
-        # replace region with counter-clockwise version #
-        polygon = ccw_poly
-
-    # TODO: if more than one poly... come up with query_polys - an optimal list of polygons to use with CMR
-    # ... it is only useful with raster
+    # generate clusters
+    clusters = []
+    if n_clusters > 1:
+        # pull out centroids of each geometry object
+        if "CenLon" in gdf and "CenLat" in gdf:
+            X = numpy.column_stack((gdf["CenLon"],gdf["CenLat"]))
+        else:
+            s = gdf.centroid
+            X = numpy.column_stack((s.x, s.y))
+        # run k means clustering algorithm against polygons in gdf
+        kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+        y_kmeans = kmeans.fit_predict(X)
+        k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+        gdf = gdf.join(k)
+        # build polygon for each cluster
+        for n in range(n_clusters):
+            c_gdf = gdf[gdf["cluster"] == n]
+            c_poly = __gdf2poly(c_gdf)
+            clusters.append(c_poly)
 
     # encode image in base64
     b64image = base64.b64encode(raster).decode('UTF-8')
 
     # return region #
     return {
-        0: polygon, # for backward compatibility
         "poly": polygon, # convex hull of polygons
+        "clusters": clusters, # list of polygon clusters for cmr request
         "raster": {
             "image": b64image, # geotiff image
             "imagelength": len(b64image), # encoded image size of geotiff
