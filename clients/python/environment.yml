@@ -23,6 +23,7 @@ dependencies:
   - scipy
   - setuptools_scm
   - shapely
+  - sklearn
   - tk
   - xyzservices
   - pip:
