@@ -8,7 +8,6 @@ import time
 import logging
 import geopandas
 import folium
-import base64
 import matplotlib.pyplot as plt
 from sliderule import icesat2
 from sliderule.stream2disk import Hdf5Writer, Hdf5Reader
