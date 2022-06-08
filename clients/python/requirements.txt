@@ -3,3 +3,4 @@ numpy
 geopandas
 shapely
 gdal
+scikit-learn
