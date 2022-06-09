@@ -363,7 +363,7 @@ def __raiseexceptrec(rec):
         if verbose:
             logger.info("%s exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
         if not handleexcept[rc]["expected"]:
-            logger.critical("Unexpected error: %s:", handleexcept[rc]["name"])
+            logger.critical("Unexpected error: %s", handleexcept[rc]["name"])
         if not handleexcept[rc]["fatal"]:
             raise TransientError()
 
