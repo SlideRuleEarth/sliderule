@@ -104,7 +104,7 @@ int LuaObject::luaGetByName(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "Name was not registered");
+        mlog(e.level(), "Failed to get Lua object by name: %s", e.what());
         lua_pushnil(L);
     }
 

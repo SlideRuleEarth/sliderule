@@ -269,7 +269,7 @@ T& Dictionary<T>::get(const char* key)
 {
     unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
-    else                    throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
+    else                    throw RunTimeException(CRITICAL, RTE_ERROR, "key <%s> not found", key);
 }
 
 /*----------------------------------------------------------------------------
