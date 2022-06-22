@@ -35,7 +35,7 @@ class TestAtl03s:
         icesat2.init(server)
         resource = "ATL03_20220208000041_07291401_005_01.h5"
         rqst = {
-            "atl03-asset" : "atlas-local",
+            "atl03-asset" : asset,
             "resource": resource,
             "parms": {"track": 0, "srt": 0, "pass_invalid":True, "yapc": {"score":0}},
             "timeout": 1 # second
