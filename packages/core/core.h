@@ -96,7 +96,5 @@ void    initcore        (void);
 void    deinitcore      (void);
 bool    checkactive     (void);
 void    setinactive     (void);
-bool    checkhealth     (void);
-void    setunhealthy    (void);
 
 #endif  /* __corepkg__ */

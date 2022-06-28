@@ -162,15 +162,13 @@ void* HttpServer::listenerThread(void* parm)
         int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
         if(status < 0)
         {
-            /* Set Global Health State */
-            setunhealthy();
             mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
 
             /* Restart Http Server */
             if(s->active)
             {
                 mlog(INFO, "Attempting to restart http server: %s", s->getName());
-                LocalLib::sleep(3.0); // wait three second to prevent spint
+                LocalLib::sleep(5.0); // wait five seconds to prevent spin
             }
         }
     }

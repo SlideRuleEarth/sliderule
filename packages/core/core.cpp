@@ -230,23 +230,3 @@ void setinactive(void)
 {
     appActive = false;
 }
-
-/*----------------------------------------------------------------------------
- * checkhealth
- *
- *  check application health
- *----------------------------------------------------------------------------*/
-bool checkhealth(void)
-{
-    return appHealthy;
-}
-
-/*----------------------------------------------------------------------------
- * setunhealthy
- *
- *  set application to unhealthy
- *----------------------------------------------------------------------------*/
-void setunhealthy(void)
-{
-    appHealthy = false;
-}

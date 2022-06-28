@@ -435,10 +435,11 @@ int LuaLibrarySys::lsys_geteventlvl (lua_State* L)
 
 /*----------------------------------------------------------------------------
  * lsys_healthy
+ *  - this is currently a placeholder for a more sophisticated health check
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_healthy (lua_State* L)
 {
-    lua_pushboolean(L, checkhealth());
+    lua_pushboolean(L, true);
     return 1;
 }
 
