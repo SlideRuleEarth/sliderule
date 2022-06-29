@@ -446,24 +446,25 @@ def __gdf2poly(gdf):
 #
 #  __atl06
 #
-def __atl06 (parm, resource, asset):
+def __atl06 (parm, resources, asset):
 
-    # Build ATL06 Request
+    # Build ATL06 Proxy Request
     rqst = {
+        "api": "atl06",
         "atl03-asset" : asset,
-        "resource": resource,
+        "resources": resources,
         "parms": parm
     }
 
     # Execute ATL06 Algorithm
-    rsps = sliderule.source("atl06", rqst, stream=True)
+    rsps = sliderule.source("proxy", rqst, stream=True)
 
     # Flatten Responses
     columns = {}
     if len(rsps) <= 0:
-        logger.debug("no response returned for %s", resource)
+        logger.debug("no response returned")
     elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
-        logger.debug("invalid response returned for %s: %s", resource, rsps[0]['__rectype'])
+        logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
     else:
         # Determine Record Type
         if rsps[0]['__rectype'] == 'atl06rec':
@@ -489,30 +490,31 @@ def __atl06 (parm, resource, asset):
                 elev_cnt += 1
 
     # Return Response
-    return __todataframe(columns, "delta_time", "lon", "lat"), resource
+    return __todataframe(columns, "delta_time", "lon", "lat")
 
 
 #
 #  __atl03s
 #
-def __atl03s (parm, resource, asset):
+def __atl03s (parm, resources, asset):
 
-    # Build ATL06 Request
+    # Build ATL06 Proxy Request
     rqst = {
+        "api": "atl03s",
         "atl03-asset" : asset,
-        "resource": resource,
+        "resources": resources,
         "parms": parm
     }
 
     # Execute ATL06 Algorithm
-    rsps = sliderule.source("atl03s", rqst, stream=True)
+    rsps = sliderule.source("proxy", rqst, stream=True)
 
     # Flatten Responses
     columns = {}
     if len(rsps) <= 0:
-        logger.debug("no response returned for %s", resource)
+        logger.debug("no response returned")
     elif rsps[0]['__rectype'] != 'atl03rec':
-        logger.debug("invalid response returned for %s: %s", resource, rsps[0]['__rectype'])
+        logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
     else:
         # Count Rows
         num_rows = 0
@@ -563,52 +565,10 @@ def __atl03s (parm, resource, asset):
         df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
 
         # Return Response
-        return df, resource
+        return df
 
     # Error Case
-    return __emptyframe(), resource
-
-#
-#  __parallelize
-#
-def __parallelize(callback, function, parm, resources, *args):
-
-    # Update Available Servers #
-    num_servers, max_workers = sliderule.update_available_servers()
-
-    # Check if Servers are Available #
-    if num_servers <= 0:
-        logger.error("There are no servers available to fulfill this request")
-        return __emptyframe()
-
-    # Check Callback
-    if callback == None:
-        results = []
-
-    # Make Parallel Processing Requests
-    total_resources = len(resources)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(function, parm, resource, *args) for resource in resources]
-
-        # Wait for Results
-        result_cnt = 0
-        for future in concurrent.futures.as_completed(futures):
-            result_cnt += 1
-            result, resource = future.result()
-            if len(result) > 0:
-                if callback == None:
-                    results.append(result)
-                else:
-                    callback(resource, result, result_cnt, total_resources)
-            logger.info("%d points returned for %s (%d out of %d resources)", len(result), resource, result_cnt, total_resources)
-
-    # Return Results
-    if callback == None:
-        if len(results) > 0:
-            results.sort(key=lambda result: result.iloc[0]['delta_time'])
-            return geopandas.pd.concat(results)
-        else:
-            return __emptyframe()
+    return __emptyframe()
 
 ###############################################################################
 # APIs
@@ -839,7 +799,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
         [622412 rows x 16 columns]
     '''
     try:
-        return __atl06(parm, resource, asset)[0]
+        return __atl06(parm, [resource], asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -847,7 +807,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  PARALLEL ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, stream=False, resources=None):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  Unlike the `atl06 <#atl06>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -868,7 +828,12 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         version:        str
                         the version of the ATL03 data to use for processing
         callback:       bool
-                        a callback function that is called for each resource and its results; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
+                        a callback function that is called for each result record; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
+        stream:         bool
+                        if enabled, results are sent back to client as they are generated; if disabled, results from all granules are assembled before being sent back
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+
 
     Returns
     -------
@@ -878,7 +843,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     try:
         if resources == None:
             resources = __query_resources(parm, version)
-        return __parallelize(callback, __atl06, parm, resources, asset)
+        return __atl06(parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -905,7 +870,7 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
         ATL03 extents (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
-        return __atl03s(parm, resource, asset)[0]
+        return __atl03s(parm, [resource], asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -913,7 +878,7 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
 #
 #  PARALLEL SUBSETTED ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, stream=False, resources=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -935,6 +900,10 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         the version of the ATL03 data to return
         callback:       bool
                         a callback function that is called for each resource and its results; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
+        stream:         bool
+                        if enabled, results are sent back to client as they are generated; if disabled, results from all granules are assembled before being sent back
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
 
     Returns
     -------
@@ -944,7 +913,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     try:
         if resources == None:
             resources = __query_resources(parm, version)
-        return __parallelize(callback, __atl03s, parm, resources, asset)
+        return __atl03s(parm, resources, asset)
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
