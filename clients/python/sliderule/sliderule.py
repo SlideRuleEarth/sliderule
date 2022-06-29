@@ -33,7 +33,6 @@ import json
 import struct
 import ctypes
 import logging
-import threading
 from datetime import datetime, timedelta
 
 ###############################################################################
@@ -41,11 +40,7 @@ from datetime import datetime, timedelta
 ###############################################################################
 
 service_url = None
-server_lock = threading.Condition()
-server_table = {}
 
-max_errors_per_server = 3
-max_pending_per_server = 3
 max_retries_per_request = 5
 
 verbose = False
@@ -131,62 +126,6 @@ class TransientError(Exception):
 ###############################################################################
 
 #
-#  get the ip address of an available sliderule server
-#
-def __getserv(stream):
-    global server_table
-    with server_lock:
-        try:
-            server_available = False
-            while not server_available:
-                serv = min(server_table.items(), key=lambda x:x[1]["pending"])[0]
-                if stream:
-                    if server_table[serv]["pending"] < max_pending_per_server:
-                        server_table[serv]["pending"] += 1
-                        server_available = True
-                    else:
-                        if not server_lock.wait(1.0):
-                            logger.debug("Timeout occurred waiting for thread to be notified")
-                else:
-                    server_available = True
-        except:
-            raise RuntimeError('No available urls')
-    return serv
-
-#
-#  __errserv
-#
-def __errserv(serv, stream):
-    global server_table, max_errors_per_server
-    with server_lock:
-        try:
-            if stream:
-                server_table[serv]["pending"] -= 1
-            server_table[serv]["errors"] += 1
-            logger.warning(serv + " encountered consecutive error " + str(server_table[serv]["errors"]))
-            if server_table[serv]["errors"] > max_errors_per_server:
-                logger.critical("Removing " + serv + " from list of available servers due to too many consecutive errors")
-                server_table.pop(serv, None)
-        except Exception as e:
-            logger.debug(serv + " already removed from table")
-        finally:
-            if stream:
-                server_lock.notify()
-
-#
-#  __clrserv
-#
-def __clrserv(serv, stream):
-    global server_table
-    with server_lock:
-        try:
-            if stream:
-                server_table[serv]["pending"] -= 1
-            server_table[serv]["errors"] = 0
-        finally:
-            server_lock.notify()
-
-#
 #  __populate
 #
 def __populate(rectype):
@@ -196,9 +135,9 @@ def __populate(rectype):
     return recdef_table[rectype]
 
 #
-#  __decode
+#  __decode_native
 #
-def __decode(rectype, rawdata):
+def __decode_native(rectype, rawdata):
     """
     rectype: record type supplied in response (string)
     rawdata: payload supplied in response (byte array)
@@ -276,20 +215,20 @@ def __decode(rectype, rawdata):
             if is_array:
                 rec[fieldname] = []
                 for e in range(elems):
-                    rec[fieldname].append(__decode(ftype, rawdata[offset:]))
+                    rec[fieldname].append(__decode_native(ftype, rawdata[offset:]))
                     offset += subrecdef["__datasize"]
             else:
-                rec[fieldname] = __decode(ftype, rawdata[offset:])
+                rec[fieldname] = __decode_native(ftype, rawdata[offset:])
 
     # return record #
     return rec
 
 #
-#  __parse
+#  __parse_native
 #
-def __parse(stream, callbacks):
+def __parse_native(data, callbacks):
     """
-    stream: request response stream
+    data: request response
     """
     recs = []
 
@@ -301,7 +240,7 @@ def __parse(stream, callbacks):
     rec_index = 0
     rec_rsps = []
 
-    for line in stream.iter_content(None):
+    for line in data.iter_content(None):
 
         i = 0
         while i < len(line):
@@ -331,7 +270,7 @@ def __parse(stream, callbacks):
                     rawbits = b''.join(rec_rsps)
                     rectype = ctypes.create_string_buffer(rawbits).value.decode('ascii')
                     rawdata = rawbits[len(rectype) + 1:]
-                    rec     = __decode(rectype, rawdata)
+                    rec     = __decode_native(rectype, rawdata)
                     if callbacks != None and rectype in callbacks:
                         # Execute Call-Back on Record
                         callbacks[rectype](rec)
@@ -346,6 +285,11 @@ def __parse(stream, callbacks):
                 i += bytes_to_append
 
     return recs
+
+###############################################################################
+#
+# Default Record Processing
+###############################################################################
 
 #
 #  __logeventrec
@@ -367,6 +311,12 @@ def __raiseexceptrec(rec):
         if not handleexcept[rc]["fatal"]:
             raise TransientError()
 
+#
+#  Globals
+#
+default_callbacks = {'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}
+default_format = "json" # | native
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -374,7 +324,7 @@ def __raiseexceptrec(rec):
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}):
+def source (api, parm={}, stream=False, format=default_format, callbacks=default_callbacks):
     '''
     Perform API call to SlideRule service
 
@@ -386,6 +336,8 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'e
                     dictionary of request parameters
         stream:     bool
                     whether the request is a **normal** service or a **stream** service (see `De-serialization <./SlideRule.html#de-serialization>`_ for more details)
+        format:     str
+                    format of the data being returned in the response: native, json
         callbacks:  dict
                     record type callbacks (advanced use)
 
@@ -407,51 +359,50 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'e
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
+    global max_retries_per_request, service_url
     rqst = json.dumps(parm)
     complete = False
     retries = max_retries_per_request
     rsps = []
     while (not complete) and (retries > 0):
         retries -= 1
-        serv = __getserv(stream) # it throws a RuntimeError that must be caught by calling function
         try:
-            url  = '%s/source/%s' % (serv, api)
+            url  = '%s/source/%s' % (service_url, api)
+            # Perform Request
             if not stream:
-                rsps = requests.get(url, data=rqst, timeout=request_timeout).json()
-            else:
+                data = requests.get(url, data=rqst, timeout=request_timeout)
+            else: # stream
                 data = requests.post(url, data=rqst, timeout=request_timeout, stream=True)
-                data.raise_for_status()
-                rsps = __parse(data, callbacks)
-            __clrserv(serv, stream)
+            data.raise_for_status()
+            # Parse Response
+            if format == "json":
+                rsps = data.json()
+            elif format == "native":
+                rsps = __parse_native(data, callbacks)
+            else:
+                raise TypeError('invalid non-streaming format specified: %s' % (format))
             complete = True
         except requests.ConnectionError as e:
             logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
-            __errserv(serv, stream)
         except requests.Timeout as e:
             logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))
-            __errserv(serv, stream)
         except requests.exceptions.ChunkedEncodingError as e:
             logger.error("Unexpected termination of response from endpoint {} ... retrying request".format(url))
-            __errserv(serv, stream)
         except requests.HTTPError as e:
             if e.response.status_code == 503:
                 logger.error("Server experiencing heavy load, stalling on request to {} ... will retry".format(url))
-                __clrserv(serv, stream)
             else:
                 logger.error("Invalid HTTP response from endpoint {} ... retrying request".format(url))
-                __errserv(serv, stream)
         except TransientError as e:
             logger.warning("Recoverable error occurred at {} ... retrying request".format(url))
-            __clrserv(serv, stream)
         except:
-            __errserv(serv, stream)
             raise
     return rsps
 
 #
 #  SET_URL
 #
-def set_url (urls):
+def set_url (url):
     '''
     Configure sliderule package with URL of service
 
@@ -467,50 +418,8 @@ def set_url (urls):
         >>> import sliderule
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
-    global server_table, service_url
-    with server_lock:
-        service_url = None
-        server_table = {}
-        if type(urls) == list: # hardcoded list of sliderule server IP addresses
-            for serv in urls:
-                server_table["http://" + serv] = {"pending": 0, "errors": 0}
-        elif type(urls) == str: # IP address of sliderule's service discovery
-            service_url = "http://" + urls + "/discovery/"
-        else:
-            raise TypeError('expected ip address or hostname as a string or list of strings')
-    # then update server table
-    update_available_servers()
-
-#
-#  UPDATE_AVAIABLE_SERVERS
-#
-def update_available_servers ():
-    '''
-    Causes the SlideRule Python client to refresh the list of available processing nodes. This is useful when performing large processing
-    requests where there is time for auto-scaling to change the number of nodes running.
-
-    This function does nothing if the client has been initialized with a hardcoded list of servers.
-
-    Returns
-    -------
-    int
-        the number of available processing nodes
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.update_available_servers()
-    '''
-    global server_table, service_url
-    with server_lock:
-        if service_url != None:
-            server_table = {}
-            response = requests.get(service_url, data='{"service":"sliderule"}', timeout=request_timeout).json()
-            for entry in response['members']:
-                server_table["http://" + entry] = {"pending": 0, "errors": 0}
-        num_servers = len(server_table)
-        max_workers = num_servers * max_pending_per_server
-    return (num_servers, max_workers)
+    global service_url
+    service_url = url
 
 #
 #  SET_VERBOSE
@@ -545,70 +454,6 @@ def set_verbose (enable):
     '''
     global verbose
     verbose = (enable == True)
-
-#
-#  SET_MAX_ERRORS
-#
-def set_max_errors (max_errors):
-    '''
-    Configure sliderule package's maximum number of errors per node setting.  When the client makes a request to a processing node,
-    if there is an error, it will retry the request to a different processing node (if available), but will keep the original processing
-    node in the list of available nodes and increment the number of errors associated with it.  But if a processing node accumulates up
-    to the **max_errors** number of errors, then the node is removed from the list of available nodes and will not be used in future
-    processing requests.
-
-    A call to ``update_available_servers`` or ``set_url`` is needed to restore a removed node to the list of available servers.
-
-    Parameters
-    ----------
-        max_errors:     int
-                        sets the maximum number of errors per node
-
-    Raises
-    ------
-    TypeError
-        max_errors must be a positive integer
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.set_max_errors(3)
-    '''
-    global max_errors_per_server
-    if max_errors > 0:
-        max_errors_per_server = max_errors
-    else:
-        raise TypeError('max errors must be greater than zero')
-
-#
-#  SET_MAX_PENDING
-#
-def set_max_pending (max_pending):
-    '''
-    Configure sliderule package's maximum number of pending requests per node setting.  When the client makes a request, it first finds the processing
-    node with the fewest requests in progress (i.e. pending), and sends the request to that node.  If the node with the fewest pending requests has
-    `max_pending` requests, it will wait until a processing node becomes available with less than `max_pending` requests.
-
-    Parameters
-    ----------
-        max_pending:    int
-                        sets the maximum number of pending requests per node
-
-    Raises
-    ------
-    TypeError
-        max_pending must be a positive integer
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.set_max_pending(1)
-    '''
-    global max_pending_per_server
-    if max_pending > 0:
-        max_pending_per_server = max_pending
-    else:
-        raise TypeError('max pending must be greater than zero')
 
 #
 # SET_REQUEST_TIMEOUT

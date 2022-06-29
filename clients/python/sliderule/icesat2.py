@@ -626,7 +626,7 @@ def cmr(**kwargs):
 #
 def atl06 (parm, resource, asset=DEFAULT_ASSET):
     '''
-    DEPRECATED (use atl06p): Performs ATL06-SR processing on ATL03 data and returns gridded elevations
+    Performs ATL06-SR processing on ATL03 data and returns gridded elevations
 
     Parameters
     ----------
@@ -642,13 +642,12 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
     '''
-    warnings.warn("API is deprecated; use `atl06p` instead.", DeprecationWarning, stacklevel=2)
-    return atl06p(parm, asset=asset, resources=[resource])
+    return atl06p(parm, asset=asset, proxy=False, resources=[resource])
 
 #
 #  Parallel ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, stream=False, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks=sliderule.default_callbacks, format="native", proxy=True, resources=None):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -669,10 +668,12 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to use for processing
-        callback:       bool
-                        a callback function that is called for each result record; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
-        stream:         bool
-                        if enabled, results are sent back to client as they are generated; if disabled, results from all granules are assembled before being sent back
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        format:         str
+                        format of the data being returned; if "native" then data is streamed back as it is generated
+        proxy:          bool
+                        use proxy API instead of directly going to atl03s API
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
 
@@ -710,7 +711,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         if resources == None:
             resources = __query_resources(parm, version)
 
-        # Build ATL06 Proxy Request
+        # Build ATL06 Request
         rqst = {
             "api": "atl06",
             "atl03-asset" : asset,
@@ -718,8 +719,14 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             "parms": parm
         }
 
-        # Execute ATL06 Algorithm
-        rsps = sliderule.source("proxy", rqst, stream=True)
+        # Select API
+        if proxy:
+            api = "proxy"
+        else:
+            api = "atl06"
+
+        # Make API Processing Request
+        rsps = sliderule.source(api, rqst, stream=True, format=format, callbacks=callbacks)
 
         # Flatten Responses
         columns = {}
@@ -764,7 +771,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
 #
 def atl03s (parm, resource, asset=DEFAULT_ASSET):
     '''
-    DEPRECATED (use atl03sp): Subsets ATL03 data given the polygon and time range provided and returns segments of photons
+    Subsets ATL03 data given the polygon and time range provided and returns segments of photons
 
     Parameters
     ----------
@@ -780,13 +787,12 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         ATL03 extents (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
-    warnings.warn("API is deprecated; use `atl03sp` instead.", DeprecationWarning, stacklevel=2)
-    return atl03sp(parm, asset=asset, resources=[resource])
+    return atl03sp(parm, asset=asset, proxy=False, resources=[resource])
 
 #
 #  Parallel Subsetted ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, stream=False, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks=sliderule.default_callbacks, format="native", proxy=True, resources=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -806,10 +812,12 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to return
-        callback:       bool
-                        a callback function that is called for each resource and its results; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
-        stream:         bool
-                        if enabled, results are sent back to client as they are generated; if disabled, results from all granules are assembled before being sent back
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        format:         str
+                        format of the data being returned; if "native" then data is streamed back as it is generated
+        proxy:          bool
+                        use proxy API instead of directly going to atl03s API
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
 
@@ -823,7 +831,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         if resources == None:
             resources = __query_resources(parm, version)
 
-        # Build ATL06 Proxy Request
+        # Build ATL03 Subsetting Request
         rqst = {
             "api": "atl03s",
             "atl03-asset" : asset,
@@ -831,8 +839,14 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
             "parms": parm
         }
 
-        # Execute ATL06 Algorithm
-        rsps = sliderule.source("proxy", rqst, stream=True)
+        # Select API
+        if proxy:
+            api = "proxy"
+        else:
+            api = "atl03s"
+
+        # Make API Processing Request
+        rsps = sliderule.source(api, rqst, stream=True, format=format, callbacks=callbacks)
 
         # Flatten Responses
         columns = {}
@@ -903,7 +917,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
 #
 #  H5
 #
-def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
+def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS, format="native"):
     '''
     Reads a dataset from an HDF5 file and returns the values of the dataset in a list
 
@@ -940,6 +954,8 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
                     the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
         numrows:    int
                     the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
+        format:     str
+                    format of the data being returned; if "native" then data is streamed back as it is generated
 
     Returns
     -------
@@ -968,7 +984,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
 
     # Read H5 File
     try:
-        rsps = sliderule.source("h5", rqst, stream=True)
+        rsps = sliderule.source("h5", rqst, stream=True, format=format)
     except RuntimeError as e:
         logger.critical(e)
         return numpy.empty(0)
@@ -994,7 +1010,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
 #
 #  Parallel H5
 #
-def h5p (datasets, resource, asset=DEFAULT_ASSET):
+def h5p (datasets, resource, asset=DEFAULT_ASSET, format="native"):
     '''
     Reads a list of datasets from an HDF5 file and returns the values of the dataset in a dictionary of lists.
 
@@ -1012,6 +1028,8 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
                     HDF5 filename
         asset:      str
                     data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+        format:     str
+                    format of the data being returned; if "native" then data is streamed back as it is generated
 
     Returns
     -------
@@ -1055,7 +1073,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
 
     # Read H5 File
     try:
-        rsps = sliderule.source("h5p", rqst, stream=True)
+        rsps = sliderule.source("h5p", rqst, stream=True, format=format)
     except RuntimeError as e:
         logger.critical(e)
         rsps = []
