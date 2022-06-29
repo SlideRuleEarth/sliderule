@@ -34,7 +34,6 @@ import ssl
 import urllib.request
 import datetime
 import logging
-import concurrent.futures
 import warnings
 import numpy
 import geopandas
@@ -99,54 +98,6 @@ SC_FORWARD = 1
 
 # gps-based epoch for delta times #
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
-
-###############################################################################
-# ICESAT2 UTILITIES
-###############################################################################
-
-#
-# __calcspot
-#
-def __calcspot(sc_orient, track, pair):
-
-    # spacecraft in forward orientation
-    if sc_orient == SC_BACKWARD:
-        if track == 1:
-            if pair == LEFT_PAIR:
-                return 1
-            elif pair == RIGHT_PAIR:
-                return 2
-        elif track == 2:
-            if pair == LEFT_PAIR:
-                return 3
-            elif pair == RIGHT_PAIR:
-                return 4
-        elif track == 3:
-            if pair == LEFT_PAIR:
-                return 5
-            elif pair == RIGHT_PAIR:
-                return 6
-
-    # spacecraft in backward orientation
-    elif sc_orient == SC_FORWARD:
-        if track == 1:
-            if pair == LEFT_PAIR:
-                return 6
-            elif pair == RIGHT_PAIR:
-                return 5
-        elif track == 2:
-            if pair == LEFT_PAIR:
-                return 4
-            elif pair == RIGHT_PAIR:
-                return 3
-        elif track == 3:
-            if pair == LEFT_PAIR:
-                return 2
-            elif pair == RIGHT_PAIR:
-                return 1
-
-    # unknown spot
-    return 0
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -291,11 +242,55 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     return (urls,polys)
 
 ###############################################################################
-# SLIDERULE UTILITIES
+# LOCAL FUNCTIONS
 ###############################################################################
 
 #
-#  __get_values
+# Calculate Laser Spot
+#
+def __calcspot(sc_orient, track, pair):
+
+    # spacecraft in forward orientation
+    if sc_orient == SC_BACKWARD:
+        if track == 1:
+            if pair == LEFT_PAIR:
+                return 1
+            elif pair == RIGHT_PAIR:
+                return 2
+        elif track == 2:
+            if pair == LEFT_PAIR:
+                return 3
+            elif pair == RIGHT_PAIR:
+                return 4
+        elif track == 3:
+            if pair == LEFT_PAIR:
+                return 5
+            elif pair == RIGHT_PAIR:
+                return 6
+
+    # spacecraft in backward orientation
+    elif sc_orient == SC_FORWARD:
+        if track == 1:
+            if pair == LEFT_PAIR:
+                return 6
+            elif pair == RIGHT_PAIR:
+                return 5
+        elif track == 2:
+            if pair == LEFT_PAIR:
+                return 4
+            elif pair == RIGHT_PAIR:
+                return 3
+        elif track == 3:
+            if pair == LEFT_PAIR:
+                return 2
+            elif pair == RIGHT_PAIR:
+                return 1
+
+    # unknown spot
+    return 0
+
+#
+#  Get Values from Raw Buffer
 #
 def __get_values(data, dtype, size):
     """
@@ -313,7 +308,7 @@ def __get_values(data, dtype, size):
     return values
 
 #
-#  __query_resources
+#  Query Resources from CMR
 #
 def __query_resources(parm, version, return_polygons=False):
 
@@ -376,7 +371,7 @@ def __query_resources(parm, version, return_polygons=False):
         return resources
 
 #
-#  __emptyframe
+#  Create Empty GeoDataFrame
 #
 def __emptyframe(**kwargs):
     # set default keyword arguments
@@ -384,7 +379,7 @@ def __emptyframe(**kwargs):
     return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
 
 #
-#  __todataframe
+#  Dictionary to GeoDataFrame
 #
 def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", **kwargs):
     # set default keyword arguments
@@ -422,7 +417,7 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     return gdf
 
 #
-# __gdf2ploy
+# GeoDataFrame to Polygon
 #
 def __gdf2poly(gdf):
     # pull out coordinates
@@ -443,139 +438,12 @@ def __gdf2poly(gdf):
     # return polygon
     return polygon
 
-#
-#  __atl06
-#
-def __atl06 (parm, resources, asset):
-
-    # Build ATL06 Proxy Request
-    rqst = {
-        "api": "atl06",
-        "atl03-asset" : asset,
-        "resources": resources,
-        "parms": parm
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("proxy", rqst, stream=True)
-
-    # Flatten Responses
-    columns = {}
-    if len(rsps) <= 0:
-        logger.debug("no response returned")
-    elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
-        logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
-    else:
-        # Determine Record Type
-        if rsps[0]['__rectype'] == 'atl06rec':
-            rectype = 'atl06rec.elevation'
-        else:
-            rectype = 'atl06rec-compact.elevation'
-        # Count Rows
-        num_rows = 0
-        for rsp in rsps:
-            num_rows += len(rsp["elevation"])
-        # Build Columns
-        for field in rsps[0]["elevation"][0].keys():
-            fielddef = sliderule.get_definition(rectype, field)
-            if len(fielddef) > 0:
-                columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-        # Populate Columns
-        elev_cnt = 0
-        for rsp in rsps:
-            for elevation in rsp["elevation"]:
-                for field in elevation.keys():
-                    if field in columns:
-                        columns[field][elev_cnt] = elevation[field]
-                elev_cnt += 1
-
-    # Return Response
-    return __todataframe(columns, "delta_time", "lon", "lat")
-
-
-#
-#  __atl03s
-#
-def __atl03s (parm, resources, asset):
-
-    # Build ATL06 Proxy Request
-    rqst = {
-        "api": "atl03s",
-        "atl03-asset" : asset,
-        "resources": resources,
-        "parms": parm
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("proxy", rqst, stream=True)
-
-    # Flatten Responses
-    columns = {}
-    if len(rsps) <= 0:
-        logger.debug("no response returned")
-    elif rsps[0]['__rectype'] != 'atl03rec':
-        logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
-    else:
-        # Count Rows
-        num_rows = 0
-        for rsp in rsps:
-            num_rows += len(rsp["data"])
-        # Build Columns
-        for rsp in rsps:
-            if len(rsp["data"]) > 0:
-                # Allocate Columns
-                for field in rsp.keys():
-                    fielddef = sliderule.get_definition("atl03rec", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-                for field in rsp["data"][0].keys():
-                    fielddef = sliderule.get_definition("atl03rec.photons", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-                break
-        # Populate Columns
-        ph_cnt = 0
-        for rsp in rsps:
-            ph_index = 0
-            pair = 0
-            left_cnt = rsp["count"][0]
-            for photon in rsp["data"]:
-                if ph_index >= left_cnt:
-                    pair = 1
-                for field in rsp.keys():
-                    if field in columns:
-                        if field == "count":
-                            columns[field][ph_cnt] = pair
-                        elif type(rsp[field]) is tuple:
-                            columns[field][ph_cnt] = rsp[field][pair]
-                        else:
-                            columns[field][ph_cnt] = rsp[field]
-                for field in photon.keys():
-                    if field in columns:
-                        columns[field][ph_cnt] = photon[field]
-                ph_cnt += 1
-                ph_index += 1
-        # Rename Count Column to Pair Column
-        columns["pair"] = columns.pop("count")
-
-        # Create DataFrame
-        df = __todataframe(columns, "delta_time", "longitude", "latitude")
-
-        # Calculate Spot Column
-        df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
-
-        # Return Response
-        return df
-
-    # Error Case
-    return __emptyframe()
-
 ###############################################################################
 # APIs
 ###############################################################################
 
 #
-#  INIT
+#  Initialize
 #
 def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max_errors=3, loglevel=logging.CRITICAL):
     '''
@@ -610,7 +478,7 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max
     set_max_resources(max_resources)
 
 #
-#  SET MAX RESOURCES
+#  Set Maximum Resources
 #
 def set_max_resources (max_resources):
     '''
@@ -630,7 +498,7 @@ def set_max_resources (max_resources):
     max_requested_resources = max_resources
 
 #
-#  COMMON METADATA REPOSITORY
+#  Common Metadata Repository
 #
 def cmr(**kwargs):
     '''
@@ -758,7 +626,7 @@ def cmr(**kwargs):
 #
 def atl06 (parm, resource, asset=DEFAULT_ASSET):
     '''
-    Performs ATL06-SR processing on ATL03 data and returns gridded elevations
+    DEPRECATED (use atl06p): Performs ATL06-SR processing on ATL03 data and returns gridded elevations
 
     Parameters
     ----------
@@ -773,15 +641,54 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     -------
     GeoDataFrame
         gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+    '''
+    warnings.warn("API is deprecated; use `atl06p` instead.", DeprecationWarning, stacklevel=2)
+    return atl06p(parm, asset=asset, resources=[resource])
+
+#
+#  Parallel ATL06
+#
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, stream=False, resources=None):
+    '''
+    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  This function expects that the **parm** argument
+    includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
+    then any polygon or resource filtering options supplied in **parm** are ignored.
+
+    Warnings
+    --------
+        It is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
+        do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
+        for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement
+        to that effect; this can be ignored and indicates no issue with the data processing.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+        asset:          str
+                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+        version:        str
+                        the version of the ATL03 data to use for processing
+        callback:       bool
+                        a callback function that is called for each result record; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
+        stream:         bool
+                        if enabled, results are sent back to client as they are generated; if disabled, results from all granules are assembled before being sent back
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+
+    Returns
+    -------
+    GeoDataFrame
+        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
 
     Examples
     --------
         >>> from sliderule import icesat2
         >>> icesat2.init("icesat2sliderule.org", True)
         >>> parms = { "cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1 }
-        >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
+        >>> resources = ["ATL03_20181019065445_03150111_003_01.h5"]
         >>> atl03_asset = "atlas-local"
-        >>> rsps = icesat2.atl06(parms, resource, atl03_asset)
+        >>> rsps = icesat2.atl06p(parms, asset=atl03_asset, resources=resources)
         >>> rsps
                 dh_fit_dx  w_surface_window_final  ...                       time                     geometry
         0        0.000042               61.157661  ... 2018-10-19 06:54:46.104937  POINT (-63.82088 -79.00266)
@@ -799,51 +706,55 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
         [622412 rows x 16 columns]
     '''
     try:
-        return __atl06(parm, [resource], asset)
-    except RuntimeError as e:
-        logger.critical(e)
-        return __emptyframe()
-
-#
-#  PARALLEL ATL06
-#
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, stream=False, resources=None):
-    '''
-    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  Unlike the `atl06 <#atl06>`_ function,
-    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
-    is used to fetch all available resources from the CMR system automatically.
-
-    Warnings
-    --------
-        Note, it is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
-        do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
-        for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement to that effect; this can be ignored and indicates no issue with the data processing.
-
-    Parameters
-    ----------
-        parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
-        asset:          str
-                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
-        version:        str
-                        the version of the ATL03 data to use for processing
-        callback:       bool
-                        a callback function that is called for each result record; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
-        stream:         bool
-                        if enabled, results are sent back to client as they are generated; if disabled, results from all granules are assembled before being sent back
-        resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
-
-
-    Returns
-    -------
-    GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
-    '''
-    try:
+        # Get List of Resources from CMR (if not supplied)
         if resources == None:
             resources = __query_resources(parm, version)
-        return __atl06(parm, resources, asset)
+
+        # Build ATL06 Proxy Request
+        rqst = {
+            "api": "atl06",
+            "atl03-asset" : asset,
+            "resources": resources,
+            "parms": parm
+        }
+
+        # Execute ATL06 Algorithm
+        rsps = sliderule.source("proxy", rqst, stream=True)
+
+        # Flatten Responses
+        columns = {}
+        if len(rsps) <= 0:
+            logger.debug("no response returned")
+        elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
+            logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
+        else:
+            # Determine Record Type
+            if rsps[0]['__rectype'] == 'atl06rec':
+                rectype = 'atl06rec.elevation'
+            else:
+                rectype = 'atl06rec-compact.elevation'
+            # Count Rows
+            num_rows = 0
+            for rsp in rsps:
+                num_rows += len(rsp["elevation"])
+            # Build Columns
+            for field in rsps[0]["elevation"][0].keys():
+                fielddef = sliderule.get_definition(rectype, field)
+                if len(fielddef) > 0:
+                    columns[field] = numpy.empty(num_rows, fielddef["nptype"])
+            # Populate Columns
+            elev_cnt = 0
+            for rsp in rsps:
+                for elevation in rsp["elevation"]:
+                    for field in elevation.keys():
+                        if field in columns:
+                            columns[field][elev_cnt] = elevation[field]
+                    elev_cnt += 1
+
+        # Return Response
+        return __todataframe(columns, "delta_time", "lon", "lat")
+
+    # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -853,7 +764,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
 #
 def atl03s (parm, resource, asset=DEFAULT_ASSET):
     '''
-    Subsets ATL03 data given the polygon and time range provided and returns segments of photons
+    DEPRECATED (use atl03sp): Subsets ATL03 data given the polygon and time range provided and returns segments of photons
 
     Parameters
     ----------
@@ -869,14 +780,11 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         ATL03 extents (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
-    try:
-        return __atl03s(parm, [resource], asset)
-    except RuntimeError as e:
-        logger.critical(e)
-        return __emptyframe()
+    warnings.warn("API is deprecated; use `atl03sp` instead.", DeprecationWarning, stacklevel=2)
+    return atl03sp(parm, asset=asset, resources=[resource])
 
 #
-#  PARALLEL SUBSETTED ATL03
+#  Parallel Subsetted ATL03
 #
 def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, stream=False, resources=None):
     '''
@@ -911,9 +819,83 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
+        # Get List of Resources from CMR (if not specified)
         if resources == None:
             resources = __query_resources(parm, version)
-        return __atl03s(parm, resources, asset)
+
+        # Build ATL06 Proxy Request
+        rqst = {
+            "api": "atl03s",
+            "atl03-asset" : asset,
+            "resources": resources,
+            "parms": parm
+        }
+
+        # Execute ATL06 Algorithm
+        rsps = sliderule.source("proxy", rqst, stream=True)
+
+        # Flatten Responses
+        columns = {}
+        if len(rsps) <= 0:
+            logger.debug("no response returned")
+        elif rsps[0]['__rectype'] != 'atl03rec':
+            logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
+        else:
+            # Count Rows
+            num_rows = 0
+            for rsp in rsps:
+                num_rows += len(rsp["data"])
+            # Build Columns
+            for rsp in rsps:
+                if len(rsp["data"]) > 0:
+                    # Allocate Columns
+                    for field in rsp.keys():
+                        fielddef = sliderule.get_definition("atl03rec", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_rows, fielddef["nptype"])
+                    for field in rsp["data"][0].keys():
+                        fielddef = sliderule.get_definition("atl03rec.photons", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_rows, fielddef["nptype"])
+                    break
+            # Populate Columns
+            ph_cnt = 0
+            for rsp in rsps:
+                ph_index = 0
+                pair = 0
+                left_cnt = rsp["count"][0]
+                for photon in rsp["data"]:
+                    if ph_index >= left_cnt:
+                        pair = 1
+                    for field in rsp.keys():
+                        if field in columns:
+                            if field == "count":
+                                columns[field][ph_cnt] = pair
+                            elif type(rsp[field]) is tuple:
+                                columns[field][ph_cnt] = rsp[field][pair]
+                            else:
+                                columns[field][ph_cnt] = rsp[field]
+                    for field in photon.keys():
+                        if field in columns:
+                            columns[field][ph_cnt] = photon[field]
+                    ph_cnt += 1
+                    ph_index += 1
+            # Rename Count Column to Pair Column
+            columns["pair"] = columns.pop("count")
+
+            # Create DataFrame
+            df = __todataframe(columns, "delta_time", "longitude", "latitude")
+
+            # Calculate Spot Column
+            df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+
+            # Return Response
+            return df
+
+        # Error Case
+        return __emptyframe()
+
+    # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -1010,7 +992,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
     return values
 
 #
-#  H5P
+#  Parallel H5
 #
 def h5p (datasets, resource, asset=DEFAULT_ASSET):
     '''
@@ -1087,7 +1069,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     return results
 
 #
-# TO REGION
+# Format Region Specification
 #
 def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     '''
@@ -1282,7 +1264,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     }
 
 #
-# GET VERSION
+# Get Version
 #
 def get_version ():
     '''
