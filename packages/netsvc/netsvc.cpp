@@ -60,7 +60,7 @@ typedef struct {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * netsvc_write_data (used in GET)
+ * netsvc_write_data
  *----------------------------------------------------------------------------*/
 size_t netsvc_write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 {
@@ -79,7 +79,7 @@ size_t netsvc_write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 }
 
 /*----------------------------------------------------------------------------
- * netsvc_read_data (used in POST)
+ * netsvc_read_data
  *----------------------------------------------------------------------------*/
 size_t netsvc_read_data(void* buffer, size_t size, size_t nmemb, void *userp)
 {
@@ -105,100 +105,122 @@ size_t netsvc_read_data(void* buffer, size_t size, size_t nmemb, void *userp)
 int netsvc_get (lua_State* L)
 {
     bool status = false;
-    List<netsvc_data_t> rsps_set;
 
-    /* Get Parameters */
-    const char* url             = LuaObject::getLuaString(L, 1);
-    bool        verify_peer     = LuaObject::getLuaBoolean(L, 2, true, true);
-    bool        verify_hostname = LuaObject::getLuaBoolean(L, 3, true, true);
-
-    /* Initialize cURL */
-    CURL* curl = curl_easy_init();
-    if(curl)
+    try
     {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, netsvc_write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
-        curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
-        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
-        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        /* Get Parameters */
+        const char* url             = LuaObject::getLuaString(L, 1);
+        bool        verify_peer     = LuaObject::getLuaBoolean(L, 2, true, true);
+        bool        verify_hostname = LuaObject::getLuaBoolean(L, 3, true, true);
+        const char* data            = LuaObject::getLuaString(L, 4, true, "");
 
-        /*
-         * If you want to connect to a site who isn't using a certificate that is
-         * signed by one of the certs in the CA bundle you have, you can skip the
-         * verification of the server's certificate. This makes the connection
-         * A LOT LESS SECURE.
-         *
-         * If you have a CA cert for the server stored someplace else than in the
-         * default bundle, then the CURLOPT_CAPATH option might come handy for
-         * you.
-         */
-        if(verify_peer)
+        /* Initialize Request */
+        netsvc_data_t rqst;
+        rqst.data = (char*)data;
+        rqst.size = StringLib::size(data);
+
+        /* Initialize Response */
+        List<netsvc_data_t> rsps_set;
+
+        /* Initialize cURL */
+        CURL* curl = curl_easy_init();
+        if(curl)
         {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        }
-
-        /*
-         * If the site you're connecting to uses a different host name that what
-         * they have mentioned in their server certificate's commonName (or
-         * subjectAltName) fields, libcurl will refuse to connect. You can skip
-         * this check, but this will make the connection less secure.
-         */
-        if(verify_hostname)
-        {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        }
-
-        /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
-
-        /* Check for Success */
-        if(res == CURLE_OK)
-        {
-            /* Get HTTP Code */
-            long http_code = 0;
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if(http_code == 200)
+            curl_easy_setopt(curl, CURLOPT_URL, url);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, netsvc_write_data);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
+            curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
+            curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
+            curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            if(rqst.size > 0)
             {
-                /* Set Successfull */
-                status = true;
+                curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, rqst.data);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
             }
 
-            /* Get Total Response Size */
-            int total_rsps_size = 0;
-            for(int i = 0; i < rsps_set.length(); i++)
+            /*
+            * If you want to connect to a site who isn't using a certificate that is
+            * signed by one of the certs in the CA bundle you have, you can skip the
+            * verification of the server's certificate. This makes the connection
+            * A LOT LESS SECURE.
+            *
+            * If you have a CA cert for the server stored someplace else than in the
+            * default bundle, then the CURLOPT_CAPATH option might come handy for
+            * you.
+            */
+            if(verify_peer)
             {
-                total_rsps_size += rsps_set[i].size;
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
             }
 
-            /* Allocate and Populate Total Response */
-            int total_rsps_index = 0;
-            char* total_rsps = new char [total_rsps_size + 1];
-            for(int i = 0; i < rsps_set.length(); i++)
+            /*
+            * If the site you're connecting to uses a different host name that what
+            * they have mentioned in their server certificate's commonName (or
+            * subjectAltName) fields, libcurl will refuse to connect. You can skip
+            * this check, but this will make the connection less secure.
+            */
+            if(verify_hostname)
             {
-                LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
-                total_rsps_index += rsps_set[i].size;
-                delete [] rsps_set[i].data;
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
             }
-            total_rsps[total_rsps_index] = '\0';
 
-            /* Return Response String */
-            lua_pushlstring(L, total_rsps, total_rsps_index);
-            delete [] total_rsps;
+            /* Perform the request, res will get the return code */
+            CURLcode res = curl_easy_perform(curl);
+
+            /* Check for Success */
+            if(res == CURLE_OK)
+            {
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code == 200)
+                {
+                    /* Set Successfull */
+                    status = true;
+                }
+
+                /* Get Total Response Size */
+                int total_rsps_size = 0;
+                for(int i = 0; i < rsps_set.length(); i++)
+                {
+                    total_rsps_size += rsps_set[i].size;
+                }
+
+                /* Allocate and Populate Total Response */
+                int total_rsps_index = 0;
+                char* total_rsps = new char [total_rsps_size + 1];
+                for(int i = 0; i < rsps_set.length(); i++)
+                {
+                    LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
+                    total_rsps_index += rsps_set[i].size;
+                    delete [] rsps_set[i].data;
+                }
+                total_rsps[total_rsps_index] = '\0';
+
+                /* Return Response String */
+                lua_pushlstring(L, total_rsps, total_rsps_index);
+                delete [] total_rsps;
+            }
+            else
+            {
+                /* Return NIL in place of Response String */
+                lua_pushnil(L);
+            }
+
+            /* Always Cleanup */
+            curl_easy_cleanup(curl);
         }
         else
         {
             /* Return NIL in place of Response String */
             lua_pushnil(L);
         }
-
-        /* Always Cleanup */
-        curl_easy_cleanup(curl);
     }
-    else
+    catch(const RunTimeException& e)
     {
-        /* Return NIL in place of Response String */
+        mlog(e.level(), "Error performing netsvc GET: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -214,82 +236,90 @@ int netsvc_post (lua_State* L)
 {
     bool status = false;
 
-    /* Get Parameters */
-    const char* url             = LuaObject::getLuaString(L, 1);
-    const char* data            = LuaObject::getLuaString(L, 2, true, "{}");
-
-    /* Initialize Request */
-    netsvc_data_t rqst;
-    rqst.data = (char*)data;
-    rqst.size = StringLib::size(data);
-
-    /* Initialize Response */
-    List<netsvc_data_t> rsps_set;
-
-    /* Initialize cURL */
-    CURL* curl = curl_easy_init();
-    if(curl)
+    try
     {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // seconds
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // seconds
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION, netsvc_read_data);
-        curl_easy_setopt(curl, CURLOPT_READDATA, &rqst);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, netsvc_write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
+        /* Get Parameters */
+        const char* url             = LuaObject::getLuaString(L, 1);
+        const char* data            = LuaObject::getLuaString(L, 2, true, "{}");
 
-        /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
+        /* Initialize Request */
+        netsvc_data_t rqst;
+        rqst.data = (char*)data;
+        rqst.size = StringLib::size(data);
 
-        /* Check for Success */
-        if(res == CURLE_OK)
+        /* Initialize Response */
+        List<netsvc_data_t> rsps_set;
+
+        /* Initialize cURL */
+        CURL* curl = curl_easy_init();
+        if(curl)
         {
-            /* Get HTTP Code */
-            long http_code = 0;
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if(http_code == 200)
+            curl_easy_setopt(curl, CURLOPT_URL, url);
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // seconds
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // seconds
+            curl_easy_setopt(curl, CURLOPT_READFUNCTION, netsvc_read_data);
+            curl_easy_setopt(curl, CURLOPT_READDATA, &rqst);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, netsvc_write_data);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
+
+            /* Perform the request, res will get the return code */
+            CURLcode res = curl_easy_perform(curl);
+
+            /* Check for Success */
+            if(res == CURLE_OK)
             {
-                /* Set Successfull */
-                status = true;
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code == 200)
+                {
+                    /* Set Successfull */
+                    status = true;
+                }
+
+                /* Get Total Response Size */
+                int total_rsps_size = 0;
+                for(int i = 0; i < rsps_set.length(); i++)
+                {
+                    total_rsps_size += rsps_set[i].size;
+                }
+
+                /* Allocate and Populate Total Response */
+                int total_rsps_index = 0;
+                char* total_rsps = new char [total_rsps_size + 1];
+                for(int i = 0; i < rsps_set.length(); i++)
+                {
+                    LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
+                    total_rsps_index += rsps_set[i].size;
+                    delete [] rsps_set[i].data;
+                }
+                total_rsps[total_rsps_index] = '\0';
+
+                /* Return Response String */
+                lua_pushlstring(L, total_rsps, total_rsps_index);
+                delete [] total_rsps;
+            }
+            else
+            {
+                /* Failed Request */
+                lua_pushstring(L, curl_easy_strerror(res));
             }
 
-            /* Get Total Response Size */
-            int total_rsps_size = 0;
-            for(int i = 0; i < rsps_set.length(); i++)
-            {
-                total_rsps_size += rsps_set[i].size;
-            }
-
-            /* Allocate and Populate Total Response */
-            int total_rsps_index = 0;
-            char* total_rsps = new char [total_rsps_size + 1];
-            for(int i = 0; i < rsps_set.length(); i++)
-            {
-                LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
-                total_rsps_index += rsps_set[i].size;
-                delete [] rsps_set[i].data;
-            }
-            total_rsps[total_rsps_index] = '\0';
-
-            /* Return Response String */
-            lua_pushlstring(L, total_rsps, total_rsps_index);
-            delete [] total_rsps;
+            /* Always Cleanup */
+            curl_easy_cleanup(curl);
         }
         else
         {
-            /* Failed Request */
-            lua_pushstring(L, curl_easy_strerror(res));
+            /* Error Response String */
+            lua_pushstring(L, "unable to initialize net services");
         }
-
-        /* Always Cleanup */
-        curl_easy_cleanup(curl);
     }
-    else
+    catch(const RunTimeException& e)
     {
-        /* Error Response String */
-        lua_pushstring(L, "unable to initialize net services");
+        mlog(e.level(), "Error performing netsvc POST: %s", e.what());
+        lua_pushnil(L);
     }
 
     /* Return Status */
