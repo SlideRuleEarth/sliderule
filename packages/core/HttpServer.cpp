@@ -128,7 +128,7 @@ const char* HttpServer::getUniqueId (void)
 {
     char* id_str = new char [REQUEST_ID_LEN];
     long id = requestId++;
-    StringLib::format(id_str, REQUEST_ID_LEN, "%s:%d:%ld", getIpAddr(), getPort(), id);
+    StringLib::format(id_str, REQUEST_ID_LEN, "%s:%ld", getName(), id);
     return id_str;
 }
 
