@@ -367,7 +367,7 @@ def source (api, parm={}, stream=False, format=default_format, callbacks=default
     while (not complete) and (retries > 0):
         retries -= 1
         try:
-            url  = '%s/source/%s' % (service_url, api)
+            url  = 'http://%s/source/%s' % (service_url, api)
             # Perform Request
             if not stream:
                 data = requests.get(url, data=rqst, timeout=request_timeout)
