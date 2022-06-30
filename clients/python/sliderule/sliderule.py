@@ -135,6 +135,19 @@ def __populate(rectype):
     return recdef_table[rectype]
 
 #
+#  __parse_json
+#
+def __parse_json(data):
+    """
+    data: request response
+    """
+    lines = []
+    for line in data.iter_content(None):
+        lines.append(line)
+    response = b''.join(lines)
+    return json.loads(response)
+
+#
 #  __decode_native
 #
 def __decode_native(rectype, rawdata):
@@ -315,7 +328,6 @@ def __raiseexceptrec(rec):
 #  Globals
 #
 default_callbacks = {'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}
-default_format = "json" # | native
 
 ###############################################################################
 # APIs
@@ -324,7 +336,7 @@ default_format = "json" # | native
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, format=default_format, callbacks=default_callbacks):
+def source (api, parm={}, stream=False, callbacks=default_callbacks):
     '''
     Perform API call to SlideRule service
 
@@ -360,28 +372,29 @@ def source (api, parm={}, stream=False, format=default_format, callbacks=default
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
     global max_retries_per_request, service_url
-    rqst = json.dumps(parm)
-    complete = False
     retries = max_retries_per_request
-    rsps = []
-    while (not complete) and (retries > 0):
+    url  = 'http://%s/source/%s' % (service_url, api)
+    rqst = json.dumps(parm)
+    rsps = {}
+    while retries > 0:
         retries -= 1
         try:
-            url  = 'http://%s/source/%s' % (service_url, api)
             # Perform Request
             if not stream:
                 data = requests.get(url, data=rqst, timeout=request_timeout)
-            else: # stream
+            else:
                 data = requests.post(url, data=rqst, timeout=request_timeout, stream=True)
             data.raise_for_status()
             # Parse Response
-            if format == "json":
-                rsps = data.json()
-            elif format == "native":
+            format = data.headers['Content-Type']
+            if format == 'text/plain':
+                rsps = __parse_json(data)
+            elif format == 'application/octet-stream':
                 rsps = __parse_native(data, callbacks)
             else:
-                raise TypeError('invalid non-streaming format specified: %s' % (format))
-            complete = True
+                raise TypeError('unsupported content type: %s' % (format))
+            # Complete
+            break
         except requests.ConnectionError as e:
             logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
         except requests.Timeout as e:
