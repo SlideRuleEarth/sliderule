@@ -1,6 +1,7 @@
 ROOT = $(shell pwd)
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 RUNDIR = /usr/local/etc/sliderule
+BUILDDIR = build
 
 FULLCFG  = -DENABLE_TRACING=ON
 FULLCFG += -DUSE_AWS_PACKAGE=ON
@@ -24,54 +25,62 @@ PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
 all: default-build
 
 default-build:
-	make -j4 -C build
+	make -j4 -C $(BUILDDIR)
 
 config: release-config
 
 # release version of sliderule binary
 release-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON $(ROOT)
+	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON $(ROOT)
 
 # debug version of sliderule binary
 development-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) $(ROOT)
+	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) $(ROOT)
 
 # python bindings
 python-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
+	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
 
 # shared library libsliderule.so
 library-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+
+# atlas plugin
+atlas-config: prep
+	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/atlas
+
+# icesat2 plugin
+icesat2-config: prep
+	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
 
 # static analysis
 scan: prep
-	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) $(ROOT)
-	cd build; scan-build -o scan-results make
+	cd $(BUILDDIR); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) $(ROOT)
+	cd $(BUILDDIR); scan-build -o scan-results make
 
 # address sanitizer debug build of sliderule binary
 asan: prep
-	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
-	cd build; make
+	cd $(BUILDDIR); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
+	cd $(BUILDDIR); make
 
 install:
-	make -C build install
+	make -C $(BUILDDIR) install
 
 uninstall:
-	xargs rm < build/install_manifest.txt
+	xargs rm < $(BUILDDIR)/install_manifest.txt
 
 package: distclean release-config
-	make -C build package
-	# sudo dpkg -i build/sliderule-X.Y.Z.deb
+	make -C $(BUILDDIR) package
+	# sudo dpkg -i $(BUILDDIR)/sliderule-X.Y.Z.deb
 
 prep:
-	mkdir -p build
+	mkdir -p $(BUILDDIR)
 
 clean:
-	make -C build clean
+	make -C $(BUILDDIR) clean
 
 distclean:
-	- rm -Rf build
+	- rm -Rf $(BUILDDIR)
 
 testmem:
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
@@ -89,10 +98,10 @@ testheaptrack:
 	# heaptrack_gui heaptrack.sliderule.<pid>.gz
 
 testcov:
-	lcov -c --directory build --output-file build/coverage.info
-	genhtml build/coverage.info --output-directory build/coverage_html
-	# firefox build/coverage_html/index.html
+	lcov -c --directory $(BUILDDIR) --output-file $(BUILDDIR)/coverage.info
+	genhtml $(BUILDDIR)/coverage.info --output-directory $(BUILDDIR)/coverage_html
+	# firefox $(BUILDDIR)/coverage_html/index.html
 
 testpy:
-	cp scripts/tests/coro.py build
-	cd build; /usr/bin/python3 coro.py
+	cp scripts/tests/coro.py $(BUILDDIR)
+	cd $(BUILDDIR); /usr/bin/python3 coro.py

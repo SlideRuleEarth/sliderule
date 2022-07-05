@@ -1,0 +1,46 @@
+global:
+
+  scrape_interval:     30s
+  evaluation_interval: 30s
+
+scrape_configs:
+
+  # System Metrics for Cluster
+  - job_name: 'system'
+    ec2_sd_configs:
+      - region: us-west-2
+        port: 9100
+    relabel_configs:
+        # Only monitor instances with a Name ending with "-node"
+      - source_labels: [__meta_ec2_tag_Name]
+        regex: .*-node
+        action: keep
+        # Use the instance ID as the instance label
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance
+
+  # Application Metrics for Cluster
+  - job_name: 'sliderule'
+    ec2_sd_configs:
+      - region: us-west-2
+        port: 9081
+    metrics_path: "/probe/prometheus"
+    relabel_configs:
+        # Only monitor instances with a Name ending with "-node"
+      - source_labels: [__meta_ec2_tag_Name]
+        regex: .*-node
+        action: keep
+        # Use the instance ID as the instance label
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance
+
+  # System Metrics for Node Manager
+  - job_name: 'manager'
+    static_configs:
+      - targets: ['localhost:9100']
+
+    # Application Metrics for Node Manager
+  - job_name: 'orchestrator'
+    static_configs:
+      - targets: ['localhost:8051']
+    metrics_path: "/prometheus"

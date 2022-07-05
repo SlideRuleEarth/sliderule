@@ -24,6 +24,10 @@ rm sliderule-$VERSION.tar.gz 2> /dev/null
 #
 echo $VERSION > version.txt
 git add version.txt
+echo $VERSION > plugins/atlas/version.txt
+git add plugins/atlas/version.txt
+echo $VERSION > plugins/icesat2/version.txt
+git add plugins/icesat2/version.txt
 git commit -m "Version v$VERSION"
 
 #
