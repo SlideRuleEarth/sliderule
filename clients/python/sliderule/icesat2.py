@@ -445,7 +445,7 @@ def __gdf2poly(gdf):
 #
 #  Initialize
 #
-def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max_errors=3, loglevel=logging.CRITICAL):
+def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL):
     '''
     Initializes the underlying SlideRule module.  Must be called before other ICESat-2 API calls.
     This function is the same as calling the sliderule module functions: `set_url`, `set_verbose`, `set_max_errors`, along with the local `set_max_resources` function.
@@ -456,8 +456,6 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max
                         the IP address or hostname of the SlideRule service (note, there is a special case where the url is provided as a list of strings instead of just a string; when a list is provided, the client hardcodes the set of servers that are used to process requests to the exact set provided; this is used for testing and for local installations and can be ignored by most users)
         verbose :       bool
                         whether or not user level log messages received from SlideRule generate a Python log message (see `sliderule.set_verbose <../user_guide/SlideRule.html#set_verbose>`_)
-        max_errors :    int
-                        the number of errors returned by a SlideRule server before the client drops it from the available server list
         max_resources : int
                         the maximum number of resources that are allowed to be processed in a single request
         loglevel :      int
@@ -468,13 +466,11 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max
         >>> from sliderule import icesat2
         >>> icesat2.init("my-sliderule-service.my-company.com", True)
     '''
-
     if verbose:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
-    sliderule.set_max_errors(max_errors)
     set_max_resources(max_resources)
 
 #
