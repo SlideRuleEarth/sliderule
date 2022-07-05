@@ -23,7 +23,7 @@ on:
 jobs:
 
   # Server Analysis
-  analyze:
+  analyze_server:
     name: Analyze Server
     runs-on: ubuntu-latest
 
@@ -70,7 +70,7 @@ jobs:
       uses: github/codeql-action/analyze@v1
 
   # ICESat-2 Plugin Analysis
-  analyze:
+  analyze_icesat2_plugin:
     name: Analyze ICESat-2 Plugin
     runs-on: ubuntu-latest
 
