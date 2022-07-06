@@ -4,9 +4,6 @@
 # Need to update notes in this file header to reflect what orchestrator does
 # Need to update terraform network security group rules
 
-
-
-
 # Example Usage:
 #   $ python orchestrator.py
 #   $ curl -X POST -d "{\"service\": \"sliderule\", \"lifetime\": 30, \"name\":\"12.33.32.21\"}" http://localhost:8050
@@ -251,13 +248,13 @@ num_active_locks {}
                 if member['service'] not in serviceCatalog:
                     serviceCatalog[member['service']] = {}
                 if member['client'] in serviceCatalog[member['service']]:
-                    member["numLocks"] = serviceCatalog[member['service']]["numLocks"]
+                    member["numLocks"] = serviceCatalog[member['service']][member['client']]["numLocks"]
                 serviceCatalog[member['service']][member['client']] = member
             # send successful response
             self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
-            response = "%s: %s --> %s" % (member['client'], request['service'], request['name'])
+            response = "{\"%s\": [\"%s\", \"%s\"]}" % (request['name'], request['service'], member['client'])
             self.wfile.write(bytes(response, "utf-8"))
         except:
             # send error response
@@ -282,7 +279,7 @@ def scrubber_thread():
         sleep(serverSettings["scrubInterval"])
         now = time()
         # Scrub Expired Member Registrations
-        for service in serviceCatalog:
+        for service in serviceCatalog.values():
             with serverLock:
                 for _, member in service.items():
                     if member['expiration'] <= now:
