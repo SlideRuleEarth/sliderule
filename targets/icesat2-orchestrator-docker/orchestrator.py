@@ -61,44 +61,60 @@ class Orchestrator(BaseHTTPRequestHandler):
 
         Output:
         {
-            "members": ["<hostname1>", "<hostname2>", ...]
+            "members": ["<hostname1>", "<hostname2>", ...],
+            "transactions": [tx1, tx2, ...]
         }
         '''
+        global serviceCatalog,transactionId
         request_count = 0
         error_count = 0
         member_list = []
+        transaction_list = []
         # process request
         try:
             # extract request
             content_length = int(self.headers['Content-Length'])
             data = self.rfile.read(content_length).decode('utf-8')
             request = json.loads(data)
-            node_count = request["nodesNeeded"]
-            request_count = node_count
+            nodes_needed = request["nodesNeeded"]
+            request_count = nodes_needed
             node_timeout = time() + request["timeout"]
             # build member list
             with serverLock:
-                if request['service'] in serviceCatalog:
-                    node_list = sorted(serviceCatalog[request['service']].items(), key=lambda x: x[1]["numLocks"])
-                    for client, member in node_list:
+                node_list = serviceCatalog[request['service']].items()
+                if request['service'] in serviceCatalog and len(node_list) > 0:
+                    node_list = sorted(node_list, key=lambda x: x[1]["numLocks"])
+                    i = 0
+                    while nodes_needed > 0:
+                        # check if end of list
+                        if i >= len(node_list):
+                            i = 0
+                        # pull out node info
+                        client, member = node_list[i]
                         # check if num locks exceeded max
                         if member["numLocks"] >= serverSettings["maxLocksPerNode"]:
-                            break
-                        # check if any more nodes needed
-                        if node_count <= 0:
-                            break
-                        # add member to transaction queue
-                        transactionTable[transactionId] = (serviceCatalog[request['service']], client, node_timeout)
-                        transactionId += 1
-                        # update lock count for member
-                        member['numLocks'] += 1
-                        # add member to list returned in response
-                        member_list.append('"%s"' % (member['name']))
+                            if i == 0:
+                                break # full capacity
+                            else:
+                                i = 0 # go back to beginning of the list
+                        else:
+                            nodes_needed -= 1
+                            # update lock count for member
+                            member['numLocks'] += 1
+                            # add member and transaction to list returned in response
+                            member_list.append('"%s"' % (member['name']))
+                            transaction_list.append(transactionId)
+                            # add member to transaction queue
+                            transactionTable[transactionId] = (serviceCatalog[request['service']], client, node_timeout)
+                            transactionId += 1
+                        # goto next member
+                        i += 1
+
             # send successful response
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            response = "{\"members\": [%s]}" % (', '.join(member_list))
+            response = "{\"members\": [%s], \"transactions\": [%s]}" % (', '.join(member_list), ', '.join([str(tx) for tx in transaction_list]))
             self.wfile.write(bytes(response, "utf-8"))
         except:
             error_count = 1
@@ -122,6 +138,7 @@ class Orchestrator(BaseHTTPRequestHandler):
             "transactions": [<id1>, <id2>, ...]
         }
         '''
+        global transactionTable, statData
         complete_count = 0
         error_count = 0
         # process request
@@ -146,6 +163,12 @@ class Orchestrator(BaseHTTPRequestHandler):
                     else:
                         print("ERROR: unknown client (%s)" % (client))
                     del transactionTable[id]
+            # send successful response
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            response = "{\"complete\": %d, \"fail\": %d}" % (complete_count, error_count)
+            self.wfile.write(bytes(response, "utf-8"))
         except:
             error_count = 1
             # send error response
@@ -163,6 +186,7 @@ class Orchestrator(BaseHTTPRequestHandler):
         '''
         Provide metrics to prometheus scraper
         '''
+        global statData
         # build response
         response = """
 # TYPE num_requests counter
@@ -279,13 +303,17 @@ def scrubber_thread():
         sleep(serverSettings["scrubInterval"])
         now = time()
         # Scrub Expired Member Registrations
+        members_to_delete = []
         for service in serviceCatalog.values():
             with serverLock:
                 for _, member in service.items():
                     if member['expiration'] <= now:
-                        del service[member['client']]
+                        members_to_delete.append(member['client'])
+                for member in members_to_delete:
+                    del service[member]
         # Scrub Timed-Out Transactions
         num_timeouts = 0
+        transactions_to_delete = []
         with serverLock:
             for id, tx in transactionTable.items():
                 service = tx[0]
@@ -299,8 +327,10 @@ def scrubber_thread():
                             print("ERROR: transaction timed-out on member with no locks (%s)" % (client))
                     else:
                         print("ERROR: unknown client (%s)" % (client))
-                    del transactionTable[id]
+                    transactions_to_delete.append(id)
                     num_timeouts += 1
+            for id in transactions_to_delete:
+                del transactionTable[id]
         # Update Statistics
         with statLock:
             statData["numTimeouts"] += num_timeouts
