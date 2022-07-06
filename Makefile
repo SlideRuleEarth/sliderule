@@ -145,7 +145,13 @@ server-config-asan: ## configure server to run with address sanitizer locally
 	cd $(SERVER_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SERVERCFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
 	cd $(PLUGIN_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
 
-server-docker: sliderule-distclean ## build the server docker container
+server-run: ## run the server locally
+	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/config-development.json
+
+server-run-valgrind: ## run the server in valgrind
+	IPV4=$(MYIP) valgrind --leak-check=full --track-origins=yes --track-fds=yes $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/config-development.json
+
+server-docker: distclean ## build the server docker container
 	# build and install sliderule into staging
 	mkdir -p $(SERVER_BUILD_DIR)
 	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SERVERCFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) -DRUNTIMEDIR=/usr/local/etc/sliderule $(ROOT)
@@ -172,12 +178,6 @@ server-docker: sliderule-distclean ## build the server docker container
 	chmod +x $(SERVER_STAGE_DIR)/scripts/docker-entrypoint.sh
 	# build image
 	cd $(SERVER_STAGE_DIR); docker build -t $(SLIDERULE_DOCKER_TAG) .
-
-server-run: ## run the server locally
-	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/config-development.json
-
-server-run-valgrind: ## run the server in valgrind
-	IPV4=$(MYIP) valgrind --leak-check=full --track-origins=yes --track-fds=yes $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/config-development.json
 
 server-docker-run: ## run the server in a docker container
 	docker run -it --rm --name=sliderule-app -e IPV4=$(MYIP) -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 --entrypoint /usr/local/scripts/docker-entrypoint.sh $(SLIDERULE_DOCKER_TAG)
