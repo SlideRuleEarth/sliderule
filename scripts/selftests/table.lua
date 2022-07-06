@@ -1,6 +1,6 @@
 local runner = require("test_executive")
 local console = require("console")
-local td = runner.rootdir(arg[0]) .. "../tests"
+local td = runner.rootdir(arg[0]) .. "../selftests"
 
 -- Table Unit Test --
 

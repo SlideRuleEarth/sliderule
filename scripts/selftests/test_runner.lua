@@ -1,6 +1,6 @@
 local runner = require("test_executive")
 local rd = runner.rootdir(arg[0]) -- root directory
-local td = rd .. "../tests/" -- test directory
+local td = rd .. "../selftests/" -- test directory
 local console = require("console")
 
 -- Initial Configuration --
