@@ -1,8 +1,5 @@
 # Orchestrator
 
-
-
-# Need to separate orchestrator into its own docker container
 # Need to create unit tests for the orchestrator
 # Need to update notes in this file header to reflect what orchestrator does
 # Need to update terraform network security group rules
@@ -11,7 +8,7 @@
 
 
 # Example Usage:
-#   $ python orchestrator.py --host "0.0.0.0" --externalPort 8050 --internalPort 8051
+#   $ python orchestrator.py
 #   $ curl -X POST -d "{\"service\": \"sliderule\", \"lifetime\": 30, \"name\":\"12.33.32.21\"}" http://localhost:8050
 #   $ curl -X GET -d "{\"service\": \"sliderule\"}" http://localhost:8050
 
@@ -203,7 +200,9 @@ num_active_locks {}
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        self.wfile.write(bytes("{\"health\":true}", "utf-8"))
+        with serverLock: # exercise server lock
+            response = "{\"health\":true}"
+        self.wfile.write(bytes(response, "utf-8"))
 
     #
     # HTTP: GET

@@ -98,7 +98,7 @@ testcov: ## analyze results of test coverage report
 	# firefox $(BUILD)/coverage_html/index.html
 
 testpy: ## run python binding test
-	cp scripts/tests/coro.py $(BUILD)
+	cp scripts/systests/coro.py $(BUILD)
 	cd $(BUILD); /usr/bin/python3 coro.py
 
 #################
@@ -229,7 +229,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
 	- rm -Rf $(STAGE)
 
-help: ## That's me!
+help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
 	@printf "\033[37m%-30s\033[0m %s\n" "# Makefile Help                                                                          |"
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
