@@ -190,7 +190,7 @@ MONITOR_DOCKER_TAG ?= icesat2sliderule/monitor:latest
 
 monitor-docker: distclean ## build monitor docker image
 	mkdir -p $(MONITOR_STAGE_DIR)
-	cp docker/monitor/* $(MONITOR_STAGE_DIR)
+	cp targets/icesat2-monitor-docker/* $(MONITOR_STAGE_DIR)
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker build -t $(MONITOR_DOCKER_TAG) .
 
@@ -205,7 +205,7 @@ ORCHESTRATOR_DOCKER_TAG ?= icesat2sliderule/orchestrator:latest
 
 orchestrator-docker: distclean ## build orchestrator docker image
 	mkdir -p $(ORCHESTRATOR_STAGE_DIR)
-	cp docker/orchestrator/* $(ORCHESTRATOR_STAGE_DIR)
+	cp targets/icesat2-orchestrator-docker/* $(ORCHESTRATOR_STAGE_DIR)
 	chmod +x $(ORCHESTRATOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(ORCHESTRATOR_STAGE_DIR); docker build -t $(ORCHESTRATOR_DOCKER_TAG) .
 
