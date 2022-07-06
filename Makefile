@@ -206,11 +206,10 @@ ORCHESTRATOR_DOCKER_TAG ?= icesat2sliderule/orchestrator:latest
 orchestrator-docker: distclean ## build orchestrator docker image
 	mkdir -p $(ORCHESTRATOR_STAGE_DIR)
 	cp targets/icesat2-orchestrator-docker/* $(ORCHESTRATOR_STAGE_DIR)
-	chmod +x $(ORCHESTRATOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(ORCHESTRATOR_STAGE_DIR); docker build -t $(ORCHESTRATOR_DOCKER_TAG) .
 
 orchestrator-docker-run: ## run orchestrator docker container
-	docker run -it --rm --name=orchestrator -p 8050:8050 --entrypoint /usr/local/etc/docker-entrypoint.sh $(ORCHESTRATOR_DOCKER_TAG)
+	docker run -it --rm --name=orchestrator -p 8050:8050 $(ORCHESTRATOR_DOCKER_TAG)
 
 ####################
 # Global Targets
