@@ -56,7 +56,7 @@ class RunTimeException : public std::runtime_error
 {
     public:
 
-        RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...); VARG_CHECK(printf, 3, 4);
+        RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...) VARG_CHECK(printf, 4, 5);
         char const* what() const throw();
         event_level_t level (void) const;
         int code (void) const;

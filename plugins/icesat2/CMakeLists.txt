@@ -12,6 +12,12 @@ cmake_policy(SET CMP0079 NEW) # add link library to target which is not built in
 cmake_policy(SET CMP0053 NEW) # simplified variable escape processing (recommended by cmake)
 
 ###################
+# Project Options #
+###################
+
+option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
+
+###################
 # ICESat-2 Plugin #
 ###################
 
@@ -25,16 +31,24 @@ find_package (Lua "5.3")
 
 # Version Information #
 file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
-execute_process (COMMAND git --git-dir ${PROJECT_SOURCE_DIR}/.git --work-tree ${PROJECT_SOURCE_DIR} describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
+execute_process (COMMAND git --work-tree ${PROJECT_SOURCE_DIR} describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
 string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
 target_compile_definitions (icesat2 PUBLIC BUILDINFO="${BUILDINFO}")
 
-# Set Environment Variables
+# Set Environment Variables #
 set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
 set (CONFDIR ${INSTALLDIR}/etc/sliderule)
 
 # Compile Definitions #
 target_compile_definitions (icesat2 PUBLIC BINID="${TGTVER}")
+if(ENABLE_ADDRESS_SANITIZER)
+	target_compile_options (icesat2 PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+endif()
+
+# Link Options #
+if(ENABLE_ADDRESS_SANITIZER)
+	target_link_options (icesat2 PUBLIC -fsanitize=address)
+endif()
 
 # Source Files #
 target_sources(icesat2
