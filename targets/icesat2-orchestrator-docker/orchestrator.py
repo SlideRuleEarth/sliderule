@@ -1,9 +1,7 @@
 # Orchestrator
-
-# Need to create unit tests for the orchestrator
-# Need to update notes in this file header to reflect what orchestrator does
-# Need to update terraform network security group rules
-
+#
+# Provides service discovery for internal cluster of serve nodes
+#
 # Example Usage:
 #   $ python orchestrator.py
 #   $ curl -X POST -d "{\"service\": \"sliderule\", \"lifetime\": 30, \"name\":\"12.33.32.21\"}" http://localhost:8050
