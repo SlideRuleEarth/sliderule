@@ -1258,6 +1258,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
     # return region #
     return {
+        "gdf": gdf,
         "poly": polygon, # convex hull of polygons
         "clusters": clusters, # list of polygon clusters for cmr request
         "raster": {
