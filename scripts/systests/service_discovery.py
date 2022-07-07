@@ -40,10 +40,10 @@ def http_post(url, rqst, as_json=True):
 
 if __name__ == '__main__':
 
-    server = "http://127.0.0.1:8050"
+    server = "127.0.0.1"
     if len(sys.argv) > 1:
         server = sys.argv[1]
-
+    url = "http://" + server + ":8050/discovery/"
     scrub_interval = 5
     num_locks_per_node = 3
 
@@ -51,18 +51,18 @@ if __name__ == '__main__':
     # TEST - Health Check
     ###################
 
-    rsps = http_get(server+"/health", {})
+    rsps = http_get(url+"health", {})
     assert rsps['health'] == True
 
     ###################
     # TEST - Repeated Posts
     ###################
 
-    rsps = http_post(server+"/", {'service':'test', 'lifetime':1, 'name':'localhost'})
+    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'localhost'})
     assert rsps['localhost'][0] == 'test'
-    rsps = http_post(server+"/", {'service':'test', 'lifetime':1, 'name':'localhost'})
+    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'localhost'})
     assert rsps['localhost'][0] == 'test'
-    rsps = http_post(server+"/", {'service':'test', 'lifetime':1, 'name':'localhost'})
+    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'localhost'})
     assert rsps['localhost'][0] == 'test'
 
     sleep(1)
@@ -71,22 +71,22 @@ if __name__ == '__main__':
     # TEST - Get Member
     ###################
 
-    rsps = http_post(server+"/", {'service':'test', 'lifetime':2, 'name':'bob'})
+    rsps = http_post(url, {'service':'test', 'lifetime':2, 'name':'bob'})
     assert rsps['bob'][0] == 'test'
-    rsps = http_get(server+"/lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
+    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
     assert rsps['members'][0] == 'bob'
     transactions = rsps['transactions']
-    rsps = http_get(server+"/unlock", {'transactions':[transactions[0]]})
+    rsps = http_get(url+"unlock", {'transactions':[transactions[0]]})
     assert rsps['complete'] == 1
 
     ###################
     # TEST - Expire Member
     ###################
 
-    rsps = http_post(server+"/", {'service':'test', 'lifetime':1, 'name':'bob'})
+    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'bob'})
     assert rsps['bob'][0] == 'test'
     sleep(2 + scrub_interval)
-    rsps = http_get(server+"/lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 5})
+    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 5})
     assert len(rsps['members']) == 0
     assert len(rsps['transactions']) == 0
 
@@ -94,19 +94,19 @@ if __name__ == '__main__':
     # TEST - Expire Transaction
     ###################
 
-    rsps = http_post(server+"/", {'service':'test', 'lifetime':(scrub_interval + 10), 'name':'bob'})
+    rsps = http_post(url, {'service':'test', 'lifetime':(scrub_interval + 10), 'name':'bob'})
     assert rsps['bob'][0] == 'test'
-    rsps = http_get(server+"/lock", {'service':'test', 'nodesNeeded': num_locks_per_node, 'timeout': 1})
+    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': num_locks_per_node, 'timeout': 1})
     assert len(rsps['members']) == num_locks_per_node
     assert len(rsps['transactions']) == num_locks_per_node
     assert rsps['members'][0] == 'bob'
     # no nodes should be available at this point
-    rsps = http_get(server+"/lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
+    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
     assert len(rsps['members']) == 0
     assert len(rsps['transactions']) == 0
     # wait for transactions to expire
     sleep(1 + scrub_interval)
-    rsps = http_get(server+"/lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
+    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
     assert len(rsps['members']) == 1
     assert len(rsps['transactions']) == 1
     assert rsps['members'][0] == 'bob'
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     # TEST - Prometheus
     ###################
 
-    rsps = http_get(server+"/prometheus", {}, as_json=False)
+    rsps = http_get(url+"prometheus", {}, as_json=False)
     metrics = {}
     for line in rsps.splitlines():
         if len(line.strip()) > 0 and line[0] != '#':

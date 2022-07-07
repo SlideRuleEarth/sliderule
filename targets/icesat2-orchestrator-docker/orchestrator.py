@@ -2,10 +2,6 @@
 #
 # Provides service discovery for internal cluster of serve nodes
 #
-# Example Usage:
-#   $ python orchestrator.py
-#   $ curl -X POST -d "{\"service\": \"sliderule\", \"lifetime\": 30, \"name\":\"12.33.32.21\"}" http://localhost:8050
-#   $ curl -X GET -d "{\"service\": \"sliderule\"}" http://localhost:8050
 
 #
 # Imports
@@ -227,13 +223,13 @@ num_active_locks {}
     # HTTP: GET
     #
     def do_GET(self):
-        if self.path == "/lock":
+        if self.path == "/discovery/lock":
             self.api_lock()
-        elif self.path == "/unlock":
+        elif self.path == "/discovery/unlock":
             self.api_unlock()
-        elif self.path == "/prometheus":
+        elif self.path == "/discovery/prometheus":
             self.api_prometheus()
-        elif self.path == "/health":
+        elif self.path == "/discovery/health":
             self.api_health()
 
     #

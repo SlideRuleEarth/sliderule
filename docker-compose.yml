@@ -27,6 +27,5 @@ services:
     network_mode: "host"
     restart: unless-stopped
     pull_policy: if_not_present
-    entrypoint: /usr/local/etc/docker-entrypoint.sh
     stdin_open: true # docker run -i
     tty: true # docker run -t
