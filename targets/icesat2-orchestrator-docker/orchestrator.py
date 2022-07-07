@@ -32,6 +32,7 @@ statData = {
     "numComplete" : 0,
     "numFailures": 0,
     "numTimeouts": 0,
+    "memberCounts": {}
 }
 
 #
@@ -198,6 +199,11 @@ num_timeouts {}
 # TYPE num_active_locks counter
 num_active_locks {}
 """.format(statData["numRequests"], statData["numComplete"], statData["numFailures"], statData["numTimeouts"], len(transactionTable))
+        for member_metric in statData["memberCounts"]:
+            response += """
+# TYPE {} counter
+{} {}
+""".format(member_metric, member_metric, statData["memberCounts"][member_metric])
         # send response
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -298,7 +304,8 @@ def scrubber_thread():
         now = time()
         # Scrub Expired Member Registrations
         members_to_delete = []
-        for service in serviceCatalog.values():
+        for service_name, service in serviceCatalog.items():
+            statData["memberCounts"][service_name + "_members"] = len(service)
             with serverLock:
                 for _, member in service.items():
                     if member['expiration'] <= now:

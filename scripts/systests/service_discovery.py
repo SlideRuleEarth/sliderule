@@ -116,6 +116,7 @@ if __name__ == '__main__':
     ###################
 
     rsps = http_get(url+"prometheus", {}, as_json=False)
+    print(rsps)
     metrics = {}
     for line in rsps.splitlines():
         if len(line.strip()) > 0 and line[0] != '#':
@@ -126,3 +127,4 @@ if __name__ == '__main__':
     assert metrics['num_failures'] == 0
     assert metrics['num_timeouts'] > 0
     assert metrics['num_active_locks'] == 1
+    assert metrics['test_members'] == 1
