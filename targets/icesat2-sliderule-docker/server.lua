@@ -38,7 +38,7 @@ local authenticate_to_earthdata = cfgtbl["authenticate_to_earthdata"] or false
 local asset_directory = cfgtbl["asset_directory"] or nil
 local normal_mem_thresh = cfgtbl["normal_mem_thresh"] or 1.0
 local stream_mem_thresh = cfgtbl["stream_mem_thresh"] or 0.75
-local orchestrator_url = cfgtbl["orchestrator_url"] or os.getenv("ORCHESTRATOR") or "http://10.0.1.5:8051"
+local orchestrator_url = cfgtbl["orchestrator_url"] or os.getenv("ORCHESTRATOR") or "http://10.0.1.5:8050/discovery/"
 local msgq_depth = cfgtbl["msgq_depth"] or 10000
 
 -- Configure System Message Queue Depth --
