@@ -5,7 +5,7 @@ global:
 
 scrape_configs:
 
-  # System Metrics for Cluster
+    # System Metrics for Cluster
   - job_name: 'system'
     ec2_sd_configs:
       - region: us-west-2
@@ -19,7 +19,7 @@ scrape_configs:
       - source_labels: [__meta_ec2_instance_id]
         target_label: instance
 
-  # Application Metrics for Cluster
+    # Application Metrics for Cluster
   - job_name: 'sliderule'
     ec2_sd_configs:
       - region: us-west-2
@@ -34,7 +34,7 @@ scrape_configs:
       - source_labels: [__meta_ec2_instance_id]
         target_label: instance
 
-  # System Metrics for Node Manager
+    # System Metrics for Node Manager
   - job_name: 'manager'
     static_configs:
       - targets: ['localhost:9100']
@@ -42,5 +42,5 @@ scrape_configs:
     # Application Metrics for Node Manager
   - job_name: 'orchestrator'
     static_configs:
-      - targets: ['localhost:8051']
-    metrics_path: "/prometheus"
+      - targets: ['localhost:8050']
+    metrics_path: "/discovery/prometheus"
