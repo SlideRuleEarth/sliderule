@@ -26,7 +26,7 @@ local userlog = msg.publish(rspq)
 local rqst = json.decode(arg[1])
 local api = rqst["api"]
 local resources = rqst["resources"]
-local orchestrator = os.getenv("ORCHESTRATOR") or "http://10.0.1.5:8051"
+local orchestrator = os.getenv("ORCHESTRATOR") or "http://127.0.0.1:8050"
 
 -- Loop Through Resources --
 for i,resource in ipairs(resources) do
@@ -37,16 +37,11 @@ for i,resource in ipairs(resources) do
 
 end
 
-local url = orchestrator.."/discovery/"
-
-
----- "action": "availableNode" | default is "allNodes"
-
-local response, status = netsvc.get(url, false, false, '{"service":"sliderule"}')
+local response, status = netsvc.get(orchestrator.."/discovery/lock", false, false, '{"service":"sliderule", "nodesNeeded":1, "timeout":600}')
 if status then
     print(response)
 else
-    sys.log(core.ERROR, "Failed to get services from <"..url..">: "..response)
+    sys.log(core.ERROR, "Failed to get services from <"..orchestrator..">: "..response)
 end
 
 

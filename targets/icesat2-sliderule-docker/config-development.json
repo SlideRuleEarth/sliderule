@@ -3,6 +3,5 @@
     "event_level": "INFO",
     "server_port": 9081,
     "authenticate_to_earthdata": false,
-    "asset_directory": "asset_directory.csv",
-    "orchestrator_url": "http://127.0.0.1:8051"
+    "asset_directory": "asset_directory.csv"
 }
