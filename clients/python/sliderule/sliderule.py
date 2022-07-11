@@ -405,7 +405,7 @@ def source (api, parm={}, stream=False, callbacks=default_callbacks):
             if e.response.status_code == 503:
                 logger.error("Server experiencing heavy load, stalling on request to {} ... will retry".format(url))
             else:
-                logger.error("Invalid HTTP response from endpoint {} ... retrying request".format(url))
+                logger.error("HTTP error {} from endpoint {} ... retrying request".format(e.response.status_code, url))
         except TransientError as e:
             logger.warning("Recoverable error occurred at {} ... retrying request".format(url))
         except:
