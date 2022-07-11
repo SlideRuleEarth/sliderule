@@ -328,9 +328,9 @@ def __query_resources(parm, version, return_polygons=False):
     kwargs['return_polygons'] = return_polygons
 
     # Pull Out Polygon #
-    if "clusters" in parm and len(parm["clusters"]) > 0:
+    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
         kwargs['polygon'] = parm["clusters"]
-    elif "poly" in parm and len(parm["poly"]) > 0:
+    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
         kwargs['polygon'] = parm["poly"]
 
     # Pull Out Time Period #
@@ -725,7 +725,7 @@ def cmr(**kwargs):
 
     # create list of polygons
     polygons = [None]
-    if len(kwargs['polygon']) > 0:
+    if kwargs['polygon'] and len(kwargs['polygon']) > 0:
         if type(kwargs['polygon'][0]) == dict:
             polygons = [copy.deepcopy(kwargs['polygon'])]
         elif type(kwargs['polygon'][0] == list):
