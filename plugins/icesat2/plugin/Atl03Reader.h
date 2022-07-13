@@ -57,12 +57,6 @@ class Atl03Reader: public LuaObject
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int H5_READ_TIMEOUT_MS = 60000; // 60 seconds
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
@@ -108,6 +102,8 @@ class Atl03Reader: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+
+        static const int H5_READ_TIMEOUT_MS = 60000; // 60 seconds
 
         static const char* phRecType;
         static const RecordObject::fieldDef_t phRecDef[];

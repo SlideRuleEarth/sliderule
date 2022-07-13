@@ -92,7 +92,7 @@ const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
 };
 
 /******************************************************************************
- * HDF5 DATASET HANDLE CLASS
+ * ATL03 READER CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ int Atl03Reader::luaCreate (lua_State* L)
 {
     try
     {
-        /* Get URL */
+        /* Get Parameters */
         Asset* asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);

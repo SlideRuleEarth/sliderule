@@ -40,6 +40,7 @@
 #include "Atl03Reader.h"
 #include "Atl03Indexer.h"
 #include "Atl06Dispatch.h"
+#include "Atl06Proxy.h"
 #include "CumulusIODriver.h"
 #include "GTArray.h"
 #include "PluginMetrics.h"
