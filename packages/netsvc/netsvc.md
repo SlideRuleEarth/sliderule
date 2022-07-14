@@ -4,7 +4,7 @@ To get the latest information and releases for cURL, please refer to their websi
 
 For Ubuntu 20.04
 ```bash
-$ sudo apt install curl libcurl-dev
+$ sudo apt install curl libcurl4-openssl-dev
 ```
 
 Note: the installation of libcurl must support SSL and TLS.  Use the `curl-config --feature` command to verify that these features are present.
