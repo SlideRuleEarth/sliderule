@@ -124,36 +124,9 @@ Here are some quick steps you can take to setup a basic development environment 
 
 The SlideRule framework is divided up into packages (which are compile-time modules) and plugins (which are run-time modules).  The ___core___ package provides the base functionality of SlideRule and must be compiled.  All other packages and all plugins extend the functionality of SlideRule and are conditionally compiled.
 
-Install the basic packages needed to build the core package
-```bash
-$ sudo apt install build-essential libreadline-dev liblua5.3-dev
-```
-
-Install analysis and utility packages used when developing and testing the code
-```bash
-$ sudo apt install curl meld cppcheck valgrind kcachegrind clang clang-tools lcov
-```
-
 ### 2. Install a recent version of CMake (>= 3.13.0)
 
-SlideRule uses a relatively recent version of CMake in order to take advantage of some of the later improvements to the tool.  If using Ubuntu 20.04, then the system package is sufficient.
-```bash
-$ sudo apt install cmake
-```
-
-If using an older version of Ubuntu, or another distribution which has an older version of CMake, then it needs to be manually installed. Navigate to https://cmake.org/download/ and grab the latest stable binary installer for linux and follow the instructions there; or alternatively, use the following commands to get and install cmake version 3.18.1.
-```bash
-$ cd {Downloads}
-$ wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
-$ cd /opt
-$ sudo sh {Downloads}/cmake-3.18.1-Linux-x86_64.sh # accept license and default install location
-$ sudo ln -s cmake-3.18.1-Linux-x86_64 cmake
-```
-
-If you followed the instructions above to install a non-system cmake into /opt, then make sure to add it to the PATH environment variable.
-```bash
-export PATH=$PATH:/opt/cmake/bin
-```
+SlideRule uses a relatively recent version of CMake in order to take advantage of some of the later improvements to the tool.  If using Ubuntu 20.04 or later, then the system package is sufficient.
 
 ### 3. Install all dependencies
 
@@ -165,15 +138,9 @@ For example, if the AWS package was needed, the installation instructions at `pa
 
 The provided Makefile has targets for typical configurations.  See the [II. Building with CMake](#ii-building-with-cmake) section for more details.
 
-```bash
-$ make config
-$ make
-$ sudo make install
-```
-
 ### 5. Running SlideRule as a stand-alone application
 
-SlideRule requires a lua script to be passed to it at startup in order to configure which components are run. "Using" SlideRule means developing the lua scripts needed to configure and instantiate the needed SlideRule components. Two stock lua scripts are provided in the repository and can be used as a starting point for developing a project-specific lua script.
+SlideRule is normally run wuth a lua script passed to it at startup in order to configure which components are run. "Using" SlideRule means developing the lua scripts needed to configure and instantiate the needed SlideRule components. There are a handful of stock lua scripts provided in the repository that can be used as a starting point for developing a project-specific lua script.
 
 A REST server running at port 9081 can be started via:
 ```bash
@@ -182,8 +149,10 @@ $ sliderule scripts/apps/server.lua <config.json>
 
 A self-test that dynamically checks which packages are present and runs their associated unit tests can be started via:
 ```bash
-$ sliderule scripts/apps/test_runner.lua
+$ sliderule scripts/selftests/test_runner.lua
 ```
+
+Alternatively, SlideRule can be run as an interactive Lua interpreter.  Just type `sliderule` to start and `ctrl-c` to exit.  The interactive Lua environment is the same enviroment present to the scripts.
 
 ## V. Directory Structure
 
@@ -210,7 +179,7 @@ Contains Lua and other scripts that can be used for tests and higher level imple
 Contains the source files to make the various executable targets. By convention, targets are named as follows: {application}-{platform}.
 
 
-## V. Plugins
+### plugins
 
 In order to build a plugin for SlideRule, the plugin code must compile down to a shared object that exposes a single function defined as `void init{plugin}(void)` where _{plugin}_ is the name of the plugin.  Note that if developing the plugin in C++ the initialization function must be externed as C in order to prevent the mangling of the exported symbol.
 
@@ -228,10 +197,6 @@ Run [RELEASE.sh](RELEASE.sh) to tag the repository and create a tarball that can
 
 The three number version identifier X.Y.Z has the following convention: Incrementing X indicates an interface change and does not guarantee the preservation of backward compatibility.  Incrementing Y indicates additional or modified functionality that maintains compile-time compatibility but may change a run-time behavior.  Incrementing Z indicates a bug fix or code cleanup and maintains both compile-time and run-time compatibility.
 
-Using a released version of the code, the following Makefile target can be used to build an easily distributable Ubuntu package:
-   * `make package`
-   * will build a debian package `build/sliderule-X.Y.Z.deb`
-   * which can be distributed and then installed via `sudo dpkg -i sliderule-X.Y.Z.deb`
 
 
 ## VII. Licensing
