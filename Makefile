@@ -25,7 +25,10 @@ default-build: ## default build of sliderule
 config: release-config ## configure make for default build
 
 release-config: prep ## configure make for release version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON $(ROOT)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+
+debug-config: prep ## configure make for release version of sliderule binary
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
 
 DEVCFG  = -DENABLE_TRACING=ON
 DEVCFG += -DUSE_AWS_PACKAGE=ON
