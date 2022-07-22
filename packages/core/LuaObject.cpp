@@ -38,7 +38,6 @@
 #include "EventLib.h"
 #include "StringLib.h"
 #include "OsApi.h"
-#include "lua.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -510,8 +509,8 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 
     /* Return User Data to Lua */
     user_data->luaObj = lua_obj;
-    luaL_getmetatable(L, lua_obj->LuaMetaName);  // Fetch from LUA_REGISTRYINDEX
-    lua_setmetatable(L, -2);                     // 
+    luaL_getmetatable(L, lua_obj->LuaMetaName);
+    lua_setmetatable(L, -2);
     return 1;
 }
 
