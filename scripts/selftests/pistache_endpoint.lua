@@ -20,8 +20,7 @@ local tmpfile = os.tmpname()
 
 -- Unit Test --
 
-local server = pistache.server(9082)
-server:name("myengine")
+local server = pistache.server(9082):name("myengine")
 
 sys.wait(1)
 

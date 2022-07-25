@@ -3,11 +3,8 @@ local console = require("console")
 
 -- UdpSocket Unit Test --
 
-server = core.udp("127.0.0.1", 35505, core.SERVER)
-client = core.udp("127.0.0.1", 35505, core.CLIENT)
-
-server:name("server")
-client:name("client")
+server = core.udp("127.0.0.1", 35505, core.SERVER):name("server")
+client = core.udp("127.0.0.1", 35505, core.CLIENT):name("client")
 
 sys.wait(2)
 

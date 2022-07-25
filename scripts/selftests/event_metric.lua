@@ -5,8 +5,7 @@ local json = require("json")
 -- Unit Test --
 
 server = core.httpd(9081)
-endpoint = core.endpoint()
-endpoint:name("metrictest")
+endpoint = core.endpoint():name("metrictest")
 endpoint:metric() -- creates catchall
 server:attach(endpoint, "/source")
 

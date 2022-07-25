@@ -3,15 +3,11 @@ local console = require("console")
 
 -- Cluster Socket Unit Test --
 
-local server = core.cluster(core.WRITER, core.QUEUE, "127.0.0.1", 34503, core.SERVER, "inq")
-local client = core.cluster(core.READER, core.QUEUE, "127.0.0.1", 34503, core.CLIENT, "outq")
-local writer = core.writer(server)
-local reader = core.reader(client)
+local server = core.cluster(core.WRITER, core.QUEUE, "127.0.0.1", 34503, core.SERVER, "inq"):name("clusterServer")
+local client = core.cluster(core.READER, core.QUEUE, "127.0.0.1", 34503, core.CLIENT, "outq"):name("clusterClient")
+local writer = core.writer(server):name("clusterWriter")
+local reader = core.reader(client):name("clusterReader")
 
-server:name("clusterServer")
-client:name("clusterClient")
-writer:name("clusterWriter")
-reader:name("clusterReader")
 
 reader:block(true)
 local attempts = 10

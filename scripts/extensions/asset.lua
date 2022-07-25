@@ -121,8 +121,7 @@ local function loaddir(file, quiet)
 
     -- create asset for each entry in directory
     for k,v in pairs(directory) do
-        assets[k] = core.asset(k, v["format"], v["path"], v["index"], v["region"], v["endpoint"])
-        assets[k]:name(k)
+        assets[k] = core.asset(k, v["format"], v["path"], v["index"], v["region"], v["endpoint"]):name(k)
     end
 
     -- load index file for each asset in directory

@@ -3,11 +3,8 @@ local console = require("console")
 
 -- TcpSocket Unit Test --
 
-server = core.tcp("127.0.0.1", 35505, core.SERVER)
-client = core.tcp("127.0.0.1", 35505, core.CLIENT)
-
-server:name("server")
-client:name("client")
+server = core.tcp("127.0.0.1", 35505, core.SERVER):name("server") 
+client = core.tcp("127.0.0.1", 35505, core.CLIENT):name("client")
 
 sys.wait(2)
 

@@ -26,6 +26,10 @@ if(NOT CMAKE_BUILD_PLATFORM)
     set(CMAKE_BUILD_PLATFORM "Linux" CACHE STRING "Choose the target platform." FORCE)
 endif()
 
+
+set(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
+
+
 ###################
 # Project Options #
 ###################

@@ -341,13 +341,14 @@ int LuaObject::luaDelete (lua_State* L)
     return 0;
 }
 
+
 /*----------------------------------------------------------------------------
  * luaName
  *----------------------------------------------------------------------------*/
 int LuaObject::luaName(lua_State* L)
 {
     bool status = false;
-
+        
     try
     {
         /* Get Self */
@@ -355,7 +356,7 @@ int LuaObject::luaName(lua_State* L)
 
         /* Get Name */
         const char* name = getLuaString(L, 2);
-
+    
         /* Add Name to Global Objects */
         globalMut.lock();
         {
@@ -379,9 +380,12 @@ int LuaObject::luaName(lua_State* L)
 
         /* Check for Errors */
         if(!status) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to register name: %s", name);
+        
+        /* Pop name */
+        lua_pop(L, 1);
 
-        /* Return Name */
-        lua_pushstring(L, lua_obj->ObjectName);
+        /* Stack hold Self */
+
     }
     catch(const RunTimeException& e)
     {

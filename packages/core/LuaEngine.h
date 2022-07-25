@@ -99,6 +99,7 @@ class LuaEngine
         static void         setAttrNum      (lua_State* l, const char* name, double val);
         static void         setAttrStr      (lua_State* l, const char* name, const char* val, int size=0);
         static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);
+        static void         showStack       (lua_State* l, const char* prefix=NULL);
         static const char*  sanitize        (const char* filename);
 
         uint64_t            getEngineId     (void);
