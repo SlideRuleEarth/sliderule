@@ -41,14 +41,10 @@ cmd.exec("itosdb::BUILD_RECORDS")
 cmd.exec(string.format('NEW CCSDS_PACKET_PROCESSOR pktProc %s %d', "scidataq", num_threads))
 
 -- Start Logs
-sbcdiaglog = core.writer(core.file(core.WRITER, core.TEXT, "sbcdiag.log", core.FLUSHED), "sbcdiaglogq")
-sbcdiaglog:name("sbcdiaglog")
-pce1diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce1diag.log", core.FLUSHED), "pce1diaglogq")
-pce1diaglog:name("pce1diaglog")
-pce2diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce2diag.log", core.FLUSHED), "pce2diaglogq")
-pce2diaglog:name("pce2diaglog")
-pce3diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce3diag.log", core.FLUSHED), "pce3diaglogq")
-pce3diaglog:name("pce3diaglog")
+sbcdiaglog  = core.writer(core.file(core.WRITER, core.TEXT, "sbcdiag.log", core.FLUSHED), "sbcdiaglogq"):name("sbcdiaglog")
+pce1diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce1diag.log", core.FLUSHED), "pce1diaglogq"):name("pce1diaglog")
+pce2diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce2diag.log", core.FLUSHED), "pce2diaglogq"):name("pce2diaglog")
+pce3diaglog = core.writer(core.file(core.WRITER, core.TEXT, "pce3diag.log", core.FLUSHED), "pce3diaglogq"):name("pce3diaglog")
 cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProcSbc sbcdiaglogq NULL")
 cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProc1 pce1diaglogq NULL 1")
 cmd.exec("NEW DIAG_LOG_PROCESSOR diagLogProc2 pce2diaglogq NULL 2")
@@ -59,8 +55,7 @@ cmd.exec("pktProc::REGISTER   0x44B diagLogProc2")    -- PCE 2 HS LOG
 cmd.exec("pktProc::REGISTER   0x45B diagLogProc3")    -- PCE 3 HS LOG
 
 -- Start Echoes
-cmdecho = core.writer(core.file(core.WRITER, core.TEXT, "cmdecho.log", core.FLUSHED), "cmdechoq")
-cmdecho:name("cmdecho")
+cmdecho = core.writer(core.file(core.WRITER, core.TEXT, "cmdecho.log", core.FLUSHED), "cmdechoq"):name("cmdecho")
 cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc1 cmdechoq itosdb 1")
 cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc2 cmdechoq itosdb 2")
 cmd.exec("NEW CMD_ECHO_PROCESSOR cmdEchoProc3 cmdechoq itosdb 3")
@@ -179,8 +174,6 @@ cmd.exec("pktProc::REGISTER   0x427 laserProc") -- HKT_E (laser energies)
 sys.setlvl(core.LOG, loglvl)
 
 -- Configure and Run Server --
-server = core.httpd(port,nil,2)
-server:name("HttpServer")
-endpoint = core.endpoint()
-endpoint:name("LuaEndpoint")
+server = core.httpd(port,nil,2):name("HttpServer")
+endpoint = core.endpoint():name("LuaEndpoint")
 server:attach(endpoint, "/source")

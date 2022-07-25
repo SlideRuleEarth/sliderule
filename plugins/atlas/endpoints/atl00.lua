@@ -57,8 +57,7 @@ local function createMetrics(metrictable)
     -- Create Base Record Metrics --
     if metrictable["base"] then  
         if not baseDispatcher then
-            baseDispatcher = core.dispatcher("recdataq", threads, player_key, key_parm)
-            baseDispatcher:name("baseDispatcher")
+            baseDispatcher = core.dispatcher("recdataq", threads, player_key, key_parm):name("baseDispatcher")
         end
         for recname,fieldlist in pairs(metrictable["base"]) do
             for _,fieldname in ipairs(fieldlist) do
@@ -76,8 +75,7 @@ local function createMetrics(metrictable)
     -- Create CCSDS Record Metrics --
     if metrictable["ccsds"] then
         if not ccsdsDispatcher then
-            ccsdsDispatcher = ccsds.dispatcher("scidataq", threads, player_key, key_parm)
-            ccsdsDispatcher:name("ccsdsDispatcher")
+            ccsdsDispatcher = ccsds.dispatcher("scidataq", threads, player_key, key_parm):name("ccsdsDispatcher")
         end
         for recname,fieldlist in pairs(metrictable["ccsds"]) do
             for _,fieldname in ipairs(fieldlist) do
@@ -230,8 +228,7 @@ if source["type"] == "ATL00" then
     for index,filepath in ipairs(filelist) do
         fileq = "filedataq-"..tostring(index)
         ccsdsq = "ccsdsdataq-"..tostring(index)
-        ccsdsParsers[filepath] = ccsds.parser(ccsds.pktmod(), ccsds.SPACE, fileq, ccsdsq)
-        ccsdsParsers[filepath]:name(filepath)
+        ccsdsParsers[filepath] = ccsds.parser(ccsds.pktmod(), ccsds.SPACE, fileq, ccsdsq):name(filepath)
         table.insert(ccsdsQs, ccsdsq)
         table.insert(fileQs, fileq)
     end
