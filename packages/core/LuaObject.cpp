@@ -397,27 +397,6 @@ int LuaObject::luaName(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaLock
- *----------------------------------------------------------------------------*/
-int LuaObject::luaLock(lua_State* L)
-{
-    try
-    {
-        /* Get Self */
-        LuaObject* lua_obj = getLuaSelf(L, 1);
-
-        /* Lock Self */
-        getLuaObject(L, 1, lua_obj->ObjectType);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error locking object: %s", e.what());
-    }
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
  * luaWaitOn - :waiton([<timeout is milliseconds>])
  *----------------------------------------------------------------------------*/
 int LuaObject::luaWaitOn(lua_State* L)
@@ -483,7 +462,6 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         /* Add Base Class Functions */
         LuaEngine::setAttrFunc(L, "name", luaName);
         LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
-        LuaEngine::setAttrFunc(L, "lock", luaLock);
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDelete);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);

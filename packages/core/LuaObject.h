@@ -139,7 +139,6 @@ class LuaObject
         /* Meta Table Functions */
         static int          luaDelete           (lua_State* L);
         static int          luaName             (lua_State* L);
-        static int          luaLock             (lua_State* L);
         static int          luaWaitOn           (lua_State* L);
 
         /*--------------------------------------------------------------------
