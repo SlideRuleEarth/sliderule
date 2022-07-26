@@ -35,7 +35,7 @@ local event_format = global.eval(cfgtbl["event_format"]) or core.FMT_TEXT
 local event_level = global.eval(cfgtbl["event_level"]) or core.INFO
 local port = cfgtbl["server_port"] or 9081
 local authenticate_to_earthdata = cfgtbl["authenticate_to_earthdata"] or false
-local asset_directory = cfgtbl["asset_directory"] or nil
+local asset_directory = cfgtbl["asset_directory"] or "asset_directory.csv"
 local normal_mem_thresh = cfgtbl["normal_mem_thresh"] or 1.0
 local stream_mem_thresh = cfgtbl["stream_mem_thresh"] or 0.75
 local msgq_depth = cfgtbl["msgq_depth"] or 10000
@@ -57,13 +57,11 @@ local assets = asset.loaddir(asset_directory, true)
 
 -- Run Earth Data Authentication Script --
 if authenticate_to_earthdata then
-    local auth_script = core.script("earth_data_auth", "")
-    auth_script:name("auth_script")
+    local auth_script = core.script("earth_data_auth", ""):name("auth_script")
 end
 
 -- Run Service Registry Script --
-local service_script = core.script("service_registry")
-service_script:name("service_script")
+local service_script = core.script("service_registry"):name("service_script")
 
 -- Configure Endpoints --
 local source_endpoint = core.endpoint(normal_mem_thresh, stream_mem_thresh)
@@ -80,8 +78,7 @@ for _,script in ipairs(available_scripts()) do
 end
 
 -- Run Server --
-local server = core.httpd(port)
-server:name("HttpServer")
+local server = core.httpd(port):name("HttpServer")
 server:metric() -- register server metrics
 server:attach(source_endpoint, "/source")
 server:attach(probe_endpoint, "/probe")

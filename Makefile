@@ -149,10 +149,10 @@ server-config-asan: ## configure server to run with address sanitizer locally
 	cd $(PLUGIN_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
 
 server-run: ## run the server locally
-	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/config-development.json
+	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua
 
 server-run-valgrind: ## run the server in valgrind
-	IPV4=$(MYIP) valgrind --leak-check=full --track-origins=yes --track-fds=yes $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/config-development.json
+	IPV4=$(MYIP) valgrind --leak-check=full --track-origins=yes --track-fds=yes $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua
 
 server-docker: distclean ## build the server docker container
 	# build and install sliderule into staging
@@ -168,7 +168,7 @@ server-docker: distclean ## build the server docker container
 	# copy over dockerfile
 	cp targets/icesat2-sliderule-docker/Dockerfile $(SERVER_STAGE_DIR)
 	cp targets/icesat2-sliderule-docker/plugins.conf $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/config-production.json $(SERVER_STAGE_DIR)/etc/sliderule/config.json
+	cp targets/icesat2-sliderule-docker/config-node.json $(SERVER_STAGE_DIR)/etc/sliderule/config.json
 	cp targets/icesat2-sliderule-docker/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/server.lua $(SERVER_STAGE_DIR)/etc/sliderule

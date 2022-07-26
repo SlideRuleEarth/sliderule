@@ -1,7 +1,0 @@
-{
-    "event_format": "FMT_TEXT",
-    "event_level": "INFO",
-    "server_port": 9081,
-    "authenticate_to_earthdata": false,
-    "asset_directory": "asset_directory.csv"
-}
