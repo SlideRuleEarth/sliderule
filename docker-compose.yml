@@ -1,11 +1,25 @@
 version: "3.9"
 services:
-  sliderule:
+  node:
     image: icesat2sliderule/sliderule:latest
     network_mode: "host"
     restart: unless-stopped
     pull_policy: if_not_present
-    entrypoint: /usr/local/scripts/docker-entrypoint.sh
+    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/node.lua
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /etc/ssl/certs:/etc/ssl/certs
+      - /data:/data
+    environment:
+      - IPV4=127.0.0.1
+      - ORCHESTRATOR=http://127.0.0.1:8050
+  proxy:
+    image: icesat2sliderule/sliderule:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/proxy.lua
     stdin_open: true # docker run -i
     tty: true # docker run -t
     volumes:

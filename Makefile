@@ -104,21 +104,21 @@ testpy: ## run python binding test
 	cp scripts/systests/coro.py $(BUILD)
 	cd $(BUILD); /usr/bin/python3 coro.py
 
-#################
-# Server Targets
-#################
+###################
+# SlideRule Targets
+###################
 
 SLIDERULE_DOCKER_TAG ?= icesat2sliderule/sliderule:latest
 
-SERVERCFG := -DMAX_FREE_STACK_SIZE=1
-SERVERCFG += -DUSE_AWS_PACKAGE=ON
-SERVERCFG += -DUSE_H5_PACKAGE=ON
-SERVERCFG += -DUSE_NETSVC_PACKAGE=ON
-SERVERCFG += -DUSE_GEOTIFF_PACKAGE=ON
-SERVERCFG += -DUSE_LEGACY_PACKAGE=OFF
-SERVERCFG += -DUSE_CCSDS_PACKAGE=OFF
+SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
+SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
+SLIDERULECFG += -DUSE_H5_PACKAGE=ON
+SLIDERULECFG += -DUSE_NETSVC_PACKAGE=ON
+SLIDERULECFG += -DUSE_GEOTIFF_PACKAGE=ON
+SLIDERULECFG += -DUSE_LEGACY_PACKAGE=OFF
+SLIDERULECFG += -DUSE_CCSDS_PACKAGE=OFF
 
-server: ## build the server using the local configuration
+sliderule: ## build the server using the local configuration
 	make -j4 -C $(SERVER_BUILD_DIR)
 	make -C $(SERVER_BUILD_DIR) install
 	make -j4 -C $(PLUGIN_BUILD_DIR)
@@ -130,34 +130,34 @@ server: ## build the server using the local configuration
 	cp targets/icesat2-sliderule-docker/service_registry.lua $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/proxy.lua $(SERVER_STAGE_DIR)/etc/sliderule/api
 
-server-config-debug: ## configure the server for running locally with debug symbols
+sliderule-config-debug: ## configure the server for running locally with debug symbols
 	mkdir -p $(SERVER_BUILD_DIR)
 	mkdir -p $(PLUGIN_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug $(SERVERCFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
+	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
 	cd $(PLUGIN_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
 
-server-config-release: ## configure server to run release version locally (useful for using valgrind)
+sliderule-config-release: ## configure server to run release version locally (useful for using valgrind)
 	mkdir -p $(SERVER_BUILD_DIR)
 	mkdir -p $(PLUGIN_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SERVERCFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
+	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
 	cd $(PLUGIN_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
 
-server-config-asan: ## configure server to run with address sanitizer locally
+sliderule-config-asan: ## configure server to run with address sanitizer locally
 	mkdir -p $(SERVER_BUILD_DIR)
 	mkdir -p $(PLUGIN_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SERVERCFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
+	cd $(SERVER_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
 	cd $(PLUGIN_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
 
-server-run: ## run the server locally
-	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua
+sliderule-run-node: ## run the server locally as node
+	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/node.lua
 
-server-run-valgrind: ## run the server in valgrind
-	IPV4=$(MYIP) valgrind --leak-check=full --track-origins=yes --track-fds=yes $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua
+sliderule-run-proxy: ## run the server locally as proxy
+	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/proxy.lua
 
-server-docker: distclean ## build the server docker container
+sliderule-docker: distclean ## build the server docker container
 	# build and install sliderule into staging
 	mkdir -p $(SERVER_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SERVERCFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) -DRUNTIMEDIR=/usr/local/etc/sliderule $(ROOT)
+	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) -DRUNTIMEDIR=/usr/local/etc/sliderule $(ROOT)
 	make -j4 $(SERVER_BUILD_DIR)
 	make -C $(SERVER_BUILD_DIR) install
 	# build and install plugin into staging
@@ -168,22 +168,17 @@ server-docker: distclean ## build the server docker container
 	# copy over dockerfile
 	cp targets/icesat2-sliderule-docker/Dockerfile $(SERVER_STAGE_DIR)
 	cp targets/icesat2-sliderule-docker/plugins.conf $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/config-node.json $(SERVER_STAGE_DIR)/etc/sliderule/config.json
 	cp targets/icesat2-sliderule-docker/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/server.lua $(SERVER_STAGE_DIR)/etc/sliderule
+	cp targets/icesat2-sliderule-docker/node.lua $(SERVER_STAGE_DIR)/etc/sliderule
+	cp targets/icesat2-sliderule-docker/proxy.lua $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/earth_data_auth.lua $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/service_registry.lua $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/proxy.lua $(SERVER_STAGE_DIR)/etc/sliderule/api
-	# copy over entry point
-	mkdir -p $(SERVER_STAGE_DIR)/scripts
-	cp targets/icesat2-sliderule-docker/docker-entrypoint.sh $(SERVER_STAGE_DIR)/scripts
-	chmod +x $(SERVER_STAGE_DIR)/scripts/docker-entrypoint.sh
 	# build image
 	cd $(SERVER_STAGE_DIR); docker build -t $(SLIDERULE_DOCKER_TAG) .
 
-server-docker-run: ## run the server in a docker container
-	docker run -it --rm --name=sliderule-app -e IPV4=$(MYIP) -v /etc/ssl/certs:/etc/ssl/certs -v /data:/data -p 9081:9081 --entrypoint /usr/local/scripts/docker-entrypoint.sh $(SLIDERULE_DOCKER_TAG)
+sliderule-docker-run: ## run docker compose to bring up sliderule containers
+	docker-compose -n sliderule up
 
 ##################
 # Monitor Targets
