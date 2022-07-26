@@ -8,18 +8,13 @@ runner.command("ADD_FIELD test.rec id INT32 0 1 NATIVE")
 runner.command("ADD_FIELD test.rec counter INT32 4 1 NATIVE")
 
 local idmetric = core.metric("id", "dispatcher_metricq"):name("idmetric")
- 
-idmetric:pbtext(true)
-idmetric:pbname(true)
+idmetric:pbtext(true):pbname(true)
 
 local countermetric = core.metric("counter", "dispatcher_metricq"):name("countermetric") 
-countermetric:pbtext(true)
-countermetric:pbname(true)
+countermetric:pbtext(true):pbname(true)
 
 local r = core.dispatcher("dispatcher_inputq"):name("dispatcher")
-r:attach(idmetric, "test.rec")
-r:attach(countermetric, "test.rec")
-r:run()
+r:attach(idmetric, "test.rec"):attach(countermetric, "test.rec"):run()
 
 local inputq = msg.publish("dispatcher_inputq")
 local metricq = msg.subscribe("dispatcher_metricq")
