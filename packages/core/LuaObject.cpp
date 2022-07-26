@@ -205,7 +205,20 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
 int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return)
 {
     if(!status) lua_pushnil(L);
-    else        lua_pushboolean(L, true);
+    else
+    {
+        if( num_obj_to_return == 1 )
+        {
+            int stack_cnt = lua_gettop(L);
+            
+            /* Self object must be on stack */
+            assert(stack_cnt != 0);         
+            
+            lua_pop(L, stack_cnt - 1);      
+            /* Return self as status, allow to chain calls */
+        }
+        else lua_pushboolean(L, true);
+    }
 
     return num_obj_to_return;
 }
@@ -384,7 +397,7 @@ int LuaObject::luaName(lua_State* L)
         /* Pop name */
         lua_pop(L, 1);
 
-        /* Stack hold Self */
+        /* Stack holds Self */
 
     }
     catch(const RunTimeException& e)

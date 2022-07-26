@@ -308,7 +308,7 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
                 printf("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));  
                 break;  
             case LUA_TBOOLEAN: 
-                printf("--%02d-- boolean %s\n", i, lua_toboolean(l, i) ? "true" : "false");  
+                printf("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");  
                 break;  
             case LUA_TNUMBER: 
                 printf("--%02d-- number: %g\n", i, lua_tonumber(l, i));  

@@ -43,8 +43,7 @@ runner.compare(format, expected["dataset1"]["format"])
 runner.compare(url, expected["dataset1"]["url"])
 
 print('\n------------------\nTest03: Display Time Tree for Dataset1\n------------------\n')
-local i3 = core.intervalindex(a2, "t0", "t1"):name("intervalindex")
-i3:display()
+local i3 = core.intervalindex(a2, "t0", "t1"):name("intervalindex"):display()
 
 print('\n------------------\nTest04: Query Dataset1\n------------------\n')
 local r4 = i3:query({t0=5.0, t1=17.0})
@@ -55,8 +54,7 @@ print('\n------------------\nTest05: Query Dataset1 with Field Index\n----------
 local f5 = core.pointindex(a2, "foot"):name("pointindex")
 local new_resource = {name="46",t0=46,t1=46,lat0=-83.2,lat1=-80.1,lon0=45.0,lon1=46.0,hand=255.4,foot=15}
 a2:load(new_resource["name"], new_resource)
-f5:add(new_resource)
-f5:display()
+f5:add(new_resource):display()
 local r5 = f5:query({foot=15})
 local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46}
 check_query(r5, e5)
@@ -67,8 +65,7 @@ name, format, url, index_filename, region, endpoint, status = a6:info()
 runner.compare(name, "dataset2")
 runner.compare(format, expected["dataset2"]["format"])
 runner.compare(url, expected["dataset2"]["url"])
-local i6 = core.intervalindex(a6, "t0", "t1"):name("overlappingindex")
-i6:display()
+local i6 = core.intervalindex(a6, "t0", "t1"):name("overlappingindex"):display()
 local r6 = i6:query({t0=6.0, t1=10.0})
 local e6 = {"B", "C", "D", "E", "F", "G", "H", "I", "J"}
 check_query(r6, e6)
@@ -100,8 +97,7 @@ end
 
 print('\n------------------\nTest08: Query Dataset1 with Spatial Index\n------------------\n')
 local a8 = core.getbyname("dataset1")
-local i8 = core.spatialindex(a8, core.SOUTH_POLAR):name("spatialindex")
-i8:display()
+local i8 = core.spatialindex(a8, core.SOUTH_POLAR):name("spatialindex"):display()
 local r5 = i8:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
 local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45}
 check_query(r5, e5)

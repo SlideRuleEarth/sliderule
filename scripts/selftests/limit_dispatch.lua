@@ -12,9 +12,7 @@ local idlimit = core.limit("id", nil, 50, 150, nil, "limit_limitq"):name("idlimi
 local counterlimit = core.limit("counter", 50, 11, 10000, nil, "limit_limitq"):name("counterlimit")
 
 local r = core.dispatcher("limit_inputq"):name("dispatcher")
-r:attach(idlimit, "test.rec")
-r:attach(counterlimit, "test.rec")
-r:run()
+r:attach(idlimit, "test.rec"):attach(counterlimit, "test.rec"):run()
 
 local inputq = msg.publish("limit_inputq")
 local limitq = msg.subscribe("limit_limitq")
