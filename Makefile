@@ -149,10 +149,10 @@ sliderule-config-asan: ## configure server to run with address sanitizer locally
 	cd $(PLUGIN_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
 
 sliderule-run-node: ## run the server locally as node
-	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/node.lua
+	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/node.json
 
 sliderule-run-proxy: ## run the server locally as proxy
-	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/proxy.lua
+	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/proxy.json
 
 sliderule-docker: distclean ## build the server docker container
 	# build and install sliderule into staging
