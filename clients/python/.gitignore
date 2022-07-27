@@ -130,3 +130,5 @@ dmypy.json
 
 # User
 .vscode/
+.DS_Store
+.DS_Store?
