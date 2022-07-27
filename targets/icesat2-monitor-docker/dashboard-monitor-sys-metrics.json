@@ -99,7 +99,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "node_memory_MemAvailable_bytes{job=\"manager\"}",
+            "expr": "node_memory_MemAvailable_bytes{job=\"monitor_sys\"}",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -181,7 +181,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "1.00 - avg(irate(node_cpu_seconds_total{job=\"manager\",mode=\"idle\"}[1m])) by (instance)",
+            "expr": "1.00 - avg(irate(node_cpu_seconds_total{job=\"monitor_sys\",mode=\"idle\"}[1m])) by (instance)",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -263,7 +263,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "node_filesystem_avail_bytes{device=\"/dev/root\",job=\"manager\"}",
+            "expr": "node_filesystem_avail_bytes{device=\"/dev/root\",job=\"monitor_sys\"}",
             "interval": "",
             "legendFormat": "",
             "refId": "A"

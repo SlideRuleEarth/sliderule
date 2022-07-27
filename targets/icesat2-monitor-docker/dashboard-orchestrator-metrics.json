@@ -98,7 +98,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "num_requests{job=\"orchestrator\"}",
+            "expr": "num_requests{job=\"orchestrator_app\"}",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -180,7 +180,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "num_failures{job=\"orchestrator\"}",
+            "expr": "num_failures{job=\"orchestrator_app\"}",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -261,7 +261,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "rate(num_requests{job=\"orchestrator\"}[1m])",
+            "expr": "rate(num_requests{job=\"orchestrator_app\"}[1m])",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -343,7 +343,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "num_unique_visitors{job=\"orchestrator\"}",
+            "expr": "num_unique_visitors{job=\"orchestrator_app\"}",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -366,7 +366,7 @@
     },
     "timepicker": {},
     "timezone": "",
-    "title": "Orchestrator",
+    "title": "Orchestrator Application Metrics",
     "uid": "a0CXTGQnk",
     "version": 1
 }
