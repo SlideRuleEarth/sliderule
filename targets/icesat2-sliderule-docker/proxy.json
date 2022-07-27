@@ -1,7 +1,7 @@
 {
     "event_format": "FMT_CLOUD",
     "event_level": "INFO",
-    "server_port": 9080,
+    "server_port": 9082,
     "authenticate_to_earthdata": true,
     "register_as_service": false,
     "asset_directory": "/usr/local/etc/sliderule/asset_directory.csv"
