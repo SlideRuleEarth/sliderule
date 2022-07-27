@@ -1,5 +1,6 @@
 local global = require("global")
 local asset = require("asset")
+local json = require("json")
 
 -- Function to return all available system scripts
 local function available_scripts()
@@ -16,23 +17,25 @@ local function available_scripts()
     return scripts
 end
 
--- Get Environment --
-local IPV4 = os.getenv("IPV4") or "127.0.0.1"
-
--- Production Configuration --
-local cfgtbl = (IPV4 == "127.0.0.1") and {} or {
-    event_format = "FMT_CLOUD",
-    event_level = "INFO",
-    server_port = 9081,
-    authenticate_to_earthdata = true,
-    asset_directory = "/usr/local/etc/sliderule/asset_directory.csv"
-}
+-- Process Arguments: JSON Configuration File
+local cfgtbl = {}
+local json_input = arg[1]
+if json_input and string.match(json_input, ".json") then
+    sys.log(core.INFO, string.format('Reading json file: %s', json_input))
+    local f = io.open(json_input, "r")
+    if f ~= nil then
+        local content = f:read("*all")
+        f:close()
+        cfgtbl = json.decode(content)
+    end
+end
 
 -- Pull Out Parameters --
 local event_format              = global.eval(cfgtbl["event_format"]) or core.FMT_TEXT
 local event_level               = global.eval(cfgtbl["event_level"]) or core.INFO
 local port                      = cfgtbl["server_port"] or 9081
-local authenticate_to_earthdata = cfgtbl["authenticate_to_earthdata"] or false
+local authenticate_to_earthdata = cfgtbl["authenticate_to_earthdata"] -- nil is false
+local register_as_service       = cfgtbl["register_as_service"] -- nil is false
 local asset_directory           = cfgtbl["asset_directory"] or "asset_directory.csv"
 local normal_mem_thresh         = cfgtbl["normal_mem_thresh"] or 1.0
 local stream_mem_thresh         = cfgtbl["stream_mem_thresh"] or 0.75
@@ -59,7 +62,9 @@ if authenticate_to_earthdata then
 end
 
 -- Run Service Registry Script --
-local service_script = core.script("service_registry"):name("service_script")
+if register_as_service then
+    local service_script = core.script("service_registry"):name("service_script")
+end
 
 -- Configure Endpoints --
 local source_endpoint = core.endpoint(normal_mem_thresh, stream_mem_thresh)

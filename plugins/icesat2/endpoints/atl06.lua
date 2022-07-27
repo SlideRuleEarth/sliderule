@@ -6,7 +6,7 @@
 -- INPUT:       rqst
 --              {
 --                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>"
---                  "resources":    "[<url of hdf5 file or object>, ...]"
+--                  "resource":     "<url of hdf5 file or object>"
 --                  "parms":        {<table of parameters>}
 --                  "timeout":      <milliseconds to wait for first response>
 --              }
@@ -28,7 +28,7 @@ local userlog = msg.publish(rspq)
 -- Request Parameters --
 local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"] or "nsidc-s3"
-local resources = rqst["resources"]
+local resource = rqst["resource"]
 local parms = rqst["parms"]
 local timeout = rqst["timeout"] or core.PEND
 
@@ -41,7 +41,6 @@ end
 
 -- Create Record Queue --
 local recq = rspq .. "-atl03"
-local rec_pub = core.publish(recq)
 
 -- Exception Forwarding --
 local except_pub = core.publish(rspq)
@@ -55,35 +54,28 @@ atl06_disp:attach(atl06_algo, "atl03rec")
 atl06_disp:attach(except_pub, "exceptrec")
 atl06_disp:run()
 
--- Loop Through Resources --
-for i,resource in ipairs(resources) do
+-- Post Initial Status Progress --
+userlog:sendlog(core.INFO, string.format("request <%s> atl06 processing initiated on %s ...", rspq, resource))
 
-    -- Post Initial Status Progress --
-    userlog:sendlog(core.INFO, string.format("request <%s> atl06 processing initiated [%d out of %d] on %s ...", rspq, i, #resources, resource))
+-- ATL03 Reader --
+local atl03_reader = icesat2.atl03(asset, resource, recq, parms, true)
 
-    -- ATL03 Reader --
-    local atl03_reader = icesat2.atl03(asset, resource, recq, parms, false)
-
-    -- Wait Until Reader Completion --
-    local duration = 0
-    local interval = 10000 -- 10 seconds
-    while not atl03_reader:waiton(interval) do
-        duration = duration + interval
-        -- Check for Timeout --
-        if timeout >= 0 and duration >= timeout then
-            userlog:sendlog(core.ERROR, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration / 1000))
-            return
-        end
-        userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration / 1000))
+-- Wait Until Reader Completion --
+local duration = 0
+local interval = 10000 -- 10 seconds
+while not atl03_reader:waiton(interval) do
+    duration = duration + interval
+    -- Check for Timeout --
+    if timeout >= 0 and duration >= timeout then
+        userlog:sendlog(core.ERROR, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration / 1000))
+        return
     end
-
-    -- Resource Processing Complete
-    local atl03_stats = atl03_reader:stats(false)
-    userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, atl03_stats.read, atl03_stats.filtered, atl03_stats.dropped))
+    userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration / 1000))
 end
 
--- Terminate Record Queue
-rec_pub:sendstring("") -- signals completion to atl06 dispatch
+-- Resource Processing Complete
+local atl03_stats = atl03_reader:stats(false)
+userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, atl03_stats.read, atl03_stats.filtered, atl03_stats.dropped))
 
 -- Wait Until Dispatch Completion --
 local duration = 0

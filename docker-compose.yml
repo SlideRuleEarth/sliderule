@@ -5,7 +5,7 @@ services:
     network_mode: "host"
     restart: unless-stopped
     pull_policy: if_not_present
-    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/node.lua
+    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/node.json
     stdin_open: true # docker run -i
     tty: true # docker run -t
     volumes:
@@ -19,7 +19,7 @@ services:
     network_mode: "host"
     restart: unless-stopped
     pull_policy: if_not_present
-    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/proxy.lua
+    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/proxy.json
     stdin_open: true # docker run -i
     tty: true # docker run -t
     volumes:

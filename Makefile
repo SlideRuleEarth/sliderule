@@ -170,8 +170,9 @@ sliderule-docker: distclean ## build the server docker container
 	cp targets/icesat2-sliderule-docker/plugins.conf $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/node.lua $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/proxy.lua $(SERVER_STAGE_DIR)/etc/sliderule
+	cp targets/icesat2-sliderule-docker/server.lua $(SERVER_STAGE_DIR)/etc/sliderule
+	cp targets/icesat2-sliderule-docker/node.json $(SERVER_STAGE_DIR)/etc/sliderule
+	cp targets/icesat2-sliderule-docker/proxy.json $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/earth_data_auth.lua $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/service_registry.lua $(SERVER_STAGE_DIR)/etc/sliderule
 	# build image
