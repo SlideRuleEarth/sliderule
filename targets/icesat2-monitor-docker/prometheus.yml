@@ -5,8 +5,8 @@ global:
 
 scrape_configs:
 
-    # System Metrics for Cluster
-  - job_name: 'sliderule_sys'
+    # System Metrics for SlideRule Nodes
+  - job_name: 'sliderule_node_sys'
     ec2_sd_configs:
       - region: us-west-2
         port: 9100
@@ -19,8 +19,8 @@ scrape_configs:
       - source_labels: [__meta_ec2_instance_id]
         target_label: instance
 
-    # Application Metrics for Cluster
-  - job_name: 'sliderule_app'
+    # Application Metrics for SlideRule Nodes
+  - job_name: 'sliderule_node_app'
     ec2_sd_configs:
       - region: us-west-2
         port: 9081
@@ -29,6 +29,35 @@ scrape_configs:
         # Only monitor instances with a Name ending with "-node"
       - source_labels: [__meta_ec2_tag_Name]
         regex: .*-node
+        action: keep
+        # Use the instance ID as the instance label
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance
+
+    # System Metrics for SlideRule Proxies
+  - job_name: 'sliderule_proxy_sys'
+    ec2_sd_configs:
+      - region: us-west-2
+        port: 9100
+    relabel_configs:
+        # Only monitor instances with a Name ending with "-proxy"
+      - source_labels: [__meta_ec2_tag_Name]
+        regex: .*-proxy
+        action: keep
+        # Use the instance ID as the instance label
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance
+
+    # Application Metrics for SlideRule Proxies
+  - job_name: 'sliderule_proxy_app'
+    ec2_sd_configs:
+      - region: us-west-2
+        port: 9082
+    metrics_path: "/probe/prometheus"
+    relabel_configs:
+        # Only monitor instances with a Name ending with "-proxy"
+      - source_labels: [__meta_ec2_tag_Name]
+        regex: .*-proxy
         action: keep
         # Use the instance ID as the instance label
       - source_labels: [__meta_ec2_instance_id]

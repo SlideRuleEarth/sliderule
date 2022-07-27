@@ -210,7 +210,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(HttpServer_duration{job=\"sliderule_app\"}[1m])",
+          "expr": "rate(HttpServer_duration{job=\"sliderule_node_app\"}[1m])",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -282,7 +282,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_alaska_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_alaska_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Alaska",
@@ -290,7 +290,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_canada_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_canada_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Canada",
@@ -298,7 +298,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_greenland_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_greenland_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Greenland",
@@ -306,14 +306,14 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_continental_us_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_continental_us_hits{job=\"sliderule_node_app\"})",
           "interval": "",
           "legendFormat": "Continental US",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_central_america_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_central_america_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Central America",
@@ -321,7 +321,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_south_america_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_south_america_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "South America",
@@ -329,7 +329,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_africa_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_africa_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Africa",
@@ -337,7 +337,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_middle_east_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_middle_east_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Middle East",
@@ -345,7 +345,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_europe_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_europe_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Europe",
@@ -353,7 +353,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_north_asia_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_north_asia_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "North Asia",
@@ -361,7 +361,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_south_asia_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_south_asia_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "South Asia",
@@ -369,7 +369,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_oceania_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_oceania_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Oceania",
@@ -377,7 +377,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_antarctica_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_antarctica_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Antarctica",
@@ -385,7 +385,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_unknown_region_hits{job=\"sliderule_app\"})",
+          "expr": "sum by (job) (icesat2_unknown_region_hits{job=\"sliderule_node_app\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Unknown",
