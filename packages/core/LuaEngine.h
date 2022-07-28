@@ -89,6 +89,8 @@ class LuaEngine
                             LuaEngine       (const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
                             ~LuaEngine      (void);
 
+        static void         init            (void);
+        static void         deinit          (void);
         static void         extend          (const char* lib_name, luaOpenLibFunc lib_func);
         static void         indicate        (const char* pkg_name, const char* pkg_version);
         static const char** getPkgList      (void);

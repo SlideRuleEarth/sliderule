@@ -157,6 +157,42 @@ LuaEngine::~LuaEngine(void)
 }
 
 /*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void LuaEngine::init(void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void LuaEngine::deinit(void)
+{
+    /* Free memory stored in pkgInitTable list */
+    pkgInitTableMutex.lock();
+    {
+        int num_pkgs = pkgInitTable.length();
+        for(int i = 0; i < num_pkgs; i++)
+        {
+            if(pkgInitTable[i].pkg_name)    delete [] pkgInitTable[i].pkg_name;
+            if(pkgInitTable[i].pkg_version) delete [] pkgInitTable[i].pkg_version;
+        }
+    }
+    pkgInitTableMutex.unlock();
+
+    /* Free memory stored libInitTable list */
+    libInitTableMutex.lock();
+    {
+        int num_libs = libInitTable.length();
+        for(int i = 0; i < num_libs ; i++)
+        {
+            if(libInitTable[i].lib_name)  delete [] libInitTable[i].lib_name; 
+        }
+    }
+    libInitTableMutex.unlock();
+}
+
+/*----------------------------------------------------------------------------
  * extend
  *----------------------------------------------------------------------------*/
 void LuaEngine::extend(const char* lib_name, luaOpenLibFunc lib_func)

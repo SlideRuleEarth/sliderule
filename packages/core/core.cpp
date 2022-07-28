@@ -159,6 +159,7 @@ static int core_open (lua_State *L)
 void initcore (void)
 {
     /* Initialize Libraries */
+    LuaEngine::init();
     LocalLib::init();
     MsgQ::init();
     SockLib::init();
@@ -202,6 +203,7 @@ void deinitcore (void)
 {
     /* Clean up libraries initialized in initcore() */
     print2term("Exiting...\n");
+    LuaEngine::deinit();print2term("Lua Engine Uninitialized\n");
     EventLib::deinit(); print2term("Event Library Uninitialized\n");
     TimeLib::deinit();  print2term("Time Library Uninitialized\n");
     TTYLib::deinit();   print2term("TTY Library Uninitialized\n");
