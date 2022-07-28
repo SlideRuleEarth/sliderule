@@ -465,7 +465,6 @@ int HttpServer::onRead(int fd)
             }
             else // currently no other types of handers
             {
-                mlog(CRITICAL, "Unable to handle unattached request");
                 status = INVALID_RC; // will close socket
             }
         }
