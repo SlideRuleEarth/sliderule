@@ -638,12 +638,12 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
     '''
-    return atl06p(parm, asset=asset, proxy=False, resources=[resource])
+    return atl06p(parm, asset=asset, resources=[resource])
 
 #
 #  Parallel ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks=sliderule.default_callbacks, proxy=True, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks=sliderule.default_callbacks, resources=None):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -666,8 +666,6 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         the version of the ATL03 data to use for processing
         callbacks:      dictionary
                         a callback function that is called for each result record
-        proxy:          bool
-                        use proxy API instead of directly going to atl03s API
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
 
@@ -707,20 +705,13 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
 
         # Build ATL06 Request
         rqst = {
-            "api": "atl06",
             "atl03-asset" : asset,
             "resources": resources,
             "parms": parm
         }
 
-        # Select API
-        if proxy:
-            api = "proxy"
-        else:
-            api = "atl06"
-
         # Make API Processing Request
-        rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)
+        rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
         columns = {}
@@ -781,12 +772,12 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         ATL03 extents (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
-    return atl03sp(parm, asset=asset, proxy=False, resources=[resource])
+    return atl03sp(parm, asset=asset, resources=[resource])
 
 #
 #  Parallel Subsetted ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks=sliderule.default_callbacks, proxy=True, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks=sliderule.default_callbacks, resources=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -808,8 +799,6 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         the version of the ATL03 data to return
         callbacks:      dictionary
                         a callback function that is called for each result record
-        proxy:          bool
-                        use proxy API instead of directly going to atl03s API
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
 
@@ -825,20 +814,13 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
 
         # Build ATL03 Subsetting Request
         rqst = {
-            "api": "atl03s",
             "atl03-asset" : asset,
             "resources": resources,
             "parms": parm
         }
 
-        # Select API
-        if proxy:
-            api = "proxy"
-        else:
-            api = "atl03s"
-
         # Make API Processing Request
-        rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)
+        rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
         columns = {}
