@@ -183,6 +183,8 @@ def __clrserv(serv, stream):
             if stream:
                 server_table[serv]["pending"] -= 1
             server_table[serv]["errors"] = 0
+        except Exception as e:
+            pass
         finally:
             server_lock.notify()
 
