@@ -19,20 +19,15 @@ jobs:
     name: Run valgrind on sliderule
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'cpp' ]
-
     steps:
+    - name: Install dependencies
+      run: sudo apt install build-essential libreadline-dev liblua5.3-dev valgrind
+
     - name: Checkout repository
       uses: actions/checkout@v2
 
 
     - run: |
-       sudo apt install build-essential libreadline-dev liblua5.3-dev valgrind
-       git clone -b memtests--depth=1 https://github.com/ICESat2-SlideRule/sliderule.git
-       cd sliderule
        make config
        make
        chmod +x scripts/memtests/sliderule_memtest.sh
