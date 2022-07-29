@@ -27,9 +27,12 @@ jobs:
       uses: actions/checkout@v2
 
 
-    - run: |
+    - name: Build sliderule
+      run: |
        make config
        make
        chmod +x scripts/memtests/sliderule_memtest.sh
-       ./scripts/memtests/sliderule_memtest.sh
+    
+    - name: 
+      run: ./scripts/memtests/sliderule_memtest.sh
 

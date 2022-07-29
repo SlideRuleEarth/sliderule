@@ -8,7 +8,8 @@ valgrind_options="--leak-check=full --show-leak-kinds=all --track-origins=yes --
 
 printf "\nStarting memory test...\n"
 
-valgrind ${valgrind_options} ./${progname} ${testscript} >${logfile} 2>&1
+#valgrind ${valgrind_options} ./${progname} ${testscript} >${logfile} 2>&1
+valgrind ${valgrind_options} ./${progname} ${testscript} 
 ret=$?
 
 if [ $ret == 0 ]; 
