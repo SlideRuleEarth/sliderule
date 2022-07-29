@@ -1,22 +1,22 @@
 #!/bin/bash
 
 logfile=sliderule_valgrind.log
-progname="build/targets/server-linux/sliderule"
+progname="/usr/local/bin/sliderule"
 testscript="scripts/selftests/test_runner.lua"
 valgrind_suppressions="scripts/memtests/sliderule.supp"
 valgrind_options="--leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes --error-exitcode=1 --suppressions=${valgrind_suppressions}"
 
-printf "\nStarting memory test...\n"
+printf "\nStarting memory test...\n\n"
 
-#valgrind ${valgrind_options} ./${progname} ${testscript} >${logfile} 2>&1
-valgrind ${valgrind_options} ./${progname} ${testscript} 
+#valgrind ${valgrind_options} ${progname} ${testscript} >${logfile} 2>&1
+valgrind ${valgrind_options} ${progname} ${testscript} 
 ret=$?
 
 if [ $ret == 0 ]; 
 then
-    printf "Memory test PASSED\n"
+    printf "\nMemory test PASSED\n"
 else
-    printf "Memory test FAILED, see $logfile for details\n"
+    printf "\nMemory test FAILED\n"
 fi
 
 # return valgrind exit status

@@ -16,7 +16,7 @@ on: [workflow_dispatch]
 jobs:
 
   memtest_sliderule:
-    name: Run valgrind on sliderule
+    name: Sliderule memory test
     runs-on: ubuntu-latest
 
     steps:
@@ -26,7 +26,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-
     - name: Build sliderule
       run: |
        make config
@@ -34,8 +33,5 @@ jobs:
        sudo make install
        chmod +x scripts/memtests/sliderule_memtest.sh
     
-    - name: 
-      run: /usr/local/bin/sliderule scripts/selftests/test_runner.lua
-     #run: ./build/targets/server-linux/sliderule scripts/selftests/test_runner.lua
-     #run: ./scripts/memtests/sliderule_memtest.sh
-
+    - name: Run Valgrind
+      run: ./scripts/memtests/sliderule_memtest.sh
