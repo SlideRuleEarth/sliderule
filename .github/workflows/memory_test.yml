@@ -11,10 +11,18 @@
 #
 name: "MemTest"
 
-on: [workflow_dispatch] 
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ main ]
+  schedule:
+    - cron: '0 23 * * 5' # Every Sunday at 11 pm
+
   
 jobs:
-
   memtest_sliderule:
     name: Sliderule memory test
     runs-on: ubuntu-latest
