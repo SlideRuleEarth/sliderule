@@ -358,16 +358,6 @@ int main (int argc, char* argv[])
 
     deinitcore();
 
-#warning REMOVE ME, HACK to cause 32k memory leak!!!!
-    {
-        unsigned char* memleak = (unsigned char*) malloc(1000*32);
-        for(int i=0; i<10; i++)
-        {
-            memleak[i] = i;
-            printf("Leaking memory %u", memleak[i]);
-        }
-    }
-
     /* Exit Thread Managing Signals */
     app_signal_abort = true;
     pthread_kill(signal_pid, SIGINT);
