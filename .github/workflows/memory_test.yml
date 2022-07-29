@@ -34,5 +34,6 @@ jobs:
        chmod +x scripts/memtests/sliderule_memtest.sh
     
     - name: 
-      run: ./scripts/memtests/sliderule_memtest.sh
+      run: ./build/targets/server-linux/sliderule scripts/selftests/test_runner.lua
+     #run: ./scripts/memtests/sliderule_memtest.sh
 
