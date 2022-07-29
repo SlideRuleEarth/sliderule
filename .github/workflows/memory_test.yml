@@ -31,7 +31,7 @@ jobs:
       run: |
        make config
        make
-       make install
+       sudo make install
        chmod +x scripts/memtests/sliderule_memtest.sh
     
     - name: 
