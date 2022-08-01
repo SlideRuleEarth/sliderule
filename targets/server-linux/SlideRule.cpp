@@ -322,6 +322,9 @@ int main (int argc, char* argv[])
         #endif
         LocalLib::sleep(1);
     }
+    
+    int errors = geterrors();
+    printf("\nCore returned %d errors\n", errors);
 
     /* Free Interpreter */
     delete interpreter;
@@ -364,5 +367,5 @@ int main (int argc, char* argv[])
     pthread_join(signal_pid, NULL);
 
     /* Exit Process */
-    return geterrors();
+    return errors;
 }
