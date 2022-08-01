@@ -39,7 +39,7 @@ jobs:
        make config
        make
        sudo make install
-       chmod +x scripts/memtests/sliderule_memtest.sh
+       chmod +x scripts/systests/memtest.sh
     
     - name: Run Valgrind
-      run: ./scripts/memtests/sliderule_memtest.sh
+      run: ./scripts/systests/memtest.sh
