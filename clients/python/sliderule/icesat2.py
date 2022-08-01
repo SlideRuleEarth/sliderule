@@ -897,9 +897,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
 
     This function provides an easy way for locally run scripts to get direct access to HDF5 data stored in a cloud environment.
     But it should be noted that this method is not the most efficient way to access remote H5 data, as the data is accessed one dataset at a time.
-    Future versions may provide the ability to read multiple datasets at once, but in the meantime, if the user finds themselves needing direct
-    access to a lot of HDF5 data residing in the cloud, then use of the H5Coro Python package is recommended as it provides a native Python package
-    for performant direct access to HDF5 data in the cloud.
+    The ``h5p`` api is the preferred solution for reading multiple datasets.
 
     One of the difficulties in reading HDF5 data directly from a Python script is converting format of the data as it is stored in the HDF5 to a data
     format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the
@@ -942,42 +940,12 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         >>> longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
         >>> df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
     '''
-    # Baseline Request
-    rqst = {
-        "asset" : asset,
-        "resource": resource,
-        "dataset": dataset,
-        "datatype": datatype,
-        "col": col,
-        "startrow": startrow,
-        "numrows": numrows,
-        "id": 0
-    }
-
-    # Read H5 File
-    try:
-        rsps = sliderule.source("h5", rqst, stream=True)
-    except RuntimeError as e:
-        logger.critical(e)
+    datasets = [ { "dataset": dataset, "datatype": datatype, "col": col, "startrow": startrow, "numrows": numrows } ]
+    values = h5p(datasets, resource, asset=asset)
+    if len(values) > 0:
+        return values[dataset]
+    else:
         return numpy.empty(0)
-
-    # Check if Data Returned
-    if len(rsps) <= 0:
-        return numpy.empty(0)
-
-    # Build Record Data
-    rsps_datatype = rsps[0]["datatype"]
-    rsps_data = bytearray()
-    rsps_size = 0
-    for d in rsps:
-        rsps_data += bytearray(d["data"])
-        rsps_size += d["size"]
-
-    # Get Values
-    values = __get_values(rsps_data, rsps_datatype, rsps_size)
-
-    # Return Response
-    return values
 
 #
 #  Parallel H5
