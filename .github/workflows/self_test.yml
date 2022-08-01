@@ -9,7 +9,7 @@
 # the `language` matrix defined below to confirm you have the correct set of
 # supported CodeQL languages.
 #
-name: "MemTest"
+name: "SelfTest"
 
 on:
   workflow_dispatch:
@@ -19,17 +19,17 @@ on:
     # The branches below must be a subset of the branches above
     branches: [ main ]
   schedule:
-    - cron: '0 23 * * 5' # Every Sunday at 11 pm
+    - cron: '0 22 * * 5' # Every Sunday at 10 pm
 
   
 jobs:
-  memtest_sliderule:
-    name: Sliderule memory test
+  self_test:
+    name: Sliderule regression test
     runs-on: ubuntu-latest
 
     steps:
     - name: Install dependencies
-      run: sudo apt install build-essential libreadline-dev liblua5.3-dev valgrind
+      run: sudo apt install build-essential libreadline-dev liblua5.3-dev
 
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -39,7 +39,6 @@ jobs:
        make config
        make
        sudo make install
-       chmod +x scripts/memtests/sliderule_memtest.sh
     
-    - name: Run Valgrind
-      run: ./scripts/memtests/sliderule_memtest.sh
+    - name: Run regression (self) test
+      run: sliderule ./scripts/selftests/test_runner.lua
