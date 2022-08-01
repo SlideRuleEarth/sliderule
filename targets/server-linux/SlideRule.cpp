@@ -364,5 +364,5 @@ int main (int argc, char* argv[])
     pthread_join(signal_pid, NULL);
 
     /* Exit Process */
-    return 0;
+    return geterrors();
 }

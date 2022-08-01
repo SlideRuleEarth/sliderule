@@ -49,8 +49,8 @@
  * LOCAL DATA
  ******************************************************************************/
 
-bool appActive = true;
-bool appHealthy = true;
+bool appActive  = true;
+int  appErrors  = 0;
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -228,7 +228,19 @@ bool checkactive(void)
  *
  *  set application active
  *----------------------------------------------------------------------------*/
-void setinactive(void)
+void setinactive(int errors)
 {
+    appErrors = errors;
     appActive = false;
 }
+
+/*----------------------------------------------------------------------------
+ *  geterrors 
+ *
+ *  get aplication errors
+ *----------------------------------------------------------------------------*/
+int geterrors(void)
+{
+    return appErrors;
+}
+

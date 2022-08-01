@@ -54,10 +54,11 @@ if __legacy__ then
     runner.script(td .. "limit_dispatch.lua")
 end
 
+
 -- Report Results --
 
-runner.report()
+local errors = runner.report()
 
 -- Cleanup and Exit --
 
-sys.quit()
+sys.quit( errors )
