@@ -324,7 +324,7 @@ int main (int argc, char* argv[])
     }
     
     int errors = geterrors();
-    printf("\nCore returned %d errors\n", errors);
+    print2term("\nCore returned %d errors\n", errors);
 
     /* Free Interpreter */
     delete interpreter;

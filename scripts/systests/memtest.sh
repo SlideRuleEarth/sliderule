@@ -1,9 +1,9 @@
 #!/bin/bash
 
-logfile=sliderule_valgrind.log
-progname="/usr/local/bin/sliderule"
+logfile=memtest.log
+progname=sliderule
 testscript="scripts/selftests/test_runner.lua"
-valgrind_suppressions="scripts/memtests/sliderule.supp"
+valgrind_suppressions="scripts/systests/memtest.supp"
 valgrind_options="--leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes --error-exitcode=1 --suppressions=${valgrind_suppressions}"
 
 printf "\nStarting memory test...\n\n"
