@@ -76,6 +76,7 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 
 ctags: prep ## generate ctags
 	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)
+	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
 
 install: ## install sliderule to system
 	make -C $(BUILD) install
