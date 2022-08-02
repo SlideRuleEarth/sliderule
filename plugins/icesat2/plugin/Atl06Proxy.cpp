@@ -151,7 +151,7 @@ int Atl06Proxy::luaInit (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<resources>, <parameter string>, <outq_name>)
+ * luaCreate - create(<resources>, <parameter string>, <outq_name>, <orchestrator_url>)
  *----------------------------------------------------------------------------*/
 int Atl06Proxy::luaCreate (lua_State* L)
 {
@@ -191,6 +191,9 @@ int Atl06Proxy::luaCreate (lua_State* L)
         /* Get Output Queue */
         const char* outq_name = getLuaString(L, 3);
 
+        /* Get Orhcestrator URL */
+        const char* orchestrator_url = getLuaString(L, 4);
+
         /* Return Reader Object */
         return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name));
     }
@@ -211,19 +214,20 @@ int Atl06Proxy::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* outq_name):
+Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* _outq_name, const char* _orchestrator_url):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(_resources);
     assert(_parameters);
-    assert(outq_name);
+    assert(_outq_name);
 
     resources = _resources;
     numResources = _num_resources;
     parameters = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
+    orchestratorURL = StringLib::duplicate(_orchestrator_url);
 
     /* Create Publisher */
-    outQ = new Publisher(outq_name);
+    outQ = new Publisher(_outq_name);
 
     /* Populate Requests */
     for(int i = 0; i < numResources; i++)
@@ -232,7 +236,10 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
             .proxy = this,
             .resource_index = i
         };
-        rqstPub->postCopy(&atl06_rqst, sizeof(atl06_rqst_t), IO_CHECK);
+        if(rqstPub->postCopy(&atl06_rqst, sizeof(atl06_rqst_t), IO_CHECK) <= 0)
+        {
+            LuaEndpoint::generateExceptionStatus(RTE_ERROR, outQ, NULL, "Failed to proxy request for %s", resources[i]);
+        }
     }
 }
 
@@ -247,9 +254,11 @@ Atl06Proxy::~Atl06Proxy (void)
     }
     delete [] resources;
 
-    delete parameters;
+    delete [] parameters;
 
     delete outQ;
+
+    delete [] orchestratorURL;
 }
 
 /*----------------------------------------------------------------------------
@@ -270,7 +279,13 @@ void* Atl06Proxy::proxyThread (void* parm)
 
             try
             {
-                mlog(CRITICAL, "Processing resource: %s", resource);
+                mlog(INFO, "Processing resource: %s", resource);
+
+                // get lock from orchestrator
+
+                // pass request to node
+
+                // stream response back to queue
             }
             catch(const RunTimeException& e)
             {

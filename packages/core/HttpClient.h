@@ -60,6 +60,7 @@ class HttpClient: public LuaObject
 
         static const int MAX_RQST_DATA_LEN  = 65536;
         static const int RSPS_READ_BUF_LEN  = 65536;
+        static const int RSPS_LUA_BUF_LEN   = 65536;
         static const int MAX_TIMEOUTS       = 5;
         static const int MAX_DIGITS         = 10;
 
@@ -76,6 +77,7 @@ class HttpClient: public LuaObject
                             HttpClient      (lua_State* L, const char* _ip_addr, int _port);
                             ~HttpClient     (void);
 
+        const char*         request         (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name);
         const char*         getIpAddr       (void);
         int                 getPort         (void);
 

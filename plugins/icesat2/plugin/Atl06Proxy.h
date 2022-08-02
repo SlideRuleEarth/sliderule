@@ -98,12 +98,13 @@ class Atl06Proxy: public LuaObject
         int                 numResources;
         const char*         parameters;
         Publisher*          outQ;
+        const char*         orchestratorURL;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl06Proxy              (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* outq_name);
+                            Atl06Proxy              (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* _outq_name, const char* _orchestrator_url);
                             ~Atl06Proxy             (void);
 
         static void*        proxyThread             (void* parm);

@@ -27,7 +27,7 @@ local resources = rqst["resources"]
 local parms = rqst["parms"]
 local orchestrator = os.getenv("ORCHESTRATOR") or "http://127.0.0.1:8050"
 
-local atl06p = icesat2.atl06proxy(resources, json.encode(parms), rspq)
+local atl06p = icesat2.atl06proxy(resources, json.encode(parms), rspq, orchestrator)
 
 
 -- While not done...

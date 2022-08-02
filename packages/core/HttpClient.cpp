@@ -115,6 +115,104 @@ HttpClient::~HttpClient(void)
 }
 
 /*----------------------------------------------------------------------------
+ * request
+ *----------------------------------------------------------------------------*/
+const char* HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name)
+{
+    connection_t* connection = NULL;
+    Subscriber* inq = NULL;
+    char* response = NULL;
+
+    /* Allocate and Initialize Connection */
+    connection = new connection_t;
+    connection->active = true;
+    connection->keep_alive = true;
+    connection->verb = verb;
+    connection->resource = StringLib::duplicate(resource);
+    connection->data = StringLib::duplicate(data);
+    connection->outq = new Publisher(outq_name);
+    connection->client = this;
+    connection->status = CONNECTION_ERROR;
+
+    /* Check if Blocking */
+    if(outq_name == NULL)
+    {
+        /* Create Subscriber */
+        inq = new Subscriber(*(connection->outq));
+    }
+
+    /* Start Connection Thread */
+    connMutex.lock();
+    {
+        connection->pid = new Thread(requestThread, connection);
+        connections.add(connection);
+    }
+    connMutex.unlock();
+
+    /* Check if Blocking */
+    if(outq_name == NULL)
+    {
+        /* Setup Response Variables */
+        int total_response_length = 0;
+        List<Subscriber::msgRef_t> responses;
+
+        /* Read Responses */
+        int attempts = 0;
+        bool done = false;
+        while(!done)
+        {
+            Subscriber::msgRef_t ref;
+            int recv_status = inq->receiveRef(ref, SYS_TIMEOUT);
+            if(recv_status > 0)
+            {
+                if(ref.size > 0)
+                {
+                    total_response_length += ref.size;
+                    responses.add(ref);
+                }
+                else // terminator
+                {
+                    inq->dereference(ref);
+                    done = true;
+                }
+            }
+            else if(recv_status == TIMEOUT_RC)
+            {
+                attempts++;
+                if(attempts >= MAX_TIMEOUTS)
+                {
+                    mlog(CRITICAL, "Maximum number of attempts to read queue reached");
+                    done = true;
+                }
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed queue receive on %s with error %d", getName(), recv_status);
+                done = true;
+            }
+        }
+
+        /* Allocate and Build Response Array */
+        response = new char [total_response_length + 1];
+        List<Subscriber::msgRef_t>::Iterator iterator(responses);
+        int index = 0;
+        for(int i = 0; i < responses.length(); i++)
+        {
+            LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
+            index += iterator[i].size;
+            inq->dereference((Subscriber::msgRef_t&)iterator[i]);
+        }
+        response[index] = '\0';
+    }
+
+    /* Delete Subscriber */
+    if(inq) delete inq;
+
+    /* return response */
+    return response;
+}
+
+/*----------------------------------------------------------------------------
  * getIpAddr
  *----------------------------------------------------------------------------*/
 const char* HttpClient::getIpAddr (void)
@@ -357,8 +455,6 @@ int HttpClient::luaRequest (lua_State* L)
 {
     bool status = false;
     int num_rets = 1;
-    connection_t* connection = NULL;
-    Subscriber* inq = NULL;
 
     try
     {
@@ -372,116 +468,30 @@ int HttpClient::luaRequest (lua_State* L)
         const char* outq_name   = getLuaString(L, 5, true, NULL);
 
         /* Error Check Verb */
-        EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
+        EndpointObject::verb_t verb = EndpointObject::str2verb(verb_str);
         if(verb == EndpointObject::UNRECOGNIZED)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid verb: %s", verb_str);
         }
 
-        /* Allocate and Initialize Connection */
-        connection = new connection_t;
-        connection->active = true;
-        connection->keep_alive = true;
-        connection->verb = verb;
-        connection->resource = StringLib::duplicate(resource);
-        connection->data = StringLib::duplicate(data);
-        connection->outq = new Publisher(outq_name);
-        connection->client = lua_obj;
-        connection->status = CONNECTION_ERROR;
-
-        /* Check if Blocking */
-        if(outq_name == NULL)
+        /* Make Request */
+        const char* response = lua_obj->request(verb, resource, data, outq_name);
+        if(response)
         {
-            /* Create Subscriber */
-            inq = new Subscriber(*(connection->outq));
-        }
-
-        /* Start Connection Thread */
-        lua_obj->connMutex.lock();
-        {
-            connection->pid = new Thread(requestThread, connection);
-            lua_obj->connections.add(connection);
-        }
-        lua_obj->connMutex.unlock();
-
-        /* Check if Blocking */
-        if(outq_name == NULL)
-        {
-            /* Setup Response Variables */
-            int total_response_length = 0;
-            List<Subscriber::msgRef_t> responses;
-
-            /* Read Responses */
-            int attempts = 0;
-            bool done = false;
-            while(!done)
-            {
-                Subscriber::msgRef_t ref;
-                int recv_status = inq->receiveRef(ref, SYS_TIMEOUT);
-                if(recv_status > 0)
-                {
-                    if(ref.size > 0)
-                    {
-                        total_response_length += ref.size;
-                        responses.add(ref);
-                    }
-                    else // terminator
-                    {
-                        inq->dereference(ref);
-                        done = true;
-                    }
-                }
-                else if(recv_status == TIMEOUT_RC)
-                {
-                    attempts++;
-                    if(attempts >= MAX_TIMEOUTS)
-                    {
-                        mlog(CRITICAL, "Maximum number of attempts to read queue reached");
-                        done = true;
-                    }
-                }
-                else
-                {
-                    mlog(CRITICAL, "Failed queue receive on %s with error %d", lua_obj->getName(), recv_status);
-                    done = true;
-                }
-            }
-
-            /* Allocate and Build Response Array */
-            char* response = new char [total_response_length + 1];
-            List<Subscriber::msgRef_t>::Iterator iterator(responses);
-            int index = 0;
-            for(int i = 0; i < responses.length(); i++)
-            {
-                LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
-                index += iterator[i].size;
-                inq->dereference((Subscriber::msgRef_t&)iterator[i]);
-            }
-            response[index] = '\0';
-
             /* Return Respnonse String */
+            int total_response_length = StringLib::size(response, RSPS_LUA_BUF_LEN);
             lua_pushlstring(L, response, total_response_length + 1);
             delete [] response;
             num_rets++;
         }
         else
         {
-            /* No way to verify connection status when not blocking */
-            connection->status = CONNECTION_OKAY;
+            status = true;
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error initiating request: %s", e.what());
-    }
-
-    /* Delete Subscriber */
-    if(inq) delete inq;
-
-    /* Get Status */
-    if(connection)
-    {
-        status = connection->status == CONNECTION_OKAY;
     }
 
     /* Return Status */
