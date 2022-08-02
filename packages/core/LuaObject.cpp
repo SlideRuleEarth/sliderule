@@ -210,11 +210,11 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
         if( num_obj_to_return == 1 )
         {
             int stack_cnt = lua_gettop(L);
-            
+
             /* Self object must be on stack */
-            assert(stack_cnt != 0);         
-            
-            lua_pop(L, stack_cnt - 1);      
+            assert(stack_cnt != 0);
+
+            lua_pop(L, stack_cnt - 1);
             /* Return self as status, allow to chain calls */
         }
         else lua_pushboolean(L, true);
@@ -361,7 +361,7 @@ int LuaObject::luaDelete (lua_State* L)
 int LuaObject::luaName(lua_State* L)
 {
     bool status = false;
-        
+
     try
     {
         /* Get Self */
@@ -369,7 +369,7 @@ int LuaObject::luaName(lua_State* L)
 
         /* Get Name */
         const char* name = getLuaString(L, 2);
-    
+
         /* Add Name to Global Objects */
         globalMut.lock();
         {
@@ -393,7 +393,7 @@ int LuaObject::luaName(lua_State* L)
 
         /* Check for Errors */
         if(!status) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to register name: %s", name);
-        
+
         /* Pop name */
         lua_pop(L, 1);
 

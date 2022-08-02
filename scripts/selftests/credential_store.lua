@@ -24,8 +24,8 @@ client = core.http("127.0.0.1", 9081)
 
 rsps = client:request("GET", "/source/version", "{}")
 metrics = sys.metric("CredentialStore")
-display = json.encode(metrics)
-print(display)
+display2screen = json.encode(metrics)
+print(display2screen)
 
 runner.check(metrics["CredentialStore.mycredentials:exp_gps"]["value"] == 1306681214000, "incorrect expiration time")
 
