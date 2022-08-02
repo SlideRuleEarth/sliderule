@@ -179,7 +179,7 @@ int Atl06Proxy::luaCreate (lua_State* L)
             for(int i = 0; i < _num_resources; i++)
             {
                 lua_rawgeti(L, resources_parm_index, i+1);
-                const char* _resource = getLuaString(L, 2);
+                const char* _resource = getLuaString(L, -1);
                 _resources[i] = StringLib::duplicate(_resource);
                 lua_pop(L, 1);
             }
@@ -270,7 +270,7 @@ void* Atl06Proxy::proxyThread (void* parm)
 
             try
             {
-                mlog(CRITICAL, "Processing resource: %s\n", resource);
+                mlog(CRITICAL, "Processing resource: %s", resource);
             }
             catch(const RunTimeException& e)
             {
