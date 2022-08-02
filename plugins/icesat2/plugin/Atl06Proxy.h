@@ -60,6 +60,8 @@ class Atl06Proxy: public LuaObject
         static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
 
         static const char* OBJECT_TYPE;
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Methods

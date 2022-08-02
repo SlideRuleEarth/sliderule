@@ -24,16 +24,11 @@ local userlog = msg.publish(rspq)
 -- Request Parameters --
 local rqst = json.decode(arg[1])
 local resources = rqst["resources"]
+local parms = rqst["parms"]
 local orchestrator = os.getenv("ORCHESTRATOR") or "http://127.0.0.1:8050"
 
--- Loop Through Resources --
-for i,resource in ipairs(resources) do
+local atl06p = icesat2.atl06proxy(resources, json.encode(parms), rspq)
 
-    -- Post Initial Status Progress --
-    userlog:sendlog(core.INFO, string.format("request <%s> proxied to atl06 [%d out of %d] for %s ...", rspq, i, #resources, resource))
-
-
-end
 
 -- While not done...
 --  Get Available Nodes (as list)
@@ -42,13 +37,13 @@ end
 
 -- Need maximum number of worker threads
 
-
+--[[
 local response, status = netsvc.get(orchestrator.."/discovery/lock", false, false, '{"service":"sliderule", "nodesNeeded":1, "timeout":600}')
 if status then
     print(response)
 else
     sys.log(core.ERROR, "Failed to get services from <"..orchestrator..">: "..response)
 end
-
+]]
 
 return

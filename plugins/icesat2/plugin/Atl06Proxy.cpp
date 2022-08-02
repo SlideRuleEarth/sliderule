@@ -46,6 +46,10 @@
  ******************************************************************************/
 
 const char* Atl06Proxy::OBJECT_TYPE = "Atl06Proxy";
+const char* Atl06Proxy::LuaMetaName = "Atl06Proxy";
+const struct luaL_Reg Atl06Proxy::LuaMetaTable[] = {
+    {NULL,          NULL}
+};
 
 Publisher*  Atl06Proxy::rqstPub;
 Subscriber* Atl06Proxy::rqstSub;
