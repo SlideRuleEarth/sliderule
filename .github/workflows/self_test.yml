@@ -30,11 +30,8 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        sudo apt install build-essential libreadline-dev liblua5.3-dev           #basic config
-        sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev     #aws
-        sudo apt install libtiff-dev                          #geotiff
-        sudo apt install zlib1g-dev                           #h5
-        sudo apt install libssl-dev meson                     #pistache
+        sudo apt install build-essential libreadline-dev liblua5.3-dev                      #basic config
+        sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libtiff-dev    #aws geotiff h5 pistache
         sudo add-apt-repository ppa:pistache+team/unstable    #pistache
         sudo apt update                                       #pistache
         sudo apt install libpistache-dev                      #pistache
@@ -61,7 +58,7 @@ jobs:
 
     - name: Build sliderule
       run: |
-       make config
+       make development-config
        make
        sudo make install
     
