@@ -47,12 +47,17 @@ jobs:
 
     - name: AWS build libraries
       run: |
-        mkdir aws_sdk_build
-        cd aws_sdk_build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
+        ######################################################
+        #bug in this version of cmake cause '..' to be ignored
+        #for now build in the same dir as sources
+        #mkdir aws_sdk_build
+        #cd aws_sdk_build
+        #cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
+        ######################################################
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
         make
         sudo make install
-        cd ../..
+        cd ..
 
     - name: Checkout repository
       uses: actions/checkout@v2
