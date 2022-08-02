@@ -30,7 +30,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        sudo apt install build-essential libreadline-dev liblua5.3-dev valgrind  #basic config
+        sudo apt install build-essential libreadline-dev liblua5.3-dev           #basic config
         sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev     #aws
         sudo apt install libtiff-dev                          #geotiff
         sudo apt install zlib1g-dev                           #h5
@@ -39,27 +39,26 @@ jobs:
         sudo apt update                                       #pistache
         sudo apt install libpistache-dev                      #pistache
 
-    - name: AWS clone repos
+    - name: AWS clone repository
       run: |
+        cd ..
         git clone https://github.com/aws/aws-sdk-cpp.git
         cd aws-sdk-cpp
         git checkout version1.8 # switch to the version 1.8 branch
+        mkdir aws_sdk_build
+        cd aws_sdk_build
 
     - name: AWS build libraries
       run: |
-        pwd
-        mkdir aws_sdk_build
-        cd aws_sdk_build
-        pwd
         #cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
-        cmake -H../aws-sdk-cpp -B. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF 
+        cmake -Hsliderule/aws-sdk-cpp -B. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF 
         make
-        sudo make install
         pwd
-        cd ..
+        sudo make install
+        cd $github.workspace
         pwd
 
-    - name: Checkout repository
+    - name: Checkout sliderule repository
       uses: actions/checkout@v2
 
     - name: Build sliderule
