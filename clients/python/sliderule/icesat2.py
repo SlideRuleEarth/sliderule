@@ -899,7 +899,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
     But it should be noted that this method is not the most efficient way to access remote H5 data, as the data is accessed one dataset at a time.
     The ``h5p`` api is the preferred solution for reading multiple datasets.
 
-    One of the difficulties in reading HDF5 data directly from a Python script is converting format of the data as it is stored in the HDF5 to a data
+    One of the difficulties in reading HDF5 data directly from a Python script is converting the format of the data as it is stored in HDF5 to a data
     format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the
     returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.
 
