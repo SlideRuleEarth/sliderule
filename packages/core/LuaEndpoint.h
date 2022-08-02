@@ -93,8 +93,9 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-       static bool         init             (void);
-       static int          luaCreate        (lua_State* L);
+        static bool         init                    (void);
+        static int          luaCreate               (lua_State* L);
+        static void         generateExceptionStatus (int code, Publisher* outq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 4, 5);
 
     protected:
 

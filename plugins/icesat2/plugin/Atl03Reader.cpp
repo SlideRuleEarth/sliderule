@@ -238,8 +238,8 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         mlog(e.level(), "Failed to read global information in resource %s: %s", resource, e.what());
 
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) generateExceptionStatus(RTE_TIMEOUT, e.what());
-        else generateExceptionStatus(RTE_RESOURCE_DOES_NOT_EXIST, e.what());
+        if(e.code() == RTE_TIMEOUT) LuaEndpoint::generateExceptionStatus(RTE_TIMEOUT, outQ, &active, "%s: (%s)", e.what(), resource);
+        else LuaEndpoint::generateExceptionStatus(RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "%s: (%s)", e.what(), resource);
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0);
@@ -272,24 +272,6 @@ Atl03Reader::~Atl03Reader (void)
 
     asset->releaseLuaObject();
 }
-
-/*----------------------------------------------------------------------------
- * generateExceptionStatus
- *----------------------------------------------------------------------------*/
- void Atl03Reader::generateExceptionStatus (int code, const char* errmsg)
- {
-    /* Initialize Endpoint Exception Record */
-    RecordObject record(LuaEndpoint::EndpointExceptionRecType);
-    LuaEndpoint::response_exception_t* exception = (LuaEndpoint::response_exception_t*)record.getRecordData();
-    exception->code = code;
-    StringLib::format(exception->text, LuaEndpoint::MAX_EXCEPTION_TEXT_SIZE, "%s (%s)", errmsg, resource);
-
-    /* Post Exception Record */
-    uint8_t* rec_buf = NULL;
-    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-    int post_status = MsgQ::STATE_TIMEOUT;
-    while(active && (post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
- }
 
 /*----------------------------------------------------------------------------
  * Region::Constructor
@@ -1385,7 +1367,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Failure during processing of resource %s track %d: %s", info->reader->resource, info->track, e.what());
-        reader->generateExceptionStatus(e.code(), e.what());
+        LuaEndpoint::generateExceptionStatus(e.code(), reader->outQ, &reader->active, "%s: (%s)", e.what(), info->reader->resource);
     }
 
     /* Handle Global Reader Updates */

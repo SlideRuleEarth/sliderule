@@ -257,8 +257,6 @@ class Atl03Reader: public LuaObject
                             Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, atl06_parms_t* _parms, bool _send_terminator=true);
                             ~Atl03Reader            (void);
 
-        void                generateExceptionStatus (int code, const char* errmsg);
-
         static void*        subsettingThread        (void* parm);
 
         static int          luaParms                (lua_State* L);
