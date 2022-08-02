@@ -42,6 +42,7 @@ jobs:
     - name: AWS clone repos
       run: |
         git clone https://github.com/aws/aws-sdk-cpp.git
+        cd aws-sdk-cpp
         git checkout version1.8 # switch to the version 1.8 branch
 
     - name: AWS build libraries
@@ -51,7 +52,7 @@ jobs:
         cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
         make
         sudo make install
-        cd ..
+        cd ../..
 
     - name: Checkout repository
       uses: actions/checkout@v2
