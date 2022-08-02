@@ -125,7 +125,6 @@ sliderule: ## build the server using the local configuration
 	make -C $(PLUGIN_BUILD_DIR) install
 	cp targets/icesat2-sliderule-docker/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/plugins.conf $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/earth_data_auth.lua $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/service_registry.lua $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/proxy.lua $(SERVER_STAGE_DIR)/etc/sliderule/api
@@ -167,7 +166,6 @@ sliderule-docker: distclean ## build the server docker container
 	make -C $(PLUGIN_BUILD_DIR) install
 	# copy over dockerfile
 	cp targets/icesat2-sliderule-docker/Dockerfile $(SERVER_STAGE_DIR)
-	cp targets/icesat2-sliderule-docker/plugins.conf $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
 	cp targets/icesat2-sliderule-docker/server.lua $(SERVER_STAGE_DIR)/etc/sliderule
