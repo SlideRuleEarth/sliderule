@@ -26,10 +26,32 @@ jobs:
   self_test:
     name: Sliderule regression test
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Install dependencies
-      run: sudo apt install build-essential libreadline-dev liblua5.3-dev
+      run: |
+        sudo apt install build-essential libreadline-dev liblua5.3-dev valgrind  #basic config
+        sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev     #aws
+        sudo apt install libtiff-dev                          #geotiff
+        sudo apt install zlib1g-dev                           #h5
+        sudo apt install libssl-dev meson                     #pistache
+        sudo add-apt-repository ppa:pistache+team/unstable    #pistache
+        sudo apt update                                       #pistache
+        sudo apt install libpistache-dev                      #pistache
+
+    - name: AWS clone repos
+      run: |
+        git clone https://github.com/aws/aws-sdk-cpp.git
+        git checkout version1.8 # switch to the version 1.8 branch
+
+    - name: AWS build libraries
+      run: |
+        mkdir aws_sdk_build
+        cd aws_sdk_build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
+        make
+        sudo make install
+        cd ..
 
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -40,5 +62,5 @@ jobs:
        make
        sudo make install
     
-    - name: Run regression (self) test
+    - name: Run test
       run: sliderule ./scripts/selftests/test_runner.lua
