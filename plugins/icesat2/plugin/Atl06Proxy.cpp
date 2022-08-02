@@ -47,9 +47,104 @@
 
 const char* Atl06Proxy::OBJECT_TYPE = "Atl06Proxy";
 
+Publisher*  Atl06Proxy::rqstPub;
+Subscriber* Atl06Proxy::rqstSub;
+bool        Atl06Proxy::proxyActive;
+Thread**    Atl06Proxy::proxyPids;
+Mutex       Atl06Proxy::proxyMut;
+int         Atl06Proxy::threadPoolSize;
+
 /******************************************************************************
  * ATL06 PROXY CLASS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void Atl06Proxy::init (void)
+{
+    rqstPub = NULL;
+    proxyActive = false;
+    rqstSub = NULL;
+    threadPoolSize = 0;
+    proxyPids = NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void Atl06Proxy::deinit (void)
+{
+    if(proxyActive)
+    {
+        proxyActive = false;
+        for(int t = 0; t < threadPoolSize; t++)
+        {
+            delete proxyPids[t];
+        }
+        if(proxyPids) delete [] proxyPids;
+        if(rqstSub) delete rqstSub;
+    }
+
+    if(rqstPub) delete rqstPub;
+}
+
+/*----------------------------------------------------------------------------
+ * luaInit - init(<num_threads>)
+ *----------------------------------------------------------------------------*/
+int Atl06Proxy::luaInit (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Number of Threads */
+        long num_threads = getLuaInteger(L, 1, true, LocalLib::nproc() * CPU_LOAD_FACTOR);
+
+        /* Get Depth of Request Queue */
+        long rqst_queue_depth = getLuaInteger(L, 2, true, MsgQ::CFG_DEPTH_STANDARD);
+
+        /* Create Proxy Thread Pool */
+        proxyMut.lock();
+        {
+            if(!proxyActive)
+            {
+                if(num_threads > 0)
+                {
+                    rqstPub = new Publisher(NULL, NULL, rqst_queue_depth);
+                    proxyActive = true;
+                    rqstSub = new Subscriber(*rqstPub);
+                    threadPoolSize = num_threads;
+                    proxyPids = new Thread* [threadPoolSize];
+                    for(int t = 0; t < threadPoolSize; t++)
+                    {
+                        proxyPids[t] = new Thread(proxyThread, NULL);
+                    }
+                }
+                else
+                {
+                    proxyMut.unlock();
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
+                }
+            }
+            else
+            {
+                proxyMut.unlock();
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Atl06Proxy has already been initialized");
+            }
+        }
+        proxyMut.unlock();
+
+        /* Set Success */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error initializing Atl06Proxy module: %s", e.what());
+    }
+
+    return returnLuaStatus(L, status);
+}
 
 /*----------------------------------------------------------------------------
  * luaCreate - create(<resources>, <parameter string>, <outq_name>)
@@ -70,7 +165,7 @@ int Atl06Proxy::luaCreate (lua_State* L)
 
         /* Get List of Resources */
         _num_resources = lua_rawlen(L, resources_parm_index);
-        if(num_resources > 0)
+        if(_num_resources > 0)
         {
             /* Allocate Resource Array */
             _resources = new const char* [_num_resources];
@@ -92,11 +187,8 @@ int Atl06Proxy::luaCreate (lua_State* L)
         /* Get Output Queue */
         const char* outq_name = getLuaString(L, 3);
 
-        /* Get Number of Threads */
-        long num_threads = getLuaInteger(L, 4, true, LocalLib::nproc() * CPU_LOAD_FACTOR);
-
         /* Return Reader Object */
-        return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name, num_threads));
+        return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -115,13 +207,12 @@ int Atl06Proxy::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* outq_name, int _num_threads):
+Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(_resources);
     assert(_parameters);
     assert(outq_name);
-    assert(_num_threads > 0);
 
     resources = _resources;
     numResources = _num_resources;
@@ -130,19 +221,14 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
     /* Create Publisher */
     outQ = new Publisher(outq_name);
 
-    /* Initialize Threads */
-    active = true;
-    threadCount = _num_threads;
-    numComplete = 0;
-    proxyPids = new Thread* [threadCount];
-    LocalLib::set(proxyPids, 0, sizeof(threadCount * sizeof(Thread*)));
-
-    /* Create Proxy Threads */
-    for(int t = 0; t < threadCount; t++)
+    /* Populate Requests */
+    for(int i = 0; i < numResources; i++)
     {
-        info_t* info = new info_t;
-        info->proxy = this;
-        proxyPids[t] = new Thread(proxyThread, info);
+        atl06_rqst_t atl06_rqst = {
+            .proxy = this,
+            .resource_index = i
+        };
+        rqstPub->postCopy(&atl06_rqst, sizeof(atl06_rqst_t), IO_CHECK);
     }
 }
 
@@ -151,14 +237,6 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
  *----------------------------------------------------------------------------*/
 Atl06Proxy::~Atl06Proxy (void)
 {
-    active = false;
-
-    for(int t = 0; t < NUM_TRACKS; t++)
-    {
-        if(proxyPids[t]) delete proxyPids[t];
-    }
-    delete [] proxyPids;
-
     for(int i = 0; i < numResources; i++)
     {
         delete [] resources[i];
@@ -175,44 +253,32 @@ Atl06Proxy::~Atl06Proxy (void)
  *----------------------------------------------------------------------------*/
 void* Atl06Proxy::proxyThread (void* parm)
 {
-    /* Get Thread Info */
-    info_t* info = (info_t*)parm;
-    Atl06Proxy* proxy = info->proxy;
+    (void)parm;
 
-    /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl06_proxy", "{\"resource\":\"%s\"}", info->reader->asset->getName(), info->reader->resource, info->track);
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
-
-    try
+    while(proxyActive)
     {
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Failure during processing of resource %s track %d: %s", info->reader->resource, info->track, e.what());
-        reader->generateExceptionStatus(e.code(), e.what());
-    }
-
-    /* Handle Global Reader Updates */
-    proxy->threadMut.lock();
-    {
-        /* Count Completion */
-        proxy->numComplete++;
-        if(reader->numComplete == proxy->threadCount)
+        atl06_rqst_t rqst;
+        int recv_status = rqstSub->receiveCopy(&rqst, sizeof(atl06_rqst_t), SYS_TIMEOUT);
+        if(recv_status > 0)
         {
-            mlog(INFO, "Completed processing resource %s", info->proxy->resource);
+            Atl06Proxy* proxy = rqst.proxy;
+            const char* resource = rqst.proxy->resources[rqst.resource_index];
 
-            /* Indicate End of Data */
-            proxy->signalComplete();
+            try
+            {
+                mlog(CRITICAL, "Processing resource: %s\n", resource);
+            }
+            catch(const RunTimeException& e)
+            {
+                mlog(e.level(), "Failure processing request: %s", e.what());
+            }
+        }
+        else if(recv_status != MsgQ::STATE_TIMEOUT)
+        {
+            mlog(CRITICAL, "Failed to receive request: %d", recv_status);
+            break;
         }
     }
-    proxy->threadMut.unlock();
 
-    /* Clean Up Info */
-    delete info;
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
-
-    /* Return */
     return NULL;
 }

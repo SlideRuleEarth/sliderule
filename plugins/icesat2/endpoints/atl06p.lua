@@ -35,6 +35,14 @@ for i,resource in ipairs(resources) do
 
 end
 
+-- While not done...
+--  Get Available Nodes (as list)
+--  Pass off processing resources to each of the nodes
+--  As nodes complete, unlock them and request additional locks for the remaining resources
+
+-- Need maximum number of worker threads
+
+
 local response, status = netsvc.get(orchestrator.."/discovery/lock", false, false, '{"service":"sliderule", "nodesNeeded":1, "timeout":600}')
 if status then
     print(response)

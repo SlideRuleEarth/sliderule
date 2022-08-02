@@ -36,17 +36,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
-#include "List.h"
 #include "LuaObject.h"
-#include "RecordObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "StringLib.h"
-
-#include "GTArray.h"
-#include "lua_parms.h"
 
 /******************************************************************************
  * ATL03 READER
@@ -65,7 +57,7 @@ class Atl06Proxy: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int MAX_REQUEST_PARAMETER_SIZE = 0x2000000; // 32MB
-        static const int CPU_LOAD_FACTOR = 2; // number of concurrent requests per cpu
+        static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
 
         static const char* OBJECT_TYPE;
 
@@ -73,7 +65,10 @@ class Atl06Proxy: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
+        static void     init        (void);
+        static void     deinit      (void);
+        static int      luaInit     (lua_State* L);
+        static int      luaCreate   (lua_State* L);
 
     private:
 
@@ -83,22 +78,19 @@ class Atl06Proxy: public LuaObject
 
         typedef struct {
             Atl06Proxy*     proxy;
-            const char*     resource;
-        } info_t;
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+            int             resource_index;
+        } atl06_rqst_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
-        Thread**            proxyPids;
-        Mutex               threadMut;
-        int                 threadCount;
-        int                 numComplete;
+        static Publisher*   rqstPub;
+        static Subscriber*  rqstSub;
+        static bool         proxyActive;
+        static Thread**     proxyPids; // thread pool
+        static Mutex        proxyMut;
+        static int          threadPoolSize;
 
         const char**        resources;
         int                 numResources;
@@ -109,7 +101,7 @@ class Atl06Proxy: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl06Proxy              (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* outq_name, int _num_threads);
+                            Atl06Proxy              (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* outq_name);
                             ~Atl06Proxy             (void);
 
         static void*        proxyThread             (void* parm);
