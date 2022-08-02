@@ -47,11 +47,12 @@ jobs:
         git checkout version1.8 # switch to the version 1.8 branch
         mkdir aws_sdk_build
         cd aws_sdk_build
+        pwd
 
     - name: AWS build libraries
       run: |
         #cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
-        cmake -Hsliderule/aws-sdk-cpp -B. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF 
+        cmake -H../aws-sdk-cpp -B. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF 
         make
         pwd
         sudo make install
