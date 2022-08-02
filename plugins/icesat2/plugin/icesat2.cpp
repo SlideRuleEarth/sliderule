@@ -67,14 +67,15 @@ int icesat2_version (lua_State* L)
 int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
-        {"atl03",           Atl03Reader::luaCreate},
-        {"atl03indexer",    Atl03Indexer::luaCreate},
-        {"atl06",           Atl06Dispatch::luaCreate},
-        {"atl06proxy",      Atl06Proxy::luaCreate},
-        {"ut_atl06",        UT_Atl06Dispatch::luaCreate},
-        {"ut_atl03",        UT_Atl03Reader::luaCreate},
-        {"version",         icesat2_version},
-        {NULL,              NULL}
+        {"atl03",               Atl03Reader::luaCreate},
+        {"atl03indexer",        Atl03Indexer::luaCreate},
+        {"atl06",               Atl06Dispatch::luaCreate},
+        {"atl06proxy",          Atl06Proxy::luaCreate},
+        {"start_atl06_proxy",   Atl06Proxy::luaInit},
+        {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
+        {"ut_atl03",            UT_Atl03Reader::luaCreate},
+        {"version",             icesat2_version},
+        {NULL,                  NULL}
     };
 
     /* Set Library */
