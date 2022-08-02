@@ -150,7 +150,14 @@ int LuaLibrarySys::lsys_version (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_quit (lua_State* L)
 {
-    setinactive();
+    /* Get errors reported by lua app */
+    int errors = 0;
+    if(lua_isnumber(L, 1))
+    {
+        errors = lua_tonumber(L, 1);
+    }
+
+    setinactive( errors );
 
     /* Return Status to Lua */
     lua_pushboolean(L, true);

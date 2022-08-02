@@ -95,6 +95,7 @@
 void    initcore        (void);
 void    deinitcore      (void);
 bool    checkactive     (void);
-void    setinactive     (void);
+void    setinactive     (int errors = 0);
+int     geterrors       (void);
 
 #endif  /* __corepkg__ */

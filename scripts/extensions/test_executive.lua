@@ -200,6 +200,7 @@ local function report ()
         print("Total number of errors: " .. tostring(total_errors))
         print("*********************************")
     end
+    return total_errors
 end
 
 

@@ -34,7 +34,7 @@ DEVCFG += -DUSE_NETSVC_PACKAGE=ON
 DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
 
 development-config: prep ## configure make for debug version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) $(ROOT)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
 
 PYTHONCFG  = -DPYTHON_BINDINGS=ON
 PYTHONCFG += -DUSE_H5_PACKAGE=ON
@@ -67,6 +67,10 @@ scan: prep ## perform static analysis
 asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd $(BUILD); make
+
+ctags: prep ## generate ctags
+	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)
+	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
 
 install: ## install sliderule to system
 	make -C $(BUILD) install

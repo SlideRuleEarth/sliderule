@@ -27,8 +27,6 @@ if(NOT CMAKE_BUILD_PLATFORM)
 endif()
 
 
-set(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
-
 
 ###################
 # Project Options #
