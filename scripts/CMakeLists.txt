@@ -32,6 +32,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/json.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/packet.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/prettyprint.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/service_registry.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/test_executive.lua
     DESTINATION
         ${CONFDIR}

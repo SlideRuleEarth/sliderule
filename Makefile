@@ -1,11 +1,5 @@
 ROOT = $(shell pwd)
 BUILD = $(ROOT)/build
-STAGE = $(ROOT)/stage
-SERVER_BUILD_DIR = $(BUILD)/sliderule
-PLUGIN_BUILD_DIR = $(BUILD)/plugin
-SERVER_STAGE_DIR = $(STAGE)/sliderule
-MONITOR_STAGE_DIR = $(STAGE)/monitor
-ORCHESTRATOR_STAGE_DIR = $(STAGE)/orchestrator
 
 # when using the llvm toolchain to build the source
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -104,127 +98,14 @@ testpy: ## run python binding test
 	cp scripts/systests/coro.py $(BUILD)
 	cd $(BUILD); /usr/bin/python3 coro.py
 
-###################
-# SlideRule Targets
-###################
-
-SLIDERULE_DOCKER_TAG ?= icesat2sliderule/sliderule:latest
-
-SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
-SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
-SLIDERULECFG += -DUSE_H5_PACKAGE=ON
-SLIDERULECFG += -DUSE_NETSVC_PACKAGE=ON
-SLIDERULECFG += -DUSE_GEOTIFF_PACKAGE=ON
-SLIDERULECFG += -DUSE_LEGACY_PACKAGE=OFF
-SLIDERULECFG += -DUSE_CCSDS_PACKAGE=OFF
-
-sliderule: ## build the server using the local configuration
-	make -j4 -C $(SERVER_BUILD_DIR)
-	make -C $(SERVER_BUILD_DIR) install
-	make -j4 -C $(PLUGIN_BUILD_DIR)
-	make -C $(PLUGIN_BUILD_DIR) install
-	cp targets/icesat2-sliderule-docker/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/earth_data_auth.lua $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/service_registry.lua $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/proxy.lua $(SERVER_STAGE_DIR)/etc/sliderule/api
-
-sliderule-config-debug: ## configure the server for running locally with debug symbols
-	mkdir -p $(SERVER_BUILD_DIR)
-	mkdir -p $(PLUGIN_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
-	cd $(PLUGIN_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
-
-sliderule-config-release: ## configure server to run release version locally (useful for using valgrind)
-	mkdir -p $(SERVER_BUILD_DIR)
-	mkdir -p $(PLUGIN_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
-	cd $(PLUGIN_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
-
-sliderule-config-asan: ## configure server to run with address sanitizer locally
-	mkdir -p $(SERVER_BUILD_DIR)
-	mkdir -p $(PLUGIN_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)
-	cd $(PLUGIN_BUILD_DIR); export CC=clang; export CXX=clang++; cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
-
-sliderule-run-node: ## run the server locally as node
-	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/node.json
-
-sliderule-run-proxy: ## run the server locally as proxy
-	IPV4=$(MYIP) $(SERVER_STAGE_DIR)/bin/sliderule targets/icesat2-sliderule-docker/server.lua targets/icesat2-sliderule-docker/proxy.json
-
-sliderule-docker: distclean ## build the server docker container
-	# build and install sliderule into staging
-	mkdir -p $(SERVER_BUILD_DIR)
-	cd $(SERVER_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) -DRUNTIMEDIR=/usr/local/etc/sliderule $(ROOT)
-	make -j4 $(SERVER_BUILD_DIR)
-	make -C $(SERVER_BUILD_DIR) install
-	# build and install plugin into staging
-	mkdir -p $(PLUGIN_BUILD_DIR)
-	cd $(PLUGIN_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(ROOT)/plugins/icesat2
-	make -j4 $(PLUGIN_BUILD_DIR)
-	make -C $(PLUGIN_BUILD_DIR) install
-	# copy over dockerfile
-	cp targets/icesat2-sliderule-docker/Dockerfile $(SERVER_STAGE_DIR)
-	cp targets/icesat2-sliderule-docker/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/server.lua $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/node.json $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/proxy.json $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/earth_data_auth.lua $(SERVER_STAGE_DIR)/etc/sliderule
-	cp targets/icesat2-sliderule-docker/service_registry.lua $(SERVER_STAGE_DIR)/etc/sliderule
-	# build image
-	cd $(SERVER_STAGE_DIR); docker build -t $(SLIDERULE_DOCKER_TAG) .
-
-sliderule-docker-run: ## run docker compose to bring up sliderule containers
-	docker-compose -n sliderule up
-
-##################
-# Monitor Targets
-##################
-
-MONITOR_DOCKER_TAG ?= icesat2sliderule/monitor:latest
-
-monitor-docker: distclean ## build monitor docker image
-	mkdir -p $(MONITOR_STAGE_DIR)
-	cp targets/icesat2-monitor-docker/* $(MONITOR_STAGE_DIR)
-	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
-	cd $(MONITOR_STAGE_DIR); docker build -t $(MONITOR_DOCKER_TAG) .
-
-monitor-docker-run: ## run monitor docker container
-	docker run -it --rm --name=monitor -p 3000:3000 -p 3100:3100 -p 9090:9090 --entrypoint /usr/local/etc/docker-entrypoint.sh $(MONITOR_DOCKER_TAG)
-
-#######################
-# Orhcestrator Targets
-#######################
-
-ORCHESTRATOR_DOCKER_TAG ?= icesat2sliderule/orchestrator:latest
-
-orchestrator-docker: distclean ## build orchestrator docker image
-	mkdir -p $(ORCHESTRATOR_STAGE_DIR)
-	cp targets/icesat2-orchestrator-docker/* $(ORCHESTRATOR_STAGE_DIR)
-	cd $(ORCHESTRATOR_STAGE_DIR); docker build -t $(ORCHESTRATOR_DOCKER_TAG) .
-
-orchestrator-docker-run: ## run orchestrator docker container
-	docker run -it --rm --name=orchestrator -p 8050:8050 $(ORCHESTRATOR_DOCKER_TAG)
-
-####################
-# Global Targets
-####################
-
 prep: ## create necessary build directories
 	mkdir -p $(BUILD)
-	mkdir -p $(SERVER_BUILD_DIR)
-	mkdir -p $(PLUGIN_BUILD_DIR)
 
 clean: ## clean last build
 	- make -C $(BUILD) clean
-	- make -C $(SERVER_BUILD_DIR) clean
-	- make -C $(PLUGIN_BUILD_DIR) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
-	- rm -Rf $(STAGE)
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
