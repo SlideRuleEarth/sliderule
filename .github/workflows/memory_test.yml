@@ -29,14 +29,36 @@ jobs:
 
     steps:
     - name: Install dependencies
-      run: sudo apt install build-essential libreadline-dev liblua5.3-dev valgrind
+      run: |
+        sudo apt install build-essential libreadline-dev liblua5.3-dev valgrind                     #basic config
+        sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libtiff-dev    #aws geotiff h5 pistache
+        sudo add-apt-repository ppa:pistache+team/unstable    #pistache
+        sudo apt update                                       #pistache
+        sudo apt install libpistache-dev                      #pistache
 
-    - name: Checkout repository
+    - name: AWS clone repository
+      run: |
+        cd ..
+        git clone https://github.com/aws/aws-sdk-cpp.git
+        cd aws-sdk-cpp
+        git checkout version1.8 # switch to the version 1.8 branch
+        mkdir aws_sdk_build
+        cd aws_sdk_build
+
+    - name: AWS build libraries
+      run: |
+        #cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF
+        cmake -H../aws-sdk-cpp -B. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF 
+        make
+        sudo make install
+        cd ../../sliderule
+
+    - name: Checkout sliderule repository
       uses: actions/checkout@v2
 
     - name: Build sliderule
       run: |
-       make config
+       make development-config
        make
        sudo make install
        chmod +x scripts/systests/memtest.sh
