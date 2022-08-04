@@ -159,11 +159,14 @@ HttpClient::~HttpClient(void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-const char* HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name)
+HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name)
 {
     connection_t* connection = NULL;
     Subscriber* inq = NULL;
-    char* response = NULL;
+    rsps_t rsps = {
+        .response = NULL,
+        .size = 0
+    };
 
     /* Allocate and Initialize Connection */
     connection = new connection_t;
@@ -237,16 +240,17 @@ const char* HttpClient::request (EndpointObject::verb_t verb, const char* resour
         if(total_response_length > 0)
         {
             /* Allocate and Build Response Array */
-            response = new char [total_response_length + 1];
+            rsps.size = total_response_length + 1;
+            rsps.response = new char [rsps.size];
             List<Subscriber::msgRef_t>::Iterator iterator(responses);
             int index = 0;
             for(int i = 0; i < responses.length(); i++)
             {
-                LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
+                LocalLib::copy(&rsps.response[index], iterator[i].data, iterator[i].size);
                 index += iterator[i].size;
                 inq->dereference((Subscriber::msgRef_t&)iterator[i]);
             }
-            response[index] = '\0';
+            rsps.response[index] = '\0';
         }
     }
 
@@ -254,7 +258,7 @@ const char* HttpClient::request (EndpointObject::verb_t verb, const char* resour
     if(inq) delete inq;
 
     /* return response */
-    return response;
+    return rsps;
 }
 
 /*----------------------------------------------------------------------------
@@ -520,20 +524,18 @@ int HttpClient::luaRequest (lua_State* L)
         }
 
         /* Make Request */
-        const char* response = lua_obj->request(verb, resource, data, outq_name);
-        if(response)
+        HttpClient::rsps_t rsps = lua_obj->request(verb, resource, data, outq_name);
+        if(rsps.response)
         {
             /* Return Response String */
-            int total_response_length = StringLib::size(response, RSPS_LUA_BUF_LEN);
-            lua_pushlstring(L, response, total_response_length + 1);
-            delete [] response;
+            lua_pushlstring(L, rsps.response, rsps.size);
+            delete [] rsps.response;
             num_rets++;
         }
 
         /* Set Success */
-        if(response || outq_name)
+        if(rsps.response || outq_name)
         {
-            printf("%s | %s\n", response, outq_name);
             status = true;
         }
     }

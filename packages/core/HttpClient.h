@@ -68,18 +68,27 @@ class HttpClient: public LuaObject
         static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            char* response;
+            long size;
+        } rsps_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate       (lua_State* L);
+        static int      luaCreate       (lua_State* L);
 
-                            HttpClient      (lua_State* L, const char* _ip_addr, int _port);
-                            HttpClient      (lua_State* L, const char* url);
-                            ~HttpClient     (void);
+                        HttpClient      (lua_State* L, const char* _ip_addr, int _port);
+                        HttpClient      (lua_State* L, const char* url);
+                        ~HttpClient     (void);
 
-        const char*         request         (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name=NULL);
-        const char*         getIpAddr       (void);
-        int                 getPort         (void);
+        rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name=NULL);
+        const char*     getIpAddr       (void);
+        int             getPort         (void);
 
     private:
 

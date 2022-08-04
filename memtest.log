@@ -1,0 +1,208 @@
+==113301== Memcheck, a memory error detector
+==113301== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==113301== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
+==113301== Command: sliderule scripts/selftests/test_runner.lua
+==113301== Parent PID: 113300
+==113301== 
+==113301== 
+==113301== FILE DESCRIPTORS: 32 open at exit.
+==113301== Open file descriptor 16:
+==113301==    at 0x52BF32B: eventfd (syscall-template.S:78)
+==113301==    by 0x4F1EE2F: Pistache::NotifyFd::bind(Pistache::Polling::Epoll&)::{lambda()#1}::operator()() const [clone .isra.0] (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F1F082: Pistache::NotifyFd::bind(Pistache::Polling::Epoll&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F389E9: Pistache::Tcp::Listener::runThreaded() (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F3455F: Pistache::Http::Endpoint::serveThreaded() (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x2E417B: PistacheServer::serverThread(void*) (in /usr/local/bin/sliderule-1.4.6)
+==113301==    by 0x48F4608: start_thread (pthread_create.c:477)
+==113301==    by 0x52BF132: clone (clone.S:95)
+==113301== 
+==113301== Open file descriptor 15:
+==113301==    at 0x52BFE5B: timerfd_create (syscall-template.S:78)
+==113301==    by 0x4F33F31: Pistache::Http::TransportImpl::registerPoller(Pistache::Polling::Epoll&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F23414: Pistache::Aio::AsyncImpl::addHandler(std::shared_ptr<Pistache::Aio::Handler> const&, bool) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F3A4F6: Pistache::Tcp::Listener::bind(Pistache::Address const&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F34557: Pistache::Http::Endpoint::serveThreaded() (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x2E417B: PistacheServer::serverThread(void*) (in /usr/local/bin/sliderule-1.4.6)
+==113301==    by 0x48F4608: start_thread (pthread_create.c:477)
+==113301==    by 0x52BF132: clone (clone.S:95)
+==113301== 
+==113301== Open file descriptor 14:
+==113301==    at 0x52BF32B: eventfd (syscall-template.S:78)
+==113301==    by 0x4F1EE2F: Pistache::NotifyFd::bind(Pistache::Polling::Epoll&)::{lambda()#1}::operator()() const [clone .isra.0] (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F1F082: Pistache::NotifyFd::bind(Pistache::Polling::Epoll&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F2917E: Pistache::Tcp::Transport::registerPoller(Pistache::Polling::Epoll&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F33F22: Pistache::Http::TransportImpl::registerPoller(Pistache::Polling::Epoll&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F23414: Pistache::Aio::AsyncImpl::addHandler(std::shared_ptr<Pistache::Aio::Handler> const&, bool) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F3A4F6: Pistache::Tcp::Listener::bind(Pistache::Address const&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F34557: Pistache::Http::Endpoint::serveThreaded() (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x2E417B: PistacheServer::serverThread(void*) (in /usr/local/bin/sliderule-1.4.6)
+==113301==    by 0x48F4608: start_thread (pthread_create.c:477)
+==113301==    by 0x52BF132: clone (clone.S:95)
+==113301== 
+==113301== Open file descriptor 10:
+==113301==    at 0x52BF32B: eventfd (syscall-template.S:78)
+==113301==    by 0x4F1EE2F: Pistache::NotifyFd::bind(Pistache::Polling::Epoll&)::{lambda()#1}::operator()() const [clone .isra.0] (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F1F082: Pistache::NotifyFd::bind(Pistache::Polling::Epoll&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F2450F: Pistache::Aio::AsyncImpl::AsyncImpl(Pistache::Aio::Reactor*, unsigned long, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F2217D: Pistache::Aio::AsyncContext::makeImpl(Pistache::Aio::Reactor*) const (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F21BF3: Pistache::Aio::Reactor::init(Pistache::Aio::ExecutionContext const&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F3A49E: Pistache::Tcp::Listener::bind(Pistache::Address const&) (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x4F34557: Pistache::Http::Endpoint::serveThreaded() (in /usr/local/lib/x86_64-linux-gnu/libpistache.so.0.0.3)
+==113301==    by 0x2E417B: PistacheServer::serverThread(void*) (in /usr/local/bin/sliderule-1.4.6)
+==113301==    by 0x48F4608: start_thread (pthread_create.c:477)
+==113301==    by 0x52BF132: clone (clone.S:95)
+==113301== 
+==113301== Open file descriptor 103: /usr/share/code/v8_context_snapshot.bin
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 57: /usr/share/code/resources/app/node_modules.asar
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 55: /home/jswinski/.config/Code/logs/20220803T074653/ptyhost.log
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 52: /usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 51: /dev/shm/.org.chromium.Chromium.A9IFw3 (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 50: /usr/share/code/resources/app/node_modules.asar
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 49: /dev/shm/.org.chromium.Chromium.1zPFG3 (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 48: /dev/shm/.org.chromium.Chromium.ILwLS2 (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 47: /dev/shm/.org.chromium.Chromium.mMEIrZ (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 46: /dev/shm/.org.chromium.Chromium.iOYYNZ (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 42: /dev/shm/.org.chromium.Chromium.UStD0c (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 40: /dev/shm/.org.chromium.Chromium.X1VRSf (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 39: /dev/shm/.org.chromium.Chromium.y1LDJd (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 38: /dev/shm/.org.chromium.Chromium.dgFFAc (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 37: /dev/shm/.org.chromium.Chromium.lrTIgd (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open AF_UNIX socket 36: <unknown>
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 35: /dev/shm/.org.chromium.Chromium.dJAtgg (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 34: /tmp/.org.chromium.Chromium.lvcDP3 (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 33: /proc/23157/status
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 32: /proc/23157/statm
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 31: /home/jswinski/.config/Code/Dictionaries/en-US-9-0.bdic
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 30: /dev/shm/.org.chromium.Chromium.MYbgQ2 (deleted)
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open AF_UNIX socket 29: <unknown>
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 20: /usr/share/code/v8_context_snapshot.bin
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 3: /home/jswinski/sliderule/sliderule/memtest.log
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 2: /dev/pts/1
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 1: /dev/pts/1
+==113301==    <inherited from parent>
+==113301== 
+==113301== Open file descriptor 0: /dev/pts/1
+==113301==    <inherited from parent>
+==113301== 
+==113301== 
+==113301== HEAP SUMMARY:
+==113301==     in use at exit: 1,924 bytes in 5 blocks
+==113301==   total heap usage: 1,691,968 allocs, 1,691,963 frees, 1,456,572,865 bytes allocated
+==113301== 
+==113301== 36 bytes in 1 blocks are still reachable in loss record 1 of 5
+==113301==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==113301==    by 0x401F5DE: strdup (strdup.c:42)
+==113301==    by 0x400A5A9: _dl_map_object (dl-load.c:2168)
+==113301==    by 0x4015D46: dl_open_worker (dl-open.c:513)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x4015609: _dl_open (dl-open.c:837)
+==113301==    by 0x485C34B: dlopen_doit (dlopen.c:66)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x53009F2: _dl_catch_error (dl-error-skeleton.c:227)
+==113301==    by 0x485CB58: _dlerror_run (dlerror.c:170)
+==113301==    by 0x485C3D9: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==113301==    by 0x26A90E: ldplugins() (in /usr/local/bin/sliderule-1.4.6)
+==113301== 
+==113301== 36 bytes in 1 blocks are still reachable in loss record 2 of 5
+==113301==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==113301==    by 0x400D5B7: _dl_new_object (dl-object.c:196)
+==113301==    by 0x4006E96: _dl_map_object_from_fd (dl-load.c:997)
+==113301==    by 0x400A61A: _dl_map_object (dl-load.c:2236)
+==113301==    by 0x4015D46: dl_open_worker (dl-open.c:513)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x4015609: _dl_open (dl-open.c:837)
+==113301==    by 0x485C34B: dlopen_doit (dlopen.c:66)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x53009F2: _dl_catch_error (dl-error-skeleton.c:227)
+==113301==    by 0x485CB58: _dlerror_run (dlerror.c:170)
+==113301==    by 0x485C3D9: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==113301== 
+==113301== 264 bytes in 1 blocks are still reachable in loss record 3 of 5
+==113301==    at 0x483DD99: calloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==113301==    by 0x401331C: _dl_check_map_versions (dl-version.c:274)
+==113301==    by 0x40160FC: dl_open_worker (dl-open.c:577)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x4015609: _dl_open (dl-open.c:837)
+==113301==    by 0x485C34B: dlopen_doit (dlopen.c:66)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x53009F2: _dl_catch_error (dl-error-skeleton.c:227)
+==113301==    by 0x485CB58: _dlerror_run (dlerror.c:170)
+==113301==    by 0x485C3D9: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==113301==    by 0x26A90E: ldplugins() (in /usr/local/bin/sliderule-1.4.6)
+==113301==    by 0x267813: main (in /usr/local/bin/sliderule-1.4.6)
+==113301== 
+==113301== 1,220 bytes in 1 blocks are still reachable in loss record 5 of 5
+==113301==    at 0x483DD99: calloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==113301==    by 0x400D283: _dl_new_object (dl-object.c:89)
+==113301==    by 0x4006E96: _dl_map_object_from_fd (dl-load.c:997)
+==113301==    by 0x400A61A: _dl_map_object (dl-load.c:2236)
+==113301==    by 0x4015D46: dl_open_worker (dl-open.c:513)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x4015609: _dl_open (dl-open.c:837)
+==113301==    by 0x485C34B: dlopen_doit (dlopen.c:66)
+==113301==    by 0x5300927: _dl_catch_exception (dl-error-skeleton.c:208)
+==113301==    by 0x53009F2: _dl_catch_error (dl-error-skeleton.c:227)
+==113301==    by 0x485CB58: _dlerror_run (dlerror.c:170)
+==113301==    by 0x485C3D9: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==113301== 
+==113301== LEAK SUMMARY:
+==113301==    definitely lost: 0 bytes in 0 blocks
+==113301==    indirectly lost: 0 bytes in 0 blocks
+==113301==      possibly lost: 0 bytes in 0 blocks
+==113301==    still reachable: 1,556 bytes in 4 blocks
+==113301==         suppressed: 368 bytes in 1 blocks
+==113301== 
+==113301== For lists of detected and suppressed errors, rerun with: -s
+==113301== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 1 from 1)

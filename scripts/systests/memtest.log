@@ -1,0 +1,7 @@
+==113159== Memcheck, a memory error detector
+==113159== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==113159== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
+==113159== Command: sliderule scripts/selftests/test_runner.lua
+==113159== Parent PID: 113158
+==113159== 
+==113159== FATAL: can't open suppressions file "scripts/systests/memtest.supp"
