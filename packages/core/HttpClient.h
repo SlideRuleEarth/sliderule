@@ -36,8 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "List.h"
@@ -61,6 +59,7 @@ class HttpClient: public LuaObject
         static const int MAX_RQST_DATA_LEN  = 65536;
         static const int RSPS_READ_BUF_LEN  = 65536;
         static const int RSPS_LUA_BUF_LEN   = 65536;
+        static const int MAX_URL_LEN        = 1024;
         static const int MAX_TIMEOUTS       = 5;
         static const int MAX_DIGITS         = 10;
 
@@ -75,9 +74,10 @@ class HttpClient: public LuaObject
         static int          luaCreate       (lua_State* L);
 
                             HttpClient      (lua_State* L, const char* _ip_addr, int _port);
+                            HttpClient      (lua_State* L, const char* url);
                             ~HttpClient     (void);
 
-        const char*         request         (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name);
+        const char*         request         (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name=NULL);
         const char*         getIpAddr       (void);
         int                 getPort         (void);
 

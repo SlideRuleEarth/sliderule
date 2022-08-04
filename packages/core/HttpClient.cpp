@@ -94,6 +94,48 @@ HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+HttpClient::HttpClient(lua_State* L, const char* url):
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+{
+    // Initial Settings
+    active = false;
+    ipAddr = NULL;
+    port = -1;
+
+    // Parse URL
+    char url_buf[MAX_URL_LEN];
+    StringLib::copy(url_buf, url, MAX_URL_LEN);
+    char* proto_term = StringLib::find(url_buf, "://", MAX_URL_LEN);
+    if(proto_term)
+    {
+        char* proto = url_buf;
+        char* _ip_addr = proto_term + 3;
+        *proto_term = '\0';
+        if((_ip_addr - proto) < MAX_URL_LEN)
+        {
+            char* ip_addr_term = StringLib::find(_ip_addr, ":", MAX_URL_LEN);
+            if(ip_addr_term)
+            {
+                char* _port_str = ip_addr_term + 1;
+                *_ip_addr = '\0';
+                if(_port_str)
+                {
+                    long val;
+                    if(StringLib::str2long(_port_str, &val))
+                    {
+                        active = true;
+                        ipAddr = StringLib::duplicate(_ip_addr);
+                        port = val;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 HttpClient::~HttpClient(void)

@@ -195,7 +195,7 @@ int Atl06Proxy::luaCreate (lua_State* L)
         const char* orchestrator_url = getLuaString(L, 4);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name));
+        return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name, orchestrator_url));
     }
     catch(const RunTimeException& e)
     {
@@ -275,14 +275,16 @@ void* Atl06Proxy::proxyThread (void* parm)
         if(recv_status > 0)
         {
             Atl06Proxy* proxy = rqst.proxy;
+            HttpClient orchestrator(NULL, rqst.proxy->orchestratorURL);
             const char* resource = rqst.proxy->resources[rqst.resource_index];
 
             try
             {
+                /* Get Lock from Orchestrator */
                 mlog(INFO, "Processing resource: %s", resource);
-
-                // get lock from orchestrator
-
+                SafeString orch_rqst_data("{'service':'test', 'nodesNeeded': 1, 'timeout': %d}", NODE_LOCK_TIMEOUT);
+                const char* rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString());
+                print2term("%s\n", rsps);
                 // pass request to node
 
                 // stream response back to queue
