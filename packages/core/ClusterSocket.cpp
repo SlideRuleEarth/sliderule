@@ -137,6 +137,33 @@ ClusterSocket::~ClusterSocket(void)
     delete [] sockqname;
     delete pubsockq;
     if(subsockq) delete subsockq;
+    
+    /* 
+     * If connector thread exits before lost connection is detected
+     * onDisconnect method will not be called and connection 
+     * memory will not be freed. 
+     * This cleanup code must be called after the connector thread 
+     * has been distroyed to avoid race condition.
+     */
+    read_connection_t*  readCon;
+    write_connection_t* writeCon;
+
+    int fd = read_connections.first( &readCon );
+    while (fd != (int)INVALID_KEY)
+    {
+        SockLib::sockclose(fd);        
+        if(readCon->payload) delete [] readCon->payload;
+        if(readCon) delete readCon;
+        fd = read_connections.next( &readCon );
+    } 
+
+    fd = write_connections.first( &writeCon );
+    while (fd != (int)INVALID_KEY)
+    {
+        SockLib::sockclose(fd);        
+        if(writeCon) delete writeCon;
+        fd = write_connections.next( &writeCon );
+    } 
 }
 
 /*----------------------------------------------------------------------------
@@ -599,7 +626,7 @@ int ClusterSocket::onConnect(int fd)
         if(!write_connections.add(fd, connection, false))
         {
             mlog(CRITICAL, "Cluster socket failed to register file descriptor for read connection due to duplicate entry");
-            if(role == WRITER && protocol == BUS) delete connection->subconnq;
+            if(role == WRITER && protocol == BUS && connection->subconnq) delete connection->subconnq;
             status = -1;
         }
     }
@@ -636,7 +663,7 @@ int ClusterSocket::onDisconnect(int fd)
         if(role == WRITER)
         {
             write_connection_t* connection = write_connections[fd];
-            if(protocol == BUS) delete connection->subconnq;
+            if(protocol == BUS && connection->subconnq) delete connection->subconnq;
             delete connection;
             if(!write_connections.remove(fd))
             {

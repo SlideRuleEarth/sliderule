@@ -89,6 +89,8 @@ class LuaEngine
                             LuaEngine       (const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
                             ~LuaEngine      (void);
 
+        static void         init            (void);
+        static void         deinit          (void);
         static void         extend          (const char* lib_name, luaOpenLibFunc lib_func);
         static void         indicate        (const char* pkg_name, const char* pkg_version);
         static const char** getPkgList      (void);
@@ -99,6 +101,7 @@ class LuaEngine
         static void         setAttrNum      (lua_State* l, const char* name, double val);
         static void         setAttrStr      (lua_State* l, const char* name, const char* val, int size=0);
         static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);
+        static void         showStack       (lua_State* l, const char* prefix=NULL);
         static const char*  sanitize        (const char* filename);
 
         uint64_t            getEngineId     (void);

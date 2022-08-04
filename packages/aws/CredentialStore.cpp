@@ -171,7 +171,8 @@ int CredentialStore::luaGet(lua_State* L)
             lua_pushstring(L, credential.expiration);
             lua_settable(L, -3);
 
-            return LuaObject::returnLuaStatus(L, true, 2);
+            lua_pushboolean(L, true);
+            return 2;
         }
     }
     catch(const RunTimeException& e)
@@ -179,7 +180,8 @@ int CredentialStore::luaGet(lua_State* L)
         mlog(e.level(), "Error getting credential: %s", e.what());
     }
 
-    return LuaObject::returnLuaStatus(L, false);
+    lua_pushboolean(L, false);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -240,5 +242,6 @@ int CredentialStore::luaPut(lua_State* L)
         mlog(e.level(), "Error putting credential: %s", e.what());
     }
 
-    return LuaObject::returnLuaStatus(L, status);
+    lua_pushboolean(L, status);
+    return 1;
 }

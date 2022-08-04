@@ -1,0 +1,106 @@
+{
+    "block": true,
+    "silent": true,
+
+    "postcfg": [
+        "ttProc1::SET_TT_BINSIZE 1.0",
+        "ttProc2::SET_TT_BINSIZE 1.0",
+        "ttProc3::SET_TT_BINSIZE 1.0"
+    ],
+
+    "source": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1088_20200926080000_P01_01.dat",
+                  "/data/ATL00/ATL00-1026_20200926080000_P01_01.dat",
+                  "/data/ATL00/ATL00-1140_20200926080000_P01_01.dat",
+                  "/data/ATL00/ATL00-1264_20200926080000_P01_01.dat"]
+    },
+
+    "writer": {
+        "format": "META",
+        "file": "scihist.csv"
+    },
+
+    "metric": {
+        "key": "CALCULATED_KEY CDS",
+        "filename": "txrx_dfc.csv",
+	    "ccsds": {
+	        "A_DFC2.HK": [  "MajorFrameCount", "DidNotFinishWritingData_Err", "StartDataCollection", "CmdCnt", "LastCmdOpcode", 
+                            "StrongAltRWS[0]", "StrongAltRWS[1]", "StrongAltRWS[2]", "StrongAltRWW",
+                            "StrongAtmRWS[0]", "StrongAtmRWS[1]", "StrongAtmRWS[2]", "StrongAtmRWW",
+                            "WeakAltRWS[0]", "WeakAltRWS[1]", "WeakAltRWS[2]", "WeakAltRWW",
+                            "WeakAtmRWS[0]", "WeakAtmRWS[1]", "WeakAtmRWS[2]", "WeakAtmRWW",
+                            "LeadingStartTimeTag[0]", "LeadingStartTimeTag[1]", "LeadingStartTimeTag[2]",
+                            "RangeWindowDropout_Err"]
+	    }
+    },
+
+    "pce1_2019_10_12": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1026_20191012220000_P01_01.dat",
+                  "/data/ATL00/ATL00-1072_20191012220000_P01_01.dat",
+                  "/data/ATL00/ATL00-1139_20191012220000_P01_01.dat",
+                  "/data/ATL00/ATL00-1254_20191012220000_P01_01.dat"]
+    },
+
+    "pce1_2019_10_18": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1026_20191018160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1072_20191018160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1139_20191018160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1254_20191018160000_P01_01.dat"]
+    },
+
+    "pce2_2020_09_16": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1026_20200916180000_P01_01.dat",
+                  "/data/ATL00/ATL00-1088_20200916180000_P01_01.dat",
+                  "/data/ATL00/ATL00-1140_20200916180000_P01_01.dat",
+                  "/data/ATL00/ATL00-1264_20200916180000_P01_01.dat"]
+    },
+
+    "pce2_2020_11_26": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1026_20201126060000_P01_01.dat",
+                  "/data/ATL00/ATL00-1088_20201126060000_P01_01.dat",
+                  "/data/ATL00/ATL00-1140_20201126060000_P01_01.dat",
+                  "/data/ATL00/ATL00-1264_20201126060000_P01_01.dat",
+                  "/data/ATL00/ATL00-1026_20201126080000_P01_01.dat",
+                  "/data/ATL00/ATL00-1088_20201126080000_P01_01.dat",
+                  "/data/ATL00/ATL00-1140_20201126080000_P01_01.dat",
+                  "/data/ATL00/ATL00-1264_20201126080000_P01_01.dat"]
+    },
+
+    "pce3_2020_06_09": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1026_20200609160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1104_20200609160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1141_20200609160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1274_20200609160000_P01_01.dat"]
+    },
+
+    "pce3_2020_04_11": {
+        "type": "ATL00",
+        "files": ["/data/ATL00/ATL00-1026_20200411160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1104_20200411160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1141_20200411160000_P01_01.dat",
+                  "/data/ATL00/ATL00-1274_20200411160000_P01_01.dat"]
+    },
+
+    "pce2_first_occurrence": {
+        "type": "ATL00",
+        "start": "2019:257:3:00:0",
+        "stop":  "2019:257:3:20:0",
+        "files": ["/data/ATL00/ATL00-1088_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1026_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1044_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1063_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1099_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1140_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1033_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1061_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1070_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1103_20190914020000_P01_01.dat",
+                  "/data/ATL00/ATL00-1264_20190914020000_P01_01.dat"]
+    }
+}

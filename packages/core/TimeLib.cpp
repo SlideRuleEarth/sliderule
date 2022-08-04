@@ -124,7 +124,8 @@ void TimeLib::init(void)
  *----------------------------------------------------------------------------*/
 void TimeLib::deinit(void)
 {
-    if(heartBeat) delete heartBeat;
+    if(heartBeat)   delete heartBeat;
+    if(leapSeconds) delete [] leapSeconds;
 }
 
 /*----------------------------------------------------------------------------

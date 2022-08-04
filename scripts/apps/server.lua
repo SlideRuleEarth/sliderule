@@ -37,8 +37,6 @@ if __aws__ then
 end
 
 -- Configure and Run Server --
-server = core.httpd(port)
-server:name("HttpServer")
-endpoint = core.endpoint()
-endpoint:name("LuaEndpoint")
+server = core.httpd(port):name("HttpServer")
+endpoint = core.endpoint():name("LuaEndpoint")
 server:attach(endpoint, "/source")

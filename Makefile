@@ -1,15 +1,40 @@
 ROOT = $(shell pwd)
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
-RUNDIR = /usr/local/etc/sliderule
+BUILD = $(ROOT)/build
 
-FULLCFG  = -DENABLE_TRACING=ON
-FULLCFG += -DUSE_AWS_PACKAGE=ON
-FULLCFG += -DUSE_CCSDS_PACKAGE=ON
-FULLCFG += -DUSE_GEOTIFF_PACKAGE=ON
-FULLCFG += -DUSE_H5_PACKAGE=ON
-FULLCFG += -DUSE_LEGACY_PACKAGE=ON
-FULLCFG += -DUSE_NETSVC_PACKAGE=ON
-FULLCFG += -DUSE_PISTACHE_PACKAGE=ON
+# when using the llvm toolchain to build the source
+CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+
+# for a MacOSX host to have this ip command you must install homebrew(see https://brew.sh/) then run 'brew install iproute2mac' on your mac host
+MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
+
+######################
+# Development Targets
+######################
+
+all: default-build
+
+default-build: ## default build of sliderule
+	make -j4 -C $(BUILD)
+
+config: release-config ## configure make for default build
+
+release-config: prep ## configure make for release version of sliderule binary
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+
+debug-config: prep ## configure make for release version of sliderule binary
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
+
+DEVCFG  = -DENABLE_TRACING=ON
+DEVCFG += -DUSE_AWS_PACKAGE=ON
+DEVCFG += -DUSE_CCSDS_PACKAGE=ON
+DEVCFG += -DUSE_GEOTIFF_PACKAGE=ON
+DEVCFG += -DUSE_H5_PACKAGE=ON
+DEVCFG += -DUSE_LEGACY_PACKAGE=ON
+DEVCFG += -DUSE_NETSVC_PACKAGE=ON
+DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
+
+development-config: prep ## configure make for debug version of sliderule binary
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
 
 PYTHONCFG  = -DPYTHON_BINDINGS=ON
 PYTHONCFG += -DUSE_H5_PACKAGE=ON
@@ -20,79 +45,76 @@ PYTHONCFG += -DUSE_GEOTIFF_PACKAGE=ON
 PYTHONCFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
 PYTHONCFG += -DH5CORO_THREAD_POOL_SIZE=0
 PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
+PYTHONCFG += -DICESAT2_PLUGIN_LIBPATH=/usr/local/etc/sliderule/icesat2.so
+PYTHONCFG += -DICESAT2_PLUGIN_INCPATH=/usr/local/include/sliderule
 
-all: default-build
+python-config: prep ## configure make for python bindings
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
 
-default-build:
-	make -j4 -C build
+library-config: prep ## configure make for shared library libsliderule.so
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
 
-config: release-config
+atlas-config: prep ## configure make for atlas plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/atlas
 
-# release version of sliderule binary
-release-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release -DPACKAGE_FOR_DEBIAN=ON $(ROOT)
+icesat2-config: prep ## configure make for icesat2 plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
 
-# debug version of sliderule binary
-development-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Debug $(FULLCFG) $(ROOT)
+scan: prep ## perform static analysis
+	cd $(BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
+	cd $(BUILD); scan-build -o scan-results make
 
-# python bindings
-python-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
+asan: prep ## build address sanitizer debug version of sliderule binary
+	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
+	cd $(BUILD); make
 
-# shared library libsliderule.so
-library-config: prep
-	cd build; cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+ctags: prep ## generate ctags
+	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)
+	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
 
-# static analysis
-scan: prep
-	cd build; export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(FULLCFG) $(ROOT)
-	cd build; scan-build -o scan-results make
+install: ## install sliderule to system
+	make -C $(BUILD) install
 
-# address sanitizer debug build of sliderule binary
-asan: prep
-	cd build; export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(FULLCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
-	cd build; make
+uninstall: ## uninstall most recent install of sliderule from system
+	xargs rm < $(BUILD)/install_manifest.txt
 
-install:
-	make -C build install
-
-uninstall:
-	xargs rm < build/install_manifest.txt
-
-package: distclean release-config
-	make -C build package
-	# sudo dpkg -i build/sliderule-X.Y.Z.deb
-
-prep:
-	mkdir -p build
-
-clean:
-	make -C build clean
-
-distclean:
-	- rm -Rf build
-
-testmem:
+testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
 
-testcpu:
+testcpu: ## run cpu test on sliderule
 	valgrind --tool=callgrind sliderule $(testcase)
 	# kcachegrind callgrind.out.<pid>
 
-testheap:
+testheap: ## run heap test on sliderule
 	valgrind --tool=massif --time-unit=B --pages-as-heap=yes sliderule $(testcase)
 	# ms_print massif.out.<pid>
 
-testheaptrack:
+testheaptrack: ## analyze results of heap test
 	# heaptrack sliderule $(testcase)
 	# heaptrack_gui heaptrack.sliderule.<pid>.gz
 
-testcov:
-	lcov -c --directory build --output-file build/coverage.info
-	genhtml build/coverage.info --output-directory build/coverage_html
-	# firefox build/coverage_html/index.html
+testcov: ## analyze results of test coverage report
+	lcov -c --directory $(BUILD) --output-file $(BUILD)/coverage.info
+	genhtml $(BUILD)/coverage.info --output-directory $(BUILD)/coverage_html
+	# firefox $(BUILD)/coverage_html/index.html
 
-testpy:
-	cp scripts/tests/coro.py build
-	cd build; /usr/bin/python3 coro.py
+testpy: ## run python binding test
+	cp scripts/systests/coro.py $(BUILD)
+	cd $(BUILD); /usr/bin/python3 coro.py
+
+prep: ## create necessary build directories
+	mkdir -p $(BUILD)
+
+clean: ## clean last build
+	- make -C $(BUILD) clean
+
+distclean: ## fully remove all non-version controlled files and directories
+	- rm -Rf $(BUILD)
+
+help: ## that's me!
+	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
+	@printf "\033[37m%-30s\033[0m %s\n" "# Makefile Help                                                                          |"
+	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
+	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
+	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+

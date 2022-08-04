@@ -405,8 +405,11 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
  *----------------------------------------------------------------------------*/
 void SockLib::sockclose(int fd)
 {
-    shutdown(fd, SHUT_RDWR);
-    close(fd);
+    if( fd != INVALID_RC)
+    {
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+    }
 }
 
 /*----------------------------------------------------------------------------

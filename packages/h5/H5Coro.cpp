@@ -3268,11 +3268,11 @@ void H5Coro::deinit (void)
         {
             delete readerPids[t];
         }
-        delete [] readerPids;
-        delete rqstSub;
+        if(readerPids) delete [] readerPids;
+        if(rqstSub) delete rqstSub;
     }
 
-    delete rqstPub;
+    if(rqstPub) delete rqstPub;
 }
 
 /*----------------------------------------------------------------------------

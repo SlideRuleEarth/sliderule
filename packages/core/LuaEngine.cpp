@@ -157,6 +157,42 @@ LuaEngine::~LuaEngine(void)
 }
 
 /*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void LuaEngine::init(void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void LuaEngine::deinit(void)
+{
+    /* Free memory stored in pkgInitTable list */
+    pkgInitTableMutex.lock();
+    {
+        int num_pkgs = pkgInitTable.length();
+        for(int i = 0; i < num_pkgs; i++)
+        {
+            if(pkgInitTable[i].pkg_name)    delete [] pkgInitTable[i].pkg_name;
+            if(pkgInitTable[i].pkg_version) delete [] pkgInitTable[i].pkg_version;
+        }
+    }
+    pkgInitTableMutex.unlock();
+
+    /* Free memory stored libInitTable list */
+    libInitTableMutex.lock();
+    {
+        int num_libs = libInitTable.length();
+        for(int i = 0; i < num_libs ; i++)
+        {
+            if(libInitTable[i].lib_name)  delete [] libInitTable[i].lib_name; 
+        }
+    }
+    libInitTableMutex.unlock();
+}
+
+/*----------------------------------------------------------------------------
  * extend
  *----------------------------------------------------------------------------*/
 void LuaEngine::extend(const char* lib_name, luaOpenLibFunc lib_func)
@@ -284,6 +320,41 @@ void LuaEngine::setAttrFunc (lua_State* l, const char* name, lua_CFunction val)
     lua_pushstring(l, name);
     lua_pushcfunction(l, val);
     lua_settable(l, -3);
+}
+
+/*----------------------------------------------------------------------------
+ * showStack
+ *
+ * Note: does not change the stack
+ *----------------------------------------------------------------------------*/
+void LuaEngine::showStack (lua_State* l, const char* prefix)
+{
+    int top = lua_gettop(l);
+
+    if( prefix ) printf("%s, stack depth is: %d\n", prefix, top ); 
+    else         printf("stack depth is: %d\n", top ); 
+
+    for (int i = top; i >= 1; i--)  
+    {  
+        int t = lua_type(l, i);  
+        
+        switch (t) 
+        {  
+            case LUA_TSTRING: 
+                printf("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));  
+                break;  
+            case LUA_TBOOLEAN: 
+                printf("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");  
+                break;  
+            case LUA_TNUMBER: 
+                printf("--%02d-- number: %g\n", i, lua_tonumber(l, i));  
+                break;  
+            default: 
+                printf("--%02d-- %s\n", i, lua_typename(l, t));  
+                break;  
+        }  
+    }  
+    printf("\n");
 }
 
 /*----------------------------------------------------------------------------

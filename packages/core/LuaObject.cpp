@@ -205,7 +205,20 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
 int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return)
 {
     if(!status) lua_pushnil(L);
-    else        lua_pushboolean(L, true);
+    else
+    {
+        if( num_obj_to_return == 1 )
+        {
+            int stack_cnt = lua_gettop(L);
+
+            /* Self object must be on stack */
+            assert(stack_cnt != 0);
+
+            lua_pop(L, stack_cnt - 1);
+            /* Return self as status, allow to chain calls */
+        }
+        else lua_pushboolean(L, true);
+    }
 
     return num_obj_to_return;
 }
@@ -341,6 +354,7 @@ int LuaObject::luaDelete (lua_State* L)
     return 0;
 }
 
+
 /*----------------------------------------------------------------------------
  * luaName
  *----------------------------------------------------------------------------*/
@@ -380,8 +394,11 @@ int LuaObject::luaName(lua_State* L)
         /* Check for Errors */
         if(!status) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to register name: %s", name);
 
-        /* Return Name */
-        lua_pushstring(L, lua_obj->ObjectName);
+        /* Pop name */
+        lua_pop(L, 1);
+
+        /* Stack holds Self */
+
     }
     catch(const RunTimeException& e)
     {
@@ -390,27 +407,6 @@ int LuaObject::luaName(lua_State* L)
     }
 
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaLock
- *----------------------------------------------------------------------------*/
-int LuaObject::luaLock(lua_State* L)
-{
-    try
-    {
-        /* Get Self */
-        LuaObject* lua_obj = getLuaSelf(L, 1);
-
-        /* Lock Self */
-        getLuaObject(L, 1, lua_obj->ObjectType);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error locking object: %s", e.what());
-    }
-
-    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -479,7 +475,6 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         /* Add Base Class Functions */
         LuaEngine::setAttrFunc(L, "name", luaName);
         LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
-        LuaEngine::setAttrFunc(L, "lock", luaLock);
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDelete);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);

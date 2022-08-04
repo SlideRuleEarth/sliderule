@@ -1,0 +1,4 @@
+asset,          format,     path,                           index,          region,     endpoint
+nsidc-s3,       cumulus,    nsidc-cumulus-prod-protected,       empty.index,    us-west-2,  https://s3.us-west-2.amazonaws.com
+atlas-s3,       s3,         icesat2-sliderule/data/ATLAS,       empty.index,    us-west-2,  https://s3.us-west-2.amazonaws.com
+atlas-local,    file,       /data/ATLAS,                        empty.index,    local,      local

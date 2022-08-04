@@ -99,13 +99,14 @@ int S3CacheIODriver::luaCreateCache(lua_State* L)
         /* Create Cache */
         createCache(cache_root, max_files);
 
-        /* Get Object and Write to File */
-        return LuaObject::returnLuaStatus(L, true);
+        lua_pushboolean(L, true);
+        return 1;
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating S3 cache: %s", e.what());
-        return LuaObject::returnLuaStatus(L, false);
+        lua_pushboolean(L, false);
+        return 1;
     }
 }
 
