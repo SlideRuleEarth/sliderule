@@ -184,7 +184,7 @@ void TcpSocket::closeConnection(void)
 {
     if(sock != INVALID_RC)
     {
-        mlog(INFO, "closing connection on socket: %s %d", ip_addr, port);
+        mlog(INFO, "closing connection on socket: %s:%d", ip_addr, port);
         SockLib::sockclose(sock);
         sock = INVALID_RC;
     }

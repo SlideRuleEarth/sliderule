@@ -11,11 +11,11 @@ client = core.http("127.0.0.1", 9081)
 
 -- Unit Test --
 
-rsps, status = client:request("GET", "/", "{}")
-runner.check(status == nil, "failed to report error on unattached endpoint")
+rsps = client:request("GET", "/", "{}")
+runner.check(rsps == nil, "failed to report error on unattached endpoint")
 
-rsps, status = client:request("RAW", "/", "\r\n\r\n")
-runner.check(status == nil, "failed to report error on empty http request")
+rsps = client:request("RAW", "/", "\r\n\r\n")
+runner.check(rsps == nil, "failed to report error on empty http request")
 
 rsps, status = client:request("GET", "/source/health", "{}")
 runner.check(status == true, "failed to remain healthy after invalid requests")

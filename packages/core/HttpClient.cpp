@@ -234,17 +234,20 @@ const char* HttpClient::request (EndpointObject::verb_t verb, const char* resour
             }
         }
 
-        /* Allocate and Build Response Array */
-        response = new char [total_response_length + 1];
-        List<Subscriber::msgRef_t>::Iterator iterator(responses);
-        int index = 0;
-        for(int i = 0; i < responses.length(); i++)
+        if(total_response_length > 0)
         {
-            LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
-            index += iterator[i].size;
-            inq->dereference((Subscriber::msgRef_t&)iterator[i]);
+            /* Allocate and Build Response Array */
+            response = new char [total_response_length + 1];
+            List<Subscriber::msgRef_t>::Iterator iterator(responses);
+            int index = 0;
+            for(int i = 0; i < responses.length(); i++)
+            {
+                LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
+                index += iterator[i].size;
+                inq->dereference((Subscriber::msgRef_t&)iterator[i]);
+            }
+            response[index] = '\0';
         }
-        response[index] = '\0';
     }
 
     /* Delete Subscriber */
@@ -520,14 +523,17 @@ int HttpClient::luaRequest (lua_State* L)
         const char* response = lua_obj->request(verb, resource, data, outq_name);
         if(response)
         {
-            /* Return Respnonse String */
+            /* Return Response String */
             int total_response_length = StringLib::size(response, RSPS_LUA_BUF_LEN);
             lua_pushlstring(L, response, total_response_length + 1);
             delete [] response;
             num_rets++;
         }
-        else
+
+        /* Set Success */
+        if(response || outq_name)
         {
+            printf("%s | %s\n", response, outq_name);
             status = true;
         }
     }
