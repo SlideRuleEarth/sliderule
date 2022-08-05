@@ -161,72 +161,78 @@ HttpClient::~HttpClient(void)
  *----------------------------------------------------------------------------*/
 TcpSocket* HttpClient::make_request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive)
 {
-    /* Calculate Content Length */
-    int content_length = StringLib::size(data, MAX_RQST_DATA_LEN);
-    if(content_length == MAX_RQST_DATA_LEN)
-    {
-        mlog(ERROR, "Http request data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_DATA_LEN);
-        return NULL;
-    }
-
-    /* Set Keep Alive Header */
-    const char* keep_alive_header = "";
-    if(keep_alive) keep_alive_header = "Connection: keep-alive\r\n";
-
-    /* Build Request */
+    TcpSocket* sock = NULL;
     unsigned char* rqst = NULL;
     int rqst_len = 0;
-    if(verb != EndpointObject::RAW)
+
+    try
     {
-        /* Build Request Header */
-        SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
-                            EndpointObject::verb2str(verb),
-                            resource,
-                            getIpAddr(),
-                            LIBID,
-                            keep_alive_header,
-                            content_length);
+        /* Calculate Content Length */
+        int content_length = StringLib::size(data, MAX_RQST_DATA_LEN);
+        if(content_length == MAX_RQST_DATA_LEN)
+        {
+            throw RunTimeException(ERROR, RTE_ERROR, "Http request data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_DATA_LEN);
+        }
+
+        /* Set Keep Alive Header */
+        const char* keep_alive_header = "";
+        if(keep_alive) keep_alive_header = "Connection: keep-alive\r\n";
 
         /* Build Request */
-        int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
-        rqst_len = content_length + hdr_len;
-        rqst = new unsigned char [rqst_len];
-        LocalLib::copy(rqst, rqst_hdr.getString(), hdr_len);
-        LocalLib::copy(&rqst[hdr_len], data, content_length);
+        if(verb != EndpointObject::RAW)
+        {
+            /* Build Request Header */
+            SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
+                                EndpointObject::verb2str(verb),
+                                resource,
+                                getIpAddr(),
+                                LIBID,
+                                keep_alive_header,
+                                content_length);
+
+            /* Build Request */
+            int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
+            rqst_len = content_length + hdr_len;
+            rqst = new unsigned char [rqst_len];
+            LocalLib::copy(rqst, rqst_hdr.getString(), hdr_len);
+            LocalLib::copy(&rqst[hdr_len], data, content_length);
+        }
+        else if(content_length > 0)
+        {
+            /* Build Raw Request */
+            rqst = new unsigned char [content_length];
+            rqst_len = content_length;
+            LocalLib::copy(rqst, data, content_length);
+        }
+        else
+        {
+            /* Invalid Request */
+            throw RunTimeException(ERROR, RTE_ERROR, "Invalid HTTP request - raw requests cannot be null");
+        }
+
+        /* Establish Connection */
+        bool block = false;
+        sock = new TcpSocket(NULL, getIpAddr(), getPort(), false, &block, false);
+        if(sock->isConnected() == false) throw RunTimeException(ERROR, RTE_ERROR, "Failed to connect socket for HTTP request");
+
+        /* Issue Request */
+        int bytes_written = sock->writeBuffer(rqst, rqst_len);
+
+        /* Check Status */
+        if(bytes_written != rqst_len)
+        {
+            throw RunTimeException(ERROR, RTE_ERROR, "Http request failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
+        }
     }
-    else if(content_length > 0)
+    catch(const RunTimeException& e)
     {
-        /* Build Raw Request */
-        rqst = new unsigned char [content_length];
-        rqst_len = content_length;
-        LocalLib::copy(rqst, data, content_length);
-    }
-    else
-    {
-        /* Invalid Request */
-        mlog(ERROR, "Invalid HTTP request - raw requests cannot be null");
-        return NULL;
+        mlog(e.level(), "HTTP Request Failed: %s", e.what());
+        if(sock) delete sock;
+        sock = NULL;
     }
 
-    /* Establish Connection */
-    bool block = false;
-    TcpSocket* sock = new TcpSocket(NULL, getIpAddr(), getPort(), false, &block, false);
-    if(sock->isConnected() == false)
-    {
-        delete [] rqst;
-        return NULL;
-    }
-
-    /* Issue Request */
-    int bytes_written = sock->writeBuffer(rqst, rqst_len);
-    delete [] rqst; // free request
-
-    /* Check Status */
-    if(bytes_written != rqst_len)
-    {
-        mlog(CRITICAL, "Http request failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
-        return NULL;
-    }
+    /* Clean Up */
+    if(rqst) delete [] rqst;
 
     /* Return Success */
     return sock;
