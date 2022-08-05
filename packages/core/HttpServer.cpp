@@ -673,8 +673,11 @@ int HttpServer::onDisconnect(int fd)
     connection_t* connection = connections[fd];
 
     /* Update Metrics */
-    double duration = TimeLib::latchtime() - connection->start_time;
-    EventLib::incrementMetric(metricId, duration);
+    if(metricId != EventLib::INVALID_METRIC)
+    {
+        double duration = TimeLib::latchtime() - connection->start_time;
+        EventLib::incrementMetric(metricId, duration);
+    }
 
     /* Remove Connection */
     if(connections.remove(fd))
