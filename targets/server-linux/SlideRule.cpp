@@ -275,6 +275,9 @@ int main (int argc, char* argv[])
         initpistache();
     #endif
 
+
+    HttpClient hc(NULL, "http://127.0.0.1:8050");
+
     /* Load Plug-ins */
     ldplugins();
 
@@ -299,7 +302,7 @@ int main (int argc, char* argv[])
         #endif
         LocalLib::sleep(1);
     }
-    
+
     int errors = geterrors();
     print2term("\nCore returned %d errors\n", errors);
 

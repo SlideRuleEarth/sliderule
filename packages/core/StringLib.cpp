@@ -548,6 +548,40 @@ bool StringLib::match(const char* str1, const char* str2, int len)
 }
 
 /*----------------------------------------------------------------------------
+ * split
+ *----------------------------------------------------------------------------*/
+StringLib::TokenList* StringLib::split(const char* str, int len, char separator, bool strip)
+{
+    TokenList* tokens = new TokenList;
+
+    int i = 0;
+    while(i < len && str[i] != '\0')
+    {
+        /* Create Token */
+        char* token = new char[MAX_STR_SIZE];
+        int t = 0;
+        while( (i < len) && (str[i] != '\0') && (str[i] == separator) ) i++; // find first character
+        while( (i < len) && (str[i] != '\0') && (str[i] != separator) && (t < (MAX_STR_SIZE - 1))) token[t++] = str[i++]; // copy characters in
+        token[t++] = '\0';
+
+        /*  Strip Leading and Trailing Spaces */
+        int s1 = 0, s2 = t-1;
+        if(strip)
+        {
+            while( (s1 < t) && isspace(token[s1]) ) s1++;
+            while( (s2 > s1) && isspace(token[s2]) ) s2--;
+            token[++s2] = '\0';
+        }
+
+        /* Add Token to List */
+        if(t > 1) tokens->add(token);
+        else delete [] token;
+    }
+
+    return tokens;
+}
+
+/*----------------------------------------------------------------------------
  * convertUpper
  *
  *  converts in place

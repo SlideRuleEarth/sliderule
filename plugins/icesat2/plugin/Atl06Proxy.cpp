@@ -180,7 +180,7 @@ int Atl06Proxy::luaCreate (lua_State* L)
             {
                 lua_rawgeti(L, resources_parm_index, i+1);
                 const char* _resource = getLuaString(L, -1);
-                _resources[i] = StringLib::duplicate(_resource);
+                _resources[i] = _resource; // NOT allocated... must be used before constructor returns
                 lua_pop(L, 1);
             }
         }
@@ -221,8 +221,8 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
     assert(_parameters);
     assert(_outq_name);
 
-    resources = _resources;
-    numResources = _num_resources;
+    numRequests = _num_resources;
+    requests = new atl06_rqst_t[numRequests];
     parameters = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
     orchestratorURL = StringLib::duplicate(_orchestrator_url);
 
@@ -230,15 +230,19 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
     outQ = new Publisher(_outq_name);
 
     /* Populate Requests */
-    for(int i = 0; i < numResources; i++)
+    for(int i = 0; i < numRequests; i++)
     {
-        atl06_rqst_t atl06_rqst = {
-            .proxy = this,
-            .resource_index = i
-        };
-        if(rqstPub->postCopy(&atl06_rqst, sizeof(atl06_rqst_t), IO_CHECK) <= 0)
+        /* Allocate and Initialize Request */
+        requests[i].proxy = this;
+        requests[i].resource = StringLib::duplicate(_resources[i]);
+        requests[i].index = i;
+        requests[i].valid = true;
+        requests[i].complete = false;
+
+        /* Post Request */
+        if(rqstPub->postRef(&requests[i], sizeof(atl06_rqst_t), IO_CHECK) <= 0)
         {
-            LuaEndpoint::generateExceptionStatus(RTE_ERROR, outQ, NULL, "Failed to proxy request for %s", resources[i]);
+            LuaEndpoint::generateExceptionStatus(RTE_ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
         }
     }
 }
@@ -248,11 +252,21 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
  *----------------------------------------------------------------------------*/
 Atl06Proxy::~Atl06Proxy (void)
 {
-    for(int i = 0; i < numResources; i++)
+    printf("OH NO, why are we here\n");
+    for(int i = 0; i < numRequests; i++)
     {
-        delete [] resources[i];
+        requests[i].sync.lock();
+        {
+            if(!requests[i].complete)
+            {
+                requests[i].sync.wait(0, NODE_LOCK_TIMEOUT * 1000);
+            }
+        }
+        requests[i].sync.unlock();
+
+        delete [] requests[i].resource;
     }
-    delete [] resources;
+    delete [] requests;
 
     delete [] parameters;
 
@@ -270,24 +284,30 @@ void* Atl06Proxy::proxyThread (void* parm)
 
     while(proxyActive)
     {
-        atl06_rqst_t rqst;
-        int recv_status = rqstSub->receiveCopy(&rqst, sizeof(atl06_rqst_t), SYS_TIMEOUT);
+        Subscriber::msgRef_t ref;
+        int recv_status = rqstSub->receiveRef(ref, SYS_TIMEOUT);
         if(recv_status > 0)
         {
-            Atl06Proxy* proxy = rqst.proxy;
-            HttpClient orchestrator(NULL, rqst.proxy->orchestratorURL);
-            const char* resource = rqst.proxy->resources[rqst.resource_index];
-
+            atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
+            Atl06Proxy* proxy = rqst->proxy;
+            HttpClient orchestrator(NULL, rqst->proxy->orchestratorURL);
+            const char* resource = rqst->resource;
+printf(">>> %s - %d\n", resource, rqst->index);
             try
             {
                 /* Get Lock from Orchestrator */
                 mlog(INFO, "Processing resource: %s", resource);
                 SafeString orch_rqst_data("{'service':'test', 'nodesNeeded': 1, 'timeout': %d}", NODE_LOCK_TIMEOUT);
-                const char* rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString());
-                print2term("%s\n", rsps);
+                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString());
+                print2term("%s\n", rsps.response);
+
                 // pass request to node
 
                 // stream response back to queue
+
+                /* Mark Complete */
+                rqst->complete = true;
+                rqst->sync.signal();
             }
             catch(const RunTimeException& e)
             {

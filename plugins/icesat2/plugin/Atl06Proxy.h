@@ -81,7 +81,11 @@ class Atl06Proxy: public LuaObject
 
         typedef struct {
             Atl06Proxy*     proxy;
-            int             resource_index;
+            const char*     resource;
+            int             index;      // 0..number of requests
+            bool            valid;      // set to false when error encountered
+            bool            complete;   // set to true when request finished
+            Cond            sync;       // signals when request is complete
         } atl06_rqst_t;
 
         /*--------------------------------------------------------------------
@@ -95,8 +99,8 @@ class Atl06Proxy: public LuaObject
         static Mutex        proxyMut;
         static int          threadPoolSize;
 
-        const char**        resources;
-        int                 numResources;
+        atl06_rqst_t*       requests; // array[numRequests]
+        int                 numRequests;
         const char*         parameters;
         Publisher*          outQ;
         const char*         orchestratorURL;

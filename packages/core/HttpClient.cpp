@@ -119,7 +119,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
             if(ip_addr_term)
             {
                 char* _port_str = ip_addr_term + 1;
-                *_ip_addr = '\0';
+                *ip_addr_term = '\0';
                 if(_port_str)
                 {
                     long val;
@@ -156,108 +156,275 @@ HttpClient::~HttpClient(void)
     if(ipAddr) delete [] ipAddr;
 }
 
+
 /*----------------------------------------------------------------------------
- * request
+ * make_request
  *----------------------------------------------------------------------------*/
-HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name)
+TcpSocket* HttpClient::make_request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive)
 {
-    connection_t* connection = NULL;
-    Subscriber* inq = NULL;
+    /* Calculate Content Length */
+    int content_length = StringLib::size(data, MAX_RQST_DATA_LEN);
+    if(content_length == MAX_RQST_DATA_LEN)
+    {
+        mlog(ERROR, "Http request data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_DATA_LEN);
+        return NULL;
+    }
+
+    /* Set Keep Alive Header */
+    const char* keep_alive_header = "";
+    if(keep_alive) keep_alive_header = "Connection: keep-alive\r\n";
+
+    /* Build Request */
+    unsigned char* rqst = NULL;
+    int rqst_len = 0;
+    if(verb != EndpointObject::RAW)
+    {
+        /* Build Request Header */
+        SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
+                            EndpointObject::verb2str(verb),
+                            resource,
+                            getIpAddr(),
+                            LIBID,
+                            keep_alive_header,
+                            content_length);
+
+        /* Build Request */
+        int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
+        rqst_len = content_length + hdr_len;
+        rqst = new unsigned char [rqst_len];
+        LocalLib::copy(rqst, rqst_hdr.getString(), hdr_len);
+        LocalLib::copy(&rqst[hdr_len], data, content_length);
+    }
+    else if(content_length > 0)
+    {
+        /* Build Raw Request */
+        rqst = new unsigned char [content_length];
+        rqst_len = content_length;
+        LocalLib::copy(rqst, data, content_length);
+    }
+    else
+    {
+        /* Invalid Request */
+        mlog(ERROR, "Invalid HTTP request - raw requests cannot be null");
+        return NULL;
+    }
+
+    /* Establish Connection */
+    bool block = false;
+    TcpSocket* sock = new TcpSocket(NULL, getIpAddr(), getPort(), false, &block, false);
+    if(sock->isConnected() == false)
+    {
+        delete [] rqst;
+        return NULL;
+    }
+
+    /* Issue Request */
+    int bytes_written = sock->writeBuffer(rqst, rqst_len);
+    delete [] rqst; // free request
+
+    /* Check Status */
+    if(bytes_written != rqst_len)
+    {
+        mlog(CRITICAL, "Http request failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
+        return NULL;
+    }
+
+    /* Return Success */
+    return sock;
+}
+/*----------------------------------------------------------------------------
+ * parse_response
+ *----------------------------------------------------------------------------*/
+HttpClient::rsps_t HttpClient::parse_response (TcpSocket* sock)
+{
+    /* Response Variables */
+    long rsps_index = 0;
     rsps_t rsps = {
+        .code = EndpointObject::Bad_Request,
         .response = NULL,
         .size = 0
     };
 
-    /* Allocate and Initialize Connection */
-    connection = new connection_t;
-    connection->active = true;
-    connection->keep_alive = true;
-    connection->verb = verb;
-    connection->resource = StringLib::duplicate(resource);
-    connection->data = StringLib::duplicate(data);
-    connection->outq = new Publisher(outq_name);
-    connection->client = this;
-    connection->status = CONNECTION_ERROR;
+    /* Check Socket */
+    if(!sock) return rsps;
 
-    /* Check if Blocking */
-    if(outq_name == NULL)
+    /* Define Response Processing Variables */
+    StringLib::TokenList* headers = NULL;
+    StringLib::TokenList* response_line = NULL;
+    char* rsps_buf = NULL;
+    const char* code_msg = NULL;
+    long content_length = 0;
+
+    /* Process Response */
+    try
     {
-        /* Create Subscriber */
-        inq = new Subscriber(*(connection->outq));
-    }
-
-    /* Start Connection Thread */
-    connMutex.lock();
-    {
-        connection->pid = new Thread(requestThread, connection);
-        connections.add(connection);
-    }
-    connMutex.unlock();
-
-    /* Check if Blocking */
-    if(outq_name == NULL)
-    {
-        /* Setup Response Variables */
-        int total_response_length = 0;
-        List<Subscriber::msgRef_t> responses;
-
-        /* Read Responses */
+        /* Attempt to Fill Resopnse Buffer */
+        rsps_buf = new char [MAX_RSPS_BUF_LEN + 1];
+        long rsps_buf_index = 0;
         int attempts = 0;
-        bool done = false;
-        while(!done)
+        while(true)
         {
-            Subscriber::msgRef_t ref;
-            int recv_status = inq->receiveRef(ref, SYS_TIMEOUT);
-            if(recv_status > 0)
+            int bytes_to_read = MAX_RSPS_BUF_LEN - rsps_buf_index;
+            if(bytes_to_read > 0)
             {
-                if(ref.size > 0)
+                int bytes_read = sock->readBuffer(&rsps_buf[rsps_buf_index], bytes_to_read);
+                if(bytes_read > 0)
                 {
-                    total_response_length += ref.size;
-                    responses.add(ref);
+                    rsps_buf_index += bytes_read;
                 }
-                else // terminator
+                else if(bytes_read == TIMEOUT_RC)
                 {
-                    inq->dereference(ref);
-                    done = true;
+                    if(++attempts >= MAX_TIMEOUTS)
+                    {
+                        mlog(CRITICAL, "Maximum number of attempts to read response reached");
+                        break;
+                    }
                 }
-            }
-            else if(recv_status == TIMEOUT_RC)
-            {
-                attempts++;
-                if(attempts >= MAX_TIMEOUTS)
+                else
                 {
-                    mlog(CRITICAL, "Maximum number of attempts to read queue reached");
-                    done = true;
+                    mlog(CRITICAL, "Failed to read socket for response: %d", bytes_read);
+                    break;
                 }
             }
             else
             {
-                mlog(CRITICAL, "Failed queue receive on %s with error %d", getName(), recv_status);
-                done = true;
+                break;
             }
         }
 
-        if(total_response_length > 0)
+        /* Look for Header Delimeter */
+        bool hdr_found = false;
+        long hdr_index = 0;
+        while(hdr_index < (rsps_buf_index - 4))
         {
-            /* Allocate and Build Response Array */
-            rsps.size = total_response_length + 1;
-            rsps.response = new char [rsps.size];
-            List<Subscriber::msgRef_t>::Iterator iterator(responses);
-            int index = 0;
-            for(int i = 0; i < responses.length(); i++)
+            if( (rsps_buf[hdr_index + 0] == '\r') &&
+                (rsps_buf[hdr_index + 1] == '\n') &&
+                (rsps_buf[hdr_index + 2] == '\r') &&
+                (rsps_buf[hdr_index + 3] == '\n') )
             {
-                LocalLib::copy(&rsps.response[index], iterator[i].data, iterator[i].size);
-                index += iterator[i].size;
-                inq->dereference((Subscriber::msgRef_t&)iterator[i]);
+                hdr_found = true;               // complete header is present
+                rsps_buf[hdr_index + 0] = '\0'; // null terminate header
+                hdr_index += 4;                 // move hdr index to first byte of payload
+                break;                          // exit loop
             }
-            rsps.response[index] = '\0';
+            else
+            {
+                hdr_index++;
+            }
+        }
+
+        /* Error Check Header Not Complete */
+        if(!hdr_found) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to read complete header");
+
+        /* Parse Headers */
+        headers = StringLib::split(rsps_buf, hdr_index, '\r', true);
+        response_line = StringLib::split(headers->get(0), MAX_RSPS_BUF_LEN, ' ', true);
+
+        /* Get Response Code */
+        long val;
+        if(StringLib::str2long(response_line->get(1), &val))
+        {
+            rsps.code = (EndpointObject::code_t)val;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid code: %s", response_line->get(1));
+        }
+
+        /* Get Response Message */
+        code_msg = StringLib::duplicate(response_line->get(2));
+
+        /* Process Each Header */
+        for(int h = 1; h < headers->length(); h++)
+        {
+            StringLib::TokenList* header = NULL;
+            try
+            {
+                header = StringLib::split(headers->get(h), MAX_RSPS_BUF_LEN, ':', true);
+                const char* key = header->get(0);
+                const char* value = header->get(1);
+                if(StringLib::match(key, "Content-Length"))
+                {
+                    if(!StringLib::str2long(value, &content_length))
+                    {
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid content length header => %s: %s", key, value);
+                    }
+                }
+            }
+            catch(const RunTimeException& e)
+            {
+                mlog(CRITICAL, "<%s>: Failed to parse header", e.what());
+            }
+            if(header) delete header;
+        }
+
+        /* Check Content Length */
+        if(content_length <= 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid content length: %ld", content_length);
+        }
+
+        /* Allocate Response */
+        rsps.size = content_length;
+        rsps.response = new char [rsps.size];
+
+        /* Populate Response Already Read */
+        int payload_bytes_to_copy = rsps_buf_index - hdr_index;
+        payload_bytes_to_copy = MIN(payload_bytes_to_copy, rsps.size);
+        if(payload_bytes_to_copy > 0)
+        {
+            LocalLib::copy(rsps.response, &rsps_buf[hdr_index], payload_bytes_to_copy);
+            rsps_index += payload_bytes_to_copy;
+        }
+
+        /* Read and Populate Rest of Response */
+        while(rsps_index < rsps.size)
+        {
+            int payload_bytes_to_read = rsps.size - rsps_index;
+            int bytes_read = sock->readBuffer(&rsps.response[rsps_index], payload_bytes_to_read);
+            if(bytes_read > 0)
+            {
+                rsps_index += bytes_read;
+            }
+            else if(bytes_read == TIMEOUT_RC)
+            {
+                if(++attempts >= MAX_TIMEOUTS)
+                {
+                    mlog(CRITICAL, "Maximum number of attempts to read response reached");
+                    break;
+                }
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed to read socket for response: %d", bytes_read);
+                break;
+            }
         }
     }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to process response: %s", e.what());
+        if(rsps.response) delete [] rsps.response;
+        rsps.size = 0;
+    }
 
-    /* Delete Subscriber */
-    if(inq) delete inq;
+    /* Clean Up Response Processing Variables */
+    if(code_msg) delete [] code_msg;
+    if(response_line) delete response_line;
+    if(headers) delete headers;
+    if(rsps_buf) delete [] rsps_buf;
 
-    /* return response */
+    /* Return Response */
+    return rsps;
+}
+
+/*----------------------------------------------------------------------------
+ * request
+ *----------------------------------------------------------------------------*/
+HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive)
+{
+    TcpSocket* sock = make_request(verb, resource, data, keep_alive);
+    rsps_t rsps = parse_response(sock);
     return rsps;
 }
 
@@ -352,13 +519,10 @@ void* HttpClient::requestThread(void* parm)
         else
         {
             /* Allocate Response Buffer */
-            char* rsps = new char [RSPS_READ_BUF_LEN];
+            char* rsps = new char [MAX_RSPS_BUF_LEN];
 
             /* Initialize Parsing Variables */
             SafeString rsps_header;
-//            char response_code_buf[MAX_DIGITS];
-//            char content_length_buf[MAX_DIGITS];
-//            const char* content_length_label = "Content-Length: ";
             bool header_complete = false;
 
             /* Read Response */
@@ -369,7 +533,7 @@ void* HttpClient::requestThread(void* parm)
                 unsigned char* rsps_data = NULL;
                 int rsps_size = 0;
 
-                int bytes_read = sock.readBuffer(rsps, RSPS_READ_BUF_LEN - 1);
+                int bytes_read = sock.readBuffer(rsps, MAX_RSPS_BUF_LEN - 1);
                 if(bytes_read > 0)
                 {
                     if(!header_complete)
@@ -504,6 +668,8 @@ int HttpClient::luaRequest (lua_State* L)
 {
     bool status = false;
     int num_rets = 1;
+    connection_t* connection = NULL;
+    Subscriber* inq = NULL;
 
     try
     {
@@ -517,31 +683,116 @@ int HttpClient::luaRequest (lua_State* L)
         const char* outq_name   = getLuaString(L, 5, true, NULL);
 
         /* Error Check Verb */
-        EndpointObject::verb_t verb = EndpointObject::str2verb(verb_str);
+        EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
         if(verb == EndpointObject::UNRECOGNIZED)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid verb: %s", verb_str);
         }
 
-        /* Make Request */
-        HttpClient::rsps_t rsps = lua_obj->request(verb, resource, data, outq_name);
-        if(rsps.response)
+        /* Allocate and Initialize Connection */
+        connection = new connection_t;
+        connection->active = true;
+        connection->keep_alive = true;
+        connection->verb = verb;
+        connection->resource = StringLib::duplicate(resource);
+        connection->data = StringLib::duplicate(data);
+        connection->outq = new Publisher(outq_name);
+        connection->client = lua_obj;
+        connection->status = CONNECTION_ERROR;
+
+        /* Check if Blocking */
+        if(outq_name == NULL)
         {
-            /* Return Response String */
-            lua_pushlstring(L, rsps.response, rsps.size);
-            delete [] rsps.response;
-            num_rets++;
+            /* Create Subscriber */
+            inq = new Subscriber(*(connection->outq));
         }
 
-        /* Set Success */
-        if(rsps.response || outq_name)
+        /* Start Connection Thread */
+        lua_obj->connMutex.lock();
         {
-            status = true;
+            connection->pid = new Thread(requestThread, connection);
+            lua_obj->connections.add(connection);
+        }
+        lua_obj->connMutex.unlock();
+
+        /* Check if Blocking */
+        if(outq_name == NULL)
+        {
+            /* Setup Response Variables */
+            int total_response_length = 0;
+            List<Subscriber::msgRef_t> responses;
+
+            /* Read Responses */
+            int attempts = 0;
+            bool done = false;
+            while(!done)
+            {
+                Subscriber::msgRef_t ref;
+                int recv_status = inq->receiveRef(ref, SYS_TIMEOUT);
+                if(recv_status > 0)
+                {
+                    if(ref.size > 0)
+                    {
+                        total_response_length += ref.size;
+                        responses.add(ref);
+                    }
+                    else // terminator
+                    {
+                        inq->dereference(ref);
+                        done = true;
+                    }
+                }
+                else if(recv_status == TIMEOUT_RC)
+                {
+                    attempts++;
+                    if(attempts >= MAX_TIMEOUTS)
+                    {
+                        mlog(CRITICAL, "Maximum number of attempts to read queue reached");
+                        done = true;
+                    }
+                }
+                else
+                {
+                    mlog(CRITICAL, "Failed queue receive on %s with error %d", lua_obj->getName(), recv_status);
+                    done = true;
+                }
+            }
+
+            /* Allocate and Build Response Array */
+            char* response = new char [total_response_length + 1];
+            List<Subscriber::msgRef_t>::Iterator iterator(responses);
+            int index = 0;
+            for(int i = 0; i < responses.length(); i++)
+            {
+                LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
+                index += iterator[i].size;
+                inq->dereference((Subscriber::msgRef_t&)iterator[i]);
+            }
+            response[index] = '\0';
+
+            /* Return Respnonse String */
+            lua_pushlstring(L, response, total_response_length + 1);
+            delete [] response;
+            num_rets++;
+        }
+        else
+        {
+            /* No way to verify connection status when not blocking */
+            connection->status = CONNECTION_OKAY;
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error initiating request: %s", e.what());
+    }
+
+    /* Delete Subscriber */
+    if(inq) delete inq;
+
+    /* Get Status */
+    if(connection)
+    {
+        status = connection->status == CONNECTION_OKAY;
     }
 
     /* Return Status */

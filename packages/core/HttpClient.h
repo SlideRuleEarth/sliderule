@@ -40,6 +40,7 @@
 #include "OsApi.h"
 #include "List.h"
 #include "StringLib.h"
+#include "TcpSocket.h"
 #include "LuaEngine.h"
 #include "LuaObject.h"
 #include "EndpointObject.h"
@@ -57,8 +58,7 @@ class HttpClient: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int MAX_RQST_DATA_LEN  = 65536;
-        static const int RSPS_READ_BUF_LEN  = 65536;
-        static const int RSPS_LUA_BUF_LEN   = 65536;
+        static const int MAX_RSPS_BUF_LEN   = 65536;
         static const int MAX_URL_LEN        = 1024;
         static const int MAX_TIMEOUTS       = 5;
         static const int MAX_DIGITS         = 10;
@@ -71,7 +71,18 @@ class HttpClient: public LuaObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
+        typedef enum {
+            CONNECTION_OKAY = 0,
+            CONNECTION_ERROR = -1,
+            RQST_INVALID = -2,
+            RQST_FAILED_TO_SEND = -3,
+            RSPS_FAILED_TO_POST = -4,
+            RSPS_INVALID_HDR = -5,
+            RSPS_INCOMPLETE = -6
+        } status_t;
+
         typedef struct {
+            EndpointObject::code_t code;
             char* response;
             long size;
         } rsps_t;
@@ -86,7 +97,9 @@ class HttpClient: public LuaObject
                         HttpClient      (lua_State* L, const char* url);
                         ~HttpClient     (void);
 
-        rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, const char* outq_name=NULL);
+        TcpSocket*      make_request    (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
+        rsps_t          parse_response  (TcpSocket* sock);
+        rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
         const char*     getIpAddr       (void);
         int             getPort         (void);
 
@@ -95,15 +108,6 @@ class HttpClient: public LuaObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-
-        typedef enum {
-            CONNECTION_OKAY = 0,
-            CONNECTION_ERROR = -1,
-            RQST_INVALID = -2,
-            RQST_FAILED_TO_SEND = -3,
-            RSPS_FAILED_TO_POST = -4,
-            RSPS_INCOMPLETE = -5
-        } status_t;
 
         typedef struct {
             bool                        active;
