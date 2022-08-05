@@ -298,7 +298,7 @@ printf(">>> %s - %d\n", resource, rqst->index);
                 /* Get Lock from Orchestrator */
                 mlog(INFO, "Processing resource: %s", resource);
                 SafeString orch_rqst_data("{'service':'test', 'nodesNeeded': 1, 'timeout': %d}", NODE_LOCK_TIMEOUT);
-                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString());
+                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false);
                 print2term("%s\n", rsps.response);
 
                 // pass request to node
