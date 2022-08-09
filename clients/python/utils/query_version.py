@@ -11,7 +11,7 @@ from sliderule import datatypes
 
 if __name__ == '__main__':
 
-    url = ["127.0.0.1"]
+    url = "127.0.0.1"
 
     # Override server URL from command line
     if len(sys.argv) > 1:

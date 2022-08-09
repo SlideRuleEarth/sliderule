@@ -1,10 +1,10 @@
 #
 # Connects to SlideRule server node at provided url and prints log messages
-# as they are generated on server to local terminal.  
-# 
-# This bypasses service discovery and goes directly to the server node.  
-# 
-# Use query_services.py to get list of server node IP addresses 
+# as they are generated on server to local terminal.
+#
+# This bypasses service discovery and goes directly to the server node.
+#
+# Use query_services.py to get list of server node IP addresses
 #
 
 import sys
@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 if __name__ == '__main__':
 
     # Override server URL from command line
-    url = ["127.0.0.1"]
+    url = "127.0.0.1"
     if len(sys.argv) > 1:
         url = [sys.argv[1]]
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     # Build Logging Request
     rqst = {
-        "type": event_type, 
+        "type": event_type,
         "level" : event_level,
         "duration": duration
     }

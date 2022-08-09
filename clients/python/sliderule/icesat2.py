@@ -984,7 +984,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     Examples
     --------
         >>> from sliderule import icesat2
-        >>> icesat2.init(["127.0.0.1"], False)
+        >>> icesat2.init("127.0.0.1", False)
         >>> datasets = [
         ...         {"dataset": "/gt1l/land_ice_segments/h_li", "numrows": 5},
         ...         {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},

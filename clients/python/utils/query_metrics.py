@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 if __name__ == '__main__':
 
     # Override server URL from command line
-    url = ["127.0.0.1"]
+    url = "127.0.0.1"
     if len(sys.argv) > 1:
         url = [sys.argv[1]]
 

@@ -58,7 +58,7 @@ def process_atl06_algorithm(parms, asset):
 
 if __name__ == '__main__':
 
-    url = ["127.0.0.1"]
+    url = "127.0.0.1"
     asset = "atlas-local"
 
     logging.basicConfig(level=logging.INFO)

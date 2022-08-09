@@ -18,7 +18,7 @@ if __name__ == '__main__':
     # Make Call to TIFF Endpoint #
     filename = sys.argv[1]
     region = icesat2.toregion(filename)
-    icesat2.init(["127.0.0.1"], False)
+    icesat2.init("127.0.0.1", False)
     rsps = sliderule.source("tiff", { "raster": region["raster"] })
 
     # Display Response #
