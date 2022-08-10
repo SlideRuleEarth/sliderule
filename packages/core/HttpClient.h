@@ -97,9 +97,7 @@ class HttpClient: public LuaObject
                         HttpClient      (lua_State* L, const char* url);
                         ~HttpClient     (void);
 
-        TcpSocket*      make_request    (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
-        rsps_t          parse_response  (TcpSocket* sock);
-        rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
+        rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq);
         const char*     getIpAddr       (void);
         int             getPort         (void);
 
@@ -110,25 +108,20 @@ class HttpClient: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            bool                        active;
-            bool                        keep_alive;
-            Thread*                     pid;
             EndpointObject::verb_t      verb;
             const char*                 resource;
             const char*                 data;
             Publisher*                  outq;
-            HttpClient*                 client;
-            status_t                    status;
-        } connection_t;
+        } rqst_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         bool                            active;
-        List<connection_t*>             connections;
-        Mutex                           connMutex;
-
+        Thread*                         requestPid;
+        Publisher*                      requestPub;
+        TcpSocket*                      sock;
         char*                           ipAddr;
         int                             port;
 
@@ -136,8 +129,14 @@ class HttpClient: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
+               TcpSocket*   initializeSocket    (const char* _ip_addr, int _port);
+               bool         makeRequest         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
+               rsps_t       parseResponse       (Publisher* outq);
+
         static void*        requestThread       (void* parm);
+
         static int          luaRequest          (lua_State* L);
+        static int          luaConnected        (lua_State* L);
 };
 
 #endif  /* __http_client__ */

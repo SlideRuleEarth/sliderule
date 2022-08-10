@@ -18,7 +18,7 @@ runner.check(creds.expiration == "2021-06-02 14:59:56+00:00")
 print('\n------------------\nTest01: Credential Metrics\n------------------')
 
 endpoint = core.endpoint()
-server   = core.httpd(9081):attach(endpoint, "/source")
+server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
 
 client = core.http("127.0.0.1", 9081)
 

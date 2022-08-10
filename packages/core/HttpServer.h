@@ -110,6 +110,7 @@ class HttpServer: public LuaObject
             EndpointObject::request_t   request;
             state_t                     state;
             double                      start_time;
+            bool                        keep_alive;
         } connection_t;
 
         /*--------------------------------------------------------------------
@@ -119,6 +120,7 @@ class HttpServer: public LuaObject
         static std::atomic<uint64_t>    requestId;
 
         bool                            active;
+        bool                            listening;
         Thread*                         listenerPid;
         Table<connection_t*, int>       connections;
 
@@ -136,9 +138,12 @@ class HttpServer: public LuaObject
         static void*        listenerThread      (void* parm);
 
         static void         extract             (const char* url, char** endpoint, char** new_url);
+        static void         initConnection      (connection_t* connection);
+        static void         deinitConnection    (connection_t* connection);
 
         static int          luaAttach           (lua_State* L);
         static int          luaMetric           (lua_State* L);
+        static int          luaUntilUp          (lua_State* L);
 
         static int          pollHandler         (int fd, short* events, void* parm);
         static int          activeHandler       (int fd, int flags, void* parm);

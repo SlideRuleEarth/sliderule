@@ -19,7 +19,7 @@ tmpfile = os.tmpname()
 -- Unit Test --
 
 endpoint = core.endpoint()
-server   = core.httpd(9081):attach(endpoint, "/source")
+server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
 
 print('\n------------------\nTest01: Stream\n------------------')
 os.execute(string.format("curl -sS -X POST -d '%s' http://127.0.0.1:9081/source/example_engine_endpoint > %s", json_object, tmpfile))

@@ -415,7 +415,7 @@ void SockLib::sockclose(int fd)
 /*----------------------------------------------------------------------------
  * startserver
  *----------------------------------------------------------------------------*/
-int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm)
+int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm, bool* listening)
 {
     int status = 0;
 
@@ -438,6 +438,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
             polllist[0].fd = listen_socket;
             polllist[0].events = POLLIN; // start out listening for new connections
             polllist[0].revents = 0;
+            if(listening) *listening = true;
         }
         else
         {
@@ -449,7 +450,6 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
     {
         dlog("Unable to establish socket server on %s:%d, failed to create listen socket", ip_addr ? ip_addr : "0.0.0.0", port);
     }
-
 
     if(listen_socket != INVALID_RC)
     {
@@ -603,6 +603,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
         /* Close Listening Socket */
         sockclose(listen_socket);
+        if(listening) *listening = false;
     }
 
     /* Disconnect Existing Connections (*/
@@ -631,10 +632,10 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 /*----------------------------------------------------------------------------
  * startclient
  *----------------------------------------------------------------------------*/
-int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm)
+int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm, bool* connected)
 {
     /* Initialize Connection Variables */
-    bool connected = false;
+    bool _connected = false;
     int max_num_sockets = max_num_connections + 1; // for listener socket
     int num_sockets = 0;
     struct pollfd polllist[1];
@@ -646,7 +647,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
         on_poll(0, &polllist[0].events, parm);
 
         /* If Not Connected */
-        if(!connected)
+        if(!_connected)
         {
             /* Check for Connection Upper Limit */
             if(max_num_sockets > 0 && num_sockets >= max_num_sockets)
@@ -670,7 +671,8 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
                 /* Update Connection Variables */
                 dlog("Client socket [%d] connection made to %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
                 polllist[0].fd = client_socket;
-                connected = true;
+                _connected = true;
+                if(connected) *connected = true;
                 num_sockets++;
             }
             else // error connected
@@ -688,7 +690,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
         }
 
         /* If Connected */
-        if(connected)
+        if(_connected)
         {
             /* Initialize Polling Structure */
             polllist[0].revents = 0;
@@ -732,7 +734,8 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             /* Check if FD still Valid */
             if(!valid_fd)
             {
-                connected = false;
+                _connected = false;
+                if(connected) *connected = false;
             }
         }
     }

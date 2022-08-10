@@ -49,6 +49,7 @@ const char* HttpServer::LuaMetaName = "HttpServer";
 const struct luaL_Reg HttpServer::LuaMetaTable[] = {
     {"attach",      luaAttach},
     {"metric",      luaMetric},
+    {"untilup",     luaUntilUp},
     {NULL,          NULL}
 };
 
@@ -97,6 +98,7 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
     port = _port;
 
     active = true;
+    listening = false;
     listenerPid = new Thread(listenerThread, this);
 
     metricId = EventLib::INVALID_METRIC;
@@ -159,10 +161,11 @@ void* HttpServer::listenerThread(void* parm)
     while(s->active)
     {
         /* Start Http Server */
-        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s);
+        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s, &(s->listening));
         if(status < 0)
         {
             mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
+            s->listening = false;
 
             /* Restart Http Server */
             if(s->active)
@@ -216,6 +219,45 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
             }
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * initConnection
+ *----------------------------------------------------------------------------*/
+void HttpServer::initConnection (connection_t* connection)
+{
+    LocalLib::set(&connection->request, 0, sizeof(EndpointObject::request_t));
+    LocalLib::set(&connection->state, 0, sizeof(state_t));
+    connection->start_time = TimeLib::latchtime();
+    connection->keep_alive = false;
+}
+
+/*----------------------------------------------------------------------------
+ * deinitConnection
+ *----------------------------------------------------------------------------*/
+void HttpServer::deinitConnection (connection_t* connection)
+{
+        /* Clear Out Headers */
+        const char* header;
+        const char* key = connection->request.headers->first(&header);
+        while(key != NULL)
+        {
+            /* Free Header Value */
+            delete [] header;
+            key = connection->request.headers->next(&header);
+        }
+
+        /* Free URL */
+        if(connection->request.url) delete [] connection->request.url;
+
+        /* Free Stream Buffer */
+        if(connection->state.stream_buf) delete [] connection->state.stream_buf;
+
+        /* Free Rest of Allocated Connection Members */
+        delete [] connection->request.id;
+        delete connection->request.headers;
+        delete connection->state.rspq;
+        delete connection->request.pid;
 }
 
 /*----------------------------------------------------------------------------
@@ -276,6 +318,40 @@ int HttpServer::luaMetric (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating metric: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaUntilUp - :untilup(<seconds to wait>)
+ *----------------------------------------------------------------------------*/
+int HttpServer::luaUntilUp (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        HttpServer* lua_obj = (HttpServer*)getLuaSelf(L, 1);
+
+        /* Get Parameters */
+        int timeout = getLuaInteger(L, 2, true, IO_PEND);
+
+        /* Wait Until Http Server Started */
+        do
+        {
+            status = lua_obj->listening;
+            if(status) break;
+            else if(timeout > 0) timeout--;
+            LocalLib::performIOTimeout();
+        }
+        while((timeout == IO_PEND) || (timeout > 0));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error waiting until HTTP server started: %s", e.what());
     }
 
     /* Return Status */
@@ -435,6 +511,19 @@ int HttpServer::onRead(int fd)
                 catch(const RunTimeException& e)
                 {
                     connection->request.body_length = 0;
+                }
+
+                /* Get Keep Alive Setting */
+                try
+                {
+                    if(StringLib::match(connection->request.headers->get("Connection"), "keep-alive"))
+                    {
+                        connection->keep_alive = true;
+                    }
+                }
+                catch(const RunTimeException& e)
+                {
+                    connection->keep_alive = false;
                 }
             }
             else
@@ -608,6 +697,14 @@ int HttpServer::onWrite(int fd)
             connection->state.ref_index = 0;
             connection->state.ref.size = 0;
         }
+
+        /* Check for Keep Alive */
+        if(connection->keep_alive)
+        {
+            deinitConnection(connection);
+            initConnection(connection);
+            status = 0; // will keep socket open
+        }
     }
 
     return status;
@@ -641,9 +738,7 @@ int HttpServer::onConnect(int fd)
 
     /* Create and Initialize New Request */
     connection_t* connection = new connection_t;
-    LocalLib::set(&connection->request, 0, sizeof(EndpointObject::request_t));
-    LocalLib::set(&connection->state, 0, sizeof(state_t));
-    connection->start_time = TimeLib::latchtime();
+    initConnection(connection);
 
     /* Register Connection */
     if(connections.add(fd, connection, false))
@@ -682,29 +777,8 @@ int HttpServer::onDisconnect(int fd)
     /* Remove Connection */
     if(connections.remove(fd))
     {
-        /* Clear Out Headers */
-        const char* header;
-        const char* key = connection->request.headers->first(&header);
-        while(key != NULL)
-        {
-            /* Free Header Value */
-            delete [] header;
-            key = connection->request.headers->next(&header);
-        }
-
-        /* Free URL */
-        if(connection->request.url) delete [] connection->request.url;
-
-        /* Free Stream Buffer */
-        if(connection->state.stream_buf) delete [] connection->state.stream_buf;
-
-        /* Free Rest of Allocated Connection Members */
-        delete [] connection->request.id;
-        delete connection->request.headers;
-        delete connection->state.rspq;
-        delete connection->request.pid;
-
         /* Free Connection */
+        deinitConnection(connection);
         delete connection;
     }
     else

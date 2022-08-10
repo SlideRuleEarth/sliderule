@@ -48,6 +48,7 @@ const char* HttpClient::OBJECT_TYPE = "HttpClient";
 const char* HttpClient::LuaMetaName = "HttpClient";
 const struct luaL_Reg HttpClient::LuaMetaTable[] = {
     {"request",     luaRequest},
+    {"connected",   luaConnected},
     {NULL,          NULL}
 };
 
@@ -91,6 +92,9 @@ HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
     active = true;
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
+    sock = initializeSocket(ipAddr, port);
+    requestPub = new Publisher(NULL);
+    requestPid = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -133,6 +137,13 @@ HttpClient::HttpClient(lua_State* L, const char* url):
             }
         }
     }
+
+    // Create Socket Connection
+    sock = initializeSocket(ipAddr, port);
+
+    // Create Request Queue and Thread
+    requestPub = new Publisher(NULL);
+    requestPid = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -141,27 +152,65 @@ HttpClient::HttpClient(lua_State* L, const char* url):
 HttpClient::~HttpClient(void)
 {
     active = false;
-    connMutex.lock();
-    {
-        for(int i = 0; i < connections.length(); i++)
-        {
-            connection_t* connection = connections[i];
-            connection->active = false;
-            delete connection->pid;
-            delete connection;
-        }
-    }
-    connMutex.unlock();
-
+    if(requestPid) delete requestPid;
+    if(requestPub) delete requestPub;
     if(ipAddr) delete [] ipAddr;
+    if(sock) delete sock;
 }
 
 /*----------------------------------------------------------------------------
- * make_request
+ * request
  *----------------------------------------------------------------------------*/
-TcpSocket* HttpClient::make_request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive)
+HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq)
 {
-    TcpSocket* sock = NULL;
+    if(makeRequest(verb, resource, data, keep_alive))
+    {
+        rsps_t rsps = parseResponse(outq);
+        return rsps;
+    }
+    else
+    {
+        rsps_t rsps = {
+            .code = EndpointObject::Service_Unavailable,
+            .response = NULL,
+            .size = 0
+        };
+        return rsps;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getIpAddr
+ *----------------------------------------------------------------------------*/
+const char* HttpClient::getIpAddr (void)
+{
+    if(ipAddr)  return ipAddr;
+    else        return "0.0.0.0";
+}
+
+/*----------------------------------------------------------------------------
+ * getPort
+ *----------------------------------------------------------------------------*/
+int HttpClient::getPort (void)
+{
+    return port;
+}
+
+/*----------------------------------------------------------------------------
+ * initializeSocket
+ *----------------------------------------------------------------------------*/
+TcpSocket* HttpClient::initializeSocket(const char* _ip_addr, int _port)
+{
+    bool block = false;
+    return new TcpSocket(NULL, _ip_addr, _port, false, &block, false);
+}
+
+/*----------------------------------------------------------------------------
+ * makeRequest
+ *----------------------------------------------------------------------------*/
+bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive)
+{
+    bool status = true;
     unsigned char* rqst = NULL;
     int rqst_len = 0;
 
@@ -171,7 +220,7 @@ TcpSocket* HttpClient::make_request (EndpointObject::verb_t verb, const char* re
         int content_length = StringLib::size(data, MAX_RQST_DATA_LEN);
         if(content_length == MAX_RQST_DATA_LEN)
         {
-            throw RunTimeException(ERROR, RTE_ERROR, "Http request data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_DATA_LEN);
+            throw RunTimeException(ERROR, RTE_ERROR, "data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_DATA_LEN);
         }
 
         /* Set Keep Alive Header */
@@ -207,13 +256,8 @@ TcpSocket* HttpClient::make_request (EndpointObject::verb_t verb, const char* re
         else
         {
             /* Invalid Request */
-            throw RunTimeException(ERROR, RTE_ERROR, "Invalid HTTP request - raw requests cannot be null");
+            throw RunTimeException(ERROR, RTE_ERROR, "raw requests cannot be null");
         }
-
-        /* Establish Connection */
-        bool block = false;
-        sock = new TcpSocket(NULL, getIpAddr(), getPort(), false, &block, false);
-        if(sock->isConnected() == false) throw RunTimeException(ERROR, RTE_ERROR, "Failed to connect socket for HTTP request");
 
         /* Issue Request */
         int bytes_written = sock->writeBuffer(rqst, rqst_len);
@@ -221,37 +265,33 @@ TcpSocket* HttpClient::make_request (EndpointObject::verb_t verb, const char* re
         /* Check Status */
         if(bytes_written != rqst_len)
         {
-            throw RunTimeException(ERROR, RTE_ERROR, "Http request failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
+            throw RunTimeException(ERROR, RTE_ERROR, "failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "HTTP Request Failed: %s", e.what());
-        if(sock) delete sock;
-        sock = NULL;
+        status = false;
     }
 
     /* Clean Up */
     if(rqst) delete [] rqst;
 
-    /* Return Success */
-    return sock;
+    /* Return Status */
+    return status;
 }
 /*----------------------------------------------------------------------------
- * parse_response
+ * parseResponse
  *----------------------------------------------------------------------------*/
-HttpClient::rsps_t HttpClient::parse_response (TcpSocket* sock)
+HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
 {
     /* Response Variables */
     long rsps_index = 0;
     rsps_t rsps = {
-        .code = EndpointObject::Bad_Request,
+        .code = EndpointObject::OK,
         .response = NULL,
         .size = 0
     };
-
-    /* Check Socket */
-    if(!sock) return rsps;
 
     /* Define Response Processing Variables */
     StringLib::TokenList* headers = NULL;
@@ -281,14 +321,12 @@ HttpClient::rsps_t HttpClient::parse_response (TcpSocket* sock)
                 {
                     if(++attempts >= MAX_TIMEOUTS)
                     {
-                        mlog(CRITICAL, "Maximum number of attempts to read response reached");
-                        break;
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "Maximum number of attempts reached on first read");
                     }
                 }
                 else
                 {
-                    mlog(CRITICAL, "Failed to read socket for response: %d", bytes_read);
-                    break;
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed first read of socket: %d", bytes_read);
                 }
             }
             else
@@ -369,40 +407,76 @@ HttpClient::rsps_t HttpClient::parse_response (TcpSocket* sock)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid content length: %ld", content_length);
         }
 
-        /* Allocate Response */
+        /* Set Size of Response */
         rsps.size = content_length;
-        rsps.response = new char [rsps.size];
 
-        /* Populate Response Already Read */
+        /* Determine Number of Payload Bytes Already Read */
         int payload_bytes_to_copy = rsps_buf_index - hdr_index;
-        payload_bytes_to_copy = MIN(payload_bytes_to_copy, rsps.size);
-        if(payload_bytes_to_copy > 0)
-        {
-            LocalLib::copy(rsps.response, &rsps_buf[hdr_index], payload_bytes_to_copy);
-            rsps_index += payload_bytes_to_copy;
-        }
+        payload_bytes_to_copy = MIN(payload_bytes_to_copy, content_length);
 
-        /* Read and Populate Rest of Response */
-        while(rsps_index < rsps.size)
+        if(outq)
         {
-            int payload_bytes_to_read = rsps.size - rsps_index;
-            int bytes_read = sock->readBuffer(&rsps.response[rsps_index], payload_bytes_to_read);
-            if(bytes_read > 0)
+            /* Post Response Already Read */
+            int post_status1 = outq->postCopy(&rsps_buf[hdr_index], payload_bytes_to_copy, SYS_TIMEOUT);
+            if(post_status1 <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed initial post: %d", post_status1);
+            rsps_index += payload_bytes_to_copy;
+
+            /* Read and Populate Rest of Response */
+            while(rsps_index < content_length)
             {
-                rsps_index += bytes_read;
-            }
-            else if(bytes_read == TIMEOUT_RC)
-            {
-                if(++attempts >= MAX_TIMEOUTS)
+                int payload_bytes_to_read = content_length - rsps_index;
+                int bytes_read = sock->readBuffer(rsps_buf, payload_bytes_to_read);
+                if(bytes_read > 0)
                 {
-                    mlog(CRITICAL, "Maximum number of attempts to read response reached");
-                    break;
+                    int post_status2 = outq->postCopy(rsps_buf, bytes_read, SYS_TIMEOUT);
+                    if(post_status2 <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed continued post: %d", post_status2);
+                    rsps_index += bytes_read;
+                }
+                else if(bytes_read == TIMEOUT_RC)
+                {
+                    if(++attempts >= MAX_TIMEOUTS)
+                    {
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "Maximum number of attempts reached continuing to stream response");
+                    }
+                }
+                else
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to continue to read socket for stream: %d", bytes_read);
                 }
             }
-            else
+        }
+        else
+        {
+            /* Allocate Response */
+            rsps.response = new char [rsps.size];
+
+            /* Populate Response Already Read */
+            if(payload_bytes_to_copy > 0)
             {
-                mlog(CRITICAL, "Failed to read socket for response: %d", bytes_read);
-                break;
+                LocalLib::copy(rsps.response, &rsps_buf[hdr_index], payload_bytes_to_copy);
+                rsps_index += payload_bytes_to_copy;
+            }
+
+            /* Read and Populate Rest of Response */
+            while(rsps_index < rsps.size)
+            {
+                int payload_bytes_to_read = rsps.size - rsps_index;
+                int bytes_read = sock->readBuffer(&rsps.response[rsps_index], payload_bytes_to_read);
+                if(bytes_read > 0)
+                {
+                    rsps_index += bytes_read;
+                }
+                else if(bytes_read == TIMEOUT_RC)
+                {
+                    if(++attempts >= MAX_TIMEOUTS)
+                    {
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "Maximum number of attempts reached continuing to read response");
+                    }
+                }
+                else
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to continue to read socket: %d", bytes_read);
+                }
             }
         }
     }
@@ -411,6 +485,7 @@ HttpClient::rsps_t HttpClient::parse_response (TcpSocket* sock)
         mlog(CRITICAL, "Failed to process response: %s", e.what());
         if(rsps.response) delete [] rsps.response;
         rsps.size = 0;
+        rsps.code = EndpointObject::Internal_Server_Error;
     }
 
     /* Clean Up Response Processing Variables */
@@ -424,244 +499,37 @@ HttpClient::rsps_t HttpClient::parse_response (TcpSocket* sock)
 }
 
 /*----------------------------------------------------------------------------
- * request
- *----------------------------------------------------------------------------*/
-HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive)
-{
-    TcpSocket* sock = make_request(verb, resource, data, keep_alive);
-    rsps_t rsps = parse_response(sock);
-    return rsps;
-}
-
-/*----------------------------------------------------------------------------
- * getIpAddr
- *----------------------------------------------------------------------------*/
-const char* HttpClient::getIpAddr (void)
-{
-    if(ipAddr)  return ipAddr;
-    else        return "0.0.0.0";
-}
-
-/*----------------------------------------------------------------------------
- * getPort
- *----------------------------------------------------------------------------*/
-int HttpClient::getPort (void)
-{
-    return port;
-}
-
-/*----------------------------------------------------------------------------
  * requestThread
  *----------------------------------------------------------------------------*/
 void* HttpClient::requestThread(void* parm)
 {
-    connection_t* connection = (connection_t*)parm;
+    HttpClient* client = (HttpClient*)parm;
+    Subscriber* request_sub = new Subscriber(*(client->requestPub));
 
-    /* Initialize Connection Status */
-    connection->status = RSPS_INCOMPLETE;
-
-    /* Calculate Content Length */
-    int content_length = StringLib::size(connection->data, MAX_RQST_DATA_LEN);
-    if(content_length == MAX_RQST_DATA_LEN)
+    while(client->active)
     {
-        mlog(ERROR, "Http request data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_DATA_LEN);
-    }
-    else
-    {
-        /* Set Keep Alive Header */
-        const char* keep_alive_header = "";
-        if(connection->keep_alive) keep_alive_header = "Connection: keep-alive\r\n";
-
-        /* Build Request*/
-        unsigned char* rqst = NULL;
-        int rqst_len = 0;
-        if(connection->verb != EndpointObject::RAW)
+        rqst_t rqst;
+        int recv_status = request_sub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
+        if(recv_status > 0)
         {
-            /* Build Request Header */
-            SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
-                                EndpointObject::verb2str(connection->verb),
-                                connection->resource,
-                                connection->client->ipAddr,
-                                LIBID,
-                                keep_alive_header,
-                                content_length);
-
-            /* Build Request */
-            int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
-            rqst_len = content_length + hdr_len;
-            rqst = new unsigned char [rqst_len];
-            LocalLib::copy(rqst, rqst_hdr.getString(), hdr_len);
-            LocalLib::copy(&rqst[hdr_len], connection->data, content_length);
-        }
-        else if(content_length > 0)
-        {
-            /* Build Raw Request */
-            rqst = new unsigned char [content_length];
-            rqst_len = content_length;
-            LocalLib::copy(rqst, connection->data, content_length);
-        }
-        else
-        {
-            /* Invalid Request */
-            mlog(ERROR, "Invalid HTTP request - raw requests cannot be null");
-            connection->status = RQST_INVALID;
-            return NULL; // no memory allocated at this point
-        }
-
-        /* Establish Connection */
-        int connection_attempts = MAX_TIMEOUTS;
-        bool die_on_disconnect = false; // only used for non-blocking/threaded connections
-        TcpSocket sock(NULL, connection->client->getIpAddr(), connection->client->getPort(), false, NULL, die_on_disconnect);
-        while(!sock.isConnected() && connection_attempts--) LocalLib::sleep(1);
-
-        /* Issue Request */
-        int bytes_written = sock.writeBuffer(rqst, rqst_len);
-        if(bytes_written != rqst_len)
-        {
-            mlog(CRITICAL, "Http request failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
-            connection->status = RQST_FAILED_TO_SEND;
-        }
-        else
-        {
-            /* Allocate Response Buffer */
-            char* rsps = new char [MAX_RSPS_BUF_LEN];
-
-            /* Initialize Parsing Variables */
-            SafeString rsps_header;
-            bool header_complete = false;
-
-            /* Read Response */
-            int attempts = 0;
-            bool done = false;
-            while(!done && connection->client->active)
+            try
             {
-                unsigned char* rsps_data = NULL;
-                int rsps_size = 0;
-
-                int bytes_read = sock.readBuffer(rsps, MAX_RSPS_BUF_LEN - 1);
-                if(bytes_read > 0)
-                {
-                    if(!header_complete)
-                    {
-                        int index = 0;
-
-                        /* Check for Partial Delimeter */
-                        bool possible_partial_delim = false;
-                        while(rsps[index] == '\r' || rsps[index] == '\n')
-                        {
-                            possible_partial_delim = true;
-                            rsps_header.appendChar(rsps[index]);
-                            index++;
-                        }
-
-                        /* Check for Header Complete when Partial Delimeter Read */
-                        int possible_header_len = rsps_header.getLength();
-                        if(possible_partial_delim && possible_header_len > 4)
-                        {
-                            if( (rsps_header[possible_header_len - 5] == '\r') &&
-                                (rsps_header[possible_header_len - 4] == '\n') &&
-                                (rsps_header[possible_header_len - 3] == '\r') &&
-                                (rsps_header[possible_header_len - 2] == '\n') )
-                            {
-                                header_complete = true;
-                                rsps_data = (unsigned char*)&rsps[index];
-                                rsps_size = bytes_read - index;
-                            }
-                        }
-
-                        /* If Header still not Complete */
-                        if(!header_complete)
-                        {
-                            /* Look for Delimeter */
-                            while(index < (bytes_read - 4))
-                            {
-                                if((rsps[index + 0] == '\r') &&
-                                   (rsps[index + 1] == '\n') &&
-                                   (rsps[index + 2] == '\r') &&
-                                   (rsps[index + 3] == '\n') )
-                                {
-                                    break;
-                                }
-                                else
-                                {
-                                    index++;
-                                }
-                            }
-
-                            /* Check if Header Complete */
-                            if(rsps[index] == '\r')
-                            {
-                                connection->status = CONNECTION_OKAY;
-                                header_complete = true;
-                                rsps[index] = '\0';
-                                index += 4; // move past delimeter
-                                rsps_data = (unsigned char*)&rsps[index];
-                                rsps_size = bytes_read - index;
-                            }
-
-                            /* Append Bytes Read to Response Header */
-                            rsps_header += rsps;
-                        }
-                    }
-                    else
-                    {
-                        /* Pass Through Everything Read */
-                        rsps_data = (unsigned char*)rsps;
-                        rsps_size = bytes_read;
-                    }
-
-                    /* Post Contents */
-                    if(rsps_size > 0)
-                    {
-                        int post_status = connection->outq->postCopy(rsps_data, rsps_size);
-                        if(post_status <= 0)
-                        {
-                            mlog(CRITICAL, "Failed to post response: %d", post_status);
-                            connection->status = RSPS_FAILED_TO_POST;
-                            done = true;
-                        }
-                    }
-                }
-                else if(bytes_read == SHUTDOWN_RC)
-                {
-                    done = true;
-                }
-                else if(bytes_read == TIMEOUT_RC)
-                {
-                    attempts++;
-                    if(attempts >= MAX_TIMEOUTS)
-                    {
-                        mlog(CRITICAL, "Maximum number of attempts to read response reached");
-                        done = true;
-                    }
-                }
-                else
-                {
-                    mlog(CRITICAL, "Failed to read socket for response: %d", bytes_read);
-                    done = true;
-                }
+                client->request(rqst.verb, rqst.resource, rqst.data, true, rqst.outq);
+                delete [] rqst.resource;
+                delete [] rqst.data;
+                delete rqst.outq;
             }
-
-            /* Clean Up Response Buffer */
-            delete [] rsps;
+            catch(const RunTimeException& e)
+            {
+                mlog(e.level(), "Failure processing request: %s", e.what());
+            }
         }
-
-        /* Clean Up Request Buffer */
-        delete [] rqst;
+        else if(recv_status != MsgQ::STATE_TIMEOUT)
+        {
+            mlog(CRITICAL, "Failed to receive request: %d", recv_status);
+            break;
+        }
     }
-
-    /* Post Terminator */
-    int term_status = connection->outq->postCopy("", 0);
-    if(term_status < 0)
-    {
-        mlog(CRITICAL, "Failed to post terminator in http client: %d", term_status);
-        connection->status = RSPS_FAILED_TO_POST;
-    }
-
-    /* Clean Up Connection */
-    delete connection->outq;
-    delete [] connection->data;
-    delete [] connection->resource;
 
     return NULL;
 }
@@ -671,10 +539,8 @@ void* HttpClient::requestThread(void* parm)
  *----------------------------------------------------------------------------*/
 int HttpClient::luaRequest (lua_State* L)
 {
-    bool status = false;
+    bool status = true;
     int num_rets = 1;
-    connection_t* connection = NULL;
-    Subscriber* inq = NULL;
 
     try
     {
@@ -694,96 +560,41 @@ int HttpClient::luaRequest (lua_State* L)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid verb: %s", verb_str);
         }
 
-        /* Allocate and Initialize Connection */
-        connection = new connection_t;
-        connection->active = true;
-        connection->keep_alive = true;
-        connection->verb = verb;
-        connection->resource = StringLib::duplicate(resource);
-        connection->data = StringLib::duplicate(data);
-        connection->outq = new Publisher(outq_name);
-        connection->client = lua_obj;
-        connection->status = CONNECTION_ERROR;
-
         /* Check if Blocking */
         if(outq_name == NULL)
         {
-            /* Create Subscriber */
-            inq = new Subscriber(*(connection->outq));
-        }
-
-        /* Start Connection Thread */
-        lua_obj->connMutex.lock();
-        {
-            connection->pid = new Thread(requestThread, connection);
-            lua_obj->connections.add(connection);
-        }
-        lua_obj->connMutex.unlock();
-
-        /* Check if Blocking */
-        if(outq_name == NULL)
-        {
-            /* Setup Response Variables */
-            int total_response_length = 0;
-            List<Subscriber::msgRef_t> responses;
-
-            /* Read Responses */
-            int attempts = 0;
-            bool done = false;
-            while(!done)
+            rsps_t rsps = lua_obj->request(verb, resource, data, true, NULL);
+            if(rsps.response)
             {
-                Subscriber::msgRef_t ref;
-                int recv_status = inq->receiveRef(ref, SYS_TIMEOUT);
-                if(recv_status > 0)
-                {
-                    if(ref.size > 0)
-                    {
-                        total_response_length += ref.size;
-                        responses.add(ref);
-                    }
-                    else // terminator
-                    {
-                        inq->dereference(ref);
-                        done = true;
-                    }
-                }
-                else if(recv_status == TIMEOUT_RC)
-                {
-                    attempts++;
-                    if(attempts >= MAX_TIMEOUTS)
-                    {
-                        mlog(CRITICAL, "Maximum number of attempts to read queue reached");
-                        done = true;
-                    }
-                }
-                else
-                {
-                    mlog(CRITICAL, "Failed queue receive on %s with error %d", lua_obj->getName(), recv_status);
-                    done = true;
-                }
+                lua_pushlstring(L, rsps.response, rsps.size);
+                delete [] rsps.response;
+                lua_pushinteger(L, rsps.code);
+                num_rets += 2;
             }
-
-            /* Allocate and Build Response Array */
-            char* response = new char [total_response_length + 1];
-            List<Subscriber::msgRef_t>::Iterator iterator(responses);
-            int index = 0;
-            for(int i = 0; i < responses.length(); i++)
+            else
             {
-                LocalLib::copy(&response[index], iterator[i].data, iterator[i].size);
-                index += iterator[i].size;
-                inq->dereference((Subscriber::msgRef_t&)iterator[i]);
+                status = false;
+                lua_pushnil(L);
+                lua_pushinteger(L, rsps.code);
+                num_rets += 2;
             }
-            response[index] = '\0';
-
-            /* Return Respnonse String */
-            lua_pushlstring(L, response, total_response_length + 1);
-            delete [] response;
             num_rets++;
         }
         else
         {
-            /* No way to verify connection status when not blocking */
-            connection->status = CONNECTION_OKAY;
+            /* Initialize Request */
+            rqst_t rqst = {
+                .verb = verb,
+                .resource = StringLib::duplicate(resource),
+                .data = StringLib::duplicate(data),
+                .outq = new Publisher(outq_name)
+            };
+
+            /* Create Request Thread Upon First Request */
+            if(!lua_obj->requestPid) lua_obj->requestPid = new Thread(requestThread, lua_obj);
+
+            /* Post Request */
+            status = lua_obj->requestPub->postCopy(&rqst, sizeof(rqst_t)) > 0;
         }
     }
     catch(const RunTimeException& e)
@@ -791,15 +602,33 @@ int HttpClient::luaRequest (lua_State* L)
         mlog(e.level(), "Error initiating request: %s", e.what());
     }
 
-    /* Delete Subscriber */
-    if(inq) delete inq;
+    /* Return Status */
+    return returnLuaStatus(L, status, num_rets);
+}
 
-    /* Get Status */
-    if(connection)
+/*----------------------------------------------------------------------------
+ * luaConnected - :connected()
+ *----------------------------------------------------------------------------*/
+int HttpClient::luaConnected (lua_State* L)
+{
+    bool status = false;
+
+    try
     {
-        status = connection->status == CONNECTION_OKAY;
+        /* Get Self */
+        HttpClient* lua_obj = (HttpClient*)getLuaSelf(L, 1);
+
+        /* Determine Connection Status */
+        if(lua_obj->sock)
+        {
+            status = lua_obj->sock->isConnected();
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error determining connection status: %s", e.what());
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, num_rets);
+    return returnLuaStatus(L, status);
 }
