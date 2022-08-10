@@ -252,26 +252,28 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
  *----------------------------------------------------------------------------*/
 Atl06Proxy::~Atl06Proxy (void)
 {
-    printf("OH NO, why are we here\n");
     for(int i = 0; i < numRequests; i++)
     {
         requests[i].sync.lock();
         {
             if(!requests[i].complete)
             {
-                requests[i].sync.wait(0, NODE_LOCK_TIMEOUT * 1000);
+                if(requests[i].sync.wait(0, NODE_LOCK_TIMEOUT * 1000))
+                {
+                    delete [] requests[i].resource;
+                }
+                else
+                {
+                    mlog(CRITICAL, "Memory leak due to unfinished proxied request: %s", requests[i].resource);
+                }
             }
         }
         requests[i].sync.unlock();
 
-        delete [] requests[i].resource;
     }
     delete [] requests;
-
     delete [] parameters;
-
     delete outQ;
-
     delete [] orchestratorURL;
 }
 
@@ -290,16 +292,15 @@ void* Atl06Proxy::proxyThread (void* parm)
         {
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
             Atl06Proxy* proxy = rqst->proxy;
-            HttpClient orchestrator(NULL, rqst->proxy->orchestratorURL);
+//            HttpClient orchestrator(NULL, rqst->proxy->orchestratorURL);
             const char* resource = rqst->resource;
-printf(">>> %s - %d\n", resource, rqst->index);
             try
             {
                 /* Get Lock from Orchestrator */
                 mlog(INFO, "Processing resource: %s", resource);
                 SafeString orch_rqst_data("{'service':'test', 'nodesNeeded': 1, 'timeout': %d}", NODE_LOCK_TIMEOUT);
-                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false);
-                print2term("%s\n", rsps.response);
+//                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false, NULL);
+//                print2term("%s\n", rsps.response);
 
                 // pass request to node
 

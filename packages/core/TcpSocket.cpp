@@ -105,10 +105,7 @@ TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
     {
         connector = NULL;
         sock = SockLib::sockstream(ip_addr, port, is_server, block);
-        if(sock != INVALID_RC)
-        {
-            mlog(INFO, "Connection established to %s:%d", ip_addr, port);
-        }
+        if(sock >= 0) mlog(INFO, "Connection [%d] established to %s:%d", sock, ip_addr, port);
     }
     else
     {
