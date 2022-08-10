@@ -202,15 +202,15 @@ void initcore (void)
 void deinitcore (void)
 {
     /* Clean up libraries initialized in initcore() */
-    print2term("Exiting...\n");
-    LuaEngine::deinit();print2term("Lua Engine Uninitialized\n");
-    EventLib::deinit(); print2term("Event Library Uninitialized\n");
-    TimeLib::deinit();  print2term("Time Library Uninitialized\n");
-    TTYLib::deinit();   print2term("TTY Library Uninitialized\n");
-    SockLib::deinit();  print2term("Socket Library Uninitialized\n");
-    MsgQ::deinit();     print2term("Message Queues Uninitialized\n");
-    LocalLib::deinit(); print2term("Local Library Uninitialized\n");
-    print2term("Cleanup Complete\n");
+    print2term("Exiting... ");
+    LuaEngine::deinit();
+    EventLib::deinit();
+    TimeLib::deinit();
+    TTYLib::deinit();
+    SockLib::deinit();
+    MsgQ::deinit();
+    LocalLib::deinit();
+    print2term("cleanup complete (%d errors)\n", appErrors);
 }
 
 /*----------------------------------------------------------------------------
@@ -235,7 +235,7 @@ void setinactive(int errors)
 }
 
 /*----------------------------------------------------------------------------
- *  geterrors 
+ *  geterrors
  *
  *  get aplication errors
  *----------------------------------------------------------------------------*/

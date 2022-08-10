@@ -191,6 +191,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* blo
         /* Set Keep Alive on Socket */
         if(sockkeepalive(server_socket) < 0)
         {
+            dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
             sockclose(server_socket);
             return INVALID_RC;
         }
@@ -198,6 +199,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* blo
         /* Make Socket Non-Blocking */
         if(socknonblock(server_socket) < 0)
         {
+            dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
             sockclose(server_socket);
             return INVALID_RC;
         }
