@@ -82,6 +82,7 @@ class StringLib
                 String&         operator+=  (const char* rstr);
                 String&         operator=   (const String& rhs);
                 String&         operator=   (const char* rstr);
+                void            reset       (void);
 
             private:
 

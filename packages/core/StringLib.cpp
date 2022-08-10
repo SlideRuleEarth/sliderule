@@ -381,6 +381,18 @@ SafeString operator+(SafeString lhs, const SafeString& rhs)
     return lhs;
 }
 
+/*----------------------------------------------------------------------------
+ * reset
+ *----------------------------------------------------------------------------*/
+void SafeString::reset(void)
+{
+    delete [] str;
+    maxlen = DEFAULT_STR_SIZE;
+    str = new char[maxlen];
+    LocalLib::set(str, 0, maxlen);
+    len = 1;
+}
+
 
 /******************************************************************************
  * PUBLIC METHODS

@@ -11,11 +11,11 @@ client = core.http("127.0.0.1", 9081)
 
 print('\n------------------\nTest01: Return\n------------------')
 
-rsps = client:request("GET", "/source/version", "{}")
-print(rsps)
---[[
+rsps, code, status = client:request("GET", "/source/version", "{}")
 rsps_table = json.decode(rsps)
 runner.check(rsps_table["server"]["packages"][1] == "core")
+runner.check(code == 200)
+runner.check(status)
 
 print('\n------------------\nTest02: Return\n------------------')
 
@@ -43,11 +43,10 @@ rsps_table = json.decode(rsps)
 runner.check(rsps_table["healthy"] == true)
 
 -- Clean Up --
-]]
 
 server:destroy()
 client:destroy()
 
 -- Report Results --
 
---runner.report()
+runner.report()

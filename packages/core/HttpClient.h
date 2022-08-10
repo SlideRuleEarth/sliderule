@@ -57,7 +57,7 @@ class HttpClient: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_RQST_DATA_LEN  = 65536;
+        static const int MAX_RQST_BUF_LEN   = 65536;
         static const int MAX_RSPS_BUF_LEN   = 65536;
         static const int MAX_URL_LEN        = 1024;
         static const int MAX_TIMEOUTS       = 5;
@@ -70,16 +70,6 @@ class HttpClient: public LuaObject
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
-
-        typedef enum {
-            CONNECTION_OKAY = 0,
-            CONNECTION_ERROR = -1,
-            RQST_INVALID = -2,
-            RQST_FAILED_TO_SEND = -3,
-            RSPS_FAILED_TO_POST = -4,
-            RSPS_INVALID_HDR = -5,
-            RSPS_INCOMPLETE = -6
-        } status_t;
 
         typedef struct {
             EndpointObject::code_t code;
@@ -114,6 +104,11 @@ class HttpClient: public LuaObject
             Publisher*                  outq;
         } rqst_t;
 
+        typedef struct {
+            const char*                 key;
+            const char*                 value;
+        } hdr_kv_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -124,19 +119,24 @@ class HttpClient: public LuaObject
         TcpSocket*                      sock;
         char*                           ipAddr;
         int                             port;
+        char                            rqstBuf[MAX_RQST_BUF_LEN];
+        char                            rspsBuf[MAX_RSPS_BUF_LEN];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-               TcpSocket*   initializeSocket    (const char* _ip_addr, int _port);
-               bool         makeRequest         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
-               rsps_t       parseResponse       (Publisher* outq);
+        TcpSocket*              initializeSocket    (const char* _ip_addr, int _port);
+        bool                    makeRequest         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
+        rsps_t                  parseResponse       (Publisher* outq);
+        long                    parseLine           (int start, int end);
+        EndpointObject::code_t  parseStatusLine     (int start, int term);
+        hdr_kv_t                parseHeaderLine     (int start, int term);
 
-        static void*        requestThread       (void* parm);
+        static void*            requestThread       (void* parm);
 
-        static int          luaRequest          (lua_State* L);
-        static int          luaConnected        (lua_State* L);
+        static int              luaRequest          (lua_State* L);
+        static int              luaConnected        (lua_State* L);
 };
 
 #endif  /* __http_client__ */

@@ -233,6 +233,9 @@ void HttpServer::deinitConnection (connection_t* connection)
         delete connection->request.headers;
         delete connection->state.rspq;
         delete connection->request.pid;
+
+        /* Reset Message */
+        connection->message.reset();
 }
 
 /*----------------------------------------------------------------------------
