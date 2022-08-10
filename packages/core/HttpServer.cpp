@@ -124,17 +124,6 @@ HttpServer::~HttpServer(void)
 }
 
 /*----------------------------------------------------------------------------
- * getUniqueId
- *----------------------------------------------------------------------------*/
-const char* HttpServer::getUniqueId (void)
-{
-    char* id_str = new char [REQUEST_ID_LEN];
-    long id = requestId++;
-    StringLib::format(id_str, REQUEST_ID_LEN, "%s:%ld", getName(), id);
-    return id_str;
-}
-
-/*----------------------------------------------------------------------------
  * getIpAddr
  *----------------------------------------------------------------------------*/
 const char* HttpServer::getIpAddr (void)
@@ -149,34 +138,6 @@ const char* HttpServer::getIpAddr (void)
 int HttpServer::getPort (void)
 {
     return port;
-}
-
-/*----------------------------------------------------------------------------
- * listenerThread
- *----------------------------------------------------------------------------*/
-void* HttpServer::listenerThread(void* parm)
-{
-    HttpServer* s = (HttpServer*)parm;
-
-    while(s->active)
-    {
-        /* Start Http Server */
-        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s, &(s->listening));
-        if(status < 0)
-        {
-            mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
-            s->listening = false;
-
-            /* Restart Http Server */
-            if(s->active)
-            {
-                mlog(INFO, "Attempting to restart http server: %s", s->getName());
-                LocalLib::sleep(5.0); // wait five seconds to prevent spin
-            }
-        }
-    }
-
-    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -222,6 +183,17 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
 }
 
 /*----------------------------------------------------------------------------
+ * getUniqueId
+ *----------------------------------------------------------------------------*/
+const char* HttpServer::getUniqueId (void)
+{
+    char* id_str = new char [REQUEST_ID_LEN];
+    long id = requestId++;
+    StringLib::format(id_str, REQUEST_ID_LEN, "%s:%ld", getName(), id);
+    return id_str;
+}
+
+/*----------------------------------------------------------------------------
  * initConnection
  *----------------------------------------------------------------------------*/
 void HttpServer::initConnection (connection_t* connection)
@@ -230,6 +202,9 @@ void HttpServer::initConnection (connection_t* connection)
     LocalLib::set(&connection->state, 0, sizeof(state_t));
     connection->start_time = TimeLib::latchtime();
     connection->keep_alive = false;
+    connection->request.id = getUniqueId(); // id is allocated
+    connection->request.headers = new Dictionary<const char*>(EXPECTED_MAX_HEADER_FIELDS);
+    connection->state.rspq = new Subscriber(connection->request.id);
 }
 
 /*----------------------------------------------------------------------------
@@ -356,6 +331,34 @@ int HttpServer::luaUntilUp (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * listenerThread
+ *----------------------------------------------------------------------------*/
+void* HttpServer::listenerThread(void* parm)
+{
+    HttpServer* s = (HttpServer*)parm;
+
+    while(s->active)
+    {
+        /* Start Http Server */
+        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s, &(s->listening));
+        if(status < 0)
+        {
+            mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
+            s->listening = false;
+
+            /* Restart Http Server */
+            if(s->active)
+            {
+                mlog(INFO, "Attempting to restart http server: %s", s->getName());
+                LocalLib::sleep(5.0); // wait five seconds to prevent spin
+            }
+        }
+    }
+
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -699,7 +702,7 @@ int HttpServer::onWrite(int fd)
         }
 
         /* Check for Keep Alive */
-        if(connection->keep_alive)
+        if(connection->state.response_complete && connection->keep_alive)
         {
             deinitConnection(connection);
             initConnection(connection);
@@ -741,16 +744,10 @@ int HttpServer::onConnect(int fd)
     initConnection(connection);
 
     /* Register Connection */
-    if(connections.add(fd, connection, false))
-    {
-        connection->request.id = getUniqueId(); // id is allocated
-        connection->request.headers = new Dictionary<const char*>(EXPECTED_MAX_HEADER_FIELDS);
-        connection->state.rspq = new Subscriber(connection->request.id);
-    }
-    else
+    if(!connections.add(fd, connection, false))
     {
         mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry", connection->request.id);
-        status = INVALID_RC;
+        status = INVALID_RC; // will disconnect and free connection
     }
 
     return status;

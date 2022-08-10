@@ -80,7 +80,6 @@ class HttpServer: public LuaObject
                             HttpServer      (lua_State* L, const char* _ip_addr, int _port, int max_connections);
                             ~HttpServer     (void);
 
-        const char*         getUniqueId     (void);
         const char*         getIpAddr       (void);
         int                 getPort         (void);
 
@@ -135,16 +134,16 @@ class HttpServer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void*        listenerThread      (void* parm);
-
-        static void         extract             (const char* url, char** endpoint, char** new_url);
-        static void         initConnection      (connection_t* connection);
-        static void         deinitConnection    (connection_t* connection);
+        void                extract             (const char* url, char** endpoint, char** new_url);
+        const char*         getUniqueId         (void);
+        void                initConnection      (connection_t* connection);
+        void                deinitConnection    (connection_t* connection);
 
         static int          luaAttach           (lua_State* L);
         static int          luaMetric           (lua_State* L);
         static int          luaUntilUp          (lua_State* L);
 
+        static void*        listenerThread      (void* parm);
         static int          pollHandler         (int fd, short* events, void* parm);
         static int          activeHandler       (int fd, int flags, void* parm);
         int                 onRead              (int fd);
