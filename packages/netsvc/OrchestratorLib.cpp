@@ -298,6 +298,44 @@ int OrchestratorLib::luaLock(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaUnlock - orchunlock(<[<txid>, <txid>, ...]>)
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::luaUnlock(lua_State* L)
+{
+    try
+    {
+        bool verbose = LuaObject::getLuaBoolean(L, 2, true, false);
+
+        if(!lua_istable(L, 1))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for parameter #1");
+        }
+
+        int num_transactions = lua_rawlen(L, 1);
+        if(num_transactions > 0)
+        {
+            long* transactions = new long [num_transactions];
+            for(int t = 0; t < num_transactions; t++)
+            {
+                lua_rawgeti(L, 1, t+1);
+                transactions[t] = (long)LuaObject::getLuaInteger(L, -1);
+                lua_pop(L, 1);
+            }
+
+            bool status = unlock(transactions, num_transactions, verbose);
+            lua_pushboolean(L, status);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error unlocking transactions: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * luaHealth - orchhealth()
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaHealth(lua_State* L)

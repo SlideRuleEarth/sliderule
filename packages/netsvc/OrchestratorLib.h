@@ -70,6 +70,7 @@ class OrchestratorLib
         static int          luaSetUrl           (lua_State* L);
         static int          luaRegisterService  (lua_State* L);
         static int          luaLock             (lua_State* L);
+        static int          luaUnlock           (lua_State* L);
         static int          luaHealth           (lua_State* L);
 
         /*--------------------------------------------------------------------

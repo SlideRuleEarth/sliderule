@@ -56,8 +56,9 @@ int netsvc_open (lua_State* L)
         {"post",        CurlLib::luaPost},
         {"orchurl",     OrchestratorLib::luaSetUrl},
         {"orchreg",     OrchestratorLib::luaRegisterService},
-        {"orchhealth",  OrchestratorLib::luaHealth},
         {"orchlock",    OrchestratorLib::luaLock},
+        {"orchunlock",  OrchestratorLib::luaUnlock},
+        {"orchhealth",  OrchestratorLib::luaHealth},
         {NULL,          NULL}
     };
 
