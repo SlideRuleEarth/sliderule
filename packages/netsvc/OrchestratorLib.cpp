@@ -71,8 +71,9 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
     bool status = true;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString orch_rqst_data("{\"service\":\"%s\", \"lifetime\": %d, \"name\": \"%s\"}", service, lifetime, name);
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/", orch_rqst_data.getString(), false, NULL);
+    SafeString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"name\": \"%s\"}", service, lifetime, name);
+
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/", rqst.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -115,9 +116,9 @@ OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_
     nodes_t* nodes = new nodes_t;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString orch_rqst_data("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false, NULL);
+    SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", rqst.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         rapidjson::Document json;
@@ -125,7 +126,7 @@ OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_
 
         for(rapidjson::SizeType i = 0; i < json["members"].Size(); i++)
         {
-            const char* name = json["members"][i].GetString();
+            const char* name = StringLib::duplicate(json["members"][i].GetString());
             nodes->members.add(name);
         }
 
@@ -148,8 +149,50 @@ OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_
             }
         }
     }
+    else
+    {
+        mlog(CRITICAL, "Failed to lock nodes on %s", service);
+    }
 
     return nodes;
+}
+
+/*----------------------------------------------------------------------------
+ * lock
+ *----------------------------------------------------------------------------*/
+bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool verbose)
+{
+    assert(num_transactions > 0);
+
+    bool status = true;
+
+    HttpClient orchestrator(NULL, URL);
+    SafeString rqst("{\"transactions\": [%ld", transactions[0]);
+    char txstrbuf[64];
+    for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(txstrbuf, 64, ",%ld", transactions[t]);
+    rqst += "]}";
+
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/unlock", rqst.getString(), false, NULL);
+    if(rsps.code == EndpointObject::OK)
+    {
+        if(verbose)
+        {
+            rapidjson::Document json;
+            json.Parse(rsps.response);
+
+            int completed = json["complete"].GetInt();
+            int failed = json["fail"].GetInt();
+
+            mlog(INFO, "Completed %d transactions%s", completed, failed ? " with failures" : " successfully");
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to unlock %d transactions", num_transactions);
+        status = false;
+    }
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -160,6 +203,7 @@ bool OrchestratorLib::health (void)
     bool status = false;
 
     HttpClient orchestrator(NULL, URL);
+
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/health", NULL, false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
@@ -225,6 +269,7 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaLock(lua_State* L)
 {
+    nodes_t* nodes = NULL;
     try
     {
         const char* service = LuaObject::getLuaString(L, 1);
@@ -232,7 +277,7 @@ int OrchestratorLib::luaLock(lua_State* L)
         int timeout_secs    = LuaObject::getLuaInteger(L, 3);
         bool verbose        = LuaObject::getLuaBoolean(L, 4, true, false);
 
-        nodes_t* nodes = lock(service, nodes_needed, timeout_secs, verbose);
+        nodes = lock(service, nodes_needed, timeout_secs, verbose);
 
         lua_newtable(L);
         for(int i = 0; i < nodes->transactions.length(); i++)
@@ -247,11 +292,13 @@ int OrchestratorLib::luaLock(lua_State* L)
         lua_pushnil(L);
     }
 
+    if(nodes) delete nodes;
+
     return 1;
 }
 
 /*----------------------------------------------------------------------------
- * luaHealth - orchhelath()
+ * luaHealth - orchhealth()
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaHealth(lua_State* L)
 {

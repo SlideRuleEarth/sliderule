@@ -64,12 +64,13 @@ class OrchestratorLib
 
         static bool         registerService     (const char* service, int lifetime, const char* name, bool verbose=false);
         static nodes_t*     lock                (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
+        static bool         unlock              (long transactions[], int num_transactions, bool verbose=false);
         static bool         health              (void);
 
         static int          luaSetUrl           (lua_State* L);
         static int          luaRegisterService  (lua_State* L);
-        static int          luaHealth           (lua_State* L);
         static int          luaLock             (lua_State* L);
+        static int          luaHealth           (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
