@@ -118,9 +118,9 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * generateExceptionStatus
  *----------------------------------------------------------------------------*/
- void LuaEndpoint::generateExceptionStatus (int code, Publisher* outq, bool* active, const char* errmsg, ...)
- {
-    /* Build Metric Name */
+void LuaEndpoint::generateExceptionStatus (int code, Publisher* outq, bool* active, const char* errmsg, ...)
+{
+    /* Build Error Message */
     char error_buf[MAX_EXCEPTION_TEXT_SIZE];
     va_list args;
     va_start(args, errmsg);
@@ -141,7 +141,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
     int post_status = MsgQ::STATE_TIMEOUT;
     if(active) while((*active) && (post_status = outq->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
     else outq->postCopy(rec_buf, rec_bytes, IO_CHECK);
- }
+}
 
 /******************************************************************************
  * PROTECTED METHODS

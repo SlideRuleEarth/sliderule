@@ -58,7 +58,6 @@ Publisher*  Atl06Proxy::rqstPub;
 Subscriber* Atl06Proxy::rqstSub;
 bool        Atl06Proxy::proxyActive;
 Thread**    Atl06Proxy::proxyPids;
-Mutex       Atl06Proxy::proxyMut;
 int         Atl06Proxy::threadPoolSize;
 
 /******************************************************************************
@@ -98,6 +97,8 @@ void Atl06Proxy::deinit (void)
 
 /*----------------------------------------------------------------------------
  * luaInit - init(<num_threads>)
+ *
+ *  NOTE: this function is not thread safe; must only be called once at startup
  *----------------------------------------------------------------------------*/
 int Atl06Proxy::luaInit (lua_State* L)
 {
@@ -112,35 +113,29 @@ int Atl06Proxy::luaInit (lua_State* L)
         long rqst_queue_depth = getLuaInteger(L, 2, true, MsgQ::CFG_DEPTH_STANDARD);
 
         /* Create Proxy Thread Pool */
-        proxyMut.lock();
+        if(!proxyActive)
         {
-            if(!proxyActive)
+            if(num_threads > 0)
             {
-                if(num_threads > 0)
+                rqstPub = new Publisher(NULL, NULL, rqst_queue_depth);
+                proxyActive = true;
+                rqstSub = new Subscriber(*rqstPub);
+                threadPoolSize = num_threads;
+                proxyPids = new Thread* [threadPoolSize];
+                for(int t = 0; t < threadPoolSize; t++)
                 {
-                    rqstPub = new Publisher(NULL, NULL, rqst_queue_depth);
-                    proxyActive = true;
-                    rqstSub = new Subscriber(*rqstPub);
-                    threadPoolSize = num_threads;
-                    proxyPids = new Thread* [threadPoolSize];
-                    for(int t = 0; t < threadPoolSize; t++)
-                    {
-                        proxyPids[t] = new Thread(proxyThread, NULL);
-                    }
-                }
-                else
-                {
-                    proxyMut.unlock();
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
+                    proxyPids[t] = new Thread(proxyThread, NULL);
                 }
             }
             else
             {
-                proxyMut.unlock();
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Atl06Proxy has already been initialized");
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
             }
         }
-        proxyMut.unlock();
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Atl06Proxy has already been initialized");
+        }
 
         /* Set Success */
         status = true;
@@ -237,6 +232,8 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resource
     parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
     outQ        = new Publisher(_outq_name);
 
+    /*
+
     /* Get First Round of Nodes */
     int num_nodes_to_request = MIN(numRequests, threadPoolSize);
     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, timeout);
@@ -248,24 +245,32 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resource
         requests[i].proxy = this;
         requests[i].resource = StringLib::duplicate(_resources[i]);
         requests[i].node = NULL;
-        requests[i].valid = true;
+        requests[i].valid = false;
         requests[i].complete = false;
+        requests[i].terminated = false;
 
         /* Assign Node if Available */
         if(i < nodes->length())
         {
             requests[i].node = nodes->get(i);
         }
+    }
 
-        /* Post Request */
+    /* Free Node List (individual nodes still remain) */
+    delete nodes;
+
+    /* Start Collator Thread */
+    active = true;
+    collatorPid = new Thread(collatorThread, this);
+
+    /* Post Requests to Proxy Threads */
+    for(int i = 0; i < numRequests; i++)
+    {
         if(rqstPub->postRef(&requests[i], sizeof(atl06_rqst_t), IO_CHECK) <= 0)
         {
             LuaEndpoint::generateExceptionStatus(RTE_ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
         }
     }
-
-    /* Free Node List (individual nodes still remain) */
-    delete nodes;
 }
 
 /*----------------------------------------------------------------------------
@@ -273,10 +278,60 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resource
  *----------------------------------------------------------------------------*/
 Atl06Proxy::~Atl06Proxy (void)
 {
+    active = false;
+    delete collatorPid;
     delete [] asset;
     delete [] requests;
     delete [] parameters;
     delete outQ;
+}
+
+/*----------------------------------------------------------------------------
+ * collatorThread
+ *----------------------------------------------------------------------------*/
+void* Atl06Proxy::collatorThread (void* parm)
+{
+    Atl06Proxy* proxy = (Atl06Proxy*)parm;
+    int num_terminated = 0;
+
+    while(proxy->active)
+    {
+        for(int i = 0; i < proxy->numRequests; i++)
+        {
+            atl06_rqst_t* rqst = &proxy->requests[i];
+            if(!rqst->terminated)
+            {
+                rqst->sync.lock();
+                {
+                    /* Wait for Completion */
+                    if(!rqst->complete)
+                    {
+                        rqst->sync.wait(0, COLLATOR_POLL_RATE);
+                    }
+
+                    /* Process Completion */
+                    if(rqst->complete)
+                    {
+                        rqst->terminated = true;
+                        num_terminated++;
+
+                        /* Post Status */
+                        int code = rqst->valid ? RTE_INFO : RTE_ERROR;
+                        LuaEndpoint::generateExceptionStatus(code, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
+                                                                rqst->valid ? "Successfully completed" : "Failed to complete",
+                                                                num_terminated, proxy->numRequests, rqst->resource);
+
+                        /* Clean Up Request */
+                        delete [] rqst->resource;
+                        delete rqst->node;
+                    }
+                }
+                rqst->sync.unlock();
+            }
+        }
+    }
+
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -294,7 +349,6 @@ void* Atl06Proxy::proxyThread (void* parm)
         {
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
             Atl06Proxy* proxy = rqst->proxy;
-            mlog(INFO, "Processing resource: %s", rqst->resource);
 
             try
             {
@@ -330,7 +384,11 @@ void* Atl06Proxy::proxyThread (void* parm)
                                     proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
                     HttpClient client(NULL, rqst->node->member);
                     HttpClient::rsps_t rsps = client.request(EndpointObject::POST, "/source/atl06", data.getString(), false, proxy->outQ);
-                    if(rsps.code != EndpointObject::OK)
+                    if(rsps.code == EndpointObject::OK)
+                    {
+                        rqst->valid = true;
+                    }
+                    else
                     {
                         mlog(CRITICAL, "Failed to proxy request to %s: %d", rqst->node->member, (int)rsps.code);
                     }
@@ -344,13 +402,13 @@ void* Atl06Proxy::proxyThread (void* parm)
                     mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", rqst->resource);
                 }
 
-                /* Clean Up Request */
-                delete [] rqst->resource;
-                delete rqst->node;
-
                 /* Mark Complete */
-                rqst->complete = true;
-                rqst->sync.signal();
+                rqst->sync.lock();
+                {
+                    rqst->complete = true;
+                    rqst->sync.signal();
+                }
+                rqst->sync.unlock();
             }
             catch(const RunTimeException& e)
             {

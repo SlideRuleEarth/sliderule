@@ -28,23 +28,7 @@ local resources = rqst["resources"]
 local parms = rqst["parms"]
 local timeout = rqst["timeout"] or 600
 
+-- Proxy Request --
 local atl06p = icesat2.atl06proxy(atl03_asset, resources, json.encode(parms), timeout, rspq)
-
-
--- While not done...
---  Get Available Nodes (as list)
---  Pass off processing resources to each of the nodes
---  As nodes complete, unlock them and request additional locks for the remaining resources
-
--- Need maximum number of worker threads
-
---[[
-local response, status = netsvc.get(orchestrator.."/discovery/lock", false, false, '{"service":"sliderule", "nodesNeeded":1, "timeout":600}')
-if status then
-    print(response)
-else
-    sys.log(core.ERROR, "Failed to get services from <"..orchestrator..">: "..response)
-end
-]]
 
 return

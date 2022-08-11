@@ -60,6 +60,7 @@ class Atl06Proxy: public LuaObject
         static const int MAX_REQUEST_PARAMETER_SIZE = 0x2000000; // 32MB
         static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
         static const int NODE_LOCK_TIMEOUT = 600; // 10 minutes
+        static const int COLLATOR_POLL_RATE = 1000; // 1 second
 
         static const char* SERVICE;
 
@@ -88,6 +89,7 @@ class Atl06Proxy: public LuaObject
             OrchestratorLib::Node*  node;       // node to proxy request to
             bool                    valid;      // set to false when error encountered
             bool                    complete;   // set to true when request finished
+            bool                    terminated; // all processing for request has been done
             Cond                    sync;       // signals when request is complete
         } atl06_rqst_t;
 
@@ -99,9 +101,10 @@ class Atl06Proxy: public LuaObject
         static Subscriber*  rqstSub;
         static bool         proxyActive;
         static Thread**     proxyPids; // thread pool
-        static Mutex        proxyMut;
         static int          threadPoolSize;
 
+        bool                active;
+        Thread*             collatorPid;
         atl06_rqst_t*       requests; // array[numRequests]
         int                 numRequests;
         const char*         asset;
@@ -116,6 +119,7 @@ class Atl06Proxy: public LuaObject
                             Atl06Proxy              (lua_State* L, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name);
                             ~Atl06Proxy             (void);
 
+        static void*        collatorThread          (void* parm);
         static void*        proxyThread             (void* parm);
 };
 

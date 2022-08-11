@@ -43,6 +43,7 @@
  * EXCEPTION
  ******************************************************************************/
 
+#define RTE_INFO                        -1
 #define RTE_ERROR                       0
 #define RTE_TIMEOUT                     1
 #define RTE_RESOURCE_DOES_NOT_EXIST     2
