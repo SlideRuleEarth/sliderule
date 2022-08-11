@@ -112,9 +112,9 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 /*----------------------------------------------------------------------------
  * lock
  *----------------------------------------------------------------------------*/
-OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
+OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
 {
-    nodes_t* nodes = new nodes_t;
+    NodeList* nodes = new NodeList;
 
     HttpClient orchestrator(NULL, URL);
     SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
@@ -270,7 +270,7 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaLock(lua_State* L)
 {
-    nodes_t* nodes = NULL;
+    NodeList* nodes = NULL;
     try
     {
         const char* service = LuaObject::getLuaString(L, 1);
@@ -285,6 +285,7 @@ int OrchestratorLib::luaLock(lua_State* L)
         {
             SafeString txidstr("%ld", nodes->get(i)->transaction);
             LuaEngine::setAttrStr(L, txidstr.getString(), nodes->get(i)->member);
+            delete nodes->get(i); // free node after using it
         }
     }
     catch(const RunTimeException& e)

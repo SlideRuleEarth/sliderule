@@ -40,10 +40,13 @@
 #include "core.h"
 #include "h5.h"
 #include "icesat2.h"
+#include "netsvc.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
+
+const char* Atl06Proxy::SERVICE = "sliderule";
 
 const char* Atl06Proxy::OBJECT_TYPE = "Atl06Proxy";
 const char* Atl06Proxy::LuaMetaName = "Atl06Proxy";
@@ -225,6 +228,9 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
     /* Create Publisher */
     outQ = new Publisher(_outq_name);
 
+    /* Get First Round of Nodes */
+    OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, numRequests, NODE_LOCK_TIMEOUT);
+
     /* Populate Requests */
     for(int i = 0; i < numRequests; i++)
     {
@@ -293,6 +299,7 @@ void* Atl06Proxy::proxyThread (void* parm)
                 mlog(INFO, "Processing resource: %s", resource);
 
                 // Get Lock from Orchestrator
+
                 // pass request to node
 
                 // stream response back to queue

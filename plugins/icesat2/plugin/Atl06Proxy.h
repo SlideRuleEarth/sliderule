@@ -39,6 +39,7 @@
 #include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
+#include "OrchestratorLib.h"
 
 /******************************************************************************
  * ATL03 READER
@@ -60,6 +61,8 @@ class Atl06Proxy: public LuaObject
         static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
         static const int NODE_LOCK_TIMEOUT = 600; // 10 minutes
 
+        static const char* SERVICE;
+
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
@@ -80,12 +83,13 @@ class Atl06Proxy: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            Atl06Proxy*     proxy;
-            const char*     resource;
-            int             index;      // 0..number of requests
-            bool            valid;      // set to false when error encountered
-            bool            complete;   // set to true when request finished
-            Cond            sync;       // signals when request is complete
+            Atl06Proxy*             proxy;
+            const char*             resource;
+            int                     index;      // 0..number of requests
+            OrchestratorLib::Node*  node;       // node to proxy request to
+            bool                    valid;      // set to false when error encountered
+            bool                    complete;   // set to true when request finished
+            Cond                    sync;       // signals when request is complete
         } atl06_rqst_t;
 
         /*--------------------------------------------------------------------

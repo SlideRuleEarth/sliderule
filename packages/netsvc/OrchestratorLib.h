@@ -65,7 +65,7 @@ class OrchestratorLib
             }
         };
 
-        typedef MgList<Node*> nodes_t;
+        typedef List<Node*> NodeList;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -75,7 +75,7 @@ class OrchestratorLib
         static void         deinit              (void);
 
         static bool         registerService     (const char* service, int lifetime, const char* name, bool verbose=false);
-        static nodes_t*     lock                (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
+        static NodeList*    lock                (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
         static bool         unlock              (long transactions[], int num_transactions, bool verbose=false);
         static bool         health              (void);
 
