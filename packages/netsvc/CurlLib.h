@@ -29,45 +29,31 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __s3_lib__
-#define __s3_lib__
+#ifndef __curl_lib__
+#define __curl_lib__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "Dictionary.h"
-#include "Asset.h"
-#include "CredentialStore.h"
-
-#include <aws/s3/S3Client.h>
+#include "core.h"
 
 /******************************************************************************
- * AWS S3 LIBRARY CLASS
+ * cURL LIBRARY CLASS
  ******************************************************************************/
 
-class S3Lib
+class CurlLib
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int STARTING_NUM_CLIENTS = 32;
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            Aws::S3::S3Client*          s3_client;
-            CredentialStore::Credential credential;
-            const char*                 asset_name;
-            int32_t                     reference_count;
-            bool                        decommissioned;
-        } client_t;
+            char* data;
+            size_t size;
+        } data_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -75,15 +61,18 @@ class S3Lib
 
         static void         init            (void);
         static void         deinit          (void);
-        static client_t*    createClient    (const Asset* asset);
-        static void         destroyClient   (client_t* client);
+
+        static int          luaGet          (lua_State* L);
+        static int          luaPost         (lua_State* L);
+
+    private:
 
         /*--------------------------------------------------------------------
-         * Data
+         * Methods
          *--------------------------------------------------------------------*/
 
-        static Mutex clientsMut;
-        static Dictionary<client_t*> clients;
+        static size_t       writeData       (void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t       readData        (void* buffer, size_t size, size_t nmemb, void *userp);
 };
 
-#endif  /* __s3_lib__ */
+#endif  /* __curl_lib__ */

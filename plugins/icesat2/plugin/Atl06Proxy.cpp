@@ -226,6 +226,13 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
     parameters = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
     orchestratorURL = StringLib::duplicate(_orchestrator_url);
 
+//            HttpClient orchestrator(NULL, rqst->proxy->orchestratorURL);
+                /* Get Lock from Orchestrator */
+                mlog(INFO, "Processing resource: %s", resource);
+                SafeString orch_rqst_data("{'service':'test', 'nodesNeeded': 1, 'timeout': %d}", NODE_LOCK_TIMEOUT);
+//                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false, NULL);
+//                print2term("%s\n", rsps.response);
+
     /* Create Publisher */
     outQ = new Publisher(_outq_name);
 

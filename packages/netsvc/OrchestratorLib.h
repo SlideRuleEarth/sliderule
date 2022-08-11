@@ -29,45 +29,31 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __s3_lib__
-#define __s3_lib__
+#ifndef __orchestrator_lib__
+#define __orchestrator_lib__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "Dictionary.h"
-#include "Asset.h"
-#include "CredentialStore.h"
-
-#include <aws/s3/S3Client.h>
+#include "core.h"
 
 /******************************************************************************
- * AWS S3 LIBRARY CLASS
+ * ORCHESTRATOR LIBRARY CLASS
  ******************************************************************************/
 
-class S3Lib
+class OrchestratorLib
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int STARTING_NUM_CLIENTS = 32;
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            Aws::S3::S3Client*          s3_client;
-            CredentialStore::Credential credential;
-            const char*                 asset_name;
-            int32_t                     reference_count;
-            bool                        decommissioned;
-        } client_t;
+            MgList<const char*, 256, true> members;
+            List<long> txids;
+        } nodes_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -75,15 +61,17 @@ class S3Lib
 
         static void         init            (void);
         static void         deinit          (void);
-        static client_t*    createClient    (const Asset* asset);
-        static void         destroyClient   (client_t* client);
+
+        static nodes_t*     lock            (const char* service, int nodes_needed, int timeout_secs);
+
+        static int          luaSetUrl       (lua_State* L);
+        static int          luaLock         (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static Mutex clientsMut;
-        static Dictionary<client_t*> clients;
+        static const char* URL;
 };
 
-#endif  /* __s3_lib__ */
+#endif  /* __orchestrator_lib__ */

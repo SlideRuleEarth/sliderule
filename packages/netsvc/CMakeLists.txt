@@ -1,6 +1,9 @@
 # Find cURL Library
 find_package (CURL)
 
+# Find RapidJSON Library
+find_package (RapidJSON)
+
 # Build package
 if (CURL_FOUND)
 
@@ -10,10 +13,13 @@ if (CURL_FOUND)
 
     target_link_libraries (slideruleLib PUBLIC ${CURL_LIBRARIES})
     target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
+    target_include_directories (slideruleLib PUBLIC ${RapidJSON_INCLUDE_DIR})
 
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/CurlLib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.cpp
     )
 
     target_include_directories (slideruleLib
@@ -25,6 +31,8 @@ if (CURL_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.h
+            ${CMAKE_CURRENT_LIST_DIR}/CurlLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.h
         DESTINATION
             ${INCDIR}
     )

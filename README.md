@@ -212,7 +212,5 @@ The following third-party libraries can be linked to by SlideRule:
 * __AWS SDK for C++__: https://aws.amazon.com/sdk-for-cpp/ (Apache 2.0 license)
 * __HDF5 Library__: https://www.hdfgroup.org (BSD-style license)
 * __HDF5 REST VOL Plugin__: https://www.hdfgroup.org (BSD-style license)
-
-The following third-party libraries are linked to indirectly by libraries used by SlideRule:
+* __RapidJSON__: https://github.com/Tencent/rapidjson (MIT license)
 * __curl__: https://curl.se/docs/copyright.html (open source license - see website for license information)
-* __yajl__: https://github.com/lloyd/yajl (open source license - similar to MIT)
