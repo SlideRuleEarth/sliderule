@@ -154,7 +154,7 @@ int Atl06Proxy::luaInit (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<resources>, <parameter string>, <outq_name>, <orchestrator_url>)
+ * luaCreate - create(<resources>, <parameter string>, <timeout>, <outq_name>)
  *----------------------------------------------------------------------------*/
 int Atl06Proxy::luaCreate (lua_State* L)
 {
@@ -163,8 +163,11 @@ int Atl06Proxy::luaCreate (lua_State* L)
 
     try
     {
+        /* Get Asset */
+        const char* _asset = getLuaString(L, 1);
+
         /* Check Resource Table Parameter */
-        int resources_parm_index = 1;
+        int resources_parm_index = 2;
         if(!lua_istable(L, resources_parm_index))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for parameter #1");
@@ -189,13 +192,16 @@ int Atl06Proxy::luaCreate (lua_State* L)
         }
 
         /* Get Request Parameters */
-        const char* _parameters = getLuaString(L, 2);
+        const char* _parameters = getLuaString(L, 3);
+
+        /* Get Timeout */
+        int _timeout_secs = getLuaInteger(L, 4, true, NODE_LOCK_TIMEOUT);
 
         /* Get Output Queue */
-        const char* outq_name = getLuaString(L, 3);
+        const char* outq_name = getLuaString(L, 5);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name));
+        return createLuaObject(L, new Atl06Proxy(L, _asset, _resources, _num_resources, _parameters, _timeout_secs, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -214,32 +220,42 @@ int Atl06Proxy::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* _outq_name):
+Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
+    assert(_asset);
     assert(_resources);
     assert(_parameters);
     assert(_outq_name);
 
     numRequests = _num_resources;
-    requests = new atl06_rqst_t[numRequests];
-    parameters = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
+    timeout = _timeout_secs;
 
-    /* Create Publisher */
-    outQ = new Publisher(_outq_name);
+    /* Allocate Data Members */
+    asset       = StringLib::duplicate(_asset);
+    requests    = new atl06_rqst_t[numRequests];
+    parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
+    outQ        = new Publisher(_outq_name);
 
     /* Get First Round of Nodes */
-    OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, numRequests, NODE_LOCK_TIMEOUT);
+    int num_nodes_to_request = MIN(numRequests, threadPoolSize);
+    OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, timeout);
 
     /* Populate Requests */
     for(int i = 0; i < numRequests; i++)
     {
-        /* Allocate and Initialize Request */
+        /* Initialize Request */
         requests[i].proxy = this;
         requests[i].resource = StringLib::duplicate(_resources[i]);
-        requests[i].index = i;
+        requests[i].node = NULL;
         requests[i].valid = true;
         requests[i].complete = false;
+
+        /* Assign Node if Available */
+        if(i < nodes->length())
+        {
+            requests[i].node = nodes->get(i);
+        }
 
         /* Post Request */
         if(rqstPub->postRef(&requests[i], sizeof(atl06_rqst_t), IO_CHECK) <= 0)
@@ -247,6 +263,9 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
             LuaEndpoint::generateExceptionStatus(RTE_ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
         }
     }
+
+    /* Free Node List (individual nodes still remain) */
+    delete nodes;
 }
 
 /*----------------------------------------------------------------------------
@@ -254,25 +273,7 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
  *----------------------------------------------------------------------------*/
 Atl06Proxy::~Atl06Proxy (void)
 {
-    for(int i = 0; i < numRequests; i++)
-    {
-        requests[i].sync.lock();
-        {
-            if(!requests[i].complete)
-            {
-                if(requests[i].sync.wait(0, NODE_LOCK_TIMEOUT * 1000))
-                {
-                    delete [] requests[i].resource;
-                }
-                else
-                {
-                    mlog(CRITICAL, "Memory leak due to unfinished proxied request: %s", requests[i].resource);
-                }
-            }
-        }
-        requests[i].sync.unlock();
-
-    }
+    delete [] asset;
     delete [] requests;
     delete [] parameters;
     delete outQ;
@@ -294,15 +295,56 @@ void* Atl06Proxy::proxyThread (void* parm)
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
             Atl06Proxy* proxy = rqst->proxy;
             const char* resource = rqst->resource;
+
             try
             {
                 mlog(INFO, "Processing resource: %s", resource);
 
-                // Get Lock from Orchestrator
+                /* Get Lock from Orchestrator */
+                double expiration_time = TimeLib::latchtime() + proxy->timeout;
+                double seconds_to_wait = 1.0;
+                while(proxyActive && !rqst->node && (expiration_time > TimeLib::latchtime()))
+                {
+                    OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
+                    if(nodes->length() > 0)
+                    {
+                        rqst->node = nodes->get(0);
+                    }
+                    else
+                    {
+                        double count_down = seconds_to_wait;
+                        while(proxyActive && (count_down > 0))
+                        {
+                            LocalLib::sleep(1);
+                            count_down -= 1.0;
+                        }
+                        seconds_to_wait *= 2;
+                        seconds_to_wait = MIN(seconds_to_wait, proxy->timeout);
+                    }
+                    delete nodes;
+                }
 
-                // pass request to node
+                /* Proxy Request */
+                if(rqst->node)
+                {
+                    SafeString data("{\"atl03-asset\": %s, \"resource\": %s, \"parms\": %s, \"timeout\": %d}",
+                                    proxy->asset, resource, proxy->parameters, proxy->timeout);
+                    HttpClient client(NULL, rqst->node->member);
+                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, "/source/atl06", data.getString(), false, proxy->outQ);
+                    if(rsps.code != EndpointObject::OK)
+                    {
+                        mlog(CRITICAL, "Failed to proxy request to %s: %d", rqst->node->member, (int)rsps.code);
+                    }
+                }
+                else
+                {
+                    /* Timeout Occurred */
+                    mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", resource);
+                }
 
-                // stream response back to queue
+                /* Clean Up Request */
+                delete [] resource;
+                delete rqst->node;
 
                 /* Mark Complete */
                 rqst->complete = true;

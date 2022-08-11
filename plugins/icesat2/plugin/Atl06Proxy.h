@@ -85,7 +85,6 @@ class Atl06Proxy: public LuaObject
         typedef struct {
             Atl06Proxy*             proxy;
             const char*             resource;
-            int                     index;      // 0..number of requests
             OrchestratorLib::Node*  node;       // node to proxy request to
             bool                    valid;      // set to false when error encountered
             bool                    complete;   // set to true when request finished
@@ -105,14 +104,16 @@ class Atl06Proxy: public LuaObject
 
         atl06_rqst_t*       requests; // array[numRequests]
         int                 numRequests;
+        const char*         asset;
         const char*         parameters;
+        int                 timeout;
         Publisher*          outQ;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl06Proxy              (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* _outq_name);
+                            Atl06Proxy              (lua_State* L, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name);
                             ~Atl06Proxy             (void);
 
         static void*        proxyThread             (void* parm);

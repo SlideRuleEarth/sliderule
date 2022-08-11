@@ -1,4 +1,5 @@
-local name = sys.ipv4()
+local default_name = "http://"..sys.ipv4()..":9081"
+local name = arg[1] or default_name
 local service = "sliderule"
 local lifetime = 120 -- seconds
 local orchestrator_url = os.getenv("ORCHESTRATOR") or "http://127.0.0.1:8050"

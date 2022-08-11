@@ -8,7 +8,7 @@
 --                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>",
 --                  "resources":    "<url of hdf5 file or object>",
 --                  "parms":        {<table of parameters>},
---                  "timeout":      <milliseconds to wait for first response>
+--                  "timeout":      <seconds to wait for response>
 --              }
 --
 --              rspq - output queue to stream results
@@ -23,11 +23,12 @@ local userlog = msg.publish(rspq)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
+local atl03_asset = rqst["atl03-asset"]
 local resources = rqst["resources"]
 local parms = rqst["parms"]
-local orchestrator = os.getenv("ORCHESTRATOR") or "http://127.0.0.1:8050"
+local timeout = rqst["timeout"] or 600
 
-local atl06p = icesat2.atl06proxy(resources, json.encode(parms), rspq, orchestrator)
+local atl06p = icesat2.atl06proxy(atl03_asset, resources, json.encode(parms), timeout, rspq)
 
 
 -- While not done...
