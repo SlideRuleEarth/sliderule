@@ -105,7 +105,7 @@ TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
     {
         connector = NULL;
         sock = SockLib::sockstream(ip_addr, port, is_server, block);
-        if(sock >= 0) mlog(INFO, "Connection [%d] established to %s:%d", sock, ip_addr, port);
+        if(sock >= 0) mlog(DEBUG, "Connection [%d] established to %s:%d", sock, ip_addr, port);
     }
     else
     {
@@ -185,7 +185,7 @@ void TcpSocket::closeConnection(void)
 {
     if(sock != INVALID_RC)
     {
-        mlog(INFO, "closing connection on socket: %s:%d", ip_addr, port);
+        mlog(DEBUG, "Closing connection on socket: %s:%d", ip_addr, port);
         SockLib::sockclose(sock);
         sock = INVALID_RC;
     }

@@ -66,24 +66,43 @@ void OrchestratorLib::deinit (void)
 /*----------------------------------------------------------------------------
  * registerService
  *----------------------------------------------------------------------------*/
-bool OrchestratorLib::registerService (const char* service, int lifetime, const char* name)
+bool OrchestratorLib::registerService (const char* service, int lifetime, const char* name, bool verbose)
 {
+    bool status = true;
+
     HttpClient orchestrator(NULL, URL);
-    SafeString orch_rqst_data("{'service':'%s', 'lifetime': %d, 'name': %s}", service, lifetime, name);
+    SafeString orch_rqst_data("{\"service\":\"%s\", \"lifetime\": %d, \"name\": \"%s\"}", service, lifetime, name);
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/", orch_rqst_data.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
-        rapidjson::Document json;
-        json.Parse(rsps.response);
+        try
+        {
+            if(verbose)
+            {
+                rapidjson::Document json;
+                json.Parse(rsps.response);
 
-        rapidjson::Value& member = json["name"];
-        auto membership = member.GetArray();
+                const char* membership = json[name][0].GetString();
+                double expiration = json[name][1].GetDouble();
 
-        rapidjson::Value& member_service = membership[0];
-        print2term("Membership: %s\n", member_service.GetString());
+                TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(expiration * 1000);
+                TimeLib::date_t date = TimeLib::gmt2date(gmt);
+                mlog(INFO, "Registered to <%s> until %d/%d/%d %d:%d:%d\n", membership, date.day, date.month, date.year, gmt.hour, gmt.minute, gmt.second);
+            }
+        }
+        catch(const std::exception& e)
+        {
+            mlog(CRITICAL, "Failed process response to registration: %s", rsps.response);
+            status = false;
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to register %s to %s", name, service);
+        status = false;
     }
 
-    return true;
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -115,7 +134,7 @@ OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_
     nodes_t* nodes = new nodes_t;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString orch_rqst_data("{'service':'%s', 'nodesNeeded': %d, 'timeout': %d}", service, nodes_needed, timeout_secs);
+    SafeString orch_rqst_data("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false, NULL);
 
     if(rsps.code == EndpointObject::OK)
@@ -166,8 +185,9 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
         const char* service = LuaObject::getLuaString(L, 1);
         int lifetime        = LuaObject::getLuaInteger(L, 2);
         const char* name    = LuaObject::getLuaString(L, 3);
+        bool verbose        = LuaObject::getLuaBoolean(L, 4, true, false);
 
-        status = registerService(service, lifetime, name);
+        status = registerService(service, lifetime, name, verbose);
     }
     catch(const RunTimeException& e)
     {

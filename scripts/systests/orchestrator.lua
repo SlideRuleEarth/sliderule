@@ -14,14 +14,14 @@ netsvc.orchurl("http://127.0.0.1:8050")
 --
 -- API: <register>
 --
-rsps = netsvc.orchreg({'service':'test', 'lifetime':2, 'name':'bob'})
+netsvc.orchreg('test', 2, 'bob', true)
 
 --
 -- API: lock
 --
-local m = netsvc.orchlock("sliderule", 1, 600)
-for k,v in pairs(m) do
-    print(k, v)
-end
+--local m = netsvc.orchlock("sliderule", 1, 600)
+--for k,v in pairs(m) do
+--    print(k, v)
+--end
 
-runner.report()
+--runner.report()
