@@ -232,8 +232,6 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resource
     parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
     outQ        = new Publisher(_outq_name);
 
-    /*
-
     /* Get First Round of Nodes */
     int num_nodes_to_request = MIN(numRequests, threadPoolSize);
     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, timeout);
@@ -296,6 +294,7 @@ void* Atl06Proxy::collatorThread (void* parm)
 
     while(proxy->active)
     {
+        /* Check Completion of All Requests */
         for(int i = 0; i < proxy->numRequests; i++)
         {
             atl06_rqst_t* rqst = &proxy->requests[i];
@@ -328,6 +327,16 @@ void* Atl06Proxy::collatorThread (void* parm)
                 }
                 rqst->sync.unlock();
             }
+        }
+
+        /* Check if Done */
+        if(num_terminated == proxy->numRequests)
+        {
+            proxy->signalComplete();
+        }
+        else
+        {
+            LocalLib::performIOTimeout();
         }
     }
 
