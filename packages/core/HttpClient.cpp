@@ -216,10 +216,14 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
     try
     {
         /* Calculate Content Length */
-        int content_length = StringLib::size(data, MAX_RQST_BUF_LEN);
-        if(content_length == MAX_RQST_BUF_LEN)
+        int content_length = 0;
+        if(data)
         {
-            throw RunTimeException(ERROR, RTE_ERROR, "data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_BUF_LEN);
+            content_length = StringLib::size(data, MAX_RQST_BUF_LEN);
+            if(content_length == MAX_RQST_BUF_LEN)
+            {
+                throw RunTimeException(ERROR, RTE_ERROR, "data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_BUF_LEN);
+            }
         }
 
         /* Set Keep Alive Header */
@@ -328,7 +332,12 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
                             /* Parse Status Line */
                             if(header_num == 0)
                             {
-                                rsps.code = parseStatusLine(line_start, line_term);
+                                status_line_t sl = parseStatusLine(line_start, line_term);
+                                rsps.code = sl.code;
+                                if(rsps.code != EndpointObject::OK)
+                                {
+                                    throw RunTimeException(CRITICAL, RTE_ERROR, "server returned error <%d> - %s", sl.code, sl.msg);
+                                }
                             }
                             /* Parse Header Line */
                             else
@@ -457,9 +466,12 @@ long HttpClient::parseLine (int start, int end)
 /*----------------------------------------------------------------------------
  * parseStatusLine
  *----------------------------------------------------------------------------*/
-EndpointObject::code_t HttpClient::parseStatusLine (int start, int term)
+HttpClient::status_line_t HttpClient::parseStatusLine (int start, int term)
 {
-    long code_val = EndpointObject::Internal_Server_Error;
+    status_line_t status = {
+        .code = EndpointObject::Internal_Server_Error,
+        .msg = NULL
+    };
 
     /* Find Start of Response Code */
     int code_str_start = term;
@@ -478,7 +490,7 @@ EndpointObject::code_t HttpClient::parseStatusLine (int start, int term)
     {
         if(rspsBuf[j] == ' ')
         {
-            code_str_term = j+1;
+            code_str_term = j;
             break;
         }
     }
@@ -488,14 +500,20 @@ EndpointObject::code_t HttpClient::parseStatusLine (int start, int term)
     {
         const char* code_str = &rspsBuf[code_str_start];
         rspsBuf[code_str_term] = '\0';
-        if(!StringLib::str2long(code_str, &code_val))
+        status.msg = &rspsBuf[code_str_term+1];
+        long code_val;
+        if(StringLib::str2long(code_str, &code_val))
+        {
+            status.code = (EndpointObject::code_t)code_val;
+        }
+        else
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid code: %s", code_str);
         }
     }
 
     /* Return Code */
-    return (EndpointObject::code_t)code_val;
+    return status;
 }
 
 /*----------------------------------------------------------------------------

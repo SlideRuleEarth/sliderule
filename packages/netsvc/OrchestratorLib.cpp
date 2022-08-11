@@ -64,6 +64,32 @@ void OrchestratorLib::deinit (void)
 }
 
 /*----------------------------------------------------------------------------
+ * health
+ *----------------------------------------------------------------------------*/
+bool OrchestratorLib::health (void)
+{
+    bool status = false;
+
+    HttpClient orchestrator(NULL, URL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/health", NULL, false, NULL);
+
+    if(rsps.code == EndpointObject::OK)
+    {
+        print2term("RESPONSE: %s\n", rsps.response);
+
+        rapidjson::Document json;
+        json.Parse(rsps.response);
+
+        rapidjson::Value& s = json["health"];
+        status = s.GetBool();
+
+        print2term("Health: %d\n", status);
+    }
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
  * lock
  *----------------------------------------------------------------------------*/
 OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs)
@@ -74,13 +100,16 @@ OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_
     SafeString orch_rqst_data("{'service':'%s', 'nodesNeeded': %d, 'timeout': %d}", service, nodes_needed, timeout_secs);
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false, NULL);
 
-    print2term("%s\n", rsps.response);
+    if(rsps.code == EndpointObject::OK)
+    {
+        print2term("RESPONSE: %s\n", rsps.response);
 
-    rapidjson::Document json;
-    json.Parse(rsps.response);
+        rapidjson::Document json;
+        json.Parse(rsps.response);
 
-    rapidjson::Value& s = json["members"];
-    print2term("IS ARRAY: %d\n", s.IsArray());
+        rapidjson::Value& s = json["members"];
+        print2term("IS ARRAY: %d\n", s.IsArray());
+    }
 
     return nodes;
 }
@@ -102,6 +131,24 @@ int OrchestratorLib::luaSetUrl(lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error setting URL: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaHealth - orchhelath()
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::luaHealth(lua_State* L)
+{
+    try
+    {
+        lua_pushboolean(L, health());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting health: %s", e.what());
         lua_pushnil(L);
     }
 

@@ -109,6 +109,11 @@ class HttpClient: public LuaObject
             const char*                 value;
         } hdr_kv_t;
 
+        typedef struct {
+            EndpointObject::code_t      code;
+            const char*                 msg;
+        } status_line_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -126,17 +131,17 @@ class HttpClient: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        TcpSocket*              initializeSocket    (const char* _ip_addr, int _port);
-        bool                    makeRequest         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
-        rsps_t                  parseResponse       (Publisher* outq);
-        long                    parseLine           (int start, int end);
-        EndpointObject::code_t  parseStatusLine     (int start, int term);
-        hdr_kv_t                parseHeaderLine     (int start, int term);
+        TcpSocket*      initializeSocket    (const char* _ip_addr, int _port);
+        bool            makeRequest         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
+        rsps_t          parseResponse       (Publisher* outq);
+        long            parseLine           (int start, int end);
+        status_line_t   parseStatusLine     (int start, int term);
+        hdr_kv_t        parseHeaderLine     (int start, int term);
 
-        static void*            requestThread       (void* parm);
+        static void*    requestThread       (void* parm);
 
-        static int              luaRequest          (lua_State* L);
-        static int              luaConnected        (lua_State* L);
+        static int      luaRequest          (lua_State* L);
+        static int      luaConnected        (lua_State* L);
 };
 
 #endif  /* __http_client__ */
