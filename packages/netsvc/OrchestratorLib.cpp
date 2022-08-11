@@ -84,10 +84,11 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 
                 const char* membership = json[name][0].GetString();
                 double expiration = json[name][1].GetDouble();
-
-                TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(expiration * 1000);
+                int64_t exp_unix_ms = (expiration * 1000);
+                int64_t exp_gps_ms = TIME_UNIX_TO_GPS(exp_unix_ms);
+                TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(exp_gps_ms);
                 TimeLib::date_t date = TimeLib::gmt2date(gmt);
-                mlog(INFO, "Registered to <%s> until %d/%d/%d %d:%d:%d\n", membership, date.day, date.month, date.year, gmt.hour, gmt.minute, gmt.second);
+                mlog(INFO, "Registered to <%s> until %d/%d/%d %02d:%02d:%02d\n", membership, date.month, date.day, date.year, gmt.hour, gmt.minute, gmt.second);
             }
         }
         catch(const std::exception& e)

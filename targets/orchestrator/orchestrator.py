@@ -278,7 +278,7 @@ num_active_locks {}
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            response = "{\"%s\": [\"%s\", \"%s\"]}" % (request['name'], request['service'], member['expiration'])
+            response = "{\"%s\": [\"%s\", %.3f]}" % (request['name'], request['service'], member['expiration'])
             self.wfile.write(bytes(response, "utf-8"))
         except:
             # send error response
