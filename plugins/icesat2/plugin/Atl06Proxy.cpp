@@ -191,11 +191,8 @@ int Atl06Proxy::luaCreate (lua_State* L)
         /* Get Output Queue */
         const char* outq_name = getLuaString(L, 3);
 
-        /* Get Orhcestrator URL */
-        const char* orchestrator_url = getLuaString(L, 4);
-
         /* Return Reader Object */
-        return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name, orchestrator_url));
+        return createLuaObject(L, new Atl06Proxy(L, _resources, _num_resources, _parameters, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -214,7 +211,7 @@ int Atl06Proxy::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* _outq_name, const char* _orchestrator_url):
+Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resources, const char* _parameters, const char* _outq_name):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(_resources);
@@ -224,14 +221,6 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char** _resources, int _num_resource
     numRequests = _num_resources;
     requests = new atl06_rqst_t[numRequests];
     parameters = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
-    orchestratorURL = StringLib::duplicate(_orchestrator_url);
-
-//            HttpClient orchestrator(NULL, rqst->proxy->orchestratorURL);
-                /* Get Lock from Orchestrator */
-                mlog(INFO, "Processing resource: %s", resource);
-                SafeString orch_rqst_data("{'service':'test', 'nodesNeeded': 1, 'timeout': %d}", NODE_LOCK_TIMEOUT);
-//                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false, NULL);
-//                print2term("%s\n", rsps.response);
 
     /* Create Publisher */
     outQ = new Publisher(_outq_name);
@@ -281,7 +270,6 @@ Atl06Proxy::~Atl06Proxy (void)
     delete [] requests;
     delete [] parameters;
     delete outQ;
-    delete [] orchestratorURL;
 }
 
 /*----------------------------------------------------------------------------
@@ -299,16 +287,12 @@ void* Atl06Proxy::proxyThread (void* parm)
         {
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
             Atl06Proxy* proxy = rqst->proxy;
-//            HttpClient orchestrator(NULL, rqst->proxy->orchestratorURL);
             const char* resource = rqst->resource;
             try
             {
-                /* Get Lock from Orchestrator */
                 mlog(INFO, "Processing resource: %s", resource);
-                SafeString orch_rqst_data("{'service':'test', 'nodesNeeded': 1, 'timeout': %d}", NODE_LOCK_TIMEOUT);
-//                HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", orch_rqst_data.getString(), false, NULL);
-//                print2term("%s\n", rsps.response);
 
+                // Get Lock from Orchestrator
                 // pass request to node
 
                 // stream response back to queue

@@ -50,10 +50,22 @@ class OrchestratorLib
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            MgList<const char*, 256, true> members;
-            List<long> transactions;
-        } nodes_t;
+        struct Node {
+            const char* member;
+            long transaction;
+
+            Node (const char* _member, long _transaction) {
+                assert(_member);
+                member = StringLib::duplicate(_member);
+                transaction = _transaction;
+            }
+
+            ~Node (void) {
+                delete [] member;
+            }
+        };
+
+        typedef MgList<Node*> nodes_t;
 
         /*--------------------------------------------------------------------
          * Methods

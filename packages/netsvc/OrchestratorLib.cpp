@@ -54,6 +54,7 @@ const char* OrchestratorLib::URL = NULL;
  *----------------------------------------------------------------------------*/
 void OrchestratorLib::init (void)
 {
+    URL = StringLib::duplicate("http://127.0.0.1:8050");
 }
 
 /*----------------------------------------------------------------------------
@@ -124,28 +125,28 @@ OrchestratorLib::nodes_t* OrchestratorLib::lock (const char* service, int nodes_
         rapidjson::Document json;
         json.Parse(rsps.response);
 
-        for(rapidjson::SizeType i = 0; i < json["members"].Size(); i++)
+        unsigned int num_members = json["members"].Size();
+        unsigned int num_transactions = json["transactions"].Size();
+        if(num_members == num_transactions)
         {
-            const char* name = StringLib::duplicate(json["members"][i].GetString());
-            nodes->members.add(name);
+            for(rapidjson::SizeType i = 0; i < num_members; i++)
+            {
+                const char* name = json["members"][i].GetString();
+                double transaction = json["transactions"][i].GetDouble();
+                Node* node = new Node(name, transaction);
+                nodes->add(node);
+            }
         }
-
-        for(rapidjson::SizeType i = 0; i < json["transactions"].Size(); i++)
+        else
         {
-            double transaction = json["transactions"][i].GetDouble();
-            nodes->transactions.add(transaction);
+            mlog(CRITICAL, "Missing information from locked response; %d members != %d transactions", num_members, num_transactions);
         }
 
         if(verbose)
         {
-            for(int i = 0; i < nodes->members.length() && i < nodes->transactions.length(); i++)
+            for(int i = 0; i < nodes->length(); i++)
             {
-                mlog(INFO, "Locked - %s <%ld>", nodes->members[i], nodes->transactions[i]);
-            }
-
-            if(nodes->members.length() != nodes->transactions.length())
-            {
-                mlog(CRITICAL, "Missing information from locked response; %d members != %d transactions", nodes->members.length(), nodes->transactions.length());
+                mlog(INFO, "Locked - %s <%ld>", nodes->get(i)->member, nodes->get(i)->transaction);
             }
         }
     }
@@ -280,10 +281,10 @@ int OrchestratorLib::luaLock(lua_State* L)
         nodes = lock(service, nodes_needed, timeout_secs, verbose);
 
         lua_newtable(L);
-        for(int i = 0; i < nodes->transactions.length(); i++)
+        for(int i = 0; i < nodes->length(); i++)
         {
-            SafeString txidstr("%ld", nodes->transactions[i]);
-            LuaEngine::setAttrStr(L, txidstr.getString(), nodes->members[i]);
+            SafeString txidstr("%ld", nodes->get(i)->transaction);
+            LuaEngine::setAttrStr(L, txidstr.getString(), nodes->get(i)->member);
         }
     }
     catch(const RunTimeException& e)
