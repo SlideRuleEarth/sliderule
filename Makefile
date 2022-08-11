@@ -33,7 +33,10 @@ DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
 DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
 
-development-config: prep ## configure make for debug version of sliderule binary
+development-config: prep ## configure make for development version of sliderule binary
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
+
+development-config-debug: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) $(ROOT)
 
 PYTHONCFG  = -DPYTHON_BINDINGS=ON
