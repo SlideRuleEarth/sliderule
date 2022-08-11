@@ -65,7 +65,7 @@ if __name__ == '__main__':
     rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'localhost'})
     assert rsps['localhost'][0] == 'test'
 
-    sleep(1)
+    sleep(2)
 
     ###################
     # TEST - Get Member

@@ -64,6 +64,29 @@ void OrchestratorLib::deinit (void)
 }
 
 /*----------------------------------------------------------------------------
+ * registerService
+ *----------------------------------------------------------------------------*/
+bool OrchestratorLib::registerService (const char* service, int lifetime, const char* name)
+{
+    HttpClient orchestrator(NULL, URL);
+    SafeString orch_rqst_data("{'service':'%s', 'lifetime': %d, 'name': %s}", service, lifetime, name);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/", orch_rqst_data.getString(), false, NULL);
+    if(rsps.code == EndpointObject::OK)
+    {
+        rapidjson::Document json;
+        json.Parse(rsps.response);
+
+        rapidjson::Value& member = json["name"];
+        auto membership = member.GetArray();
+
+        rapidjson::Value& member_service = membership[0];
+        print2term("Membership: %s\n", member_service.GetString());
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * health
  *----------------------------------------------------------------------------*/
 bool OrchestratorLib::health (void)
@@ -129,6 +152,29 @@ int OrchestratorLib::luaSetUrl(lua_State* L)
         lua_pushnil(L);
     }
 
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaRegisterService - orchreg(<service>, <lifetime>, <name>)
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::luaRegisterService(lua_State* L)
+{
+    bool status = false;
+    try
+    {
+        const char* service = LuaObject::getLuaString(L, 1);
+        int lifetime        = LuaObject::getLuaInteger(L, 2);
+        const char* name    = LuaObject::getLuaString(L, 3);
+
+        status = registerService(service, lifetime, name);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error registering: %s", e.what());
+    }
+
+    lua_pushboolean(L, status);
     return 1;
 }
 

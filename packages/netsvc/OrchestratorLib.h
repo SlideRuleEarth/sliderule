@@ -59,15 +59,17 @@ class OrchestratorLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init            (void);
-        static void         deinit          (void);
+        static void         init                (void);
+        static void         deinit              (void);
 
-        static bool         health          (void);
-        static nodes_t*     lock            (const char* service, int nodes_needed, int timeout_secs);
+        static bool         registerService     (const char* service, int lifetime, const char* name);
+        static bool         health              (void);
+        static nodes_t*     lock                (const char* service, int nodes_needed, int timeout_secs);
 
-        static int          luaSetUrl       (lua_State* L);
-        static int          luaHealth       (lua_State* L);
-        static int          luaLock         (lua_State* L);
+        static int          luaSetUrl           (lua_State* L);
+        static int          luaRegisterService  (lua_State* L);
+        static int          luaHealth           (lua_State* L);
+        static int          luaLock             (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

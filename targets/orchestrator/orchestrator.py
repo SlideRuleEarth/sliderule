@@ -18,7 +18,7 @@ serverSettings = {
     'host': '0.0.0.0',
     'port': 8050,
     'maxLocksPerNode': 3,
-    'scrubInterval': 5 # seconds
+    'scrubInterval': 1 # seconds
 }
 
 serverLock = Lock()
@@ -60,7 +60,7 @@ class Orchestrator(BaseHTTPRequestHandler):
             "transactions": [tx1, tx2, ...]
         }
         '''
-        global serviceCatalog,transactionId
+        global serviceCatalog, transactionId
         request_count = 0
         error_count = 0
         member_list = []
@@ -76,6 +76,7 @@ class Orchestrator(BaseHTTPRequestHandler):
             node_timeout = time() + request["timeout"]
             # build member list
             with serverLock:
+                print(serviceCatalog)
                 node_list = serviceCatalog[request['service']].items()
                 if request['service'] in serviceCatalog and len(node_list) > 0:
                     node_list = sorted(node_list, key=lambda x: x[1]["numLocks"])
@@ -261,7 +262,6 @@ num_active_locks {}
             request = json.loads(data)
             # build member structure
             member = {
-                'client': self.client_address[0],
                 'service': request['service'],
                 'expiration': time() + request['lifetime'],
                 'name': request['name'],
@@ -271,14 +271,14 @@ num_active_locks {}
             with serverLock:
                 if member['service'] not in serviceCatalog:
                     serviceCatalog[member['service']] = {}
-                if member['client'] in serviceCatalog[member['service']]:
-                    member["numLocks"] = serviceCatalog[member['service']][member['client']]["numLocks"]
-                serviceCatalog[member['service']][member['client']] = member
+                if member['name'] in serviceCatalog[member['service']]:
+                    member["numLocks"] = serviceCatalog[member['service']][member['name']]["numLocks"]
+                serviceCatalog[member['service']][member['name']] = member
             # send successful response
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            response = "{\"%s\": [\"%s\", \"%s\"]}" % (request['name'], request['service'], member['client'])
+            response = "{\"%s\": [\"%s\", \"%s\"]}" % (request['name'], request['service'], member['expiration'])
             self.wfile.write(bytes(response, "utf-8"))
         except:
             # send error response
@@ -309,7 +309,7 @@ def scrubber_thread():
             with serverLock:
                 for _, member in service.items():
                     if member['expiration'] <= now:
-                        members_to_delete.append(member['client'])
+                        members_to_delete.append(member['name'])
                 for member in members_to_delete:
                     del service[member]
         # Scrub Timed-Out Transactions
