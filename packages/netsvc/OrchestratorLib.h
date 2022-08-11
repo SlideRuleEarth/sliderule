@@ -52,7 +52,7 @@ class OrchestratorLib
 
         typedef struct {
             MgList<const char*, 256, true> members;
-            List<long> txids;
+            List<long> transactions;
         } nodes_t;
 
         /*--------------------------------------------------------------------
@@ -63,8 +63,8 @@ class OrchestratorLib
         static void         deinit              (void);
 
         static bool         registerService     (const char* service, int lifetime, const char* name, bool verbose=false);
+        static nodes_t*     lock                (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
         static bool         health              (void);
-        static nodes_t*     lock                (const char* service, int nodes_needed, int timeout_secs);
 
         static int          luaSetUrl           (lua_State* L);
         static int          luaRegisterService  (lua_State* L);

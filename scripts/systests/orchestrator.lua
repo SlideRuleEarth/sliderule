@@ -7,21 +7,22 @@ netsvc.orchurl("http://127.0.0.1:8050")
 --
 -- API: health
 --
---local h = netsvc.orchhealth()
---runner.check(h, "orchestrator unhealthy")
+local h = netsvc.orchhealth()
+runner.check(h, "orchestrator unhealthy")
 
 
 --
 -- API: <register>
 --
-netsvc.orchreg('test', 2, 'bob', true)
+local reg_status = netsvc.orchreg('test', 5, 'bob', true)
+runner.check(reg_status, "failed to register")
 
 --
 -- API: lock
 --
---local m = netsvc.orchlock("sliderule", 1, 600)
---for k,v in pairs(m) do
---    print(k, v)
---end
+local m = netsvc.orchlock("test", 1, 5, true)
+for k,v in pairs(m) do
+    print(k, v)
+end
 
---runner.report()
+runner.report()
