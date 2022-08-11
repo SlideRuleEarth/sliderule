@@ -294,12 +294,10 @@ void* Atl06Proxy::proxyThread (void* parm)
         {
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
             Atl06Proxy* proxy = rqst->proxy;
-            const char* resource = rqst->resource;
+            mlog(INFO, "Processing resource: %s", rqst->resource);
 
             try
             {
-                mlog(INFO, "Processing resource: %s", resource);
-
                 /* Get Lock from Orchestrator */
                 double expiration_time = TimeLib::latchtime() + proxy->timeout;
                 double seconds_to_wait = 1.0;
@@ -327,23 +325,27 @@ void* Atl06Proxy::proxyThread (void* parm)
                 /* Proxy Request */
                 if(rqst->node)
                 {
+                    /* Make Request */
                     SafeString data("{\"atl03-asset\": %s, \"resource\": %s, \"parms\": %s, \"timeout\": %d}",
-                                    proxy->asset, resource, proxy->parameters, proxy->timeout);
+                                    proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
                     HttpClient client(NULL, rqst->node->member);
                     HttpClient::rsps_t rsps = client.request(EndpointObject::POST, "/source/atl06", data.getString(), false, proxy->outQ);
                     if(rsps.code != EndpointObject::OK)
                     {
                         mlog(CRITICAL, "Failed to proxy request to %s: %d", rqst->node->member, (int)rsps.code);
                     }
+
+                    /* Unlock Node */
+                    OrchestratorLib::unlock(&rqst->node->transaction, 1);
                 }
                 else
                 {
                     /* Timeout Occurred */
-                    mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", resource);
+                    mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", rqst->resource);
                 }
 
                 /* Clean Up Request */
-                delete [] resource;
+                delete [] rqst->resource;
                 delete rqst->node;
 
                 /* Mark Complete */
