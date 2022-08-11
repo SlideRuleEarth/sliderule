@@ -4,8 +4,9 @@ local json = require("json")
 
 netsvc.orchurl("http://127.0.0.1:8050")
 
---m = netsvc.orchlock("sliderule", 1, 600)
-k = netsvc.orchhealth()
-print(k)
+--local m = netsvc.orchlock("sliderule", 1, 600)
+
+local h = netsvc.orchhealth()
+runner.check(h, "orchestrator unhealthy")
 
 runner.report()

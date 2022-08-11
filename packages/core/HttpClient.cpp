@@ -307,7 +307,8 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
     int     rsps_index          = 0;
     int     rsps_buf_index      = 0;
     int     attempts            = 0;
-    int     content_remaining   = 0;
+    long    content_remaining   = 0;
+    bool    unbounded_content   = false;
     bool    headers_complete    = false;
     bool    response_complete   = false;
 
@@ -346,17 +347,9 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
                                 /* Process Content Length Header */
                                 if(StringLib::match(hdr.key, "Content-Length"))
                                 {
-                                    long content_length;
-                                    if(StringLib::str2long(hdr.value, &content_length))
+                                    if(StringLib::str2long(hdr.value, &content_remaining))
                                     {
-                                        content_remaining = content_length;
-                                        rsps.size = content_length;
-                                        if(!outq)
-                                        {
-                                            rsps.response = new char [rsps.size + 1]; // add one byte for terminator
-                                            rsps.response[rsps.size] = '\0'; // ensure termination
-                                        }
-
+                                        rsps.size = content_remaining;
                                     }
                                     else
                                     {
@@ -385,11 +378,26 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
                     }
                     else // payload
                     {
+                        /* Check if Content Length Not Provided */
+                        if(rsps.size == 0)
+                        {
+                            unbounded_content = true;
+                            rsps.size = MAX_UNBOUNDED_RSPS;
+                            content_remaining = rsps.size;
+                        }
+
+                        /* Allocate Response If Necessary */
+                        if(!outq && !rsps.response)
+                        {
+                            rsps.response = new char [rsps.size + 1]; // add one byte for terminator
+                            rsps.response[rsps.size] = '\0'; // ensure termination
+                        }
+
                         /* Determine Bytes to Copy */
                         int bytes_remaining = bytes_read - line_term;
                         if(bytes_remaining > content_remaining)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "Received too many bytes in response - %d > %d", bytes_remaining, content_remaining);
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "Received too many bytes in %sresponse - %d > %ld", unbounded_content ? "unbounded " : "", bytes_remaining, content_remaining);
                         }
                         else if(bytes_remaining > 0)
                         {
@@ -403,10 +411,10 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
                             {
                                 /* Populate Response */
                                 LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_term], bytes_remaining);
-                                rsps_index += bytes_remaining;
                             }
 
                             /* Update Indices Check If Done */
+                            rsps_index += bytes_remaining;
                             content_remaining -= bytes_remaining;
                             if(content_remaining <= 0) response_complete = true;
                         }
@@ -423,6 +431,11 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "Maximum number of attempts reached");
                 }
+            }
+            else if((bytes_read == SHUTDOWN_RC) && headers_complete && unbounded_content)
+            {
+                rsps.size = rsps_index;
+                response_complete = true;
             }
             else
             {

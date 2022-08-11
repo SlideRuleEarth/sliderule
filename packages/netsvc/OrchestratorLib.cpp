@@ -72,18 +72,13 @@ bool OrchestratorLib::health (void)
 
     HttpClient orchestrator(NULL, URL);
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/health", NULL, false, NULL);
-
     if(rsps.code == EndpointObject::OK)
     {
-        print2term("RESPONSE: %s\n", rsps.response);
-
         rapidjson::Document json;
         json.Parse(rsps.response);
 
         rapidjson::Value& s = json["health"];
         status = s.GetBool();
-
-        print2term("Health: %d\n", status);
     }
 
     return status;
