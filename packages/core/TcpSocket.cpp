@@ -196,7 +196,7 @@ void TcpSocket::closeConnection(void)
  *
  *  returns when full buffer written out
  *----------------------------------------------------------------------------*/
-int TcpSocket::writeBuffer(const void* buf, int len)
+int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
 {
     unsigned char* cbuf = (unsigned char*)buf;
 
@@ -214,7 +214,7 @@ int TcpSocket::writeBuffer(const void* buf, int len)
     int c = 0;
     while(c < len && alive)
     {
-        int ret = SockLib::socksend(sock, &cbuf[c], len - c, SYS_TIMEOUT);
+        int ret = SockLib::socksend(sock, &cbuf[c], len - c, timeout);
         if(ret > 0)
         {
             c += ret;
@@ -235,7 +235,7 @@ int TcpSocket::writeBuffer(const void* buf, int len)
  *
  *  returns if any data read into buffer
  *----------------------------------------------------------------------------*/
-int TcpSocket::readBuffer(void* buf, int len)
+int TcpSocket::readBuffer(void* buf, int len, int timeout)
 {
     /* Check Parameters */
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
@@ -248,7 +248,7 @@ int TcpSocket::readBuffer(void* buf, int len)
     }
 
     /* Receive Data */
-    int ret = SockLib::sockrecv(sock, buf, len, SYS_TIMEOUT);
+    int ret = SockLib::sockrecv(sock, buf, len, timeout);
     if(ret < 0)
     {
         closeConnection();

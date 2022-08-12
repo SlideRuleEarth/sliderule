@@ -137,19 +137,19 @@ void UdpSocket::closeConnection(void)
 /*----------------------------------------------------------------------------
  * writeBuffer
  *----------------------------------------------------------------------------*/
-int UdpSocket::writeBuffer(const void* buf, int len)
+int UdpSocket::writeBuffer(const void* buf, int len, int timeout)
 {
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
-    return SockLib::socksend(sock, buf, len, SYS_TIMEOUT);
+    return SockLib::socksend(sock, buf, len, timeout);
 }
 
 /*----------------------------------------------------------------------------
  * readBuffer
  *----------------------------------------------------------------------------*/
-int UdpSocket::readBuffer(void* buf, int len)
+int UdpSocket::readBuffer(void* buf, int len, int timeout)
 {
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
-    return SockLib::sockrecv(sock, buf, len, SYS_TIMEOUT);
+    return SockLib::sockrecv(sock, buf, len, timeout);
 }
 
 /*----------------------------------------------------------------------------

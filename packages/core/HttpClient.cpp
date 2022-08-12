@@ -161,11 +161,11 @@ HttpClient::~HttpClient(void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq)
+HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout)
 {
     if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive))
     {
-        rsps_t rsps = parseResponse(outq);
+        rsps_t rsps = parseResponse(outq, timeout);
         return rsps;
     }
     else
@@ -295,7 +295,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
 /*----------------------------------------------------------------------------
  * parseResponse
  *----------------------------------------------------------------------------*/
-HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
+HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
 {
     rsps_t rsps = {
         .code = EndpointObject::OK,
@@ -306,7 +306,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
     int     header_num          = 0;
     int     rsps_index          = 0;
     int     rsps_buf_index      = 0;
-    int     attempts            = 0;
     long    content_remaining   = 0;
     bool    unbounded_content   = false;
     bool    headers_complete    = false;
@@ -315,9 +314,9 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
     /* Process Response */
     try
     {
-        while(!response_complete)
+        while(active && !response_complete)
         {
-            int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index);
+            int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index, timeout);
             if(bytes_read > 0)
             {
                 int line_start = 0;
@@ -423,13 +422,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq)
                         line_term = 0;
                         break;
                     }
-                }
-            }
-            else if(bytes_read == TIMEOUT_RC)
-            {
-                if(++attempts >= MAX_TIMEOUTS)
-                {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Maximum number of attempts reached");
                 }
             }
             else if((bytes_read == SHUTDOWN_RC) && headers_complete && unbounded_content)

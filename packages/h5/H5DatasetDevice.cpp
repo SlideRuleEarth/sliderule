@@ -192,10 +192,11 @@ void H5DatasetDevice::closeConnection (void)
 /*----------------------------------------------------------------------------
  * writeBuffer
  *----------------------------------------------------------------------------*/
-int H5DatasetDevice::writeBuffer (const void* buf, int len)
+int H5DatasetDevice::writeBuffer (const void* buf, int len, int timeout)
 {
     (void)buf;
     (void)len;
+    (void)timeout;
 
     return TIMEOUT_RC;
 }
@@ -203,8 +204,10 @@ int H5DatasetDevice::writeBuffer (const void* buf, int len)
 /*----------------------------------------------------------------------------
  * readBuffer
  *----------------------------------------------------------------------------*/
-int H5DatasetDevice::readBuffer (void* buf, int len)
+int H5DatasetDevice::readBuffer (void* buf, int len, int timeout)
 {
+    (void)timeout;
+
     int bytes = SHUTDOWN_RC;
 
     if(connected)

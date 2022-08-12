@@ -392,7 +392,7 @@ void* Atl06Proxy::proxyThread (void* parm)
                     SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}",
                                     proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
                     HttpClient client(NULL, rqst->node->member);
-                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, "/source/atl06", data.getString(), false, proxy->outQ);
+                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, "/source/atl06", data.getString(), false, proxy->outQ, proxy->timeout);
                     if(rsps.code == EndpointObject::OK)
                     {
                         rqst->valid = true;

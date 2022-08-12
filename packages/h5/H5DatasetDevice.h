@@ -97,16 +97,16 @@ class H5DatasetDevice: public DeviceObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DatasetDevice     (lua_State* L, role_t _role, Asset* asset, const char* resource, const char* dataset_name, long id, bool raw_mode,
-                                                    RecordObject::valType_t datatype, long col, long startrow, long numrows);
-                            ~H5DatasetDevice    (void);
+                    H5DatasetDevice     (lua_State* L, role_t _role, Asset* asset, const char* resource, const char* dataset_name, long id, bool raw_mode,
+                                            RecordObject::valType_t datatype, long col, long startrow, long numrows);
+                    ~H5DatasetDevice    (void);
 
-        virtual bool        isConnected         (int num_open=0);   // is the file open
-        virtual void        closeConnection     (void);             // close the file
-        virtual int         writeBuffer         (const void* buf, int len);
-        virtual int         readBuffer          (void* buf, int len);
-        virtual int         getUniqueId         (void);             // returns file descriptor
-        virtual const char* getConfig           (void);             // returns filename with attribute list
+        bool        isConnected         (int num_open=0);   // is the file open
+        void        closeConnection     (void);             // close the file
+        int         writeBuffer         (const void* buf, int len, int timeout=SYS_TIMEOUT);
+        int         readBuffer          (void* buf, int len, int timeout=SYS_TIMEOUT);
+        int         getUniqueId         (void);             // returns file descriptor
+        const char* getConfig           (void);             // returns filename with attribute list
 };
 
 #endif  /* __h5_dataset__ */

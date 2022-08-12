@@ -88,7 +88,7 @@ class HttpClient: public LuaObject
                         HttpClient      (lua_State* L, const char* url);
                         ~HttpClient     (void);
 
-        rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq);
+        rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout=SYS_TIMEOUT);
         const char*     getIpAddr       (void);
         int             getPort         (void);
 
@@ -134,7 +134,7 @@ class HttpClient: public LuaObject
 
         TcpSocket*      initializeSocket    (const char* _ip_addr, int _port);
         bool            makeRequest         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive);
-        rsps_t          parseResponse       (Publisher* outq);
+        rsps_t          parseResponse       (Publisher* outq, int timeout);
         long            parseLine           (int start, int end);
         status_line_t   parseStatusLine     (int start, int term);
         hdr_kv_t        parseHeaderLine     (int start, int term);

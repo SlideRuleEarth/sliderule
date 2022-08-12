@@ -201,8 +201,10 @@ void File::closeConnection (void)
 /*----------------------------------------------------------------------------
  * writeBuffer
  *----------------------------------------------------------------------------*/
-int File::writeBuffer (const void* buf, int len)
+int File::writeBuffer (const void* buf, int len, int timeout)
 {
+    (void)timeout;
+
     int bytes_written = INVALID_RC;
 
     /* Check Access */
@@ -306,8 +308,10 @@ int File::writeBuffer (const void* buf, int len)
 /*----------------------------------------------------------------------------
  * readBuffer
  *----------------------------------------------------------------------------*/
-int File::readBuffer (void* buf, int len)
+int File::readBuffer (void* buf, int len, int timeout)
 {
+    (void)timeout;
+
     /* Check Access */
     if(role != READER)
     {

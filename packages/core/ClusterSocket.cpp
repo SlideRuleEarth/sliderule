@@ -137,12 +137,12 @@ ClusterSocket::~ClusterSocket(void)
     delete [] sockqname;
     delete pubsockq;
     if(subsockq) delete subsockq;
-    
-    /* 
+
+    /*
      * If connector thread exits before lost connection is detected
-     * onDisconnect method will not be called and connection 
-     * memory will not be freed. 
-     * This cleanup code must be called after the connector thread 
+     * onDisconnect method will not be called and connection
+     * memory will not be freed.
+     * This cleanup code must be called after the connector thread
      * has been distroyed to avoid race condition.
      */
     read_connection_t*  readCon;
@@ -151,19 +151,19 @@ ClusterSocket::~ClusterSocket(void)
     int fd = read_connections.first( &readCon );
     while (fd != (int)INVALID_KEY)
     {
-        SockLib::sockclose(fd);        
+        SockLib::sockclose(fd);
         if(readCon->payload) delete [] readCon->payload;
         if(readCon) delete readCon;
         fd = read_connections.next( &readCon );
-    } 
+    }
 
     fd = write_connections.first( &writeCon );
     while (fd != (int)INVALID_KEY)
     {
-        SockLib::sockclose(fd);        
+        SockLib::sockclose(fd);
         if(writeCon) delete writeCon;
         fd = write_connections.next( &writeCon );
-    } 
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -189,7 +189,7 @@ void ClusterSocket::closeConnection(void)
  *
  *  Notes: read meter and send data if below threshold
  *----------------------------------------------------------------------------*/
-int ClusterSocket::writeBuffer(const void *buf, int len)
+int ClusterSocket::writeBuffer(const void *buf, int len, int timeout)
 {
     assert(role == WRITER);
     if(buf == NULL || len <= 0)
@@ -198,7 +198,7 @@ int ClusterSocket::writeBuffer(const void *buf, int len)
     }
     else if(len <= MAX_MSG_SIZE)
     {
-        int status = pubsockq->postCopy(buf, len, SYS_TIMEOUT);
+        int status = pubsockq->postCopy(buf, len, timeout);
         if(status > 0)                                  return status;
         else if(status == MsgQ::STATE_NO_SUBSCRIBERS)   return len;
         else if(status == MsgQ::STATE_TIMEOUT)          return TIMEOUT_RC;
@@ -215,12 +215,12 @@ int ClusterSocket::writeBuffer(const void *buf, int len)
  *
  *  Notes: send meter and read data
  *----------------------------------------------------------------------------*/
-int ClusterSocket::readBuffer(void *buf, int len)
+int ClusterSocket::readBuffer(void *buf, int len, int timeout)
 {
     assert(role == READER);
     if(buf && subsockq)
     {
-        int bytes = subsockq->receiveCopy(buf, len, SYS_TIMEOUT);
+        int bytes = subsockq->receiveCopy(buf, len, timeout);
         if(bytes > 0)                           return bytes;
         else if(bytes == MsgQ::STATE_TIMEOUT)   return TIMEOUT_RC;
         else                                    return SOCK_ERR_RC;
