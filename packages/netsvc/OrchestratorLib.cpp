@@ -152,7 +152,7 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
     }
     else
     {
-        mlog(CRITICAL, "Failed to lock nodes on %s", service);
+        mlog(CRITICAL, "Encountered HTTP error <%d> when locking nodes on %s", rsps.code, service);
     }
 
     return nodes;

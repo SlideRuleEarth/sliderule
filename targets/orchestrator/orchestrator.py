@@ -76,35 +76,35 @@ class Orchestrator(BaseHTTPRequestHandler):
             node_timeout = time() + request["timeout"]
             # build member list
             with serverLock:
-                print(serviceCatalog)
-                node_list = serviceCatalog[request['service']].items()
-                if request['service'] in serviceCatalog and len(node_list) > 0:
-                    node_list = sorted(node_list, key=lambda x: x[1]["numLocks"])
-                    i = 0
-                    while nodes_needed > 0:
-                        # check if end of list
-                        if i >= len(node_list):
-                            i = 0
-                        # pull out node info
-                        client, member = node_list[i]
-                        # check if num locks exceeded max
-                        if member["numLocks"] >= serverSettings["maxLocksPerNode"]:
-                            if i == 0:
-                                break # full capacity
+                if request['service'] in serviceCatalog:
+                    node_list = serviceCatalog[request['service']].items()
+                    if len(node_list) > 0:
+                        node_list = sorted(node_list, key=lambda x: x[1]["numLocks"])
+                        i = 0
+                        while nodes_needed > 0:
+                            # check if end of list
+                            if i >= len(node_list):
+                                i = 0
+                            # pull out node info
+                            client, member = node_list[i]
+                            # check if num locks exceeded max
+                            if member["numLocks"] >= serverSettings["maxLocksPerNode"]:
+                                if i == 0:
+                                    break # full capacity
+                                else:
+                                    i = 0 # go back to beginning of the list
                             else:
-                                i = 0 # go back to beginning of the list
-                        else:
-                            nodes_needed -= 1
-                            # update lock count for member
-                            member['numLocks'] += 1
-                            # add member and transaction to list returned in response
-                            member_list.append('"%s"' % (member['name']))
-                            transaction_list.append(transactionId)
-                            # add member to transaction queue
-                            transactionTable[transactionId] = (serviceCatalog[request['service']], client, node_timeout)
-                            transactionId += 1
-                        # goto next member
-                        i += 1
+                                nodes_needed -= 1
+                                # update lock count for member
+                                member['numLocks'] += 1
+                                # add member and transaction to list returned in response
+                                member_list.append('"%s"' % (member['name']))
+                                transaction_list.append(transactionId)
+                                # add member to transaction queue
+                                transactionTable[transactionId] = (serviceCatalog[request['service']], client, node_timeout)
+                                transactionId += 1
+                            # goto next member
+                            i += 1
 
             # send successful response
             self.send_response(200)
@@ -113,6 +113,7 @@ class Orchestrator(BaseHTTPRequestHandler):
             response = "{\"members\": [%s], \"transactions\": [%s]}" % (', '.join(member_list), ', '.join([str(tx) for tx in transaction_list]))
             self.wfile.write(bytes(response, "utf-8"))
         except:
+            raise
             error_count = 1
             # send error response
             self.send_response(500)

@@ -850,7 +850,6 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
     /* Check success of connection */
     if(rp == NULL)
     {
-        dlog("Failed to create socket for %s:%d", ip_addr, port);
         return WOULDBLOCK_RC;
     }
 
@@ -859,6 +858,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
     {
         if(sockkeepalive(sock) < 0)
         {
+            dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
             sockclose(sock);
             return TCP_ERR_RC;
         }
@@ -866,6 +866,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
         /* Make Socket Non-Blocking*/
         if(socknonblock(sock) < 0)
         {
+            dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
             sockclose(sock);
             return TCP_ERR_RC;
         }

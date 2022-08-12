@@ -163,7 +163,7 @@ HttpClient::~HttpClient(void)
  *----------------------------------------------------------------------------*/
 HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq)
 {
-    if(makeRequest(verb, resource, data, keep_alive))
+    if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive))
     {
         rsps_t rsps = parseResponse(outq);
         return rsps;

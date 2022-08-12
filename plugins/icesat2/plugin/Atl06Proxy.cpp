@@ -358,7 +358,7 @@ void* Atl06Proxy::proxyThread (void* parm)
         {
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
             Atl06Proxy* proxy = rqst->proxy;
-
+printf(">>> %s\n", rqst->resource);
             try
             {
                 /* Get Lock from Orchestrator */
