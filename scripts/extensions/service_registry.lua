@@ -14,15 +14,19 @@ while sys.alive() do
             else Lvl = core.INFO end
             sys.log(Lvl, "Successfully registered to <"..service..">: "..response)
             registration_state = true
+
+            -- wait until next registration time
+            local next_registration_time = time.gps() + ((lifetime / 2) * 1000)
+            while sys.alive() and time.gps() < next_registration_time do
+                sys.wait(5)
+            end
         else
             if not registration_state then Lvl = core.DEBUG
             else Lvl = core.ERROR end
             sys.log(Lvl, "Failed to register to <"..service..">: "..response)
             registration_state = false
-        end
-        -- wait until next registration time
-        local next_registration_time = time.gps() + ((lifetime / 2) * 1000)
-        while sys.alive() and time.gps() < next_registration_time do
+
+            -- wait before trying again
             sys.wait(5)
         end
     else

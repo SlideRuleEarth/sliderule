@@ -29,6 +29,7 @@ local parms = rqst["parms"]
 local timeout = rqst["timeout"] or 600000 -- 10 minutes
 
 -- Proxy Request --
+print("started...")
 local atl06p = icesat2.atl06proxy(atl03_asset, resources, json.encode(parms), timeout, rspq)
 
 -- Wait Until Proxy Completes --
@@ -43,4 +44,5 @@ while __alive() and not atl06p:waiton(interval) do
 end
 
 -- Done --
+print("finished...")
 return

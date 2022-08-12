@@ -358,7 +358,7 @@ void* Atl06Proxy::proxyThread (void* parm)
         {
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
             Atl06Proxy* proxy = rqst->proxy;
-printf(">>> %s\n", rqst->resource);
+
             try
             {
                 /* Get Lock from Orchestrator */
@@ -389,7 +389,7 @@ printf(">>> %s\n", rqst->resource);
                 if(rqst->node)
                 {
                     /* Make Request */
-                    SafeString data("{\"atl03-asset\": %s, \"resource\": %s, \"parms\": %s, \"timeout\": %d}",
+                    SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}",
                                     proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
                     HttpClient client(NULL, rqst->node->member);
                     HttpClient::rsps_t rsps = client.request(EndpointObject::POST, "/source/atl06", data.getString(), false, proxy->outQ);
