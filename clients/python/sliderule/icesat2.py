@@ -820,7 +820,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         }
 
         # Make API Processing Request
-        rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
+        rsps = sliderule.source("atl03s", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
         columns = {}

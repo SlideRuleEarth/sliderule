@@ -267,7 +267,7 @@ def __parse_native(data, callbacks):
                 rec_size_index += bytes_to_append
                 if(rec_size_index >= rec_hdr_size):
                     raw = b''.join(rec_size_rsps)
-                    rec_version, rec_type_size, rec_data_size = struct.unpack('>hhi', raw)[0]
+                    rec_version, rec_type_size, rec_data_size = struct.unpack('>hhi', raw)
                     if rec_version != 2:
                         raise SystemError("Invalid record format: %d" % (rec_version))
                     rec_size = rec_type_size + rec_data_size
