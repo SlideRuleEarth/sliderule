@@ -47,11 +47,14 @@ if __name__ == '__main__':
         "maxi": 1
     }
 
+    # Get Granules
+    resources = icesat2.cmr(polygon=region["poly"])
+
     # Latch Start Time
     perf_start = time.perf_counter()
 
     # Request ATL06 Data
-    atl06 = icesat2.atl06p(parms, asset)
+    atl06 = icesat2.atl06p(parms, asset, resources=resources[0:1])
 
     # Latch Stop Time
     perf_stop = time.perf_counter()
