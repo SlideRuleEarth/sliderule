@@ -69,7 +69,9 @@ class LuaEndpoint: public EndpointObject
         static const int MAX_RESPONSE_TIME_MS = 5000;
         static const int INITIAL_NUM_ENDPOINTS = 32;
         static const int MAX_EXCEPTION_TEXT_SIZE = 256;
-        static const char* RESPONSE_QUEUE;
+        static const char* LUA_ALIVE_FUNC;
+        static const char* LUA_RESPONSE_QUEUE;
+        static const char* LUA_REQUEST_SELF;
         static const char* UNREGISTERED_ENDPOINT;
         static const char* HITS_METRIC;
 
@@ -110,11 +112,12 @@ class LuaEndpoint: public EndpointObject
 
         rsptype_t           handleRequest   (request_t* request) override;
 
-        void                normalResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
-        void                streamResponse  (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id);
+        void                normalResponse  (const char* scriptpath, request_t* request, Publisher* rspq, uint32_t trace_id);
+        void                streamResponse  (const char* scriptpath, request_t* request, Publisher* rspq, uint32_t trace_id);
 
         int32_t             getMetricId     (const char* endpoint);
 
+        static int          luaAlive        (lua_State* L);
         static int          luaMetric       (lua_State* L);
 
         /*--------------------------------------------------------------------

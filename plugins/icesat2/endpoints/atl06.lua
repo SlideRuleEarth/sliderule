@@ -63,7 +63,7 @@ local atl03_reader = icesat2.atl03(asset, resource, recq, parms, true)
 -- Wait Until Reader Completion --
 local duration = 0
 local interval = 10000 -- 10 seconds
-while not atl03_reader:waiton(interval) do
+while __alive() and not atl03_reader:waiton(interval) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout >= 0 and duration >= timeout then
@@ -80,7 +80,7 @@ userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete
 -- Wait Until Dispatch Completion --
 local duration = 0
 local interval = 10000 -- 10 seconds
-while not atl06_disp:waiton(interval) do
+while __alive() and not atl06_disp:waiton(interval) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout >= 0 and duration >= timeout then

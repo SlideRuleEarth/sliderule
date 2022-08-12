@@ -202,6 +202,7 @@ void HttpServer::initConnection (connection_t* connection)
     LocalLib::set(&connection->state, 0, sizeof(state_t));
     connection->start_time = TimeLib::latchtime();
     connection->keep_alive = false;
+    connection->request.active = true;
     connection->request.id = getUniqueId(); // id is allocated
     connection->request.headers = new Dictionary<const char*>(EXPECTED_MAX_HEADER_FIELDS);
     connection->state.rspq = new Subscriber(connection->request.id);
@@ -212,30 +213,33 @@ void HttpServer::initConnection (connection_t* connection)
  *----------------------------------------------------------------------------*/
 void HttpServer::deinitConnection (connection_t* connection)
 {
-        /* Clear Out Headers */
-        const char* header;
-        const char* key = connection->request.headers->first(&header);
-        while(key != NULL)
-        {
-            /* Free Header Value */
-            delete [] header;
-            key = connection->request.headers->next(&header);
-        }
+    /* Set In-Active */
+    connection->request.active = false;
 
-        /* Free URL */
-        if(connection->request.url) delete [] connection->request.url;
+    /* Clear Out Headers */
+    const char* header;
+    const char* key = connection->request.headers->first(&header);
+    while(key != NULL)
+    {
+        /* Free Header Value */
+        delete [] header;
+        key = connection->request.headers->next(&header);
+    }
 
-        /* Free Stream Buffer */
-        if(connection->state.stream_buf) delete [] connection->state.stream_buf;
+    /* Free URL */
+    if(connection->request.url) delete [] connection->request.url;
 
-        /* Free Rest of Allocated Connection Members */
-        delete [] connection->request.id;
-        delete connection->request.headers;
-        delete connection->state.rspq;
-        delete connection->request.pid;
+    /* Free Stream Buffer */
+    if(connection->state.stream_buf) delete [] connection->state.stream_buf;
 
-        /* Reset Message */
-        connection->message.reset();
+    /* Free Rest of Allocated Connection Members */
+    delete [] connection->request.id;
+    delete connection->request.headers;
+    delete connection->state.rspq;
+    delete connection->request.pid;
+
+    /* Reset Message */
+    connection->message.reset();
 }
 
 /*----------------------------------------------------------------------------

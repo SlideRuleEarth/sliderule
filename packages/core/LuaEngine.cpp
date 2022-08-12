@@ -186,7 +186,7 @@ void LuaEngine::deinit(void)
         int num_libs = libInitTable.length();
         for(int i = 0; i < num_libs ; i++)
         {
-            if(libInitTable[i].lib_name)  delete [] libInitTable[i].lib_name; 
+            if(libInitTable[i].lib_name)  delete [] libInitTable[i].lib_name;
         }
     }
     libInitTableMutex.unlock();
@@ -331,29 +331,29 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
 {
     int top = lua_gettop(l);
 
-    if( prefix ) printf("%s, stack depth is: %d\n", prefix, top ); 
-    else         printf("stack depth is: %d\n", top ); 
+    if( prefix ) printf("%s, stack depth is: %d\n", prefix, top );
+    else         printf("stack depth is: %d\n", top );
 
-    for (int i = top; i >= 1; i--)  
-    {  
-        int t = lua_type(l, i);  
-        
-        switch (t) 
-        {  
-            case LUA_TSTRING: 
-                printf("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));  
-                break;  
-            case LUA_TBOOLEAN: 
-                printf("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");  
-                break;  
-            case LUA_TNUMBER: 
-                printf("--%02d-- number: %g\n", i, lua_tonumber(l, i));  
-                break;  
-            default: 
-                printf("--%02d-- %s\n", i, lua_typename(l, t));  
-                break;  
-        }  
-    }  
+    for (int i = top; i >= 1; i--)
+    {
+        int t = lua_type(l, i);
+
+        switch (t)
+        {
+            case LUA_TSTRING:
+                printf("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));
+                break;
+            case LUA_TBOOLEAN:
+                printf("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");
+                break;
+            case LUA_TNUMBER:
+                printf("--%02d-- number: %g\n", i, lua_tonumber(l, i));
+                break;
+            default:
+                printf("--%02d-- %s\n", i, lua_typename(l, t));
+                break;
+        }
+    }
     printf("\n");
 }
 
@@ -488,6 +488,19 @@ void LuaEngine::setFunction (const char* name, lua_CFunction val)
 }
 
 /*----------------------------------------------------------------------------
+ * setObject
+ *----------------------------------------------------------------------------*/
+void LuaEngine::setObject (const char* name, void* val)
+{
+    engineSignal.lock();
+    {
+        lua_pushlightuserdata(L, val);
+        lua_setglobal(L, name);
+    }
+    engineSignal.unlock();
+}
+
+/*----------------------------------------------------------------------------
  * getResult
  *----------------------------------------------------------------------------*/
 const char* LuaEngine::getResult (void)
@@ -586,11 +599,11 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     /* Initialize Lua */
     lua_State* l = luaL_newstate();     /* opens Lua */
     assert(l);                          /* not enough memory to create lua state */
-    if(hook) lua_sethook(l, hook,  LUA_MASKLINE, 0);
+    if(hook) lua_sethook(l, hook, LUA_MASKLINE, 0);
 
     /* Register Interpreter Object */
     lua_pushstring(l, LUA_SELFKEY);
-    lua_pushlightuserdata(l, (void *)this);
+    lua_pushlightuserdata(l, (void*)this);
     lua_settable(l, LUA_REGISTRYINDEX); /* registry[LUA_SELFKEY] = this */
 
     /* Register Application Libraries */
@@ -1046,7 +1059,7 @@ int LuaEngine::collectargs (char **argv, int *first)
  *----------------------------------------------------------------------------*/
 int LuaEngine::pmain (lua_State *L)
 {
-    /* retrieve LuaLibrary object from registry */
+    /* retrieve LuaEngine object from registry */
     lua_pushstring(L, LUA_SELFKEY);
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
     LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);

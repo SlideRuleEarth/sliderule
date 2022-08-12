@@ -97,6 +97,7 @@ class EndpointObject: public LuaObject
             const char*                 body;
             long                        body_length;
             EndpointObject*             endpoint;
+            bool                        active;
             rsptype_t                   response_type;
             Thread*                     pid;
         } request_t;

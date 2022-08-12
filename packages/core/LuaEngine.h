@@ -112,6 +112,7 @@ class LuaEngine
         void                setNumber       (const char* name, double val);
         void                setString       (const char* name, const char* val);
         void                setFunction     (const char* name, lua_CFunction val);
+        void                setObject       (const char* name, void* val);
         const char*         getResult       (void);
 
     private:

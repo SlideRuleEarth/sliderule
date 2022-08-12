@@ -57,7 +57,9 @@ const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 
 SafeString LuaEndpoint::serverHead("sliderule/%s", LIBID);
 
-const char* LuaEndpoint::RESPONSE_QUEUE = "rspq";
+const char* LuaEndpoint::LUA_ALIVE_FUNC = "__alive";
+const char* LuaEndpoint::LUA_RESPONSE_QUEUE = "rspq";
+const char* LuaEndpoint::LUA_REQUEST_SELF = "__endpoint";
 
 const char* LuaEndpoint::UNREGISTERED_ENDPOINT = "untracked";
 const char* LuaEndpoint::HITS_METRIC = "hits";
@@ -196,8 +198,8 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Dispatch Handle Request */
     switch(request->verb)
     {
-        case GET:   lua_endpoint->normalResponse(script_pathname, request->body, rspq, trace_id); break;
-        case POST:  lua_endpoint->streamResponse(script_pathname, request->body, rspq, trace_id); break;
+        case GET:   lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id); break;
+        case POST:  lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id); break;
         default:    break;
     }
 
@@ -228,7 +230,7 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (request_t* request)
 /*----------------------------------------------------------------------------
  * normalResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::normalResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
+void LuaEndpoint::normalResponse (const char* scriptpath, request_t* request, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
     double mem;
@@ -240,7 +242,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, const char* body, Publ
         ((mem = LocalLib::memusage()) < normalRequestMemoryThreshold) )
     {
         /* Launch Engine */
-        engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
+        engine = new LuaEngine(scriptpath, request->body, trace_id, NULL, true);
         bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
         /* Send Response */
@@ -284,7 +286,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, const char* body, Publ
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publisher* rspq, uint32_t trace_id)
+void LuaEndpoint::streamResponse (const char* scriptpath, request_t* request, Publisher* rspq, uint32_t trace_id)
 {
     char header[MAX_HDR_SIZE];
     double mem;
@@ -300,10 +302,12 @@ void LuaEndpoint::streamResponse (const char* scriptpath, const char* body, Publ
         rspq->postCopy(header, header_length);
 
         /* Create Engine */
-        engine = new LuaEngine(scriptpath, body, trace_id, NULL, true);
+        engine = new LuaEngine(scriptpath, request->body, trace_id, NULL, true);
 
-        /* Supply and Setup Request Queue */
-        engine->setString(RESPONSE_QUEUE, rspq->getName());
+        /* Supply Global Variables to Script */
+        engine->setString(LUA_RESPONSE_QUEUE, rspq->getName());
+        engine->setObject(LUA_REQUEST_SELF, request);
+        engine->setFunction(LUA_ALIVE_FUNC, luaAlive);
 
         /* Execute Engine
         *  The call to execute the script blocks on completion of the script. The lua state context
@@ -350,6 +354,48 @@ int32_t LuaEndpoint::getMetricId (const char* endpoint)
     }
 
     return metric_id;
+}
+
+/*----------------------------------------------------------------------------
+ * luaAlive - __alive()
+ *----------------------------------------------------------------------------*/
+int LuaEndpoint::luaAlive (lua_State* L)
+{
+    bool status;
+
+    /* Retrieve LuaEngine from Registry */
+    lua_pushstring(L, LuaEngine::LUA_SELFKEY);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    LuaEngine* engine = (LuaEngine*)lua_touserdata(L, -1);
+    if(engine)
+    {
+        /* Get LuaEngine State */
+        status = engine->isActive();
+        if(status)
+        {
+            /* Retrieve LuaEndpoint */
+            lua_getglobal(L, LUA_REQUEST_SELF);
+            request_t* request = (request_t*)lua_touserdata(L, -1);
+            if(request)
+            {
+                status = request->active;
+            }
+            else
+            {
+                mlog(CRITICAL, "Unable to access request");
+                status = false;
+            }
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "Unable to access lua engine");
+        status = false;
+    }
+
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

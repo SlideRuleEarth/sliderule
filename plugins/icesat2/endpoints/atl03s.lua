@@ -54,7 +54,7 @@ for i,resource in ipairs(resources) do
     -- Wait Until Completion --
     local duration = 0
     local interval = 10000 -- 10 seconds
-    while not atl03_reader:waiton(interval) do
+    while __alive() and not atl03_reader:waiton(interval) do
         duration = duration + interval
         -- Check for Timeout --
         if timeout >= 0 and duration >= timeout then

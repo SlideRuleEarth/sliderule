@@ -376,7 +376,6 @@ printf(">>> %s\n", rqst->resource);
                         double count_down = seconds_to_wait;
                         while(proxyActive && rqst->proxy->active && (count_down > 0))
                         {
-printf("SLEEP: %d %d %lf\n", proxyActive, rqst->proxy->active, count_down);
                             LocalLib::sleep(1);
                             count_down -= 1.0;
                         }
