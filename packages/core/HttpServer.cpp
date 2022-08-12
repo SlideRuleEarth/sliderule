@@ -617,23 +617,6 @@ int HttpServer::onWrite(int fd)
 
                 if(connection->state.ref.size > 0)
                 {
-
-
-
-//REMOVE
-                    /* Write Message Size */
-                    #ifdef __be__
-                    uint32_t rec_size = LocalLib::swapl(rec_size);
-                    #else
-                    uint32_t rec_size = connection->state.ref.size;
-                    #endif
-                    LocalLib::copy(&connection->state.stream_buf[connection->state.stream_buf_size], &rec_size, sizeof(uint32_t));
-                    connection->state.stream_buf_size += sizeof(uint32_t);
-
-
-
-
-
                     /* Write Message Data */
                     LocalLib::copy(&connection->state.stream_buf[connection->state.stream_buf_size], connection->state.ref.data, connection->state.ref.size);
                     connection->state.stream_buf_size += connection->state.ref.size;
