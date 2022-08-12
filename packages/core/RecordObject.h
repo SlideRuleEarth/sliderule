@@ -130,6 +130,7 @@ class RecordObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int    RECORD_FORMAT_VERSION = 2;
         static const int    MAX_INITIALIZERS = 64;
         static const int    MAX_VAL_STR_SIZE = 64;
         static const int    CALC_MAX_FIELDS = -1;
@@ -233,7 +234,6 @@ class RecordObject
         static unsigned long    unpackBitField      (unsigned char* buf, int bit_offset, int bit_length);
         static void             packBitField        (unsigned char* buf, int bit_offset, int bit_length, long val);
         static field_t          parseImmediateField (const char* str);
-        static const char*      buildRecType        (const char* rec_type_str, char* rec_type_buf, int buf_size);
 
     protected:
 
@@ -246,6 +246,12 @@ class RecordObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+
+        typedef struct {
+            uint16_t                version;
+            uint16_t                type_size;
+            uint32_t                data_size;
+        } rec_hdr_t;
 
         struct definition_t
         {
@@ -262,7 +268,7 @@ class RecordObject
                   type_size = (int)StringLib::size(_type_name) + 1;
                   id_field = StringLib::duplicate(_id_field);
                   data_size = _data_size;
-                  record_size = type_size + _data_size; }
+                  record_size = sizeof(rec_hdr_t) + type_size + _data_size; }
             ~definition_t(void)
                 { if(type_name) delete [] type_name;
                   if(id_field) delete [] id_field; }
@@ -293,6 +299,7 @@ class RecordObject
         static field_t          getUserField        (definition_t* def, const char* field_name);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
         static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags);
+        static void*            populateHeader      (char* buf, const char* type_name, int type_size, int data_size);
 
         /* Overloaded Methods */
         static definition_t*    getDefinition       (const char* rec_type);

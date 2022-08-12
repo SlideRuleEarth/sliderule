@@ -29,6 +29,12 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ *  String Representation: <rec_type> [[<field>=<value>], ...]
+ *  Record Format v1: <rec_type> '\0' [record data]
+ *  Record Format v2: <version:2bytes> <rectype length:2bytes> <data length:4bytes> <rec_type> '\0' [record data]
+ */
+
 /******************************************************************************
  INCLUDES
  ******************************************************************************/
@@ -183,7 +189,6 @@ RecordObject::valType_t RecordObject::Field::getValueType(void)
  * Constructor
  *
  *  Attempts to create record from a string specification
- *  format: <rec_type> [[<field>=<value>], ...]
  *----------------------------------------------------------------------------*/
 RecordObject::RecordObject(const char* rec_type, int allocated_memory)
 {
@@ -195,14 +200,18 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
     /* Attempt to Initialize Record */
     if(recordDefinition != NULL)
     {
+        int data_size;
+
         /* Calculate Memory to Allocate */
         if(allocated_memory == 0)
         {
             memoryAllocated = recordDefinition->record_size;
+            data_size = recordDefinition->data_size;
         }
-        else if(allocated_memory + recordDefinition->type_size >= recordDefinition->record_size)
+        else if(allocated_memory + (int)sizeof(rec_hdr_t) + recordDefinition->type_size >= recordDefinition->record_size)
         {
-            memoryAllocated = allocated_memory + recordDefinition->type_size;
+            memoryAllocated = allocated_memory + sizeof(rec_hdr_t) + recordDefinition->type_size;
+            data_size = allocated_memory;
         }
         else
         {
@@ -213,11 +222,10 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
         memoryOwner = true;
         recordMemory = new char[memoryAllocated];
 
-        /* Copy In Record Type */
-        LocalLib::copy(&recordMemory[0], recordDefinition->type_name, recordDefinition->type_size);
+        /* Populate Header */
+        recordData = (unsigned char*)populateHeader(recordMemory, recordDefinition->type_name, recordDefinition->type_size, data_size);
 
         /* Zero Out Record Data */
-        recordData = (unsigned char*)&recordMemory[recordDefinition->type_size];
         LocalLib::set(recordData, 0, recordDefinition->data_size);
     }
     else
@@ -246,7 +254,7 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
             LocalLib::copy(recordMemory, buffer, memoryAllocated);
 
             /* Set Record Data */
-            recordData = (unsigned char*)&recordMemory[recordDefinition->type_size];
+            recordData = (unsigned char*)&recordMemory[sizeof(rec_hdr_t) + recordDefinition->type_size];
         }
         else
         {
@@ -334,14 +342,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
  *----------------------------------------------------------------------------*/
 bool RecordObject::isRecordType(const char* rec_type)
 {
-#ifdef RECORD_ARCHITECTURE
-    char arch_rec_type[MAX_STR_SIZE];
-    const char* new_rec_type = buildRecType(rec_type, arch_rec_type, MAX_STR_SIZE);
-#else
-    const char* new_rec_type = rec_type;
-#endif
-
-    return (StringLib::match(new_rec_type, recordDefinition->type_name));
+    return (StringLib::match(rec_type, recordDefinition->type_name));
 }
 
 /*----------------------------------------------------------------------------
@@ -484,9 +485,6 @@ int RecordObject::getFieldNames(char*** names)
     return recordDefinition->fields.getKeys(names);
 }
 
-
-// todo - need another function that takes pointer to record definition, and field name, called by this function and is static
-
 /*----------------------------------------------------------------------------
  * getField
  *----------------------------------------------------------------------------*/
@@ -509,7 +507,6 @@ RecordObject::Field RecordObject::field(const char* field_name)
 {
     return Field(*this, getField(field_name));
 }
-
 
 /*----------------------------------------------------------------------------
  * setValueText
@@ -949,14 +946,7 @@ bool RecordObject::isType(unsigned char* buffer, int size, const char* rec_type)
     const char* buf_type = NULL;
     if(parseSerial(buffer, size, &buf_type, NULL) > 0)
     {
-#ifdef RECORD_ARCHITECTURE
-        char arch_rec_type[MAX_STR_SIZE];
-        const char* new_rec_type = buildRecType(rec_type, arch_rec_type, MAX_STR_SIZE);
-#else
-        const char* new_rec_type = rec_type;
-#endif
-
-        return (StringLib::match(new_rec_type, buf_type));
+        return (StringLib::match(rec_type, buf_type));
     }
 
     return false;
@@ -1049,7 +1039,7 @@ int RecordObject::parseSerial(unsigned char* buffer, int size, const char** rec_
     if(rec_type) *rec_type = NULL;
     if(rec_data) *rec_data = NULL;
 
-    for(int i = 0; i < size; i++)
+    for(int i = sizeof(rec_hdr_t); i < size; i++)
     {
         if(buffer[i] == '\0')
         {
@@ -1070,16 +1060,13 @@ int RecordObject::parseSerial(unsigned char* buffer, int size, const char** rec_
  *----------------------------------------------------------------------------*/
 int RecordObject::postSerial (Publisher* outq, int timeout, const char* rec_type, int rec_type_size, unsigned char* buffer, int size)
 {
-#ifdef RECORD_ARCHITECTURE
     const int MAX_REC_TYPE_SIZE = 128;
-    if(rec_type_size < MAX_REC_TYPE_SIZE) return 0;
-    char rec_type_buf[MAX_REC_TYPE_SIZE];
-    const char* data1 = buildRecType(rec_type, rec_type_buf, MAX_REC_TYPE_SIZE);
-    int data1_size = StringLib::size(data1) + 1;
-#else
-    const char* data1 = rec_type;
-    int data1_size = rec_type_size;
-#endif
+    char data1[MAX_REC_TYPE_SIZE];
+
+    int data1_size = sizeof(rec_hdr_t) + rec_type_size;
+    if(data1_size > MAX_REC_TYPE_SIZE) return -1;
+
+    populateHeader(data1, rec_type, rec_type_size, size);
 
     return outq->postCopy(data1, data1_size, buffer, size, timeout);
 }
@@ -1394,37 +1381,6 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
 }
 
 /*----------------------------------------------------------------------------
- * buildRecType
- *
- *  returns pointer to the correct record type string, no memory allocated
- *----------------------------------------------------------------------------*/
-const char* RecordObject::buildRecType(const char* rec_type_str, char* rec_type_buf, int buf_size)
-{
-#ifdef RECORD_ARCHITECTURE
-    int i = 0;
-    while(true)
-    {
-        if(rec_type_str[i] == ARCHITECTURE_TYPE_SYMBOL)
-        {
-            return rec_type_str;
-        }
-        else if(rec_type_str[i] == '\0')
-        {
-            return StringLib::format(rec_type_buf, buf_size, "%s%c%s", rec_type_str, ARCHITECTURE_TYPE_SYMBOL, RECORD_ARCHITECTURE);
-        }
-        else
-        {
-            i++;
-        }
-    }
-#else
-    (void)rec_type_buf;
-    (void)buf_size;
-    return rec_type_str;
-#endif
-}
-
-/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 RecordObject::RecordObject(void)
@@ -1596,21 +1552,13 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
 
     defMut.lock();
     {
-        /* Get Type */
-#ifdef RECORD_ARCHITECTURE
-        char arch_rec_type[MAX_STR_SIZE];
-        const char* new_rec_type = buildRecType(rec_type, arch_rec_type, MAX_STR_SIZE);
-#else
-        const char* new_rec_type = rec_type;
-#endif
-
         /* Add Definition */
-        def = getDefinition(new_rec_type);
+        def = getDefinition(rec_type);
         if(def == NULL)
         {
             assert(data_size > 0);
-            def = new definition_t(new_rec_type, id_field, data_size, max_fields);
-            if(!definitions.add(new_rec_type, def))
+            def = new definition_t(rec_type, id_field, data_size, max_fields);
+            if(!definitions.add(rec_type, def))
             {
                 delete def;
                 def = NULL;
@@ -1681,25 +1629,38 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
     /* Return Field and Status */
     return status;
 }
+/*----------------------------------------------------------------------------
+ * populateHeader
+ *----------------------------------------------------------------------------*/
+void* RecordObject::populateHeader (char* buf, const char* type_name, int type_size, int data_size)
+{
+    #ifdef __be__
+    rec_hdr_t hdr = {
+        .version = RECORD_FORMAT_VERSION,
+        .rectype_length = def->type_size,
+        .data_length = data_size
+    };
+    #else
+        rec_hdr_t hdr = {
+            .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
+            .type_size = LocalLib::swaps(type_size),
+            .data_size = LocalLib::swaps(data_size)
+        };
+    #endif
+
+    LocalLib::copy(buf, &hdr, sizeof(rec_hdr_t));
+    LocalLib::copy(&buf[sizeof(rec_hdr_t)], type_name, type_size);
+
+    return &buf[sizeof(rec_hdr_t) + type_size];
+}
 
 /*----------------------------------------------------------------------------
  * getDefinition
- *
- *  Notes:
- *   1. operates on record type string in the form of <type>@<archecture>
- *   2. if no @ symbol is present, it adds the locally defined RECORD_ARCHITECTURE
  *----------------------------------------------------------------------------*/
 RecordObject::definition_t* RecordObject::getDefinition(const char* rec_type)
 {
-#ifdef RECORD_ARCHITECTURE
-    char arch_rec_type[MAX_STR_SIZE];
-    const char* new_rec_type = buildRecType(rec_type, arch_rec_type, MAX_STR_SIZE);
-#else
-    const char* new_rec_type = rec_type;
-#endif
-
     definition_t* def = NULL;
-    try { def = definitions[new_rec_type]; }
+    try { def = definitions[rec_type]; }
     catch (RunTimeException& e) { (void)e; }
     return def;
 }
@@ -1714,26 +1675,10 @@ RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, i
 {
     /* Check Parameters */
     if(buffer == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Null buffer used to retrieve record definition");
-    else if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Zero length buffer used to retrieve record definition");
-
-    /* Find Null Terminator */
-    int i;
-    for(i = 0; i < size; i++)
-    {
-        if(buffer[i] == '\0')
-        {
-            break;
-        }
-    }
-
-    /* Check Null Terminator */
-    if(i == size)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Record buffer does not contain record type");
-    }
+    else if(size <= (int)sizeof(rec_hdr_t)) throw RunTimeException(CRITICAL, RTE_ERROR, "Buffer too small to retrieve record definition");
 
     /* Get Record Definitions */
-    char* rec_type = (char*)buffer;
+    char* rec_type = (char*)&buffer[sizeof(rec_hdr_t)];
     definition_t* def = getDefinition(rec_type);
 
     /* Check Record Definition */

@@ -212,16 +212,8 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
     definition_t* rec_def;
     recordDefErr_t status;
 
-#ifdef RECORD_ARCHITECTURE
-    /* Get Fully Qualified Record Type Back */
-    char arch_rec_type[MAX_STR_SIZE];
-    const char* full_rec_type = RecordObject::buildRecType(rec_type, arch_rec_type, MAX_STR_SIZE);
-#else
-    const char* full_rec_type = rec_type;
-#endif
-
     /* Define Underlying Record */
-    status = addDefinition(&rec_def, full_rec_type, id_field, _size, fields, num_fields, max_fields);
+    status = addDefinition(&rec_def, rec_type, id_field, _size, fields, num_fields, max_fields);
 
     /* Add Packet Definition */
     if(status == SUCCESS_DEF)
@@ -231,7 +223,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
             pktDef_t* pkt_def;
             try
             {
-                pkt_def = pktDefs[full_rec_type];
+                pkt_def = pktDefs[rec_type];
                 status = DUPLICATE_DEF;
             }
             catch(RunTimeException& e)
@@ -246,7 +238,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
                 pkt_def->subtype = _fc;
                 pkt_def->apid = _apid;
                 pkt_def->size = _size;
-                pktDefs.add(full_rec_type, pkt_def);
+                pktDefs.add(rec_type, pkt_def);
 
                 /* Register New Packet Definition */
                 unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
@@ -267,16 +259,8 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
     definition_t* rec_def;
     recordDefErr_t status;
 
-#ifdef RECORD_ARCHITECTURE
-    /* Get Fully Qualified Record Type Back */
-    char arch_rec_type[MAX_STR_SIZE];
-    const char* full_rec_type = RecordObject::buildRecType(rec_type, arch_rec_type, MAX_STR_SIZE);
-#else
-    const char* full_rec_type = rec_type;
-#endif
-
     /* Define Underlying Record */
-    status = addDefinition(&rec_def, full_rec_type, id_field, _size, fields, num_fields, max_fields);
+    status = addDefinition(&rec_def, rec_type, id_field, _size, fields, num_fields, max_fields);
 
     /* Add Packet Definition */
     if(status == SUCCESS_DEF)
@@ -286,7 +270,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
             pktDef_t* pkt_def;
             try
             {
-                pkt_def = pktDefs[full_rec_type];
+                pkt_def = pktDefs[rec_type];
                 status = DUPLICATE_DEF;
             }
             catch(RunTimeException& e)
@@ -301,7 +285,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
                 pkt_def->subtype = 0;
                 pkt_def->apid = _apid;
                 pkt_def->size = _size;
-                pktDefs.add(full_rec_type, pkt_def);
+                pktDefs.add(rec_type, pkt_def);
 
                 /* Register New Packet Definition */
                 unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;

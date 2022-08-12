@@ -60,8 +60,8 @@
 #define TIME_MILLISECS_IN_AN_HOUR   (60*TIME_MILLISECS_IN_A_MINUTE)
 #define TIME_MILLISECS_IN_A_DAY     (24*TIME_MILLISECS_IN_AN_HOUR)
 #define TIME_GPS_EPOCH_START        315964800
-#define TIME_GPS_TO_UNIX(x)         (x + 315964809000LL)
-#define TIME_UNIX_TO_GPS(x)         (x - 315964809000LL)
+#define TIME_GPS_TO_UNIX(x)         (x + 315964800000LL)
+#define TIME_UNIX_TO_GPS(x)         (x - 315964800000LL)
 #define TIME_NTP_TO_UNIX(x)         (x - 2208988800LL)
 #define TIME_NIST_LIST_FILENAME     "leap-seconds.list"
 

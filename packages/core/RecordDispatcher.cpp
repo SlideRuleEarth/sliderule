@@ -266,9 +266,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
             List<DispatchObject*> new_dispatch_list;
 
             /* Build Record Type */
-            char arch_rec_type[MAX_STR_SIZE]; // used as buffer if necessary
-            const char* rec_type_str = getLuaString(L, p);
-            const char* rec_type = RecordObject::buildRecType(rec_type_str, arch_rec_type, MAX_STR_SIZE);
+            const char* rec_type = getLuaString(L, p);
 
             try
             {
@@ -280,7 +278,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     {
                         if(old_dispatch.list[d] == dispatch)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "Dispatch already attached to %s", rec_type_str);
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "Dispatch already attached to %s", rec_type);
                         }
                     }
 
@@ -314,7 +312,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
             if(!lua_obj->dispatchTable.add(rec_type, new_dispatch))
             {
                 delete [] new_dispatch.list;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "unable to register dispatch for %s", rec_type_str);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "unable to register dispatch for %s", rec_type);
             }
         }
 
