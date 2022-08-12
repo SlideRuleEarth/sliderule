@@ -1644,7 +1644,7 @@ void* RecordObject::populateHeader (char* buf, const char* type_name, int type_s
         rec_hdr_t hdr = {
             .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
             .type_size = LocalLib::swaps(type_size),
-            .data_size = LocalLib::swaps(data_size)
+            .data_size = LocalLib::swapl(data_size)
         };
     #endif
 
