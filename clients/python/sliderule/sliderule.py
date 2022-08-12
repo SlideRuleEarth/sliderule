@@ -245,7 +245,7 @@ def __parse_native(data, callbacks):
     """
     recs = []
 
-    rec_size_size = 4
+    rec_hdr_size = 8
     rec_size_index = 0
     rec_size_rsps = []
 
@@ -259,15 +259,18 @@ def __parse_native(data, callbacks):
         while i < len(line):
 
             # Parse Record Size
-            if(rec_size_index < rec_size_size):
+            if(rec_size_index < rec_hdr_size):
                 bytes_available = len(line)  - i
-                bytes_remaining = rec_size_size - rec_size_index
+                bytes_remaining = rec_hdr_size - rec_size_index
                 bytes_to_append = min(bytes_available, bytes_remaining)
                 rec_size_rsps.append(line[i:i+bytes_to_append])
                 rec_size_index += bytes_to_append
-                if(rec_size_index >= rec_size_size):
+                if(rec_size_index >= rec_hdr_size):
                     raw = b''.join(rec_size_rsps)
-                    rec_size = struct.unpack('<i', raw)[0]
+                    rec_version, rec_type_size, rec_data_size = struct.unpack('>hhi', raw)[0]
+                    if rec_version != 2:
+                        raise SystemError("Invalid record format: %d" % (rec_version))
+                    rec_size = rec_type_size + rec_data_size
                     rec_size_rsps.clear()
                 i += bytes_to_append
 
