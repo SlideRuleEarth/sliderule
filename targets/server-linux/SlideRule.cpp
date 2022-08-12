@@ -75,7 +75,14 @@
  TYPEDEFS
  ******************************************************************************/
 
-typedef void (*init_f) (void);
+typedef void (*plugin_f) (void);
+
+typedef struct plugin_node {
+    char init_func_name[MAX_STR_SIZE];
+    char deinit_func_name[MAX_STR_SIZE];
+    void* plugin;
+    struct plugin_node* next;
+} plugin_list_t;
 
 /******************************************************************************
  FILE DATA
@@ -83,7 +90,7 @@ typedef void (*init_f) (void);
 
 static bool app_immediate_abort = false;
 static bool app_signal_abort = false;
-
+static plugin_list_t loaded_plugins;
 #ifdef CUSTOM_ALLOCATOR
 static std::atomic<uint64_t> allocCount = {0};
 #endif
@@ -176,10 +183,15 @@ static void* signal_thread (void* parm)
 }
 
 /*
- * ldplugins - Load plug-ins from application configuration directory
+ * ldplugins - Load plugins from application configuration directory
  */
 static void ldplugins(void)
 {
+    /* Initialize Plugin List */
+    loaded_plugins.next = NULL;
+    plugin_list_t* curr_plugin = &loaded_plugins;
+
+    /* Load All Plugins from Configuration Directory */
     DIR *dir;
     if((dir = opendir(CONFDIR)) != NULL)
     {
@@ -197,21 +209,49 @@ static void ldplugins(void)
             print2term("Loading plug-in %s ... ", plugin_name);
             char plugin_path[MAX_STR_SIZE];
             StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFDIR, PATH_DELIMETER, plugin_name);
-            void* plugin = dlopen(plugin_path, RTLD_NOW);
-            if(!plugin)
+            curr_plugin->plugin = dlopen(plugin_path, RTLD_NOW);
+            if(!curr_plugin->plugin)
             {
                 print2term("cannot load %s: %s\n", plugin_name, dlerror());
                 continue;
             }
 
             /* Initialize Plugin */
-            char plugin_init[MAX_STR_SIZE];
-            StringLib::format(plugin_init, MAX_STR_SIZE, "init%s", plugin_name);
-            init_f init = (init_f)dlsym(plugin, plugin_init);
-            if(!init) print2term("cannot find initialization function %s: %s\n", plugin_init, dlerror());
+            StringLib::format(curr_plugin->init_func_name, MAX_STR_SIZE, "init%s", plugin_name);
+            plugin_f init = (plugin_f)dlsym(curr_plugin->plugin, curr_plugin->init_func_name);
+            if(!init) print2term("cannot find initialization function %s: %s\n", curr_plugin->init_func_name, dlerror());
             else init();
+
+            /* Save Off Deinit Function Name */
+            StringLib::format(curr_plugin->deinit_func_name, MAX_STR_SIZE, "deinit%s", plugin_name);
+
+            /* Add to Plugin List */
+            curr_plugin->next = new plugin_list_t;
+            curr_plugin = curr_plugin->next;
+            curr_plugin->next = NULL;
         }
         closedir(dir);
+    }
+}
+
+/*
+ * ulplugins - Unload plugins
+ */
+static void ulplugins(void)
+{
+    plugin_list_t* curr_plugin = &loaded_plugins;
+    while(curr_plugin->next != NULL)
+    {
+        /* Deinitialize */
+        plugin_f deinit = (plugin_f)dlsym(curr_plugin->plugin, curr_plugin->deinit_func_name);
+        if(!deinit) print2term("cannot find deinitialization function %s: %s\n", curr_plugin->deinit_func_name, dlerror());
+        else deinit();
+
+        /* Close */
+        dlclose(curr_plugin->plugin);
+
+        /* Goto Next */
+        curr_plugin = curr_plugin->next;
     }
 }
 
@@ -275,7 +315,7 @@ int main (int argc, char* argv[])
         initpistache();
     #endif
 
-    /* Load Plug-ins */
+    /* Load Plugins */
     ldplugins();
 
     /* Get Interpreter Arguments */
@@ -304,7 +344,10 @@ int main (int argc, char* argv[])
     delete interpreter;
     delete [] lua_argv;
 
-    /* Full Clean Up */
+    /* Unload Plugins */
+    ulplugins();
+
+    /* Clean Up Built-In Packages */
     #ifdef __pistache__
         deinitpistache();
     #endif

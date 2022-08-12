@@ -149,4 +149,10 @@ void initicesat2 (void)
     /* Display Status */
     print2term("%s plugin initialized (%s)\n", LUA_ICESAT2_LIBNAME, BINID);
 }
+
+void deiniticesat2 (void)
+{
+    /* Uninitialize Modules */
+    Atl06Proxy::deinit();
+}
 }

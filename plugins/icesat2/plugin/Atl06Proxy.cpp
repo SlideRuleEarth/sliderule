@@ -364,7 +364,7 @@ printf(">>> %s\n", rqst->resource);
                 /* Get Lock from Orchestrator */
                 double expiration_time = TimeLib::latchtime() + proxy->timeout;
                 double seconds_to_wait = 1.0;
-                while(proxyActive && !rqst->node && (expiration_time > TimeLib::latchtime()))
+                while(proxyActive && rqst->proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
                 {
                     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
                     if(nodes->length() > 0)
@@ -374,8 +374,9 @@ printf(">>> %s\n", rqst->resource);
                     else
                     {
                         double count_down = seconds_to_wait;
-                        while(proxyActive && (count_down > 0))
+                        while(proxyActive && rqst->proxy->active && (count_down > 0))
                         {
+printf("SLEEP: %d %d %lf\n", proxyActive, rqst->proxy->active, count_down);
                             LocalLib::sleep(1);
                             count_down -= 1.0;
                         }

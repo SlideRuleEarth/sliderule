@@ -26,7 +26,7 @@ local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"]
 local resources = rqst["resources"]
 local parms = rqst["parms"]
-local timeout = rqst["timeout"] or 600
+local timeout = rqst["timeout"] or 600000 -- 10 minutes
 
 -- Proxy Request --
 local atl06p = icesat2.atl06proxy(atl03_asset, resources, json.encode(parms), timeout, rspq)
