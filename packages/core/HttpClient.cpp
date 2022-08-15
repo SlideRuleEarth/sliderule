@@ -382,7 +382,8 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         }
                         else if(line_term < 0) // end of headers reached
                         {
-                            line_term = line_start + 2; // move past header delimeter
+                            line_start += 2; // move past header delimeter
+                            line_term = line_start;
                             headers_complete = true;
                         }
                         else // header line not complete (line_term == 0)
@@ -502,7 +503,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         }
                         else // chunk invalid
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing length");
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing trailer");
                         }
 
                     }
