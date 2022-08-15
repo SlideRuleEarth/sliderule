@@ -19,6 +19,5 @@ print("Output Queue", rspq)
 outp:sendstring(parm["var4"]["type"].."\n")
 outp:sendstring(parm["var4"]["files"].."\n")
 outp:sendstring(parm["var4"]["format"].."\n")
-outp:sendstring("")
 
 return
