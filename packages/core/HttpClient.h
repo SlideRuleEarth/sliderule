@@ -138,6 +138,7 @@ class HttpClient: public LuaObject
         long            parseLine           (int start, int end);
         status_line_t   parseStatusLine     (int start, int term);
         hdr_kv_t        parseHeaderLine     (int start, int term);
+        const char*     parseChunkHeaderLine(int start, int term);
 
         static void*    requestThread       (void* parm);
 

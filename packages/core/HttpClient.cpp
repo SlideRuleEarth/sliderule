@@ -300,16 +300,22 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
     rsps_t rsps = {
         .code = EndpointObject::OK,
         .response = NULL,
-        .size = 0
+        .size = MAX_UNBOUNDED_RSPS
     };
 
-    int     header_num          = 0;
-    int     rsps_index          = 0;
-    int     rsps_buf_index      = 0;
-    long    content_remaining   = 0;
-    bool    unbounded_content   = false;
-    bool    headers_complete    = false;
-    bool    response_complete   = false;
+    int     header_num              = 0;
+    int     rsps_index              = 0;
+    int     rsps_buf_index          = 0;
+    long    content_remaining       = MAX_UNBOUNDED_RSPS;
+    long    chunk_length            = 0;
+    long    chunk_remaining         = 0;
+    bool    unbounded_content       = true;
+    bool    chunk_encoding          = false;
+    bool    chunk_header_complete   = false;
+    bool    chunk_payload_complete  = false;
+    bool    chunk_trailer_complete  = false;
+    bool    headers_complete        = false;
+    bool    response_complete       = false;
 
     /* Process Response */
     try
@@ -323,6 +329,9 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                 int line_term = 0;
                 while(line_start < bytes_read)
                 {
+                    //////////////////////////
+                    // Process Headers
+                    //////////////////////////
                     if(!headers_complete)
                     {
                         /* Parse Line */
@@ -343,16 +352,25 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             else
                             {
                                 hdr_kv_t hdr = parseHeaderLine(line_start, line_term);
+
                                 /* Process Content Length Header */
                                 if(StringLib::match(hdr.key, "Content-Length"))
                                 {
                                     if(StringLib::str2long(hdr.value, &content_remaining))
                                     {
                                         rsps.size = content_remaining;
+                                        unbounded_content = false;
                                     }
                                     else
                                     {
-                                        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid content length header => %s: %s", hdr.key, hdr.value);
+                                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid content length header => %s: %s", hdr.key, hdr.value);
+                                    }
+                                }
+                                else if(StringLib::match(hdr.key, "Transfer-Encoding"))
+                                {
+                                    if(StringLib::match(hdr.value, "chunked"))
+                                    {
+                                        chunk_encoding = true;
                                     }
                                 }
                             }
@@ -375,16 +393,44 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             break;
                         }
                     }
-                    else // payload
+                    //////////////////////////
+                    // Process Chunk Header
+                    //////////////////////////
+                    else if(chunk_encoding && !chunk_header_complete)
                     {
-                        /* Check if Content Length Not Provided */
-                        if(rsps.size == 0)
+                        line_term = parseLine(line_start, bytes_read);
+                        if(line_term > 0) // valid header line found
                         {
-                            unbounded_content = true;
-                            rsps.size = MAX_UNBOUNDED_RSPS;
-                            content_remaining = rsps.size;
+                            const char* chunk_length_str = parseChunkHeaderLine(line_start, line_term);
+                            if(StringLib::str2long(chunk_length_str, &chunk_length, 16))
+                            {
+                                chunk_header_complete = true;
+                                chunk_payload_complete = false;
+                                chunk_remaining = chunk_length;
+                            }
+                            else
+                            {
+                                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk length: %s", chunk_length_str);
+                            }
+                        }
+                        else if(line_term < 0) // the chunk was invalid
+                        {
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing length");
+                        }
+                        else // chunk header not complete
+                        {
+                            int bytes_remaining = bytes_read - line_start;
+                            LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
+                            rsps_buf_index += bytes_remaining;
+                            break;
                         }
 
+                    }
+                    //////////////////////////
+                    // Process Payload
+                    //////////////////////////
+                    else if(!chunk_encoding || !chunk_payload_complete)
+                    {
                         /* Allocate Response If Necessary */
                         if(!outq && !rsps.response)
                         {
@@ -393,34 +439,79 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         }
 
                         /* Determine Bytes to Copy */
-                        int bytes_remaining = bytes_read - line_term;
-                        if(bytes_remaining > content_remaining)
+                        int rsps_bytes = bytes_read - line_term;
+                        if(chunk_encoding) rsps_bytes = MIN(rsps_bytes, chunk_remaining);
+                        if(!outq && rsps_bytes > content_remaining)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "Received too many bytes in %sresponse - %d > %ld", unbounded_content ? "unbounded " : "", bytes_remaining, content_remaining);
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "received too many bytes in %sresponse - %d > %ld", unbounded_content ? "unbounded " : "", rsps_bytes, content_remaining);
                         }
-                        else if(bytes_remaining > 0)
+
+                        /* Copy Payload Bytes */
+                        if(rsps_bytes > 0)
                         {
                             if(outq)
                             {
                                 /* Post Response */
-                                int post_status = outq->postCopy(&rspsBuf[line_term], bytes_remaining, SYS_TIMEOUT);
-                                if(post_status <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to post response: %d", post_status);
+                                int post_status = outq->postCopy(&rspsBuf[line_term], rsps_bytes, SYS_TIMEOUT);
+                                if(post_status <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to post response: %d", post_status);
                             }
                             else
                             {
                                 /* Populate Response */
-                                LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_term], bytes_remaining);
+                                LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_term], rsps_bytes);
                             }
 
-                            /* Update Indices Check If Done */
-                            rsps_index += bytes_remaining;
-                            content_remaining -= bytes_remaining;
-                            if(content_remaining <= 0) response_complete = true;
+                            /* Update Indices */
+                            rsps_index += rsps_bytes;
+                            if(chunk_encoding)
+                            {
+                                chunk_remaining -= rsps_bytes;
+                                if(chunk_remaining <= 0)
+                                {
+                                    chunk_payload_complete = true;
+                                    chunk_trailer_complete = false;
+                                    chunk_remaining = chunk_length;
+                                }
+                            }
+
+                            /* Check if Respose Complete */
+                            if(!outq || !unbounded_content)
+                            {
+                                content_remaining -= rsps_bytes;
+                                if(content_remaining <= 0)
+                                {
+                                    response_complete = true;
+                                }
+                            }
                         }
 
                         /* Update Indices */
                         line_term = 0;
                         break;
+                    }
+                    //////////////////////////
+                    // Process Chunk Trailer
+                    //////////////////////////
+                    else if(chunk_encoding && !chunk_trailer_complete)
+                    {
+                        line_term = parseLine(line_start, bytes_read);
+                        if(line_term < 0) // chunk trailer
+                        {
+                            chunk_trailer_complete = true;
+                            chunk_header_complete = false;
+                        }
+                        else // chunk invalid
+                        {
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing length");
+                        }
+
+                    }
+                    //////////////////////////
+                    // Process Chunk Trailer
+                    //////////////////////////
+                    else
+                    {
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid http parsing state");
                     }
                 }
             }
@@ -542,6 +633,25 @@ HttpClient::hdr_kv_t HttpClient::parseHeaderLine (int start, int term)
     }
 
     return hdr;
+}
+
+/*----------------------------------------------------------------------------
+ * parseChunkHeaderLine
+ *----------------------------------------------------------------------------*/
+const char* HttpClient::parseChunkHeaderLine (int start, int term)
+{
+    const char* str = &rspsBuf[start];
+
+    for(int i = start; i < (term - 2); i++)
+    {
+        if(rspsBuf[i] == '\r' && rspsBuf[i+1] == '\n')
+        {
+            rspsBuf[i] = '\0'; // terminate string
+            break;
+        }
+    }
+
+    return str;
 }
 
 /*----------------------------------------------------------------------------
