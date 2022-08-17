@@ -62,6 +62,7 @@ int netsvc_open (lua_State* L)
         {"psurl",       ProvisioningSystemLib::luaSetUrl},
         {"psorg",       ProvisioningSystemLib::luaSetOrganization},
         {"psvalidate",  ProvisioningSystemLib::luaValidate},
+        {"psauth",      ProvisioningSystemLib::Authenticator::luaCreate},
         {NULL,          NULL}
     };
 

@@ -39,6 +39,13 @@
 #include "core.h"
 
 /******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#define DEFAULT_ORGANIZATION_NAME   "local"
+#define DEFAULT_PS_URL              "https://ps.testsliderule.org"
+
+/******************************************************************************
  * PROVISIONING SYSTEM LIBRARY CLASS
  ******************************************************************************/
 
@@ -65,6 +72,18 @@ class ProvisioningSystemLib
 
         static const char* URL;
         static const char* Organization;
+
+        /*--------------------------------------------------------------------
+         * Authenticator Subclass
+         *--------------------------------------------------------------------*/
+        class Authenticator: public LuaEndpoint::Authenticator
+        {
+            public:
+                static int luaCreate (lua_State* L);
+                Authenticator(lua_State* L);
+                ~Authenticator(void);
+                bool isValid(const char* token) override;
+        };
 };
 
 #endif  /* __provisioning_system_lib__ */

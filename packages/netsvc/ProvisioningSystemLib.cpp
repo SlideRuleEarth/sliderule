@@ -41,7 +41,7 @@
 #include <rapidjson/document.h>
 
 /******************************************************************************
- * ORCHESTRATOR LIBRARY CLASS
+ * PROVISIONING SYSTEM LIBRARY CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -56,8 +56,8 @@ const char* ProvisioningSystemLib::Organization = NULL;
  *----------------------------------------------------------------------------*/
 void ProvisioningSystemLib::init (void)
 {
-    URL = StringLib::duplicate("http://ps.localhost");
-    Organization = StringLib::duplicate("local");
+    URL = StringLib::duplicate(DEFAULT_PS_URL);
+    Organization = StringLib::duplicate(DEFAULT_ORGANIZATION_NAME);
 }
 
 /*----------------------------------------------------------------------------
@@ -183,7 +183,7 @@ int ProvisioningSystemLib::luaSetOrganization(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaHealth - orchhealth()
+ * luaValidate - psvalidate()
  *----------------------------------------------------------------------------*/
 int ProvisioningSystemLib::luaValidate(lua_State* L)
 {
@@ -202,4 +202,54 @@ int ProvisioningSystemLib::luaValidate(lua_State* L)
     }
 
     return 1;
+}
+
+/******************************************************************************
+ * AUTHENTICATOR SUBCLASS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaCreate - .psauth()
+ *----------------------------------------------------------------------------*/
+int ProvisioningSystemLib::Authenticator::luaCreate (lua_State* L)
+{
+    try
+    {
+        return createLuaObject(L, new Authenticator(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating Authenticator: %s", e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+ProvisioningSystemLib::Authenticator::Authenticator (lua_State* L):
+    LuaEndpoint::Authenticator(L)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+ProvisioningSystemLib::Authenticator::~Authenticator (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * isValid
+ *----------------------------------------------------------------------------*/
+bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
+{
+    if(StringLib::match(DEFAULT_ORGANIZATION_NAME, ProvisioningSystemLib::Organization))
+    {
+        return true; // no authentication used for default organization name
+    }
+    else
+    {
+        return ProvisioningSystemLib::validate(token);
+    }
 }
