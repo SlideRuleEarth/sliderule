@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __geotiff_file__
-#define __geotiff_file__
+#ifndef __gdal_raster__
+#define __gdal_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -40,14 +40,14 @@
 #include "OsApi.h"
 
 /******************************************************************************
- * GEOTIFF CLASS
+ * GDALRASTER CLASS
  ******************************************************************************/
 
 
 // TODO: add bbox as optional parameter with functions to use it
 // have the lua_get_raster use this constructor
 
-class GeoTIFFFile: public LuaObject
+class GdalRaster: public LuaObject
 {
     public:
 
@@ -55,15 +55,14 @@ class GeoTIFFFile: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int GEOTIFF_PIXEL_ON = 1;
-        static const int GEOTIFF_MAX_IMAGE_SIZE = 4194304; // 4MB
+        static const int GDALRASTER_PIXEL_ON = 1;
+        static const int GDALRASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
 
         static const char* IMAGE_KEY;
         static const char* IMAGELENGTH_KEY;
         static const char* DIMENSION_KEY;
         static const char* BBOX_KEY;
         static const char* CELLSIZE_KEY;
-        static const char* CRS_KEY;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -81,10 +80,9 @@ class GeoTIFFFile: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int          luaCreate       (lua_State* L);
-        static GeoTIFFFile* create          (lua_State* L, int index);
+        static GdalRaster*  create          (lua_State* L, int index);
 
-        bool                 subset         (double lon, double lat);
-        virtual             ~GeoTIFFFile    (void);
+        virtual             ~GdalRaster    (void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -92,7 +90,25 @@ class GeoTIFFFile: public LuaObject
 
         bool rawPixel (const uint32_t row, const uint32_t col)
         {
-            return raster[(row * cols) + col] == GEOTIFF_PIXEL_ON;
+            return raster[(row * cols) + col] == GDALRASTER_PIXEL_ON;
+        }
+
+        bool subset (double lon, double lat)
+        {
+            if( (lon >= bbox.lon_min) &&
+                (lon <= bbox.lon_max) &&
+                (lat >= bbox.lat_min) &&
+                (lat <= bbox.lat_max) )
+            {
+                uint32_t row = (bbox.lat_max - lat) / cellsize;
+                uint32_t col = (lon - bbox.lon_min) / cellsize;
+
+                if((row < rows) && (col < cols))
+                {
+                    return rawPixel(row, col);
+                }
+            }
+            return false;
         }
 
         uint32_t numRows (void)
@@ -118,7 +134,7 @@ class GeoTIFFFile: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoTIFFFile (lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize, uint32_t _epsg);
+        GdalRaster (lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize);
 
     private:
 
@@ -131,7 +147,6 @@ class GeoTIFFFile: public LuaObject
         uint8_t*    raster;
         bbox_t      bbox;
         double      cellsize;
-        uint32_t    epsg;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -144,4 +159,4 @@ class GeoTIFFFile: public LuaObject
         static int luaSubset        (lua_State* L);
 };
 
-#endif  /* __geotiff_file__ */
+#endif  /* __gdal_raster__ */

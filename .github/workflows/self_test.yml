@@ -35,6 +35,7 @@ jobs:
         sudo add-apt-repository ppa:pistache+team/unstable    #pistache
         sudo apt update                                       #pistache
         sudo apt install libpistache-dev                      #pistache
+        sudo apt install libgdal-dev                          #gdal
 
     - name: AWS clone repository
       run: |

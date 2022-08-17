@@ -50,6 +50,7 @@ option (ENABLE_H5CORO_ATTRIBUTE_SUPPORT "H5Coro will read and process attribute 
 option (USE_AWS_PACKAGE "Include the AWS package" OFF)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_GEOTIFF_PACKAGE "Include the GeoTIFF package" OFF)
+option (USE_GDAL_PACKAGE "Include the GDAL package" OFF)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)
 option (USE_NETSVC_PACKAGE "Include the Network Services package" OFF)
@@ -204,6 +205,10 @@ endif()
 
 if(${USE_GEOTIFF_PACKAGE})
     add_subdirectory (packages/geotiff)
+endif()
+
+if(${USE_GDAL_PACKAGE})
+    add_subdirectory (packages/gdal)
 endif()
 
 if(${USE_H5_PACKAGE})

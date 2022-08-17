@@ -33,17 +33,16 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoTIFFFile.h"
-#include <tiffio.h>
-#include <cstring>
+#include "GdalRaster.h"
+#include <gdal.h>
 #include "core.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoTIFFFile::LuaMetaName = "GeoTIFFFile";
-const struct luaL_Reg GeoTIFFFile::LuaMetaTable[] = {
+const char* GdalRaster::LuaMetaName = "GdalRaster";
+const struct luaL_Reg GdalRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
     {"bbox",        luaBoundingBox},
     {"cell",        luaCellSize},
@@ -51,18 +50,17 @@ const struct luaL_Reg GeoTIFFFile::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* GeoTIFFFile::IMAGE_KEY = "image";
-const char* GeoTIFFFile::IMAGELENGTH_KEY = "imagelength";
-const char* GeoTIFFFile::DIMENSION_KEY = "dimension";
-const char* GeoTIFFFile::BBOX_KEY = "bbox";
-const char* GeoTIFFFile::CELLSIZE_KEY = "cellsize";
-const char* GeoTIFFFile::CRS_KEY = "crs";
+const char* GdalRaster::IMAGE_KEY = "image";
+const char* GdalRaster::IMAGELENGTH_KEY = "imagelength";
+const char* GdalRaster::DIMENSION_KEY = "dimension";
+const char* GdalRaster::BBOX_KEY = "bbox";
+const char* GdalRaster::CELLSIZE_KEY = "cellsize";
 
 
 /******************************************************************************
  * FILE STATIC LIBTIFF METHODS
  ******************************************************************************/
-
+#if 0
 /*----------------------------------------------------------------------------
  * libtiff call-back parameter
  *----------------------------------------------------------------------------*/
@@ -140,7 +138,7 @@ static void libtiff_unmap(thandle_t, tdata_t, toff_t)
 {
     return;
 };
-
+#endif
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -154,7 +152,7 @@ static void libtiff_unmap(thandle_t, tdata_t, toff_t)
  *      cellsize=<cell size>]
  *  })
  *----------------------------------------------------------------------------*/
-int GeoTIFFFile::luaCreate (lua_State* L)
+int GdalRaster::luaCreate (lua_State* L)
 {
     try
     {
@@ -170,7 +168,7 @@ int GeoTIFFFile::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoTIFFFile* GeoTIFFFile::create (lua_State* L, int index)
+GdalRaster* GdalRaster::create (lua_State* L, int index)
 {
     bbox_t _bbox = {0.0, 0.0, 0.0, 0.0 };
 
@@ -206,96 +204,22 @@ GeoTIFFFile* GeoTIFFFile::create (lua_State* L, int index)
     }
     lua_pop(L, 1);
 
-    /* Get Cell Size */
+    /* Optionally Get Cell Size */
     lua_getfield(L, index, CELLSIZE_KEY);
     double _cellsize = getLuaFloat(L, -1);
-    lua_pop(L, 1);
-
-    /* Get EPSG (projection type) */
-    lua_getfield(L, index, CRS_KEY);
-    uint32_t _epsg = getLuaInteger(L, -1);
     lua_pop(L, 1);
 
     /* Convert Image from Base64 to Binary */
     std::string tiff = MathLib::b64decode(image, imagelength);
 
     /* Create GeoTIFF File */
-    return new GeoTIFFFile(L, tiff.c_str(), tiff.size(), _bbox, _cellsize, _epsg);
-}
-        
-        
-/*----------------------------------------------------------------------------
- * subset
- *----------------------------------------------------------------------------*/
-bool GeoTIFFFile::subset (double _lon, double _lat)
-{
-    double lon = _lon;
-    double lat = _lat;
-
-    // if( projection != MathLib::NO_PROJECTION)
-    // {
-    //     MathLib::coord_t coord = {_lon, _lat};
-    //     MathLib::point_t point = MathLib::coord2point(coord, projection);
-    //     lon = point.x;
-    //     lat = point.y;
-    // }
-
-    static bool first_hit = true;
-    if (first_hit)
-    {
-        first_hit = false;
-        print2term("\n\n_lon: %lf, _lat: %lf, lon: %lf, lat: %lf\n", _lon, _lat, lon, lat);
-        print2term("blon_min: %lf, blon_max: %lf, blat_min: %lf, blat_max: %lf\n\n", bbox.lon_min, bbox.lon_max, bbox.lat_min, bbox.lat_max);
-
-        double mylon, mylat;
-        
-        mylon = -100.0; 
-        mylat =   30.0;
-        MathLib::coord_t coord = {mylon, mylat};
-        MathLib::point_t point = MathLib::coord2point(coord, MathLib::PLATE_CARREE);
-        lon = point.x;
-        lat = point.y;
-        print2term("    PLATE_CAREE: lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
-
-        mylon = -100.0; 
-        mylat =   80.0;
-        coord = {mylon, mylat};
-        point = MathLib::coord2point(coord, MathLib::NORTH_POLAR);
-        lon = point.x;
-        lat = point.y;
-        print2term("    NORTH_POLAR: lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
-
-        mylon = -100.0; 
-        mylat =  -80.0;
-        coord = {mylon, mylat};
-        point = MathLib::coord2point(coord, MathLib::SOUTH_POLAR);
-        lon = point.x;
-        lat = point.y;
-        print2term("    SOUTH_POLAR: lon: %lf, lat: %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
-        
-        print2term("\n\n");
-    }
-
-    if ((lon >= bbox.lon_min) &&
-        (lon <= bbox.lon_max) &&
-        (lat >= bbox.lat_min) &&
-        (lat <= bbox.lat_max))
-    {
-        uint32_t row = (bbox.lat_max - lat) / cellsize;
-        uint32_t col = (lon - bbox.lon_min) / cellsize;
-
-        if ((row < rows) && (col < cols))
-        {
-            return rawPixel(row, col);
-        }
-    }
-    return false;
+    return new GdalRaster(L, tiff.c_str(), tiff.size(), _bbox, _cellsize);
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GeoTIFFFile::~GeoTIFFFile(void)
+GdalRaster::~GdalRaster(void)
 {
     if(raster) delete [] raster;
 }
@@ -307,7 +231,7 @@ GeoTIFFFile::~GeoTIFFFile(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize, uint32_t _epsg):
+GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(image);
@@ -318,8 +242,7 @@ GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength, bbox
     raster = NULL;
     bbox = _bbox;
     cellsize = _cellsize;
-    epsg = _epsg;
-
+#if 0
     /* Create LibTIFF Callback Data Structure */
     geotiff_cb_t g = {
         .filebuf = (const uint8_t*)image,
@@ -347,7 +270,7 @@ GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength, bbox
         uint32_t strip_size = TIFFStripSize(tif);
         uint32_t num_strips = TIFFNumberOfStrips(tif);
         long size = strip_size * num_strips;
-        if(size > 0 && size < GEOTIFF_MAX_IMAGE_SIZE)
+        if(size > 0 && size < GDALRASTER_MAX_IMAGE_SIZE)
         {
             /* Allocate Image */
             raster = new uint8_t [size];
@@ -370,6 +293,7 @@ GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength, bbox
     {
         mlog(CRITICAL, "Unable to open memory mapped tiff file");
     }
+#endif
 }
 
 /******************************************************************************
@@ -379,7 +303,7 @@ GeoTIFFFile::GeoTIFFFile(lua_State* L, const char* image, long imagelength, bbox
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
  *----------------------------------------------------------------------------*/
-int GeoTIFFFile::luaDimensions (lua_State* L)
+int GdalRaster::luaDimensions (lua_State* L)
 {
     bool status = false;
     int num_ret = 1;
@@ -387,7 +311,7 @@ int GeoTIFFFile::luaDimensions (lua_State* L)
     try
     {
         /* Get Self */
-        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+        GdalRaster* lua_obj = (GdalRaster*)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->rows);
@@ -409,7 +333,7 @@ int GeoTIFFFile::luaDimensions (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaBoundingBox - :bbox() --> (lon_min, lat_min, lon_max, lat_max)
  *----------------------------------------------------------------------------*/
-int GeoTIFFFile::luaBoundingBox(lua_State* L)
+int GdalRaster::luaBoundingBox(lua_State* L)
 {
     bool status = false;
     int num_ret = 1;
@@ -417,7 +341,7 @@ int GeoTIFFFile::luaBoundingBox(lua_State* L)
     try
     {
         /* Get Self */
-        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+        GdalRaster* lua_obj = (GdalRaster*)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->bbox.lon_min);
@@ -441,7 +365,7 @@ int GeoTIFFFile::luaBoundingBox(lua_State* L)
 /*----------------------------------------------------------------------------
  * luaCellSize - :cell() --> cell size
  *----------------------------------------------------------------------------*/
-int GeoTIFFFile::luaCellSize(lua_State* L)
+int GdalRaster::luaCellSize(lua_State* L)
 {
     bool status = false;
     int num_ret = 1;
@@ -449,7 +373,7 @@ int GeoTIFFFile::luaCellSize(lua_State* L)
     try
     {
         /* Get Self */
-        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+        GdalRaster* lua_obj = (GdalRaster*)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushnumber(L, lua_obj->cellsize);
@@ -470,7 +394,7 @@ int GeoTIFFFile::luaCellSize(lua_State* L)
 /*----------------------------------------------------------------------------
  * luaPixel - :pixel(r, c) --> on|off
  *----------------------------------------------------------------------------*/
-int GeoTIFFFile::luaPixel (lua_State* L)
+int GdalRaster::luaPixel (lua_State* L)
 {
     bool status = false;
     int num_ret = 1;
@@ -478,7 +402,7 @@ int GeoTIFFFile::luaPixel (lua_State* L)
     try
     {
         /* Get Self */
-        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+        GdalRaster* lua_obj = (GdalRaster*)getLuaSelf(L, 1);
 
         /* Get Pixel Index */
         uint32_t r = getLuaInteger(L, 2);
@@ -510,14 +434,14 @@ int GeoTIFFFile::luaPixel (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaSubset - :subset(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
-int GeoTIFFFile::luaSubset (lua_State* L)
+int GdalRaster::luaSubset (lua_State* L)
 {
     bool status = false;
 
     try
     {
         /* Get Self */
-        GeoTIFFFile* lua_obj = (GeoTIFFFile*)getLuaSelf(L, 1);
+        GdalRaster* lua_obj = (GdalRaster*)getLuaSelf(L, 1);
 
         /* Get Coordinates */
         double lon = getLuaFloat(L, 2);
