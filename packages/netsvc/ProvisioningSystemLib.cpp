@@ -49,13 +49,15 @@
  *----------------------------------------------------------------------------*/
 
 const char* ProvisioningSystemLib::URL = NULL;
+const char* ProvisioningSystemLib::Organization = NULL;
 
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
 void ProvisioningSystemLib::init (void)
 {
-    URL = StringLib::duplicate("https://ps.localhost");
+    URL = StringLib::duplicate("http://ps.localhost");
+    Organization = StringLib::duplicate("local");
 }
 
 /*----------------------------------------------------------------------------
@@ -63,20 +65,21 @@ void ProvisioningSystemLib::init (void)
  *----------------------------------------------------------------------------*/
 void ProvisioningSystemLib::deinit (void)
 {
+    if(URL) delete [] URL;
+    if(Organization) delete [] Organization;
 }
 
 /*----------------------------------------------------------------------------
  * validate
  *----------------------------------------------------------------------------*/
-bool ProvisioningSystemLib::validate (const char* org, const char* access_token, bool verbose)
+bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
 {
     bool status = false;
 
     try
     {
         /* Build API URL */
-        SafeString url_str("%s/ps/api/get_membership_status/", URL);
-        url_str += org;
+        SafeString url_str("%s/ps/api/get_membership_status/%s", URL, Organization);
 
         /* Build Bearer Token Header */
         SafeString hdr_str("Authorization: Bearer %s", access_token);
@@ -157,6 +160,29 @@ int ProvisioningSystemLib::luaSetUrl(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaSetOrganization - psorg(<organization>)
+ *----------------------------------------------------------------------------*/
+int ProvisioningSystemLib::luaSetOrganization(lua_State* L)
+{
+    try
+    {
+        const char* _organization = LuaObject::getLuaString(L, 1);
+
+        if(Organization) delete [] Organization;
+        Organization = StringLib::duplicate(_organization);
+
+        lua_pushboolean(L, true);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error setting organization: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * luaHealth - orchhealth()
  *----------------------------------------------------------------------------*/
 int ProvisioningSystemLib::luaValidate(lua_State* L)
@@ -164,11 +190,10 @@ int ProvisioningSystemLib::luaValidate(lua_State* L)
     try
     {
         /* Get Parameters */
-        const char* org     = LuaObject::getLuaString(L, 1);
-        const char* token   = LuaObject::getLuaString(L, 2);
-        bool verbose        = LuaObject::getLuaBoolean(L, 3, true, false);
+        const char* token   = LuaObject::getLuaString(L, 1);
+        bool verbose        = LuaObject::getLuaBoolean(L, 2, true, false);
 
-        lua_pushboolean(L, validate(org, token, verbose));
+        lua_pushboolean(L, validate(token, verbose));
     }
     catch(const RunTimeException& e)
     {

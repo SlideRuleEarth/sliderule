@@ -53,9 +53,10 @@ class ProvisioningSystemLib
         static void         init                (void);
         static void         deinit              (void);
 
-        static bool         validate            (const char* org, const char* access_token, bool verbose=false);
+        static bool         validate            (const char* access_token, bool verbose=false);
 
         static int          luaSetUrl           (lua_State* L);
+        static int          luaSetOrganization  (lua_State* L);
         static int          luaValidate         (lua_State* L);
 
         /*--------------------------------------------------------------------
@@ -63,6 +64,7 @@ class ProvisioningSystemLib
          *--------------------------------------------------------------------*/
 
         static const char* URL;
+        static const char* Organization;
 };
 
 #endif  /* __provisioning_system_lib__ */

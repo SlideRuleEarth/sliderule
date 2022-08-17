@@ -60,6 +60,7 @@ int netsvc_open (lua_State* L)
         {"orchunlock",  OrchestratorLib::luaUnlock},
         {"orchhealth",  OrchestratorLib::luaHealth},
         {"psurl",       ProvisioningSystemLib::luaSetUrl},
+        {"psorg",       ProvisioningSystemLib::luaSetOrganization},
         {"psvalidate",  ProvisioningSystemLib::luaValidate},
         {NULL,          NULL}
     };
@@ -80,6 +81,7 @@ void initnetsvc (void)
     /* Initialize Modules */
     CurlLib::init();
     OrchestratorLib::init();
+    ProvisioningSystemLib::init();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_NETSVC_LIBNAME, netsvc_open);
@@ -93,6 +95,7 @@ void initnetsvc (void)
 
 void deinitnetsvc (void)
 {
+    ProvisioningSystemLib::deinit();
     OrchestratorLib::deinit();
     CurlLib::deinit();
 }
