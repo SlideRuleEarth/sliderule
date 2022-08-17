@@ -20,6 +20,7 @@ if (CURL_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CurlLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.cpp
     )
 
     target_include_directories (slideruleLib
@@ -33,6 +34,7 @@ if (CURL_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.h
             ${CMAKE_CURRENT_LIST_DIR}/CurlLib.h
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.h
         DESTINATION
             ${INCDIR}
     )

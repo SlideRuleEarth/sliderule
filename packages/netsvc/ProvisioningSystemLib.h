@@ -29,71 +29,40 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __provisioning_system_lib__
+#define __provisioning_system_lib__
+
 /******************************************************************************
- *INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
 #include "core.h"
-#include "netsvc.h"
 
 /******************************************************************************
- * DEFINES
+ * PROVISIONING SYSTEM LIBRARY CLASS
  ******************************************************************************/
 
-#define LUA_NETSVC_LIBNAME  "netsvc"
-
-/******************************************************************************
- * LOCAL FUNCTIONS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * netsvc_open
- *----------------------------------------------------------------------------*/
-int netsvc_open (lua_State* L)
+class ProvisioningSystemLib
 {
-    static const struct luaL_Reg netsvc_functions[] = {
-        {"get",         CurlLib::luaGet},
-        {"post",        CurlLib::luaPost},
-        {"orchurl",     OrchestratorLib::luaSetUrl},
-        {"orchreg",     OrchestratorLib::luaRegisterService},
-        {"orchlock",    OrchestratorLib::luaLock},
-        {"orchunlock",  OrchestratorLib::luaUnlock},
-        {"orchhealth",  OrchestratorLib::luaHealth},
-        {"psurl",       ProvisioningSystemLib::luaSetUrl},
-        {"psvalidate",  ProvisioningSystemLib::luaValidate},
-        {NULL,          NULL}
-    };
+    public:
 
-    /* Set Library */
-    luaL_newlib(L, netsvc_functions);
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-    return 1;
-}
+        static void         init                (void);
+        static void         deinit              (void);
 
-/******************************************************************************
- * EXPORTED FUNCTIONS
- ******************************************************************************/
+        static bool         validate            (const char* org, const char* access_token, bool verbose=false);
 
-extern "C" {
-void initnetsvc (void)
-{
-    /* Initialize Modules */
-    CurlLib::init();
-    OrchestratorLib::init();
+        static int          luaSetUrl           (lua_State* L);
+        static int          luaValidate         (lua_State* L);
 
-    /* Extend Lua */
-    LuaEngine::extend(LUA_NETSVC_LIBNAME, netsvc_open);
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_NETSVC_LIBNAME, LIBID);
+        static const char* URL;
+};
 
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_NETSVC_LIBNAME, LIBID);
-}
-
-void deinitnetsvc (void)
-{
-    OrchestratorLib::deinit();
-    CurlLib::deinit();
-}
-}
+#endif  /* __provisioning_system_lib__ */

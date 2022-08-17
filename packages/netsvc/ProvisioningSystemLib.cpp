@@ -1,0 +1,180 @@
+/*
+ * Copyright (c) 2021, University of Washington
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
+
+
+#include "ProvisioningSystemLib.h"
+#include "core.h"
+
+#include <curl/curl.h>
+#include <rapidjson/document.h>
+
+/******************************************************************************
+ * ORCHESTRATOR LIBRARY CLASS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Static Data
+ *----------------------------------------------------------------------------*/
+
+const char* ProvisioningSystemLib::URL = NULL;
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void ProvisioningSystemLib::init (void)
+{
+    URL = StringLib::duplicate("https://ps.localhost");
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void ProvisioningSystemLib::deinit (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * validate
+ *----------------------------------------------------------------------------*/
+bool ProvisioningSystemLib::validate (const char* org, const char* access_token, bool verbose)
+{
+    bool status = false;
+
+    try
+    {
+        /* Build API URL */
+        SafeString url_str("%s/ps/api/get_membership_status/", URL);
+        url_str += org;
+
+        /* Build Bearer Token Header */
+        SafeString hdr_str("Authorization: Bearer %s", access_token);
+
+        /* Initialize cURL */
+        CURL* curl = curl_easy_init();
+        if(curl)
+        {
+            /* Set cURL Options */
+            curl_easy_setopt(curl, CURLOPT_URL, url_str.getString());
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
+
+            /* Set Bearer Token Header */
+            struct curl_slist* headers = NULL;
+            headers = curl_slist_append(headers, hdr_str.getString());
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+            /* Perform the request, res will get the return code */
+            CURLcode res = curl_easy_perform(curl);
+
+            /* Check for Success */
+            if(res == CURLE_OK)
+            {
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code == 200)
+                {
+                    /* Set Successfull */
+                    status = true;
+                }
+                else if(verbose)
+                {
+                    mlog(CRITICAL, "Http error <%ld> returned by provisioning system", http_code);
+                }
+            }
+            else if(verbose)
+            {
+                mlog(CRITICAL, "curl request failed: %ld", (long)res);
+            }
+
+            /* Always Cleanup */
+            curl_easy_cleanup(curl);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error validating membership: %s", e.what());
+    }
+
+    /* Return Status */
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * luaSetUrl - psurl(<URL>)
+ *----------------------------------------------------------------------------*/
+int ProvisioningSystemLib::luaSetUrl(lua_State* L)
+{
+    try
+    {
+        const char* _url = LuaObject::getLuaString(L, 1);
+
+        if(URL) delete [] URL;
+        URL = StringLib::duplicate(_url);
+
+        lua_pushboolean(L, true);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error setting URL: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaHealth - orchhealth()
+ *----------------------------------------------------------------------------*/
+int ProvisioningSystemLib::luaValidate(lua_State* L)
+{
+    try
+    {
+        /* Get Parameters */
+        const char* org     = LuaObject::getLuaString(L, 1);
+        const char* token   = LuaObject::getLuaString(L, 2);
+        bool verbose        = LuaObject::getLuaBoolean(L, 3, true, false);
+
+        lua_pushboolean(L, validate(org, token, verbose));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error validating: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}

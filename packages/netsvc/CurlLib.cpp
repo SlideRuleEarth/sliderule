@@ -65,13 +65,14 @@ void CurlLib::deinit (void)
 int CurlLib::luaGet (lua_State* L)
 {
     bool status = false;
+    CURL* curl = NULL;
 
     try
     {
         /* Get Parameters */
         const char* url             = LuaObject::getLuaString(L, 1);
-        bool        verify_peer     = LuaObject::getLuaBoolean(L, 2, true, true);
-        bool        verify_hostname = LuaObject::getLuaBoolean(L, 3, true, true);
+        bool        verify_peer     = LuaObject::getLuaBoolean(L, 2, true, false);
+        bool        verify_hostname = LuaObject::getLuaBoolean(L, 3, true, false);
         const char* data            = LuaObject::getLuaString(L, 4, true, "");
 
         /* Initialize Request */
@@ -83,7 +84,7 @@ int CurlLib::luaGet (lua_State* L)
         List<data_t> rsps_set;
 
         /* Initialize cURL */
-        CURL* curl = curl_easy_init();
+        curl = curl_easy_init();
         if(curl)
         {
             curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -112,7 +113,7 @@ int CurlLib::luaGet (lua_State* L)
             */
             if(verify_peer)
             {
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
             }
 
             /*
@@ -123,7 +124,7 @@ int CurlLib::luaGet (lua_State* L)
             */
             if(verify_hostname)
             {
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
             }
 
             /* Perform the request, res will get the return code */
@@ -168,9 +169,6 @@ int CurlLib::luaGet (lua_State* L)
                 /* Return NIL in place of Response String */
                 lua_pushnil(L);
             }
-
-            /* Always Cleanup */
-            curl_easy_cleanup(curl);
         }
         else
         {
@@ -184,6 +182,9 @@ int CurlLib::luaGet (lua_State* L)
         lua_pushnil(L);
     }
 
+    /* Always Cleanup */
+    if(curl) curl_easy_cleanup(curl);
+
     /* Return Status */
     lua_pushboolean(L, status);
     return 2;
@@ -195,6 +196,7 @@ int CurlLib::luaGet (lua_State* L)
 int CurlLib::luaPost (lua_State* L)
 {
     bool status = false;
+    CURL* curl = NULL;
 
     try
     {
@@ -211,7 +213,7 @@ int CurlLib::luaPost (lua_State* L)
         List<data_t> rsps_set;
 
         /* Initialize cURL */
-        CURL* curl = curl_easy_init();
+        curl = curl_easy_init();
         if(curl)
         {
             curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -266,9 +268,6 @@ int CurlLib::luaPost (lua_State* L)
                 /* Failed Request */
                 lua_pushstring(L, curl_easy_strerror(res));
             }
-
-            /* Always Cleanup */
-            curl_easy_cleanup(curl);
         }
         else
         {
@@ -281,6 +280,9 @@ int CurlLib::luaPost (lua_State* L)
         mlog(e.level(), "Error performing netsvc POST: %s", e.what());
         lua_pushnil(L);
     }
+
+    /* Always Cleanup */
+    if(curl) curl_easy_cleanup(curl);
 
     /* Return Status */
     lua_pushboolean(L, status);
