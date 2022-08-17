@@ -85,12 +85,10 @@ if __name__ == '__main__':
     dest_plate_carte2.ImportFromEPSG(32663)
 
     dest_npolar= osr.SpatialReference()
-    dest_npolar.ImportFromEPSG(3413)
-    # dest_npolar.ImportFromEPSG(3995)
+    dest_npolar.ImportFromEPSG(3995)
     
     dest_spolar= osr.SpatialReference()
-    dest_spolar.ImportFromEPSG(3976)
-    # dest_spolar.ImportFromEPSG(3031)
+    dest_spolar.ImportFromEPSG(3031)
 
 
     lon = -100.0
@@ -100,7 +98,7 @@ if __name__ == '__main__':
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(lat, lon)
     point.Transform(transform)
-    print("PCARTE1 (lon, lat)", lon, lat, point.GetX()/1000, point.GetY()/1000)
+    print("PCARTE1 (lon, lat)", lon, lat, point.GetX(), point.GetY())
     transform = point = None 
 
 
@@ -109,7 +107,7 @@ if __name__ == '__main__':
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(lat, lon)
     point.Transform(transform)
-    print("PCARTE2 (lon, lat)", lon, lat, point.GetX()/1000, point.GetY()/1000)
+    print("PCARTE2 (lon, lat)", lon, lat, point.GetX(), point.GetY())
     transform = point = None 
     
 
@@ -119,7 +117,7 @@ if __name__ == '__main__':
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(lat, lon)
     point.Transform(transform)
-    print("NPOLAR  (lon, lat)", lon, lat, point.GetX()/1000, point.GetY()/1000)
+    print("NPOLAR  (lon, lat)", lon, lat, point.GetX(), point.GetY())
     transform = point = None 
     
 
@@ -129,5 +127,5 @@ if __name__ == '__main__':
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(lat, lon)
     point.Transform(transform)
-    print("SPOLAR  (lon, lat)", lon, lat, point.GetX()/1000, point.GetY()/1000)
+    print("SPOLAR  (lon, lat)", lon, lat, point.GetX(), point.GetY())
     transform = point = None 
