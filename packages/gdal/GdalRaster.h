@@ -38,6 +38,7 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
+#include <ogr_spatialref.h>
 
 /******************************************************************************
  * GDALRASTER CLASS
@@ -83,6 +84,11 @@ class GdalRaster: public LuaObject
         static GdalRaster*  create          (lua_State* L, int index);
 
         virtual             ~GdalRaster    (void);
+        
+        static void initGdalProj( void ); 
+        static void getGdalXY( double lon, double lat, double *x, double *y, uint32_t epsg);
+        static void getGdalXY_fast( double lon, double lat, double *x, double *y, uint32_t epsg);
+        
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -147,6 +153,7 @@ class GdalRaster: public LuaObject
         uint8_t*    raster;
         bbox_t      bbox;
         double      cellsize;
+        
 
         /*--------------------------------------------------------------------
          * Methods

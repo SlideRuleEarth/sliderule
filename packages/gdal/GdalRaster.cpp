@@ -37,6 +37,8 @@
 #include <gdal.h>
 #include "core.h"
 
+#include <ogr_geometry.h>
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -142,6 +144,72 @@ static void libtiff_unmap(thandle_t, tdata_t, toff_t)
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
+        
+void GdalRaster::initGdalProj( void )
+{
+    static bool init = true;
+    if( init )
+    {
+        init = false;
+        GDALAllRegister();
+    }
+}
+
+void GdalRaster::getGdalXY_fast( double lon, double lat, double *x, double *y, uint32_t epsg)
+{
+    static OGRCoordinateTransformation* coordTrans = NULL;
+    
+    static bool init = true;
+    if( init )
+    {
+        GdalRaster::initGdalProj();
+        init = false;
+
+        static OGRSpatialReference source;
+        static OGRSpatialReference target;
+    
+        source.importFromEPSG(4326);
+        target.importFromEPSG(epsg);
+        target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+        source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+        coordTrans = OGRCreateCoordinateTransformation(&source, &target);
+    }
+
+    OGRPoint p = {lon, lat};
+
+    OGRErr eErr = p.transform(coordTrans);
+    if( eErr )
+    {
+        print2term("%s, error: %u\n", __FUNCTION__, eErr);
+    }
+
+    *x = p.getX();
+    *y = p.getY();
+}
+
+void GdalRaster::getGdalXY( double lon, double lat, double *x, double *y, uint32_t epsg)
+{
+    OGRPoint p = {lon, lat};
+    OGRSpatialReference source;
+    OGRSpatialReference target;
+
+    source.importFromEPSG(4326);
+    target.importFromEPSG(epsg);
+    target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    
+    p.assignSpatialReference(&source);
+    OGRErr eErr = p.transformTo(&target);
+    if( eErr )
+    {
+        print2term("transformTo error: %u\n", eErr);
+    }
+
+    *x = p.getX();
+    *y = p.getY();
+}
+
 
 /*----------------------------------------------------------------------------
  * luaCreate - file(

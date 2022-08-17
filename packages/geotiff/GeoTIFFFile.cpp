@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "GdalRaster.h"
 #include "GeoTIFFFile.h"
 #include <tiffio.h>
 #include <cstring>
@@ -227,24 +228,20 @@ GeoTIFFFile* GeoTIFFFile::create (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * subset
  *----------------------------------------------------------------------------*/
-bool GeoTIFFFile::subset (double _lon, double _lat)
+bool GeoTIFFFile::subset (double lon, double lat)
 {
-    double lon = _lon;
-    double lat = _lat;
-
-    // if( projection != MathLib::NO_PROJECTION)
-    // {
-    //     MathLib::coord_t coord = {_lon, _lat};
-    //     MathLib::point_t point = MathLib::coord2point(coord, projection);
-    //     lon = point.x;
-    //     lat = point.y;
-    // }
+    double x = 0;
+    double y = 0;
 
     static bool first_hit = true;
     if (first_hit)
     {
         first_hit = false;
-        print2term("\n\n_lon: %lf, _lat: %lf, lon: %lf, lat: %lf\n", _lon, _lat, lon, lat);
+        
+        GdalRaster::initGdalProj();
+        
+        print2term("EPSG is: %u\n", epsg);
+        print2term("\n\n_lon: %lf, _lat: %lf, lon: %lf, lat: %lf\n", lon, lat, lon, lat);
         print2term("blon_min: %lf, blon_max: %lf, blat_min: %lf, blat_max: %lf\n\n", bbox.lon_min, bbox.lon_max, bbox.lat_min, bbox.lat_max);
 
         double mylon, mylat;
@@ -255,15 +252,26 @@ bool GeoTIFFFile::subset (double _lon, double _lat)
         MathLib::point_t point = MathLib::coord2point(coord, MathLib::PLATE_CARREE);
         lon = point.x;
         lat = point.y;
-        print2term("    PLATE_CAREE: lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
+        print2term("    PLATE_CAREE:  lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
 
+        GdalRaster::getGdalXY( mylon, mylat, &x, &y, 4326);
+        print2term("GDAL_EPSG_4326:   lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, x, y);
+        GdalRaster::getGdalXY( mylon, mylat, &x, &y, 32662);
+        print2term("GDALPLATE_CAREE1: lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, x, y);
+        GdalRaster::getGdalXY( mylon, mylat, &x, &y, 32663);
+        print2term("GDALPLATE_CAREE2: lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, x, y);
+        
         mylon = -100.0; 
         mylat =   80.0;
         coord = {mylon, mylat};
         point = MathLib::coord2point(coord, MathLib::NORTH_POLAR);
         lon = point.x;
         lat = point.y;
-        print2term("    NORTH_POLAR: lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
+        print2term("    NORTH_POLAR:  lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
+
+        GdalRaster::getGdalXY( mylon, mylat, &x, &y, 3995);
+        print2term("GDALNORTH_POLAR:  lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, x, y);
+        
 
         mylon = -100.0; 
         mylat =  -80.0;
@@ -271,10 +279,19 @@ bool GeoTIFFFile::subset (double _lon, double _lat)
         point = MathLib::coord2point(coord, MathLib::SOUTH_POLAR);
         lon = point.x;
         lat = point.y;
-        print2term("    SOUTH_POLAR: lon: %lf, lat: %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
+        print2term("    SOUTH_POLAR:  lon: %lf, lat: %lf ===> (%lf, %lf)\n", mylon, mylat, lon, lat);
+        
+        GdalRaster::getGdalXY( mylon, mylat, &x, &y, 3031);
+        print2term("GDALSOUTH_POLAR:  lon: %lf, lat:  %lf ===> (%lf, %lf)\n", mylon, mylat, x, y);
         
         print2term("\n\n");
     }
+
+        
+    GdalRaster::getGdalXY_fast( lon, lat, &x, &y, epsg);
+    lon = x;
+    lat = y;
+
 
     if ((lon >= bbox.lon_min) &&
         (lon <= bbox.lon_max) &&
