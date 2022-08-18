@@ -43,8 +43,8 @@
 #include "ccsds.h"
 #endif
 
-#ifdef __geotiff__
-#include "geotiff.h"
+#ifdef __gdal__
+#include "gdalpkg.h"
 #endif
 
 #ifdef __h5__
@@ -295,8 +295,8 @@ int main (int argc, char* argv[])
         initccsds();
     #endif
 
-    #ifdef __geotiff__
-        initgeotiff();
+    #ifdef __gdal__
+        initgdal();
     #endif
 
     #ifdef __h5__
@@ -364,8 +364,8 @@ int main (int argc, char* argv[])
         deinith5();
     #endif
 
-    #ifdef __geotiff__
-        deinitgeotiff();
+    #ifdef __gdal__
+        deinitgdal();
     #endif
 
     #ifdef __ccsds__

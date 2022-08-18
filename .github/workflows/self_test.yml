@@ -31,11 +31,10 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt install build-essential libreadline-dev liblua5.3-dev                      #basic config
-        sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libtiff-dev    #aws geotiff h5 pistache
+        sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libtiff-dev libgdal-dev #aws h5 pistache gdal
         sudo add-apt-repository ppa:pistache+team/unstable    #pistache
         sudo apt update                                       #pistache
         sudo apt install libpistache-dev                      #pistache
-        sudo apt install libgdal-dev                          #gdal
 
     - name: AWS clone repository
       run: |

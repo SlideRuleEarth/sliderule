@@ -33,11 +33,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "GdalRaster.h"
-#include <gdal.h>
 #include "core.h"
-
+#include "GdalRaster.h"
+#include <tiffio.h>
+#include <gdal.h>
 #include <ogr_geometry.h>
+#include <ogr_spatialref.h>
 
 /******************************************************************************
  * STATIC DATA
@@ -57,12 +58,13 @@ const char* GdalRaster::IMAGELENGTH_KEY = "imagelength";
 const char* GdalRaster::DIMENSION_KEY = "dimension";
 const char* GdalRaster::BBOX_KEY = "bbox";
 const char* GdalRaster::CELLSIZE_KEY = "cellsize";
+const char* GdalRaster::CRS_KEY = "crs";
 
 
 /******************************************************************************
  * FILE STATIC LIBTIFF METHODS
  ******************************************************************************/
-#if 0
+
 /*----------------------------------------------------------------------------
  * libtiff call-back parameter
  *----------------------------------------------------------------------------*/
@@ -140,77 +142,11 @@ static void libtiff_unmap(thandle_t, tdata_t, toff_t)
 {
     return;
 };
-#endif
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
         
-void GdalRaster::initGdalProj( void )
-{
-    static bool init = true;
-    if( init )
-    {
-        init = false;
-        GDALAllRegister();
-    }
-}
-
-void GdalRaster::getGdalXY_fast( double lon, double lat, double *x, double *y, uint32_t epsg)
-{
-    static OGRCoordinateTransformation* coordTrans = NULL;
-    
-    static bool init = true;
-    if( init )
-    {
-        GdalRaster::initGdalProj();
-        init = false;
-
-        static OGRSpatialReference source;
-        static OGRSpatialReference target;
-    
-        source.importFromEPSG(4326);
-        target.importFromEPSG(epsg);
-        target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        coordTrans = OGRCreateCoordinateTransformation(&source, &target);
-    }
-
-    OGRPoint p = {lon, lat};
-
-    OGRErr eErr = p.transform(coordTrans);
-    if( eErr )
-    {
-        print2term("%s, error: %u\n", __FUNCTION__, eErr);
-    }
-
-    *x = p.getX();
-    *y = p.getY();
-}
-
-void GdalRaster::getGdalXY( double lon, double lat, double *x, double *y, uint32_t epsg)
-{
-    OGRPoint p = {lon, lat};
-    OGRSpatialReference source;
-    OGRSpatialReference target;
-
-    source.importFromEPSG(4326);
-    target.importFromEPSG(epsg);
-    target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-    source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-    
-    p.assignSpatialReference(&source);
-    OGRErr eErr = p.transformTo(&target);
-    if( eErr )
-    {
-        print2term("transformTo error: %u\n", eErr);
-    }
-
-    *x = p.getX();
-    *y = p.getY();
-}
-
-
 /*----------------------------------------------------------------------------
  * luaCreate - file(
  *  {
@@ -272,16 +208,65 @@ GdalRaster* GdalRaster::create (lua_State* L, int index)
     }
     lua_pop(L, 1);
 
-    /* Optionally Get Cell Size */
+    /* Get Cell Size */
     lua_getfield(L, index, CELLSIZE_KEY);
     double _cellsize = getLuaFloat(L, -1);
+    lua_pop(L, 1);
+
+    /* Get EPSG (projection type) */
+    lua_getfield(L, index, CRS_KEY);
+    uint32_t _epsg = getLuaInteger(L, -1);
     lua_pop(L, 1);
 
     /* Convert Image from Base64 to Binary */
     std::string tiff = MathLib::b64decode(image, imagelength);
 
-    /* Create GeoTIFF File */
-    return new GdalRaster(L, tiff.c_str(), tiff.size(), _bbox, _cellsize);
+    /* Create GdalRaster */
+    return new GdalRaster(L, tiff.c_str(), tiff.size(), _bbox, _cellsize, _epsg);
+}
+        
+        
+/*----------------------------------------------------------------------------
+ * subset
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::subset (double lon, double lat)
+{
+    OGRPoint p  = {lon, lat};
+    OGRErr eErr = p.transform(latlon2xy);
+    if( eErr )
+    {
+        mlog(CRITICAL, "Raster lat/lon transformation failed with error: %d\n", eErr);
+    }
+
+    static bool first_hit = true;
+    if (first_hit)
+    {
+        first_hit = false;
+        
+        print2term("\n\nEPSG is: %u\n", epsg);
+        print2term("lon: %lf, lat: %lf, x: %lf, y: %lf\n", lon, lat, p.getX(), p.getY());
+        print2term("blon_min: %lf, blon_max: %lf, blat_min: %lf, blat_max: %lf\n\n", bbox.lon_min, bbox.lon_max, bbox.lat_min, bbox.lat_max);
+        print2term("\n\n");
+    }
+
+    
+    lon = p.getX();
+    lat = p.getY();
+        
+    if ((lon >= bbox.lon_min) &&
+        (lon <= bbox.lon_max) &&
+        (lat >= bbox.lat_min) &&
+        (lat <= bbox.lat_max))
+    {
+        uint32_t row = (bbox.lat_max - lat) / cellsize;
+        uint32_t col = (lon - bbox.lon_min) / cellsize;
+
+        if ((row < rows) && (col < cols))
+        {
+            return rawPixel(row, col);
+        }
+    }
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -290,6 +275,7 @@ GdalRaster* GdalRaster::create (lua_State* L, int index)
 GdalRaster::~GdalRaster(void)
 {
     if(raster) delete [] raster;
+    if(latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
 }
 
 /******************************************************************************
@@ -299,7 +285,7 @@ GdalRaster::~GdalRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize):
+GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize, uint32_t _epsg):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(image);
@@ -310,7 +296,8 @@ GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, bbox_t
     raster = NULL;
     bbox = _bbox;
     cellsize = _cellsize;
-#if 0
+    epsg = _epsg;
+
     /* Create LibTIFF Callback Data Structure */
     geotiff_cb_t g = {
         .filebuf = (const uint8_t*)image,
@@ -361,7 +348,18 @@ GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, bbox_t
     {
         mlog(CRITICAL, "Unable to open memory mapped tiff file");
     }
-#endif
+        
+    /* Create coordinates transformation */    
+    source.importFromEPSG(GDALRASTER_PHOTON_CRS);
+    target.importFromEPSG(epsg);
+    target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
+    assert(latlon2xy);
+    if(!latlon2xy)
+    {
+        mlog(CRITICAL, "Failed to create projection from EPSG:%d to EPSG:%d\n", GDALRASTER_PHOTON_CRS, epsg);
+    } 
 }
 
 /******************************************************************************

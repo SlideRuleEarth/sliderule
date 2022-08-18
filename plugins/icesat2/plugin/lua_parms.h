@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include <lua.h>
-#include "GeoTIFFFile.h"
+#include "GdalRaster.h"
 #include "List.h"
 #include "MathLib.h"
 
@@ -204,7 +204,7 @@ typedef struct {
     bool                    stages[NUM_STAGES];             // algorithm iterations
     yapc_t                  yapc;                           // settings used in YAPC algorithm
     List<MathLib::coord_t>  polygon;                        // polygon of region of interest
-    GeoTIFFFile*            raster;                         // raster of region of interest
+    GdalRaster*             raster;                         // raster of region of interest, created from geojson or ESRI shapefile
     int                     track;                          // reference pair track number (1, 2, 3, or 0 for all tracks)
     int                     max_iterations;                 // least squares fit iterations
     int                     minimum_photon_count;           // PE

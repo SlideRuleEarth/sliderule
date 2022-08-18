@@ -36,6 +36,7 @@
 #include "core.h"
 #include "gdalpkg.h"
 #include <gdal.h>
+#include <tiffio.h>
 
 /******************************************************************************
  * DEFINES
@@ -71,7 +72,10 @@ extern "C" {
 void initgdal (void)
 {
     /* Initialize LibTIFF */
-    // TIFFSetWarningHandler(NULL); // turns off warnings
+    TIFFSetWarningHandler(NULL); // turns off warnings
+
+    /* Register all gdal drivers */
+    GDALAllRegister();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GDAL_LIBNAME, gdal_open);

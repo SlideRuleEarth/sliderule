@@ -1,5 +1,7 @@
-# Find gdal Library
+# Find gdal and tiff Libraries
+find_package (TIFF)
 find_package (GDAL)
+
 
 # Build package
 if (GDAL_FOUND)
@@ -8,7 +10,11 @@ if (GDAL_FOUND)
 
     target_compile_definitions (slideruleLib PUBLIC __gdal__)
 
+
+    target_link_libraries (slideruleLib PUBLIC ${TIFF_LIBRARIES})
     target_link_libraries (slideruleLib PUBLIC ${GDAL_LIBRARIES})
+    
+    target_include_directories (slideruleLib PUBLIC ${TIFF_INCLUDE_DIR})
     target_include_directories (slideruleLib PUBLIC ${GDAL_INCLUDE_DIR})
 
     target_sources(slideruleLib
