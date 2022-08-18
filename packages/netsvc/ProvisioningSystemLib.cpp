@@ -137,9 +137,9 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
 }
 
 /*----------------------------------------------------------------------------
- * luaSetUrl - psurl(<URL>)
+ * luaUrl - psurl(<URL>)
  *----------------------------------------------------------------------------*/
-int ProvisioningSystemLib::luaSetUrl(lua_State* L)
+int ProvisioningSystemLib::luaUrl(lua_State* L)
 {
     try
     {

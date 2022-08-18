@@ -62,7 +62,7 @@ class ProvisioningSystemLib
 
         static bool         validate            (const char* access_token, bool verbose=false);
 
-        static int          luaSetUrl           (lua_State* L);
+        static int          luaUrl              (lua_State* L);
         static int          luaSetOrganization  (lua_State* L);
         static int          luaValidate         (lua_State* L);
 
