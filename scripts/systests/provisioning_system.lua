@@ -4,7 +4,7 @@ local json = require("json")
 
 local username = arg[1]
 local password = arg[2]
-local org_name = os.getenv("CLUSTER") or "local"
+local org_name = arg[3] or "sliderule"
 local url = os.getenv("PROVISIONING_SYSTEM") or "https://ps.testsliderule.org"
 
 -- Set URL and Organization
@@ -12,8 +12,11 @@ netsvc.psurl(url)
 netsvc.psorg(org_name)
 
 -- Login
-local rqst = {username=username, password=password, org_name=org_name}
-local rsps = netsvc.get(url.."/ps/api/org_token/", true, true, json.encode(rqst))
+local rsps_str = netsvc.pslogin(username, password, org_name, true)
+local rsps = json.decode(rsps_str)
+--runner.check(rsps["access"], "unable to login")
+
+--netsvc.psurl("http://ps.testsliderule.org")
 
 -- Validate
 local status = netsvc.psvalidate(rsps["access"], true)

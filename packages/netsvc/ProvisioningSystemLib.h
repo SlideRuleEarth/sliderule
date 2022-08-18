@@ -54,17 +54,30 @@ class ProvisioningSystemLib
     public:
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            char* data;
+            size_t size;
+        } data_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static void         init                (void);
         static void         deinit              (void);
 
+        static const char*  login               (const char* username, const char* password, const char* organization, bool verbose=false);
         static bool         validate            (const char* access_token, bool verbose=false);
 
         static int          luaUrl              (lua_State* L);
         static int          luaSetOrganization  (lua_State* L);
+        static int          luaLogin            (lua_State* L);
         static int          luaValidate         (lua_State* L);
+
+        static size_t       writeData           (void *buffer, size_t size, size_t nmemb, void *userp);
 
         /*--------------------------------------------------------------------
          * Data

@@ -72,6 +72,99 @@ void ProvisioningSystemLib::deinit (void)
 /*----------------------------------------------------------------------------
  * validate
  *----------------------------------------------------------------------------*/
+const char* ProvisioningSystemLib::login (const char* username, const char* password, const char* organization, bool verbose)
+{
+    char* rsps = NULL;
+
+    try
+    {
+        /* Build API URL */
+        SafeString url_str("%s/ps/api/org_token/", URL);
+
+        /* Build Bearer Token Header */
+        SafeString hdr_str("Content-Type: application/json");
+
+        /* Initialize Request */
+        SafeString data_str("{\"username\":\"%s\",\"password\":\"%s\",\"org_name\":\"%s\"}", username, password, organization);
+
+        /* Initialize Response */
+        List<data_t> rsps_set;
+
+        /* Initialize cURL */
+        CURL* curl = curl_easy_init();
+        if(curl)
+        {
+            /* Set cURL Options */
+            curl_easy_setopt(curl, CURLOPT_URL, url_str.getString());
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // seconds
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // seconds
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data_str.getString());
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ProvisioningSystemLib::writeData);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
+
+            /* Set Bearer Token Header */
+            struct curl_slist* headers = NULL;
+            headers = curl_slist_append(headers, hdr_str.getString());
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+            /* Perform the request, res will get the return code */
+            CURLcode res = curl_easy_perform(curl);
+
+            /* Check for Success */
+            if(res == CURLE_OK)
+            {
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code == 200)
+                {
+                    /* Get Response Size */
+                    int rsps_size = 0;
+                    for(int i = 0; i < rsps_set.length(); i++)
+                    {
+                        rsps_size += rsps_set[i].size;
+                    }
+
+                    /* Allocate and Populate Response */
+                    int rsps_index = 0;
+                    rsps = new char [rsps_size + 1];
+                    for(int i = 0; i < rsps_set.length(); i++)
+                    {
+                        LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
+                        rsps_index += rsps_set[i].size;
+                        delete [] rsps_set[i].data;
+                    }
+                    rsps[rsps_index] = '\0';
+                }
+                else if(verbose)
+                {
+                    mlog(CRITICAL, "Http error <%ld> returned by provisioning system", http_code);
+                }
+            }
+            else if(verbose)
+            {
+                mlog(CRITICAL, "curl request error (%ld): %s", (long)res, curl_easy_strerror(res));
+            }
+
+            /* Always Cleanup */
+            curl_easy_cleanup(curl);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error on login: %s", e.what());
+        if(rsps) delete [] rsps;
+        rsps = NULL;
+    }
+
+    /* Return Response */
+    return rsps;
+}
+
+/*----------------------------------------------------------------------------
+ * validate
+ *----------------------------------------------------------------------------*/
 bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
 {
     bool status = false;
@@ -185,6 +278,30 @@ int ProvisioningSystemLib::luaSetOrganization(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaLogin - pslogin()
+ *----------------------------------------------------------------------------*/
+int ProvisioningSystemLib::luaLogin(lua_State* L)
+{
+    try
+    {
+        /* Get Parameters */
+        const char* username        = LuaObject::getLuaString(L, 1);
+        const char* password        = LuaObject::getLuaString(L, 2);
+        const char* organization    = LuaObject::getLuaString(L, 3);
+        bool verbose                = LuaObject::getLuaBoolean(L, 4, true, false);
+
+        lua_pushstring(L, login(username, password, organization, verbose));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error authenticating: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * luaValidate - psvalidate()
  *----------------------------------------------------------------------------*/
 int ProvisioningSystemLib::luaValidate(lua_State* L)
@@ -254,4 +371,23 @@ bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
     {
         return ProvisioningSystemLib::validate(token);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * writeData
+ *----------------------------------------------------------------------------*/
+size_t ProvisioningSystemLib::writeData(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    List<data_t>* rsps_set = (List<data_t>*)userp;
+
+    data_t rsps;
+    rsps.size = size * nmemb;
+    rsps.data = new char [rsps.size + 1];
+
+    LocalLib::copy(rsps.data, buffer, rsps.size);
+    rsps.data[rsps.size] = '\0';
+
+    rsps_set->add(rsps);
+
+    return rsps.size;
 }

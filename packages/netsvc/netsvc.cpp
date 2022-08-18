@@ -61,6 +61,7 @@ int netsvc_open (lua_State* L)
         {"orchhealth",  OrchestratorLib::luaHealth},
         {"psurl",       ProvisioningSystemLib::luaUrl},
         {"psorg",       ProvisioningSystemLib::luaSetOrganization},
+        {"pslogin",     ProvisioningSystemLib::luaLogin},
         {"psvalidate",  ProvisioningSystemLib::luaValidate},
         {"psauth",      ProvisioningSystemLib::Authenticator::luaCreate},
         {NULL,          NULL}
