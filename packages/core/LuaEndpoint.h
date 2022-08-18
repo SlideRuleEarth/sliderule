@@ -86,6 +86,22 @@ class LuaEndpoint: public EndpointObject
         } response_exception_t;
 
         /*--------------------------------------------------------------------
+         * Authenticator Subclass
+         *--------------------------------------------------------------------*/
+        class Authenticator: public LuaObject
+        {
+            public:
+                static const char* OBJECT_TYPE;
+                static const char* LuaMetaName;
+                static const struct luaL_Reg LuaMetaTable[];
+
+                Authenticator(lua_State* L);
+                virtual ~Authenticator(void);
+
+                virtual bool isValid(const char* token) = 0;
+       };
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
@@ -117,8 +133,10 @@ class LuaEndpoint: public EndpointObject
 
         int32_t             getMetricId     (const char* endpoint);
 
-        static int          luaAlive        (lua_State* L);
+        static int          luaAlive        (lua_State* L); // this function called _within_ context of lua endpoint executing
+
         static int          luaMetric       (lua_State* L);
+        static int          luaAuth         (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -129,6 +147,7 @@ class LuaEndpoint: public EndpointObject
         double              normalRequestMemoryThreshold;
         double              streamRequestMemoryThreshold;
         event_level_t       logLevel;
+        Authenticator*      authenticator;
 };
 
 #endif  /* __lua_endpoint__ */

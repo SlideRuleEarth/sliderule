@@ -54,11 +54,16 @@ int netsvc_open (lua_State* L)
     static const struct luaL_Reg netsvc_functions[] = {
         {"get",         CurlLib::luaGet},
         {"post",        CurlLib::luaPost},
-        {"orchurl",     OrchestratorLib::luaSetUrl},
+        {"orchurl",     OrchestratorLib::luaUrl},
         {"orchreg",     OrchestratorLib::luaRegisterService},
         {"orchlock",    OrchestratorLib::luaLock},
         {"orchunlock",  OrchestratorLib::luaUnlock},
         {"orchhealth",  OrchestratorLib::luaHealth},
+        {"psurl",       ProvisioningSystemLib::luaUrl},
+        {"psorg",       ProvisioningSystemLib::luaSetOrganization},
+        {"pslogin",     ProvisioningSystemLib::luaLogin},
+        {"psvalidate",  ProvisioningSystemLib::luaValidate},
+        {"psauth",      ProvisioningSystemLib::Authenticator::luaCreate},
         {NULL,          NULL}
     };
 
@@ -78,6 +83,7 @@ void initnetsvc (void)
     /* Initialize Modules */
     CurlLib::init();
     OrchestratorLib::init();
+    ProvisioningSystemLib::init();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_NETSVC_LIBNAME, netsvc_open);
@@ -91,6 +97,7 @@ void initnetsvc (void)
 
 void deinitnetsvc (void)
 {
+    ProvisioningSystemLib::deinit();
     OrchestratorLib::deinit();
     CurlLib::deinit();
 }

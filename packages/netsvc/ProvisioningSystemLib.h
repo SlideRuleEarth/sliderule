@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __orchestrator_lib__
-#define __orchestrator_lib__
+#ifndef __provisioning_system_lib__
+#define __provisioning_system_lib__
 
 /******************************************************************************
  * INCLUDES
@@ -39,10 +39,17 @@
 #include "core.h"
 
 /******************************************************************************
- * ORCHESTRATOR LIBRARY CLASS
+ * DEFINES
  ******************************************************************************/
 
-class OrchestratorLib
+#define DEFAULT_ORGANIZATION_NAME   "sliderule"
+#define DEFAULT_PS_URL              "https://ps.testsliderule.org"
+
+/******************************************************************************
+ * PROVISIONING SYSTEM LIBRARY CLASS
+ ******************************************************************************/
+
+class ProvisioningSystemLib
 {
     public:
 
@@ -50,22 +57,10 @@ class OrchestratorLib
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        struct Node {
-            const char* member;
-            long transaction;
-
-            Node (const char* _member, long _transaction) {
-                assert(_member);
-                member = StringLib::duplicate(_member);
-                transaction = _transaction;
-            }
-
-            ~Node (void) {
-                delete [] member;
-            }
-        };
-
-        typedef List<Node*> NodeList;
+        typedef struct {
+            char* data;
+            size_t size;
+        } data_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -74,22 +69,34 @@ class OrchestratorLib
         static void         init                (void);
         static void         deinit              (void);
 
-        static bool         registerService     (const char* service, int lifetime, const char* name, bool verbose=false);
-        static NodeList*    lock                (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
-        static bool         unlock              (long transactions[], int num_transactions, bool verbose=false);
-        static bool         health              (void);
+        static const char*  login               (const char* username, const char* password, const char* organization, bool verbose=false);
+        static bool         validate            (const char* access_token, bool verbose=false);
 
         static int          luaUrl              (lua_State* L);
-        static int          luaRegisterService  (lua_State* L);
-        static int          luaLock             (lua_State* L);
-        static int          luaUnlock           (lua_State* L);
-        static int          luaHealth           (lua_State* L);
+        static int          luaSetOrganization  (lua_State* L);
+        static int          luaLogin            (lua_State* L);
+        static int          luaValidate         (lua_State* L);
+
+        static size_t       writeData           (void *buffer, size_t size, size_t nmemb, void *userp);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static const char* URL;
+        static const char* Organization;
+
+        /*--------------------------------------------------------------------
+         * Authenticator Subclass
+         *--------------------------------------------------------------------*/
+        class Authenticator: public LuaEndpoint::Authenticator
+        {
+            public:
+                static int luaCreate (lua_State* L);
+                Authenticator(lua_State* L);
+                ~Authenticator(void);
+                bool isValid(const char* token) override;
+        };
 };
 
-#endif  /* __orchestrator_lib__ */
+#endif  /* __provisioning_system_lib__ */

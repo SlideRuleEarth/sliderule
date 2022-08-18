@@ -43,6 +43,7 @@
 const char* LuaEndpoint::LuaMetaName = "LuaEndpoint";
 const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
     {"metric",      luaMetric},
+    {"auth",        luaAuth},
     {NULL,          NULL}
 };
 
@@ -65,6 +66,31 @@ const char* LuaEndpoint::UNREGISTERED_ENDPOINT = "untracked";
 const char* LuaEndpoint::HITS_METRIC = "hits";
 
 int32_t LuaEndpoint::totalMetricId = EventLib::INVALID_METRIC;
+
+/******************************************************************************
+ * AUTHENTICATOR SUBCLASS
+ ******************************************************************************/
+
+const char* LuaEndpoint::Authenticator::OBJECT_TYPE = "Authenticator";
+const char* LuaEndpoint::Authenticator::LuaMetaName = "Authenticator";
+const struct luaL_Reg LuaEndpoint::Authenticator::LuaMetaTable[] = {
+    {NULL,          NULL}
+};
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+LuaEndpoint::Authenticator::Authenticator(lua_State* L):
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+LuaEndpoint::Authenticator::~Authenticator(void)
+{
+}
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -157,7 +183,8 @@ LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_m
     metricIds(INITIAL_NUM_ENDPOINTS),
     normalRequestMemoryThreshold(normal_mem_thresh),
     streamRequestMemoryThreshold(stream_mem_thresh),
-    logLevel(lvl)
+    logLevel(lvl),
+    authenticator(NULL)
 {
 }
 
@@ -195,13 +222,28 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
 
-    /* Dispatch Handle Request */
-    switch(request->verb)
+    /* Check Authentication */
+    bool authorized = true;
+    if(lua_endpoint->authenticator)
     {
-        case GET:   lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id); break;
-        case POST:  lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id); break;
-        default:    break;
+        const char* token = NULL;
+        request->headers->find("Authorization", &token);
+        authorized = lua_endpoint->authenticator->isValid(token);
     }
+
+    /* Dispatch Handle Request */
+    if(authorized)
+    {
+        switch(request->verb)
+        {
+            case GET:   lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id); break;
+            case POST:  lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id); break;
+            default:    break;
+        }
+    }
+
+    /* End Response */
+    rspq->postCopy("", 0);
 
     /* Clean Up */
     delete rspq;
@@ -276,9 +318,6 @@ void LuaEndpoint::normalResponse (const char* scriptpath, request_t* request, Pu
         rspq->postCopy(header, header_length);
     }
 
-    /* End Response */
-    rspq->postCopy("", 0);
-
     /* Clean Up */
     if(engine) delete engine;
 }
@@ -321,9 +360,6 @@ void LuaEndpoint::streamResponse (const char* scriptpath, request_t* request, Pu
         rspq->postCopy(header, header_length);
     }
 
-    /* End Response */
-    rspq->postCopy("", 0);
-
     /* Clean Up */
     if(engine) delete engine;
 }
@@ -358,6 +394,9 @@ int32_t LuaEndpoint::getMetricId (const char* endpoint)
 
 /*----------------------------------------------------------------------------
  * luaAlive - __alive()
+ *
+ * Note:    this function is available only to the endpoint lua script, NOT the
+ *          script that creates a LuaEndpoint object
  *----------------------------------------------------------------------------*/
 int LuaEndpoint::luaAlive (lua_State* L)
 {
@@ -437,6 +476,38 @@ int LuaEndpoint::luaMetric (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating metric: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaAuth - :auth(<authentication object>)
+ *
+ * Note: NOT thread safe, must be called prior to attaching endpoint to server
+ *----------------------------------------------------------------------------*/
+int LuaEndpoint::luaAuth (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
+
+        /* Get Authenticator */
+        Authenticator* auth = (Authenticator*)getLuaObject(L, 2, LuaEndpoint::Authenticator::OBJECT_TYPE);
+
+        /* Set Authenticator */
+        lua_obj->authenticator = auth;
+
+        /* Set return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error setting authenticator: %s", e.what());
     }
 
     /* Return Status */

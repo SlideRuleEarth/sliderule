@@ -2,17 +2,16 @@ local default_name = "http://"..sys.ipv4()..":9081"
 local name = arg[1] or default_name
 local service = "sliderule"
 local lifetime = 120 -- seconds
-local orchestrator_url = os.getenv("ORCHESTRATOR") or "http://127.0.0.1:8050"
 local registration_state = false
 
 while sys.alive() do
     if sys.healthy() then
         sys.log(core.DEBUG, "Registering "..name.." to service <"..service.."> for "..tostring(lifetime))
-        local response, status = netsvc.post(orchestrator_url.."/discovery/", string.format("{\"service\": \"%s\", \"lifetime\": %d, \"name\":\"%s\"}", service, lifetime, name))
+        local status = netsvc.orchreg(service, lifetime, name, false)
         if status then
             if registration_state then Lvl = core.DEBUG
             else Lvl = core.INFO end
-            sys.log(Lvl, "Successfully registered to <"..service..">: "..response)
+            sys.log(Lvl, "Successfully registered to <"..service..">")
             registration_state = true
 
             -- wait until next registration time
@@ -23,7 +22,7 @@ while sys.alive() do
         else
             if not registration_state then Lvl = core.DEBUG
             else Lvl = core.ERROR end
-            sys.log(Lvl, "Failed to register to <"..service..">: "..response)
+            sys.log(Lvl, "Failed to register to <"..service..">")
             registration_state = false
 
             -- wait before trying again

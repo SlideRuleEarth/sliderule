@@ -1,7 +1,7 @@
 --
--- ENDPOINT:    /source/atl06p
+-- ENDPOINT:    /source/atl03sp
 --
--- PURPOSE:     fan out atl06 requests to multiple back-end servers and collect responses
+-- PURPOSE:     fan out atl03s requests to multiple back-end servers and collect responses
 --
 -- INPUT:       rqst
 --              {
@@ -29,7 +29,7 @@ local parms = rqst["parms"]
 local timeout = rqst["timeout"] or 600000 -- 10 minutes
 
 -- Proxy Request --
-local atl06p = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), timeout, rspq)
+local atl06p = icesat2.proxy("atl03s", atl03_asset, resources, json.encode(parms), timeout, rspq)
 
 -- Wait Until Proxy Completes --
 local duration = 0
