@@ -30,7 +30,8 @@ set_target_properties (icesat2 PROPERTIES PREFIX "")
 find_package (Lua "5.3")
 
 # Version Information #
-file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
+file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
+message(${PROJECT_SOURCE_DIR})
 execute_process (COMMAND git --work-tree ${PROJECT_SOURCE_DIR} describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
 string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
 target_compile_definitions (icesat2 PUBLIC BUILDINFO="${BUILDINFO}")

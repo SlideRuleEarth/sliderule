@@ -24,7 +24,7 @@ set_target_properties (atlas PROPERTIES PREFIX "")
 find_package (Lua "5.3")
 
 # Version Information #
-file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
+file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
 
 # Set Environment Variables
 set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
