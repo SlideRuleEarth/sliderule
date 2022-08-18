@@ -11,7 +11,7 @@ while sys.alive() do
         if status then
             if registration_state then Lvl = core.DEBUG
             else Lvl = core.INFO end
-            sys.log(Lvl, "Successfully registered to <"..service..">: "..response)
+            sys.log(Lvl, "Successfully registered to <"..service..">")
             registration_state = true
 
             -- wait until next registration time
@@ -22,7 +22,7 @@ while sys.alive() do
         else
             if not registration_state then Lvl = core.DEBUG
             else Lvl = core.ERROR end
-            sys.log(Lvl, "Failed to register to <"..service..">: "..response)
+            sys.log(Lvl, "Failed to register to <"..service..">")
             registration_state = false
 
             -- wait before trying again
