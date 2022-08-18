@@ -183,7 +183,6 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
         {
             /* Set cURL Options */
             curl_easy_setopt(curl, CURLOPT_URL, url_str.getString());
-            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
 
