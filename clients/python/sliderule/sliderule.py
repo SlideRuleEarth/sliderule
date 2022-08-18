@@ -27,6 +27,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
+import netrc
 import requests
 import numpy
 import json
@@ -40,6 +42,10 @@ from datetime import datetime, timedelta
 ###############################################################################
 
 service_url = None
+
+ps_url = None
+ps_refresh_token = None
+ps_access_token = None
 
 max_retries_per_request = 5
 
@@ -434,8 +440,9 @@ def set_url (url):
         >>> import sliderule
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
-    global service_url
+    global service_url, ps_url
     service_url = url
+    ps_url = "ps." + url
 
 #
 #  SET_VERBOSE
@@ -495,6 +502,64 @@ def set_rqst_timeout (timeout):
         request_timeout = timeout
     else:
         raise TypeError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+
+#
+# AUTHENTICATE
+#
+def authenticate (ps_organization):
+    '''
+    Authenticate to SlideRule Provisioning System
+    The code first looks for and uses the O.S. environment variables 'PS_USERNAME' and 'PS_PASSWORD'.
+    If not found, the code then looks for a .netrc file in your home directory
+
+    Parameters
+    ----------
+        ps_organization:    str
+                            name of the SlideRule organization the user belongs to
+
+    Returns
+    -------
+    status
+        True of successful, False if unsuccessful
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.authenticate("myorg")
+        True
+    '''
+    global ps_url, ps_refresh_token, ps_access_token
+    login_status = False
+
+    # attempt retrieving from environment
+    ps_username = os.environ.get("PS_USERNAME")
+    ps_password = os.environ.get("PS_PASSWORD")
+
+    # attempt retrieving from netrc file
+    if not ps_username or not ps_password:
+        try:
+            netrc_file = netrc.netrc()
+            login_credentials = netrc_file.hosts[ps_url]
+            ps_username = login_credentials[0]
+            ps_password = login_credentials[2]
+        except:
+            logger.error("Failed to retrieve username and password for provisioning system")
+
+    # authenticate to provisioning system
+    if ps_username and ps_password:
+        rqst = {"username": ps_username, "password": ps_password, "org_name": ps_organization}
+        headers = {'Content-Type': 'application/json'}
+        try:
+            api = "https://" + ps_url + "/ps/api/org_token/"
+            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout).json()
+            ps_refresh_token = rsps["refresh"]
+            ps_access_token = rsps["access"]
+            login_status = True
+        except:
+            logger.error("Unable to authenticate user %s to %s" % (ps_username, api))
+
+    # return login status
+    return login_status
 
 #
 # GPS2UTC
