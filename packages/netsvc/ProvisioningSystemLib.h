@@ -42,7 +42,7 @@
  * DEFINES
  ******************************************************************************/
 
-#define DEFAULT_ORGANIZATION_NAME   "local"
+#define DEFAULT_ORGANIZATION_NAME   "sliderule"
 #define DEFAULT_PS_URL              "https://ps.testsliderule.org"
 
 /******************************************************************************

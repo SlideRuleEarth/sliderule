@@ -147,14 +147,15 @@ int ProvisioningSystemLib::luaSetUrl(lua_State* L)
 
         if(URL) delete [] URL;
         URL = StringLib::duplicate(_url);
-
-        lua_pushboolean(L, true);
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error setting URL: %s", e.what());
-        lua_pushnil(L);
+        // silently fail... allows calling lua script to set nil
+        // as way of keeping and returning the current value
+        (void)e;
     }
+
+    lua_pushstring(L, URL);
 
     return 1;
 }
@@ -170,14 +171,15 @@ int ProvisioningSystemLib::luaSetOrganization(lua_State* L)
 
         if(Organization) delete [] Organization;
         Organization = StringLib::duplicate(_organization);
-
-        lua_pushboolean(L, true);
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error setting organization: %s", e.what());
-        lua_pushnil(L);
+        // silently fail... allows calling lua script to set nil
+        // as way of keeping and returning the current value
+        (void)e;
     }
+
+    lua_pushstring(L, Organization);
 
     return 1;
 }

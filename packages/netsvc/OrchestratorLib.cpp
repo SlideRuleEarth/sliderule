@@ -220,9 +220,9 @@ bool OrchestratorLib::health (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaSetUrl - orchurl(<URL>)
+ * luaUrl - orchurl(<URL>)
  *----------------------------------------------------------------------------*/
-int OrchestratorLib::luaSetUrl(lua_State* L)
+int OrchestratorLib::luaUrl(lua_State* L)
 {
     try
     {
@@ -230,14 +230,15 @@ int OrchestratorLib::luaSetUrl(lua_State* L)
 
         if(URL) delete [] URL;
         URL = StringLib::duplicate(_url);
-
-        lua_pushboolean(L, true);
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error setting URL: %s", e.what());
-        lua_pushnil(L);
+        // silently fail... allows calling lua script to set nil
+        // as way of keeping and returning the current value
+        (void)e;
     }
+
+    lua_pushstring(L, URL);
 
     return 1;
 }

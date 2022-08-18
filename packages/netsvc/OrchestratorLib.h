@@ -79,7 +79,7 @@ class OrchestratorLib
         static bool         unlock              (long transactions[], int num_transactions, bool verbose=false);
         static bool         health              (void);
 
-        static int          luaSetUrl           (lua_State* L);
+        static int          luaUrl              (lua_State* L);
         static int          luaRegisterService  (lua_State* L);
         static int          luaLock             (lua_State* L);
         static int          luaUnlock           (lua_State* L);
