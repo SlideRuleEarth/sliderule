@@ -70,8 +70,8 @@ int icesat2_open (lua_State *L)
         {"atl03",               Atl03Reader::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},
-        {"atl06proxy",          Atl06Proxy::luaCreate},
-        {"start_atl06_proxy",   Atl06Proxy::luaInit},
+        {"proxy",               EndpointProxy::luaCreate},
+        {"start_proxy",         EndpointProxy::luaInit},
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
         {"ut_atl03",            UT_Atl03Reader::luaCreate},
         {"version",             icesat2_version},
@@ -135,7 +135,7 @@ void initicesat2 (void)
     Atl03Reader::init();
     Atl03Indexer::init();
     Atl06Dispatch::init();
-    Atl06Proxy::init();
+    EndpointProxy::init();
 
     /* Register Cumulus IO Driver */
     Asset::registerDriver(CumulusIODriver::FORMAT, CumulusIODriver::create);
@@ -153,6 +153,6 @@ void initicesat2 (void)
 void deiniticesat2 (void)
 {
     /* Uninitialize Modules */
-    Atl06Proxy::deinit();
+    EndpointProxy::deinit();
 }
 }

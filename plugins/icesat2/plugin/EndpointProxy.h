@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl06_proxy__
-#define __atl06_proxy__
+#ifndef __endpoint_proxy__
+#define __endpoint_proxy__
 
 /******************************************************************************
  * INCLUDES
@@ -45,7 +45,7 @@
  * ATL03 READER
  ******************************************************************************/
 
-class Atl06Proxy: public LuaObject
+class EndpointProxy: public LuaObject
 {
     public:
 
@@ -84,7 +84,7 @@ class Atl06Proxy: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            Atl06Proxy*             proxy;
+            EndpointProxy*          proxy;
             const char*             resource;
             OrchestratorLib::Node*  node;       // node to proxy request to
             bool                    valid;      // set to false when error encountered
@@ -107,6 +107,7 @@ class Atl06Proxy: public LuaObject
         Thread*             collatorPid;
         atl06_rqst_t*       requests; // array[numRequests]
         int                 numRequests;
+        const char*         endpoint;
         const char*         asset;
         const char*         parameters;
         int                 timeout;
@@ -116,11 +117,11 @@ class Atl06Proxy: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl06Proxy              (lua_State* L, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name);
-                            ~Atl06Proxy             (void);
+                            EndpointProxy           (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name);
+                            ~EndpointProxy          (void);
 
         static void*        collatorThread          (void* parm);
         static void*        proxyThread             (void* parm);
 };
 
-#endif  /* __atl06_proxy__ */
+#endif  /* __endpoint_proxy__ */

@@ -46,19 +46,19 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl06Proxy::SERVICE = "sliderule";
+const char* EndpointProxy::SERVICE = "sliderule";
 
-const char* Atl06Proxy::OBJECT_TYPE = "Atl06Proxy";
-const char* Atl06Proxy::LuaMetaName = "Atl06Proxy";
-const struct luaL_Reg Atl06Proxy::LuaMetaTable[] = {
+const char* EndpointProxy::OBJECT_TYPE = "EndpointProxy";
+const char* EndpointProxy::LuaMetaName = "EndpointProxy";
+const struct luaL_Reg EndpointProxy::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-Publisher*  Atl06Proxy::rqstPub;
-Subscriber* Atl06Proxy::rqstSub;
-bool        Atl06Proxy::proxyActive;
-Thread**    Atl06Proxy::proxyPids;
-int         Atl06Proxy::threadPoolSize;
+Publisher*  EndpointProxy::rqstPub;
+Subscriber* EndpointProxy::rqstSub;
+bool        EndpointProxy::proxyActive;
+Thread**    EndpointProxy::proxyPids;
+int         EndpointProxy::threadPoolSize;
 
 /******************************************************************************
  * ATL06 PROXY CLASS
@@ -67,7 +67,7 @@ int         Atl06Proxy::threadPoolSize;
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Atl06Proxy::init (void)
+void EndpointProxy::init (void)
 {
     rqstPub = NULL;
     proxyActive = false;
@@ -79,7 +79,7 @@ void Atl06Proxy::init (void)
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void Atl06Proxy::deinit (void)
+void EndpointProxy::deinit (void)
 {
     if(proxyActive)
     {
@@ -96,11 +96,11 @@ void Atl06Proxy::deinit (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaInit - init(<num_threads>)
+ * luaInit - init(<num_threads>, <depth of request queue>)
  *
  *  NOTE: this function is not thread safe; must only be called once at startup
  *----------------------------------------------------------------------------*/
-int Atl06Proxy::luaInit (lua_State* L)
+int EndpointProxy::luaInit (lua_State* L)
 {
     bool status = false;
 
@@ -134,7 +134,7 @@ int Atl06Proxy::luaInit (lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Atl06Proxy has already been initialized");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "EndpointProxy has already been initialized");
         }
 
         /* Set Success */
@@ -142,27 +142,30 @@ int Atl06Proxy::luaInit (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error initializing Atl06Proxy module: %s", e.what());
+        mlog(e.level(), "Error initializing EndpointProxy module: %s", e.what());
     }
 
     return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<resources>, <parameter string>, <timeout>, <outq_name>)
+ * luaCreate - create(<endpoint>, <asset>, <resources>, <parameter string>, <timeout>, <outq_name>)
  *----------------------------------------------------------------------------*/
-int Atl06Proxy::luaCreate (lua_State* L)
+int EndpointProxy::luaCreate (lua_State* L)
 {
     const char** _resources = NULL;
     int _num_resources = 0;
 
     try
     {
+        /* Get Endpoint */
+        const char* _endpoint = getLuaString(L, 1);
+
         /* Get Asset */
-        const char* _asset = getLuaString(L, 1);
+        const char* _asset = getLuaString(L, 2);
 
         /* Check Resource Table Parameter */
-        int resources_parm_index = 2;
+        int resources_parm_index = 3;
         if(!lua_istable(L, resources_parm_index))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for parameter #1");
@@ -187,20 +190,20 @@ int Atl06Proxy::luaCreate (lua_State* L)
         }
 
         /* Get Request Parameters */
-        const char* _parameters = getLuaString(L, 3);
+        const char* _parameters = getLuaString(L, 4);
 
         /* Get Timeout */
-        int _timeout_secs = getLuaInteger(L, 4, true, NODE_LOCK_TIMEOUT);
+        int _timeout_secs = getLuaInteger(L, 5, true, NODE_LOCK_TIMEOUT);
 
         /* Get Output Queue */
-        const char* outq_name = getLuaString(L, 5);
+        const char* outq_name = getLuaString(L, 6);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl06Proxy(L, _asset, _resources, _num_resources, _parameters, _timeout_secs, outq_name));
+        return createLuaObject(L, new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, outq_name));
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating Atl06Proxy: %s", e.what());
+        mlog(e.level(), "Error creating EndpointProxy: %s", e.what());
 
         for(int i = 0; i < _num_resources; i++)
         {
@@ -215,7 +218,7 @@ int Atl06Proxy::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name):
+EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(_asset);
@@ -227,6 +230,7 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resource
     timeout = _timeout_secs;
 
     /* Allocate Data Members */
+    endpoint    = StringLib::duplicate(_endpoint);
     asset       = StringLib::duplicate(_asset);
     requests    = new atl06_rqst_t[numRequests];
     parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
@@ -274,10 +278,11 @@ Atl06Proxy::Atl06Proxy (lua_State* L, const char* _asset, const char** _resource
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Atl06Proxy::~Atl06Proxy (void)
+EndpointProxy::~EndpointProxy (void)
 {
     active = false;
     delete collatorPid;
+    delete [] endpoint;
     delete [] asset;
     delete [] requests;
     delete [] parameters;
@@ -287,9 +292,9 @@ Atl06Proxy::~Atl06Proxy (void)
 /*----------------------------------------------------------------------------
  * collatorThread
  *----------------------------------------------------------------------------*/
-void* Atl06Proxy::collatorThread (void* parm)
+void* EndpointProxy::collatorThread (void* parm)
 {
-    Atl06Proxy* proxy = (Atl06Proxy*)parm;
+    EndpointProxy* proxy = (EndpointProxy*)parm;
     int num_terminated = 0;
 
     while(proxy->active)
@@ -346,7 +351,7 @@ void* Atl06Proxy::collatorThread (void* parm)
 /*----------------------------------------------------------------------------
  * proxyThread
  *----------------------------------------------------------------------------*/
-void* Atl06Proxy::proxyThread (void* parm)
+void* EndpointProxy::proxyThread (void* parm)
 {
     (void)parm;
 
@@ -357,7 +362,7 @@ void* Atl06Proxy::proxyThread (void* parm)
         if(recv_status > 0)
         {
             atl06_rqst_t* rqst = (atl06_rqst_t*)ref.data;
-            Atl06Proxy* proxy = rqst->proxy;
+            EndpointProxy* proxy = rqst->proxy;
 
             try
             {
@@ -389,10 +394,11 @@ void* Atl06Proxy::proxyThread (void* parm)
                 if(rqst->node)
                 {
                     /* Make Request */
+                    SafeString path("/source/%s", proxy->endpoint);
                     SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}",
                                     proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
                     HttpClient client(NULL, rqst->node->member);
-                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, "/source/atl06", data.getString(), false, proxy->outQ, proxy->timeout);
+                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout);
                     if(rsps.code == EndpointObject::OK)
                     {
                         rqst->valid = true;
