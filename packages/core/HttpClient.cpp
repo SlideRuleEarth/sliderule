@@ -307,7 +307,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
     int     rsps_index              = 0;
     int     rsps_buf_index          = 0;
     long    content_remaining       = MAX_UNBOUNDED_RSPS;
-    long    chunk_length            = 0;
     long    chunk_remaining         = 0;
     bool    unbounded_content       = true;
     bool    chunk_encoding          = false;
@@ -403,11 +402,11 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         if(line_term > 0) // valid header line found
                         {
                             const char* chunk_length_str = parseChunkHeaderLine(line_start, line_term);
-                            if(StringLib::str2long(chunk_length_str, &chunk_length, 16))
+                            if(StringLib::str2long(chunk_length_str, &chunk_remaining, 16))
                             {
                                 chunk_header_complete = true;
                                 chunk_payload_complete = false;
-                                chunk_remaining = chunk_length;
+                                line_start = line_term;
                             }
                             else
                             {
@@ -425,7 +424,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             rsps_buf_index += bytes_remaining;
                             break;
                         }
-
                     }
                     //////////////////////////
                     // Process Payload
@@ -440,7 +438,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         }
 
                         /* Determine Bytes to Copy */
-                        int rsps_bytes = bytes_read - line_term;
+                        int rsps_bytes = bytes_read - line_start;
                         if(chunk_encoding) rsps_bytes = MIN(rsps_bytes, chunk_remaining);
                         if(!outq && rsps_bytes > content_remaining)
                         {
@@ -453,42 +451,38 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             if(outq)
                             {
                                 /* Post Response */
-                                int post_status = outq->postCopy(&rspsBuf[line_term], rsps_bytes, SYS_TIMEOUT);
+                                int post_status = outq->postCopy(&rspsBuf[line_start], rsps_bytes, SYS_TIMEOUT);
                                 if(post_status <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to post response: %d", post_status);
                             }
                             else
                             {
                                 /* Populate Response */
-                                LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_term], rsps_bytes);
-                            }
-
-                            /* Update Indices */
-                            rsps_index += rsps_bytes;
-                            if(chunk_encoding)
-                            {
-                                chunk_remaining -= rsps_bytes;
-                                if(chunk_remaining <= 0)
-                                {
-                                    chunk_payload_complete = true;
-                                    chunk_trailer_complete = false;
-                                    chunk_remaining = chunk_length;
-                                }
-                            }
-
-                            /* Check if Respose Complete */
-                            if(!outq || !unbounded_content)
-                            {
-                                content_remaining -= rsps_bytes;
-                                if(content_remaining <= 0)
-                                {
-                                    response_complete = true;
-                                }
+                                LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
                             }
                         }
 
                         /* Update Indices */
-                        line_term = 0;
-                        break;
+                        rsps_index += rsps_bytes;
+                        line_start += rsps_bytes;
+                        if(chunk_encoding)
+                        {
+                            chunk_remaining -= rsps_bytes;
+                            if(chunk_remaining <= 0)
+                            {
+                                chunk_payload_complete = true;
+                                chunk_trailer_complete = false;
+                            }
+                        }
+
+                        /* Check if Respose Complete */
+                        if(!outq || !unbounded_content)
+                        {
+                            content_remaining -= rsps_bytes;
+                            if(content_remaining <= 0)
+                            {
+                                response_complete = true;
+                            }
+                        }
                     }
                     //////////////////////////
                     // Process Chunk Trailer
@@ -500,12 +494,20 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         {
                             chunk_trailer_complete = true;
                             chunk_header_complete = false;
+                            line_start += 2;
+                            line_term = line_start;
                         }
-                        else // chunk invalid
+                        else if(line_term > 0) // chunk invalid
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing trailer");
                         }
-
+                        else // chunk header not complete
+                        {
+                            int bytes_remaining = bytes_read - line_start;
+                            LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
+                            rsps_buf_index += bytes_remaining;
+                            break;
+                        }
                     }
                     //////////////////////////
                     // Process Chunk Trailer
