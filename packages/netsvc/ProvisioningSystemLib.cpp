@@ -368,7 +368,7 @@ bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
     }
     else
     {
-        return ProvisioningSystemLib::validate(token);
+        return ProvisioningSystemLib::validate(token);;
     }
 }
 
