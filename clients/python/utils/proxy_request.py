@@ -31,7 +31,7 @@ if __name__ == '__main__':
         asset = sys.argv[3]
 
     # Configure SlideRule #
-    icesat2.init(url, True)
+    icesat2.init(url, True, organization="Developers")
 
     # Build ATL06 Request #
     parms = {
@@ -39,7 +39,6 @@ if __name__ == '__main__':
         "raster": region["raster"],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_HIGH,
-#        "atl08_class": ["atl08_ground"],
         "ats": 10.0,
         "cnt": 10,
         "len": 40.0,
@@ -48,7 +47,6 @@ if __name__ == '__main__':
     }
 
     # Get Granules
-#    resources = icesat2.cmr(polygon=region["poly"])
     resources = ['ATL03_20181017222812_02950102_005_01.h5']
 
     # Latch Start Time
@@ -56,7 +54,6 @@ if __name__ == '__main__':
 
     # Request ATL06 Data
     gdf = icesat2.atl06p(parms, asset=asset, resources=resources[0:1])
-#    gdf = icesat2.atl03s(parms, resource=resources[0], asset=asset)
 
     # Latch Stop Time
     perf_stop = time.perf_counter()

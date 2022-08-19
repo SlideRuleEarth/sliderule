@@ -445,7 +445,7 @@ def __gdf2poly(gdf):
 #
 #  Initialize
 #
-def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL):
+def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=None):
     '''
     Initializes the underlying SlideRule module.  Must be called before other ICESat-2 API calls.
     This function is the same as calling the sliderule module functions: `set_url`, `set_verbose`, `set_max_errors`, along with the local `set_max_resources` function.
@@ -460,6 +460,8 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
                         the maximum number of resources that are allowed to be processed in a single request
         loglevel :      int
                         minimum severity of log message to output
+        organization:   str
+                        SlideRule provisioning system organization user belongs to (see sliderule.authenticate for details)
 
     Examples
     --------
@@ -471,6 +473,8 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
     logging.basicConfig(level=loglevel)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
+    if organization:
+        sliderule.authenticate(organization)
     set_max_resources(max_resources)
 
 #

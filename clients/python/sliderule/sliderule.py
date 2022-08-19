@@ -42,8 +42,8 @@ from datetime import datetime, timedelta
 ###############################################################################
 
 service_url = None
+service_org = None
 
-ps_url = None
 ps_refresh_token = None
 ps_access_token = None
 
@@ -380,19 +380,31 @@ def source (api, parm={}, stream=False, callbacks=default_callbacks):
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
-    global max_retries_per_request, service_url
+    global service_url, service_org, max_retries_per_request
     retries = max_retries_per_request
-    url  = 'http://%s/source/%s' % (service_url, api)
     rqst = json.dumps(parm)
     rsps = {}
+    headers = None
+    # Construct Request URL and Authorization #
+    try:
+        if service_org:
+            url = 'http://%s.%s/source/%s' % (service_org, service_url, api)
+            headers = {'Authorization': 'Bearer ' + ps_access_token}
+        else:
+            url = 'http://%s/source/%s' % (service_url, api)
+    except TypeError as e:
+        logger.error("Invalid request parameters: url={}, org={}, token_type={}".format(service_url, service_org, type(ps_access_token)))
+        retries = 0 # prevent request from being issued
+    url = 'http://127.0.0.1/source/%s' % (api)
+    # Attempt Request #
     while retries > 0:
         retries -= 1
         try:
             # Perform Request
             if not stream:
-                data = requests.get(url, data=rqst, timeout=request_timeout)
+                data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
             else:
-                data = requests.post(url, data=rqst, timeout=request_timeout, stream=True)
+                data = requests.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
             data.raise_for_status()
             # Parse Response
             format = data.headers['Content-Type']
@@ -440,9 +452,8 @@ def set_url (url):
         >>> import sliderule
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
-    global service_url, ps_url
+    global service_url
     service_url = url
-    ps_url = "ps." + url
 
 #
 #  SET_VERBOSE
@@ -506,17 +517,24 @@ def set_rqst_timeout (timeout):
 #
 # AUTHENTICATE
 #
-def authenticate (ps_organization):
+def authenticate (ps_organization, ps_username=None, ps_password=None):
     '''
     Authenticate to SlideRule Provisioning System
-    The code first looks for and uses the O.S. environment variables 'PS_USERNAME' and 'PS_PASSWORD'.
-    If not found, the code then looks for a .netrc file in your home directory
+    The username and password can be provided the following way in order of priority:
+    (1) The passed in arguments `ps_username' and 'ps_password';
+    (2) The O.S. environment variables 'PS_USERNAME' and 'PS_PASSWORD';
+    (3) The `ps.<url>` entry in the .netrc file in your home directory
 
     Parameters
     ----------
         ps_organization:    str
                             name of the SlideRule organization the user belongs to
 
+        ps_username:        str
+                            SlideRule provisioning system account name
+
+        ps_password:        str
+                            SlideRule provisioning system account password
     Returns
     -------
     status
@@ -528,12 +546,17 @@ def authenticate (ps_organization):
         >>> sliderule.authenticate("myorg")
         True
     '''
-    global ps_url, ps_refresh_token, ps_access_token
+    global service_org, ps_refresh_token, ps_access_token
     login_status = False
+    ps_url = "ps." + service_url
+
+    # set organization on any authentication request
+    service_org = ps_organization
 
     # attempt retrieving from environment
-    ps_username = os.environ.get("PS_USERNAME")
-    ps_password = os.environ.get("PS_PASSWORD")
+    if not ps_username or not ps_password:
+        ps_username = os.environ.get("PS_USERNAME")
+        ps_password = os.environ.get("PS_PASSWORD")
 
     # attempt retrieving from netrc file
     if not ps_username or not ps_password:
@@ -542,8 +565,8 @@ def authenticate (ps_organization):
             login_credentials = netrc_file.hosts[ps_url]
             ps_username = login_credentials[0]
             ps_password = login_credentials[2]
-        except:
-            logger.error("Failed to retrieve username and password for provisioning system")
+        except Exception as e:
+            logger.error("Failed to retrieve username and password from netrc file: {}".format(e))
 
     # authenticate to provisioning system
     if ps_username and ps_password:
