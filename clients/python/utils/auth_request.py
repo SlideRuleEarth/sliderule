@@ -27,7 +27,7 @@ if __name__ == '__main__':
     print("My Token: ", access)
 
     # Organization Access Request
-    url = "https://ps.testsliderule.org/ps/api/get_membership_status/" + "Developers"
+    url = "https://ps.testsliderule.org/ps/api/get_membership_status/" + organization + "/"
     headers = {'Authorization': 'Bearer ' + access}
     rsps = requests.get(url, headers=headers, timeout=(60,10)).json()
     print(rsps)
