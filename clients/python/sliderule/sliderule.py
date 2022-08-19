@@ -395,7 +395,6 @@ def source (api, parm={}, stream=False, callbacks=default_callbacks):
     except TypeError as e:
         logger.error("Invalid request parameters: url={}, org={}, token_type={}".format(service_url, service_org, type(ps_access_token)))
         retries = 0 # prevent request from being issued
-    url = 'http://127.0.0.1/source/%s' % (api)
     # Attempt Request #
     while retries > 0:
         retries -= 1
