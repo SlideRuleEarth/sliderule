@@ -30,8 +30,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
         asset = sys.argv[3]
 
+    # Set Organization #
+    organization = None
+    if len(sys.argv) > 4:
+        organization = sys.argv[4]
+
     # Configure SlideRule #
-    icesat2.init(url, True, organization="Developers")
+    icesat2.init(url, True, organization=organization)
 
     # Build ATL06 Request #
     parms = {
