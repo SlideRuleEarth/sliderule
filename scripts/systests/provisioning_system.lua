@@ -14,9 +14,7 @@ netsvc.psorg(org_name)
 -- Login
 local rsps_str = netsvc.pslogin(username, password, org_name, true)
 local rsps = json.decode(rsps_str)
---runner.check(rsps["access"], "unable to login")
-
---netsvc.psurl("http://ps.testsliderule.org")
+runner.check(rsps["access"] ~= nil, "unable to login")
 
 -- Validate
 local status = netsvc.psvalidate(rsps["access"], true)
