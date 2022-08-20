@@ -851,7 +851,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         # Build ATL03 Subsetting Request
         rqst = {
             "atl03-asset" : asset,
-            "resources": resources,
+            "resource": resources[0],
             "parms": parm
         }
 
@@ -1085,13 +1085,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         region = {
             "poly": [{"lat": <lat1>, "lon": <lon1>, ... }],
             "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...],
-            "raster": {
-                "image": <base64 encoded geotiff image string>,
-                "imagelength": <length of base64 encoded image>,
-                "dimension": (<number of rows>, <number of columns>),
-                "bbox": (<minimum longitutde>, <minimum latitude>, <maximum longitude>, <maximum latitude>),
-                "cellsize": <cell size in degrees>
-                "crs": < EPSG code for projections, integer>
+            "file": {
+                "data": <base64 encoded geotiff image string>,
+                "length": <length of base64 encoded image>,
+                "type": < gtiff, sh, geojson >
             }
         }
 
@@ -1217,6 +1214,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     else:
         crs = CRS_MERCATOR 
     
+    # crs = CRS_PLATE_CARTE
+    
     if(crs != CRS_MERCATOR):
       # Reproject raster 
       print( "Projecting raster to", crs, "\n")
@@ -1239,6 +1238,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     ulx, xres, xskew, uly, yskew, yres = src.GetGeoTransform()
     lrx = ulx + (src.RasterXSize * xres)
     lry = uly + (src.RasterYSize * yres)
+
+    print("lrx:", lrx, "lry:", lry,  "yres:", yres, "\n")
 
     x_min = ulx
     x_max = lrx
@@ -1268,7 +1269,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     if n_clusters > 1:
         # pull out centroids of each geometry object
         if "CenLon" in gdf and "CenLat" in gdf:
-            X = numpy.column_stack((gdf["CenLon"],gdf["CenLat"]))
+            X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
         else:
             s = gdf.centroid
             X = numpy.column_stack((s.x, s.y))
@@ -1286,18 +1287,22 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     # encode image in base64
     b64image = base64.b64encode(raster).decode('UTF-8')
 
+    # From GdalRaster.h
+    GEOJSON   = 0
+    ESRISHAPE = 1
+    GEOTIF    = 2
+
+    type = GEOTIF 
+
     # return region #
     return {
         "gdf": gdf,
         "poly": polygon, # convex hull of polygons
         "clusters": clusters, # list of polygon clusters for cmr request
-        "raster": {
-            "image": b64image, # geotiff image
-            "imagelength": len(b64image), # encoded image size of geotiff
-            "dimension": (y_ncells, x_ncells), # rows x cols
-            "bbox": (x_min, y_min, x_max, y_max), # lon1, lat1 x lon2, lat2 (in meters/pixels if projected)
-            "cellsize": cellsize, # in degrees or meters if projected
-            "crs": crs # EPSG code as integer
+        "file": {
+            "data": b64image, # geotiff or shape file
+            "length": len(b64image), # encoded binary file
+            "type": type  # gtiff, sh, geojson 
         }
     }
 

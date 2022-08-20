@@ -41,7 +41,7 @@ if __name__ == '__main__':
     # Build ATL06 Request #
     parms = {
         "poly": region["poly"],
-        "raster": region["raster"],
+        "file": region["file"],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_HIGH,
         "ats": 10.0,
