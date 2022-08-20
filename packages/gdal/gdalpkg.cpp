@@ -36,7 +36,6 @@
 #include "core.h"
 #include "gdalpkg.h"
 #include <gdal.h>
-#include <tiffio.h>
 
 /******************************************************************************
  * DEFINES
@@ -64,18 +63,28 @@ int gdal_open (lua_State* L)
     return 1;
 }
 
+
+/*----------------------------------------------------------------------------
+ * Error handler called by GDAL lib on errors
+ *----------------------------------------------------------------------------*/
+void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
+{
+    (void)eErrClass;  /* Silence compiler warning */
+    mlog(CRITICAL, "GDAL ERROR %d: %s\n", err_no, msg);
+}
+
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
-
 extern "C" {
 void initgdal (void)
 {
-    /* Initialize LibTIFF */
-    TIFFSetWarningHandler(NULL); // turns off warnings
-
     /* Register all gdal drivers */
     GDALAllRegister();
+
+    /* Register GDAL custom error handler */
+    void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
+    CPLSetErrorHandler(fptrGdalErrorHandler);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GDAL_LIBNAME, gdal_open);

@@ -36,9 +36,15 @@
 #include "core.h"
 #include "GdalRaster.h"
 #include <tiffio.h>
+
 #include <gdal.h>
 #include <ogr_geometry.h>
 #include <ogr_spatialref.h>
+#include <gdal_priv.h>
+#include <cpl_string.h>
+#include <cpl_conv.h>
+#include <gdalwarper.h>
+#include <cpl_vsi.h>
 
 /******************************************************************************
  * STATIC DATA
@@ -53,95 +59,11 @@ const struct luaL_Reg GdalRaster::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* GdalRaster::IMAGE_KEY = "image";
-const char* GdalRaster::IMAGELENGTH_KEY = "imagelength";
-const char* GdalRaster::DIMENSION_KEY = "dimension";
-const char* GdalRaster::BBOX_KEY = "bbox";
-const char* GdalRaster::CELLSIZE_KEY = "cellsize";
-const char* GdalRaster::CRS_KEY = "crs";
+const char* GdalRaster::FILEDATA_KEY   = "data";
+const char* GdalRaster::FILELENGTH_KEY = "length";
+const char* GdalRaster::FILETYPE_KEY   = "type";
+const char* GdalRaster::DIMENSION_KEY  = "dimension";
 
-
-/******************************************************************************
- * FILE STATIC LIBTIFF METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * libtiff call-back parameter
- *----------------------------------------------------------------------------*/
-typedef struct {
-    const uint8_t* filebuf;
-    long filesize;
-    long pos;
-} geotiff_cb_t;
-
-/*----------------------------------------------------------------------------
- * libtiff_read
- *----------------------------------------------------------------------------*/
-static tsize_t libtiff_read(thandle_t st, tdata_t buffer, tsize_t size)
-{
-    geotiff_cb_t* g = (geotiff_cb_t*)st;
-    tsize_t bytes_left = g->filesize - g->pos;
-    tsize_t bytes_to_read = MIN(bytes_left, size);
-    LocalLib::copy(buffer, &g->filebuf[g->pos], bytes_to_read);
-    g->pos += bytes_to_read;
-    return bytes_to_read;
-};
-
-/*----------------------------------------------------------------------------
- * libtiff_write
- *----------------------------------------------------------------------------*/
-static tsize_t libtiff_write(thandle_t, tdata_t, tsize_t)
-{
-    return 0;
-};
-
-/*----------------------------------------------------------------------------
- * libtiff_seek
- *----------------------------------------------------------------------------*/
-static toff_t libtiff_seek(thandle_t st, toff_t pos, int whence)
-{
-    geotiff_cb_t* g = (geotiff_cb_t*)st;
-    if(whence == SEEK_SET)      g->pos = pos;
-    else if(whence == SEEK_CUR) g->pos += pos;
-    else if(whence == SEEK_END) g->pos = g->filesize + pos;
-    return g->pos;
-};
-
-/*----------------------------------------------------------------------------
- * libtiff_close
- *----------------------------------------------------------------------------*/
-static int libtiff_close(thandle_t)
-{
-    return 0;
-};
-
-/*----------------------------------------------------------------------------
- * libtiff_size
- *----------------------------------------------------------------------------*/
-static toff_t libtiff_size(thandle_t st)
-{
-    geotiff_cb_t* g = (geotiff_cb_t*)st;
-    return g->filesize;
-};
-
-/*----------------------------------------------------------------------------
- * libtiff_map
- *----------------------------------------------------------------------------*/
-static int libtiff_map(thandle_t st, tdata_t* addr, toff_t* pos)
-{
-    geotiff_cb_t* g = (geotiff_cb_t*)st;
-    *pos = g->pos;
-    *addr = (void*)&g->filebuf[g->pos];
-    return 0;
-};
-
-/*----------------------------------------------------------------------------
- * libtiff_unmap
- *----------------------------------------------------------------------------*/
-static void libtiff_unmap(thandle_t, tdata_t, toff_t)
-{
-    return;
-};
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -150,10 +72,9 @@ static void libtiff_unmap(thandle_t, tdata_t, toff_t)
 /*----------------------------------------------------------------------------
  * luaCreate - file(
  *  {
- *      image=<image>,
- *      imagelength=<imagelength>,
- *      [bbox=<<lon_min>, <lat_min>, <lon_max>, <lat_max>>,
- *      cellsize=<cell size>]
+ *      file=<file>,
+ *      filelength=<filelength>,
+ *      filetype=<file type>]
  *  })
  *----------------------------------------------------------------------------*/
 int GdalRaster::luaCreate (lua_State* L)
@@ -174,66 +95,39 @@ int GdalRaster::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 GdalRaster* GdalRaster::create (lua_State* L, int index)
 {
-    bbox_t _bbox = {0.0, 0.0, 0.0, 0.0 };
-
-    /* Get Image */
-    lua_getfield(L, index, IMAGE_KEY);
+    /* Get file */
+    lua_getfield(L, index, FILEDATA_KEY);
     const char* image = getLuaString(L, -1);
     lua_pop(L, 1);
 
-    /* Get Image Length */
-    lua_getfield(L, index, IMAGELENGTH_KEY);
-    size_t imagelength = (size_t)getLuaInteger(L, -1);
+    /* Get file Length */
+    lua_getfield(L, index, FILELENGTH_KEY);
+    size_t filelength = (size_t)getLuaInteger(L, -1);
     lua_pop(L, 1);
 
-    /* Optionally Get Bounding Box */
-    lua_getfield(L, index, BBOX_KEY);
-    if(lua_istable(L, -1) && (lua_rawlen(L, -1) == 4))
-    {
-        lua_rawgeti(L, -1, 1);
-        _bbox.lon_min = getLuaFloat(L, -1);
-        lua_pop(L, 1);
-
-        lua_rawgeti(L, -1, 2);
-        _bbox.lat_min = getLuaFloat(L, -1);
-        lua_pop(L, 1);
-
-        lua_rawgeti(L, -1, 3);
-        _bbox.lon_max = getLuaFloat(L, -1);
-        lua_pop(L, 1);
-
-        lua_rawgeti(L, -1, 4);
-        _bbox.lat_max = getLuaFloat(L, -1);
-        lua_pop(L, 1);
-    }
-    lua_pop(L, 1);
-
-    /* Get Cell Size */
-    lua_getfield(L, index, CELLSIZE_KEY);
-    double _cellsize = getLuaFloat(L, -1);
-    lua_pop(L, 1);
-
-    /* Get EPSG (projection type) */
-    lua_getfield(L, index, CRS_KEY);
-    uint32_t _epsg = getLuaInteger(L, -1);
+    /* Get file type */
+    lua_getfield(L, index, FILETYPE_KEY);
+    long filetype = (size_t)getLuaInteger(L, -1);
     lua_pop(L, 1);
 
     /* Convert Image from Base64 to Binary */
-    std::string tiff = MathLib::b64decode(image, imagelength);
+    std::string tiff = MathLib::b64decode(image, filelength);
 
     /* Create GdalRaster */
-    return new GdalRaster(L, tiff.c_str(), tiff.size(), _bbox, _cellsize, _epsg);
+    return new GdalRaster(L, tiff.c_str(), tiff.size(), filetype);
 }
-        
-        
+
 /*----------------------------------------------------------------------------
  * subset
  *----------------------------------------------------------------------------*/
 bool GdalRaster::subset (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
+
+    if(!latlon2xy) return false;
+
     OGRErr eErr = p.transform(latlon2xy);
-    if( eErr )
+    if(eErr != OGRERR_NONE)
     {
         mlog(CRITICAL, "Raster lat/lon transformation failed with error: %d\n", eErr);
     }
@@ -242,24 +136,23 @@ bool GdalRaster::subset (double lon, double lat)
     if (first_hit)
     {
         first_hit = false;
-        
+
         print2term("\n\nEPSG is: %u\n", epsg);
         print2term("lon: %lf, lat: %lf, x: %lf, y: %lf\n", lon, lat, p.getX(), p.getY());
         print2term("blon_min: %lf, blon_max: %lf, blat_min: %lf, blat_max: %lf\n\n", bbox.lon_min, bbox.lon_max, bbox.lat_min, bbox.lat_max);
         print2term("\n\n");
     }
 
-    
     lon = p.getX();
     lat = p.getY();
-        
+
     if ((lon >= bbox.lon_min) &&
         (lon <= bbox.lon_max) &&
         (lat >= bbox.lat_min) &&
         (lat <= bbox.lat_max))
     {
-        uint32_t row = (bbox.lat_max - lat) / cellsize;
-        uint32_t col = (lon - bbox.lon_min) / cellsize;
+        uint32_t row = (bbox.lat_max - lat) / abs(lat_cellsize);
+        uint32_t col = (lon - bbox.lon_min) / abs(lon_cellsize);
 
         if ((row < rows) && (col < cols))
         {
@@ -274,7 +167,7 @@ bool GdalRaster::subset (double lon, double lat)
  *----------------------------------------------------------------------------*/
 GdalRaster::~GdalRaster(void)
 {
-    if(raster) delete [] raster;
+    if(raster) CPLFree(raster);
     if(latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
 }
 
@@ -285,77 +178,123 @@ GdalRaster::~GdalRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize, uint32_t _epsg):
+GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, long _filetype):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    assert(image);
+    OGRErr eErr;
 
     /* Initialize Class Data Members */
+    raster = NULL;
     rows = 0;
     cols = 0;
-    raster = NULL;
-    bbox = _bbox;
-    cellsize = _cellsize;
-    epsg = _epsg;
+    bbox = {0.0, 0.0, 0.0, 0.0 };
+    lon_cellsize = 0;
+    lat_cellsize = 0;
+    epsg = 0;
+    latlon2xy = NULL;
+    source.Clear();
+    target.Clear();
 
-    /* Create LibTIFF Callback Data Structure */
-    geotiff_cb_t g = {
-        .filebuf = (const uint8_t*)image,
-        .filesize = imagelength,
-        .pos = 0
-    };
+    /* Must have valid file */
+    if(!image || imagelength == 0) {mlog(CRITICAL, "Invalid file type!\n"); return;} 
+    
+    const char  *format = "GTiff";
+    const char  *fname  = "/vsimem/temp.tif";
 
-    /* Open TIFF via Memory Callbacks */
-    TIFF* tif = TIFFClientOpen("Memory", "r", (thandle_t)&g,
-                                libtiff_read,
-                                libtiff_write,
-                                libtiff_seek,
-                                libtiff_close,
-                                libtiff_size,
-                                libtiff_map,
-                                libtiff_unmap);
-
-    /* Read TIFF */
-    if(tif)
+    filetype = (file_t)_filetype;
+    switch (filetype)
     {
-        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &cols);
-        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &rows);
-
-        /* Create User Data */
-        uint32_t strip_size = TIFFStripSize(tif);
-        uint32_t num_strips = TIFFNumberOfStrips(tif);
-        long size = strip_size * num_strips;
-        if(size > 0 && size < GDALRASTER_MAX_IMAGE_SIZE)
-        {
-            /* Allocate Image */
-            raster = new uint8_t [size];
-
-            /* Read Data */
-            for(uint32_t strip = 0; strip < num_strips; strip++)
-            {
-                TIFFReadEncodedStrip(tif, strip, &raster[strip * strip_size], (tsize_t)-1);
-            }
-
-            /* Clean Up */
-            TIFFClose(tif);
-        }
-        else
-        {
-            mlog(CRITICAL, "Invalid image size: %ld\n", size);
-        }
-    }
-    else
+    case GEOJSON:
     {
-        mlog(CRITICAL, "Unable to open memory mapped tiff file");
+        /* Create raster from json file, store it in 'fname' */
+        break;
     }
-        
+
+    case ESRISHAPE:
+    {
+        /* Create raster from shape file, store it in 'fname' */
+        break;
+    }
+
+    case GEOTIF:
+    {
+        VSILFILE *fp = VSIFileFromMemBuffer(fname, (GByte *)image, (vsi_l_offset)imagelength, FALSE);
+        if (!fp) {mlog(CRITICAL, "Failed creating memFile\n"); return;}
+        VSIFCloseL(fp);
+        break;
+    }
+
+    default:
+    {
+        mlog(CRITICAL, "Invalid file type!\n");
+        return; /* Must have valid file */
+    }
+    }
+
+    /* 
+     * Store raster in byte array for fast lookup. 
+     * Create transform for lat lon to raster projection.
+     */
+
+    GDALDataset *dataset= (GDALDataset*) GDALOpen(fname, GA_ReadOnly);
+    if(!dataset) {mlog(CRITICAL, "Failed creating dataset\n"); return;}  
+    
+    const OGRSpatialReference *sref = (OGRSpatialReference *)GDALGetSpatialRef(dataset);
+    if(!dataset) {mlog(CRITICAL, "Failed GDALGetSpatialRef\n"); return;}  
+
+    /* Set projection */    
+    epsg = sref->GetEPSGGeogCS();
+
+    long bands = dataset->GetBands().size();
+    if(bands == 0)
+    {
+        mlog(CRITICAL, "Raster has no bands!\n");
+        return;  /* Must have at least one band */
+    }
+    else if(bands > 1)
+        mlog(WARNING, "Raster has: %ld bands, using first band\n", bands);
+
+    GDALRasterBand *band = dataset->GetRasterBand(1);
+    assert(band);
+
+    cols = band->GetXSize();
+    rows = band->GetYSize();
+
+    double adfGeoTransform[6];
+
+    /* Get raster boundry box and cell/pixel size */
+    dataset->GetGeoTransform(adfGeoTransform);
+    bbox.lon_min = adfGeoTransform[0];
+    bbox.lon_max = adfGeoTransform[0] + cols * adfGeoTransform[1];
+    bbox.lat_max = adfGeoTransform[3];      
+    bbox.lat_min = adfGeoTransform[3] + rows * adfGeoTransform[5];
+
+    lon_cellsize = adfGeoTransform[1];
+    lat_cellsize = adfGeoTransform[5];
+
+    long size = cols * rows;
+    raster = (uint8_t*)CPLMalloc(sizeof(uint8_t)*size);
+    assert(raster); 
+ 
+    /*
+     * RasterIO: acording to GDAL docs, the raster original data will be converted
+     * automaticly to GDT_Byte by RasterIO call below.
+     */
+    eErr = band->RasterIO(GF_Read, 0, 0, cols, rows, raster, cols, rows, GDT_Byte, 0, 0);
+    if (eErr != OGRERR_NONE)
+    {
+        mlog(CRITICAL, "RasterIO failed with error: %d\n", eErr);
+    }
+
+    GDALClose((GDALDatasetH) dataset);
+    VSIUnlink(fname);
+
     /* Create coordinates transformation */    
     source.importFromEPSG(GDALRASTER_PHOTON_CRS);
     target.importFromEPSG(epsg);
     target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
     source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
     latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
-    assert(latlon2xy);
     if(!latlon2xy)
     {
         mlog(CRITICAL, "Failed to create projection from EPSG:%d to EPSG:%d\n", GDALRASTER_PHOTON_CRS, epsg);
@@ -442,8 +381,9 @@ int GdalRaster::luaCellSize(lua_State* L)
         GdalRaster* lua_obj = (GdalRaster*)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->cellsize);
-        num_ret += 1;
+        lua_pushnumber(L, lua_obj->lat_cellsize);
+        lua_pushnumber(L, lua_obj->lon_cellsize);
+        num_ret += 2;
 
         /* Set Return Status */
         status = true;

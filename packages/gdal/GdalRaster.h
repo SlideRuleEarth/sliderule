@@ -60,12 +60,12 @@ class GdalRaster: public LuaObject
         static const int GDALRASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
         static const int GDALRASTER_PHOTON_CRS = 4326;
 
-        static const char* IMAGE_KEY;
-        static const char* IMAGELENGTH_KEY;
+        static const char* FILEDATA_KEY;
+        static const char* FILELENGTH_KEY;
+        static const char* FILETYPE_KEY;
         static const char* DIMENSION_KEY;
         static const char* BBOX_KEY;
         static const char* CELLSIZE_KEY;
-        static const char* CRS_KEY;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -77,6 +77,14 @@ class GdalRaster: public LuaObject
             double lon_max;
             double lat_max;
         } bbox_t;
+
+        typedef enum {
+            GEOJSON,
+            ESRISHAPE,
+            GEOTIF,
+        } file_t;
+
+
 
         /*--------------------------------------------------------------------
          * Methods
@@ -102,7 +110,7 @@ class GdalRaster: public LuaObject
             return rows;
         }
 
-        uint32_t numCols (void)
+        uint32_t numCols(void)
         {
             return cols;
         }
@@ -120,7 +128,7 @@ class GdalRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        GdalRaster (lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize,  uint32_t _epsgl);
+        GdalRaster (lua_State* L, const char* image, long imagelength, long _filetype);
 
     private:
 
@@ -128,15 +136,16 @@ class GdalRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
+        uint8_t*    raster;
         uint32_t    rows;
         uint32_t    cols;
-        uint8_t*    raster;
         bbox_t      bbox;
-        double      cellsize;
+        double      lon_cellsize;
+        double      lat_cellsize;
         uint32_t    epsg;
-        
-    
-        OGRCoordinateTransformation* latlon2xy = NULL;
+        file_t      filetype;
+
+        OGRCoordinateTransformation *latlon2xy;
         OGRSpatialReference source;
         OGRSpatialReference target;
 
