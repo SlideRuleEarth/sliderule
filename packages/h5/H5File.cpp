@@ -154,7 +154,7 @@ void* H5File::readThread (void* parm)
 
         /* Post Record */
         unsigned char* rec_buf;
-        int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, 0);
+        int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, sizeof(h5file_t) + results.datasize);
         int status = outq.postCopy(rec_buf, rec_size, results.data, results.datasize, SYS_TIMEOUT);
         if(status <= 0)
         {

@@ -116,7 +116,7 @@ class H5File: public LuaObject
 
         Asset*              asset;
         const char*         resource;
-        H5Coro::context_t    context;
+        H5Coro::context_t   context;
 };
 
 #endif  /* __h5_file__ */

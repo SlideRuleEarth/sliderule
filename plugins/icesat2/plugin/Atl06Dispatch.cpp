@@ -632,22 +632,17 @@ void Atl06Dispatch::postResult (result_t* result)
             /* Check If ATL06 Record Should Be Posted*/
             if((!elevation && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
             {
+                /* Calculate Record Size (according to number of elevations) */
+                int size;
+                if(!parms->compact) size = elevationIndex * sizeof(elevation_t);
+                else                size = elevationIndex * sizeof(elevation_compact_t);
+
                 /* Serialize Record */
                 unsigned char* buffer;
-                int size = recObj->serialize(&buffer, RecordObject::REFERENCE);
-
-                /* Adjust Size (according to number of elevations) */
-                if(!parms->compact)
-                {
-                    size -= (BATCH_SIZE - elevationIndex) * sizeof(elevation_t);
-                }
-                else
-                {
-                    size -= (BATCH_SIZE - elevationIndex) * sizeof(elevation_compact_t);
-                }
+                int bufsize = recObj->serialize(&buffer, RecordObject::REFERENCE, size);
 
                 /* Post Record */
-                if(outQ->postCopy(buffer, size, SYS_TIMEOUT) > 0)
+                if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
                 {
                     stats.post_success_cnt += elevationIndex;
                 }

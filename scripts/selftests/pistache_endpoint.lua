@@ -20,12 +20,13 @@ local tmpfile = os.tmpname()
 
 -- Unit Test --
 
-local server = pistache.server(9082):name("myengine")
+local port = 9091
+local server = pistache.server(port):name("myengine")
 
 sys.wait(1)
 
 print('\n------------------\nTest01: Echo\n------------------')
-os.execute(string.format("curl -sS -d \"%s\" http://127.0.0.1:9082/echo -o %s", parm, tmpfile))
+os.execute(string.format("curl -sS -d \"%s\" http://127.0.0.1:%d/echo -o %s", parm, port, tmpfile))
 local f = io.open(tmpfile)
 if f ~= nil then
     result = f:read()
@@ -36,14 +37,12 @@ else
 end
 
 print('\n------------------\nTest02: Engine\n------------------')
-os.execute(string.format("curl -sS -X POST -d '%s' http://127.0.0.1:9082/source/example_engine_endpoint > %s", json_object, tmpfile))
+os.execute(string.format("curl -sS -X POST -d '%s' http://127.0.0.1:%d/source/example_engine_endpoint > %s", json_object, port, tmpfile))
+print("curl call finished")
 f = io.open(tmpfile)
 if f ~= nil then
-    f:read(4)
     local result1 = f:read()
-    f:read(4)
     local result2 = f:read()
-    f:read(4)
     local result3 = f:read()
     f:close()
     runner.check(result1 == "FILE")
@@ -54,7 +53,7 @@ else
 end
 
 print('\n------------------\nTest03: Source\n------------------')
-os.execute(string.format("curl -sS -X GET -d '%s' http://127.0.0.1:9082/source/example_source_endpoint > %s", json_object, tmpfile))
+os.execute(string.format("curl -sS -X GET -d '%s' http://127.0.0.1:%d/source/example_source_endpoint > %s", json_object, port, tmpfile))
 f = io.open(tmpfile)
 if f ~= nil then
     local result = f:read()

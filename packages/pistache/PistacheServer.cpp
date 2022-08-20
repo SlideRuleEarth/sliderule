@@ -316,16 +316,8 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
         status = rspq.receiveRef(ref, SYS_TIMEOUT);
         if(status == MsgQ::STATE_OKAY)
         {
-            uint32_t size = ref.size;
-            if(size > 0)
-            {
-                stream.write((const char*)&size, sizeof(size));
-                stream.write((const char*)ref.data, ref.size);
-            }
-            else
-            {
-                stream.ends();
-            }
+            if(ref.size > 0)    stream.write((const char*)ref.data, ref.size);
+            else                stream.ends();
             rspq.dereference(ref);
         }
         else if(status == MsgQ::STATE_TIMEOUT)

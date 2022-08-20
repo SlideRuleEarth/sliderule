@@ -312,9 +312,21 @@ bool RecordObject::deserialize(unsigned char* buffer, int size)
 int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 {
     assert(buffer);
+    int bufsize = memoryAllocated;
+    int datasize = 0;
 
     /* Determine Buffer Size */
-    int bufsize = memoryAllocated;
+    rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
+    if(size > 0)
+    {
+        #ifdef __be__
+            int hdrsize = sizeof(rec_hdr_t) + rechdr->type_size;
+        #else
+            int hdrsize = sizeof(rec_hdr_t) + LocalLib::swapl(rechdr->type_size);
+        #endif
+        bufsize = MIN(memoryAllocated, hdrsize + size);
+        datasize = bufsize - hdrsize;
+    }
 
     /* Allocate or Copy Buffer */
     if (mode == ALLOCATE)
@@ -329,8 +341,18 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     else // if (mode == COPY)
     {
         assert(*buffer);
-        bufsize = MIN(bufsize, size);
         LocalLib::copy(*buffer, recordMemory, bufsize);
+    }
+
+    /* Set Size in Record Header */
+    if(size > 0)
+    {
+        rec_hdr_t* bufhdr = (rec_hdr_t*)(*buffer);
+        #ifdef __be__
+            bufhdr->data_size = datasize;
+        #else
+            bufhdr->data_size = LocalLib::swapl(datasize);
+        #endif
     }
 
     /* Return Buffer Size */
@@ -1635,11 +1657,11 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
 void* RecordObject::populateHeader (char* buf, const char* type_name, int type_size, int data_size)
 {
     #ifdef __be__
-    rec_hdr_t hdr = {
-        .version = RECORD_FORMAT_VERSION,
-        .rectype_length = def->type_size,
-        .data_length = data_size
-    };
+        rec_hdr_t hdr = {
+            .version = RECORD_FORMAT_VERSION,
+            .type_size = def->type_size,
+            .data_size = data_size
+        };
     #else
         rec_hdr_t hdr = {
             .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
