@@ -46,6 +46,22 @@
 #include <gdalwarper.h>
 #include <cpl_vsi.h>
 
+
+/******************************************************************************
+ * LOCAL DEFINES AND MACROS
+ ******************************************************************************/
+
+#define CHECKPTR(p)                                                         \
+    do                                                                      \
+    {                                                                       \
+        if ((p) == NULL)                                                    \
+        {                                                                   \
+            mlog(CRITICAL, "NULL pointer detected, constructor failed!\n"); \
+            assert(p);                                                      \
+            return;                                                         \
+        }                                                                   \
+    } while (0)
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -68,7 +84,7 @@ const char* GdalRaster::DIMENSION_KEY  = "dimension";
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
-        
+
 /*----------------------------------------------------------------------------
  * luaCreate - file(
  *  {
@@ -90,6 +106,7 @@ int GdalRaster::luaCreate (lua_State* L)
     }
 }
 
+
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
@@ -97,7 +114,7 @@ GdalRaster* GdalRaster::create (lua_State* L, int index)
 {
     /* Get file */
     lua_getfield(L, index, FILEDATA_KEY);
-    const char* image = getLuaString(L, -1);
+    const char* file = getLuaString(L, -1);
     lua_pop(L, 1);
 
     /* Get file Length */
@@ -110,8 +127,8 @@ GdalRaster* GdalRaster::create (lua_State* L, int index)
     long filetype = (size_t)getLuaInteger(L, -1);
     lua_pop(L, 1);
 
-    /* Convert Image from Base64 to Binary */
-    std::string tiff = MathLib::b64decode(image, filelength);
+    /* Convert file from Base64 to Binary */
+    std::string tiff = MathLib::b64decode(file, filelength);
 
     /* Create GdalRaster */
     return new GdalRaster(L, tiff.c_str(), tiff.size(), filetype);
@@ -124,7 +141,7 @@ bool GdalRaster::subset (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
 
-    if(!latlon2xy) return false;
+    if(!latlon2xy) return false; /* Constructor failed */
 
     OGRErr eErr = p.transform(latlon2xy);
     if(eErr != OGRERR_NONE)
@@ -137,9 +154,9 @@ bool GdalRaster::subset (double lon, double lat)
     {
         first_hit = false;
 
-        print2term("\n\nEPSG is: %u\n", epsg);
-        print2term("lon: %lf, lat: %lf, x: %lf, y: %lf\n", lon, lat, p.getX(), p.getY());
-        print2term("blon_min: %lf, blon_max: %lf, blat_min: %lf, blat_max: %lf\n\n", bbox.lon_min, bbox.lon_max, bbox.lat_min, bbox.lat_max);
+        print2term("lon: %lf, lat: %lf, x: %lf, y: %lf\n\n", lon, lat, p.getX(), p.getY());
+        print2term("x_min: %.6lf, x_max: %.6lf, y_min: %.6lf, y_max: %.6lf\n\n", bbox.lon_min, bbox.lon_max, bbox.lat_min, bbox.lat_max);
+        print2term("x_cellsize: %.6lf, y_cellsize: %.6lf\n\n", lon_cellsize, lat_cellsize);
         print2term("\n\n");
     }
 
@@ -168,6 +185,7 @@ bool GdalRaster::subset (double lon, double lat)
 GdalRaster::~GdalRaster(void)
 {
     if(raster) CPLFree(raster);
+    if(dataset) GDALClose((GDALDatasetH)dataset);
     if(latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
 }
 
@@ -178,127 +196,122 @@ GdalRaster::~GdalRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(lua_State* L, const char* image, long imagelength, long _filetype):
+GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, long _filetype):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    OGRErr eErr;
-
     /* Initialize Class Data Members */
     raster = NULL;
     rows = 0;
     cols = 0;
-    bbox = {0.0, 0.0, 0.0, 0.0 };
+    bands = 0;
+    bbox = {0.0, 0.0, 0.0, 0.0};
     lon_cellsize = 0;
     lat_cellsize = 0;
-    epsg = 0;
     latlon2xy = NULL;
+    dataset = NULL;
     source.Clear();
     target.Clear();
 
     /* Must have valid file */
-    if(!image || imagelength == 0) {mlog(CRITICAL, "Invalid file type!\n"); return;} 
-    
-    const char  *format = "GTiff";
-    const char  *fname  = "/vsimem/temp.tif";
+    CHECKPTR(file);
+
+    const char *format = "GTiff";
+    const char *fname = "/vsimem/temp.tif";
 
     filetype = (file_t)_filetype;
     switch (filetype)
     {
-    case GEOJSON:
-    {
-        /* Create raster from json file, store it in 'fname' */
-        break;
+        case GEOJSON:
+        {
+            /* Create raster from json file, store it in 'fname' */
+            break;
+        }
+
+        case ESRISHAPE:
+        {
+            /* Create raster from shape file, store it in 'fname' */
+            break;
+        }
+
+        case GEOTIF:
+        {
+            VSILFILE *fp = VSIFileFromMemBuffer(fname, (GByte *)file, (vsi_l_offset)filelength, FALSE);
+            CHECKPTR(fp);
+            VSIFCloseL(fp);
+            break;
+        }
+
+        default:
+        {
+            mlog(CRITICAL, "Invalid file type!\n");
+            return; /* Must have valid file */
+        }
     }
 
-    case ESRISHAPE:
-    {
-        /* Create raster from shape file, store it in 'fname' */
-        break;
-    }
 
-    case GEOTIF:
-    {
-        VSILFILE *fp = VSIFileFromMemBuffer(fname, (GByte *)image, (vsi_l_offset)imagelength, FALSE);
-        if (!fp) {mlog(CRITICAL, "Failed creating memFile\n"); return;}
-        VSIFCloseL(fp);
-        break;
-    }
-
-    default:
-    {
-        mlog(CRITICAL, "Invalid file type!\n");
-        return; /* Must have valid file */
-    }
-    }
-
-    /* 
-     * Store raster in byte array for fast lookup. 
+    /*
+     * Store raster in byte array for fast lookup.
      * Create transform for lat lon to raster projection.
      */
 
-    GDALDataset *dataset= (GDALDataset*) GDALOpen(fname, GA_ReadOnly);
-    if(!dataset) {mlog(CRITICAL, "Failed creating dataset\n"); return;}  
-    
-    const OGRSpatialReference *sref = (OGRSpatialReference *)GDALGetSpatialRef(dataset);
-    if(!dataset) {mlog(CRITICAL, "Failed GDALGetSpatialRef\n"); return;}  
+    dataset = (GDALDataset *)GDALOpen(fname, GA_ReadOnly);
+    VSIUnlink(fname);
+    CHECKPTR(dataset);
 
-    /* Set projection */    
-    epsg = sref->GetEPSGGeogCS();
+    cols = dataset->GetRasterXSize();
+    rows = dataset->GetRasterYSize();
+    bands = dataset->GetRasterCount();
 
-    long bands = dataset->GetBands().size();
-    if(bands == 0)
+    const char *wkt = dataset->GetProjectionRef();
+    CHECKPTR(wkt);
+    mlog(INFO, "Raster WKT: %s", wkt);
+    mlog(INFO, "Raster Driver: %s/%s",  dataset->GetDriver()->GetDescription(), dataset->GetDriver()->GetMetadataItem(GDAL_DMD_LONGNAME));
+    mlog(INFO, "Raster cols:%u, rows:%u, bands:%u", cols, rows, bands);
+
+    if (bands == 0)
     {
         mlog(CRITICAL, "Raster has no bands!\n");
-        return;  /* Must have at least one band */
+        return; /* Must have at least one band */
     }
-    else if(bands > 1)
-        mlog(WARNING, "Raster has: %ld bands, using first band\n", bands);
+    else if (bands > 1)
+        mlog(WARNING, "Raster has: %u bands, using first band\n", bands);
 
-    GDALRasterBand *band = dataset->GetRasterBand(1);
-    assert(band);
+    /* Get raster boundry box and cell size */
+    double geot[6];
+    dataset->GetGeoTransform(geot);
+    bbox.lon_min = geot[0];
+    bbox.lon_max = geot[0] + cols * geot[1];
+    bbox.lat_max = geot[3];
+    bbox.lat_min = geot[3] + rows * geot[5];
 
-    cols = band->GetXSize();
-    rows = band->GetYSize();
-
-    double adfGeoTransform[6];
-
-    /* Get raster boundry box and cell/pixel size */
-    dataset->GetGeoTransform(adfGeoTransform);
-    bbox.lon_min = adfGeoTransform[0];
-    bbox.lon_max = adfGeoTransform[0] + cols * adfGeoTransform[1];
-    bbox.lat_max = adfGeoTransform[3];      
-    bbox.lat_min = adfGeoTransform[3] + rows * adfGeoTransform[5];
-
-    lon_cellsize = adfGeoTransform[1];
-    lat_cellsize = adfGeoTransform[5];
+    lon_cellsize = geot[1];
+    lat_cellsize = geot[5];
 
     long size = cols * rows;
-    raster = (uint8_t*)CPLMalloc(sizeof(uint8_t)*size);
-    assert(raster); 
- 
+    raster = (uint8_t *)CPLMalloc(sizeof(uint8_t) * size);
+    CHECKPTR(raster);
+
     /*
      * RasterIO: acording to GDAL docs, the raster original data will be converted
      * automaticly to GDT_Byte by RasterIO call below.
      */
-    eErr = band->RasterIO(GF_Read, 0, 0, cols, rows, raster, cols, rows, GDT_Byte, 0, 0);
-    if (eErr != OGRERR_NONE)
+    GDALRasterBand *band = dataset->GetRasterBand(1);
+    CHECKPTR(band);
+    OGRErr e0 = band->RasterIO(GF_Read, 0, 0, cols, rows, raster, cols, rows, GDT_Byte, 0, 0);
+
+    OGRErr e1 = source.importFromEPSG(GDALRASTER_PHOTON_CRS);
+    OGRErr e2 = target.importFromWkt(wkt);
+
+    if( ((e0 == e1) == e2) == OGRERR_NONE)
     {
-        mlog(CRITICAL, "RasterIO failed with error: %d\n", eErr);
+        /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+        target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+        source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+        /* Create coordinates transformation */
+        latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
+        CHECKPTR(latlon2xy);
     }
-
-    GDALClose((GDALDatasetH) dataset);
-    VSIUnlink(fname);
-
-    /* Create coordinates transformation */    
-    source.importFromEPSG(GDALRASTER_PHOTON_CRS);
-    target.importFromEPSG(epsg);
-    target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-    source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-    latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
-    if(!latlon2xy)
-    {
-        mlog(CRITICAL, "Failed to create projection from EPSG:%d to EPSG:%d\n", GDALRASTER_PHOTON_CRS, epsg);
-    } 
 }
 
 /******************************************************************************

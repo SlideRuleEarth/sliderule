@@ -71,8 +71,8 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd $(BUILD); make
 
-ctags: prep ## generate ctags
-	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT) -DCMAKE_PREFIX_PATH=/usr/include/gdal
+ctags: development-config ## generate ctags
+	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT) 
 	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
 
 install: ## install sliderule to system
