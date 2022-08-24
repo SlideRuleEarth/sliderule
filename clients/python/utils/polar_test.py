@@ -34,6 +34,7 @@ if __name__ == '__main__':
 
     # Region of Interest #
     region = icesat2.toregion("examples/grandmesa.geojson")
+    # region = icesat2.toregion("examples/grandmesa.shp")
 
     # Configure SlideRule #
     icesat2.init(url, True)
@@ -77,29 +78,29 @@ if __name__ == '__main__':
 
     source = osr.SpatialReference()
     source.ImportFromEPSG(4326)
-    
+
     dest_plate_carte1 = osr.SpatialReference()
     dest_plate_carte1.ImportFromEPSG(32662)
-    
+
     dest_plate_carte2 = osr.SpatialReference()
     dest_plate_carte2.ImportFromEPSG(32663)
 
     dest_npolar= osr.SpatialReference()
     dest_npolar.ImportFromEPSG(3995)
-    
+
     dest_spolar= osr.SpatialReference()
     dest_spolar.ImportFromEPSG(3031)
 
 
     lon = -100.0
     lat = 30.0
-    
+
     transform = osr.CoordinateTransformation(source, dest_plate_carte1)
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(lat, lon)
     point.Transform(transform)
     print("PCARTE1 (lon, lat)", lon, lat, point.GetX(), point.GetY())
-    transform = point = None 
+    transform = point = None
 
 
 
@@ -108,8 +109,8 @@ if __name__ == '__main__':
     point.AddPoint(lat, lon)
     point.Transform(transform)
     print("PCARTE2 (lon, lat)", lon, lat, point.GetX(), point.GetY())
-    transform = point = None 
-    
+    transform = point = None
+
 
     lon = -100.0
     lat = 80.0
@@ -118,8 +119,8 @@ if __name__ == '__main__':
     point.AddPoint(lat, lon)
     point.Transform(transform)
     print("NPOLAR  (lon, lat)", lon, lat, point.GetX(), point.GetY())
-    transform = point = None 
-    
+    transform = point = None
+
 
     lon = -100.0
     lat = -80.0
@@ -128,4 +129,4 @@ if __name__ == '__main__':
     point.AddPoint(lat, lon)
     point.Transform(transform)
     print("SPOLAR  (lon, lat)", lon, lat, point.GetX(), point.GetY())
-    transform = point = None 
+    transform = point = None
