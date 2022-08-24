@@ -57,7 +57,7 @@
 #define LUA_PARM_ATL08_CLASS                    "atl08_class"
 #define LUA_PARM_QUALITY                        "quality_ph"
 #define LUA_PARM_POLYGON                        "poly"
-#define LUA_PARM_FILE                           "file"
+#define LUA_PARM_RASTER                         "file"
 #define LUA_PARM_TRACK                          "track"
 #define LUA_PARM_STAGES                         "stages"
 #define LUA_PARM_COMPACT                        "compact"

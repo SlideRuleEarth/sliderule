@@ -612,9 +612,9 @@ atl06_parms_t* getLuaAtl06Parms (lua_State* L, int index)
             if(provided) mlog(DEBUG, "Setting %s to %d points", LUA_PARM_POLYGON, (int)parms->polygon.length());
             lua_pop(L, 1);
 
-            lua_getfield(L, index, LUA_PARM_FILE);
+            lua_getfield(L, index, LUA_PARM_RASTER);
             get_lua_raster(L, -1, parms, &provided);
-            if(provided) mlog(DEBUG, "Setting %s file for use", LUA_PARM_FILE);
+            if(provided) mlog(DEBUG, "Setting %s file for use", LUA_PARM_RASTER);
             lua_pop(L, 1);
 
             lua_getfield(L, index, LUA_PARM_TRACK);

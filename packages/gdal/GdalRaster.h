@@ -82,7 +82,6 @@ class GdalRaster: public LuaObject
 
         typedef enum {
             GEOJSON,
-            ESRISHAPE,
             GEOTIF,
         } file_t;
 
@@ -130,27 +129,31 @@ class GdalRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        GdalRaster (lua_State* L, const char* image, long imagelength, long _filetype);
+        GdalRaster (lua_State* L, const char* image, long imagelength, long _filetype, double cellsize);
 
     private:
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        uint8_t*    raster;
+        uint8_t *raster;
         uint32_t    rows;
         uint32_t    cols;
         uint32_t    bands;
         bbox_t      bbox;
         double      lon_cellsize;
         double      lat_cellsize;
+        double      cellsize;
         file_t      filetype;
 
         OGRCoordinateTransformation *latlon2xy;
-        GDALDataset *dataset;
         OGRSpatialReference source;
         OGRSpatialReference target;
+        GDALDataset *rasterDset;
+        GDALDataset *jsonDset;
+
+        std::string rasterfname;
+        std::string jsonfname;
 
         /*--------------------------------------------------------------------
          * Methods
