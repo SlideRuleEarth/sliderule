@@ -98,5 +98,6 @@ void initgdal (void)
 
 void deinitgdal (void)
 {
+    GDALDestroy();
 }
 }
