@@ -47,9 +47,6 @@
  ******************************************************************************/
 
 
-// TODO: add bbox as optional parameter with functions to use it
-// have the lua_get_raster use this constructor
-
 class GdalRaster: public LuaObject
 {
     public:
