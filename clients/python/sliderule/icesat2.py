@@ -27,6 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 import itertools
 import copy
 import json
@@ -37,16 +38,13 @@ import logging
 import warnings
 import numpy
 import geopandas
-import uuid
 import base64
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
 from sklearn.cluster import KMeans
 import sliderule
 from sliderule import version
+import os
 
 ###############################################################################
 # GLOBALS
@@ -99,41 +97,7 @@ SC_FORWARD = 1
 # gps-based epoch for delta times #
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 
-EPSG_POLAR_NORTH  = "EPSG:3995"  # WGS 84 / Arctic Polar Stereographic North
-CRS_POLAR_NORTH   = 3995
 
-EPSG_POLAR_SOUTH  = "EPSG:3031"  # WGS 84 / Antartic Stereographic South
-CRS_POLAR_SOUTH   = 3031
-
-EPSG_MERCATOR     = "EPSG:4326"  # WGS 84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
-CRS_MERCATOR      = 4326
-
-EPSG_WEB_MERCATOR = "EPSG:3857"  # WGS 84 / Web Mercator (Pseudo Mercator), Earth as perfec shpere, Coordinate system PROJECTED from the surface of the sphere.
-                                 # used by Google Maps, Mapquest, etc
-CRS_WEB_MERCATOR  = 3857
-
-EPSG_PLATE_CARTE  = "EPSG:32663" # WGS 84 / World Equidistant Cylindrical, meters, Server default for non polar regions
-CRS_PLATE_CARTE   = 32663
-
-
-###########################################################################################################
-# All of this is further confused by that fact that often even though the map is in Web Mercator(EPSG: 3857),
-# the actual coordinates used are in lat-long (EPSG: 4326). This convention is used in many places, such as:
-# Most mapping API,s You can give the coordinates in Lat-long, and the API automatically transforms it
-# to the appropriate Web Mercator coordinates.
-# Most mapping Libraries use lat-long for position, while the map is in web Mercator.
-#
-# It's confusing when an API says it uses EPSG:3857 but gives a location using EPSG:4326
-# Quick way of telling what EPSG your lat/lon is in: Look at how big the number & the precision
-#
-# EPSG:4326 is in degrees - 3D sphere
-# EPSG:3857 is in metres  - 2D projection
-#
-# Example, Paris is:
-# Lat(48.8589506) Lon(2.2768485)
-# Lat(6250962.06) Lon(253457.62)
-#
-###########################################################################################################
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -150,6 +114,10 @@ CRS_PLATE_CARTE   = 32663
 # Software is furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
+
+
+# WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
+EPSG_MERCATOR = "EPSG:4326"
 
 CMR_URL = 'https://cmr.earthdata.nasa.gov'
 CMR_PAGE_SIZE = 2000
@@ -1070,7 +1038,9 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     Parameters
     ----------
         filename:   str
-                    file name of GeoJSON formatted regions of interest, file **must** have named with the .geojson suffix
+                    file name of GeoJSON formatted regions of interest, file **must** have name with the .geojson suffix
+                    file name of ESRI Shapefile formatted regions of interest, file **must** have name with the .shp suffix
+                    file name of raster data of region of interest, file **must** have name with the .tif suffix
         tolerance:  float
                     tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
         cellsize:   float
@@ -1115,25 +1085,21 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         >>> atl06 = icesat2.atl06p(parms)
     '''
 
-    # create:
-    #   gdf - geodataframe
-    #   inp_lyr - input layer
+    # From GdalRaster.h
+    GEOJSON   = 0
+    GEOTIF    = 1
+    filetype = None
+    tempfile = "temp.geojson"
+
     if isinstance(source, geopandas.GeoDataFrame):
         # user provided GeoDataFrame instead of a file
         gdf = source
-
-        # create input layer
-        proj = osr.SpatialReference()
-        proj.ImportFromEPSG(CRS_MERCATOR)
-        rast_ogr_ds = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
-        inp_lyr = rast_ogr_ds.CreateLayer('poly', srs=proj)
-
-        # add polygons to input layer
-        for polygon in gdf.geometry:
-            geom = ogr.CreateGeometryFromWkt(polygon.wkt)
-            feat = ogr.Feature(inp_lyr.GetLayerDefn())
-            feat.SetGeometryDirectly(geom)
-            inp_lyr.CreateFeature(feat)
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        filetype = GEOJSON
+        os.remove(tempfile)
 
     elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
         # create lat/lon lists
@@ -1148,171 +1114,76 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         p = Polygon([point for point in zip(lons, lats)])
         gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_MERCATOR)
 
-        # create input layer
-        proj = osr.SpatialReference()
-        proj.ImportFromEPSG(CRS_MERCATOR)
-        rast_ogr_ds = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
-        inp_lyr = rast_ogr_ds.CreateLayer('poly', srs=proj)
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        filetype = GEOJSON
+        os.remove(tempfile)
 
-        # add polygons to input layer
-        for polygon in gdf.geometry:
-            geom = ogr.CreateGeometryFromWkt(polygon.wkt)
-            feat = ogr.Feature(inp_lyr.GetLayerDefn())
-            feat.SetGeometryDirectly(geom)
-            inp_lyr.CreateFeature(feat)
-
-    elif isinstance(source, str) and ((source.find(".geojson") > 1) or (source.find(".shp") > 1)):
+    elif isinstance(source, str) and (source.find(".shp") > 1):
         # create geodataframe
         gdf = geopandas.read_file(source)
-
-        # create input driver
-        if (source.find(".geojson") > 1):
-            inp_driver = ogr.GetDriverByName('GeoJSON')
-        else: # (source.find(".shp") > 1)
-            inp_driver = ogr.GetDriverByName('ESRI Shapefile')
-
-        # create input layer
-        inp_source = inp_driver.Open(source, 0)
-        inp_lyr = inp_source.GetLayer()
-
-    else:
-        raise TypeError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
-
-    # get extent of raster
-    x_min, x_max, y_min, y_max = inp_lyr.GetExtent()
-    x_ncells = int((x_max - x_min) / cellsize)
-    y_ncells = int((y_max - y_min) / cellsize)
-
-
-    print("\nOriginal box for raster create")
-    print( "x_min:", x_min, "\tx_max:", x_max, "\ty_min:", y_min, "\ty_max:", y_max, "\ncellsize:", cellsize, "\tx_ncells:", x_ncells, "\ty_ncells:", y_ncells, "\n")
-
-    # setup raster output
-    out_driver = gdal.GetDriverByName('GTiff')
-    out_filename = '/vsimem/' + str(uuid.uuid4())
-    out_source = out_driver.Create(out_filename, x_ncells, y_ncells, 1, gdal.GDT_Byte, options = [ 'COMPRESS=DEFLATE' ])
-    out_source.SetGeoTransform((x_min, cellsize, 0, y_max, 0, -cellsize))
-    spref = inp_lyr.GetSpatialRef()
-    proj = spref.ExportToWkt()
-    out_source.SetProjection(proj)
-    out_lyr = out_source.GetRasterBand(1)
-    out_lyr.SetNoDataValue(200)
-
-    # rasterize
-    gdal.RasterizeLayer(out_source, [1], inp_lyr, burn_values=[1])
-
-    # close the data sources
-    inp_source = None
-    rast_ogr_ds = None
-    out_source = None
-
-
-
-# Use polar projections for near polar regions
-    if (y_max > 60 and y_min > 60):
-        crs = CRS_POLAR_NORTH
-    elif (y_max < -60 and y_min < -60):
-        crs = CRS_POLAR_SOUTH
-    else:
-        crs = CRS_MERCATOR
-
-    # crs = CRS_PLATE_CARTE
-    # crs = CRS_POLAR_NORTH
-    # crs = CRS_POLAR_SOUTH
-
-    if(crs != CRS_MERCATOR):
-      # Reproject raster
-      print( "Projecting raster to", crs, "\n")
-      new_out_filename = out_filename + 'reprojected'
-      srs = "EPSG:" + str(crs)
-      gdal.Warp(new_out_filename, out_filename, dstSRS = srs)
-      out_filename = new_out_filename
-
-
-    # read out raster data
-    f = gdal.VSIFOpenL(out_filename, 'rb')
-    gdal.VSIFSeekL(f, 0, 2)  # seek to end
-    size = gdal.VSIFTellL(f)
-    gdal.VSIFSeekL(f, 0, 0)  # seek to beginning
-    raster = gdal.VSIFReadL(1, size, f)
-    gdal.VSIFCloseL(f)
-
-    # Get box from raster
-    src = gdal.Open(out_filename)
-    proj = osr.SpatialReference(wkt=src.GetProjection())
-    epsg = int(proj.GetAttrValue('AUTHORITY', 1))
-    ulx, xres, xskew, uly, yskew, yres = src.GetGeoTransform()
-    lrx = ulx + (src.RasterXSize * xres)
-    lry = uly + (src.RasterYSize * yres)
-
-    print("lrx:", lrx, "lry:", lry,  "yres:", yres, "\n")
-
-    x_min = ulx
-    x_max = lrx
-    y_min = lry
-    y_max = uly
-
-    x_ncells = src.RasterXSize
-    y_ncells = src.RasterYSize
-    cellsize = xres         # xres == yres due to the type of projection we did
-    src = None
-
-    print("Box from raster with EPSG:", epsg)
-    print( "x_min:", x_min, "\tx_max:", x_max, "\ty_min:", y_min, "\ty_max:", y_max, "\n\nx_cellsize:", xres, "\ty_cellsize:", yres, "\tx_ncells:", x_ncells, "\ty_ncells: ", y_ncells, "\n")
-
-    # simplify polygon
-    if(tolerance > 0.0):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            gdf = gdf.buffer(tolerance)
-            gdf = gdf.simplify(tolerance)
-
-    # generate polygon
-    polygon = __gdf2poly(gdf)
-
-    # generate clusters
-    clusters = []
-    if n_clusters > 1:
-        # pull out centroids of each geometry object
-        if "CenLon" in gdf and "CenLat" in gdf:
-            X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
-        else:
-            s = gdf.centroid
-            X = numpy.column_stack((s.x, s.y))
-        # run k means clustering algorithm against polygons in gdf
-        kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
-        y_kmeans = kmeans.fit_predict(X)
-        k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
-        gdf = gdf.join(k)
-        # build polygon for each cluster
-        for n in range(n_clusters):
-            c_gdf = gdf[gdf["cluster"] == n]
-            c_poly = __gdf2poly(c_gdf)
-            clusters.append(c_poly)
-
-
-    # From GdalRaster.h
-    GEOJSON   = 0
-    GEOTIF    = 1
-    type = None
-
-    if isinstance(source, str) and (source.find(".shp") > 1):
-        with open(source, mode='rb') as file:
-            infile = file.read()
-
-        # CONVERT with pandas to geojson file
-
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        filetype = GEOJSON
+        os.remove(tempfile)
 
     elif isinstance(source, str) and (source.find(".geojson") > 1):
+        # create geodataframe
+        gdf = geopandas.read_file(source)
         with open(source, mode='rt') as file:
             datafile = file.read()
-        type = GEOJSON
-    # else:
-    #     # encode image in base64
-    #     datafile = base64.b64encode(raster).decode('UTF-8')
-    #     type = GEOTIF
+        filetype = GEOJSON
 
-    print("Before sending, cellsize:", cellsize)
+    elif isinstance(source, str) and (source.find(".tif") > 1):
+        gdf = None
+        # encode image in base64
+        with open(source, mode='rb') as file:
+            raster = file.read()
+
+        datafile = base64.b64encode(raster).decode('UTF-8')
+        filetype = GEOTIF
+
+    else:
+        raise TypeError("incorrect filetype: please use a .geojson, .shp, .tif or a geodataframe")
+
+
+    # If user provided raster we don't have gdf, geopandas cannot easily convert it
+    polygon = clusters = None
+    if gdf is not None:
+        # simplify polygon
+        if(tolerance > 0.0):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                gdf = gdf.buffer(tolerance)
+                gdf = gdf.simplify(tolerance)
+
+        # generate polygon
+        polygon = __gdf2poly(gdf)
+
+        # generate clusters
+        clusters = []
+        if n_clusters > 1:
+            # pull out centroids of each geometry object
+            if "CenLon" in gdf and "CenLat" in gdf:
+                X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+            else:
+                s = gdf.centroid
+                X = numpy.column_stack((s.x, s.y))
+            # run k means clustering algorithm against polygons in gdf
+            kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+            y_kmeans = kmeans.fit_predict(X)
+            k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+            gdf = gdf.join(k)
+            # build polygon for each cluster
+            for n in range(n_clusters):
+                c_gdf = gdf[gdf["cluster"] == n]
+                c_poly = __gdf2poly(c_gdf)
+                clusters.append(c_poly)
+
 
     # return region #
     return {
@@ -1323,7 +1194,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             # "_data": datafile, # geotiff or shape file
             "data": datafile, # geotiff or geojson file
             "length": len(datafile), # encoded binary file or txt file
-            "type": type,  # geotiff or geojson
+            "type": filetype,  # geotiff or geojson
             "cellsize": cellsize  # used only for geojson, untis are in projection
         }
     }
