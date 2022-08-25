@@ -58,6 +58,7 @@ class GdalRaster: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int GDALRASTER_NODATA_VALUE = 200;
         static const int GDALRASTER_PIXEL_ON = 1;
         static const int GDALRASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
         static const int GDALRASTER_PHOTON_CRS = 4326;
@@ -103,7 +104,7 @@ class GdalRaster: public LuaObject
 
         bool rawPixel (const uint32_t row, const uint32_t col)
         {
-            return raster[(row * cols) + col] == GDALRASTER_PIXEL_ON;
+            return raster[(row * cols) + col] == pixelon;
         }
 
         uint32_t numRows (void)
@@ -129,31 +130,31 @@ class GdalRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        GdalRaster (lua_State* L, const char* image, long imagelength, long _filetype, double cellsize);
+        GdalRaster (lua_State* L, const char* image, long imagelength, long _filetype, double _cellsize);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        uint8_t *raster;
-        uint32_t    rows;
-        uint32_t    cols;
-        uint32_t    bands;
-        bbox_t      bbox;
-        double      lon_cellsize;
-        double      lat_cellsize;
-        double      cellsize;
-        file_t      filetype;
+        uint8_t  *raster;
+        uint32_t  rows;
+        uint32_t  cols;
+        uint32_t  bands;
+        bbox_t    bbox;
+        double    lon_cellsize;
+        double    lat_cellsize;
+        double    cellsize;
+        file_t    filetype;
+        uint8_t   pixelon;
 
         OGRCoordinateTransformation *latlon2xy;
         OGRSpatialReference source;
         OGRSpatialReference target;
         GDALDataset *rasterDset;
         GDALDataset *jsonDset;
-
-        std::string rasterfname;
-        std::string jsonfname;
+        std::string  rasterfname;
+        std::string  jsonfname;
 
         /*--------------------------------------------------------------------
          * Methods
