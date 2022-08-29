@@ -36,9 +36,7 @@ if __name__ == '__main__':
     cycles     = [0, 0, 0]
     exectime   = [0, 0, 0]
 
-    test_files = ["examples/grandmesa.geojson", "examples/grandmesa.shp", "examples/grandmesa.tif"]
-    # test_files = ["examples/grandmesa.tif", "examples/grandmesa.geojson", "examples/grandmesa.shp"]
-    # test_files = ["examples/grandmesa.tif"]
+    test_files = ["examples/grandmesa.geojson", "examples/grandmesa.shp"]
 
     for i, testfile in enumerate(test_files):
         print("Testing with:", testfile)

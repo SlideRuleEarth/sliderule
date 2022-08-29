@@ -1040,7 +1040,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         filename:   str
                     file name of GeoJSON formatted regions of interest, file **must** have name with the .geojson suffix
                     file name of ESRI Shapefile formatted regions of interest, file **must** have name with the .shp suffix
-                    file name of raster data of region of interest, file **must** have name with the .tif suffix
         tolerance:  float
                     tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
         cellsize:   float
@@ -1058,7 +1057,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             "file": {
                 "data": <base64 encoded geotiff image string>,
                 "length": <length of base64 encoded image>,
-                "type": < gtiff, sh, geojson >
             }
         }
 
@@ -1085,10 +1083,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         >>> atl06 = icesat2.atl06p(parms)
     '''
 
-    # From GdalRaster.h
-    GEOJSON   = 0
-    GEOTIF    = 1
-    filetype = None
     tempfile = "temp.geojson"
 
     if isinstance(source, geopandas.GeoDataFrame):
@@ -1098,7 +1092,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         gdf.to_file(tempfile, driver="GeoJSON")
         with open(tempfile, mode='rt') as file:
             datafile = file.read()
-        filetype = GEOJSON
         os.remove(tempfile)
 
     elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
@@ -1118,7 +1111,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         gdf.to_file(tempfile, driver="GeoJSON")
         with open(tempfile, mode='rt') as file:
             datafile = file.read()
-        filetype = GEOJSON
         os.remove(tempfile)
 
     elif isinstance(source, str) and (source.find(".shp") > 1):
@@ -1128,7 +1120,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         gdf.to_file(tempfile, driver="GeoJSON")
         with open(tempfile, mode='rt') as file:
             datafile = file.read()
-        filetype = GEOJSON
         os.remove(tempfile)
 
     elif isinstance(source, str) and (source.find(".geojson") > 1):
@@ -1136,19 +1127,9 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         gdf = geopandas.read_file(source)
         with open(source, mode='rt') as file:
             datafile = file.read()
-        filetype = GEOJSON
-
-    elif isinstance(source, str) and (source.find(".tif") > 1):
-        gdf = None
-        # encode image in base64
-        with open(source, mode='rb') as file:
-            raster = file.read()
-
-        datafile = base64.b64encode(raster).decode('UTF-8')
-        filetype = GEOTIF
 
     else:
-        raise TypeError("incorrect filetype: please use a .geojson, .shp, .tif or a geodataframe")
+        raise TypeError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
 
 
     # If user provided raster we don't have gdf, geopandas cannot easily convert it
@@ -1192,10 +1173,9 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         "clusters": clusters, # list of polygon clusters for cmr request
         "file": {
             # "_data": datafile, # geotiff or shape file
-            "data": datafile, # geotiff or geojson file
-            "length": len(datafile), # encoded binary file or txt file
-            "type": filetype,  # geotiff or geojson
-            "cellsize": cellsize  # used only for geojson, untis are in projection
+            "data": datafile, # geojson file
+            "length": len(datafile), # geojson file length
+            "cellsize": cellsize  # untis are in crs/projection
         }
     }
 
