@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "GdalRaster.h"
+#include "GeoJsonRaster.h"
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
@@ -71,8 +71,8 @@ do                                                                              
  * STATIC DATA
  ******************************************************************************/
 
-const char* GdalRaster::LuaMetaName = "GdalRaster";
-const struct luaL_Reg GdalRaster::LuaMetaTable[] = {
+const char* GeoJsonRaster::LuaMetaName = "GeoJsonRaster";
+const struct luaL_Reg GeoJsonRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
     {"bbox",        luaBoundingBox},
     {"cell",        luaCellSize},
@@ -80,10 +80,10 @@ const struct luaL_Reg GdalRaster::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* GdalRaster::FILEDATA_KEY   = "data";
-const char* GdalRaster::FILELENGTH_KEY = "length";
-const char* GdalRaster::CELLSIZE_KEY   = "cellsize";
-const char* GdalRaster::DIMENSION_KEY  = "dimension";
+const char* GeoJsonRaster::FILEDATA_KEY   = "data";
+const char* GeoJsonRaster::FILELENGTH_KEY = "length";
+const char* GeoJsonRaster::CELLSIZE_KEY   = "cellsize";
+const char* GeoJsonRaster::DIMENSION_KEY  = "dimension";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -96,7 +96,7 @@ const char* GdalRaster::DIMENSION_KEY  = "dimension";
  *      filelength=<filelength>,
  *  })
  *----------------------------------------------------------------------------*/
-int GdalRaster::luaCreate (lua_State* L)
+int GeoJsonRaster::luaCreate (lua_State* L)
 {
     try
     {
@@ -113,7 +113,7 @@ int GdalRaster::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GdalRaster* GdalRaster::create (lua_State* L, int index)
+GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 {
     /* Get geojson file */
     lua_getfield(L, index, FILEDATA_KEY);
@@ -130,14 +130,14 @@ GdalRaster* GdalRaster::create (lua_State* L, int index)
     double _cellsize = getLuaFloat(L, -1);
     lua_pop(L, 1);
 
-    /* Create GdalRaster */
-    return new GdalRaster(L, file, filelength, _cellsize);
+    /* Create GeoJsonRaster */
+    return new GeoJsonRaster(L, file, filelength, _cellsize);
 }
 
 /*----------------------------------------------------------------------------
  * subset
  *----------------------------------------------------------------------------*/
-bool GdalRaster::subset (double lon, double lat)
+bool GeoJsonRaster::subset (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
 
@@ -174,7 +174,7 @@ bool GdalRaster::subset (double lon, double lat)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GdalRaster::~GdalRaster(void)
+GeoJsonRaster::~GeoJsonRaster(void)
 {
     if (raster) delete[] raster;
     if (latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
@@ -210,7 +210,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, double _cellsize):
+GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, double _cellsize):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     char uuid_str[UUID_STR_LEN] = {0};
@@ -275,7 +275,7 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, double _
         int bandInx = 1; /* Band index starts at 1, not 0 */
         GDALRasterBand *band = rasterDset->GetRasterBand(bandInx);
         CHECKPTR(band);
-        band->SetNoDataValue(GDALRASTER_NODATA_VALUE);
+        band->SetNoDataValue(RASTER_NODATA_VALUE);
 
         /*
          * Build params for GDALRasterizeLayers
@@ -290,7 +290,7 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, double _
         layers[0] = srcLayer;
 
         double burnValues[BANDCNT];
-        burnValues[0] = GDALRASTER_PIXEL_ON;
+        burnValues[0] = RASTER_PIXEL_ON;
 
         CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
         CHECK_GDALERR(cplerr);
@@ -316,7 +316,7 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, double _
 
         const char *_wkt = rasterDset->GetProjectionRef();
         CHECKPTR(_wkt);
-        ogrerr = source.importFromEPSG(GDALRASTER_PHOTON_CRS);
+        ogrerr = source.importFromEPSG(RASTER_PHOTON_CRS);
         CHECK_GDALERR(ogrerr);
         ogrerr = target.importFromWkt(_wkt);
         CHECK_GDALERR(ogrerr);
@@ -333,7 +333,7 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, double _
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating GdalRaster: %s", e.what());
+        mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
     }
 
    /* Cleanup */
@@ -354,7 +354,7 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, double _
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
  *----------------------------------------------------------------------------*/
-int GdalRaster::luaDimensions(lua_State *L)
+int GeoJsonRaster::luaDimensions(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -362,7 +362,7 @@ int GdalRaster::luaDimensions(lua_State *L)
     try
     {
         /* Get Self */
-        GdalRaster *lua_obj = (GdalRaster *)getLuaSelf(L, 1);
+        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->rows);
@@ -384,7 +384,7 @@ int GdalRaster::luaDimensions(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaBoundingBox - :bbox() --> (lon_min, lat_min, lon_max, lat_max)
  *----------------------------------------------------------------------------*/
-int GdalRaster::luaBoundingBox(lua_State *L)
+int GeoJsonRaster::luaBoundingBox(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -392,7 +392,7 @@ int GdalRaster::luaBoundingBox(lua_State *L)
     try
     {
         /* Get Self */
-        GdalRaster *lua_obj = (GdalRaster *)getLuaSelf(L, 1);
+        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->bbox.lon_min);
@@ -416,7 +416,7 @@ int GdalRaster::luaBoundingBox(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaCellSize - :cell() --> cell size
  *----------------------------------------------------------------------------*/
-int GdalRaster::luaCellSize(lua_State *L)
+int GeoJsonRaster::luaCellSize(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -424,7 +424,7 @@ int GdalRaster::luaCellSize(lua_State *L)
     try
     {
         /* Get Self */
-        GdalRaster *lua_obj = (GdalRaster *)getLuaSelf(L, 1);
+        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushnumber(L, lua_obj->cellsize);
@@ -445,7 +445,7 @@ int GdalRaster::luaCellSize(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaPixel - :pixel(r, c) --> on|off
  *----------------------------------------------------------------------------*/
-int GdalRaster::luaPixel(lua_State *L)
+int GeoJsonRaster::luaPixel(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -453,7 +453,7 @@ int GdalRaster::luaPixel(lua_State *L)
     try
     {
         /* Get Self */
-        GdalRaster *lua_obj = (GdalRaster *)getLuaSelf(L, 1);
+        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
 
         /* Get Pixel Index */
         uint32_t r = getLuaInteger(L, 2);
@@ -485,14 +485,14 @@ int GdalRaster::luaPixel(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaSubset - :subset(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
-int GdalRaster::luaSubset(lua_State *L)
+int GeoJsonRaster::luaSubset(lua_State *L)
 {
     bool status = false;
 
     try
     {
         /* Get Self */
-        GdalRaster *lua_obj = (GdalRaster *)getLuaSelf(L, 1);
+        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
 
         /* Get Coordinates */
         double lon = getLuaFloat(L, 2);

@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gdal_raster__
-#define __gdal_raster__
+#ifndef __geojson_raster__
+#define __geojson_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -43,11 +43,11 @@
 #include <gdal_priv.h>
 
 /******************************************************************************
- * GDALRASTER CLASS
+ * GEOJSON RASTER CLASS
  ******************************************************************************/
 
 
-class GdalRaster: public LuaObject
+class GeoJsonRaster: public LuaObject
 {
     public:
 
@@ -55,10 +55,10 @@ class GdalRaster: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int GDALRASTER_NODATA_VALUE = 200;
-        static const int GDALRASTER_PIXEL_ON = 1;
-        static const int GDALRASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
-        static const int GDALRASTER_PHOTON_CRS = 4326;
+        static const int   RASTER_NODATA_VALUE = 200;
+        static const int   RASTER_PIXEL_ON = 1;
+        static const int   RASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
+        static const int   RASTER_PHOTON_CRS = 4326;
 
         static const char* FILEDATA_KEY;
         static const char* FILELENGTH_KEY;
@@ -82,11 +82,11 @@ class GdalRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate       (lua_State* L);
-        static GdalRaster*  create          (lua_State* L, int index);
+        static int            luaCreate      (lua_State* L);
+        static GeoJsonRaster* create         (lua_State* L, int index);
 
-        bool                subset         (double lon, double lat);
-        virtual            ~GdalRaster     (void);
+        bool                  subset         (double lon, double lat);
+        virtual              ~GeoJsonRaster  (void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -94,7 +94,7 @@ class GdalRaster: public LuaObject
 
         bool rawPixel (const uint32_t row, const uint32_t col)
         {
-            return raster[(row * cols) + col] == GDALRASTER_PIXEL_ON;
+            return raster[(row * cols) + col] == RASTER_PIXEL_ON;
         }
 
         uint32_t numRows (void)
@@ -120,7 +120,7 @@ class GdalRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        GdalRaster (lua_State* L, const char* image, long imagelength, double _cellsize);
+        GeoJsonRaster (lua_State* L, const char* image, long imagelength, double _cellsize);
 
     private:
         /*--------------------------------------------------------------------
@@ -148,4 +148,4 @@ class GdalRaster: public LuaObject
         static int luaSubset        (lua_State* L);
 };
 
-#endif  /* __gdal_raster__ */
+#endif  /* __geojson_raster__ */

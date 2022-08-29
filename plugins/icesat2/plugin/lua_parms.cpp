@@ -499,12 +499,12 @@ static void get_lua_raster (lua_State* L, int index, atl06_parms_t* parms, bool*
     {
         try
         {
-            parms->raster = GdalRaster::create(L, index);
+            parms->raster = GeoJsonRaster::create(L, index);
             *provided = true;
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Error creating GdalRaster file: %s", e.what());
+            mlog(e.level(), "Error creating GeoJsonRaster file: %s", e.what());
         }
     }
 }

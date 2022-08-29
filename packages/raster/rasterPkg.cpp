@@ -34,31 +34,32 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "gdalpkg.h"
+#include "rasterPkg.h"
+#include "GeoJsonRaster.h"
 #include <gdal.h>
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
-#define LUA_GDAL_LIBNAME  "gdal"
+#define LUA_GEOJSONRASTER_LIBNAME  "raster"
 
 /******************************************************************************
- * GDAL FUNCTIONS
+ * GEOJSONRASTER FUNCTIONS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * gdal_open
+ * raster_open
  *----------------------------------------------------------------------------*/
-int gdal_open (lua_State* L)
+int raster_open (lua_State* L)
 {
-    static const struct luaL_Reg gdal_functions[] = {
-        {"file",        GdalRaster::luaCreate},
+    static const struct luaL_Reg raster_functions[] = {
+        {"file",        GeoJsonRaster::luaCreate},
         {NULL,          NULL}
     };
 
     /* Set Package Library */
-    luaL_newlib(L, gdal_functions);
+    luaL_newlib(L, raster_functions);
 
     return 1;
 }
@@ -77,7 +78,7 @@ void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
  * EXPORTED FUNCTIONS
  ******************************************************************************/
 extern "C" {
-void initgdal (void)
+void initraster (void)
 {
     /* Register all gdal drivers */
     GDALAllRegister();
@@ -87,16 +88,16 @@ void initgdal (void)
     CPLSetErrorHandler(fptrGdalErrorHandler);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_GDAL_LIBNAME, gdal_open);
+    LuaEngine::extend(LUA_GEOJSONRASTER_LIBNAME, raster_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GDAL_LIBNAME, LIBID);
+    LuaEngine::indicate(LUA_GEOJSONRASTER_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_GDAL_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_GEOJSONRASTER_LIBNAME, LIBID);
 }
 
-void deinitgdal (void)
+void deinitraster (void)
 {
     GDALDestroy();
 }

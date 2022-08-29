@@ -29,24 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gdalpkg__
-#define __gdalpkg__
+#ifndef __raster_pkg__
+#define __raster_pkg__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GdalRaster.h"
+// #include "GeoJsonRaster.h"
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initgdal (void);
-void deinitgdal (void);
+void initraster (void);
+void deinitraster (void);
 }
 
-#endif  /* __gdalpkg__ */
+#endif  /* __raster_pkg__ */
 
 

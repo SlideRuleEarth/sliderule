@@ -27,7 +27,7 @@ debug-config: prep ## configure make for release version of sliderule binary
 DEVCFG  = -DENABLE_TRACING=ON
 DEVCFG += -DUSE_AWS_PACKAGE=ON
 DEVCFG += -DUSE_CCSDS_PACKAGE=ON
-DEVCFG += -DUSE_GDAL_PACKAGE=ON
+DEVCFG += -DUSE_RASTER_PACKAGE=ON
 DEVCFG += -DUSE_H5_PACKAGE=ON
 DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
@@ -44,7 +44,7 @@ PYTHONCFG += -DUSE_H5_PACKAGE=ON
 PYTHONCFG += -DUSE_AWS_PACKAGE=ON
 PYTHONCFG += -DUSE_LEGACY_PACKAGE=ON
 PYTHONCFG += -DUSE_CCSDS_PACKAGE=ON
-PYTHONCFG += -DUSE_GDAL_PACKAGE=ON
+PYTHONCFG += -DUSE_RASTER_PACKAGE=ON
 PYTHONCFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
 PYTHONCFG += -DH5CORO_THREAD_POOL_SIZE=0
 PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
@@ -72,7 +72,7 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(BUILD); make
 
 ctags: development-config ## generate ctags
-	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT) 
+	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)
 	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
 
 install: ## install sliderule to system
