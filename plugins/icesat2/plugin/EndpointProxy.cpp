@@ -268,7 +268,8 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     /* Post Requests to Proxy Threads */
     for(int i = 0; i < numRequests; i++)
     {
-        if(rqstPub->postCopy(&requests[i], sizeof(atl06_rqst_t), IO_CHECK) <= 0)
+        atl06_rqst_t* rqst = &requests[i];
+        if(rqstPub->postCopy(&rqst, sizeof(rqst), IO_CHECK) <= 0)
         {
             LuaEndpoint::generateExceptionStatus(RTE_ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
         }
@@ -282,6 +283,14 @@ EndpointProxy::~EndpointProxy (void)
 {
     active = false;
     delete collatorPid;
+    for(int i = 0; i < numRequests; i++)
+    {
+        if(!requests[i].terminated)
+        {
+            delete [] requests[i].resource;
+            delete requests[i].node;
+        }
+    }
     delete [] endpoint;
     delete [] asset;
     delete [] requests;
@@ -357,28 +366,28 @@ void* EndpointProxy::proxyThread (void* parm)
 
     while(proxyActive)
     {
-        atl06_rqst_t rqst;
-        int recv_status = rqstSub->receiveCopy(&rqst, sizeof(atl06_rqst_t), SYS_TIMEOUT);
+        atl06_rqst_t* rqst;
+        int recv_status = rqstSub->receiveCopy(&rqst, sizeof(rqst), SYS_TIMEOUT);
         if(recv_status > 0)
         {
-            EndpointProxy* proxy = rqst.proxy;
+            EndpointProxy* proxy = rqst->proxy;
 
             try
             {
                 /* Get Lock from Orchestrator */
                 double expiration_time = TimeLib::latchtime() + proxy->timeout;
                 double seconds_to_wait = 1.0;
-                while(proxyActive && rqst.proxy->active && !rqst.node && (expiration_time > TimeLib::latchtime()))
+                while(proxyActive && proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
                 {
                     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
                     if(nodes->length() > 0)
                     {
-                        rqst.node = nodes->get(0);
+                        rqst->node = nodes->get(0);
                     }
                     else
                     {
                         double count_down = seconds_to_wait;
-                        while(proxyActive && rqst.proxy->active && (count_down > 0))
+                        while(proxyActive && proxy->active && (count_down > 0))
                         {
                             LocalLib::sleep(1);
                             count_down -= 1.0;
@@ -390,39 +399,39 @@ void* EndpointProxy::proxyThread (void* parm)
                 }
 
                 /* Proxy Request */
-                if(rqst.node)
+                if(rqst->node)
                 {
                     /* Make Request */
                     SafeString path("/source/%s", proxy->endpoint);
                     SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}",
-                                    proxy->asset, rqst.resource, proxy->parameters, proxy->timeout);
-                    HttpClient client(NULL, rqst.node->member);
+                                    proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
+                    HttpClient client(NULL, rqst->node->member);
                     HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout);
                     if(rsps.code == EndpointObject::OK)
                     {
-                        rqst.valid = true;
+                        rqst->valid = true;
                     }
                     else
                     {
-                        mlog(CRITICAL, "Failed to proxy request to %s: %d", rqst.node->member, (int)rsps.code);
+                        mlog(CRITICAL, "Failed to proxy request to %s: %d", rqst->node->member, (int)rsps.code);
                     }
 
                     /* Unlock Node */
-                    OrchestratorLib::unlock(&rqst.node->transaction, 1);
+                    OrchestratorLib::unlock(&rqst->node->transaction, 1);
                 }
                 else
                 {
                     /* Timeout Occurred */
-                    mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", rqst.resource);
+                    mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", rqst->resource);
                 }
 
                 /* Mark Complete */
-                rqst.sync.lock();
+                rqst->sync.lock();
                 {
-                    rqst.complete = true;
-                    rqst.sync.signal();
+                    rqst->complete = true;
+                    rqst->sync.signal();
                 }
-                rqst.sync.unlock();
+                rqst->sync.unlock();
             }
             catch(const RunTimeException& e)
             {
