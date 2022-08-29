@@ -47,16 +47,25 @@
  * LOCAL DEFINES AND MACROS
  ******************************************************************************/
 
-#define CHECKPTR(p)                                                         \
-    do                                                                      \
-    {                                                                       \
-        if ((p) == NULL)                                                    \
-        {                                                                   \
-            mlog(CRITICAL, "NULL pointer detected, constructor failed!\n"); \
-            assert(p);                                                      \
-            return;                                                         \
-        }                                                                   \
-    } while (0)
+#define CHECKPTR(p)                                                           \
+do                                                                            \
+{                                                                             \
+    if ((p) == NULL)                                                          \
+    {                                                                         \
+        throw RunTimeException(CRITICAL, RTE_ERROR, "NULL pointer detected"); \
+    }                                                                         \
+} while (0)
+
+
+#define CHECK_GDALERR(e)                                                          \
+do                                                                                \
+{                                                                                 \
+    if ((e))   /* CPLErr and OGRErr types have 0 for no error  */                 \
+    {                                                                             \
+        throw RunTimeException(CRITICAL, RTE_ERROR, "GDAL ERROR detected: %d", e);\
+    }                                                                             \
+} while (0)
+
 
 /******************************************************************************
  * STATIC DATA
@@ -73,7 +82,6 @@ const struct luaL_Reg GdalRaster::LuaMetaTable[] = {
 
 const char* GdalRaster::FILEDATA_KEY   = "data";
 const char* GdalRaster::FILELENGTH_KEY = "length";
-const char* GdalRaster::FILETYPE_KEY   = "type";
 const char* GdalRaster::CELLSIZE_KEY   = "cellsize";
 const char* GdalRaster::DIMENSION_KEY  = "dimension";
 
@@ -86,7 +94,6 @@ const char* GdalRaster::DIMENSION_KEY  = "dimension";
  *  {
  *      file=<file>,
  *      filelength=<filelength>,
- *      filetype=<file type>]
  *  })
  *----------------------------------------------------------------------------*/
 int GdalRaster::luaCreate (lua_State* L)
@@ -108,19 +115,14 @@ int GdalRaster::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 GdalRaster* GdalRaster::create (lua_State* L, int index)
 {
-    /* Get file */
+    /* Get geojson file */
     lua_getfield(L, index, FILEDATA_KEY);
     const char* file = getLuaString(L, -1);
     lua_pop(L, 1);
 
-    /* Get file Length */
+    /* Get geojson file Length */
     lua_getfield(L, index, FILELENGTH_KEY);
     size_t filelength = (size_t)getLuaInteger(L, -1);
-    lua_pop(L, 1);
-
-    /* Get file type */
-    lua_getfield(L, index, FILETYPE_KEY);
-    long filetype = (size_t)getLuaInteger(L, -1);
     lua_pop(L, 1);
 
     /* Get cellsize */
@@ -128,18 +130,8 @@ GdalRaster* GdalRaster::create (lua_State* L, int index)
     double _cellsize = getLuaFloat(L, -1);
     lua_pop(L, 1);
 
-    std::string datafile;
-
-    if( filetype == GEOJSON )
-        datafile = file;  /* Text */
-    else
-    {
-        /* Convert file from Base64 to Binary */
-        datafile = MathLib::b64decode(file, filelength);
-    }
-
     /* Create GdalRaster */
-    return new GdalRaster(L, datafile.c_str(), datafile.size(), filetype, _cellsize);
+    return new GdalRaster(L, file, filelength, _cellsize);
 }
 
 /*----------------------------------------------------------------------------
@@ -148,8 +140,6 @@ GdalRaster* GdalRaster::create (lua_State* L, int index)
 bool GdalRaster::subset (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
-
-    if(!latlon2xy) return false; /* Constructor failed */
 
     if(p.transform(latlon2xy) == OGRERR_NONE)
     {
@@ -161,8 +151,8 @@ bool GdalRaster::subset (double lon, double lat)
             (lat >= bbox.lat_min) &&
             (lat <= bbox.lat_max))
         {
-            uint32_t row = (bbox.lat_max - lat) / abs(lat_cellsize);
-            uint32_t col = (lon - bbox.lon_min) / abs(lon_cellsize);
+            uint32_t row = (bbox.lat_max - lat) / cellsize;
+            uint32_t col = (lon - bbox.lon_min) / cellsize;
 
             if ((row < rows) && (col < cols))
             {
@@ -186,12 +176,7 @@ bool GdalRaster::subset (double lon, double lat)
  *----------------------------------------------------------------------------*/
 GdalRaster::~GdalRaster(void)
 {
-    VSIUnlink(jsonfname.c_str());
-    VSIUnlink(rasterfname.c_str());
-
-    if (raster) CPLFree(raster);
-    if (jsonDset) GDALClose((GDALDatasetH)jsonDset);
-    if (rasterDset) GDALClose((GDALDatasetH)rasterDset);
+    if (raster) delete[] raster;
     if (latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
 }
 
@@ -208,48 +193,49 @@ static const char *getUuid(char *uuid_str)
     return uuid_str;
 }
 
+/* Utilitiy function to check constructor's params */
+static void validatedParams(const char *file, long filelength, double _cellsize)
+{
+    if (file == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
+
+    if (filelength <= 0)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
+
+    if (_cellsize <= 0.0)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellsize: %lf:", _cellsize);
+}
+
+
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, long _filetype, double _cellsize):
+GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, double _cellsize):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     char uuid_str[UUID_STR_LEN] = {0};
-    VSILFILE *fp = NULL;
+    bool rasterCreated = false;
+    GDALDataset *rasterDset = NULL;
+    GDALDataset *jsonDset   = NULL;
+    std::string rasterfname = "/vsimem/" + std::string(getUuid(uuid_str));
+    std::string jsonfname   = "/vsimem/" + std::string(getUuid(uuid_str));
 
     /* Initialize Class Data Members */
     raster = NULL;
     rows = 0;
     cols = 0;
-    bands = 0;
     bbox = {0.0, 0.0, 0.0, 0.0};
-    lon_cellsize = 0;
-    lat_cellsize = 0;
-    cellsize = _cellsize;
-    filetype = (file_t)_filetype;
-    pixelon = GDALRASTER_PIXEL_ON;
+    cellsize = 0.0;
     latlon2xy = NULL;
-    rasterDset = NULL;
-    jsonDset = NULL;
     source.Clear();
     target.Clear();
-    rasterfname = "/vsimem/" + std::string(getUuid(uuid_str));
-    jsonfname   = "/vsimem/" + std::string(getUuid(uuid_str));
 
-    /* Must have valid file */
-    CHECKPTR(file);
+    validatedParams(file, filelength, _cellsize);
 
-    if (filetype == GEOJSON)
+    try
     {
         /* Create raster from json file */
-
-        if( !(cellsize > 0.0) )
-        {
-            mlog(CRITICAL, "Cannot create raster with cellsize: %lf\n", cellsize);
-            return;
-        }
-
-        fp = VSIFileFromMemBuffer(jsonfname.c_str(), (GByte *)file, (vsi_l_offset)filelength, FALSE);
+        VSILFILE *fp = VSIFileFromMemBuffer(jsonfname.c_str(), (GByte *)file, (vsi_l_offset)filelength, FALSE);
         CHECKPTR(fp);
         VSIFCloseL(fp);
 
@@ -258,23 +244,20 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, long _fi
         OGRLayer *srcLayer = jsonDset->GetLayer(0);
         CHECKPTR(srcLayer);
 
-        GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
-        CHECKPTR(driver);
-
         OGREnvelope e;
-        OGRErr err = srcLayer->GetExtent(&e);
-        if (err != OGRERR_NONE)
-        {
-            mlog(CRITICAL, "Failed to get geojson file extent\n");
-            return;
-        }
-        int x_ncells = int((e.MaxX - e.MinX) / cellsize);
-        int y_ncells = int((e.MaxY - e.MinY) / cellsize);
+        OGRErr ogrerr = srcLayer->GetExtent(&e);
+        CHECK_GDALERR(ogrerr);
+
+        cellsize = _cellsize;
+        int _cols = int((e.MaxX - e.MinX) / cellsize);
+        int _rows = int((e.MaxY - e.MinY) / cellsize);
 
         char **options = NULL;
         options = CSLSetNameValue(options, "COMPRESS", "DEFLATE");
 
-        rasterDset = (GDALDataset *)driver->Create(rasterfname.c_str(), x_ncells, y_ncells, 1, GDT_Byte, options);
+        GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
+        CHECKPTR(driver);
+        rasterDset = (GDALDataset *)driver->Create(rasterfname.c_str(), _cols, _rows, 1, GDT_Byte, options);
         CSLDestroy(options);
         CHECKPTR(rasterDset);
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};
@@ -309,97 +292,35 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, long _fi
         double burnValues[BANDCNT];
         burnValues[0] = GDALRASTER_PIXEL_ON;
 
-        CPLErr er = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
-        if (er != CPLE_None)
-            mlog(CRITICAL, "Failed to rasterize geojson file\n");
+        CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
+        CHECK_GDALERR(cplerr);
 
-        GDALClose(rasterDset);
-        rasterDset = NULL;
-    }
-    else if (filetype == GEOTIF)
-    {
-        fp = VSIFileFromMemBuffer(rasterfname.c_str(), (GByte *)file, (vsi_l_offset)filelength, FALSE);
-        CHECKPTR(fp);
-        VSIFCloseL(fp);
-    }
-    else
-    {
-        mlog(CRITICAL, "Invalid file type!\n");
-        return; /* Must have valid file */
-    }
+        /* Store information about raster */
+        cols = rasterDset->GetRasterXSize();
+        rows = rasterDset->GetRasterYSize();
 
-    /*
-     * Open raster (newly created or given as parameter)
-     * Read it into byte array and create lat/lon transform function.
-     */
-    rasterDset = (GDALDataset *)GDALOpen(rasterfname.c_str(), GA_ReadOnly);
-    CHECKPTR(rasterDset);
+        /* Get raster boundry box */
+        rasterDset->GetGeoTransform(geot);
+        bbox.lon_min = geot[0];
+        bbox.lon_max = geot[0] + cols * geot[1];
+        bbox.lat_max = geot[3];
+        bbox.lat_min = geot[3] + rows * geot[5];
 
-    cols  = rasterDset->GetRasterXSize();
-    rows  = rasterDset->GetRasterYSize();
-    bands = rasterDset->GetRasterCount();
+        long size = cols * rows;
+        raster = new uint8_t[size];
+        CHECKPTR(raster);
 
-    if (bands == 0)
-    {
-        mlog(CRITICAL, "Raster has no bands!\n");
-        return; /* Must have at least one band */
-    }
+        /* Store raster in byte array. */
+        cplerr = band->RasterIO(GF_Read, 0, 0, cols, rows, raster, cols, rows, GDT_Byte, 0, 0);
+        CHECK_GDALERR(cplerr);
 
-    /* Get raster boundry box and cell size */
-    double geot[6];
-    rasterDset->GetGeoTransform(geot);
-    bbox.lon_min = geot[0];
-    bbox.lon_max = geot[0] + cols * geot[1];
-    bbox.lat_max = geot[3];
-    bbox.lat_min = geot[3] + rows * geot[5];
+        const char *_wkt = rasterDset->GetProjectionRef();
+        CHECKPTR(_wkt);
+        ogrerr = source.importFromEPSG(GDALRASTER_PHOTON_CRS);
+        CHECK_GDALERR(ogrerr);
+        ogrerr = target.importFromWkt(_wkt);
+        CHECK_GDALERR(ogrerr);
 
-    lon_cellsize = geot[1];
-    lat_cellsize = geot[5];
-
-    long size = cols * rows;
-    raster = (uint8_t *)CPLMalloc(sizeof(uint8_t) * size);
-    CHECKPTR(raster);
-
-    int bandInx = 1; /* Band index starts at 1, not 0 */
-    GDALRasterBand *band = rasterDset->GetRasterBand(bandInx);
-    CHECKPTR(band);
-
-    /* Get raster band stats */
-    double min, max, mean, stdev;
-    OGRErr err = band->GetStatistics(false, true, &min, &max, &mean, &stdev);
-    if (err != OGRERR_NONE)
-    {
-        mlog(CRITICAL, "Failed to get raster stats\n");
-        return;
-    }
-
-    /*
-     * Do sanity check on raster not created from json file.
-     * Raster's first band must be an on/off mask.
-     * Double comparison only works if the values are trully the same
-     * (created from integers or constants)
-     */
-    if((min != max) || (min != mean) || (stdev != 0.0))
-    {
-        mlog(CRITICAL, "Unsuported raster, first band must be a mask\n");
-        return;
-    }
-
-    /* Set pixelon marker for this raster */
-    pixelon = max;
-
-    /* Store raster in byte array.
-     * Raster original data will be converted automaticly to GDT_Byte.
-     */
-    OGRErr e0 = band->RasterIO(GF_Read, 0, 0, cols, rows, raster, cols, rows, GDT_Byte, 0, 0);
-
-    const char *wkt = rasterDset->GetProjectionRef();
-    CHECKPTR(wkt);
-    OGRErr e1 = source.importFromEPSG(GDALRASTER_PHOTON_CRS);
-    OGRErr e2 = target.importFromWkt(wkt);
-
-    if (((e0 == e1) == e2) == OGRERR_NONE)
-    {
         /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
         target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
         source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
@@ -407,7 +328,23 @@ GdalRaster::GdalRaster(lua_State *L, const char *file, long filelength, long _fi
         /* Create coordinates transformation */
         latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
         CHECKPTR(latlon2xy);
+
+        rasterCreated = true;
     }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating GdalRaster: %s", e.what());
+    }
+
+   /* Cleanup */
+   VSIUnlink(jsonfname.c_str());
+   VSIUnlink(rasterfname.c_str());
+
+   if (jsonDset) GDALClose((GDALDatasetH)jsonDset);
+   if (rasterDset) GDALClose((GDALDatasetH)rasterDset);
+
+    if(!rasterCreated)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
 }
 
 /******************************************************************************
@@ -490,9 +427,8 @@ int GdalRaster::luaCellSize(lua_State *L)
         GdalRaster *lua_obj = (GdalRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->lat_cellsize);
-        lua_pushnumber(L, lua_obj->lon_cellsize);
-        num_ret += 2;
+        lua_pushnumber(L, lua_obj->cellsize);
+        num_ret += 1;
 
         /* Set Return Status */
         status = true;

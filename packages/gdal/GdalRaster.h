@@ -62,7 +62,6 @@ class GdalRaster: public LuaObject
 
         static const char* FILEDATA_KEY;
         static const char* FILELENGTH_KEY;
-        static const char* FILETYPE_KEY;
         static const char* DIMENSION_KEY;
         static const char* BBOX_KEY;
         static const char* CELLSIZE_KEY;
@@ -77,12 +76,6 @@ class GdalRaster: public LuaObject
             double lon_max;
             double lat_max;
         } bbox_t;
-
-        typedef enum {
-            GEOJSON,
-            GEOTIF,
-        } file_t;
-
 
 
         /*--------------------------------------------------------------------
@@ -101,7 +94,7 @@ class GdalRaster: public LuaObject
 
         bool rawPixel (const uint32_t row, const uint32_t col)
         {
-            return raster[(row * cols) + col] == pixelon;
+            return raster[(row * cols) + col] == GDALRASTER_PIXEL_ON;
         }
 
         uint32_t numRows (void)
@@ -127,7 +120,7 @@ class GdalRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        GdalRaster (lua_State* L, const char* image, long imagelength, long _filetype, double _cellsize);
+        GdalRaster (lua_State* L, const char* image, long imagelength, double _cellsize);
 
     private:
         /*--------------------------------------------------------------------
@@ -137,21 +130,12 @@ class GdalRaster: public LuaObject
         uint8_t  *raster;
         uint32_t  rows;
         uint32_t  cols;
-        uint32_t  bands;
         bbox_t    bbox;
-        double    lon_cellsize;
-        double    lat_cellsize;
         double    cellsize;
-        file_t    filetype;
-        uint8_t   pixelon;
 
         OGRCoordinateTransformation *latlon2xy;
         OGRSpatialReference source;
         OGRSpatialReference target;
-        GDALDataset *rasterDset;
-        GDALDataset *jsonDset;
-        std::string  rasterfname;
-        std::string  jsonfname;
 
         /*--------------------------------------------------------------------
          * Methods
