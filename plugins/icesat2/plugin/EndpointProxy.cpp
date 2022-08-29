@@ -347,6 +347,7 @@ void* EndpointProxy::collatorThread (void* parm)
         if(num_terminated == proxy->numRequests)
         {
             proxy->signalComplete();
+            break;
         }
         else
         {
