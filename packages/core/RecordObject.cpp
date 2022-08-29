@@ -313,7 +313,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 {
     assert(buffer);
     int bufsize = memoryAllocated;
-    int datasize = 0;
+    uint32_t datasize = 0;
 
     /* Determine Buffer Size */
     rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
@@ -322,7 +322,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
         #ifdef __be__
             int hdrsize = sizeof(rec_hdr_t) + rechdr->type_size;
         #else
-            int hdrsize = sizeof(rec_hdr_t) + LocalLib::swapl(rechdr->type_size);
+            int hdrsize = sizeof(rec_hdr_t) + LocalLib::swaps(rechdr->type_size);
         #endif
         bufsize = MIN(memoryAllocated, hdrsize + size);
         datasize = bufsize - hdrsize;
@@ -1082,11 +1082,11 @@ int RecordObject::parseSerial(unsigned char* buffer, int size, const char** rec_
  *----------------------------------------------------------------------------*/
 int RecordObject::postSerial (Publisher* outq, int timeout, const char* rec_type, int rec_type_size, unsigned char* buffer, int size)
 {
-    const int MAX_REC_TYPE_SIZE = 128;
-    char data1[MAX_REC_TYPE_SIZE];
+    const int MAX_HDR_SIZE = 128;
+    char data1[MAX_HDR_SIZE];
 
     int data1_size = sizeof(rec_hdr_t) + rec_type_size;
-    if(data1_size > MAX_REC_TYPE_SIZE) return -1;
+    if(data1_size > MAX_HDR_SIZE) return -1;
 
     populateHeader(data1, rec_type, rec_type_size, size);
 
