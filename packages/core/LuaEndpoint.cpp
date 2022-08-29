@@ -247,6 +247,12 @@ void* LuaEndpoint::requestThread (void* parm)
             default:    break;
         }
     }
+    else
+    {
+        char header[MAX_HDR_SIZE];
+        int header_length = buildheader(header, Unauthorized);
+        rspq->postCopy(header, header_length);
+    }
 
     /* End Response */
     rspq->postCopy("", 0);

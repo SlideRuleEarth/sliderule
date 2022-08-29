@@ -76,6 +76,7 @@ class EndpointObject: public LuaObject
         typedef enum {
             OK = 200,
             Bad_Request = 400,
+            Unauthorized = 401,
             Not_Found = 404,
             Method_Not_Allowed = 405,
             Request_Timeout = 408,
