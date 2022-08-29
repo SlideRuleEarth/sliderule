@@ -306,8 +306,10 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     engine->executeEngine(IO_CHECK);
 
     /* Stream Response
-     *  the response is read from the response queue until both the script completes and
-     *  there are no more messages left in the message queue */
+     *  The response is read from the response queue until both the script completes and
+     *  there are no more messages left in the message queue; the only exception is if
+     *  the termination message is received (size = 0), then the response is immediately
+     *  finished. */
     int status = MsgQ::STATE_OKAY;
     auto stream = response.stream(Http::Code::Ok);
     while(engine->isActive() || status == MsgQ::STATE_OKAY)
@@ -316,20 +318,21 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
         status = rspq.receiveRef(ref, SYS_TIMEOUT);
         if(status == MsgQ::STATE_OKAY)
         {
-            if(ref.size > 0)    stream.write((const char*)ref.data, ref.size);
-            else                stream.ends();
+            bool done = false;
+            if(ref.size > 0) stream.write((const char*)ref.data, ref.size);
+            else done = true;
             rspq.dereference(ref);
+            if(done) break;
         }
-        else if(status == MsgQ::STATE_TIMEOUT)
-        {
-            stream.flush();
-        }
-        else
+        else if(status != MsgQ::STATE_TIMEOUT)
         {
             mlog(CRITICAL, "%s error streaming data: %d", id_str, status);
             break;
         }
     }
+
+    /* End Response */
+    stream.ends();
 
     /* Clean Up */
     delete engine;

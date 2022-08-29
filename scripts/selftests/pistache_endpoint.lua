@@ -20,7 +20,7 @@ local tmpfile = os.tmpname()
 
 -- Unit Test --
 
-local port = 9091
+local port = 9093
 local server = pistache.server(port):name("myengine")
 
 sys.wait(1)
