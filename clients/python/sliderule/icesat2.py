@@ -1055,8 +1055,9 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             "poly": [{"lat": <lat1>, "lon": <lon1>, ... }],
             "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...],
             "file": {
-                "data": <base64 encoded geotiff image string>,
-                "length": <length of base64 encoded image>,
+                "data": <geojson file as string>,
+                "length": <length of geojson file>,
+                "cellsize": <parameter cellsize>
             }
         }
 
