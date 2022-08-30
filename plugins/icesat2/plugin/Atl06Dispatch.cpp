@@ -630,7 +630,7 @@ void Atl06Dispatch::postResult (result_t* result)
             }
 
             /* Check If ATL06 Record Should Be Posted*/
-            if((!elevation && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
+            if((!result && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
             {
                 /* Calculate Record Size (according to number of elevations) */
                 int size;
