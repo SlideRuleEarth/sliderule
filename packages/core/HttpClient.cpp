@@ -434,7 +434,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         if(!outq && !rsps.response)
                         {
                             rsps.response = new char [rsps.size + 1]; // add one byte for terminator
-                            rsps.response[rsps.size] = '\0'; // ensure termination
                         }
 
                         /* Determine Bytes to Copy */
@@ -458,6 +457,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             {
                                 /* Populate Response */
                                 LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
+                                rsps.response[rsps_index + rsps_bytes] = '\0'; // ensure termination
                             }
                         }
 
