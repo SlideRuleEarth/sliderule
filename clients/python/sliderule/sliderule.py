@@ -266,7 +266,7 @@ def __parse_native(data, callbacks):
 
             # Parse Record Size
             if(rec_size_index < rec_hdr_size):
-                bytes_available = len(line)  - i
+                bytes_available = len(line) - i
                 bytes_remaining = rec_hdr_size - rec_size_index
                 bytes_to_append = min(bytes_available, bytes_remaining)
                 rec_size_rsps.append(line[i:i+bytes_to_append])
@@ -305,6 +305,11 @@ def __parse_native(data, callbacks):
                     rec_size = 0
                     rec_index = 0
                 i += bytes_to_append
+
+            # Zero Sized Record
+            else:
+                rec_size_index = 0
+                rec_index = 0
 
     return recs
 
