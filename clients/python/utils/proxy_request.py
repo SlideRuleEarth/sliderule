@@ -25,6 +25,7 @@ if __name__ == '__main__':
     # Set URL #
     if len(sys.argv) > 2:
         url = sys.argv[2]
+        asset = "nsidc-s3"
 
     # Set Asset #
     if len(sys.argv) > 3:
