@@ -83,7 +83,6 @@ const struct luaL_Reg GeoJsonRaster::LuaMetaTable[] = {
 const char* GeoJsonRaster::FILEDATA_KEY   = "data";
 const char* GeoJsonRaster::FILELENGTH_KEY = "length";
 const char* GeoJsonRaster::CELLSIZE_KEY   = "cellsize";
-const char* GeoJsonRaster::DIMENSION_KEY  = "dimension";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -395,10 +394,10 @@ int GeoJsonRaster::luaBoundingBox(lua_State *L)
         GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushinteger(L, lua_obj->bbox.lon_min);
-        lua_pushinteger(L, lua_obj->bbox.lat_min);
-        lua_pushinteger(L, lua_obj->bbox.lon_max);
-        lua_pushinteger(L, lua_obj->bbox.lat_max);
+        lua_pushnumber(L, lua_obj->bbox.lon_min);
+        lua_pushnumber(L, lua_obj->bbox.lat_min);
+        lua_pushnumber(L, lua_obj->bbox.lon_max);
+        lua_pushnumber(L, lua_obj->bbox.lat_max);
         num_ret += 4;
 
         /* Set Return Status */

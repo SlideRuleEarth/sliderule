@@ -62,7 +62,6 @@ class GeoJsonRaster: public LuaObject
 
         static const char* FILEDATA_KEY;
         static const char* FILELENGTH_KEY;
-        static const char* DIMENSION_KEY;
         static const char* BBOX_KEY;
         static const char* CELLSIZE_KEY;
 
