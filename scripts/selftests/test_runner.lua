@@ -40,6 +40,12 @@ if __pistache__ then
     runner.script(td .. "pistache_endpoint.lua")
 end
 
+-- Run Raster Unit Tests --
+
+if __raster__ then
+    runner.script(td .. "geojson_raster.lua", {td.."grandmesa.geojson"})
+end
+
 -- Run Legacy Unit Tests --
 
 if __legacy__ then

@@ -29,61 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __raster_pkg__
+#define __raster_pkg__
+
 /******************************************************************************
- *INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "geotiff.h"
-#include <tiffio.h>
+// #include "GeoJsonRaster.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_GEOTIFF_LIBNAME  "geotiff"
-
-/******************************************************************************
- * GEOTIFF FUNCTIONS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * geotiff_open
- *----------------------------------------------------------------------------*/
-int geotiff_open (lua_State* L)
-{
-    static const struct luaL_Reg geotiff_functions[] = {
-        {"file",        GeoTIFFFile::luaCreate},
-        {NULL,          NULL}
-    };
-
-    /* Set Package Library */
-    luaL_newlib(L, geotiff_functions);
-
-    return 1;
-}
-
-/******************************************************************************
- * EXPORTED FUNCTIONS
+ * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initgeotiff (void)
-{
-    /* Initialize LibTIFF */
-    TIFFSetWarningHandler(NULL); // turns off warnings
-
-    /* Extend Lua */
-    LuaEngine::extend(LUA_GEOTIFF_LIBNAME, geotiff_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEOTIFF_LIBNAME, LIBID);
-
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_GEOTIFF_LIBNAME, LIBID);
+void initraster (void);
+void deinitraster (void);
 }
 
-void deinitgeotiff (void)
-{
-}
-}
+#endif  /* __raster_pkg__ */
+
+

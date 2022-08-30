@@ -499,12 +499,12 @@ static void get_lua_raster (lua_State* L, int index, atl06_parms_t* parms, bool*
     {
         try
         {
-            parms->raster = GeoTIFFFile::create(L, index);
+            parms->raster = GeoJsonRaster::create(L, index);
             *provided = true;
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Error creating GeoTIFF file: %s", e.what());
+            mlog(e.level(), "Error creating GeoJsonRaster file: %s", e.what());
         }
     }
 }
@@ -614,7 +614,7 @@ atl06_parms_t* getLuaAtl06Parms (lua_State* L, int index)
 
             lua_getfield(L, index, LUA_PARM_RASTER);
             get_lua_raster(L, -1, parms, &provided);
-            if(provided) mlog(DEBUG, "Setting %s image for use", LUA_PARM_RASTER);
+            if(provided) mlog(DEBUG, "Setting %s file for use", LUA_PARM_RASTER);
             lua_pop(L, 1);
 
             lua_getfield(L, index, LUA_PARM_TRACK);

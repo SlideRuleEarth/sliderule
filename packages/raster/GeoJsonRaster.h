@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __geotiff_file__
-#define __geotiff_file__
+#ifndef __geojson_raster__
+#define __geojson_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -39,15 +39,15 @@
 #include "LuaObject.h"
 #include "OsApi.h"
 
+#include <ogr_spatialref.h>
+#include <gdal_priv.h>
+
 /******************************************************************************
- * GEOTIFF CLASS
+ * GEOJSON RASTER CLASS
  ******************************************************************************/
 
 
-// TODO: add bbox as optional parameter with functions to use it
-// have the lua_get_raster use this constructor
-
-class GeoTIFFFile: public LuaObject
+class GeoJsonRaster: public LuaObject
 {
     public:
 
@@ -55,12 +55,13 @@ class GeoTIFFFile: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int GEOTIFF_PIXEL_ON = 1;
-        static const int GEOTIFF_MAX_IMAGE_SIZE = 4194304; // 4MB
+        static const int   RASTER_NODATA_VALUE = 200;
+        static const int   RASTER_PIXEL_ON = 1;
+        static const int   RASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
+        static const int   RASTER_PHOTON_CRS = 4326;
 
-        static const char* IMAGE_KEY;
-        static const char* IMAGELENGTH_KEY;
-        static const char* DIMENSION_KEY;
+        static const char* FILEDATA_KEY;
+        static const char* FILELENGTH_KEY;
         static const char* BBOX_KEY;
         static const char* CELLSIZE_KEY;
 
@@ -75,14 +76,16 @@ class GeoTIFFFile: public LuaObject
             double lat_max;
         } bbox_t;
 
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate       (lua_State* L);
-        static GeoTIFFFile* create          (lua_State* L, int index);
+        static int            luaCreate      (lua_State* L);
+        static GeoJsonRaster* create         (lua_State* L, int index);
 
-        virtual             ~GeoTIFFFile    (void);
+        bool                  subset         (double lon, double lat);
+        virtual              ~GeoJsonRaster  (void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -90,25 +93,7 @@ class GeoTIFFFile: public LuaObject
 
         bool rawPixel (const uint32_t row, const uint32_t col)
         {
-            return raster[(row * cols) + col] == GEOTIFF_PIXEL_ON;
-        }
-
-        bool subset (double lon, double lat)
-        {
-            if( (lon >= bbox.lon_min) &&
-                (lon <= bbox.lon_max) &&
-                (lat >= bbox.lat_min) &&
-                (lat <= bbox.lat_max) )
-            {
-                uint32_t row = (bbox.lat_max - lat) / cellsize;
-                uint32_t col = (lon - bbox.lon_min) / cellsize;
-
-                if((row < rows) && (col < cols))
-                {
-                    return rawPixel(row, col);
-                }
-            }
-            return false;
+            return raster[(row * cols) + col] == RASTER_PIXEL_ON;
         }
 
         uint32_t numRows (void)
@@ -116,7 +101,7 @@ class GeoTIFFFile: public LuaObject
             return rows;
         }
 
-        uint32_t numCols (void)
+        uint32_t numCols(void)
         {
             return cols;
         }
@@ -134,19 +119,22 @@ class GeoTIFFFile: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoTIFFFile (lua_State* L, const char* image, long imagelength, bbox_t _bbox, double _cellsize);
+        GeoJsonRaster (lua_State* L, const char* image, long imagelength, double _cellsize);
 
     private:
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        uint32_t    rows;
-        uint32_t    cols;
-        uint8_t*    raster;
-        bbox_t      bbox;
-        double      cellsize;
+        uint8_t  *raster;
+        uint32_t  rows;
+        uint32_t  cols;
+        bbox_t    bbox;
+        double    cellsize;
+
+        OGRCoordinateTransformation *latlon2xy;
+        OGRSpatialReference source;
+        OGRSpatialReference target;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -159,4 +147,4 @@ class GeoTIFFFile: public LuaObject
         static int luaSubset        (lua_State* L);
 };
 
-#endif  /* __geotiff_file__ */
+#endif  /* __geojson_raster__ */

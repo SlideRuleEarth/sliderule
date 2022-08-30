@@ -28,6 +28,7 @@ set_target_properties (icesat2 PROPERTIES PREFIX "")
 
 # Prerequisites #
 find_package (Lua "5.3")
+find_package (GDAL)
 
 # Version Information #
 file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
@@ -70,6 +71,7 @@ target_include_directories (icesat2
     PUBLIC
         ${INSTALLDIR}/include/sliderule
         ${LUA_INCLUDE_DIR}
+        ${GDAL_INCLUDE_DIR}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/plugin
 )
 
