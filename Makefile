@@ -111,6 +111,9 @@ uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from syste
 # Development Targets
 ########################
 
+arcticdem-config: prep ## configure make for arcticdem plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
+
 scan: prep ## perform static analysis
 	cd $(BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
 	cd $(BUILD); scan-build -o scan-results make
