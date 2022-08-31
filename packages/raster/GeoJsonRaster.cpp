@@ -35,12 +35,14 @@
 
 #include "core.h"
 #include "GeoJsonRaster.h"
+
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 #include <gdal.h>
 #include <gdalwarper.h>
-
+#include <ogr_spatialref.h>
+#include <gdal_priv.h>
 
 
 /******************************************************************************
@@ -66,6 +68,18 @@ do                                                                              
     }                                                                             \
 } while (0)
 
+
+/******************************************************************************
+ * PRIVATE IMPLEMENTATION
+ ******************************************************************************/
+
+struct GeoJsonRaster::impl
+{
+    public:
+        OGRCoordinateTransformation *latlon2xy;
+        OGRSpatialReference source;
+        OGRSpatialReference target;
+};
 
 /******************************************************************************
  * STATIC DATA
@@ -140,7 +154,7 @@ bool GeoJsonRaster::subset (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
 
-    if(p.transform(latlon2xy) == OGRERR_NONE)
+    if(p.transform(pimpl->latlon2xy) == OGRERR_NONE)
     {
         lon = p.getX();
         lat = p.getY();
@@ -176,7 +190,7 @@ bool GeoJsonRaster::subset (double lon, double lat)
 GeoJsonRaster::~GeoJsonRaster(void)
 {
     if (raster) delete[] raster;
-    if (latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
+    if (pimpl->latlon2xy) OGRCoordinateTransformation::DestroyCT(pimpl->latlon2xy);
 }
 
 /******************************************************************************
@@ -210,7 +224,8 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, double _cellsize):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    pimpl{ new impl{} }
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool rasterCreated = false;
@@ -225,9 +240,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
     cols = 0;
     bbox = {0.0, 0.0, 0.0, 0.0};
     cellsize = 0.0;
-    latlon2xy = NULL;
-    source.Clear();
-    target.Clear();
+    pimpl->latlon2xy = NULL;
+    pimpl->source.Clear();
+    pimpl->target.Clear();
 
     validatedParams(file, filelength, _cellsize);
 
@@ -315,18 +330,18 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
 
         const char *_wkt = rasterDset->GetProjectionRef();
         CHECKPTR(_wkt);
-        ogrerr = source.importFromEPSG(RASTER_PHOTON_CRS);
+        ogrerr = pimpl->source.importFromEPSG(RASTER_PHOTON_CRS);
         CHECK_GDALERR(ogrerr);
-        ogrerr = target.importFromWkt(_wkt);
+        ogrerr = pimpl->target.importFromWkt(_wkt);
         CHECK_GDALERR(ogrerr);
 
         /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-        target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+        pimpl->target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+        pimpl->source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
         /* Create coordinates transformation */
-        latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
-        CHECKPTR(latlon2xy);
+        pimpl->latlon2xy = OGRCreateCoordinateTransformation(&pimpl->source, &pimpl->target);
+        CHECKPTR(pimpl->latlon2xy);
 
         rasterCreated = true;
     }
