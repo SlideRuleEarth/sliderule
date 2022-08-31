@@ -63,6 +63,9 @@ atlas-config: prep ## configure make for atlas plugin
 icesat2-config: prep ## configure make for icesat2 plugin
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
 
+arcticdem-config: prep ## configure make for arcticdem plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
+
 scan: prep ## perform static analysis
 	cd $(BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
 	cd $(BUILD); scan-build -o scan-results make
