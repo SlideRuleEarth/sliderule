@@ -168,7 +168,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         int resources_parm_index = 3;
         if(!lua_istable(L, resources_parm_index))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for parameter #1");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for resource list");
         }
 
         /* Get List of Resources */
