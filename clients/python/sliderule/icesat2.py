@@ -823,7 +823,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         # Build ATL03 Subsetting Request
         rqst = {
             "atl03-asset" : asset,
-            "resource": resources[0],
+            "resources": resources,
             "parms": parm
         }
 
