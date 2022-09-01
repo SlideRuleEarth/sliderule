@@ -1,6 +1,5 @@
 local runner = require("test_executive")
-local rd = runner.rootdir(arg[0]) -- root directory
-local td = rd .. "../selftests/" -- test directory
+local td = runner.rootdir(arg[0]) -- root directory
 local console = require("console")
 
 -- Initial Configuration --
@@ -43,7 +42,7 @@ end
 -- Run Raster Unit Tests --
 
 if __raster__ then
-    runner.script(td .. "geojson_raster.lua", {td.."grandmesa.geojson"})
+    runner.script(td .. "geojson_raster.lua")
 end
 
 -- Run Legacy Unit Tests --
@@ -59,7 +58,6 @@ if __legacy__ then
     runner.script(td .. "record_dispatcher.lua")
     runner.script(td .. "limit_dispatch.lua")
 end
-
 
 -- Report Results --
 

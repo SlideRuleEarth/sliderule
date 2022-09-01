@@ -1,6 +1,5 @@
 local runner = require("test_executive")
-local rd = runner.rootdir(arg[0]) -- root directory
-local td = rd .. "../selftests/" -- test directory
+local td = runner.rootdir(arg[0]) -- root directory
 local console = require("console")
 
 -- Run ICESat2 Unit Tests --

@@ -1,5 +1,5 @@
 local runner = require("test_executive")
-local td = runner.rootdir(arg[0]) .. "../selftests"
+local td = runner.rootdir(arg[0])
 
 -- Dictionary Unit Test --
 
