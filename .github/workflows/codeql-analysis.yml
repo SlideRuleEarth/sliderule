@@ -74,8 +74,8 @@ jobs:
     - run: |
        sudo apt install build-essential libreadline-dev liblua5.3-dev
        sudo mkdir -p /usr/local/include/sliderule
-       sudo find sliderule -name "*.h" -exec cp {} /usr/local/include/sliderule/ \;
-       sudo cp sliderule/platforms/linux/*.h /usr/local/include/sliderule/
+       sudo find . -name "*.h" -exec cp {} /usr/local/include/sliderule/ \;
+       sudo cp platforms/linux/*.h /usr/local/include/sliderule/
        sudo touch /usr/local/include/sliderule/platform.h
        sudo chmod 777 /usr/local/include/sliderule/platform.h
        sudo echo "#define LIBID \"codeql\"" >> /usr/local/include/sliderule/platform.h
