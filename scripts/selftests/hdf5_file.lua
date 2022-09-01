@@ -1,6 +1,6 @@
 local runner = require("test_executive")
 local console = require("console")
-local td = runner.rootdir(arg[0]) .. "../selftests"
+local td = runner.rootdir(arg[0])
 
 asset = core.asset("local", "file", td, "empty.index")
 

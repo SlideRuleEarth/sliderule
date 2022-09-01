@@ -39,13 +39,11 @@
 #include "LuaObject.h"
 #include "OsApi.h"
 
-#include <ogr_spatialref.h>
-#include <gdal_priv.h>
+#include <memory>
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
  ******************************************************************************/
-
 
 class GeoJsonRaster: public LuaObject
 {
@@ -132,9 +130,8 @@ class GeoJsonRaster: public LuaObject
         bbox_t    bbox;
         double    cellsize;
 
-        OGRCoordinateTransformation *latlon2xy;
-        OGRSpatialReference source;
-        OGRSpatialReference target;
+        struct impl; // gdal implementation
+        std::unique_ptr<impl> pimpl; // private gdal data
 
         /*--------------------------------------------------------------------
          * Methods
