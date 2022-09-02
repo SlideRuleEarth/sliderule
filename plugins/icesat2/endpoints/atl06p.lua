@@ -29,12 +29,12 @@ local parms = rqst["parms"]
 local timeout = rqst["timeout"] or 600000 -- 10 minutes
 
 -- Proxy Request --
-local atl06p = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), timeout, rspq)
+local proxy = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), timeout, rspq)
 
 -- Wait Until Proxy Completes --
 local duration = 0
 local interval = 10000 -- 10 seconds
-while __alive() and not atl06p:waiton(interval) do
+while __alive() and not proxy:waiton(interval) do
     duration = duration + interval
     if timeout >= 0 and duration >= timeout then
         userlog:sendlog(core.ERROR, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration / 1000))

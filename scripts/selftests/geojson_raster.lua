@@ -1,13 +1,13 @@
 local runner = require("test_executive")
 local json = require("json")
 local console = require("console")
+local td = runner.rootdir(arg[0])
 
 -- Setup --
-local geojsonfile = arg[1]
+
+local geojsonfile = td.."/grandmesa.geojson"
 
 -- Unit Test --
-
--- sys.wait(1)
 
 local f = io.open(geojsonfile, "r")
 local vectorfile = nil

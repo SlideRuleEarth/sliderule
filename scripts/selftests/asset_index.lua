@@ -1,7 +1,7 @@
 local runner = require("test_executive")
 local asset = require("asset")
 local console = require("console")
-local td = sys.cwd() .. "/" .. runner.rootdir(arg[0]) .. "../selftests"
+local td = sys.cwd() .. "/" .. runner.rootdir(arg[0])
 
 -- Setup --
 
