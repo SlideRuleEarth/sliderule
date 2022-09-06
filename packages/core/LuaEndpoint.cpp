@@ -223,7 +223,7 @@ void* LuaEndpoint::requestThread (void* parm)
     Publisher* rspq = new Publisher(request->id);
 
     /* Check Authentication */
-    bool authorized = true;
+    bool authorized = false;
     if(lua_endpoint->authenticator)
     {
         const char* auth_value = NULL;
@@ -235,6 +235,10 @@ void* LuaEndpoint::requestThread (void* parm)
                 authorized = lua_endpoint->authenticator->isValid(token + 1);
             }
         }
+    }
+    else // no authentication required
+    {
+        authorized = true;
     }
 
     /* Dispatch Handle Request */

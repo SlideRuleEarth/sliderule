@@ -362,13 +362,13 @@ ProvisioningSystemLib::Authenticator::~Authenticator (void)
  *----------------------------------------------------------------------------*/
 bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
 {
-    if(StringLib::find(ProvisioningSystemLib::Organization, DEFAULT_ORGANIZATION_NAME, MAX_STR_SIZE))
+    if(StringLib::match(ProvisioningSystemLib::Organization, DEFAULT_ORGANIZATION_NAME, MAX_STR_SIZE))
     {
         return true; // no authentication used for default organization name
     }
     else
     {
-        return ProvisioningSystemLib::validate(token);;
+        return ProvisioningSystemLib::validate(token);
     }
 }
 
