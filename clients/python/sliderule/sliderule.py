@@ -393,7 +393,7 @@ def source (api, parm={}, stream=False, callbacks=default_callbacks):
     # Construct Request URL and Authorization #
     try:
         if service_org:
-            url = 'http://%s.%s/source/%s' % (service_org, service_url, api)
+            url = 'https://%s.%s/source/%s' % (service_org, service_url, api)
             headers = {'Authorization': 'Bearer ' + ps_access_token}
         else:
             url = 'http://%s/source/%s' % (service_url, api)
