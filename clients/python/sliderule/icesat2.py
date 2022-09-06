@@ -1058,7 +1058,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         region = {
             "poly": [{"lat": <lat1>, "lon": <lon1>, ... }],
             "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...],
-            "file": {
+            "raster": {
                 "data": <geojson file as string>,
                 "length": <length of geojson file>,
                 "cellsize": <parameter cellsize>
@@ -1176,8 +1176,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         "gdf": gdf,
         "poly": polygon, # convex hull of polygons
         "clusters": clusters, # list of polygon clusters for cmr request
-        "file": {
-            # "_data": datafile, # geotiff or shape file
+        "raster": {
             "data": datafile, # geojson file
             "length": len(datafile), # geojson file length
             "cellsize": cellsize  # untis are in crs/projection
