@@ -17,9 +17,9 @@ cmake_policy(SET CMP0053 NEW) # simplified variable escape processing (recommend
 
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 
-###################
-# ICESat-2 Plugin #
-###################
+####################
+# ArcticDem Plugin #
+####################
 
 add_library (arcticdem MODULE "")
 
@@ -28,6 +28,7 @@ set_target_properties (arcticdem PROPERTIES PREFIX "")
 
 # Prerequisites #
 find_package (Lua "5.3")
+find_package (GDAL)
 
 # Version Information #
 file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
@@ -54,6 +55,7 @@ endif()
 target_sources(arcticdem
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMReader.cpp
 )
 
@@ -80,6 +82,7 @@ install (TARGETS arcticdem LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMReader.h
     DESTINATION
         ${INSTALLDIR}/include/sliderule)

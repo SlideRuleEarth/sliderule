@@ -12,6 +12,20 @@ local arcticdem_local = core.getbyname(asset_name)
 
 -- Unit Test --
 
+print('\n------------------\nTest01: Create ArcticDemRaster \n------------------')
+local robj = arcticdem.raster()
+runner.check(robj ~= nil)
+
+local lat = 82.86
+local lon = -74.6
+
+for i = 100, 1, -1
+do
+    local el, status = robj:subset(lon, lat)
+    print(status, el)
+    lat = lat + 0.001
+end
+
 print('\n------------------\nTest01: ArcticDEM Reader \n------------------')
 
 

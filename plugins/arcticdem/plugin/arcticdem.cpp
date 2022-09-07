@@ -67,9 +67,10 @@ int arcticdem_version (lua_State* L)
 int arcticdem_open (lua_State *L)
 {
     static const struct luaL_Reg arcticdem_functions[] = {
-        {"articdem",            ArcticDEMReader::luaCreate},
-        {"version",             arcticdem_version},
-        {NULL,                  NULL}
+        {"raster",          ArcticDEMRaster::luaCreate},
+        {"reader",          ArcticDEMReader::luaCreate},
+        {"version",         arcticdem_version},
+        {NULL,              NULL}
     };
 
     /* Set Library */
@@ -86,6 +87,7 @@ extern "C" {
 void initarcticdem (void)
 {
     /* Initialize Modules */
+    ArcticDEMRaster::init();
     ArcticDEMReader::init();
 
     /* Extend Lua */
@@ -101,6 +103,7 @@ void initarcticdem (void)
 void deinitarcticdem (void)
 {
     /* Uninitialize Modules */
+    ArcticDEMRaster::deinit();
     ArcticDEMReader::deinit();
 }
 }
