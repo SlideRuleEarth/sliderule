@@ -1,5 +1,5 @@
 #
-# Uses the icesat2.h5 api to read a dataset from an H5 file and write the contents to a file
+# Uses the icesat2.h5p api to read a dataset from an H5 file and write the contents to a file
 #
 
 import sys
@@ -19,7 +19,7 @@ if __name__ == '__main__':
         "organization": None,
         "asset":        'atlas-local',
         "dataset":      '/gt2l/heights/h_ph',
-        "resource":     'ATL03_20181017222812_02950102_003_01.h5',
+        "resource":     'ATL03_20181017222812_02950102_005_01.h5',
         "col":          0,
         "startrow":     0,
         "numrows":      -1

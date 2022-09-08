@@ -6,6 +6,7 @@ import sys
 import logging
 import time
 from sliderule import icesat2
+from utils import parse_command_line
 
 ###############################################################################
 # MAIN
@@ -13,36 +14,25 @@ from sliderule import icesat2
 
 if __name__ == '__main__':
 
-    url = "127.0.0.1"
-    asset = "atlas-local"
-    organization = None
-    resource = "ATL03_20181017222812_02950102_005_01.h5"
+   # set script defaults
+    cfg = {
+        "url":          'localhost',
+        "organization": None,
+        "asset":        'atlas-local',
+        "region":       'examples/grandmesa.geojson'
+    }
 
+    # parse configuration parameters
+    parse_command_line(sys.argv, cfg)
+
+    # Configure Logging #
     logging.basicConfig(level=logging.INFO)
 
     # Region of Interest #
-    region_filename = sys.argv[1]
-    region = icesat2.toregion(region_filename)
-
-    # Set URL #
-    if len(sys.argv) > 2:
-        url = sys.argv[2]
-        asset = "nsidc-s3"
-
-    # Set Asset #
-    if len(sys.argv) > 3:
-        asset = sys.argv[3]
-
-    # Set Organization #
-    if len(sys.argv) > 4:
-        organization = sys.argv[4]
-
-    # Set Resource #
-    if len(sys.argv) > 5:
-        organization = sys.argv[5]
+    region = icesat2.toregion(cfg["region"])
 
     # Configure SlideRule #
-    icesat2.init(url, True, organization=organization)
+    icesat2.init(cfg["url"], True, organization=cfg["organization"])
 
     # Build ATL06 Request #
     parms = {
@@ -59,7 +49,7 @@ if __name__ == '__main__':
 
     # Request ATL06 Data
     perf_start = time.perf_counter()
-    gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
+    gdf = icesat2.atl06p(parms, asset=cfg["asset"], resources=[cfg["resource"]])
     perf_stop = time.perf_counter()
 
     # Display Statistics
