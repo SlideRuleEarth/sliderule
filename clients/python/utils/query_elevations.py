@@ -19,7 +19,8 @@ if __name__ == '__main__':
         "url":          'localhost',
         "organization": None,
         "asset":        'atlas-local',
-        "region":       'examples/grandmesa.geojson'
+        "region":       'examples/grandmesa.geojson',
+        "resource":     'ATL03_20181017222812_02950102_005_01.h5'
     }
 
     # parse configuration parameters
