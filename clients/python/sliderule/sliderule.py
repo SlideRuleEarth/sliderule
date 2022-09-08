@@ -41,8 +41,8 @@ from datetime import datetime, timedelta
 # GLOBALS
 ###############################################################################
 
-service_url = None
-service_org = None
+service_url = "localhost"
+service_org = "sliderule"
 
 ps_refresh_token = None
 ps_access_token = None
@@ -350,7 +350,7 @@ __callbacks = {'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, callbacks=None):
+def source (api, parm={}, stream=False, callbacks={}):
     '''
     Perform API call to SlideRule service
 
@@ -395,15 +395,9 @@ def source (api, parm={}, stream=False, callbacks=None):
         if c not in callbacks:
             callbacks[c] = __callbacks[c]
     # Construct Request URL and Authorization #
-    try:
-        if service_org:
-            url = 'https://%s.%s/source/%s' % (service_org, service_url, api)
-            headers = {'Authorization': 'Bearer ' + ps_access_token}
-        else:
-            url = 'http://%s/source/%s' % (service_url, api)
-    except TypeError as e:
-        logger.error("Invalid request parameters: url={}, org={}, token_type={}".format(service_url, service_org, type(ps_access_token)))
-        retries = 0 # prevent request from being issued
+    url = 'https://%s.%s/source/%s' % (service_org, service_url, api)
+    if ps_access_token:
+        headers = {'Authorization': 'Bearer ' + ps_access_token}
     # Attempt Request #
     while retries > 0:
         retries -= 1

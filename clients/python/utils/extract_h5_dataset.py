@@ -12,7 +12,7 @@ from sliderule import icesat2
 
 if __name__ == '__main__':
 
-    url             = "127.0.0.1"
+    url             = "localhost"
     asset           = "atlas-local"
     organization    = None
     dataset         = "/gt2l/heights/h_ph"

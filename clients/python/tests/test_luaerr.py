@@ -4,8 +4,6 @@ import pytest
 import sliderule
 from sliderule import icesat2
 
-
-
 def catchlogs(rec):
     global GLOBAL_message
     GLOBAL_message = rec["attr"]
