@@ -45,6 +45,8 @@
 #include <gdal_priv.h>
 
 
+#define USE_CACHE
+
 /******************************************************************************
  * LOCAL DEFINES AND MACROS
  ******************************************************************************/
@@ -163,89 +165,122 @@ ArcticDEMRaster* ArcticDEMRaster::create (lua_State* L, int index)
 
 
 /*----------------------------------------------------------------------------
- * createRaster
+ * readRaster
  *----------------------------------------------------------------------------*/
-bool ArcticDEMRaster::createRaster(OGRPoint* p)
+bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
 {
-    std::string rasterfname = "/data/ArcticDEM/";
-    bool rasterCreated = false;
     GDALDataset *idset = NULL;
     GDALDataset *rdset = NULL;
+    bool rasterFound = false;
+    bool rasterRead  = false;
 
     try
     {
-        bool foundRasterFile = false;
-
-        /* Open index shapefile and find raster tile */
-        idset = (GDALDataset *)GDALOpenEx(indexfname.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
-        CHECKPTR(idset);
-        OGRLayer *srcLayer = idset->GetLayer(0);
-        CHECKPTR(srcLayer);
-
-#if 0
-        int nGeomFieldCount = srcLayer->GetLayerDefn()->GetFieldCount();
-        print2term("- Geometry Field Count: %d\n", nGeomFieldCount);
-
-        print2term("- Geometry: %s\n", OGRGeometryTypeToName(srcLayer->GetGeomType()));
-        print2term("- Feature Count: %lld\n", srcLayer->GetFeatureCount());
-#endif
-
-        OGRFeature *feature;
-        srcLayer->ResetReading();
-        while( (feature = srcLayer->GetNextFeature()) != NULL)
+        if(findNewRaster)
         {
-            const OGRGeometry *geo = feature->GetGeometryRef();
-            CHECKPTR(geo);
-            if(geo->getGeometryType() == wkbPolygon)
-            {
-                OGRPolygon *poly = (OGRPolygon *)geo;
-                CHECKPTR(poly);
-                if (poly->Contains(p))
-                {
-                    /* For this polygon, get the name of raster directory */
-                    std::string rname = feature->GetFieldAsString("name");
-                    rasterfname += rname + '/' + rname + "_reg_dem.tif";
-                    print2term("Found raster %s at %f, %f\n", rasterfname.c_str(), p->getX(), p->getY());
-                    foundRasterFile = true;
-                    break;
-                }
-            }
-            OGRFeature::DestroyFeature(feature);
-        }
+            /* Open index shapefile and find raster tile */
+            idset = (GDALDataset *)GDALOpenEx(indexfname.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+            CHECKPTR(idset);
+            OGRLayer *ilayer = idset->GetLayer(0);
+            CHECKPTR(ilayer);
 
-        /* Open the raster, read data into memory for fast lookup */
-        if( foundRasterFile )
+            OGRFeature *feature;
+            ilayer->ResetReading();
+            while ((feature = ilayer->GetNextFeature()) != NULL)
+            {
+                const OGRGeometry *geo = feature->GetGeometryRef();
+                CHECKPTR(geo);
+                if (geo->getGeometryType() == wkbPolygon)
+                {
+                    OGRPolygon *poly = (OGRPolygon *)geo;
+                    CHECKPTR(poly);
+                    if (poly->Contains(p))
+                    {
+                        /* Found polygon with point in it, get the name of raster directory/file */
+                        std::string rname = feature->GetFieldAsString("name");
+                        rasterfname += rname + '/' + rname + "_reg_dem.tif";
+                        print2term("Found raster %s at %0.2f, %0.2f\n", rasterfname.c_str(), p->getX(), p->getY());
+                        rasterFound = true;
+                        break;
+                    }
+                }
+                OGRFeature::DestroyFeature(feature);
+            }
+        } else rasterFound = true;
+
+        /* Open the raster, read data into cache for fast lookup */
+        if(rasterFound)
         {
             rdset = (GDALDataset *)GDALOpenEx(rasterfname.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
             CHECKPTR(rdset);
 
             /* Store information about raster */
-            cols = rdset->GetRasterXSize();
-            rows = rdset->GetRasterYSize();
+            rrows = rdset->GetRasterYSize();
+            rcols = rdset->GetRasterXSize();
+            print2term("Raster rows: %d, cols: %d\n", rrows, rcols);
 
             /* Get raster boundry box */
             double geot[6] = {0, 0, 0, 0, 0, 0};
             rdset->GetGeoTransform(geot);
-            bbox.lon_min = geot[0];
-            bbox.lon_max = geot[0] + cols * geot[1];
-            bbox.lat_max = geot[3];
-            bbox.lat_min = geot[3] + rows * geot[5];
+            rbbox.lon_min = geot[0];
+            rbbox.lon_max = geot[0] + rcols * geot[1];
+            rbbox.lat_max = geot[3];
+            rbbox.lat_min = geot[3] + rrows * geot[5];
 
             cellsize = geot[1];
+            print2term("Raster rbbox.lon_min/max %0.2lf %0.2lf, rbbox.lat_min/max %0.2lf %0.2lf, cellsize: %lf\n",
+                       rbbox.lon_min, rbbox.lon_max, rbbox.lat_min, rbbox.lat_max, cellsize);
 
-            long size = cols * rows;
-            raster = new float[size];
-            CHECKPTR(raster);
+            /* Which row/col of raster do we need? */
+            uint32_t row = (rbbox.lat_max - p->getY()) / cellsize;
+            uint32_t col = (p->getX() - rbbox.lon_min) / cellsize;
+            print2term("Need row: %u, col: %u\n", row, col);
+
+            /* Calculate raster cache offsets and rows/cols to read */
+            int crow_offset = row-CACHE_MAX_ROWS_OFFSET;
+            if(crow_offset<0)
+                crow_offset = 0;
+
+            int rows2read = CACHE_MAX_ROWS;
+            if(crow_offset+rows2read > rrows)
+                rows2read = rrows-crow_offset;
+
+            int ccol_offset = col-CACHE_MAX_COLS_OFFSET;
+            if(ccol_offset<0)
+                ccol_offset = 0;
+
+            int cols2read = CACHE_MAX_COLS;
+            if(ccol_offset+cols2read > rcols)
+                cols2read = rcols-ccol_offset;
+
+            crows = rows2read;
+            ccols = cols2read;
+            crows_offset = crow_offset;
+            ccols_offset = ccol_offset;
+
+            print2term("Cache row_offset: %d, col_offset: %d, rows2read: %d, cols2read: %d\n",
+                        crow_offset, ccol_offset, crows, ccols);
 
             int bandInx = 1; /* Band index starts at 1, not 0 */
             GDALRasterBand *band = rdset->GetRasterBand(bandInx);
             CHECKPTR(band);
+            CPLErr cplerr;
 
-            /* Store raster in byte array. */
-            CPLErr cplerr = band->RasterIO(GF_Read, 0, 0, cols, rows, raster, cols, rows, GDT_Float32, 0, 0);
+#ifdef USE_CACHE
+            /* Store cached part of raster in array. */
+            cplerr = band->RasterIO(GF_Read, ccols_offset, crows_offset, ccols, crows, raster_cache,
+                                    CACHE_MAX_COLS, CACHE_MAX_ROWS, GDT_Float32, 0, 0);
             CHECK_GDALERR(cplerr);
+#else
+            long size = rcols * rrows;
+            raster = new float[size];
+            CHECKPTR(raster);
 
-            rasterCreated = true;
+            /* Store raster in array. */
+            cplerr = band->RasterIO(GF_Read, 0, 0, rcols, rrows, raster, rcols, rrows, GDT_Float32, 0, 0);
+            CHECK_GDALERR(cplerr);
+#endif
+            rasterRead = true;
         }
     }
     catch(const RunTimeException& e)
@@ -258,10 +293,10 @@ bool ArcticDEMRaster::createRaster(OGRPoint* p)
    if (idset) GDALClose((GDALDatasetH)idset);
    if (rdset) GDALClose((GDALDatasetH)rdset);
 
-    if(!rasterCreated)
+    if(!rasterRead)
         throw RunTimeException(CRITICAL, RTE_ERROR, "ArcticDEMRaster failed");
 
-    return rasterCreated;
+    return rasterRead;
 }
 
 
@@ -278,38 +313,40 @@ float ArcticDEMRaster::subset (double lon, double lat)
         lat = p.getY();
 
 GET_ELEV:
-        if ((lon >= bbox.lon_min) &&
-            (lon <= bbox.lon_max) &&
-            (lat >= bbox.lat_min) &&
-            (lat <= bbox.lat_max))
+        if ((lon >= rbbox.lon_min) &&
+            (lon <= rbbox.lon_max) &&
+            (lat >= rbbox.lat_min) &&
+            (lat <= rbbox.lat_max))
         {
-            uint32_t row = (bbox.lat_max - lat) / cellsize;
-            uint32_t col = (lon - bbox.lon_min) / cellsize;
+            uint32_t row = (rbbox.lat_max - lat) / cellsize;
+            uint32_t col = (lon - rbbox.lon_min) / cellsize;
 
-            if ((row < rows) && (col < cols))
+#ifdef USE_CACHE
+            if ((row >= crows_offset) && (row < crows_offset+crows) &&
+                (col >= ccols_offset) && (col < ccols_offset+ccols))
             {
-                return rawPixel(row, col);
+                return cacheRawPixel(row, col);
             }
+            else
+            {
+                /* Point is in this raster but not in cache */
+                if (readRaster(&p, false)) goto GET_ELEV;
+                else return ARCTIC_DEM_INVALID_EL;
+            }
+#else
+            if ((row < rrows) && (col < rcols)) return rawPixel(row, col);
+#endif
         }
         else
         {
-            /* Create raster with lat/lon in center */
-            if( createRaster(&p) )
-                goto GET_ELEV;
-            else
-                return ARCTIC_DEM_INVALID_EL;
+            /* Point not in the raster */
+            if( readRaster(&p, true) ) goto GET_ELEV;
+            else return ARCTIC_DEM_INVALID_EL;
         }
 
     }
-    else
-    {
-        /*
-         * Cannot log this error...
-         * Transform failed for probably thousands of pixels in raster.
-         */
-    }
 
-    return false;
+    return ARCTIC_DEM_INVALID_EL;
 }
 
 /*----------------------------------------------------------------------------
@@ -317,6 +354,7 @@ GET_ELEV:
  *----------------------------------------------------------------------------*/
 ArcticDEMRaster::~ArcticDEMRaster(void)
 {
+    if (raster_cache) delete[] raster_cache;
     if (raster) delete[] raster;
     if (latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
 }
@@ -357,29 +395,30 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength
 
     /* Initialize Class Data Members */
     raster = NULL;
-    rows = 0;
-    cols = 0;
-    bbox = {0.0, 0.0, 0.0, 0.0};
+    rbbox = {0.0, 0.0, 0.0, 0.0};
+    rrows = 0;
+    rcols = 0;
+
+    raster_cache = NULL;
+    crows = 0;
+    ccols = 0;
+    crows_offset = 0;
+    ccols_offset = 0;
     cellsize = 0.0;
     latlon2xy = NULL;
     source.Clear();
     target.Clear();
 
-    bbox.lon_min = 0;
-    bbox.lon_max = 0;
-    bbox.lat_max = 0;
-    bbox.lat_min = 0;
-
     try
     {
         idset = (GDALDataset *)GDALOpenEx(indexfname.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         CHECKPTR(idset);
-        OGRLayer *srcLayer = idset->GetLayer(0);
-        CHECKPTR(srcLayer);
+        OGRLayer *ilayer = idset->GetLayer(0);
+        CHECKPTR(ilayer);
 
-        OGRSpatialReference *srcSrs = srcLayer->GetSpatialRef();
+        OGRSpatialReference *srcSrs = ilayer->GetSpatialRef();
         CHECKPTR(srcSrs);
-        srcSrs->dumpReadable();
+        //srcSrs->dumpReadable();
 
         char *wkt;
         srcSrs->exportToWkt(&wkt);
@@ -398,6 +437,15 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength
         /* Create coordinates transformation */
         latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
         CHECKPTR(latlon2xy);
+
+        /* Allocate memory for raster cache */
+        long size = RASTER_MAX_SIZE / sizeof(float);
+        raster_cache = new float[size];
+
+        /* Preload cache, this may be done based on poligon past to constructor */
+        double lat =  82.86;
+        double lon = -74.60;
+        subset(lon, lat);
 
         objCreated = true;
     }
@@ -432,8 +480,8 @@ int ArcticDEMRaster::luaDimensions(lua_State *L)
         ArcticDEMRaster *lua_obj = (ArcticDEMRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushinteger(L, lua_obj->rows);
-        lua_pushinteger(L, lua_obj->cols);
+        lua_pushinteger(L, lua_obj->rrows);
+        lua_pushinteger(L, lua_obj->rcols);
         num_ret += 2;
 
         /* Set Return Status */
@@ -462,10 +510,10 @@ int ArcticDEMRaster::luaBoundingBox(lua_State *L)
         ArcticDEMRaster *lua_obj = (ArcticDEMRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->bbox.lon_min);
-        lua_pushnumber(L, lua_obj->bbox.lat_min);
-        lua_pushnumber(L, lua_obj->bbox.lon_max);
-        lua_pushnumber(L, lua_obj->bbox.lat_max);
+        lua_pushnumber(L, lua_obj->rbbox.lon_min);
+        lua_pushnumber(L, lua_obj->rbbox.lat_min);
+        lua_pushnumber(L, lua_obj->rbbox.lon_max);
+        lua_pushnumber(L, lua_obj->rbbox.lat_max);
         num_ret += 4;
 
         /* Set Return Status */
@@ -527,7 +575,7 @@ int ArcticDEMRaster::luaPixel(lua_State *L)
         uint32_t c = getLuaInteger(L, 3);
 
         /* Get Pixel */
-        if ((r < lua_obj->rows) && (c < lua_obj->cols))
+        if ((r < lua_obj->rrows) && (c < lua_obj->rcols))
         {
             lua_pushboolean(L, lua_obj->rawPixel(r, c));
             num_ret++;

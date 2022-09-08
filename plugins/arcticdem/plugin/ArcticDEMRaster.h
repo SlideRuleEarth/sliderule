@@ -54,7 +54,11 @@ class ArcticDEMRaster: public LuaObject
         static const int   ARCTIC_DEM_INVALID_EL = -1000000;
         static const int   RASTER_NODATA_VALUE = 200;
         static const int   RASTER_PIXEL_ON = 1;
-        static const int   RASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
+        static const int   CACHE_MAX_ROWS = 2048;
+        static const int   CACHE_MAX_COLS = 2048;
+        static const int   CACHE_MAX_ROWS_OFFSET = CACHE_MAX_ROWS/2;
+        static const int   CACHE_MAX_COLS_OFFSET = CACHE_MAX_COLS/2;
+        static const int   RASTER_MAX_SIZE = CACHE_MAX_ROWS*CACHE_MAX_COLS*sizeof(float); // 16MB
         static const int   RASTER_PHOTON_CRS = 4326;
 
         static const char* FILEDATA_KEY;
@@ -84,7 +88,7 @@ class ArcticDEMRaster: public LuaObject
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
         float                   subset         (double lon, double lat);
-        bool                    createRaster   (OGRPoint* p);
+        bool                    readRaster     (OGRPoint* p, bool findNewRaster);
         virtual                ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
@@ -93,17 +97,22 @@ class ArcticDEMRaster: public LuaObject
 
         float rawPixel (const uint32_t row, const uint32_t col)
         {
-            return raster[(row * cols) + col];
+            return raster[(row * rcols) + col];
+        }
+
+        float cacheRawPixel (const uint32_t row, const uint32_t col)
+        {
+            return raster_cache[((row-crows_offset) * ccols) + (col-ccols_offset)];
         }
 
         uint32_t numRows (void)
         {
-            return rows;
+            return rrows;
         }
 
         uint32_t numCols(void)
         {
-            return cols;
+            return rcols;
         }
 
     protected:
@@ -126,11 +135,19 @@ class ArcticDEMRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
         const std::string indexfname = "/data/ArcticDEM/ArcticDEM_Tile_Index_Rel7/ArcticDEM_Tile_Index_Rel7.shp";
+        std::string rasterfname = "/data/ArcticDEM/";
 
         float    *raster;
-        uint32_t  rows;
-        uint32_t  cols;
-        bbox_t    bbox;
+        uint32_t  rrows;
+        uint32_t  rcols;
+        bbox_t    rbbox;
+
+        float    *raster_cache;
+        uint32_t  crows;
+        uint32_t  ccols;
+        uint32_t  crows_offset;
+        uint32_t  ccols_offset;
+
         double    cellsize;
 
         OGRCoordinateTransformation *latlon2xy;
