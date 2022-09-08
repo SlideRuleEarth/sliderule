@@ -226,15 +226,18 @@ void* LuaEndpoint::requestThread (void* parm)
     bool authorized = false;
     if(lua_endpoint->authenticator)
     {
-        const char* auth_value = NULL;
-        if(request->headers->find("Authorization", &auth_value))
+        char* bearer_token = NULL;
+
+        /* Extract Bearer Token */
+        const char* auth_hdr = NULL;
+        if(request->headers->find("Authorization", &auth_hdr))
         {
-            const char* token = StringLib::find(auth_value, ' ');
-            if(token)
-            {
-                authorized = lua_endpoint->authenticator->isValid(token + 1);
-            }
+            bearer_token = StringLib::find(auth_hdr, ' ');
+            if(bearer_token) bearer_token += 1;
         }
+
+        /* Validate Bearer Token */
+        authorized = lua_endpoint->authenticator->isValid(bearer_token);
     }
     else // no authentication required
     {

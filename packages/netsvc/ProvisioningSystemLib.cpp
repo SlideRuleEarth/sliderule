@@ -45,6 +45,17 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Local Functions
+ *----------------------------------------------------------------------------*/
+
+size_t write2nothing(char* ptr, size_t size, size_t nmemb, void* userdata)
+{
+    (void)ptr;
+    (void)userdata;
+    return size * nmemb;
+}
+
+/*----------------------------------------------------------------------------
  * Static Data
  *----------------------------------------------------------------------------*/
 
@@ -185,6 +196,7 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
             curl_easy_setopt(curl, CURLOPT_URL, url_str.getString());
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write2nothing);
 
             /* Set Bearer Token Header */
             struct curl_slist* headers = NULL;
@@ -366,9 +378,13 @@ bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
     {
         return true; // no authentication used for default organization name
     }
-    else
+    else if(token != NULL)
     {
         return ProvisioningSystemLib::validate(token);
+    }
+    else
+    {
+        return false;
     }
 }
 
