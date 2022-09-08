@@ -25,9 +25,9 @@ if __name__ == '__main__':
     # set script defaults
     cfg = {
         "run": 'write', # run, plot, list
-        "url": 'icesat2sliderule.org',
+        "url": 'localhost',
         "organization": None,
-        "asset": 'nsidc-s3',
+        "asset": 'atlas-local',
         "filename": 'output.hdf5',
         "tolerance": 0.0,
         "cellsize": 0.01,

@@ -5,6 +5,7 @@
 import sys
 import logging
 from sliderule import icesat2
+from utils import parse_command_line
 
 ###############################################################################
 # MAIN
@@ -12,54 +13,34 @@ from sliderule import icesat2
 
 if __name__ == '__main__':
 
-    url             = "localhost"
-    asset           = "atlas-local"
-    organization    = None
-    dataset         = "/gt2l/heights/h_ph"
-    resource        = "ATL03_20181017222812_02950102_003_01.h5"
-    col             = 0
-    startrow        = 0
-    numrows         = -1
+    # set script defaults
+    cfg = {
+        "url":          'localhost',
+        "organization": None,
+        "asset":        'atlas-local',
+        "dataset":      '/gt2l/heights/h_ph',
+        "resource":     'ATL03_20181017222812_02950102_003_01.h5',
+        "col":          0,
+        "startrow":     0,
+        "numrows":      -1
+    }
 
-    # Set URL #
-    if len(sys.argv) > 1:
-        url = sys.argv[1]
-
-    # Set Asset #
-    if len(sys.argv) > 2:
-        asset = sys.argv[2]
-
-    # Set Organization
-    if len(sys.argv) > 3:
-        organization = sys.argv[3]
-
-    # Set Dataset #
-    if len(sys.argv) > 4:
-        dataset = sys.argv[4]
-
-    # Set Resource #
-    if len(sys.argv) > 5:
-        resource = sys.argv[5]
-
-    # Set Subset #
-    if len(sys.argv) > 8:
-        col         = int(sys.argv[6]) # 0
-        startrow    = int(sys.argv[7]) # 13665185
-        numrows     = int(sys.argv[8]) # 89624
+    # parse configuration parameters
+    parse_command_line(sys.argv, cfg)
 
     # Configure Logging #
     logging.basicConfig(level=logging.INFO)
 
     # Configure SlideRule #
-    icesat2.init(url, True, organization=organization)
+    icesat2.init(cfg["url"], True, organization=cfg["organization"])
 
     # Read Dataset #
-    datasets = [ {"dataset": dataset, "col": col, "startrow": startrow, "numrows": numrows} ]
-    rawdata = icesat2.h5p(datasets, resource, asset)
+    datasets = [ {"dataset": cfg["dataset"], "col": cfg["col"], "startrow": cfg["startrow"], "numrows": cfg["numrows"]} ]
+    rawdata = icesat2.h5p(datasets, cfg["resource"], cfg["asset"])
     print(rawdata)
 
     # Write Dataset to File #
-    filename = dataset[dataset.rfind("/")+1:]
+    filename = cfg["dataset"][cfg["dataset"].rfind("/")+1:]
     f = open(filename + ".bin", 'w+b')
-    f.write(bytearray(rawdata[dataset]))
+    f.write(bytearray(rawdata[cfg["dataset"]]))
     f.close()

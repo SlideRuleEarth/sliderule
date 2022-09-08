@@ -41,8 +41,11 @@ from datetime import datetime, timedelta
 # GLOBALS
 ###############################################################################
 
-service_url = "localhost"
-service_org = "sliderule"
+PUBLIC_URL = "icesat2sliderule.org"
+PUBLIC_ORG = "sliderule"
+
+service_url = PUBLIC_URL
+service_org = PUBLIC_ORG
 
 ps_refresh_token = None
 ps_access_token = None
@@ -558,8 +561,8 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
     # set organization on any authentication request
     service_org = ps_organization
 
-    # check for direct IP access
-    if service_org == None:
+    # check for direct or public access
+    if service_org == None or service_org == PUBLIC_ORG:
         return True
 
     # attempt retrieving from environment
