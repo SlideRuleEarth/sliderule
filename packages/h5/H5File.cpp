@@ -155,7 +155,7 @@ void* H5File::readThread (void* parm)
         /* Post Record */
         unsigned char* rec_buf;
         int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, sizeof(h5file_t) + results.datasize);
-        int status = outq.postCopy(rec_buf, rec_size, results.data, results.datasize, SYS_TIMEOUT);
+        int status = outq.postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT);
         if(status <= 0)
         {
             mlog(CRITICAL, "Failed (%d) to post h5 dataset: %s/%s", status, info->h5file->asset->getName(), info->dataset);
