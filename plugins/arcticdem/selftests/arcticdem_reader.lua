@@ -17,14 +17,17 @@ local robj = arcticdem.raster()
 runner.check(robj ~= nil)
 
 local lat = 82.86
-local lon = -74.6
+local lon = -74.60
 
-for i = 100, 1, -1
+
+for i = 10, 1, -1
 do
     local el, status = robj:subset(lon, lat)
     print(status, el)
-    lat = lat + 0.001
+    lat = lat + 0.0001
+    lon = lon + 0.0001
 end
+
 
 print('\n------------------\nTest01: ArcticDEM Reader \n------------------')
 

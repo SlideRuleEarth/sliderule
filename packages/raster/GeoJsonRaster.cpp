@@ -321,6 +321,10 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         bbox.lat_min = geot[3] + rows * geot[5];
 
         long size = cols * rows;
+
+        if(size > RASTER_MAX_IMAGE_SIZE)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster exceeds max rster size, %ld>%u", size, RASTER_MAX_IMAGE_SIZE);
+
         raster = new uint8_t[size];
         CHECKPTR(raster);
 
