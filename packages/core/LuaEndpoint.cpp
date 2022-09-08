@@ -49,8 +49,9 @@ const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
 
 const char* LuaEndpoint::EndpointExceptionRecType = "exceptrec";
 const RecordObject::fieldDef_t LuaEndpoint::EndpointExceptionRecDef[] = {
-    {"code",        RecordObject::INT32,    offsetof(response_exception_t, code), 1,                        NULL, NATIVE_FLAGS},
-    {"text",        RecordObject::STRING,   offsetof(response_exception_t, text), MAX_EXCEPTION_TEXT_SIZE,  NULL, NATIVE_FLAGS}
+    {"code",        RecordObject::INT32,    offsetof(response_exception_t, code),   1,                       NULL, NATIVE_FLAGS},
+    {"level",       RecordObject::INT32,    offsetof(response_exception_t, level),  1,                       NULL, NATIVE_FLAGS},
+    {"text",        RecordObject::STRING,   offsetof(response_exception_t, text),   MAX_EXCEPTION_TEXT_SIZE, NULL, NATIVE_FLAGS}
 };
 
 const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
@@ -146,7 +147,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * generateExceptionStatus
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::generateExceptionStatus (int code, Publisher* outq, bool* active, const char* errmsg, ...)
+void LuaEndpoint::generateExceptionStatus (int code, event_level_t level, Publisher* outq, bool* active, const char* errmsg, ...)
 {
     /* Build Error Message */
     char error_buf[MAX_EXCEPTION_TEXT_SIZE];
@@ -161,6 +162,7 @@ void LuaEndpoint::generateExceptionStatus (int code, Publisher* outq, bool* acti
     RecordObject record(EndpointExceptionRecType);
     response_exception_t* exception = (response_exception_t*)record.getRecordData();
     exception->code = code;
+    exception->level = (int32_t)level;
     StringLib::format(exception->text, MAX_EXCEPTION_TEXT_SIZE, "%s", error_buf);
 
     /* Post Exception Record */

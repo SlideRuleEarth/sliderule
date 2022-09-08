@@ -271,7 +271,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
         atl06_rqst_t* rqst = &requests[i];
         if(rqstPub->postCopy(&rqst, sizeof(rqst), IO_CHECK) <= 0)
         {
-            LuaEndpoint::generateExceptionStatus(RTE_ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
+            LuaEndpoint::generateExceptionStatus(RTE_ERROR, ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
         }
     }
 }
@@ -330,7 +330,8 @@ void* EndpointProxy::collatorThread (void* parm)
 
                         /* Post Status */
                         int code = rqst->valid ? RTE_INFO : RTE_ERROR;
-                        LuaEndpoint::generateExceptionStatus(code, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
+                        event_level_t level = rqst->valid ? INFO : ERROR;
+                        LuaEndpoint::generateExceptionStatus(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
                                                                 rqst->valid ? "Successfully completed" : "Failed to complete",
                                                                 num_terminated, proxy->numRequests, rqst->resource);
 

@@ -82,6 +82,7 @@ class LuaEndpoint: public EndpointObject
         /* Response Exception Record */
         typedef struct {
             int32_t code;
+            int32_t level;
             char    text[MAX_EXCEPTION_TEXT_SIZE];
         } response_exception_t;
 
@@ -113,7 +114,7 @@ class LuaEndpoint: public EndpointObject
 
         static bool         init                    (void);
         static int          luaCreate               (lua_State* L);
-        static void         generateExceptionStatus (int code, Publisher* outq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 4, 5);
+        static void         generateExceptionStatus (int code, event_level_t level, Publisher* outq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 
     protected:
 
