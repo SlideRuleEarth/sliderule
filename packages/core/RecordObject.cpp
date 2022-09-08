@@ -324,7 +324,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
         #else
             int hdrsize = sizeof(rec_hdr_t) + LocalLib::swaps(rechdr->type_size);
         #endif
-        bufsize = MIN(memoryAllocated, hdrsize + size);
+        bufsize = hdrsize + size;
         datasize = bufsize - hdrsize;
     }
 
@@ -332,7 +332,8 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     if (mode == ALLOCATE)
     {
         *buffer = new unsigned char[bufsize];
-        LocalLib::copy(*buffer, recordMemory, bufsize);
+        uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
+        LocalLib::copy(*buffer, recordMemory, bytes_to_copy);
     }
     else if (mode == REFERENCE)
     {
@@ -341,7 +342,8 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     else // if (mode == COPY)
     {
         assert(*buffer);
-        LocalLib::copy(*buffer, recordMemory, bufsize);
+        uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
+        LocalLib::copy(*buffer, recordMemory, bytes_to_copy);
     }
 
     /* Set Size in Record Header */
