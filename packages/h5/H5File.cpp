@@ -135,7 +135,7 @@ void* H5File::readThread (void* parm)
     }
     catch (const RunTimeException& e)
     {
-        mlog(e.level(), "Failed to read dataset %s/%s: %s", info->h5file->asset->getName(), info->dataset, e.what());
+        mlog(e.level(), "Failed to read dataset %s://%s/%s: %s", info->h5file->asset->getName(), info->h5file->resource, info->dataset, e.what());
     }
 
     /* Post Results to Output Queue */
