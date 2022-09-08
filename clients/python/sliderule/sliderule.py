@@ -395,9 +395,12 @@ def source (api, parm={}, stream=False, callbacks={}):
         if c not in callbacks:
             callbacks[c] = __callbacks[c]
     # Construct Request URL and Authorization #
-    url = 'https://%s.%s/source/%s' % (service_org, service_url, api)
-    if ps_access_token:
-        headers = {'Authorization': 'Bearer ' + ps_access_token}
+    if service_org:
+        url = 'https://%s.%s/source/%s' % (service_org, service_url, api)
+        if ps_access_token:
+            headers = {'Authorization': 'Bearer ' + ps_access_token}
+    else:
+        url = 'http://%s/source/%s' % (service_url, api)
     # Attempt Request #
     while retries > 0:
         retries -= 1
@@ -554,6 +557,10 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
 
     # set organization on any authentication request
     service_org = ps_organization
+
+    # check for direct IP access
+    if service_org == None:
+        return True
 
     # attempt retrieving from environment
     if not ps_username or not ps_password:

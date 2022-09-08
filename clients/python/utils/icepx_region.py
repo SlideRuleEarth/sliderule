@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     # set script defaults
     scfg = {
-        "url": '127.0.0.1',
+        "url": 'localhost',
         "organization": None,
         "asset": 'atlas-local'
     }
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # set icepx defaults
     icfg = {
         "short_name": 'ATL03',
-        "spatial_extent": 'valgrande.shp',
+        "spatial_extent": 'tests/data/grandmesa.shp',
         "date_range": ['2018-01-01', "{}-{}-{}".format(today.year, today.month, today.day)],
         "cycles": None,
         "tracks": None
