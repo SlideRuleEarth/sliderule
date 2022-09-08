@@ -11,25 +11,7 @@ import folium
 import matplotlib.pyplot as plt
 from sliderule import icesat2
 from sliderule.stream2disk import Hdf5Writer, Hdf5Reader
-
-def parse_command_line(args, cfg):
-    i = 1
-    while i < len(args):
-        for entry in cfg:
-            if args[i] == '--'+entry:
-                if type(cfg[entry]) is str:
-                    cfg[entry] = args[i + 1]
-                elif type(cfg[entry]) is list:
-                    l = []
-                    while (i + 1) < len(args) and args[i + 1].isnumeric():
-                        l.append(int(args[i + 1]))
-                        i += 1
-                    cfg[entry] = l
-                elif type(cfg[entry]) is int:
-                    cfg[entry] = int(args[i + 1])
-                i += 1
-        i += 1
-    return cfg
+from utils import parse_command_line
 
 ###############################################################################
 # MAIN
@@ -44,8 +26,9 @@ if __name__ == '__main__':
     cfg = {
         "run": 'write', # run, plot, list
         "url": 'icesat2sliderule.org',
+        "organization": None,
         "asset": 'nsidc-s3',
-        "filename": 'atl06.hdf5',
+        "filename": 'output.hdf5',
         "tolerance": 0.0,
         "cellsize": 0.01,
         "n_clusters": 1,
@@ -80,7 +63,7 @@ if __name__ == '__main__':
     if cfg["run"] == 'write':
 
         # configure SlideRule
-        icesat2.init(cfg["url"], False, cfg["max_resources"], loglevel=logging.INFO)
+        icesat2.init(cfg["url"], False, cfg["max_resources"], loglevel=logging.INFO, organization=cfg["organization"])
 
         # create hdf5 writer
         hdf5writer = Hdf5Writer(cfg["filename"], parms)

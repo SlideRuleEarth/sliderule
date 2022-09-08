@@ -24,8 +24,8 @@ from sliderule import icesat2
 
 if __name__ == '__main__':
 
-    url = "127.0.0.1"
-    asset = "atlas-local"
+    url = "testsliderule.org"
+    asset = "nsidc-s3"
     resource = "ATL03_20181017222812_02950102_005_01.h5"
 
     # Configure SlideRule #

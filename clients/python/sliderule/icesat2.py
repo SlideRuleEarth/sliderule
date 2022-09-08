@@ -925,7 +925,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets <#assets>`_)
+                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
@@ -1054,16 +1054,9 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     Returns
     -------
     dict
-        a raster image and a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule
-        region = {
-            "poly": [{"lat": <lat1>, "lon": <lon1>, ... }],
-            "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...],
-            "raster": {
-                "data": <geojson file as string>,
-                "length": <length of geojson file>,
-                "cellsize": <parameter cellsize>
-            }
-        }
+        a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule.
+
+        region = {"poly": [{"lat": <lat1>, "lon": <lon1>, ... }], "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...], "raster": {"data": <geojson file as string>, "length": <length of geojson file>, "cellsize": <parameter cellsize>}}
 
     Examples
     --------

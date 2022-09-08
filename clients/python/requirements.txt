@@ -1,5 +1,5 @@
 requests
 numpy
 geopandas
-shapely
+shapely<2
 scikit-learn

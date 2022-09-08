@@ -1,11 +1,12 @@
 #
-#   Uses the "event" endpoint to capture a set of traces 
+#   Uses the "event" endpoint to capture a set of traces
 #   and produce human readable results
 #
 
 import sys
 import pandas
 import sliderule
+from utils import parse_command_line
 
 ###############################################################################
 # GLOBALS
@@ -15,7 +16,7 @@ TRACE_ORIGIN = 0
 TRACE_START = 1
 TRACE_STOP = 2
 LOG = 1
-TRACE = 2 
+TRACE = 2
 METRIC = 4
 COLOR_MAP = [8421631, 8454143, 8454016, 16777088, 16744703, 16777215]
 
@@ -115,25 +116,6 @@ def sta_output(idlist, depth, names, traces):
     write_sta_events("pytrace.txt", df)
     write_sta_setup("pytrace.PerfIDSetup", perf_ids)
 
-def parse_command_line(args, cfg):
-    i = 1
-    while i < len(args):
-        for entry in cfg:
-            if args[i] == '--'+entry:
-                if type(cfg[entry]) is str:
-                    cfg[entry] = args[i + 1]
-                elif type(cfg[entry]) is list:
-                    l = []
-                    while (i + 1) < len(args) and args[i + 1].isnumeric():
-                        l.append(int(args[i + 1]))
-                        i += 1
-                    cfg[entry] = l
-                elif type(cfg[entry]) is int:
-                    cfg[entry] = int(args[i + 1])
-                i += 1
-        i += 1
-    return cfg
-
 def process_event(rec):
     global names, traces, origins
     # Populate traces dictionary
@@ -142,7 +124,7 @@ def process_event(rec):
     elif rec["type"] == TRACE:
         trace_id = rec['id']
         if rec["flags"] & TRACE_START:
-            if trace_id not in traces.keys():                        
+            if trace_id not in traces.keys():
                 # Populate start of span
                 name = str(rec['name']) + "." + str(rec['tid'])
                 traces[trace_id] = {"id": trace_id, "name": name, "start": rec, "stop": None, "children": []}
@@ -182,7 +164,7 @@ if __name__ == '__main__':
 
     # Default Request
     rqst = {
-        "type": LOG | TRACE, 
+        "type": LOG | TRACE,
         "level" : "INFO",
         "duration": 30
     }
@@ -192,7 +174,7 @@ if __name__ == '__main__':
 
     # Set URL (bypass service discovery)
     sliderule.set_url([parms["ipaddr"]])
-    
+
     # Connect to SlideRule
     rsps = sliderule.source("event", rqst, stream=True, callbacks={'eventrec': process_event})
 

@@ -2,32 +2,9 @@ import sys
 from datetime import date
 from sliderule import ipxapi
 from sliderule import icesat2
-from sliderule import io
+from utils import parse_command_line
 import matplotlib.pyplot as plt
 import icepyx
-
-###############################################################################
-# LOCAL FUNCTIONS
-###############################################################################
-
-def parse_command_line(args, cfg):
-    i = 1
-    while i < len(args):
-        for entry in cfg:
-            if args[i] == '--'+entry:
-                if type(cfg[entry]) is str:
-                    cfg[entry] = args[i + 1]
-                elif (type(cfg[entry]) is list) or (cfg[entry] is None):
-                    l = []
-                    while (i + 1) < len(args) and args[i + 1].isnumeric():
-                        l.append(int(args[i + 1]))
-                        i += 1
-                    cfg[entry] = l
-                elif type(cfg[entry]) is int:
-                    cfg[entry] = int(args[i + 1])
-                i += 1
-        i += 1
-    return cfg
 
 ###############################################################################
 # MAIN
@@ -40,6 +17,7 @@ if __name__ == '__main__':
     # set script defaults
     scfg = {
         "url": '127.0.0.1',
+        "organization": None,
         "asset": 'atlas-local'
     }
 
@@ -68,10 +46,6 @@ if __name__ == '__main__':
     parse_command_line(sys.argv, scfg)
     parse_command_line(sys.argv, parms)
 
-    # bypass service discovery if url is localhost
-    if scfg["url"] == '127.0.0.1':
-        scfg["url"] = ['127.0.0.1']
-
     # create icepx region
     iregion = icepyx.Query(icfg["short_name"], icfg["spatial_extent"], icfg["date_range"], cycles=icfg["cycles"], tracks=icfg["tracks"])
 
@@ -84,7 +58,7 @@ if __name__ == '__main__':
     # print("Available Granule IDs:", iregion.avail_granules(ids=True))
 
     # initialize sliderule api
-    icesat2.init(scfg["url"], verbose=True)
+    icesat2.init(scfg["url"], verbose=True, organization=scfg["organization"])
 
     # generate sliderule atl06 elevations
     # parms["poly"] = icesat2.toregion(icfg["spatial_extent"])["poly"]

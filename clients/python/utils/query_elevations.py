@@ -1,5 +1,5 @@
 #
-# Perform a proxy request
+# Perform a proxy request for atl06-sr elevations
 #
 
 import sys
@@ -15,6 +15,8 @@ if __name__ == '__main__':
 
     url = "127.0.0.1"
     asset = "atlas-local"
+    organization = None
+    resource = "ATL03_20181017222812_02950102_005_01.h5"
 
     logging.basicConfig(level=logging.INFO)
 
@@ -32,9 +34,12 @@ if __name__ == '__main__':
         asset = sys.argv[3]
 
     # Set Organization #
-    organization = None
     if len(sys.argv) > 4:
         organization = sys.argv[4]
+
+    # Set Resource #
+    if len(sys.argv) > 5:
+        organization = sys.argv[5]
 
     # Configure SlideRule #
     icesat2.init(url, True, organization=organization)
@@ -52,22 +57,13 @@ if __name__ == '__main__':
         "maxi": 1
     }
 
-    # Get Granules
-    resources = ['ATL03_20181017222812_02950102_005_01.h5']
-
-    # Latch Start Time
-    perf_start = time.perf_counter()
-
     # Request ATL06 Data
-    gdf = icesat2.atl06p(parms, asset=asset, resources=resources[0:1])
-
-    # Latch Stop Time
+    perf_start = time.perf_counter()
+    gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
     perf_stop = time.perf_counter()
 
-    # Build DataFrame of SlideRule Responses
-    num_elevations = len(gdf)
-
     # Display Statistics
+    num_elevations = len(gdf)
     perf_duration = perf_stop - perf_start
     print("Completed in {:.3f} seconds of wall-clock time".format(perf_duration))
     if num_elevations > 0:

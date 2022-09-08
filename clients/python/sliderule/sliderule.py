@@ -341,7 +341,7 @@ def __raiseexceptrec(rec):
 #
 #  Globals
 #
-default_callbacks = {'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}
+__callbacks = {'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}
 
 ###############################################################################
 # APIs
@@ -350,7 +350,7 @@ default_callbacks = {'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, callbacks=default_callbacks):
+def source (api, parm={}, stream=False, callbacks=None):
     '''
     Perform API call to SlideRule service
 
@@ -390,6 +390,10 @@ def source (api, parm={}, stream=False, callbacks=default_callbacks):
     rqst = json.dumps(parm)
     rsps = {}
     headers = None
+    # Build callbacks
+    for c in __callbacks:
+        if c not in callbacks:
+            callbacks[c] = __callbacks[c]
     # Construct Request URL and Authorization #
     try:
         if service_org:
