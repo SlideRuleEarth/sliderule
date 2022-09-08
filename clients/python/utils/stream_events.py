@@ -11,13 +11,7 @@ import sys
 import logging
 from sliderule import sliderule
 from sliderule import icesat2
-
-###############################################################################
-# GLOBAL CODE
-###############################################################################
-
-# configure logging
-logging.basicConfig(level=logging.INFO)
+from utils import parse_command_line
 
 ###############################################################################
 # MAIN
@@ -25,34 +19,29 @@ logging.basicConfig(level=logging.INFO)
 
 if __name__ == '__main__':
 
-    # Override server URL from command line
-    url = "127.0.0.1"
-    if len(sys.argv) > 1:
-        url = [sys.argv[1]]
+    # Set Script Defaults
+    cfg = {
+        "url":          'localhost',
+        "organization": None,
+        "duration":     30, # seconds
+        "event_type":   'LOG',
+        "event_level":  'INFO'
+    }
 
-    # Override duration to maintain connection
-    duration = 30 # seconds
-    if len(sys.argv) > 2:
-        duration = int(sys.argv[2])
+    # Parse Configuration Parameters
+    parse_command_line(sys.argv, cfg)
 
-    # Override event type
-    event_type = "LOG"
-    if len(sys.argv) > 3:
-        event_type = sys.argv[3]
-
-    # Override event level
-    event_level = "INFO"
-    if len(sys.argv) > 4:
-        event_level = sys.argv[4]
+    # configure logging
+    logging.basicConfig(level=logging.INFO)
 
     # Initialize ICESat2/SlideRule Package
-    icesat2.init(url, True)
+    icesat2.init(cfg["url"], True, organization=cfg["organization"])
 
     # Build Logging Request
     rqst = {
-        "type": event_type,
-        "level" : event_level,
-        "duration": duration
+        "type":     cfg["event_type"],
+        "level" :   cfg["event_level"],
+        "duration": cfg["duration"]
     }
 
     # Retrieve logs

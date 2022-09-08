@@ -14,7 +14,7 @@ from utils import parse_command_line
 
 if __name__ == '__main__':
 
-   # set script defaults
+    # Set Script Defaults
     cfg = {
         "url":          'localhost',
         "organization": None,
@@ -23,7 +23,7 @@ if __name__ == '__main__':
         "resource":     'ATL03_20181017222812_02950102_005_01.h5'
     }
 
-    # parse configuration parameters
+    # Parse Configuration Parameters
     parse_command_line(sys.argv, cfg)
 
     # Configure Logging #
