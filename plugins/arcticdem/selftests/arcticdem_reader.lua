@@ -20,7 +20,7 @@ local lat = 82.86
 local lon = -74.60
 
 
-for i = 10, 1, -1
+for i = 1, 1, -1
 do
     local el, status = robj:subset(lon, lat)
     print(status, el)
