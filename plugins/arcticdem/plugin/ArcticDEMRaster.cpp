@@ -45,7 +45,7 @@
 #include <gdal_priv.h>
 
 
-#define USE_CACHE
+// #define USE_CACHE
 
 /******************************************************************************
  * LOCAL DEFINES AND MACROS
@@ -167,8 +167,6 @@ ArcticDEMRaster* ArcticDEMRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
 {
-    GDALDataset *idset = NULL;
-    GDALDataset *rdset = NULL;
     bool rasterFound = false;
     bool rasterRead  = false;
 
@@ -176,12 +174,16 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
     {
         if(findNewRaster)
         {
-            /* Open index shapefile and find raster tile */
-            idset = (GDALDataset *)GDALOpenEx(indexfname.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
-            CHECKPTR(idset);
-            OGRLayer *ilayer = idset->GetLayer(0);
-            CHECKPTR(ilayer);
+            /* Close existing raster */
+            if (rdset)
+            {
+                GDALClose((GDALDatasetH)rdset);
+                rdset = NULL;
+                rbbox = {0.0, 0.0, 0.0, 0.0};
+                cellsize = rrows = rcols = 0;
+            }
 
+            /* Index shapefile was already opened in constructor */
             OGRFeature *feature;
             ilayer->ResetReading();
             while ((feature = ilayer->GetNextFeature()) != NULL)
@@ -204,31 +206,35 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
                 }
                 OGRFeature::DestroyFeature(feature);
             }
+
+            /* Open new raster, store it's info */
+            if (rasterFound)
+            {
+                rdset = (GDALDataset *)GDALOpenEx(rasterfname.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+                CHECKPTR(rdset);
+
+                /* Store information about raster */
+                rrows = rdset->GetRasterYSize();
+                rcols = rdset->GetRasterXSize();
+                print2term("Raster rows: %d, cols: %d\n", rrows, rcols);
+
+                /* Get raster boundry box */
+                double geot[6] = {0, 0, 0, 0, 0, 0};
+                rdset->GetGeoTransform(geot);
+                rbbox.lon_min = geot[0];
+                rbbox.lon_max = geot[0] + rcols * geot[1];
+                rbbox.lat_max = geot[3];
+                rbbox.lat_min = geot[3] + rrows * geot[5];
+
+                cellsize = geot[1];
+                print2term("Raster rbbox.lon_min/max %0.2lf %0.2lf, rbbox.lat_min/max %0.2lf %0.2lf, cellsize: %lf\n",
+                           rbbox.lon_min, rbbox.lon_max, rbbox.lat_min, rbbox.lat_max, cellsize);
+            }
         } else rasterFound = true;
 
-        /* Open the raster, read data into cache for fast lookup */
+        /* Read data from raster into cache for fast lookup */
         if(rasterFound)
         {
-            rdset = (GDALDataset *)GDALOpenEx(rasterfname.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
-            CHECKPTR(rdset);
-
-            /* Store information about raster */
-            rrows = rdset->GetRasterYSize();
-            rcols = rdset->GetRasterXSize();
-            print2term("Raster rows: %d, cols: %d\n", rrows, rcols);
-
-            /* Get raster boundry box */
-            double geot[6] = {0, 0, 0, 0, 0, 0};
-            rdset->GetGeoTransform(geot);
-            rbbox.lon_min = geot[0];
-            rbbox.lon_max = geot[0] + rcols * geot[1];
-            rbbox.lat_max = geot[3];
-            rbbox.lat_min = geot[3] + rrows * geot[5];
-
-            cellsize = geot[1];
-            print2term("Raster rbbox.lon_min/max %0.2lf %0.2lf, rbbox.lat_min/max %0.2lf %0.2lf, cellsize: %lf\n",
-                       rbbox.lon_min, rbbox.lon_max, rbbox.lat_min, rbbox.lat_max, cellsize);
-
             /* Which row/col of raster do we need? */
             uint32_t row = (rbbox.lat_max - p->getY()) / cellsize;
             uint32_t col = (p->getX() - rbbox.lon_min) / cellsize;
@@ -289,11 +295,6 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
         mlog(e.level(), "Error creating ArcticDEMRaster: %s", e.what());
     }
 
-   /* Cleanup */
-
-   if (idset) GDALClose((GDALDatasetH)idset);
-   if (rdset) GDALClose((GDALDatasetH)rdset);
-
     if(!rasterRead)
         throw RunTimeException(CRITICAL, RTE_ERROR, "ArcticDEMRaster failed");
 
@@ -317,7 +318,8 @@ float ArcticDEMRaster::subset (double lon, double lat)
         lat = p.getY();
 
 GET_ELEV:
-        if ((lon >= rbbox.lon_min) &&
+        if ( rdset &&
+            (lon >= rbbox.lon_min) &&
             (lon <= rbbox.lon_max) &&
             (lat >= rbbox.lat_min) &&
             (lat <= rbbox.lat_max))
@@ -366,6 +368,8 @@ GET_ELEV:
  *----------------------------------------------------------------------------*/
 ArcticDEMRaster::~ArcticDEMRaster(void)
 {
+    if (idset) GDALClose((GDALDatasetH)idset);
+    if (rdset) GDALClose((GDALDatasetH)rdset);
     if (raster_block) delete[] raster_block;
     if (raster_cache) delete[] raster_cache;
     if (latlon2xy) OGRCoordinateTransformation::DestroyCT(latlon2xy);
@@ -403,9 +407,10 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool objCreated = false;
-    GDALDataset *idset = NULL;
 
     /* Initialize Class Data Members */
+    idset = NULL;
+    ilayer = NULL;
     raster_block = NULL;
     rbbox = {0.0, 0.0, 0.0, 0.0};
     rrows = 0;
@@ -428,7 +433,7 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength
     {
         idset = (GDALDataset *)GDALOpenEx(indexfname.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         CHECKPTR(idset);
-        OGRLayer *ilayer = idset->GetLayer(0);
+        ilayer = idset->GetLayer(0);
         CHECKPTR(ilayer);
 
         OGRSpatialReference *srcSrs = ilayer->GetSpatialRef();
@@ -472,10 +477,6 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength
     {
         mlog(e.level(), "Error creating ArcticDEMRaster: %s", e.what());
     }
-
-   /* Cleanup */
-
-   if (idset) GDALClose((GDALDatasetH)idset);
 
     if(!objCreated)
         throw RunTimeException(CRITICAL, RTE_ERROR, "ArcticDEMRaster failed");
