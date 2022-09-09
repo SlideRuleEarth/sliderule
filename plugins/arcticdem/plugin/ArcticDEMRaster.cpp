@@ -45,8 +45,6 @@
 #include <gdal_priv.h>
 
 
-// #define USE_CACHE
-
 /******************************************************************************
  * LOCAL DEFINES AND MACROS
  ******************************************************************************/
@@ -140,32 +138,16 @@ int ArcticDEMRaster::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 ArcticDEMRaster* ArcticDEMRaster::create (lua_State* L, int index)
 {
-#if 0
-    //TODO: may need to start with some known region for optimization
-    //      creating first raster with user's ROI
-
-    /* Get geojson file */
-    lua_getfield(L, index, FILEDATA_KEY);
-    const char* file = getLuaString(L, -1);
+    cache_t ctype = (cache_t)getLuaInteger(L, -1);
     lua_pop(L, 1);
-
-    /* Get geojson file Length */
-    lua_getfield(L, index, FILELENGTH_KEY);
-    size_t filelength = (size_t)getLuaInteger(L, -1);
-    lua_pop(L, 1);
-    /* Create ArcticDEMRaster */
-    return new ArcticDEMRaster(L, file, filelength);
-#else
-    return new ArcticDEMRaster(L, NULL, 0);
-#endif
-
+    return new ArcticDEMRaster(L, ctype);
 }
 
 
 /*----------------------------------------------------------------------------
  * readRaster
  *----------------------------------------------------------------------------*/
-bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
+bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster, float* elevation=NULL)
 {
     bool rasterFound = false;
     bool rasterRead  = false;
@@ -199,7 +181,7 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
                         /* Found polygon with point in it, get the name of raster directory/file */
                         std::string rname = feature->GetFieldAsString("name");
                         rasterfname = "/data/ArcticDEM/" + rname + "/" + rname + "_reg_dem.tif";
-                        print2term("Found raster %s at %0.2f, %0.2f\n", rasterfname.c_str(), p->getX(), p->getY());
+                        // print2term("Found raster %s at %0.2f, %0.2f\n", rasterfname.c_str(), p->getX(), p->getY());
                         rasterFound = true;
                         break;
                     }
@@ -216,7 +198,7 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
                 /* Store information about raster */
                 rrows = rdset->GetRasterYSize();
                 rcols = rdset->GetRasterXSize();
-                print2term("Raster rows: %d, cols: %d\n", rrows, rcols);
+                // print2term("Raster rows: %d, cols: %d\n", rrows, rcols);
 
                 /* Get raster boundry box */
                 double geot[6] = {0, 0, 0, 0, 0, 0};
@@ -227,66 +209,86 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
                 rbbox.lat_min = geot[3] + rrows * geot[5];
 
                 cellsize = geot[1];
-                print2term("Raster rbbox.lon_min/max %0.2lf %0.2lf, rbbox.lat_min/max %0.2lf %0.2lf, cellsize: %lf\n",
-                           rbbox.lon_min, rbbox.lon_max, rbbox.lat_min, rbbox.lat_max, cellsize);
+                // print2term("Raster rbbox.lon_min/max %0.2lf %0.2lf, rbbox.lat_min/max %0.2lf %0.2lf, cellsize: %lf\n",
+                //            rbbox.lon_min, rbbox.lon_max, rbbox.lat_min, rbbox.lat_max, cellsize);
             }
         } else rasterFound = true;
 
         /* Read data from raster into cache for fast lookup */
         if(rasterFound)
         {
+            float el = ARCTIC_DEM_INVALID_ELELVATION;
+
             /* Which row/col of raster do we need? */
             uint32_t row = (rbbox.lat_max - p->getY()) / cellsize;
             uint32_t col = (p->getX() - rbbox.lon_min) / cellsize;
-            print2term("Need row: %u, col: %u\n", row, col);
+            // print2term("Need row: %u, col: %u\n", row, col);
 
             int bandInx = 1; /* Band index starts at 1, not 0 */
             GDALRasterBand *band = rdset->GetRasterBand(bandInx);
             CHECKPTR(band);
 
-#ifdef USE_CACHE
-            /* Calculate raster cache offsets and rows/cols to read */
-            int crow_offset = row-CACHE_MAX_ROWS_OFFSET;
-            if(crow_offset<0) crow_offset = 0;
+            if(cache_type == POLY_CACHE)
+            {
+                /* Calculate raster cache offsets and rows/cols to read */
+                int crow_offset = row - CACHE_MAX_ROWS_OFFSET;
+                if (crow_offset < 0) crow_offset = 0;
 
-            int rows2read = CACHE_MAX_ROWS;
-            if(crow_offset+rows2read > rrows) rows2read = rrows-crow_offset;
+                int rows2read = CACHE_MAX_ROWS;
+                if (crow_offset + rows2read > rrows) rows2read = rrows - crow_offset;
 
-            int ccol_offset = col-CACHE_MAX_COLS_OFFSET;
-            if(ccol_offset<0) ccol_offset = 0;
+                int ccol_offset = col - CACHE_MAX_COLS_OFFSET;
+                if (ccol_offset < 0) ccol_offset = 0;
 
-            int cols2read = CACHE_MAX_COLS;
-            if(ccol_offset+cols2read > rcols) cols2read = rcols-ccol_offset;
+                int cols2read = CACHE_MAX_COLS;
+                if (ccol_offset + cols2read > rcols) cols2read = rcols - ccol_offset;
 
-            crows = rows2read;
-            ccols = cols2read;
-            crows_offset = crow_offset;
-            ccols_offset = ccol_offset;
+                crows = rows2read;
+                ccols = cols2read;
+                crows_offset = crow_offset;
+                ccols_offset = ccol_offset;
 
-            print2term("Cache row_offset: %d, col_offset: %d, rows2read: %d, cols2read: %d\n",
-                        crow_offset, ccol_offset, crows, ccols);
+                // print2term("Cache row_offset: %d, col_offset: %d, rows2read: %d, cols2read: %d\n",
+                //            crow_offset, ccol_offset, crows, ccols);
 
-            /* Store part of raster in array (cache). */
-            CPLErr cplerr = band->RasterIO(GF_Read, ccols_offset, crows_offset, ccols, crows, raster_cache,
-                                           CACHE_MAX_COLS, CACHE_MAX_ROWS, GDT_Float32, 0, 0);
-            CHECK_GDALERR(cplerr);
-#else
-            /* Store raster block. */
-            int nXBlockSize, nYBlockSize;
-            band->GetBlockSize(&nXBlockSize, &nYBlockSize);
-            print2term("BlockXsize: %d, BlockYsize: %d\n", nXBlockSize, nYBlockSize);
+                /* Store part of raster in array (cache). */
+                CPLErr cplerr = band->RasterIO(GF_Read, ccols_offset, crows_offset, ccols, crows, raster_cache,
+                                               CACHE_MAX_COLS, CACHE_MAX_ROWS, GDT_Float32, 0, 0);
+                CHECK_GDALERR(cplerr);
+                el = cacheRawPixel(row, col);
+            }
+            else if(cache_type == BLOCK_CACHE || cache_type == NO_CACHE)
+            {
+                /* Store raster block. */
+                int nXBlockSize, nYBlockSize;
+                band->GetBlockSize(&nXBlockSize, &nYBlockSize);
+                // print2term("BlockXsize: %d, BlockYsize: %d\n", nXBlockSize, nYBlockSize);
 
-            int nXBlocks = (band->GetXSize() + nXBlockSize - 1) / nXBlockSize;
-            int nYBlocks = (band->GetYSize() + nYBlockSize - 1) / nYBlockSize;
+                int nXBlocks = (band->GetXSize() + nXBlockSize - 1) / nXBlockSize;
+                int nYBlocks = (band->GetYSize() + nYBlockSize - 1) / nYBlockSize;
 
-            assert(nXBlocks==1);
-            assert(nYBlocks==RASTER_BLOCK_SIZE);
+                assert(nXBlocks == 1);
+                assert(nYBlocks == RASTER_BLOCK_SIZE);
 
-            CPLErr cplerr = band->ReadBlock(0, row, raster_block);
-            CHECK_GDALERR(cplerr);
-            block_row = row;
-            print2term("Elevation: %f\n", raster_block[col]);
-#endif
+                if (cache_type == BLOCK_CACHE)
+                {
+                    CPLErr cplerr = band->ReadBlock(0, row, raster_block);
+                    CHECK_GDALERR(cplerr);
+                    block_row = row;
+                    el = raster_block[col];
+                }
+                else
+                {
+                    GDALRasterBlock *block = band->GetLockedBlockRef(0, row, false);
+                    CHECKPTR(block);
+                    float *p = (float*)block->GetDataRef();
+                    CHECKPTR(p);
+                    el = p[col];
+                    block->DropLock();
+                }
+                // print2term("Elevation: %f\n", el);
+            }
+            if (elevation) *elevation = el;
             rasterRead = true;
         }
     }
@@ -308,16 +310,13 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster)
 float ArcticDEMRaster::subset (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
+    float    el = ARCTIC_DEM_INVALID_ELELVATION;
 
     if(p.transform(latlon2xy) == OGRERR_NONE)
     {
-        /* Assume no need for new raster */
-        bool needNewRaster = false;
-
         lon = p.getX();
         lat = p.getY();
 
-GET_ELEV:
         if ( rdset &&
             (lon >= rbbox.lon_min) &&
             (lon <= rbbox.lon_max) &&
@@ -327,40 +326,46 @@ GET_ELEV:
             uint32_t row = (rbbox.lat_max - lat) / cellsize;
             uint32_t col = (lon - rbbox.lon_min) / cellsize;
 
-#ifdef USE_CACHE
-            if ((row >= crows_offset) && (row < crows_offset+crows) &&
-                (col >= ccols_offset) && (col < ccols_offset+ccols))
+
+            if (cache_type == NO_CACHE)
             {
-                return cacheRawPixel(row, col);
+                readRaster(&p, false, &el);
+                return el;
             }
-            else
+            else if (cache_type == BLOCK_CACHE)
             {
-                /* Point is in this raster but not in cache */
-                if (readRaster(&p, needNewRaster)) goto GET_ELEV;
-                else return ARCTIC_DEM_INVALID_EL;
+                if (row == block_row)
+                    return rawBlockPixel(col);
+                else
+                {
+                    /* Point is in this raster but not in block cache */
+                    readRaster(&p, false, &el);
+                    return el;
+                }
             }
-#else
-            if (row == block_row)
-                return rawBlockPixel(col);
-            else
+            else if (cache_type == POLY_CACHE)
             {
-                /* Point is in this raster but not in block cache */
-                if (readRaster(&p, needNewRaster)) goto GET_ELEV;
-                else return ARCTIC_DEM_INVALID_EL;
+                if ((row >= crows_offset) && (row < crows_offset + crows) &&
+                    (col >= ccols_offset) && (col < ccols_offset + ccols))
+                {
+                    return cacheRawPixel(row, col);
+                }
+                else
+                {
+                    /* Point is in this raster but not in cache */
+                    return readRaster(&p, true, &el);
+                }
             }
-#endif
         }
         else
         {
             /* Point not in the raster */
-            needNewRaster = true;
-            if( readRaster(&p, needNewRaster) ) goto GET_ELEV;
-            else return ARCTIC_DEM_INVALID_EL;
+             readRaster(&p, true, &el);
+             return el;
         }
-
     }
 
-    return ARCTIC_DEM_INVALID_EL;
+    return el;
 }
 
 /*----------------------------------------------------------------------------
@@ -388,27 +393,17 @@ static const char *getUuid(char *uuid_str)
     return uuid_str;
 }
 
-/* Utilitiy function to check constructor's params */
-static void validatedParams(const char *file, long filelength)
-{
-    if (file == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
-
-    if (filelength <= 0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
-}
-
-
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength):
+ArcticDEMRaster::ArcticDEMRaster(lua_State *L, cache_t ctype):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool objCreated = false;
 
     /* Initialize Class Data Members */
+    cache_type = ctype;
     idset = NULL;
     ilayer = NULL;
     raster_block = NULL;
@@ -428,6 +423,11 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength
     source.Clear();
     target.Clear();
     rasterfname.clear();
+
+    if     (cache_type == NO_CACHE)    print2term("** NO_CACHE ***\n");
+    else if(cache_type == BLOCK_CACHE) print2term("** BLOCK_CACHE ***\n");
+    else if(cache_type == POLY_CACHE)  print2term("** POLY_CACHE ***\n");
+    else assert(false);
 
     try
     {
@@ -458,14 +458,21 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *file, long filelength
         latlon2xy = OGRCreateCoordinateTransformation(&source, &target);
         CHECKPTR(latlon2xy);
 
+        if (cache_type == NO_CACHE)
+        {
+            /* Do nothing */
+        }
+        else if (cache_type == POLY_CACHE)
+        {
+            /* Allocate memory for raster cache */
+            raster_cache = new float[RASTER_CACHE_SIZE];
+        }
+        else if (cache_type == BLOCK_CACHE)
+        {
+            /* Allocate memory for raster block */
+            raster_block = new float[RASTER_BLOCK_SIZE];
+        }
 
-#ifdef USE_CACHE
-        /* Allocate memory for raster cache */
-        raster_cache = new float[RASTER_CACHE_SIZE];
-#else
-        /* Allocate memory for raster block */
-        raster_block = new float[RASTER_BLOCK_SIZE];
-#endif
         /* Preload cache or block, this may be done based on poligon past to constructor */
         double lat =  82.86;
         double lon = -74.60;
@@ -600,7 +607,7 @@ int ArcticDEMRaster::luaSubset(lua_State *L)
         lua_pushnumber(L, el);
         num_ret++;
 
-        if( el != ARCTIC_DEM_INVALID_EL )
+        if( el != ARCTIC_DEM_INVALID_ELELVATION )
             status = true;
 
     }

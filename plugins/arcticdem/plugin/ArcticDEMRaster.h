@@ -52,7 +52,7 @@ class ArcticDEMRaster: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const int   ARCTIC_DEM_INVALID_EL = -1000000;
+        static const int   ARCTIC_DEM_INVALID_ELELVATION = -1000000;
         static const int   RASTER_NODATA_VALUE = 200;
         static const int   RASTER_PIXEL_ON = 1;
         static const int   CACHE_MAX_ROWS = 2048;
@@ -79,6 +79,12 @@ class ArcticDEMRaster: public LuaObject
             double lat_max;
         } bbox_t;
 
+        typedef enum {
+            NO_CACHE,
+            BLOCK_CACHE,
+            POLY_CACHE
+        } cache_t;
+
 
         /*--------------------------------------------------------------------
          * Methods
@@ -90,7 +96,7 @@ class ArcticDEMRaster: public LuaObject
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
         float                   subset         (double lon, double lat);
-        bool                    readRaster     (OGRPoint* p, bool findNewRaster);
+        bool                    readRaster     (OGRPoint* p, bool findNewRaster, float* elevation);
         virtual                ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
@@ -129,7 +135,7 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDEMRaster (lua_State* L, const char* image, long imagelength);
+        ArcticDEMRaster (lua_State* L, cache_t ctype);
 
     private:
         /*--------------------------------------------------------------------
@@ -139,8 +145,9 @@ class ArcticDEMRaster: public LuaObject
         std::string rasterfname;
         GDALDataset *idset;
         OGRLayer    *ilayer;
-
         GDALDataset *rdset;
+
+        cache_t cache_type;
 
         float    *raster_block;
         uint32_t  rrows;

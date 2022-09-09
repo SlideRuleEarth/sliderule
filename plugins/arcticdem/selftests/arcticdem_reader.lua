@@ -13,20 +13,27 @@ local arcticdem_local = core.getbyname(asset_name)
 -- Unit Test --
 
 print('\n------------------\nTest01: Create ArcticDemRaster \n------------------')
-local robj = arcticdem.raster()
-runner.check(robj ~= nil)
 
-local lat = 82.86
-local lon = -74.60
-
-
-for i = 1, 1, -1
+for ctype = 0, 2
 do
-    local el, status = robj:subset(lon, lat)
-    print(status, el)
-    lat = lat + 0.0001
-    lon = lon + 0.0001
+    local lat =  82.86
+    local lon = -74.60
+    local el, status
+
+    local arcdem = arcticdem.raster(ctype)
+    runner.check(arcdem ~= nil)
+
+    for i = 1, 10
+    do
+        el, status = arcdem:subset(lon, lat)
+        print(i, status, el)
+        lat = lat + 0.0001
+        lon = lon + 0.0001
+    end
+
+    arcdem = nil
 end
+
 
 
 print('\n------------------\nTest01: ArcticDEM Reader \n------------------')
