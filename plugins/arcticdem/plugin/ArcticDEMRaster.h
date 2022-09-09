@@ -53,13 +53,6 @@ class ArcticDEMRaster: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
         static const int   ARCTIC_DEM_INVALID_ELELVATION = -1000000;
-        static const int   RASTER_NODATA_VALUE = 200;
-        static const int   RASTER_PIXEL_ON = 1;
-        static const int   CACHE_MAX_ROWS = 2048;
-        static const int   CACHE_MAX_COLS = 2048;
-        static const int   CACHE_MAX_ROWS_OFFSET = CACHE_MAX_ROWS/2;
-        static const int   CACHE_MAX_COLS_OFFSET = CACHE_MAX_COLS/2;
-        static const int   RASTER_CACHE_SIZE = CACHE_MAX_ROWS*CACHE_MAX_COLS; // 16MB if using float for elevation
         static const int   RASTER_BLOCK_SIZE = 25000;
         static const int   RASTER_PHOTON_CRS = 4326;
 
@@ -79,13 +72,6 @@ class ArcticDEMRaster: public LuaObject
             double lat_max;
         } bbox_t;
 
-        typedef enum {
-            NO_CACHE,
-            BLOCK_CACHE,
-            POLY_CACHE
-        } cache_t;
-
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -96,31 +82,11 @@ class ArcticDEMRaster: public LuaObject
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
         float                   subset         (double lon, double lat);
-        bool                    readRaster     (OGRPoint* p, bool findNewRaster, float* elevation);
         virtual                ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
          *--------------------------------------------------------------------*/
-        float rawBlockPixel(const uint32_t col)
-        {
-            return raster_block[col];
-        }
-
-        float cacheRawPixel (const uint32_t row, const uint32_t col)
-        {
-            return raster_cache[((row-crows_offset) * ccols) + (col-ccols_offset)];
-        }
-
-        uint32_t numRows (void)
-        {
-            return rrows;
-        }
-
-        uint32_t numCols(void)
-        {
-            return rcols;
-        }
 
     protected:
 
@@ -135,32 +101,22 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDEMRaster (lua_State* L, cache_t ctype);
+        ArcticDEMRaster  (lua_State* L);
+        float readRaster (OGRPoint* p, bool findNewRaster);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
         const std::string indexfname = "/data/ArcticDEM/ArcticDEM_Tile_Index_Rel7/ArcticDEM_Tile_Index_Rel7.shp";
-        std::string rasterfname;
-        GDALDataset *idset;
-        OGRLayer    *ilayer;
-        GDALDataset *rdset;
+        std::string       rasterfname;
+        GDALDataset*      idset;
+        OGRLayer*         ilayer;
+        GDALDataset*      rdset;
 
-        cache_t cache_type;
-
-        float    *raster_block;
-        uint32_t  rrows;
-        uint32_t  rcols;
-        bbox_t    rbbox;
-        uint32_t  block_row;
-
-        float    *raster_cache;
-        uint32_t  crows;
-        uint32_t  ccols;
-        uint32_t  crows_offset;
-        uint32_t  ccols_offset;
-
+        uint32_t  rows;
+        uint32_t  cols;
+        bbox_t    bbox;
         double    cellsize;
 
         OGRCoordinateTransformation *latlon2xy;

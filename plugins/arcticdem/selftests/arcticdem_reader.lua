@@ -12,75 +12,54 @@ local arcticdem_local = core.getbyname(asset_name)
 
 -- Unit Test --
 
-print('\n------------------\nMilion Points All In Cache\n------------------')
+print('\n------------------\nTest01: Reading milion points\n------------')
 
-for ctype = 0, 2
+local lat =  82.86
+local lon = -74.60
+local el, status
+
+local robj = arcticdem.raster()
+runner.check(robj ~= nil)
+
+local starttime = time.latch();
+for i = 1, 1000000
 do
-    local lat =  82.86
-    local lon = -74.60
-    local el, status
-
-    local arcdem = arcticdem.raster(ctype)
-    runner.check(arcdem ~= nil)
-
-    local starttime = time.latch();
-    for i = 1, 1000000
-    do
-        el, status = arcdem:subset(lon, lat)
-        if status ~= true then
-            print(i, status, el)
-        end
-        if (i % 2 == 0) then
-            lon = lon + 0.0001
-         -- lat = lat + 0.0001
-        else
-            lon = lon - 0.0001
-         -- lat = lat - 0.0001
-        end
+    el, status = robj:subset(lon, lat)
+    if status ~= true then
+        print(i, status, el)
     end
-    local stoptime = time.latch();
-    local dtime = stoptime-starttime
-    print('ExecTIme:',dtime*1000, '\n')
-
-    arcdem = nil
-end
-
-
-print('\n------------------\n10 Points All Cache Misses\n------------------')
-
-for ctype = 0, 2
-do
-    local lat =  82.86
-    local lon = -74.60
-    local el, status
-
-    local arcdem = arcticdem.raster(ctype)
-    runner.check(arcdem ~= nil)
-
-    local starttime = time.latch();
-    -- for i = 1, 1000000
-    for i = 1, 10
-    do
-        el, status = arcdem:subset(lon, lat)
-        if status ~= true then
-            print(i, status, el)
-        end
-        if (i % 2 == 0) then
-            lon = lon + 0.1
-            lat = lat + 0.1
-        else
-            lon = lon - 0.1
-            lat = lat - 0.1
-        end
+    if (i % 1000 == 0) then
+        lat =  82.86
+        lon = -74.60
+    else
+        lon = lon + 0.0001
+        lat = lat + 0.0001
     end
-    local stoptime = time.latch();
-    local dtime = stoptime-starttime
-    print('ExecTIme:',dtime*1000, '\n')
-
-    arcdem = nil
 end
+local stoptime = time.latch();
+local dtime = stoptime-starttime
+print('ExecTime:',dtime*1000, '\n')
 
-print('\n------------------\nTest01: ArcticDEM Reader \n------------------')
+
+print('\n------------------\nTest02: dim\n------------------')
+local rows, cols = robj:dim()
+print("rows: ", rows, "cols: ", cols)
+runner.check(rows == 25000)
+runner.check(cols == 25000)
+
+
+print('\n------------------\nTest03: bbox\n------------------')
+local lon_min, lat_min, lon_max, lat_max = robj:bbox()
+print("lon_min: ", lon_min, "lat_min: ", lat_min, "\nlon_max: ", lon_max, "lat_max: ", lat_max)
+runner.check(lon_min ~= 0)
+runner.check(lat_min ~= 0)
+runner.check(lon_max ~= 0)
+runner.check(lon_max ~= 0)
+
+print('\n------------------\nTest04: cellsize\n------------------')
+local cellsize = robj:cell()
+print("cellsize: ", cellsize)
+runner.check(cellsize == 2.0)
 
 
 -- Clean Up --
