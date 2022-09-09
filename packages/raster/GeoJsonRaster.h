@@ -55,7 +55,7 @@ class GeoJsonRaster: public LuaObject
 
         static const int   RASTER_NODATA_VALUE = 200;
         static const int   RASTER_PIXEL_ON = 1;
-        static const int   RASTER_MAX_IMAGE_SIZE = 4194304*4; // 16MB
+        static const int   RASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
         static const int   RASTER_PHOTON_CRS = 4326;
 
         static const char* FILEDATA_KEY;
