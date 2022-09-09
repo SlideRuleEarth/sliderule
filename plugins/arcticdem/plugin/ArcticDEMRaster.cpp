@@ -52,6 +52,7 @@
 #define CHECKPTR(p)                                                           \
 do                                                                            \
 {                                                                             \
+    assert(p);                                                                \
     if ((p) == NULL)                                                          \
     {                                                                         \
         throw RunTimeException(CRITICAL, RTE_ERROR, "NULL pointer detected"); \
@@ -181,7 +182,7 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster, float* elevati
                         /* Found polygon with point in it, get the name of raster directory/file */
                         std::string rname = feature->GetFieldAsString("name");
                         rasterfname = "/data/ArcticDEM/" + rname + "/" + rname + "_reg_dem.tif";
-                        // print2term("Found raster %s at %0.2f, %0.2f\n", rasterfname.c_str(), p->getX(), p->getY());
+                        // print2term("Found new raster %s at %0.2f, %0.2f\n", rasterfname.c_str(), p->getX(), p->getY());
                         rasterFound = true;
                         break;
                     }
@@ -211,6 +212,20 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster, float* elevati
                 cellsize = geot[1];
                 // print2term("Raster rbbox.lon_min/max %0.2lf %0.2lf, rbbox.lat_min/max %0.2lf %0.2lf, cellsize: %lf\n",
                 //            rbbox.lon_min, rbbox.lon_max, rbbox.lat_min, rbbox.lat_max, cellsize);
+
+                /* Sanity check for block size of this raster */
+                GDALRasterBand *band = rdset->GetRasterBand(1);
+                CHECKPTR(band);
+
+                int nXBlockSize, nYBlockSize;
+                band->GetBlockSize(&nXBlockSize, &nYBlockSize);
+                // print2term("BlockXsize: %d, BlockYsize: %d\n", nXBlockSize, nYBlockSize);
+
+                int nXBlocks = (band->GetXSize() + nXBlockSize - 1) / nXBlockSize;
+                int nYBlocks = (band->GetYSize() + nYBlockSize - 1) / nYBlockSize;
+
+                assert(nXBlocks == 1);
+                assert(nYBlocks == RASTER_BLOCK_SIZE);
             }
         } else rasterFound = true;
 
@@ -224,8 +239,7 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster, float* elevati
             uint32_t col = (p->getX() - rbbox.lon_min) / cellsize;
             // print2term("Need row: %u, col: %u\n", row, col);
 
-            int bandInx = 1; /* Band index starts at 1, not 0 */
-            GDALRasterBand *band = rdset->GetRasterBand(bandInx);
+            GDALRasterBand *band = rdset->GetRasterBand(1);
             CHECKPTR(band);
 
             if(cache_type == POLY_CACHE)
@@ -256,26 +270,17 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster, float* elevati
                                                CACHE_MAX_COLS, CACHE_MAX_ROWS, GDT_Float32, 0, 0);
                 CHECK_GDALERR(cplerr);
                 el = cacheRawPixel(row, col);
+                // print2term("New poly cache\n");
             }
             else if(cache_type == BLOCK_CACHE || cache_type == NO_CACHE)
             {
-                /* Store raster block. */
-                int nXBlockSize, nYBlockSize;
-                band->GetBlockSize(&nXBlockSize, &nYBlockSize);
-                // print2term("BlockXsize: %d, BlockYsize: %d\n", nXBlockSize, nYBlockSize);
-
-                int nXBlocks = (band->GetXSize() + nXBlockSize - 1) / nXBlockSize;
-                int nYBlocks = (band->GetYSize() + nYBlockSize - 1) / nYBlockSize;
-
-                assert(nXBlocks == 1);
-                assert(nYBlocks == RASTER_BLOCK_SIZE);
-
                 if (cache_type == BLOCK_CACHE)
                 {
                     CPLErr cplerr = band->ReadBlock(0, row, raster_block);
                     CHECK_GDALERR(cplerr);
                     block_row = row;
                     el = raster_block[col];
+                    // print2term("New block cache\n");
                 }
                 else
                 {
@@ -286,7 +291,6 @@ bool ArcticDEMRaster::readRaster(OGRPoint* p, bool findNewRaster, float* elevati
                     el = p[col];
                     block->DropLock();
                 }
-                // print2term("Elevation: %f\n", el);
             }
             if (elevation) *elevation = el;
             rasterRead = true;
@@ -424,9 +428,9 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, cache_t ctype):
     target.Clear();
     rasterfname.clear();
 
-    if     (cache_type == NO_CACHE)    print2term("** NO_CACHE ***\n");
-    else if(cache_type == BLOCK_CACHE) print2term("** BLOCK_CACHE ***\n");
-    else if(cache_type == POLY_CACHE)  print2term("** POLY_CACHE ***\n");
+    if     (cache_type == NO_CACHE)    print2term("NO_CACHE\n");
+    else if(cache_type == BLOCK_CACHE) print2term("BLOCK_CACHE\n");
+    else if(cache_type == POLY_CACHE)  print2term("POLY_CACHE\n");
     else assert(false);
 
     try
