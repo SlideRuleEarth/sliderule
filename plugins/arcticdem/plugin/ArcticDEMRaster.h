@@ -58,7 +58,8 @@ class ArcticDEMRaster: public LuaObject
         static const int   CACHE_MAX_COLS = 2048;
         static const int   CACHE_MAX_ROWS_OFFSET = CACHE_MAX_ROWS/2;
         static const int   CACHE_MAX_COLS_OFFSET = CACHE_MAX_COLS/2;
-        static const int   RASTER_MAX_SIZE = CACHE_MAX_ROWS*CACHE_MAX_COLS*sizeof(float); // 16MB
+        static const int   RASTER_CACHE_SIZE = CACHE_MAX_ROWS*CACHE_MAX_COLS; // 16MB if using float for elevation
+        static const int   RASTER_BLOCK_SIZE = 25000;
         static const int   RASTER_PHOTON_CRS = 4326;
 
         static const char* FILEDATA_KEY;
@@ -94,10 +95,9 @@ class ArcticDEMRaster: public LuaObject
         /*--------------------------------------------------------------------
          * Inline Methods
          *--------------------------------------------------------------------*/
-
-        float rawPixel (const uint32_t row, const uint32_t col)
+        float rawBlockPixel(const uint32_t col)
         {
-            return raster[(row * rcols) + col];
+            return raster_block[col];
         }
 
         float cacheRawPixel (const uint32_t row, const uint32_t col)
@@ -135,12 +135,13 @@ class ArcticDEMRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
         const std::string indexfname = "/data/ArcticDEM/ArcticDEM_Tile_Index_Rel7/ArcticDEM_Tile_Index_Rel7.shp";
-        std::string rasterfname = "/data/ArcticDEM/";
+        std::string rasterfname;
 
-        float    *raster;
+        float    *raster_block;
         uint32_t  rrows;
         uint32_t  rcols;
         bbox_t    rbbox;
+        uint32_t  block_row;
 
         float    *raster_cache;
         uint32_t  crows;
@@ -161,7 +162,6 @@ class ArcticDEMRaster: public LuaObject
         static int luaDimensions    (lua_State* L);
         static int luaBoundingBox   (lua_State* L);
         static int luaCellSize      (lua_State* L);
-        static int luaPixel         (lua_State* L);
         static int luaSubset        (lua_State* L);
 };
 
