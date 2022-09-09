@@ -65,6 +65,7 @@ if __name__ == '__main__':
         "organization": None,
         "asset":        'atlas-local',
         "region":       'examples/grandmesa.geojson',
+        "verbose":      True
     }
 
     # Parse Configuration Parameters
@@ -77,7 +78,7 @@ if __name__ == '__main__':
     region = icesat2.toregion(cfg["region"])
 
     # Configure SlideRule #
-    icesat2.init(cfg["url"], False, organization=cfg["organization"])
+    icesat2.init(cfg["url"], cfg["verbose"], organization=cfg["organization"])
 
     # Build ATL06 Request #
     parms = {

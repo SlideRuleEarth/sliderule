@@ -333,11 +333,12 @@ def __logeventrec(rec):
 #
 def __raiseexceptrec(rec):
     rc = rec["code"]
+    lvl = rec["level"]
     if rc in handleexcept:
-        if verbose:
-            logger.info("%s exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
         if not handleexcept[rc]["expected"]:
             logger.critical("Unexpected error: %s", handleexcept[rc]["name"])
+        elif verbose:
+            eventlogger[rec['level']]("%s exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
         if not handleexcept[rc]["fatal"]:
             raise TransientError()
 
