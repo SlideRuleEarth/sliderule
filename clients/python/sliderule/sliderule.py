@@ -425,6 +425,8 @@ def source (api, parm={}, stream=False, callbacks={}):
                 raise TypeError('unsupported content type: %s' % (format))
             # Complete
             break
+        except requests.exceptions.SSLError as e:
+            logger.error("Unable to verify SSL certificate: {}".format(e))
         except requests.ConnectionError as e:
             logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
         except requests.Timeout as e:

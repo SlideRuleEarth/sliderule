@@ -1,7 +1,9 @@
 import sys
 import json
+import logging
 import sliderule
 from sliderule import icesat2
+from utils import parse_command_line
 
 ###############################################################################
 # MAIN
@@ -9,19 +11,20 @@ from sliderule import icesat2
 
 if __name__ == '__main__':
 
-    url = "127.0.0.1"
-    organization=None
+    # Set Script Defaults
+    cfg = {
+        "url":          'localhost',
+        "organization": None,
+    }
 
-    # Server URL
-    if len(sys.argv) > 1:
-        url = sys.argv[1]
+    # Parse Configuration Parameters
+    parse_command_line(sys.argv, cfg)
 
-    # Organization
-    if len(sys.argv) > 2:
-        organization = sys.argv[2]
+    # Configure Logging
+    logging.basicConfig(level=logging.INFO)
 
     # Initialize ICESat2/SlideRule Package
-    icesat2.init(url, organization=organization)
+    icesat2.init(cfg["url"], organization=cfg["organization"])
 
     # Query Version
     rsps = sliderule.source("version", {})
