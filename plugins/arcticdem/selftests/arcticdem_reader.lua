@@ -80,10 +80,6 @@ do
     arcdem = nil
 end
 
-
-os.exit()
-
-
 print('\n------------------\nTest01: ArcticDEM Reader \n------------------')
 
 
