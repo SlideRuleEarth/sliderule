@@ -39,6 +39,7 @@
 #include "LuaObject.h"
 #include "OsApi.h"
 #include <ogr_geometry.h>
+#include <ogrsf_frmts.h>
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
@@ -136,6 +137,10 @@ class ArcticDEMRaster: public LuaObject
          *--------------------------------------------------------------------*/
         const std::string indexfname = "/data/ArcticDEM/ArcticDEM_Tile_Index_Rel7/ArcticDEM_Tile_Index_Rel7.shp";
         std::string rasterfname;
+        GDALDataset *idset;
+        OGRLayer    *ilayer;
+
+        GDALDataset *rdset;
 
         float    *raster_block;
         uint32_t  rrows;
