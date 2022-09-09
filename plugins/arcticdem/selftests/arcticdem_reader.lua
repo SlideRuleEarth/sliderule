@@ -66,11 +66,11 @@ do
             print(i, status, el)
         end
         if (i % 2 == 0) then
-            lon = lon + 0.2
-            lat = lat + 0.2
+            lon = lon + 0.1
+            lat = lat + 0.1
         else
-            lon = lon - 0.2
-            lat = lat - 0.2
+            lon = lon - 0.1
+            lat = lat - 0.1
         end
     end
     local stoptime = time.latch();
