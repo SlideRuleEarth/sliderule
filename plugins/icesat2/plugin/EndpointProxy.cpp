@@ -378,7 +378,6 @@ void* EndpointProxy::proxyThread (void* parm)
             {
                 /* Get Lock from Orchestrator */
                 double expiration_time = TimeLib::latchtime() + proxy->timeout;
-                double seconds_to_wait = 1.0;
                 while(proxyActive && proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
                 {
                     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
@@ -395,7 +394,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}",
                                     proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
                     HttpClient client(NULL, rqst->node->member);
-                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout);
+                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout * 1000);
                     if(rsps.code == EndpointObject::OK)
                     {
                         rqst->valid = true;

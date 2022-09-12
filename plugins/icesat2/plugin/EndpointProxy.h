@@ -59,8 +59,8 @@ class EndpointProxy: public LuaObject
 
         static const int MAX_REQUEST_PARAMETER_SIZE = 0x2000000; // 32MB
         static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
-        static const int NODE_LOCK_TIMEOUT = 600; // 10 minutes
-        static const int COLLATOR_POLL_RATE = 1000; // 1 second
+        static const int NODE_LOCK_TIMEOUT = 600; // seconds
+        static const int COLLATOR_POLL_RATE = 1000; // milliseconds
 
         static const char* SERVICE;
 

@@ -523,7 +523,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                 rsps.size = rsps_index;
                 response_complete = true;
             }
-            else
+            else if(bytes_read != TIMEOUT_RC)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to read socket: %d", bytes_read);
             }
