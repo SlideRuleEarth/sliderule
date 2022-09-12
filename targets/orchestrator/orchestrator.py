@@ -18,7 +18,8 @@ serverSettings = {
     'host': '0.0.0.0',
     'port': 8050,
     'maxLocksPerNode': 3,
-    'scrubInterval': 1 # seconds
+    'scrubInterval': 1, # seconds
+    'maxTimeout': 600 # seconds
 }
 
 serverLock = Lock()
@@ -73,7 +74,7 @@ class Orchestrator(BaseHTTPRequestHandler):
             request = json.loads(data)
             nodes_needed = request["nodesNeeded"]
             request_count = nodes_needed
-            node_timeout = time() + request["timeout"]
+            node_timeout = time() + min(request["timeout"], serverSettings['maxTimeout'])
             # build member list
             with serverLock:
                 if request['service'] in serviceCatalog:

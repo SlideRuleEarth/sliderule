@@ -19,7 +19,7 @@ local rqst = json.decode(arg[1])
 -- File Data
 --------------------------------------------------------------------------------------
 local threads = rqst["threads"] or 4
-local timeout_seconds = rqst["timeout"] or -1
+local timeout_seconds = rqst["timeout"] or core.PEND
 local baseDispatcher = nil
 local ccsdsDispatcher = nil
 local reportDispatcher = nil
@@ -28,8 +28,8 @@ local metricDictionary = {}
 --------------------------------------------------------------------------------------
 -- createMetrics
 --
---  metrictable:  { base: { <recname>: [<field>, ... ], ... } 
---                  ccsds: { <recname>: [<field>, ... ], ... } 
+--  metrictable:  { base: { <recname>: [<field>, ... ], ... }
+--                  ccsds: { <recname>: [<field>, ... ], ... }
 --                  key: <player key> }
 --
 --  reportfilename: <file name of CSV report of metric values, nil if not desired>
@@ -44,7 +44,7 @@ local function createMetrics(metrictable)
     if metrictable["filename"] then
         reportfilename = metrictable["filename"]
     end
-    
+
     -- Get Key --
     local key_str = metrictable["key"] or "RECEIPT_KEY"
     chunks = {}
@@ -55,7 +55,7 @@ local function createMetrics(metrictable)
     local key_parm = chunks[2]
 
     -- Create Base Record Metrics --
-    if metrictable["base"] then  
+    if metrictable["base"] then
         if not baseDispatcher then
             baseDispatcher = core.dispatcher("recdataq", threads, player_key, key_parm):name("baseDispatcher")
         end
@@ -92,7 +92,7 @@ local function createMetrics(metrictable)
     end
 
     -- Create Report --
-    local reportname = nil 
+    local reportname = nil
     if reportfilename then
         -- Sort Column List --
         table.sort(columnlist)
@@ -130,7 +130,7 @@ local function createLimits (limittable)
     local key_parm = chunks[2]
 
     -- Create Base Record Metrics --
-    if limittable["base"] then        
+    if limittable["base"] then
         if not baseDispatcher then
             baseDispatcher = core.dispatcher("recdataq", threads, player_key, key_parm)
         end
@@ -161,7 +161,7 @@ local function createLimits (limittable)
             local limitname = string.format('%s.%sLimit_%d', recname, fieldname, i)
             metricDictionary[limitname] = core.limit(fieldname, id, min, max)
             metricDictionary[limitname]:setloglvl(core.CRITICAL)
-            metricDictionary[limitname]:gmtdisplay(true)            
+            metricDictionary[limitname]:gmtdisplay(true)
             ccsdsDispatcher:attach(metricDictionary[limitname], recname)
         end
     end

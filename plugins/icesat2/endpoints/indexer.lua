@@ -27,7 +27,7 @@ local userlog = msg.publish(rspq)
 local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"] or "atlas-local"
 local resources = rqst["resources"]
-local timeout = rqst["timeout"] or core.PEND
+local timeout = rqst["timeout"] or icesat2.API_TIMEOUT
 
 -- Post Initial Status Progress --
 userlog:sendlog(core.DEBUG, string.format("atl03 indexing initiated on %s data...", atl03_asset))
@@ -39,12 +39,12 @@ local indexer = icesat2.atl03indexer(atl03, resources, rspq)
 
 -- Wait Until Completion --
 local duration = 0
-local interval = 10000 -- 10 seconds
-while __alive() and not indexer:waiton(interval) do
+local interval = 10 -- seconds
+while __alive() and not indexer:waiton(interval * 1000) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout > 0 and duration == timeout then
-        userlog:sendlog(core.ERROR, string.format("request timed-out after %d seconds", duration / 1000))
+        userlog:sendlog(core.ERROR, string.format("request timed-out after %d seconds", duration))
         return
     end
     -- Get Stats --

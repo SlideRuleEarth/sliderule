@@ -30,7 +30,7 @@ local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"] or "nsidc-s3"
 local resource = rqst["resource"]
 local parms = rqst["parms"]
-local timeout = rqst["timeout"] or core.PEND
+local timeout = rqst["timeout"] or icesat2.API_TIMEOUT
 
 -- Get Asset --
 local asset = core.getbyname(atl03_asset)
@@ -47,16 +47,16 @@ local atl03_reader = icesat2.atl03(asset, resource, rspq, parms, false)
 
 -- Wait Until Completion --
 local duration = 0
-local interval = 10000 -- 10 seconds
-while __alive() and not atl03_reader:waiton(interval) do
+local interval = 10 -- seconds
+while __alive() and not atl03_reader:waiton(interval * 1000) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout >= 0 and duration >= timeout then
-        userlog:sendlog(core.ERROR, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration / 1000))
+        userlog:sendlog(core.ERROR, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
         return
     end
     local atl03_stats = atl03_reader:stats(false)
-    userlog:sendlog(core.INFO, string.format("request <%s> read %d segments in %s (after %d seconds)", rspq, atl03_stats.read, resource, duration / 1000))
+    userlog:sendlog(core.INFO, string.format("request <%s> read %d segments in %s (after %d seconds)", rspq, atl03_stats.read, resource, duration))
 end
 
 -- Resource Processing Complete
