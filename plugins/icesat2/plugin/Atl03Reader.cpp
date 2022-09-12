@@ -343,8 +343,8 @@ void Atl03Reader::Region::polyregion (info_t* info)
 
     /* Determine Best Projection To Use */
     MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(segment_lat.gt[PRT_LEFT][0] > 60.0) projection = MathLib::NORTH_POLAR;
-    else if(segment_lat.gt[PRT_LEFT][0] < -60.0) projection = MathLib::SOUTH_POLAR;
+    if(segment_lat.gt[PRT_LEFT][0] > 70.0) projection = MathLib::NORTH_POLAR;
+    else if(segment_lat.gt[PRT_LEFT][0] < -70.0) projection = MathLib::SOUTH_POLAR;
 
     /* Project Polygon */
     List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);

@@ -113,7 +113,6 @@ class Orchestrator(BaseHTTPRequestHandler):
             response = "{\"members\": [%s], \"transactions\": [%s]}" % (', '.join(member_list), ', '.join([str(tx) for tx in transaction_list]))
             self.wfile.write(bytes(response, "utf-8"))
         except:
-            raise
             error_count = 1
             # send error response
             self.send_response(500)
