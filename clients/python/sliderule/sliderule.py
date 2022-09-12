@@ -336,7 +336,7 @@ def __raiseexceptrec(rec):
     lvl = rec["level"]
     if rc in handleexcept:
         if not handleexcept[rc]["expected"]:
-            logger.critical("Unexpected error: %s", handleexcept[rc]["name"])
+            logger.critical("%s, unexpected exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
         elif verbose:
             eventlogger[rec['level']]("%s exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
         if not handleexcept[rc]["fatal"]:
