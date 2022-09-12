@@ -382,21 +382,8 @@ void* EndpointProxy::proxyThread (void* parm)
                 while(proxyActive && proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
                 {
                     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
-                    if(nodes->length() > 0)
-                    {
-                        rqst->node = nodes->get(0);
-                    }
-                    else
-                    {
-//                        double count_down = seconds_to_wait;
-//                        while(proxyActive && proxy->active && (count_down > 0))
-//                        {
-                            LocalLib::sleep(1);
-//                            count_down -= 1.0;
-//                        }
-//                        seconds_to_wait *= 2;
-//                        seconds_to_wait = MIN(seconds_to_wait, proxy->timeout);
-                    }
+                    if(nodes->length() > 0) rqst->node = nodes->get(0);
+                    else                    LocalLib::sleep(1);
                     delete nodes;
                 }
 
