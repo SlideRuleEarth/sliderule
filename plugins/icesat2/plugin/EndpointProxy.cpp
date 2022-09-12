@@ -388,14 +388,14 @@ void* EndpointProxy::proxyThread (void* parm)
                     }
                     else
                     {
-                        double count_down = seconds_to_wait;
-                        while(proxyActive && proxy->active && (count_down > 0))
-                        {
+//                        double count_down = seconds_to_wait;
+//                        while(proxyActive && proxy->active && (count_down > 0))
+//                        {
                             LocalLib::sleep(1);
-                            count_down -= 1.0;
-                        }
-                        seconds_to_wait *= 2;
-                        seconds_to_wait = MIN(seconds_to_wait, proxy->timeout);
+//                            count_down -= 1.0;
+//                        }
+//                        seconds_to_wait *= 2;
+//                        seconds_to_wait = MIN(seconds_to_wait, proxy->timeout);
                     }
                     delete nodes;
                 }
