@@ -84,7 +84,7 @@ const struct luaL_Reg ArcticDEMRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
     {"bbox",        luaBoundingBox},
     {"cell",        luaCellSize},
-    {"subset",      luaSubset},
+    {"elevation",   luaElevation},
     {NULL,          NULL}
 };
 
@@ -144,9 +144,9 @@ ArcticDEMRaster* ArcticDEMRaster::create (lua_State* L, int index)
 
 
 /*----------------------------------------------------------------------------
- * subset
+ * elevation
  *----------------------------------------------------------------------------*/
-float ArcticDEMRaster::subset (double lon, double lat)
+float ArcticDEMRaster::elevation (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
 
@@ -304,6 +304,7 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L):
     bool objCreated = false;
 
     /* Initialize Class Data Members */
+    rdset = NULL;
     idset = NULL;
     ilayer = NULL;
     bbox = {0.0, 0.0, 0.0, 0.0};
@@ -452,9 +453,9 @@ int ArcticDEMRaster::luaCellSize(lua_State *L)
 
 
 /*----------------------------------------------------------------------------
- * luaSubset - :subset(lon, lat) --> in|out
+ * luaElevation - :elevation(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaSubset(lua_State *L)
+int ArcticDEMRaster::luaElevation(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -469,7 +470,7 @@ int ArcticDEMRaster::luaSubset(lua_State *L)
         double lat = getLuaFloat(L, 3);
 
         /* Get Elevation */
-        float el = lua_obj->subset(lon, lat);
+        float el = lua_obj->elevation(lon, lat);
         lua_pushnumber(L, el);
         num_ret++;
 
@@ -479,7 +480,7 @@ int ArcticDEMRaster::luaSubset(lua_State *L)
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error subsetting: %s", e.what());
+        mlog(e.level(), "Error getting elevation: %s", e.what());
     }
 
     /* Return Status */

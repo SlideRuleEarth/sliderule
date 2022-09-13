@@ -18,13 +18,13 @@ local lat =  82.86
 local lon = -74.60
 local el, status
 
-local robj = arcticdem.raster()
-runner.check(robj ~= nil)
+local dem = arcticdem.raster()
+runner.check(dem ~= nil)
 
 local starttime = time.latch();
 for i = 1, 1000000
 do
-    el, status = robj:subset(lon, lat)
+    el, status = dem:elevation(lon, lat)
     if status ~= true then
         print(i, status, el)
     end
@@ -44,7 +44,7 @@ print('ExecTime:',dtime*1000, '\n')
 -- 'hole' in the raster
 lat =  82.898092
 lon = -74.418638
-el, status = robj:subset(lon, lat)
+el, status = dem:elevation(lon, lat)
 print('hole in raster', status, el)
 
 
@@ -54,14 +54,14 @@ print('hole in raster', status, el)
 
 
 print('\n------------------\nTest02: dim\n------------------')
-local rows, cols = robj:dim()
+local rows, cols = dem:dim()
 print("rows: ", rows, "cols: ", cols)
 runner.check(rows == 25000)
 runner.check(cols == 25000)
 
 
 print('\n------------------\nTest03: bbox\n------------------')
-local lon_min, lat_min, lon_max, lat_max = robj:bbox()
+local lon_min, lat_min, lon_max, lat_max = dem:bbox()
 print("lon_min: ", lon_min, "lat_min: ", lat_min, "\nlon_max: ", lon_max, "lat_max: ", lat_max)
 runner.check(lon_min ~= 0)
 runner.check(lat_min ~= 0)
@@ -69,7 +69,7 @@ runner.check(lon_max ~= 0)
 runner.check(lon_max ~= 0)
 
 print('\n------------------\nTest04: cellsize\n------------------')
-local cellsize = robj:cell()
+local cellsize = dem:cell()
 print("cellsize: ", cellsize)
 runner.check(cellsize == 2.0)
 
