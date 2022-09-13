@@ -81,7 +81,7 @@ class ArcticDEMRaster: public LuaObject
         static int              luaCreate      (lua_State* L);
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
-        float                   subset         (double lon, double lat);
+        float                   elevation      (double lon, double lat);
         virtual                ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
@@ -130,7 +130,7 @@ class ArcticDEMRaster: public LuaObject
         static int luaDimensions    (lua_State* L);
         static int luaBoundingBox   (lua_State* L);
         static int luaCellSize      (lua_State* L);
-        static int luaSubset        (lua_State* L);
+        static int luaElevation     (lua_State* L);
 };
 
 #endif  /* __arcticdem_raster__ */
