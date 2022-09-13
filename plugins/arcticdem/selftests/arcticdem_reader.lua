@@ -41,6 +41,18 @@ local dtime = stoptime-starttime
 print('ExecTime:',dtime*1000, '\n')
 
 
+-- 'hole' in the raster
+lat =  82.898092
+lon = -74.418638
+el, status = robj:subset(lon, lat)
+print('hole in raster', status, el)
+
+
+
+
+
+
+
 print('\n------------------\nTest02: dim\n------------------')
 local rows, cols = robj:dim()
 print("rows: ", rows, "cols: ", cols)
