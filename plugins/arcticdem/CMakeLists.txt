@@ -71,7 +71,7 @@ target_include_directories (arcticdem
 # Script Installation #
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/arcdem.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/elevation.lua
     DESTINATION
         ${CONFDIR}/api
 )
