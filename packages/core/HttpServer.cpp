@@ -149,9 +149,9 @@ void HttpServer::initConnection (connection_t* connection)
     connection->id = new char [REQUEST_ID_LEN];
     connection->start_time = TimeLib::latchtime();
     connection->keep_alive = false;
-    connection->request = new EndpointObject::Request(connection->id);
     StringLib::format(connection->id, REQUEST_ID_LEN, "%s:%ld", getName(), cnt);
     connection->rsps_state.rspq = new Subscriber(connection->id);
+    connection->request = new EndpointObject::Request(connection->id);
 }
 
 /*----------------------------------------------------------------------------
@@ -217,12 +217,11 @@ void HttpServer::extractPath (const char* url, const char** path, const char** r
 /*----------------------------------------------------------------------------
  * processHttpHeader
  *----------------------------------------------------------------------------*/
-bool HttpServer::processHttpHeader (char* buf, int bufsize, EndpointObject::Request* request)
+bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
 {
     bool status = true;
 
     /* Parse Request */
-    buf[bufsize] = '\0';
     SafeString http_header("%s", buf);
     List<SafeString>* header_list = http_header.split('\r');
 
@@ -404,10 +403,11 @@ int HttpServer::onRead(int fd)
                 (state->header_buf[state->header_index + 3] == '\n') )
             {
                 state->header_complete = true;
+                state->header_buf[state->header_index] = '\0';
                 state->header_index += 4;
 
                 /* Process HTTP Header */
-                if(processHttpHeader(state->header_buf, state->header_index, connection->request))
+                if(processHttpHeader(state->header_buf, connection->request))
                 {
                     /* Get Content Length */
                     try
@@ -415,7 +415,8 @@ int HttpServer::onRead(int fd)
                         if(StringLib::str2long(connection->request->headers["Content-Length"], &connection->request->length))
                         {
                             /* Allocate and Prepopulate Request Body */
-                            connection->request->body = new uint8_t[connection->request->length];
+                            connection->request->body = new uint8_t[connection->request->length + 1];
+                            connection->request->body[connection->request->length] = '\0';
                             int bytes_to_copy = state->header_size - state->header_index;
                             LocalLib::copy(connection->request->body, &state->header_buf[state->header_index], bytes_to_copy);
                             state->body_size += bytes_to_copy;
@@ -609,9 +610,9 @@ int HttpServer::onWrite(int fd)
         /* Check for Keep Alive */
         if(state->response_complete && connection->keep_alive)
         {
+            LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
             deinitConnection(connection);
             initConnection(connection);
-            LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
             status = 0; // will keep socket open
         }
     }
@@ -648,9 +649,9 @@ int HttpServer::onConnect(int fd)
 
     /* Create and Initialize New Request */
     connection_t* connection = new connection_t;
-    initConnection(connection);
     LocalLib::set(&connection->rqst_state, 0, sizeof(rqst_state_t));
     LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
+    initConnection(connection);
 
     /* Register Connection */
     if(!connections.add(fd, connection, false))

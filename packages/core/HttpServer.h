@@ -144,7 +144,7 @@ class HttpServer: public LuaObject
         void                initConnection      (connection_t* connection);
         void                deinitConnection    (connection_t* connection);
         void                extractPath         (const char* url, const char** path, const char** resource);
-        bool                processHttpHeader   (char* buf, int bufsize, EndpointObject::Request* request);
+        bool                processHttpHeader   (char* buf, EndpointObject::Request* request);
 
         static void*        listenerThread      (void* parm);
         static int          pollHandler         (int fd, short* events, void* parm);
