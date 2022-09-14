@@ -7,14 +7,8 @@
 --              {
 --                  "dem-asset":    "<name of asset to use>"
 --                  "coordinates": [
---                      {
---                         "latitude":   <lat>
---                         "longitude":  <lon>
---                      },
---                      {
---                         "latitude":   <lat>
---                         "longitude":  <lon>
---                      }...
+--                      [<latitude>, <longitude>],
+--                      [<latitude>, <longitude>]...
 --                  ]
 --              }
 --
@@ -36,8 +30,10 @@ local elevations = {}
 local dem = arcticdem.raster()
 
 
-for i, position in ipairs(coord) do
-    el, status = dem:elevation(position.longitude, position.latitude)
+for _, position in ipairs(coord) do
+    lat = position[1]
+    lon = position[2]
+    el, status = dem:elevation(lon, lat)
     table.insert(elevations, el)
 end
 
