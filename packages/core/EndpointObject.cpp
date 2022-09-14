@@ -80,6 +80,7 @@ EndpointObject::Request::~Request (void)
     if(body) delete [] body;
     if(resource) delete [] resource;
     if(path) delete [] path;
+    delete [] id;
 }
 
 /******************************************************************************
