@@ -34,7 +34,7 @@ local proxy = icesat2.proxy("atl03s", atl03_asset, resources, json.encode(parms)
 -- Wait Until Proxy Completes --
 local duration = 0
 local interval = 10 -- seconds
-while __alive() and not proxy:waiton(interval * 1000) do
+while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do
     duration = duration + interval
     if timeout >= 0 and duration >= timeout then
         userlog:sendlog(core.ERROR, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration))

@@ -40,7 +40,7 @@ local indexer = icesat2.atl03indexer(atl03, resources, rspq)
 -- Wait Until Completion --
 local duration = 0
 local interval = 10 -- seconds
-while __alive() and not indexer:waiton(interval * 1000) do
+while (userlog:numsubs() > 0) and not indexer:waiton(interval * 1000) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout > 0 and duration == timeout then
