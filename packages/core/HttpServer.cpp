@@ -146,9 +146,10 @@ int HttpServer::getPort (void)
 void HttpServer::initConnection (connection_t* connection)
 {
     long cnt = requestId++;
-    connection->id = new char [REQUEST_ID_LEN];
+    LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
     connection->start_time = TimeLib::latchtime();
     connection->keep_alive = false;
+    connection->id = new char [REQUEST_ID_LEN];
     StringLib::format(connection->id, REQUEST_ID_LEN, "%s:%ld", getName(), cnt);
     connection->rsps_state.rspq = new Subscriber(connection->id);
     connection->request = new EndpointObject::Request(connection->id);
@@ -615,7 +616,6 @@ int HttpServer::onWrite(int fd)
         /* Check for Keep Alive */
         if(state->response_complete && connection->keep_alive)
         {
-            LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
             deinitConnection(connection);
             initConnection(connection);
             status = 0; // will keep socket open
@@ -654,9 +654,8 @@ int HttpServer::onConnect(int fd)
 
     /* Create and Initialize New Request */
     connection_t* connection = new connection_t;
-    LocalLib::set(&connection->rqst_state, 0, sizeof(rqst_state_t));
-    LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
     initConnection(connection);
+    LocalLib::set(&connection->rqst_state, 0, sizeof(rqst_state_t));
 
     /* Register Connection */
     if(!connections.add(fd, connection, false))
