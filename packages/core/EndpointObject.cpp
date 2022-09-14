@@ -45,6 +45,47 @@
 const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
 
 /******************************************************************************
+ * REQUEST SUBCLASS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+EndpointObject::Request::Request (const char* _id):
+    headers(EXPECTED_MAX_HEADER_FIELDS)
+{
+    id          = StringLib::duplicate(_id);
+    path        = NULL;
+    resource    = NULL;
+    verb        = UNRECOGNIZED;
+    body        = NULL;
+    length      = 0;
+    pid         = NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+EndpointObject::Request::~Request (void)
+{
+    /* Clear Out Headers */
+    const char* header;
+    const char* key = headers.first(&header);
+    while(key != NULL)
+    {
+        delete [] header;
+        key = headers.next(&header);
+    }
+
+    /* Free Allocate Members */
+    if(pid) delete pid;
+    if(body) delete [] body;
+    if(resource) delete [] resource;
+    if(path) delete [] path;
+    delete [] id;
+}
+
+/******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 

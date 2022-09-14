@@ -141,17 +141,49 @@ int HttpServer::getPort (void)
 }
 
 /*----------------------------------------------------------------------------
- * extract
+ * initConnection
+ *----------------------------------------------------------------------------*/
+void HttpServer::initConnection (connection_t* connection)
+{
+    long cnt = requestId++;
+    connection->id = new char [REQUEST_ID_LEN];
+    connection->start_time = TimeLib::latchtime();
+    connection->keep_alive = false;
+    connection->request = new EndpointObject::Request(connection->id);
+    StringLib::format(connection->id, REQUEST_ID_LEN, "%s:%ld", getName(), cnt);
+    connection->rsps_state.rspq = new Subscriber(connection->id);
+}
+
+/*----------------------------------------------------------------------------
+ * deinitConnection
+ *----------------------------------------------------------------------------*/
+void HttpServer::deinitConnection (connection_t* connection)
+{
+    /* Free Stream Buffer */
+    if(connection->rsps_state.stream_buf) delete [] connection->rsps_state.stream_buf;
+
+    /* Free Message Queue */
+    delete connection->rsps_state.rspq;
+
+    /* Free Id */
+    delete [] connection->id;
+
+    /* Request freed only if present, o/w memory owned by EndpointObject */
+    if(connection->request) delete connection->request;
+}
+
+/*----------------------------------------------------------------------------
+ * extractPath
  *
  *  Note: must delete returned strings
  *----------------------------------------------------------------------------*/
-void HttpServer::extract (const char* url, char** endpoint, char** new_url)
+void HttpServer::extractPath (const char* url, const char** path, const char** resource)
 {
     const char* src;
     char* dst;
 
-    *endpoint = NULL;
-    *new_url = NULL;
+    *path = NULL;
+    *resource = NULL;
 
     const char* first_slash = StringLib::find(url, '/');
     if(first_slash)
@@ -160,10 +192,10 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
         if(second_slash)
         {
             /* Get Endpoint */
-            int endpoint_len = second_slash - first_slash + 1; // this includes null terminator and slash
-            *endpoint = new char[endpoint_len];
+            int path_len = second_slash - first_slash + 1; // this includes null terminator and slash
+            dst = new char[path_len];
             src = first_slash ; // include the slash
-            dst = *endpoint;
+            *path = dst;
             while(src < second_slash) *dst++ = *src++;
             *dst = '\0';
 
@@ -171,10 +203,10 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
             const char* terminator = StringLib::find(second_slash+1, '\0');
             if(terminator)
             {
-                int new_url_len = terminator - second_slash; // this includes null terminator
-                *new_url = new char[new_url_len];
+                int resource_len = terminator - second_slash; // this includes null terminator
+                dst = new char[resource_len];
                 src = second_slash + 1; // do NOT include the slash
-                dst = *new_url;
+                *resource = dst;
                 while(src < terminator) *dst++ = *src++;
                 *dst = '\0';
             }
@@ -183,63 +215,485 @@ void HttpServer::extract (const char* url, char** endpoint, char** new_url)
 }
 
 /*----------------------------------------------------------------------------
- * getUniqueId
+ * processHttpHeader
  *----------------------------------------------------------------------------*/
-const char* HttpServer::getUniqueId (void)
+bool HttpServer::processHttpHeader (char* buf, int bufsize, EndpointObject::Request* request)
 {
-    char* id_str = new char [REQUEST_ID_LEN];
-    long id = requestId++;
-    StringLib::format(id_str, REQUEST_ID_LEN, "%s:%ld", getName(), id);
-    return id_str;
-}
+    bool status = true;
 
-/*----------------------------------------------------------------------------
- * initConnection
- *----------------------------------------------------------------------------*/
-void HttpServer::initConnection (connection_t* connection)
-{
-    LocalLib::set(&connection->request, 0, sizeof(EndpointObject::request_t));
-    LocalLib::set(&connection->state, 0, sizeof(state_t));
-    connection->start_time = TimeLib::latchtime();
-    connection->keep_alive = false;
-    connection->request.active = true;
-    connection->request.id = getUniqueId(); // id is allocated
-    connection->request.headers = new Dictionary<const char*>(EXPECTED_MAX_HEADER_FIELDS);
-    connection->state.rspq = new Subscriber(connection->request.id);
-}
+    /* Parse Request */
+    buf[bufsize] = '\0';
+    SafeString http_header("%s", buf);
+    List<SafeString>* header_list = http_header.split('\r');
 
-/*----------------------------------------------------------------------------
- * deinitConnection
- *----------------------------------------------------------------------------*/
-void HttpServer::deinitConnection (connection_t* connection)
-{
-    /* Set In-Active */
-    connection->request.active = false;
-
-    /* Clear Out Headers */
-    const char* header;
-    const char* key = connection->request.headers->first(&header);
-    while(key != NULL)
+    /* Parse Request Line */
+    try
     {
-        /* Free Header Value */
-        delete [] header;
-        key = connection->request.headers->next(&header);
+        List<SafeString>* request_line = (*header_list)[0].split(' ');
+        const char* verb_str = (*request_line)[0].getString();
+        const char* url_str = (*request_line)[1].getString();
+
+        /* Get Verb */
+        request->verb = EndpointObject::str2verb(verb_str);
+
+        /* Get Endpoint and URL */
+        extractPath(url_str, &request->path, &request->resource);
+        if(!request->path || !request->resource)
+        {
+            mlog(CRITICAL, "Unable to extract endpoint and url: %s", url_str);
+            status = false;
+        }
+
+        /* Clean Up Allocated Memory */
+        delete request_line;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Invalid request line: %s", e.what());
     }
 
-    /* Free URL */
-    if(connection->request.url) delete [] connection->request.url;
+    /* Parse Headers */
+    for(int h = 1; h < header_list->length(); h++)
+    {
+        /* Create Key/Value Pairs */
+        List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
+        try
+        {
+            const char* key = (*keyvalue_list)[0].getString();
+            const char* value = (*keyvalue_list)[1].getString(true);
+            request->headers.add(key, value, true);
+        }
+        catch(const RunTimeException& e)
+        {
+            mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h].getString(), e.what());
+        }
+        delete keyvalue_list;
+    }
 
-    /* Free Stream Buffer */
-    if(connection->state.stream_buf) delete [] connection->state.stream_buf;
+    /* Clean Up Header List */
+    delete header_list;
 
-    /* Free Rest of Allocated Connection Members */
-    delete [] connection->request.id;
-    delete connection->request.headers;
-    delete connection->state.rspq;
-    delete connection->request.pid;
+    /* Return Status */
+    return status;
+}
 
-    /* Reset Message */
-    connection->message.reset();
+/*----------------------------------------------------------------------------
+ * listenerThread
+ *----------------------------------------------------------------------------*/
+void* HttpServer::listenerThread(void* parm)
+{
+    HttpServer* s = (HttpServer*)parm;
+
+    while(s->active)
+    {
+        /* Start Http Server */
+        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s, &(s->listening));
+        if(status < 0)
+        {
+            mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
+            s->listening = false;
+
+            /* Restart Http Server */
+            if(s->active)
+            {
+                mlog(INFO, "Attempting to restart http server: %s", s->getName());
+                LocalLib::sleep(5.0); // wait five seconds to prevent spin
+            }
+        }
+    }
+
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * pollHandler
+ *
+ *  Notes: provides the events back to the poll function
+ *----------------------------------------------------------------------------*/
+int HttpServer::pollHandler(int fd, short* events, void* parm)
+{
+    HttpServer* s = (HttpServer*)parm;
+
+    /* Get Connection */
+    connection_t* connection = s->connections[fd];
+    rsps_state_t* state = &connection->rsps_state;
+
+    /* Set Polling Flags */
+    *events |= IO_READ_FLAG;
+    if(state->ref_status > 0)
+    {
+        *events |= IO_WRITE_FLAG;
+    }
+    else
+    {
+        *events &= ~IO_WRITE_FLAG;
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * activeHandler
+ *
+ *  Notes: performed on activity returned from poll
+ *----------------------------------------------------------------------------*/
+int HttpServer::activeHandler(int fd, int flags, void* parm)
+{
+    HttpServer* s = (HttpServer*)parm;
+
+    int rc = 0;
+
+    if((flags & IO_READ_FLAG)       && (s->onRead(fd)       < 0))   rc = INVALID_RC;
+    if((flags & IO_WRITE_FLAG)      && (s->onWrite(fd)      < 0))   rc = INVALID_RC;
+    if((flags & IO_ALIVE_FLAG)      && (s->onAlive(fd)      < 0))   rc = INVALID_RC;
+    if((flags & IO_CONNECT_FLAG)    && (s->onConnect(fd)    < 0))   rc = INVALID_RC;
+    if((flags & IO_DISCONNECT_FLAG) && (s->onDisconnect(fd) < 0))   rc = INVALID_RC;
+
+    return rc;
+}
+
+/*----------------------------------------------------------------------------
+ * onRead
+ *
+ *  Notes: performed for every connection that is ready to have data read from it
+ *----------------------------------------------------------------------------*/
+int HttpServer::onRead(int fd)
+{
+    int status = 0;
+    connection_t* connection = connections[fd];
+    rqst_state_t* state = &connection->rqst_state;
+
+
+    /* Determine Buffer to Read Into */
+    uint8_t* buf; // pointer to buffer to read into
+    int buf_available; // bytes available in buffer
+    if(!state->header_complete)
+    {
+        buf = (uint8_t*)&state->header_buf[state->header_size];
+        buf_available = HEADER_BUF_LEN - state->header_size;
+    }
+    else
+    {
+        buf = &connection->request->body[state->body_size];
+        buf_available = connection->request->length - state->body_size;
+    }
+
+    /* Socket Read */
+    int bytes = SockLib::sockrecv(fd, buf, buf_available - 1, IO_CHECK);
+    if(bytes > 0)
+    {
+        status = bytes;
+
+        /* Update Buffer Size */
+        if(!state->header_complete)
+        {
+            state->header_size += bytes;
+        }
+        else
+        {
+            state->body_size += bytes;
+        }
+
+        /* Look Through Existing Header Received */
+        while(!state->header_complete && (state->header_index < (state->header_size - 4)))
+        {
+            /* If Header Complete (look for \r\n\r\n separator) */
+            if( (state->header_buf[state->header_index + 0] == '\r') &&
+                (state->header_buf[state->header_index + 1] == '\n') &&
+                (state->header_buf[state->header_index + 2] == '\r') &&
+                (state->header_buf[state->header_index + 3] == '\n') )
+            {
+                state->header_complete = true;
+                state->header_index += 4;
+
+                /* Process HTTP Header */
+                if(processHttpHeader(state->header_buf, state->header_index, connection->request))
+                {
+                    /* Get Content Length */
+                    try
+                    {
+                        if(StringLib::str2long(connection->request->headers["Content-Length"], &connection->request->length))
+                        {
+                            /* Allocate and Prepopulate Request Body */
+                            connection->request->body = new uint8_t[connection->request->length];
+                            int bytes_to_copy = state->header_size - state->header_index;
+                            LocalLib::copy(connection->request->body, &state->header_buf[state->header_index], bytes_to_copy);
+                            state->body_size += bytes_to_copy;
+                        }
+                        else
+                        {
+                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["Content-Length"]);
+                            status = INVALID_RC; // will close socket
+                        }
+                    }
+                    catch(const RunTimeException& e)
+                    {
+                        connection->request->length = 0;
+                    }
+
+                    /* Get Keep Alive Setting */
+                    try
+                    {
+                        if(StringLib::match(connection->request->headers["Connection"], "keep-alive"))
+                        {
+                            connection->keep_alive = true;
+                        }
+                    }
+                    catch(const RunTimeException& e)
+                    {
+                        connection->keep_alive = false;
+                    }
+                }
+                else
+                {
+                    status = INVALID_RC; // will close socket
+                }
+            }
+            else
+            {
+                /* Go to Next Character in Header */
+                state->header_index++;
+            }
+        }
+
+        /* Check If Body Complete */
+        if((state->body_size >= connection->request->length) && (status >= 0))
+        {
+            /* Handle Request */
+            try
+            {
+                EndpointObject* endpoint = routeTable[connection->request->path];
+                connection->response_type = endpoint->handleRequest(connection->request);
+                connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
+                LocalLib::set(&connection->rqst_state, 0, sizeof(rqst_state_t));
+            }
+            catch(const RunTimeException& e)
+            {
+                mlog(e.level(), "No attached endpoint at %s: %s", connection->request->path, e.what());
+                status = INVALID_RC; // will close socket
+            }
+        }
+    }
+    else
+    {
+        /* Failed to receive data on socket that was marked for reading */
+        status = INVALID_RC; // will close socket
+    }
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * onWrite
+ *
+ *  Notes: performed for every request that is ready to have data written to it
+ *----------------------------------------------------------------------------*/
+int HttpServer::onWrite(int fd)
+{
+    int status = 0;
+    connection_t* connection = connections[fd];
+    rsps_state_t* state = &connection->rsps_state;
+    bool ref_complete = false;
+
+    uint8_t* buffer;
+    int bytes_left;
+
+    /* If Something to Send */
+    if(state->ref_status > 0)
+    {
+        if(state->header_sent && connection->response_type == EndpointObject::STREAMING) /* Setup Streaming */
+        {
+            /* Allocate Streaming Buffer (if necessary) */
+            if(state->ref.size + STREAM_OVERHEAD_SIZE > state->stream_mem_size)
+            {
+                /* Delete Old Buffer */
+                if(state->stream_buf) delete [] state->stream_buf;
+
+                /* Allocate New Buffer */
+                state->stream_mem_size = state->ref.size + STREAM_OVERHEAD_SIZE;
+                state->stream_buf = new uint8_t [state->stream_mem_size];
+            }
+
+            /* Build Stream Buffer */
+            if(state->stream_buf_size == 0)
+            {
+                /* Write Chunk Header - HTTP */
+                unsigned long chunk_size = state->ref.size > 0 ? state->ref.size : 0;
+                StringLib::format((char*)state->stream_buf, STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
+                state->stream_buf_size = StringLib::size((const char*)state->stream_buf, state->stream_mem_size);
+
+                if(state->ref.size > 0)
+                {
+                    /* Write Message Data */
+                    LocalLib::copy(&state->stream_buf[state->stream_buf_size], state->ref.data, state->ref.size);
+                    state->stream_buf_size += state->ref.size;
+                }
+
+                /* Write Chunk Trailer - HTTP */
+                StringLib::format((char*)&state->stream_buf[state->stream_buf_size], STREAM_OVERHEAD_SIZE, "\r\n");
+                state->stream_buf_size += 2;
+            }
+
+            /* Setup Write State */
+            buffer = &state->stream_buf[state->stream_buf_index];
+            bytes_left = state->stream_buf_size - state->stream_buf_index;
+        }
+        else /* Setup Normal */
+        {
+            /* Setup Write State */
+            buffer = ((uint8_t*)state->ref.data) + state->ref_index;
+            bytes_left = state->ref.size - state->ref_index;
+        }
+
+        /* If Anything Left to Send */
+        if(bytes_left > 0)
+        {
+            /* Write Data to Socket */
+            int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
+            if(bytes >= 0)
+            {
+                /* Update Status */
+                status += bytes;
+
+                /* Update Write State */
+                if(state->header_sent && connection->response_type == EndpointObject::STREAMING)
+                {
+                    /* Update Streaming Write State */
+                    state->stream_buf_index += bytes;
+                    if(state->stream_buf_index == state->stream_buf_size)
+                    {
+                        state->stream_buf_index = 0;
+                        state->stream_buf_size = 0;
+                        ref_complete = true;
+                    }
+                }
+                else
+                {
+                    /* Update Normal Write State
+                    *  note that this code will be executed once for the
+                    *  header of a streaming write as well */
+                    state->ref_index += bytes;
+                    if(state->ref_index == state->ref.size)
+                    {
+                        state->header_sent = true;
+                        ref_complete = true;
+                    }
+                }
+            }
+            else
+            {
+                /* Failed to Write Ready Socket */
+                status = INVALID_RC; // will close socket
+            }
+        }
+
+        /* Check if Done with Entire Response
+         *  a valid reference of size zero indicates that
+         *  the response is complete */
+        if(state->ref.size == 0)
+        {
+            ref_complete = true; // logic is skipped above on terminating message
+            state->response_complete = true; // prevent further messages received
+            status = INVALID_RC; // will close socket
+        }
+
+        /* Reset State */
+        if(ref_complete)
+        {
+            state->rspq->dereference(state->ref);
+            state->ref_status = 0;
+            state->ref_index = 0;
+            state->ref.size = 0;
+        }
+
+        /* Check for Keep Alive */
+        if(state->response_complete && connection->keep_alive)
+        {
+            deinitConnection(connection);
+            initConnection(connection);
+            LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
+            status = 0; // will keep socket open
+        }
+    }
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * onAlive
+ *
+ *  Notes: Performed for every existing connection
+ *----------------------------------------------------------------------------*/
+int HttpServer::onAlive(int fd)
+{
+    connection_t* connection = connections[fd];
+    rsps_state_t* state = &connection->rsps_state;
+
+    if(!state->response_complete && state->ref_status <= 0)
+    {
+        state->ref_status = state->rspq->receiveRef(state->ref, IO_CHECK);
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * onConnect
+ *
+ *  Notes: performed on new connections when the connection is made
+ *----------------------------------------------------------------------------*/
+int HttpServer::onConnect(int fd)
+{
+    int status = 0;
+
+    /* Create and Initialize New Request */
+    connection_t* connection = new connection_t;
+    initConnection(connection);
+    LocalLib::set(&connection->rqst_state, 0, sizeof(rqst_state_t));
+    LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
+
+    /* Register Connection */
+    if(!connections.add(fd, connection, false))
+    {
+        mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry", connection->id);
+        status = INVALID_RC; // will disconnect and free connection
+    }
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * onDisconnect
+ *
+ *  Notes: performed on disconnected connections
+ *----------------------------------------------------------------------------*/
+int HttpServer::onDisconnect(int fd)
+{
+    int status = 0;
+
+    connection_t* connection = connections[fd];
+
+    /* Update Metrics */
+    if(metricId != EventLib::INVALID_METRIC)
+    {
+        double duration = TimeLib::latchtime() - connection->start_time;
+        EventLib::incrementMetric(metricId, duration);
+    }
+
+    /* Remove Connection */
+    if(connections.remove(fd))
+    {
+        /* Free Connection */
+        deinitConnection(connection);
+        delete connection;
+    }
+    else
+    {
+        mlog(CRITICAL, "HTTP server at %s failed to release connection", connection->id);
+        status = INVALID_RC;
+    }
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -338,449 +792,4 @@ int HttpServer::luaUntilUp (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * listenerThread
- *----------------------------------------------------------------------------*/
-void* HttpServer::listenerThread(void* parm)
-{
-    HttpServer* s = (HttpServer*)parm;
-
-    while(s->active)
-    {
-        /* Start Http Server */
-        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s, &(s->listening));
-        if(status < 0)
-        {
-            mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
-            s->listening = false;
-
-            /* Restart Http Server */
-            if(s->active)
-            {
-                mlog(INFO, "Attempting to restart http server: %s", s->getName());
-                LocalLib::sleep(5.0); // wait five seconds to prevent spin
-            }
-        }
-    }
-
-    return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * pollHandler
- *
- *  Notes: provides the events back to the poll function
- *----------------------------------------------------------------------------*/
-int HttpServer::pollHandler(int fd, short* events, void* parm)
-{
-    HttpServer* s = (HttpServer*)parm;
-
-    /* Get Connection */
-    connection_t* connection = s->connections[fd];
-
-    /* Set Polling Flags */
-    *events |= IO_READ_FLAG;
-    if(connection->state.ref_status > 0)
-    {
-        *events |= IO_WRITE_FLAG;
-    }
-    else
-    {
-        *events &= ~IO_WRITE_FLAG;
-    }
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
- * activeHandler
- *
- *  Notes: performed on activity returned from poll
- *----------------------------------------------------------------------------*/
-int HttpServer::activeHandler(int fd, int flags, void* parm)
-{
-    HttpServer* s = (HttpServer*)parm;
-
-    int rc = 0;
-
-    if((flags & IO_READ_FLAG)       && (s->onRead(fd)       < 0))   rc = INVALID_RC;
-    if((flags & IO_WRITE_FLAG)      && (s->onWrite(fd)      < 0))   rc = INVALID_RC;
-    if((flags & IO_ALIVE_FLAG)      && (s->onAlive(fd)      < 0))   rc = INVALID_RC;
-    if((flags & IO_CONNECT_FLAG)    && (s->onConnect(fd)    < 0))   rc = INVALID_RC;
-    if((flags & IO_DISCONNECT_FLAG) && (s->onDisconnect(fd) < 0))   rc = INVALID_RC;
-
-    return rc;
-}
-
-/*----------------------------------------------------------------------------
- * onRead
- *
- *  Notes: performed for every connection that is ready to have data read from it
- *----------------------------------------------------------------------------*/
-int HttpServer::onRead(int fd)
-{
-    int status = 0;
-    char msg_buf[REQUEST_MSG_BUF_LEN];
-    connection_t* connection = connections[fd];
-
-    int bytes = SockLib::sockrecv(fd, msg_buf, REQUEST_MSG_BUF_LEN - 1, IO_CHECK);
-    if(bytes > 0)
-    {
-        msg_buf[bytes] = '\0';
-        connection->message += msg_buf;
-        status = bytes;
-
-        /* Look Through Existing Header Received */
-        while(!connection->state.header_complete && (connection->state.header_index < (connection->message.getLength() - 4)))
-        {
-            /* If Header Complete (look for \r\n\r\n separator) */
-            if( (connection->message[connection->state.header_index + 0] == '\r') &&
-                (connection->message[connection->state.header_index + 1] == '\n') &&
-                (connection->message[connection->state.header_index + 2] == '\r') &&
-                (connection->message[connection->state.header_index + 3] == '\n') )
-            {
-                /* Parse Request */
-                connection->message.setChar('\0', connection->state.header_index);
-                List<SafeString>* header_list = connection->message.split('\r');
-                connection->message.setChar('\r', connection->state.header_index);
-                connection->state.header_complete = true;
-                connection->state.header_index += 4; // moves state.header_index to start of body
-
-                /* Parse Request Line */
-                try
-                {
-                    List<SafeString>* request_line = (*header_list)[0].split(' ');
-                    const char* verb_str = (*request_line)[0].getString();
-                    const char* url_str = (*request_line)[1].getString();
-
-                    /* Get Verb */
-                    connection->request.verb = EndpointObject::str2verb(verb_str);
-
-                    /* Get Endpoint and URL */
-                    char* endpoint = NULL;
-                    extract(url_str, &endpoint, &connection->request.url);
-                    if(endpoint && connection->request.url)
-                    {
-                        try
-                        {
-                            /* Get Attached Endpoint Object */
-                            connection->request.endpoint = routeTable[endpoint];
-                        }
-                        catch(const RunTimeException& e)
-                        {
-                            mlog(e.level(), "No attached endpoint at %s: %s", endpoint, e.what());
-                            status = INVALID_RC; // will close socket
-                        }
-                    }
-                    else
-                    {
-                        mlog(CRITICAL, "Unable to extract endpoint and url: %s", url_str);
-                    }
-
-                    /* Clean Up Allocated Memory */
-                    delete request_line;
-                    if(endpoint) delete [] endpoint;
-                }
-                catch(const RunTimeException& e)
-                {
-                    mlog(e.level(), "Invalid request line: %s", e.what());
-                }
-
-                /* Parse Headers */
-                for(int h = 1; h < header_list->length(); h++)
-                {
-                    /* Create Key/Value Pairs */
-                    List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
-                    try
-                    {
-                        const char* key = (*keyvalue_list)[0].getString();
-                        const char* value = (*keyvalue_list)[1].getString(true);
-                        connection->request.headers->add(key, value, true);
-                    }
-                    catch(const RunTimeException& e)
-                    {
-                        mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h].getString(), e.what());
-                    }
-                    delete keyvalue_list;
-                }
-
-                /* Clean Up Header List */
-                delete header_list;
-
-                /* Get Content Length */
-                try
-                {
-                    if(!StringLib::str2long(connection->request.headers->get("Content-Length"), &connection->request.body_length))
-                    {
-                        mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request.headers->get("Content-Length"));
-                        status = INVALID_RC; // will close socket
-                    }
-                }
-                catch(const RunTimeException& e)
-                {
-                    connection->request.body_length = 0;
-                }
-
-                /* Get Keep Alive Setting */
-                try
-                {
-                    if(StringLib::match(connection->request.headers->get("Connection"), "keep-alive"))
-                    {
-                        connection->keep_alive = true;
-                    }
-                }
-                catch(const RunTimeException& e)
-                {
-                    connection->keep_alive = false;
-                }
-            }
-            else
-            {
-                /* Go to Next Character in Header */
-                connection->state.header_index++;
-            }
-        }
-
-        /* Check If Body Complete */
-        if((connection->message.getLength() - connection->state.header_index) >= connection->request.body_length)
-        {
-            /* Get Message Body */
-            if(connection->request.body_length > 0)
-            {
-                const char* raw_message = connection->message.getString();
-                connection->request.body = &raw_message[connection->state.header_index];
-            }
-            else
-            {
-                connection->request.body = NULL;
-            }
-
-            /* Handle Request */
-            if(connection->request.endpoint)
-            {
-                connection->request.response_type = connection->request.endpoint->handleRequest(&connection->request);
-            }
-            else // currently no other types of handers
-            {
-                status = INVALID_RC; // will close socket
-            }
-        }
-    }
-    else
-    {
-        /* Failed to receive data on socket that was marked for reading */
-        status = INVALID_RC; // will close socket
-    }
-
-    return status;
-}
-
-/*----------------------------------------------------------------------------
- * onWrite
- *
- *  Notes: performed for every request that is ready to have data written to it
- *----------------------------------------------------------------------------*/
-int HttpServer::onWrite(int fd)
-{
-    int status = 0;
-    connection_t* connection = connections[fd];
-    bool ref_complete = false;
-
-    uint8_t* buffer;
-    int bytes_left;
-
-    /* If Something to Send */
-    if(connection->state.ref_status > 0)
-    {
-        if(connection->state.header_sent && connection->request.response_type == EndpointObject::STREAMING) /* Setup Streaming */
-        {
-            /* Allocate Streaming Buffer (if necessary) */
-            if(connection->state.ref.size + STREAM_OVERHEAD_SIZE > connection->state.stream_mem_size)
-            {
-                /* Delete Old Buffer */
-                if(connection->state.stream_buf) delete [] connection->state.stream_buf;
-
-                /* Allocate New Buffer */
-                connection->state.stream_mem_size = connection->state.ref.size + STREAM_OVERHEAD_SIZE;
-                connection->state.stream_buf = new uint8_t [connection->state.stream_mem_size];
-            }
-
-            /* Build Stream Buffer */
-            if(connection->state.stream_buf_size == 0)
-            {
-                /* Write Chunk Header - HTTP */
-                unsigned long chunk_size = connection->state.ref.size > 0 ? connection->state.ref.size : 0;
-                StringLib::format((char*)connection->state.stream_buf, STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
-                connection->state.stream_buf_size = StringLib::size((const char*)connection->state.stream_buf, connection->state.stream_mem_size);
-
-                if(connection->state.ref.size > 0)
-                {
-                    /* Write Message Data */
-                    LocalLib::copy(&connection->state.stream_buf[connection->state.stream_buf_size], connection->state.ref.data, connection->state.ref.size);
-                    connection->state.stream_buf_size += connection->state.ref.size;
-                }
-
-                /* Write Chunk Trailer - HTTP */
-                StringLib::format((char*)&connection->state.stream_buf[connection->state.stream_buf_size], STREAM_OVERHEAD_SIZE, "\r\n");
-                connection->state.stream_buf_size += 2;
-            }
-
-            /* Setup Write State */
-            buffer = &connection->state.stream_buf[connection->state.stream_buf_index];
-            bytes_left = connection->state.stream_buf_size - connection->state.stream_buf_index;
-        }
-        else /* Setup Normal */
-        {
-            /* Setup Write State */
-            buffer = ((uint8_t*)connection->state.ref.data) + connection->state.ref_index;
-            bytes_left = connection->state.ref.size - connection->state.ref_index;
-        }
-
-        /* If Anything Left to Send */
-        if(bytes_left > 0)
-        {
-            /* Write Data to Socket */
-            int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
-            if(bytes >= 0)
-            {
-                /* Update Status */
-                status += bytes;
-
-                /* Update Write State */
-                if(connection->state.header_sent && connection->request.response_type == EndpointObject::STREAMING)
-                {
-                    /* Update Streaming Write State */
-                    connection->state.stream_buf_index += bytes;
-                    if(connection->state.stream_buf_index == connection->state.stream_buf_size)
-                    {
-                        connection->state.stream_buf_index = 0;
-                        connection->state.stream_buf_size = 0;
-                        ref_complete = true;
-                    }
-                }
-                else
-                {
-                    /* Update Normal Write State
-                    *  note that this code will be executed once for the
-                    *  header of a streaming write as well */
-                    connection->state.ref_index += bytes;
-                    if(connection->state.ref_index == connection->state.ref.size)
-                    {
-                        connection->state.header_sent = true;
-                        ref_complete = true;
-                    }
-                }
-            }
-            else
-            {
-                /* Failed to Write Ready Socket */
-                status = INVALID_RC; // will close socket
-            }
-        }
-
-        /* Check if Done with Entire Response
-         *  a valid reference of size zero indicates that
-         *  the response is complete */
-        if(connection->state.ref.size == 0)
-        {
-            ref_complete = true; // logic is skipped above on terminating message
-            connection->state.response_complete = true; // prevent further messages received
-            status = INVALID_RC; // will close socket
-        }
-
-        /* Reset State */
-        if(ref_complete)
-        {
-            connection->state.rspq->dereference(connection->state.ref);
-            connection->state.ref_status = 0;
-            connection->state.ref_index = 0;
-            connection->state.ref.size = 0;
-        }
-
-        /* Check for Keep Alive */
-        if(connection->state.response_complete && connection->keep_alive)
-        {
-            deinitConnection(connection);
-            initConnection(connection);
-            status = 0; // will keep socket open
-        }
-    }
-
-    return status;
-}
-
-/*----------------------------------------------------------------------------
- * onAlive
- *
- *  Notes: Performed for every existing connection
- *----------------------------------------------------------------------------*/
-int HttpServer::onAlive(int fd)
-{
-    connection_t* connection = connections[fd];
-
-    if(!connection->state.response_complete && connection->state.ref_status <= 0)
-    {
-        connection->state.ref_status = connection->state.rspq->receiveRef(connection->state.ref, IO_CHECK);
-    }
-
-    return 0;
-}
-
-/*----------------------------------------------------------------------------
- * onConnect
- *
- *  Notes: performed on new connections when the connection is made
- *----------------------------------------------------------------------------*/
-int HttpServer::onConnect(int fd)
-{
-    int status = 0;
-
-    /* Create and Initialize New Request */
-    connection_t* connection = new connection_t;
-    initConnection(connection);
-
-    /* Register Connection */
-    if(!connections.add(fd, connection, false))
-    {
-        mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry", connection->request.id);
-        status = INVALID_RC; // will disconnect and free connection
-    }
-
-    return status;
-}
-
-/*----------------------------------------------------------------------------
- * onDisconnect
- *
- *  Notes: performed on disconnected connections
- *----------------------------------------------------------------------------*/
-int HttpServer::onDisconnect(int fd)
-{
-    int status = 0;
-
-    connection_t* connection = connections[fd];
-
-    /* Update Metrics */
-    if(metricId != EventLib::INVALID_METRIC)
-    {
-        double duration = TimeLib::latchtime() - connection->start_time;
-        EventLib::incrementMetric(metricId, duration);
-    }
-
-    /* Remove Connection */
-    if(connections.remove(fd))
-    {
-        /* Free Connection */
-        deinitConnection(connection);
-        delete connection;
-    }
-    else
-    {
-        mlog(CRITICAL, "HTTP server at %s failed to release connection", connection->request.id);
-        status = INVALID_RC;
-    }
-
-    return status;
 }

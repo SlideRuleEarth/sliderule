@@ -54,10 +54,11 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int MAX_HDR_SIZE = MAX_STR_SIZE;
+        static const int EXPECTED_MAX_HEADER_FIELDS = 32;
         static const char* OBJECT_TYPE;
 
         /*--------------------------------------------------------------------
-         * Types
+         * Enumerations
          *--------------------------------------------------------------------*/
 
         typedef enum {
@@ -86,22 +87,40 @@ class EndpointObject: public LuaObject
         } code_t;
 
         typedef enum {
+            INVALID = -1,
             NORMAL = 0,
             STREAMING = 1
         } rsptype_t;
 
+        /*--------------------------------------------------------------------
+         * Request Subclass
+         *--------------------------------------------------------------------*/
+
+        class Request
+        {
+            public:
+
+                const char*                 path;
+                const char*                 resource;
+                verb_t                      verb;
+                Dictionary<const char*>     headers;
+                uint8_t*                    body;
+                long                        length; // of body
+                Thread*                     pid;
+                const char*                 id; // must be unique
+
+                Request (const char* _id);
+                ~Request (void);
+        };
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
         typedef struct {
-            const char*                 id; // must be unique
-            char*                       url;
-            verb_t                      verb;
-            Dictionary<const char*>*    headers;
-            const char*                 body;
-            long                        body_length;
-            EndpointObject*             endpoint;
-            bool                        active;
-            rsptype_t                   response_type;
-            Thread*                     pid;
-        } request_t;
+            EndpointObject*     endpoint;
+            Request*            request;
+        } info_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -116,7 +135,8 @@ class EndpointObject: public LuaObject
         static const char*  code2str            (code_t code);
         static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL, const char* server=NULL);
 
-        virtual rsptype_t   handleRequest       (request_t* request) = 0;
+        virtual rsptype_t   handleRequest       (Request* request) = 0;
+
 };
 
 #endif  /* __endpoint_object__ */

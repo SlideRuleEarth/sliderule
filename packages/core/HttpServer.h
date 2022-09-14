@@ -57,13 +57,12 @@ class HttpServer: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int REQUEST_MSG_BUF_LEN        = MAX_STR_SIZE;
+        static const int HEADER_BUF_LEN             = MAX_STR_SIZE;
         static const int REQUEST_ID_LEN             = 128;
         static const int CONNECTION_TIMEOUT         = 5; // seconds
         static const int INITIAL_POLL_SIZE          = 16;
         static const int DEFAULT_MAX_CONNECTIONS    = 256;
         static const int STREAM_OVERHEAD_SIZE       = 128; // chunk size, record size, and line breaks
-        static const int EXPECTED_MAX_HEADER_FIELDS = 64;
 
         static const char* DURATION_METRIC;
 
@@ -90,8 +89,14 @@ class HttpServer: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
+            char                        header_buf[HEADER_BUF_LEN];
             int                         header_index;
+            int                         header_size;
             bool                        header_complete;
+            int                         body_size;
+        } rqst_state_t;
+
+        typedef struct {
             bool                        header_sent;
             bool                        response_complete;
             Subscriber::msgRef_t        ref;
@@ -102,14 +107,16 @@ class HttpServer: public LuaObject
             int                         stream_buf_index;
             int                         stream_buf_size;
             int                         stream_mem_size;
-        } state_t;
+        } rsps_state_t;
 
         typedef struct {
-            SafeString                  message; // raw request
-            EndpointObject::request_t   request;
-            state_t                     state;
+            char*                       id;
+            rqst_state_t                rqst_state;
+            rsps_state_t                rsps_state;
             double                      start_time;
             bool                        keep_alive;
+            EndpointObject::rsptype_t   response_type;
+            EndpointObject::Request*    request;
         } connection_t;
 
         /*--------------------------------------------------------------------
@@ -134,14 +141,10 @@ class HttpServer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        void                extract             (const char* url, char** endpoint, char** new_url);
-        const char*         getUniqueId         (void);
         void                initConnection      (connection_t* connection);
         void                deinitConnection    (connection_t* connection);
-
-        static int          luaAttach           (lua_State* L);
-        static int          luaMetric           (lua_State* L);
-        static int          luaUntilUp          (lua_State* L);
+        void                extractPath         (const char* url, const char** path, const char** resource);
+        bool                processHttpHeader   (char* buf, int bufsize, EndpointObject::Request* request);
 
         static void*        listenerThread      (void* parm);
         static int          pollHandler         (int fd, short* events, void* parm);
@@ -151,6 +154,10 @@ class HttpServer: public LuaObject
         int                 onAlive             (int fd);
         int                 onConnect           (int fd);
         int                 onDisconnect        (int fd);
+
+        static int          luaAttach           (lua_State* L);
+        static int          luaMetric           (lua_State* L);
+        static int          luaUntilUp          (lua_State* L);
 };
 
 #endif  /* __http_server__ */
