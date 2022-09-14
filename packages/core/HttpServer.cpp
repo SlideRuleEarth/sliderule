@@ -382,6 +382,7 @@ int HttpServer::onRead(int fd)
     if(bytes > 0)
     {
         status = bytes;
+        buf[bytes] = '\0';
 
         /* Update Buffer Size */
         if(!state->header_complete)
@@ -394,7 +395,7 @@ int HttpServer::onRead(int fd)
         }
 
         /* Look Through Existing Header Received */
-        while(!state->header_complete && (state->header_index < (state->header_size - 4)))
+        while(!state->header_complete && (state->header_index <= (state->header_size - 4)))
         {
             /* If Header Complete (look for \r\n\r\n separator) */
             if( (state->header_buf[state->header_index + 0] == '\r') &&
@@ -403,7 +404,6 @@ int HttpServer::onRead(int fd)
                 (state->header_buf[state->header_index + 3] == '\n') )
             {
                 state->header_complete = true;
-                state->header_buf[state->header_index] = '\0';
                 state->header_index += 4;
 
                 /* Process HTTP Header */
@@ -458,7 +458,7 @@ int HttpServer::onRead(int fd)
         }
 
         /* Check If Body Complete */
-        if((state->body_size >= connection->request->length) && (status >= 0))
+        if(state->header_complete && (state->body_size >= connection->request->length) && (status >= 0))
         {
             /* Handle Request */
             try
