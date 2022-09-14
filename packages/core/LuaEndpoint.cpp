@@ -286,7 +286,7 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
     info->request = request;
 
     /* Start Thread */
-    request->pid = new Thread(requestThread, info);
+    Thread pid(requestThread, info, false);
 
     /* Return Response Type */
     if(request->verb == POST)   return STREAMING;

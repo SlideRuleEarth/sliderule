@@ -106,7 +106,6 @@ class EndpointObject: public LuaObject
                 Dictionary<const char*>     headers;
                 uint8_t*                    body;
                 long                        length; // of body
-                Thread*                     pid;
                 const char*                 id; // must be unique
 
                 Request (const char* _id);

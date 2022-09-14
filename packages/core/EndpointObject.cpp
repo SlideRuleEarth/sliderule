@@ -60,7 +60,6 @@ EndpointObject::Request::Request (const char* _id):
     verb        = UNRECOGNIZED;
     body        = NULL;
     length      = 0;
-    pid         = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -78,11 +77,9 @@ EndpointObject::Request::~Request (void)
     }
 
     /* Free Allocate Members */
-    if(pid) delete pid;
     if(body) delete [] body;
     if(resource) delete [] resource;
     if(path) delete [] path;
-    delete [] id;
 }
 
 /******************************************************************************

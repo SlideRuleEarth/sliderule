@@ -371,10 +371,15 @@ int HttpServer::onRead(int fd)
         buf = (uint8_t*)&state->header_buf[state->header_size];
         buf_available = HEADER_BUF_LEN - state->header_size;
     }
-    else
+    else if(connection->request->body)
     {
         buf = &connection->request->body[state->body_size];
-        buf_available = connection->request->length - state->body_size;
+        buf_available = connection->request->length - state->body_size + 1;
+    }
+    else
+    {
+        // Early Exit - Error Condition
+        return INVALID_RC;
     }
 
     /* Socket Read */
@@ -382,7 +387,6 @@ int HttpServer::onRead(int fd)
     if(bytes > 0)
     {
         status = bytes;
-        buf[bytes] = '\0';
 
         /* Update Buffer Size */
         if(!state->header_complete)
@@ -403,6 +407,7 @@ int HttpServer::onRead(int fd)
                 (state->header_buf[state->header_index + 2] == '\r') &&
                 (state->header_buf[state->header_index + 3] == '\n') )
             {
+                state->header_buf[state->header_index] = '\0';
                 state->header_complete = true;
                 state->header_index += 4;
 

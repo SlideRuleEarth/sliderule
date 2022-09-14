@@ -403,27 +403,30 @@ void* EndpointProxy::proxyThread (void* parm)
                     {
                         mlog(CRITICAL, "Failed to proxy request to %s: %d", rqst->node->member, (int)rsps.code);
                     }
-
-                    /* Unlock Node */
-                    OrchestratorLib::unlock(&rqst->node->transaction, 1);
                 }
                 else
                 {
                     /* Timeout Occurred */
                     mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", rqst->resource);
                 }
-
-                /* Mark Complete */
-                rqst->sync.lock();
-                {
-                    rqst->complete = true;
-                    rqst->sync.signal();
-                }
-                rqst->sync.unlock();
             }
             catch(const RunTimeException& e)
             {
                 mlog(e.level(), "Failure processing request: %s", e.what());
+            }
+
+            /* Mark Complete */
+            rqst->sync.lock();
+            {
+                rqst->complete = true;
+                rqst->sync.signal();
+            }
+            rqst->sync.unlock();
+
+            /* Unlock Node */
+            if(rqst->node)
+            {
+                OrchestratorLib::unlock(&rqst->node->transaction, 1);
             }
         }
         else if(recv_status != MsgQ::STATE_TIMEOUT)
