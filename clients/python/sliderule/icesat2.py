@@ -38,7 +38,6 @@ import logging
 import warnings
 import numpy
 import geopandas
-import base64
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
 from sklearn.cluster import KMeans
