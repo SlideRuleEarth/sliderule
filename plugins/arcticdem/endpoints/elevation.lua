@@ -6,9 +6,10 @@
 -- INPUT:       rqst
 --              {
 --                  "dem-asset":    "<name of asset to use>"
+--                  "dem-type":     "<strip or mosaic>"
 --                  "coordinates": [
---                      [<latitude>, <longitude>],
---                      [<latitude>, <longitude>]...
+--                      [<longitude>, <latitude>],
+--                      [<longitude>, <latitude>]...
 --                  ]
 --              }
 --
@@ -20,6 +21,7 @@ local json = require("json")
 -- Request Parameters --
 local rqst = json.decode(arg[1])
 local dem_asset = rqst["dem-asset"] or "arcticdem-local"
+local dem_type = rqst["dem-type"] or "mosaic"
 local coord = rqst["coordinates"]
 
 local el, status, lat, lon
@@ -27,12 +29,12 @@ local elevations = {}
 
 
 -- Get Elevation --
-local dem = arcticdem.raster()
+local dem = arcticdem.raster(dem_type)
 
 
 for _, position in ipairs(coord) do
-    lat = position[1]
-    lon = position[2]
+    lon = position[1]
+    lat = position[2]
     el, status = dem:elevation(lon, lat)
     table.insert(elevations, el)
 end

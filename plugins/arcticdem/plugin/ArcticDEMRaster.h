@@ -101,15 +101,17 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDEMRaster  (lua_State* L);
-        float readRaster (OGRPoint* p, bool findNewRaster);
+        ArcticDEMRaster     (lua_State* L, const char* dem_type);
+        bool  findNewRaster (OGRPoint* p);
+        float readRaster    (OGRPoint* p);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        const std::string indexfname = "/data/ArcticDEM/ArcticDEM_Tile_Index_Rel7/ArcticDEM_Tile_Index_Rel7.shp";
+        std::string       indexfname;
         std::string       rasterfname;
+        bool              ismosaic;
         GDALDataset*      idset;
         OGRLayer*         ilayer;
         GDALDataset*      rdset;
@@ -118,6 +120,8 @@ class ArcticDEMRaster: public LuaObject
         uint32_t  cols;
         bbox_t    bbox;
         double    cellsize;
+        int32_t   xblocksize;
+        int32_t   yblocksize;
 
         OGRCoordinateTransformation *latlon2xy;
         OGRSpatialReference source;
