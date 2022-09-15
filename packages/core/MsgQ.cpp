@@ -542,6 +542,15 @@ int Publisher::post(void* data, unsigned int mask, void* secondary_data, unsigne
     return post_state;
 }
 
+/*----------------------------------------------------------------------------
+ * defaultFree
+ *----------------------------------------------------------------------------*/
+void Publisher::defaultFree(void* obj, void* parm)
+{
+    (void)parm;
+    delete [] (char*)obj;
+}
+
 /******************************************************************************
  * SUBSCRIBER METHODS
  ******************************************************************************/
