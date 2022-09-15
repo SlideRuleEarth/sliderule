@@ -510,7 +510,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         }
                     }
                     //////////////////////////
-                    // Process Chunk Trailer
+                    // Invalid Machine State
                     //////////////////////////
                     else
                     {
