@@ -470,6 +470,8 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                     //////////////////////////
                     else if(!chunk_payload_complete)
                     {
+//TODO: what to do if the chunk includes a null terminating record... size 0
+
                         /* Allocate Response If Necessary */
                         if(!rsps.response)
                         {

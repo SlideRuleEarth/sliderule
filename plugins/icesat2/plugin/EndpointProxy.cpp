@@ -252,7 +252,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
         requests[i].terminated = false;
 
         /* Assign Node if Available */
-        if(i < nodes->length())
+        if(nodes && i < nodes->length())
         {
             requests[i].node = nodes->get(i);
         }
@@ -381,8 +381,9 @@ void* EndpointProxy::proxyThread (void* parm)
                 while(proxyActive && proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
                 {
                     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
-                    if(nodes->length() > 0) rqst->node = nodes->get(0);
-                    else                    LocalLib::sleep(1);
+                    if(!nodes)                      throw RunTimeException(CRITICAL, RTE_ERROR, "unable to reach orchestrator");
+                    else if(nodes->length() > 0)    rqst->node = nodes->get(0);
+                    else                            LocalLib::sleep(1);
                     delete nodes;
                 }
 
