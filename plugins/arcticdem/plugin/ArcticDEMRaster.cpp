@@ -85,12 +85,10 @@ const struct luaL_Reg ArcticDEMRaster::LuaMetaTable[] = {
     {"bbox",        luaBoundingBox},
     {"cell",        luaCellSize},
     {"elevation",   luaElevation},
+    {"elevations",  luaElevations},
     {NULL,          NULL}
 };
 
-const char* ArcticDEMRaster::FILEDATA_KEY   = "data";
-const char* ArcticDEMRaster::FILELENGTH_KEY = "length";
-const char* ArcticDEMRaster::CELLSIZE_KEY   = "cellsize";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -172,6 +170,29 @@ float ArcticDEMRaster::elevation (double lon, double lat)
     return ARCTIC_DEM_INVALID_ELELVATION;
 }
 
+
+/*----------------------------------------------------------------------------
+ * elevations
+ *----------------------------------------------------------------------------*/
+void ArcticDEMRaster::elevations (double lon, double lat, List<ArcticDEMRaster::elevation_t>& elist)
+{
+    OGRPoint p  = {lon, lat};
+
+    if(p.transform(latlon2xy) == OGRERR_NONE)
+    {
+        bool reset = true;
+        elist.clear();
+
+        while(findNewRaster(&p, reset))
+        {
+            elevation_t el = {readRaster(&p), rasterdate};
+            elist.add(el);
+
+            reset = false; /* Don't reset feature reading ptr */
+        }
+    }
+}
+
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
@@ -189,7 +210,7 @@ ArcticDEMRaster::~ArcticDEMRaster(void)
 /*----------------------------------------------------------------------------
  * findNewRaster
  *----------------------------------------------------------------------------*/
-bool ArcticDEMRaster::findNewRaster(OGRPoint* p)
+bool ArcticDEMRaster::findNewRaster(OGRPoint* p, bool reset)
 {
     bool rasterFound = false;
 
@@ -202,11 +223,13 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p)
             rdset = NULL;
             bbox = {0.0, 0.0, 0.0, 0.0};
             cellsize = rows = cols = xblocksize = yblocksize = 0;
+            rasterfname.clear();
+            rasterdate.clear();
         }
 
         /* Index shapefile was already opened in constructor */
         OGRFeature *feature;
-        ilayer->ResetReading();
+        if(reset) ilayer->ResetReading();
         while ((feature = ilayer->GetNextFeature()) != NULL)
         {
             const OGRGeometry *geo = feature->GetGeometryRef();
@@ -220,11 +243,19 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p)
                     /* Found polygon with point in it, get the name of raster directory/file */
                     std::string rname = feature->GetFieldAsString("name");
                     if (ismosaic)
+                    {
                         rasterfname = "/data/ArcticDEM/mosaic/" + rname + "/" + rname + "_reg_dem.tif";
+                        rasterdate = feature->GetFieldAsString("creationda");
+                    }
                     else
+                    {
                         rasterfname = "/data/ArcticDEM/strip/" + rname + "/" + rname + "_dem.tif";
+                        rasterdate = feature->GetFieldAsString("acquisitio");
+                    }
 
-                    mlog(INFO, "Raster %s, point(%0.2f, %0.2f)", rasterfname.c_str(), p->getX(), p->getY());
+                    mlog(DEBUG, "Raster %s, point(%0.2f, %0.2f)", rasterfname.c_str(), p->getX(), p->getY());
+                    mlog(DEBUG, "Raster Date: %s\n", rasterdate.c_str());
+
                     rasterFound = true;
                     break;
                 }
@@ -256,7 +287,7 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p)
             GDALRasterBand *band = rdset->GetRasterBand(1);
             CHECKPTR(band);
             band->GetBlockSize(&xblocksize, &yblocksize);
-            mlog(INFO, "Raster xblocksize: %d, yblocksize: %d", xblocksize, yblocksize);
+            mlog(DEBUG, "Raster xblocksize: %d, yblocksize: %d", xblocksize, yblocksize);
         }
     }
     catch(const RunTimeException& e)
@@ -363,6 +394,7 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type):
     source.Clear();
     target.Clear();
     rasterfname.clear();
+    rasterdate.clear();
 
     try
     {
@@ -524,6 +556,57 @@ int ArcticDEMRaster::luaElevation(lua_State *L)
         if( el != ARCTIC_DEM_INVALID_ELELVATION )
             status = true;
 
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting elevation: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_ret);
+}
+
+/*----------------------------------------------------------------------------
+ * luaElevations - :elevations(lon, lat) --> in|out
+ *----------------------------------------------------------------------------*/
+int ArcticDEMRaster::luaElevations(lua_State *L)
+{
+    bool status = false;
+    int num_ret = 1;
+
+    try
+    {
+        /* Get Self */
+        ArcticDEMRaster *lua_obj = (ArcticDEMRaster *)getLuaSelf(L, 1);
+
+        /* Get Coordinates */
+        double lon = getLuaFloat(L, 2);
+        double lat = getLuaFloat(L, 3);
+
+        List<ArcticDEMRaster::elevation_t> elist;
+
+        /* Get Elevations */
+        lua_obj->elevations(lon, lat, elist);
+
+        if(elist.length() > 0)
+        {
+            /* Create Table */
+            lua_createtable(L, elist.length(), 0);
+
+            for (int i = 0; i < elist.length(); i++)
+            {
+                elevation_t el = elist.get(i);
+
+                lua_createtable(L, 0, 2);
+                LuaEngine::setAttrNum(L, "value", el.value);
+                LuaEngine::setAttrStr(L, "date",  el.date.c_str());
+                lua_rawseti(L, -2, i+1);
+            }
+
+
+            num_ret++;
+            status = true;
+        }
     }
     catch (const RunTimeException &e)
     {

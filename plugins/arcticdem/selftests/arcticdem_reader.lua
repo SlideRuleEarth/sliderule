@@ -12,7 +12,27 @@ local arcticdem_local = core.getbyname(asset_name)
 
 -- Unit Test --
 
-print('\n------------------\nTest01: Reading milion points\n------------')
+-------------
+local lon = -74.60
+local lat = 82.86
+local dem = arcticdem.raster("strip")
+
+
+print('\n------------------\nTest: Strip Elevations\n------------')
+
+local etbl = dem:elevations(lon, lat)
+
+print('All strip elevations for:', lon, lat)
+for i, elevetaion in ipairs(etbl) do
+    local el = elevetaion["value"]
+    local date = elevetaion["date"]
+    print(i, el, date)
+end
+
+-- os.exit()
+
+
+-------------
 
 
 for dems = 1, 2 do
@@ -21,6 +41,8 @@ for dems = 1, 2 do
     local lat =  82.86
     local el, status
     local dem
+
+    print('\n------------------\nTest: Reading milion points\n------------')
 
     if dems == 1 then
         dem = arcticdem.raster("mosaic")
@@ -56,13 +78,13 @@ for dems = 1, 2 do
     el, status = dem:elevation(lon, lat)
     print('hole in raster', status, el)
 
-    print('\n------------------\nTest02: dim\n------------------')
+    print('\n------------------\nTest: dim\n------------------')
     local rows, cols = dem:dim()
     print("rows: ", rows, "cols: ", cols)
     runner.check(rows ~= 0)
     runner.check(cols ~= 0)
 
-    print('\n------------------\nTest03: bbox\n------------------')
+    print('\n------------------\nTest: bbox\n------------------')
     local lon_min, lat_min, lon_max, lat_max = dem:bbox()
     print("lon_min: ", lon_min, "lat_min: ", lat_min, "\nlon_max: ", lon_max, "lat_max: ", lat_max)
     runner.check(lon_min ~= 0)
@@ -70,7 +92,7 @@ for dems = 1, 2 do
     runner.check(lon_max ~= 0)
     runner.check(lon_max ~= 0)
 
-    print('\n------------------\nTest04: cellsize\n------------------')
+    print('\n------------------\nTest: cellsize\n------------------')
     local cellsize = dem:cell()
     print("cellsize: ", cellsize)
     runner.check(cellsize == 2.0)

@@ -56,10 +56,6 @@ class ArcticDEMRaster: public LuaObject
         static const int   RASTER_BLOCK_SIZE = 25000;
         static const int   RASTER_PHOTON_CRS = 4326;
 
-        static const char* FILEDATA_KEY;
-        static const char* FILELENGTH_KEY;
-        static const char* BBOX_KEY;
-        static const char* CELLSIZE_KEY;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -72,6 +68,12 @@ class ArcticDEMRaster: public LuaObject
             double lat_max;
         } bbox_t;
 
+
+        typedef struct {
+            double      value;
+            std::string date;
+        } elevation_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -82,6 +84,7 @@ class ArcticDEMRaster: public LuaObject
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
         float                   elevation      (double lon, double lat);
+        void                    elevations     (double lon, double lat, List<elevation_t>& elist);
         virtual                ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
@@ -102,8 +105,9 @@ class ArcticDEMRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         ArcticDEMRaster     (lua_State* L, const char* dem_type);
-        bool  findNewRaster (OGRPoint* p);
+        bool  findNewRaster (OGRPoint* p, bool reset=true);
         float readRaster    (OGRPoint* p);
+
 
     private:
         /*--------------------------------------------------------------------
@@ -111,6 +115,7 @@ class ArcticDEMRaster: public LuaObject
          *--------------------------------------------------------------------*/
         std::string       indexfname;
         std::string       rasterfname;
+        std::string       rasterdate;
         bool              ismosaic;
         GDALDataset*      idset;
         OGRLayer*         ilayer;
@@ -135,6 +140,7 @@ class ArcticDEMRaster: public LuaObject
         static int luaBoundingBox   (lua_State* L);
         static int luaCellSize      (lua_State* L);
         static int luaElevation     (lua_State* L);
+        static int luaElevations    (lua_State* L);
 };
 
 #endif  /* __arcticdem_raster__ */
