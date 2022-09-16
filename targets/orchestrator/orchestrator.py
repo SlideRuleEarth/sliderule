@@ -9,6 +9,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread, Lock
 from time import time, sleep
+import traceback
 import json
 
 #
@@ -114,6 +115,7 @@ class Orchestrator(BaseHTTPRequestHandler):
             response = "{\"members\": [%s], \"transactions\": [%s]}" % (', '.join(member_list), ', '.join([str(tx) for tx in transaction_list]))
             self.wfile.write(bytes(response, "utf-8"))
         except:
+            traceback.print_exc()
             error_count = 1
             # send error response
             self.send_response(500)
@@ -166,7 +168,8 @@ class Orchestrator(BaseHTTPRequestHandler):
             self.end_headers()
             response = "{\"complete\": %d, \"fail\": %d}" % (complete_count, error_count)
             self.wfile.write(bytes(response, "utf-8"))
-        except:
+        except Exception:
+            traceback.print_exc()
             error_count = 1
             # send error response
             self.send_response(500)
@@ -282,6 +285,7 @@ num_active_locks {}
             response = "{\"%s\": [\"%s\", %.3f]}" % (request['name'], request['service'], member['expiration'])
             self.wfile.write(bytes(response, "utf-8"))
         except:
+            traceback.print_exc()
             # send error response
             self.send_response(500)
             self.end_headers()
