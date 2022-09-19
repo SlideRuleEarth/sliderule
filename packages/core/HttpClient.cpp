@@ -470,10 +470,8 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                     //////////////////////////
                     else if(!chunk_payload_complete)
                     {
-//TODO: what to do if the chunk includes a null terminating record... size 0
-
                         /* Allocate Response If Necessary */
-                        if(!rsps.response)
+                        if(!rsps.response && rsps.size > 0)
                         {
                             rsps.response = new char [rsps.size]; // add one byte for terminator
                         }
@@ -495,7 +493,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         if(chunk_remaining <= 0)
                         {
                             int post_status = MsgQ::STATE_TIMEOUT;
-                            while(active && post_status == MsgQ::STATE_TIMEOUT)
+                            while(rsps.size && active && post_status == MsgQ::STATE_TIMEOUT)
                             {
                                 post_status = outq->postRef(rsps.response, rsps.size, SYS_TIMEOUT);
                                 if(post_status < 0)
