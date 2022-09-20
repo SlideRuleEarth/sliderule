@@ -428,6 +428,14 @@ int RecordObject::getAllocatedMemory(void)
 }
 
 /*----------------------------------------------------------------------------
+ * getAllocatedDataSize
+ *----------------------------------------------------------------------------*/
+int RecordObject::getAllocatedDataSize(void)
+{
+    return memoryAllocated - (sizeof(rec_hdr_t) + recordDefinition->type_size);
+}
+
+/*----------------------------------------------------------------------------
  * createRecordField
  *----------------------------------------------------------------------------*/
 RecordObject::Field* RecordObject::createRecordField(const char* field_name)
@@ -592,7 +600,7 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueReal(field_t f, const double val, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -663,7 +671,7 @@ void RecordObject::setValueReal(field_t f, const double val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueInteger(field_t f, const long val, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -791,7 +799,7 @@ const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
  *----------------------------------------------------------------------------*/
 double RecordObject::getValueReal(field_t f, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)
@@ -852,7 +860,7 @@ double RecordObject::getValueReal(field_t f, int element)
  *----------------------------------------------------------------------------*/
 long RecordObject::getValueInteger(field_t f, int element)
 {
-    if(element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
 
     if(f.flags & POINTER)

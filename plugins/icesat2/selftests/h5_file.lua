@@ -13,7 +13,7 @@ local resource = "ATL03_20181015231931_02650102_003_01.h5"
 
 -- Unit Test --
 
-local f = h5.file(atlas_asset, resource)
+local f = h5.file(atlas_asset, resource):name(resource)
 local rspq = msg.subscribe("h5testq")
 
 f:read({{dataset="ancillary_data/atlas_sdp_gps_epoch"}}, "h5testq")

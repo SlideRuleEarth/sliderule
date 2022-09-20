@@ -878,15 +878,20 @@ int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
             }
             case RecordObject::REAL:
             {
-                if(field.elements <= 1)
+                if(field.elements == 1)
                 {
                     LuaEngine::setAttrNum(L, fieldnames[i], rec_data->rec->getValueReal(field));
                 }
                 else
                 {
+                    int num_elements = field.elements;
+                    if(num_elements <= 0)
+                    {
+                        num_elements = (rec_data->rec->getAllocatedDataSize() - (field.offset / 8)) / RecordObject::FIELD_TYPE_BYTES[field.type];
+                    }
                     lua_pushstring(L, fieldnames[i]);
                     lua_newtable(L);
-                    for(int e = 0; e < field.elements; e++)
+                    for(int e = 0; e < num_elements; e++)
                     {
                         lua_pushnumber(L, rec_data->rec->getValueReal(field, e));
                         lua_rawseti(L, -2, e+1);
@@ -897,15 +902,20 @@ int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
             }
             case RecordObject::INTEGER:
             {
-                if(field.elements <= 1)
+                if(field.elements == 1)
                 {
                     LuaEngine::setAttrInt(L, fieldnames[i], rec_data->rec->getValueInteger(field));
                 }
                 else
                 {
+                    int num_elements = field.elements;
+                    if(num_elements <= 0)
+                    {
+                        num_elements = (rec_data->rec->getAllocatedDataSize() - (field.offset / 8)) / RecordObject::FIELD_TYPE_BYTES[field.type];
+                    }
                     lua_pushstring(L, fieldnames[i]);
                     lua_newtable(L);
-                    for(int e = 0; e < field.elements; e++)
+                    for(int e = 0; e < num_elements; e++)
                     {
                         lua_pushnumber(L, rec_data->rec->getValueInteger(field, e));
                         lua_rawseti(L, -2, e+1);

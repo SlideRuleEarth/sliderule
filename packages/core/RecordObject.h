@@ -193,6 +193,7 @@ class RecordObject
         int                     getRecordTypeSize   (void);
         int                     getRecordDataSize   (void);
         int                     getAllocatedMemory  (void);
+        int                     getAllocatedDataSize(void);
         Field*                  createRecordField   (const char* field_name);
 
         /* Get/Set Methods */
