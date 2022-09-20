@@ -6,8 +6,6 @@ local pp = require("prettyprint")
 
 -- Setup --
 
-console.loglvl(core.DEBUG)
-
 local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
 local asset_name = "nsidc-s3"
 local atlas_asset = core.getbyname(asset_name)
