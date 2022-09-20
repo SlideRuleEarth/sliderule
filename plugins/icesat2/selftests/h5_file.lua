@@ -1,6 +1,7 @@
 local runner = require("test_executive")
 local console = require("console")
 local asset = require("asset")
+local json = require("json")
 local pp = require("prettyprint")
 
 -- Setup --
@@ -8,8 +9,17 @@ local pp = require("prettyprint")
 console.loglvl(core.DEBUG)
 
 local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
-local atlas_asset = core.getbyname("atlas-s3")
-local resource = "ATL03_20181015231931_02650102_003_01.h5"
+local asset_name = "nsidc-s3"
+local atlas_asset = core.getbyname(asset_name)
+local resource = "ATL03_20181015231931_02650102_005_01.h5"
+
+local creds = aws.csget(asset_name)
+if not creds then
+    local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
+    local response, _ = netsvc.get(earthdata_url)
+    local _, credential = pcall(json.decode, response)
+    aws.csput(asset_name, credential)
+end
 
 -- Unit Test --
 

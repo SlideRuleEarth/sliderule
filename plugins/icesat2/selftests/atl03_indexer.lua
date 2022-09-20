@@ -11,7 +11,7 @@ local asset_name = "nsidc-s3"
 local nsidc_s3 = core.getbyname(asset_name)
 
 local creds = aws.csget(asset_name)
-if creds == nil then
+if not creds then
     local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
     local response, _ = netsvc.get(earthdata_url)
     local _, credential = pcall(json.decode, response)
