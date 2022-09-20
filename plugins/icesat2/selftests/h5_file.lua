@@ -10,7 +10,7 @@ local resource = "ATL03_20181015231931_02650102_003_01.h5"
 local f = h5.file(asset, resource)
 local rspq = msg.subscribe("h5testq")
 
-f:read({{dataset="DS1", col=2}}, "h5testq")
+f:read({{dataset="ancillary_data/atlas_sdp_gps_epoch"}}, "h5testq")
 
 local recdata = rspq:recvrecord(3000)
 local rectable = recdata:tabulate()
