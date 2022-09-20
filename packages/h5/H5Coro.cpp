@@ -802,7 +802,7 @@ void H5FileBuffer::readDataset (info_t* info)
                     uint64_t bi = 0; // index into source buffer
 
                     /* Build Number of Each Chunk per Dimension */
-                    uint64_t cdimnum[MAX_NDIMS * 2];
+                    uint64_t cdimnum[MAX_NDIMS * 2] = {0};
                     for(int i = 0; i < metaData.ndims; i++)
                     {
                         cdimnum[i] = metaData.dimensions[i] / metaData.chunkdims[i];

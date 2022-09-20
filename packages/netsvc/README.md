@@ -15,7 +15,7 @@ If they are not present, follow the instructions in the libcurl-tutorial linked 
 The RapidJSON library is used to parse json strings.  For the latest information, please refer to their website: https://github.com/Tencent/rapidjson/
 
 ```bash
-git clone git@github.com:Tencent/rapidjson.git
+git clone https://github.com/Tencent/rapidjson.git
 cd rapidjson
 mkdir build
 cd build

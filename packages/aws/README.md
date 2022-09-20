@@ -4,14 +4,16 @@ The latest release can be found at https://github.com/aws/aws-sdk-cpp.  Addition
 
 Make sure dependencies are installed:
 ```bash
-sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev
+sudo apt install libcurl4-openssl-dev libssl3 uuid-dev zlib1g-dev
 ```
 
 Clone the repo:
 ```bash
 git clone https://github.com/aws/aws-sdk-cpp.git
 cd aws-sdk-cpp
-git checkout version1.8 # switch to the version 1.8 branch
+git checkout main
+git pull origin main
+git submodule update --init --recursive
 ```
 
 Build and install the library:
