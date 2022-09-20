@@ -7,6 +7,7 @@ local console = require("console")
 runner.script(td .. "plugin_unittest.lua")
 runner.script(td .. "atl06_elements.lua")
 runner.script(td .. "atl03_indexer.lua")
+runner.script(td .. "h5_file.lua")
 
 -- Report Results --
 

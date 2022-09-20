@@ -23,6 +23,15 @@ local rectable = recdata:tabulate()
 
 pp.display(rectable)
 
+runner.check(rectable.data[1] == 0)
+runner.check(rectable.data[2] == 0)
+runner.check(rectable.data[3] == 128)
+runner.check(rectable.data[4] == 36)
+runner.check(rectable.data[5] == 15)
+runner.check(rectable.data[6] == 221)
+runner.check(rectable.data[7] == 209)
+runner.check(rectable.data[8] == 65)
+
 rspq:destroy()
 f:destroy()
 
