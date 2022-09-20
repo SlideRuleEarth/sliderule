@@ -39,7 +39,7 @@
 #include "core.h"
 
 #include <aws/core/Aws.h>
-#include <aws/s3/S3Client.h>
+#include <aws/s3-crt/S3CrtClient.h>
 #include <aws/core/auth/AWSCredentials.h>
 
 /******************************************************************************
@@ -116,7 +116,7 @@ S3Lib::client_t* S3Lib::createClient (const Asset* asset)
             client->decommissioned = false;
 
             /* Create S3 Client Configuration */
-            Aws::Client::ClientConfiguration client_config;
+            Aws::S3Crt::ClientConfiguration client_config;
             client_config.endpointOverride = asset->getEndpoint();
             client_config.region = asset->getRegion();
 
@@ -127,11 +127,11 @@ S3Lib::client_t* S3Lib::createClient (const Asset* asset)
                 const Aws::String secretAccessKey(client->credential.secretAccessKey);
                 const Aws::String sessionToken(client->credential.sessionToken);
                 Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
-                client->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
+                client->s3_client = new Aws::S3Crt::S3CrtClient(awsCredentials, client_config);
             }
             else
             {
-                client->s3_client = new Aws::S3::S3Client(client_config);
+                client->s3_client = new Aws::S3Crt::S3CrtClient(client_config);
             }
 
             /* Register New Client */

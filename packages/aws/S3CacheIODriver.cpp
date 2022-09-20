@@ -39,9 +39,8 @@
 #include "S3Lib.h"
 
 #include <aws/core/Aws.h>
-#include <aws/transfer/TransferManager.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/model/GetObjectRequest.h>
+#include <aws/s3-crt/S3CrtClient.h>
+#include <aws/s3-crt/model/GetObjectRequest.h>
 #include <aws/core/auth/AWSCredentials.h>
 
 #include <assert.h>
@@ -307,31 +306,61 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     const Aws::String key_name = key;
     const Aws::String file_name = cache_filepath.getString();
 
-    /* Create Transfer Configuration */
+    /* Open Up File for Writing */
+    FILE* fd = fopen(cache_filepath.getString(), "w");
+    if(!fd) RunTimeException(CRITICAL, RTE_ERROR, "Unable to open file %s: %s", cache_filepath.getString(), LocalLib::err2str(errno));
+
+    /* Set Bucket and Key */
+    Aws::S3Crt::Model::GetObjectRequest object_request;
+    object_request.SetBucket(bucket_name);
+    object_request.SetKey(key_name);
+
+    /* Make Request */
     S3Lib::client_t* client = S3Lib::createClient(asset);
-    auto thread_executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(ALLOC_TAG, 4);
-    Aws::Transfer::TransferManagerConfiguration transfer_config(thread_executor.get());
-    std::shared_ptr<Aws::S3::S3Client> transfer_client(client->s3_client);
-    transfer_config.s3Client = transfer_client;
+    Aws::S3Crt::Model::GetObjectOutcome response = client->s3_client->GetObject(object_request);
+    bool status = response.IsSuccess();
 
-    /* Create Transfer Manager */
-    auto transfer_manager = Aws::Transfer::TransferManager::Create(transfer_config);
+    /* Read Response */
+    if(status)
+    {
+        int64_t total_bytes = (int64_t)response.GetResult().GetContentLength();
+        std::streambuf* sbuf = response.GetResult().GetBody().rdbuf();
+        std::istream reader(sbuf);
+        char* data = new char [FILE_BUFFER_SIZE];
 
-    /* Download File */
-    auto transfer_handle = transfer_manager->DownloadFile(bucket_name, key_name, file_name);
+        /* Write File */
+        int64_t bytes_read = 0;
+        while(bytes_read < total_bytes)
+        {
+            int64_t bytes_left = total_bytes - bytes_read;
+            int64_t bytes_to_read = MIN(bytes_left, FILE_BUFFER_SIZE);
+            reader.read((char*)data, bytes_to_read);
+            int64_t bytes_written = fwrite(data, bytes_to_read, 1, fd);
+            if(bytes_written > 0)
+            {
+                bytes_read += bytes_written;
+            }
+            else
+            {
+                fclose(fd);
+                RunTimeException(CRITICAL, RTE_ERROR, "Error(%d) writing file %s: %s", bytes_written, cache_filepath.getString(), LocalLib::err2str(errno));
+            }
+        }
 
-    /* Wait for Download to Complete */
-    transfer_handle->WaitUntilFinished();
-    auto transfer_status = transfer_handle->GetStatus();
+        /* Clean Up File Data */
+        delete [] data;
+    }
 
-    /* Clean Up Transfer Configuration */
+    /* Clean Up File Descriptor */
+    fclose(fd);
+
+    /* Clean Up Client */
     S3Lib::destroyClient(client);
 
-    /* Handle Status */
-    if(transfer_status != Aws::Transfer::TransferStatus::COMPLETED)
+    /* Handle Errors or Return Bytes Read */
+    if(!status)
     {
-        mlog(CRITICAL, "Failed to transfer S3 object: %d", (int)transfer_status);
-        return false;
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read S3 data: %s", response.GetError().GetMessage().c_str());
     }
 
     /* Populate Cache */

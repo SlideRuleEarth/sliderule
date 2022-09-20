@@ -39,8 +39,8 @@
 #include "S3Lib.h"
 
 #include <aws/core/Aws.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/model/GetObjectRequest.h>
+#include <aws/s3-crt/S3CrtClient.h>
+#include <aws/s3-crt/model/GetObjectRequest.h>
 #include <aws/core/auth/AWSCredentials.h>
 
 /******************************************************************************
@@ -97,7 +97,7 @@ void S3IODriver::ioClose (void)
 int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     int64_t bytes_read = 0;
-    Aws::S3::Model::GetObjectRequest object_request;
+    Aws::S3Crt::Model::GetObjectRequest object_request;
 
     /* Set Bucket and Key */
     object_request.SetBucket(ioBucket);
@@ -109,7 +109,7 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 
     /* Make Request */
     S3Lib::client_t* client = S3Lib::createClient(asset);
-    Aws::S3::Model::GetObjectOutcome response = client->s3_client->GetObject(object_request);
+    Aws::S3Crt::Model::GetObjectOutcome response = client->s3_client->GetObject(object_request);
     bool status = response.IsSuccess();
 
     /* Read Response */

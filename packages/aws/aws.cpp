@@ -34,8 +34,8 @@
  ******************************************************************************/
 
 #include <aws/core/Aws.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/model/GetObjectRequest.h>
+#include <aws/s3-crt/S3CrtClient.h>
+#include <aws/s3-crt/model/GetObjectRequest.h>
 #include <aws/core/auth/AWSCredentials.h>
 
 #include "core.h"
@@ -76,20 +76,20 @@ int aws_s3_get(lua_State* L)
         /* Initialize Variables for Read */
         char* data = NULL;
         int64_t bytes_read = 0;
-        Aws::S3::Model::GetObjectRequest object_request;
+        Aws::S3Crt::Model::GetObjectRequest object_request;
 
         /* Set Bucket and Key */
         object_request.SetBucket(bucket);
         object_request.SetKey(key);
 
         /* Create S3 Client */
-        Aws::Client::ClientConfiguration client_config;
+        Aws::S3Crt::ClientConfiguration client_config;
         client_config.endpointOverride = endpoint;
         client_config.region = region;
-        Aws::S3::S3Client* s3_client = new Aws::S3::S3Client(client_config);
+        Aws::S3Crt::S3CrtClient* s3_client = new Aws::S3Crt::S3CrtClient(client_config);
 
         /* Make Request */
-        Aws::S3::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
+        Aws::S3Crt::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
         if(response.IsSuccess())
         {
             bytes_read = (int64_t)response.GetResult().GetContentLength();

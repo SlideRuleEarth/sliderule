@@ -41,7 +41,7 @@
 #include "Asset.h"
 #include "CredentialStore.h"
 
-#include <aws/s3/S3Client.h>
+#include <aws/s3-crt/S3CrtClient.h>
 
 /******************************************************************************
  * AWS S3 LIBRARY CLASS
@@ -62,7 +62,7 @@ class S3Lib
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            Aws::S3::S3Client*          s3_client;
+            Aws::S3Crt::S3CrtClient*    s3_client;
             CredentialStore::Credential credential;
             const char*                 asset_name;
             int32_t                     reference_count;
