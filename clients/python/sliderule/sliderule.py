@@ -50,7 +50,7 @@ service_org = PUBLIC_ORG
 ps_refresh_token = None
 ps_access_token = None
 
-max_retries_per_request = 5
+max_attempts_per_request = 1
 
 verbose = False
 
@@ -74,13 +74,6 @@ eventlogger = {
     2: logger.warning,
     3: logger.error,
     4: logger.critical
-}
-
-handleexcept = {
-    0: {"name": "ERROR",                    "fatal": True,  "expected": False },
-    1: {"name": "TIMEOUT",                  "fatal": False, "expected": True },
-    2: {"name": "RESOURCE_DOES_NOT_EXIST",  "fatal": True,  "expected": True },
-    3: {"name": "EMPTY_SUBSET",             "fatal": True,  "expected": True }
 }
 
 datatypes = {
@@ -121,14 +114,6 @@ codedtype2str = {
     11: "TIME8",
     12: "STRING"
 }
-
-###############################################################################
-# CLASSES
-###############################################################################
-
-class TransientError(Exception):
-    """Processing exception that can be retried"""
-    pass
 
 ###############################################################################
 # UTILITIES
@@ -317,7 +302,6 @@ def __parse_native(data, callbacks):
     return recs
 
 ###############################################################################
-#
 # Default Record Processing
 ###############################################################################
 
@@ -332,15 +316,11 @@ def __logeventrec(rec):
 #  __raiseexceptrec
 #
 def __raiseexceptrec(rec):
-    rc = rec["code"]
-    lvl = rec["level"]
-    if rc in handleexcept:
-        if not handleexcept[rc]["expected"]:
-            logger.critical("%s, unexpected exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
-        elif verbose:
-            eventlogger[rec['level']]("%s exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
-        if not handleexcept[rc]["fatal"]:
-            raise TransientError()
+    if verbose:
+        if rec["code"] >= 0:
+            eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
+        else:
+            eventlogger[rec["level"]]("%s", rec["text"])
 
 #
 #  Globals
@@ -389,8 +369,8 @@ def source (api, parm={}, stream=False, callbacks={}):
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
-    global service_url, service_org, max_retries_per_request
-    retries = max_retries_per_request
+    global service_url, service_org, max_attempts_per_request
+    retries = max_attempts_per_request
     rqst = json.dumps(parm)
     rsps = {}
     headers = None
@@ -438,8 +418,6 @@ def source (api, parm={}, stream=False, callbacks={}):
                 logger.error("Server experiencing heavy load, stalling on request to {} ... will retry".format(url))
             else:
                 logger.error("HTTP error {} from endpoint {} ... retrying request".format(e.response.status_code, url))
-        except TransientError as e:
-            logger.warning("Recoverable error occurred at {} ... retrying request".format(url))
         except:
             raise
     return rsps
