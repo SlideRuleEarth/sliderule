@@ -404,6 +404,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             const char* chunk_length_str = parseChunkHeaderLine(line_start, line_term);
                             if(StringLib::str2long(chunk_length_str, &chunk_remaining, 16))
                             {
+                                rsps.size = chunk_remaining;
                                 chunk_header_complete = true;
                                 chunk_payload_complete = false;
                                 line_start = line_term;
@@ -426,56 +427,36 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         }
                     }
                     //////////////////////////
-                    // Process Payload
+                    // Process Content Payload
                     //////////////////////////
-                    else if(!chunk_encoding || !chunk_payload_complete)
+                    else if(!chunk_encoding)
                     {
                         /* Allocate Response If Necessary */
-                        if(!outq && !rsps.response)
+                        if(!rsps.response)
                         {
                             rsps.response = new char [rsps.size + 1]; // add one byte for terminator
                         }
 
                         /* Determine Bytes to Copy */
                         int rsps_bytes = bytes_read - line_start;
-                        if(chunk_encoding) rsps_bytes = MIN(rsps_bytes, chunk_remaining);
-                        if(!outq && rsps_bytes > content_remaining)
+                        if(rsps_bytes > content_remaining)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "received too many bytes in %sresponse - %d > %ld", unbounded_content ? "unbounded " : "", rsps_bytes, content_remaining);
                         }
 
-                        /* Copy Payload Bytes */
+                        /* Populate Response */
                         if(rsps_bytes > 0)
                         {
-                            if(outq)
-                            {
-                                /* Post Response */
-                                int post_status = outq->postCopy(&rspsBuf[line_start], rsps_bytes, SYS_TIMEOUT);
-                                if(post_status <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to post response: %d", post_status);
-                            }
-                            else
-                            {
-                                /* Populate Response */
-                                LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
-                                rsps.response[rsps_index + rsps_bytes] = '\0'; // ensure termination
-                            }
+                            LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
+                            rsps.response[rsps_index + rsps_bytes] = '\0'; // ensure termination
                         }
 
                         /* Update Indices */
                         rsps_index += rsps_bytes;
                         line_start += rsps_bytes;
-                        if(chunk_encoding)
-                        {
-                            chunk_remaining -= rsps_bytes;
-                            if(chunk_remaining <= 0)
-                            {
-                                chunk_payload_complete = true;
-                                chunk_trailer_complete = false;
-                            }
-                        }
 
                         /* Check if Respose Complete */
-                        if(!outq || !unbounded_content)
+                        if(!unbounded_content)
                         {
                             content_remaining -= rsps_bytes;
                             if(content_remaining <= 0)
@@ -485,9 +466,58 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         }
                     }
                     //////////////////////////
+                    // Process Chunk Payload
+                    //////////////////////////
+                    else if(!chunk_payload_complete)
+                    {
+                        /* Allocate Response If Necessary */
+                        if(!rsps.response && rsps.size > 0)
+                        {
+                            rsps.response = new char [rsps.size]; // add one byte for terminator
+                        }
+
+                        /* Populate Response */
+                        int rsps_bytes = bytes_read - line_start;
+                        rsps_bytes = MIN(rsps_bytes, chunk_remaining);
+                        if(rsps_bytes > 0)
+                        {
+                            LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
+                        }
+
+                        /* Update Indices */
+                        rsps_index += rsps_bytes;
+                        line_start += rsps_bytes;
+                        chunk_remaining -= rsps_bytes;
+
+                        /* Post Completed Chunk */
+                        if(chunk_remaining <= 0)
+                        {
+                            int post_status = MsgQ::STATE_TIMEOUT;
+                            while(rsps.size && active && post_status == MsgQ::STATE_TIMEOUT)
+                            {
+                                post_status = outq->postRef(rsps.response, rsps.size, SYS_TIMEOUT);
+                                if(post_status < 0)
+                                {
+                                    /* Handle Post Errors */
+                                    delete [] rsps.response;
+                                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to post response: %d", post_status);
+                                }
+                            }
+
+                            /* Reset Response */
+                            rsps.response = NULL;
+                            rsps.size = 0;
+                            rsps_index = 0;
+
+                            /* Go To Chunk Trailer */
+                            chunk_payload_complete = true;
+                            chunk_trailer_complete = false;
+                        }
+                    }
+                    //////////////////////////
                     // Process Chunk Trailer
                     //////////////////////////
-                    else if(chunk_encoding && !chunk_trailer_complete)
+                    else if(!chunk_trailer_complete)
                     {
                         line_term = parseLine(line_start, bytes_read);
                         if(line_term < 0) // chunk trailer
@@ -749,7 +779,13 @@ int HttpClient::luaRequest (lua_State* L)
             };
 
             /* Create Request Thread Upon First Request */
-            if(!lua_obj->requestPid) lua_obj->requestPid = new Thread(requestThread, lua_obj);
+            if(!lua_obj->requestPid)
+            {
+                lua_obj->requestPid = new Thread(requestThread, lua_obj);
+                // TODO: need signaling for when subscriber comes up...
+                // otherwise the post below will return error that there
+                // are no subscribers
+            }
 
             /* Post Request */
             status = lua_obj->requestPub->postCopy(&rqst, sizeof(rqst_t)) > 0;

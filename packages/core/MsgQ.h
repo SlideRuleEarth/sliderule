@@ -182,8 +182,8 @@ class Publisher: public MsgQ
 
         static const int MAX_POSTED_STR = 1024;
 
-                Publisher       (const char* name, MsgQ::free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                Publisher       (const MsgQ& existing_q, MsgQ::free_func_t free_func=NULL);
+                Publisher       (const char* name, MsgQ::free_func_t free_func=defaultFree, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+                Publisher       (const MsgQ& existing_q, MsgQ::free_func_t free_func=defaultFree);
                 ~Publisher      (void);
 
 
@@ -194,7 +194,8 @@ class Publisher: public MsgQ
 
     private:
 
-        int     post            (void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout);
+        int         post        (void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout);
+        static void defaultFree (void* obj, void* parm);
 
 };
 

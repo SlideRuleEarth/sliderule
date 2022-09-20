@@ -115,8 +115,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
  *----------------------------------------------------------------------------*/
 OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
 {
-    NodeList* nodes = new NodeList;
-
+    NodeList* nodes = NULL;
     HttpClient orchestrator(NULL, URL);
     SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
@@ -130,6 +129,7 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
         unsigned int num_transactions = json["transactions"].Size();
         if(num_members == num_transactions)
         {
+            nodes = new NodeList; // allocate node list to be returned
             for(rapidjson::SizeType i = 0; i < num_members; i++)
             {
                 const char* name = json["members"][i].GetString();
