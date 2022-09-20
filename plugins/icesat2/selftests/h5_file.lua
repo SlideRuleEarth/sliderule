@@ -1,13 +1,19 @@
 local runner = require("test_executive")
 local console = require("console")
+local asset = require("asset")
 local pp = require("prettyprint")
 
-local asset = "atlas-s3"
+-- Setup --
+
+console.loglvl(core.DEBUG)
+
+local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
+local atlas_asset = core.getbyname("atlas-s3")
 local resource = "ATL03_20181015231931_02650102_003_01.h5"
 
 -- Unit Test --
 
-local f = h5.file(asset, resource)
+local f = h5.file(atlas_asset, resource)
 local rspq = msg.subscribe("h5testq")
 
 f:read({{dataset="ancillary_data/atlas_sdp_gps_epoch"}}, "h5testq")

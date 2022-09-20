@@ -13,7 +13,7 @@ if (AWSSDK_LINK_LIBRARIES)
 
     target_compile_definitions (slideruleLib PUBLIC __aws__)
 
-    #target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-DENABLE_AWS_LOGGING>")
+    target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-DENABLE_AWS_LOGGING>")
 
     target_link_libraries (slideruleLib PUBLIC ${AWSSDK_LINK_LIBRARIES})
 
