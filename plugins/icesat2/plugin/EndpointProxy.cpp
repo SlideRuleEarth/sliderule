@@ -54,99 +54,9 @@ const struct luaL_Reg EndpointProxy::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-Publisher*  EndpointProxy::rqstPub;
-Subscriber* EndpointProxy::rqstSub;
-bool        EndpointProxy::proxyActive;
-Thread**    EndpointProxy::proxyPids;
-int         EndpointProxy::threadPoolSize;
-
 /******************************************************************************
  * ATL06 PROXY CLASS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void EndpointProxy::init (void)
-{
-    rqstPub = NULL;
-    proxyActive = false;
-    rqstSub = NULL;
-    threadPoolSize = 0;
-    proxyPids = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * deinit
- *----------------------------------------------------------------------------*/
-void EndpointProxy::deinit (void)
-{
-    if(proxyActive)
-    {
-        proxyActive = false;
-        for(int t = 0; t < threadPoolSize; t++)
-        {
-            delete proxyPids[t];
-        }
-        if(proxyPids) delete [] proxyPids;
-        if(rqstSub) delete rqstSub;
-    }
-
-    if(rqstPub) delete rqstPub;
-}
-
-/*----------------------------------------------------------------------------
- * luaInit - init(<num_threads>, <depth of request queue>)
- *
- *  NOTE: this function is not thread safe; must only be called once at startup
- *----------------------------------------------------------------------------*/
-int EndpointProxy::luaInit (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Number of Threads */
-        long num_threads = getLuaInteger(L, 1, true, LocalLib::nproc() * CPU_LOAD_FACTOR);
-
-        /* Get Depth of Request Queue */
-        long rqst_queue_depth = getLuaInteger(L, 2, true, MsgQ::CFG_DEPTH_STANDARD);
-
-        /* Create Proxy Thread Pool */
-        if(!proxyActive)
-        {
-            if(num_threads > 0)
-            {
-                rqstPub = new Publisher(NULL, NULL, rqst_queue_depth);
-                proxyActive = true;
-                rqstSub = new Subscriber(*rqstPub);
-                threadPoolSize = num_threads;
-                proxyPids = new Thread* [threadPoolSize];
-                for(int t = 0; t < threadPoolSize; t++)
-                {
-                    proxyPids[t] = new Thread(proxyThread, NULL);
-                }
-            }
-            else
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
-            }
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "EndpointProxy has already been initialized");
-        }
-
-        /* Set Success */
-        status = true;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error initializing EndpointProxy module: %s", e.what());
-    }
-
-    return returnLuaStatus(L, status);
-}
 
 /*----------------------------------------------------------------------------
  * luaCreate - create(<endpoint>, <asset>, <resources>, <parameter string>, <timeout>, <outq_name>)
@@ -158,11 +68,9 @@ int EndpointProxy::luaCreate (lua_State* L)
 
     try
     {
-        /* Get Endpoint */
-        const char* _endpoint = getLuaString(L, 1);
-
-        /* Get Asset */
-        const char* _asset = getLuaString(L, 2);
+        /* Get Parameters */
+        const char* _endpoint   = getLuaString(L, 1); // get endpoint
+        const char* _asset      = getLuaString(L, 2); // get asset
 
         /* Check Resource Table Parameter */
         int resources_parm_index = 3;
@@ -189,17 +97,19 @@ int EndpointProxy::luaCreate (lua_State* L)
             }
         }
 
-        /* Get Request Parameters */
-        const char* _parameters = getLuaString(L, 4);
+        /* Get Parameters Continued */
+        const char* _parameters         = getLuaString(L, 4); // get request parameters
+        int         _timeout_secs       = getLuaInteger(L, 5, true, NODE_LOCK_TIMEOUT); // get timeout in seconds
+        const char* _outq_name          = getLuaString(L, 6); // get output queue
+        long        _num_threads        = getLuaInteger(L, 7, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
+        long        _rqst_queue_depth   = getLuaInteger(L, 8, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
 
-        /* Get Timeout */
-        int _timeout_secs = getLuaInteger(L, 5, true, NODE_LOCK_TIMEOUT);
-
-        /* Get Output Queue */
-        const char* outq_name = getLuaString(L, 6);
+        /* Check Parameters */
+        if(_num_threads <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
+        else if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
 
         /* Return Reader Object */
-        return createLuaObject(L, new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, outq_name));
+        return createLuaObject(L, new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _num_threads, _rqst_queue_depth));
     }
     catch(const RunTimeException& e)
     {
@@ -218,7 +128,9 @@ int EndpointProxy::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name):
+EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources,
+                              const char* _parameters, int _timeout_secs, const char* _outq_name,
+                              int _num_threads, int _rqst_queue_depth):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(_asset);
@@ -228,23 +140,36 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
 
     numRequests = _num_resources;
     timeout = _timeout_secs;
+    numProxyThreads = _num_threads;
+    rqstQDepth = _rqst_queue_depth;
+
+    /* Proxy Active */
+    active = true;
+
+    /* Create Proxy Threads */
+    rqstPub = new Publisher(NULL, NULL, rqstQDepth);
+    rqstSub = new Subscriber(*rqstPub);
+    proxyPids = new Thread* [numProxyThreads];
+    for(int t = 0; t < numProxyThreads; t++)
+    {
+        proxyPids[t] = new Thread(proxyThread, this);
+    }
 
     /* Allocate Data Members */
     endpoint    = StringLib::duplicate(_endpoint);
     asset       = StringLib::duplicate(_asset);
-    requests    = new atl06_rqst_t[numRequests];
+    requests    = new rqst_t[numRequests];
     parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
     outQ        = new Publisher(_outq_name);
 
     /* Get First Round of Nodes */
-    int num_nodes_to_request = MIN(numRequests, threadPoolSize);
+    int num_nodes_to_request = MIN(numRequests, numProxyThreads);
     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, timeout);
 
     /* Populate Requests */
     for(int i = 0; i < numRequests; i++)
     {
         /* Initialize Request */
-        requests[i].proxy = this;
         requests[i].resource = StringLib::duplicate(_resources[i]);
         requests[i].node = NULL;
         requests[i].valid = false;
@@ -262,13 +187,12 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     delete nodes;
 
     /* Start Collator Thread */
-    active = true;
     collatorPid = new Thread(collatorThread, this);
 
     /* Post Requests to Proxy Threads */
     for(int i = 0; i < numRequests; i++)
     {
-        atl06_rqst_t* rqst = &requests[i];
+        rqst_t* rqst = &requests[i];
         if(rqstPub->postCopy(&rqst, sizeof(rqst), IO_CHECK) <= 0)
         {
             LuaEndpoint::generateExceptionStatus(RTE_ERROR, ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
@@ -281,21 +205,25 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
  *----------------------------------------------------------------------------*/
 EndpointProxy::~EndpointProxy (void)
 {
+    /* Join and Delete Threads */
     active = false;
-    delete collatorPid;
-    for(int i = 0; i < numRequests; i++)
+    for(int i = 0; i < numProxyThreads; i++)
     {
-        if(!requests[i].terminated)
-        {
-            delete [] requests[i].resource;
-            delete requests[i].node;
-        }
+        delete proxyPids[i];
     }
+    delete [] proxyPids;
+    delete collatorPid;
+
+    /* Delete Queues */
+    delete rqstPub;
+    delete rqstSub;
+    delete outQ;
+
+    /* Delete Allocated Memory */
+    delete [] requests;
     delete [] endpoint;
     delete [] asset;
-    delete [] requests;
     delete [] parameters;
-    delete outQ;
 }
 
 /*----------------------------------------------------------------------------
@@ -311,7 +239,7 @@ void* EndpointProxy::collatorThread (void* parm)
         /* Check Completion of All Requests */
         for(int i = 0; i < proxy->numRequests; i++)
         {
-            atl06_rqst_t* rqst = &proxy->requests[i];
+            rqst_t* rqst = &proxy->requests[i];
             if(!rqst->terminated)
             {
                 rqst->sync.lock();
@@ -322,40 +250,39 @@ void* EndpointProxy::collatorThread (void* parm)
                         rqst->sync.wait(0, COLLATOR_POLL_RATE);
                     }
 
-                    /* Process Completion */
+                    /* Mark as Terminated */
                     if(rqst->complete)
                     {
                         rqst->terminated = true;
                         num_terminated++;
-
-                        /* Post Status */
-                        int code = rqst->valid ? RTE_INFO : RTE_ERROR;
-                        event_level_t level = rqst->valid ? INFO : ERROR;
-                        LuaEndpoint::generateExceptionStatus(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
-                                                                rqst->valid ? "Successfully completed" : "Failed to complete",
-                                                                num_terminated, proxy->numRequests, rqst->resource);
-
-                        /* Clean Up Request */
-                        delete [] rqst->resource;
-                        delete rqst->node;
                     }
                 }
                 rqst->sync.unlock();
+
+                /* Process Completion */
+                if(rqst->terminated)
+                {
+                    /* Post Status */
+                    int code = rqst->valid ? RTE_INFO : RTE_ERROR;
+                    event_level_t level = rqst->valid ? INFO : ERROR;
+                    LuaEndpoint::generateExceptionStatus(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
+                                                            rqst->valid ? "Successfully completed" : "Failed to complete",
+                                                            num_terminated, proxy->numRequests, rqst->resource);
+
+                    /* Clean Up Request */
+                    delete [] rqst->resource;
+                    delete rqst->node;
+                }
             }
         }
 
         /* Check if Done */
-        if(num_terminated == proxy->numRequests)
-        {
-            proxy->signalComplete();
-            break;
-        }
-        else
-        {
-            LocalLib::performIOTimeout();
-        }
+        if(num_terminated == proxy->numRequests) break;
+        else LocalLib::performIOTimeout();
     }
 
+    /* Signal Complete */
+    proxy->signalComplete();
     return NULL;
 }
 
@@ -364,21 +291,19 @@ void* EndpointProxy::collatorThread (void* parm)
  *----------------------------------------------------------------------------*/
 void* EndpointProxy::proxyThread (void* parm)
 {
-    (void)parm;
+    EndpointProxy* proxy = (EndpointProxy*)parm;
 
-    while(proxyActive)
+    while(proxy->active)
     {
-        atl06_rqst_t* rqst;
-        int recv_status = rqstSub->receiveCopy(&rqst, sizeof(rqst), SYS_TIMEOUT);
+        rqst_t* rqst;
+        int recv_status = proxy->rqstSub->receiveCopy(&rqst, sizeof(rqst), SYS_TIMEOUT);
         if(recv_status > 0)
         {
-            EndpointProxy* proxy = rqst->proxy;
-
             try
             {
                 /* Get Lock from Orchestrator */
                 double expiration_time = TimeLib::latchtime() + proxy->timeout;
-                while(proxyActive && proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
+                while(proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
                 {
                     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
                     if(!nodes)                      throw RunTimeException(CRITICAL, RTE_ERROR, "unable to reach orchestrator");
@@ -416,6 +341,12 @@ void* EndpointProxy::proxyThread (void* parm)
                 mlog(e.level(), "Failure processing request: %s", e.what());
             }
 
+            /* Unlock Node */
+            if(rqst->node)
+            {
+                OrchestratorLib::unlock(&rqst->node->transaction, 1);
+            }
+
             /* Mark Complete */
             rqst->sync.lock();
             {
@@ -423,12 +354,6 @@ void* EndpointProxy::proxyThread (void* parm)
                 rqst->sync.signal();
             }
             rqst->sync.unlock();
-
-            /* Unlock Node */
-            if(rqst->node)
-            {
-                OrchestratorLib::unlock(&rqst->node->transaction, 1);
-            }
         }
         else if(recv_status != MsgQ::STATE_TIMEOUT)
         {

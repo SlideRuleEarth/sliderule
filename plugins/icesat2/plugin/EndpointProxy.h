@@ -57,6 +57,8 @@ class EndpointProxy: public LuaObject
         static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
         static const int NODE_LOCK_TIMEOUT = 600; // seconds
         static const int COLLATOR_POLL_RATE = 1000; // milliseconds
+        static const int DEFAULT_PROXY_QUEUE_DEPTH = 1000;
+        static const int MAX_PROXY_THREADS = 1000;
 
         static const char* SERVICE;
 
@@ -68,10 +70,7 @@ class EndpointProxy: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     init        (void);
-        static void     deinit      (void);
-        static int      luaInit     (lua_State* L);
-        static int      luaCreate   (lua_State* L);
+        static int luaCreate (lua_State* L);
 
     private:
 
@@ -80,40 +79,40 @@ class EndpointProxy: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            EndpointProxy*          proxy;
             const char*             resource;
             OrchestratorLib::Node*  node;       // node to proxy request to
             bool                    valid;      // set to false when error encountered
             bool                    complete;   // set to true when request finished
             bool                    terminated; // all processing for request has been done
             Cond                    sync;       // signals when request is complete
-        } atl06_rqst_t;
+        } rqst_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static Publisher*   rqstPub;
-        static Subscriber*  rqstSub;
-        static bool         proxyActive;
-        static Thread**     proxyPids; // thread pool
-        static int          threadPoolSize;
-
         bool                active;
+        Publisher*          rqstPub;
+        Subscriber*         rqstSub;
+        Thread**            proxyPids;
         Thread*             collatorPid;
-        atl06_rqst_t*       requests; // array[numRequests]
+        rqst_t*             requests; // array[numRequests]
         int                 numRequests;
         const char*         endpoint;
         const char*         asset;
         const char*         parameters;
         int                 timeout;
         Publisher*          outQ;
+        int                 numProxyThreads;
+        int                 rqstQDepth;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            EndpointProxy           (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources, const char* _parameters, int _timeout_secs, const char* _outq_name);
+                            EndpointProxy           (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources,
+                                                     const char* _parameters, int _timeout_secs, const char* _outq_name,
+                                                     int _num_threads, int _rqst_queue_depth);
                             ~EndpointProxy          (void);
 
         static void*        collatorThread          (void* parm);

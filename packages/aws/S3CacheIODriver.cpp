@@ -268,8 +268,6 @@ S3CacheIODriver::~S3CacheIODriver (void)
  *----------------------------------------------------------------------------*/
 bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char** file)
 {
-    const char* ALLOC_TAG = __FUNCTION__;
-
     /* Check Cache */
     bool found_in_cache = false;
     cacheMut.lock();
@@ -343,7 +341,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
             else
             {
                 fclose(fd);
-                RunTimeException(CRITICAL, RTE_ERROR, "Error(%d) writing file %s: %s", bytes_written, cache_filepath.getString(), LocalLib::err2str(errno));
+                RunTimeException(CRITICAL, RTE_ERROR, "Error(%ld) writing file %s: %s", bytes_written, cache_filepath.getString(), LocalLib::err2str(errno));
             }
         }
 
