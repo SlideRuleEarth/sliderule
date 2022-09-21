@@ -24,6 +24,7 @@ if (AWSSDK_LINK_LIBRARIES)
             ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3Lib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.cpp
     )
 
     target_include_directories (slideruleLib
@@ -39,6 +40,7 @@ if (AWSSDK_LINK_LIBRARIES)
             ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.h
             ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.h
             ${CMAKE_CURRENT_LIST_DIR}/S3Lib.h
+            ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.h
         DESTINATION
             ${INCDIR}
     )

@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __s3_client__
-#define __s3_client__
+#ifndef __s3_curl_io_driver__
+#define __s3_curl_io_driver__
 
 /******************************************************************************
  * INCLUDES
@@ -45,38 +45,49 @@
  * AWS S3 CLIENT CLASS
  ******************************************************************************/
 
-class S3Client
+class S3CurlIODriver: public Asset::IODriver
 {
-    public:
-
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const long DEFAULT_CONNECTION_TIMEOUT = 10; // seconds
+        static const long DEFAULT_READ_TIMEOUT = 10; // seconds
+        static const long DEFAULT_SSL_VERIFYPEER = 0;
+        static const long DEFAULT_SSL_VERIFYHOST = 0;
         static const int STARTING_NUM_CLIENTS = 32;
+        static const char* FORMAT;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     init        (void);
-        static void     deinit      (void);
+        static void         init    (void);
+        static void         deinit  (void);
 
-                        S3Client    (const Asset* asset);
-                        ~S3Client   (void);
+        static IODriver*    create  (const Asset* _asset);
+        virtual void        ioOpen  (const char* resource);
+        virtual void        ioClose (void);
+        virtual int64_t     ioRead  (uint8_t* data, int64_t size, uint64_t pos);
 
-        int             readBuffer  (void* buf, int len, int timeout=SYS_TIMEOUT);
+    protected:
 
-    private:
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                S3CurlIODriver  (const Asset* _asset);
+        virtual ~S3CurlIODriver (void);
+        void    destroyClient   (void);
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        class impl; // private implementation of client code
+        struct impl; // private implementation of client code
 
         typedef struct {
-            class impl*                 s3_handle;
+            struct impl*                s3_handle;
             CredentialStore::Credential credential;
             const char*                 asset_name;
             int32_t                     reference_count;
@@ -84,18 +95,16 @@ class S3Client
         } client_t;
 
         /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        void    destroyClient  (void);
-
-        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static Mutex clientsMut;
-        static Dictionary<S3Client*> clients;
-        client_t* client;
+        static Dictionary<S3CurlIODriver*> clients;
+
+        client_t*       client;
+        const Asset*    asset;
+        char*           ioBucket;
+        char*           ioKey;
 };
 
-#endif  /* __s3_client__ */
+#endif  /* __s3_curl_io_driver__ */

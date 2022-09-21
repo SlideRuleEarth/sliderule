@@ -40,6 +40,7 @@
 
 #include "core.h"
 #include "aws.h"
+#include "S3Lib.h"
 
 /******************************************************************************
  * DEFINES
@@ -157,8 +158,12 @@ void initaws (void)
     /* Initialize Modules */
     CredentialStore::init();
     S3Lib::init();
+    S3CurlIODriver::init();
+
+    /* Register I/O Drivers */
     Asset::registerDriver(S3IODriver::FORMAT, S3IODriver::create);
     Asset::registerDriver(S3CacheIODriver::FORMAT, S3CacheIODriver::create);
+    Asset::registerDriver(S3CurlIODriver::FORMAT, S3CurlIODriver::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_AWS_LIBNAME, aws_open);
@@ -172,6 +177,7 @@ void initaws (void)
 
 void deinitaws (void)
 {
+    S3CurlIODriver::deinit();
     S3Lib::deinit();
     CredentialStore::deinit();
     Aws::ShutdownAPI(options);

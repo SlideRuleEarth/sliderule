@@ -149,9 +149,9 @@ S3IODriver::S3IODriver (const Asset* _asset)
 S3IODriver::~S3IODriver (void)
 {
     /*
-        * Delete Memory Allocated for ioBucket
-        *  only ioBucket is freed because ioKey only points
-        *  into the memory allocated to ioBucket
-        */
+     * Delete Memory Allocated for ioBucket
+     *  only ioBucket is freed because ioKey only points
+     *  into the memory allocated to ioBucket
+     */
     if(ioBucket) delete [] ioBucket;
 }
