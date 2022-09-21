@@ -47,10 +47,12 @@ class S3Client::impl
 {
     public:
 
+        static const long DEFAULT_CONNECTION_TIMEOUT = 10; // seconds
+
         S3Client::impl(CredentialStore::Credential* _credential, const char* _endpoint, const char* _region);
         S3Client::~impl(void);
 
-        void read (uint8_t* buffer, int size);
+        void read (uint8_t* buffer, int size, int timeout_secs);
 
     private:
 
@@ -80,8 +82,7 @@ S3Client::impl (CredentialStore::Credential* _credential, const char* _endpoint,
     if(curl)
     {
         /* Set cURL Options */
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // seconds
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // seconds
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONNECTION_TIMEOUT); // seconds
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, S3Client::curlWriteCallback);
     }
     else
@@ -101,7 +102,7 @@ S3Client::~impl (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-void S3Client::read (uint8_t* buffer, int size)
+void S3Client::impl::read (uint8_t* buffer, int size, int timeout_secs)
 {
     /* Setup Buffer for Callback */
     data_t data = {
@@ -110,6 +111,12 @@ void S3Client::read (uint8_t* buffer, int size)
         .index = 0
     };
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+
+    /* Set Timeout */
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_secs);
+
+    /* Build Request Headers */
+    // TODO
 
     /* Perform Request */
     CURLcode res = curl_easy_perform(curl);
@@ -218,7 +225,7 @@ S3Client::S3Client (const Asset* asset)
             client->asset_name = StringLib::duplicate(asset->getName());
             client->reference_count = 1;
             client->decommissioned = false;
-            client->impl = new S3Client::impl(&client->credential, asset->getEndpoint(), asset->getRegion());
+            client->s3_handle = new S3Client::impl(&client->credential, asset->getEndpoint(), asset->getRegion());
 
             /* Register New Client */
             clients.add(asset->getName(), client);
@@ -239,6 +246,26 @@ S3Client::~S3Client (void)
 }
 
 /*----------------------------------------------------------------------------
+ * readBuffer
+ *----------------------------------------------------------------------------*/
+int S3Client::readBuffer (void* buf, int len, int timeout)
+{
+    int rc = len;
+
+    try
+    {
+        client->s3_handle->read(buf, len, (timeout + 999) / 1000);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "S3 client failure: %s", e.what());
+        rc = INVALID_RC;
+    }
+
+    return rc;
+}
+
+/*----------------------------------------------------------------------------
  * destroyClient
  *----------------------------------------------------------------------------*/
 void S3Client::destroyClient (void)
@@ -254,7 +281,7 @@ void S3Client::destroyClient (void)
             clients.remove(client->asset_name);
             delete client->s3_client;
             delete [] client->asset_name;
-            delete client->impl;
+            delete client->s3_handle;
             delete client;
         }
     }

@@ -65,6 +65,8 @@ class S3Client
                         S3Client    (const Asset* asset);
                         ~S3Client   (void);
 
+        int             readBuffer  (void* buf, int len, int timeout=SYS_TIMEOUT);
+
     private:
 
         /*--------------------------------------------------------------------
@@ -74,7 +76,7 @@ class S3Client
         class impl; // private implementation of client code
 
         typedef struct {
-            class impl*                 s3_descriptor;
+            class impl*                 s3_handle;
             CredentialStore::Credential credential;
             const char*                 asset_name;
             int32_t                     reference_count;
