@@ -52,7 +52,7 @@ class S3Client::impl
         S3Client::impl(CredentialStore::Credential* _credential, const char* _endpoint, const char* _region);
         S3Client::~impl(void);
 
-        void read (uint8_t* buffer, int size, int timeout_secs);
+        void get (const char* bucket, const char* key, long offset, long length, uint8_t* buffer, int timeout_secs);
 
     private:
 
@@ -99,21 +99,75 @@ S3Client::~impl (void)
     curl_easy_cleanup(curl);
 }
 
+
+
+#include <string.h>
+#include <openssl/hmac.h>
+
+int main()
+{
+    // The key to hash
+    char key[] = "012345678";
+
+    // The data that we're going to hash using HMAC
+    char data[] = "hello world";
+
+    unsigned char* digest;
+
+    // Using sha1 hash engine here.
+    // You may use other hash engines. e.g EVP_md5(), EVP_sha224, EVP_sha512, etc
+    digest = HMAC(EVP_sha1(), key, strlen(key), (unsigned char*)data, strlen(data), NULL, NULL);
+
+    // Be careful of the length of string with the choosen hash engine. SHA1 produces a 20-byte hash value which rendered as 40 characters.
+    // Change the length accordingly with your choosen hash engine
+    char mdString[20];
+    for(int i = 0; i < 20; i++)
+         sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+
+    printf("HMAC digest: %s\n", mdString);
+
+    return 0;
+}
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-void S3Client::impl::read (uint8_t* buffer, int size, int timeout_secs)
+void S3Client::impl::get (const char* bucket, const char* key, long offset, long length, uint8_t* buffer, int timeout_secs)
 {
+    /* Build Host and URL String */
+    SafeString host("%s.%s.s3.amazonaws.com", bucket, region);
+    SafeString url("https://%s/%s", host.getString(), key);
+
+    /* Build Date String */
+    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+
+    /* Build SecurityToken Header */
+    SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+
+    /* Build StringToSign */
+    SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
+
+    /* Build Authorization Header */
+    char hash[EVP_MAX_MD_SIZE];
+    int hash_size = EVP_MAX_MD_SIZE;
+    HMAC(EVP_sha1(), credential->secretAccessKey, strlen(credential->secretAccessKey), stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
+    SafeString authorizationHeader("Authorization: AWS %s:%s", credential->accessKeyId, stringToSign.getString());
+
+
     /* Setup Buffer for Callback */
     data_t data = {
         .buffer = buffer;
-        .size = size,
+        .size = length,
         .index = 0
     };
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
-    /* Set Timeout */
+    /* Set Options */
+    curl_easy_setopt(curl, CURLOPT_URL, url.getString());
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_secs);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
 
     /* Build Request Headers */
     // TODO
@@ -254,7 +308,7 @@ int S3Client::readBuffer (void* buf, int len, int timeout)
 
     try
     {
-        client->s3_handle->read(buf, len, (timeout + 999) / 1000);
+        client->s3_handle->get(buf, len, (timeout + 999) / 1000);
     }
     catch(const RunTimeException& e)
     {

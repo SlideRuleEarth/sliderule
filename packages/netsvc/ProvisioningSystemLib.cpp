@@ -114,7 +114,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ProvisioningSystemLib::writeData);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
 
-            /* Set Bearer Token Header */
+            /* Set Content-Type Header */
             struct curl_slist* headers = NULL;
             headers = curl_slist_append(headers, hdr_str.getString());
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
