@@ -113,7 +113,7 @@ void EventLib::init (const char* eventq)
 
     /* Set Default Event Level */
     log_level = INFO;
-    trace_level = CRITICAL;
+    trace_level = INFO;
     metric_level = CRITICAL;
 
     /* Create Output Q */
