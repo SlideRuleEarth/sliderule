@@ -153,7 +153,8 @@ if __name__ == '__main__':
 
     # Default Parameters
     parms = {
-        "ipaddr": "localhost",
+        "url": "localhost",
+        "organization": None,
         "fmt": "console",
         "depth": 1,
         "ids": []
@@ -172,8 +173,9 @@ if __name__ == '__main__':
     # Override Request
     rqst = parse_command_line(sys.argv, rqst)
 
-    # Set URL
-    sliderule.set_url(parms["ipaddr"])
+    # Set URL and Organization
+    sliderule.set_url(parms["url"])
+    sliderule.authenticate(parms["organization"])
 
     # Connect to SlideRule
     rsps = sliderule.source("event", rqst, stream=True, callbacks={'eventrec': process_event})
