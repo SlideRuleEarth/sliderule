@@ -24,8 +24,7 @@ release-config: prep ## configure make for release version of sliderule binary
 debug-config: prep ## configure make for release version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
 
-DEVCFG  = -DENABLE_TRACING=ON
-DEVCFG += -DUSE_AWS_PACKAGE=ON
+DEVCFG  = -DUSE_AWS_PACKAGE=ON
 DEVCFG += -DUSE_CCSDS_PACKAGE=ON
 DEVCFG += -DUSE_RASTER_PACKAGE=ON
 DEVCFG += -DUSE_H5_PACKAGE=ON
@@ -37,7 +36,7 @@ development-config: prep ## configure make for development version of sliderule 
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
 
 development-config-debug: prep ## configure make for debug version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) $(ROOT)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
 
 PYTHONCFG  = -DPYTHON_BINDINGS=ON
 PYTHONCFG += -DUSE_H5_PACKAGE=ON

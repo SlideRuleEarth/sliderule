@@ -96,7 +96,6 @@ void S3IODriver::ioOpen (const char* resource)
 
     /* Create S3 Client Configuration */
     Aws::S3Crt::ClientConfiguration client_config;
-    client_config.endpointOverride = asset->getEndpoint();
     client_config.region = asset->getRegion();
 
     /* Create S3 Client */
