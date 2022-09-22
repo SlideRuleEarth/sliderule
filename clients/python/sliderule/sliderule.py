@@ -370,7 +370,7 @@ def source (api, parm={}, stream=False, callbacks={}):
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
     global service_url, service_org, max_attempts_per_request
-    retries = max_attempts_per_request
+    attempts = max_attempts_per_request
     rqst = json.dumps(parm)
     rsps = {}
     headers = None
@@ -386,8 +386,8 @@ def source (api, parm={}, stream=False, callbacks={}):
     else:
         url = 'http://%s/source/%s' % (service_url, api)
     # Attempt Request #
-    while retries > 0:
-        retries -= 1
+    while attempts > 0:
+        attempts -= 1
         try:
             # Perform Request
             if not stream:
