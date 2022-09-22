@@ -40,7 +40,6 @@
 
 #include "core.h"
 #include "aws.h"
-#include "S3Lib.h"
 
 /******************************************************************************
  * DEFINES
@@ -66,6 +65,10 @@ Aws::SDKOptions options;
  *----------------------------------------------------------------------------*/
 int aws_s3_get(lua_State* L)
 {
+    bool status = false;
+    int num_rets = 1;
+    Aws::S3Crt::S3CrtClient* s3_client = NULL;
+
     try
     {
         /* Get Parameters */
@@ -87,7 +90,7 @@ int aws_s3_get(lua_State* L)
         Aws::S3Crt::ClientConfiguration client_config;
         client_config.endpointOverride = endpoint;
         client_config.region = region;
-        Aws::S3Crt::S3CrtClient* s3_client = new Aws::S3Crt::S3CrtClient(client_config);
+        s3_client = new Aws::S3Crt::S3CrtClient(client_config);
 
         /* Make Request */
         Aws::S3Crt::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
@@ -99,14 +102,14 @@ int aws_s3_get(lua_State* L)
             std::istream reader(sbuf);
             reader.read((char*)data, bytes_read);
 
-            /* Return Contents */
+            /* Push Contents */
             lua_pushlstring(L, data, bytes_read);
-            lua_pushboolean(L, true);
-            return 2;
+            status = true;
+            num_rets++;
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to get S3 object");
+            mlog(CRITICAL, "Http error getting S3 object: %s", response.GetError().GetMessage().c_str());
         }
     }
     catch(const RunTimeException& e)
@@ -114,8 +117,12 @@ int aws_s3_get(lua_State* L)
         mlog(e.level(), "Error getting S3 object: %s", e.what());
     }
 
-    lua_pushboolean(L, false);
-    return 1;
+    /* Free S3 Client */
+    if(s3_client) delete s3_client;
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return num_rets;
 }
 
 /*----------------------------------------------------------------------------
@@ -157,7 +164,6 @@ void initaws (void)
 
     /* Initialize Modules */
     CredentialStore::init();
-    S3Lib::init();
     S3CurlIODriver::init();
 
     /* Register I/O Drivers */
@@ -177,9 +183,11 @@ void initaws (void)
 
 void deinitaws (void)
 {
+    /* Uninitialize Modules */
     S3CurlIODriver::deinit();
-    S3Lib::deinit();
     CredentialStore::deinit();
+
+    /* Uninitialize AWS SDK */
     Aws::ShutdownAPI(options);
 }
 }

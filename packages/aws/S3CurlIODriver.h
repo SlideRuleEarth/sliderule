@@ -68,9 +68,9 @@ class S3CurlIODriver: public Asset::IODriver
         static void         deinit          (void);
 
         static IODriver*    create          (const Asset* _asset);
-        virtual void        ioOpen          (const char* resource);
-        virtual void        ioClose         (void);
-        virtual int64_t     ioRead          (uint8_t* data, int64_t size, uint64_t pos);
+        virtual void        ioOpen          (const char* resource) override;
+        virtual void        ioClose         (void) override;
+        virtual int64_t     ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
 
     protected:
 

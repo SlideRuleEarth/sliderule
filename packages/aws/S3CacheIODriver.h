@@ -58,7 +58,6 @@ class S3CacheIODriver: Asset::IODriver
 
         static const char* DEFAULT_CACHE_ROOT;
         static const int DEFAULT_MAX_CACHE_FILES = 16;
-        static const int FILE_BUFFER_SIZE = 0x1000000; // 16MB
 
         /*--------------------------------------------------------------------
          * Methods

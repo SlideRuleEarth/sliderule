@@ -23,7 +23,6 @@ if (AWSSDK_LINK_LIBRARIES)
             ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/S3Lib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.cpp
     )
 
@@ -39,7 +38,6 @@ if (AWSSDK_LINK_LIBRARIES)
             ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.h
             ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.h
             ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.h
-            ${CMAKE_CURRENT_LIST_DIR}/S3Lib.h
             ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.h
         DESTINATION
             ${INCDIR}

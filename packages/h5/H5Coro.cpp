@@ -33,10 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#ifdef __aws__
-#include "S3Lib.h"
-#endif
-
 #include "H5Coro.h"
 #include "core.h"
 

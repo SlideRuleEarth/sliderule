@@ -36,12 +36,20 @@
 #include "S3IODriver.h"
 #include "OsApi.h"
 #include "Asset.h"
-#include "S3Lib.h"
 
 #include <aws/core/Aws.h>
 #include <aws/s3-crt/S3CrtClient.h>
 #include <aws/s3-crt/model/GetObjectRequest.h>
 #include <aws/core/auth/AWSCredentials.h>
+
+/******************************************************************************
+ * PRIVATE IMPLEMENTATION
+ ******************************************************************************/
+
+struct S3IODriver::impl
+{
+    Aws::S3Crt::S3CrtClient* s3_client;
+};
 
 /******************************************************************************
  * STATIC DATA
@@ -82,6 +90,28 @@ void S3IODriver::ioOpen (const char* resource)
     if(*ioKey == '/') *ioKey = '\0';
     else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
     ioKey++;
+
+    /* Get Latest Credentials */
+    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
+
+    /* Create S3 Client Configuration */
+    Aws::S3Crt::ClientConfiguration client_config;
+    client_config.endpointOverride = asset->getEndpoint();
+    client_config.region = asset->getRegion();
+
+    /* Create S3 Client */
+    if(latest_credential.provided)
+    {
+        const Aws::String accessKeyId(latest_credential.accessKeyId);
+        const Aws::String secretAccessKey(latest_credential.secretAccessKey);
+        const Aws::String sessionToken(latest_credential.sessionToken);
+        Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
+        pimpl->s3_client = new Aws::S3Crt::S3CrtClient(awsCredentials, client_config);
+    }
+    else
+    {
+        pimpl->s3_client = new Aws::S3Crt::S3CrtClient(client_config);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -89,6 +119,22 @@ void S3IODriver::ioOpen (const char* resource)
  *----------------------------------------------------------------------------*/
 void S3IODriver::ioClose (void)
 {
+    if(pimpl->s3_client)
+    {
+        delete pimpl->s3_client;
+        pimpl->s3_client = NULL;
+    }
+
+    /*
+     * Delete Memory Allocated for ioBucket
+     *  only ioBucket is freed because ioKey only points
+     *  into the memory allocated to ioBucket
+     */
+    if(ioBucket)
+    {
+        delete [] ioBucket;
+        ioBucket = NULL;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -108,8 +154,7 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     object_request.SetRange(s3_rqst_range.getString());
 
     /* Make Request */
-    S3Lib::client_t* client = S3Lib::createClient(asset);
-    Aws::S3Crt::Model::GetObjectOutcome response = client->s3_client->GetObject(object_request);
+    Aws::S3Crt::Model::GetObjectOutcome response = pimpl->s3_client->GetObject(object_request);
     bool status = response.IsSuccess();
 
     /* Read Response */
@@ -120,9 +165,6 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
         std::istream reader(sbuf);
         reader.read((char*)data, bytes_read);
     }
-
-    /* Clean Up Client */
-    S3Lib::destroyClient(client);
 
     /* Handle Errors or Return Bytes Read */
     if(!status)
@@ -148,10 +190,5 @@ S3IODriver::S3IODriver (const Asset* _asset)
  *----------------------------------------------------------------------------*/
 S3IODriver::~S3IODriver (void)
 {
-    /*
-     * Delete Memory Allocated for ioBucket
-     *  only ioBucket is freed because ioKey only points
-     *  into the memory allocated to ioBucket
-     */
-    if(ioBucket) delete [] ioBucket;
+    ioClose();
 }
