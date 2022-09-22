@@ -47,6 +47,8 @@
 
 class S3CurlIODriver: public Asset::IODriver
 {
+    public:
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -62,23 +64,15 @@ class S3CurlIODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init    (void);
-        static void         deinit  (void);
+        static void         init            (void);
+        static void         deinit          (void);
 
-        static IODriver*    create  (const Asset* _asset);
-        virtual void        ioOpen  (const char* resource);
-        virtual void        ioClose (void);
-        virtual int64_t     ioRead  (uint8_t* data, int64_t size, uint64_t pos);
+        static IODriver*    create          (const Asset* _asset);
+        virtual void        ioOpen          (const char* resource);
+        virtual void        ioClose         (void);
+        virtual int64_t     ioRead          (uint8_t* data, int64_t size, uint64_t pos);
 
     protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                S3CurlIODriver  (const Asset* _asset);
-        virtual ~S3CurlIODriver (void);
-        void    destroyClient   (void);
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -95,11 +89,19 @@ class S3CurlIODriver: public Asset::IODriver
         } client_t;
 
         /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                            S3CurlIODriver  (const Asset* _asset);
+        virtual             ~S3CurlIODriver (void);
+        static void         destroyClient   (client_t* _client);
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static Mutex clientsMut;
-        static Dictionary<S3CurlIODriver*> clients;
+        static Dictionary<client_t*> clients;
 
         client_t*       client;
         const Asset*    asset;

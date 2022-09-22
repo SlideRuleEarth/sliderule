@@ -45,8 +45,6 @@ class MathLib
         static const int MAXFREQSPEC = 8192;
         static const int LOG2DATASIZE = 13;
         static const double EARTHRADIUS;
-        static const char* B64CHARS;
-        static const int B64INDEX[256];
 
         /*--------------------------------------------------------------------
          * Types
@@ -85,9 +83,6 @@ class MathLib
         static point_t  coord2point (const coord_t c, proj_t projection);
         static coord_t  point2coord (const point_t p, proj_t projection);
         static bool     inpoly      (point_t* poly, int len, point_t point);
-
-        static const std::string    b64encode   (const void* data, const size_t &len);
-        static const std::string    b64decode   (const void* data, const size_t &len);
 
     private:
 

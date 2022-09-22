@@ -39,6 +39,9 @@
 
 #include <curl/curl.h>
 #include <openssl/hmac.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/buffer.h>
 
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
@@ -51,8 +54,8 @@ struct S3CurlIODriver::impl
      *-----------------------------------------------*/
     typedef struct {
         uint8_t*    buffer;
-        int         size;
-        int         index;
+        long        size;
+        long        index;
     } data_t;
 
     /*-----------------------------------------------
@@ -93,10 +96,14 @@ struct S3CurlIODriver::impl
         SafeString host("%s.%s.s3.amazonaws.com", bucket, region);
         SafeString url("https://%s/%s", host.getString(), key);
 
-        /* Build Date String */
+        /* Build Date String and Date Header */
         TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
         TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
         SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+        SafeString dateHeader("Date: %s", date.getString());
+
+        /* Build Range Header */
+        SafeString rangeHeader("Range: bytes=%lu-%lu", (unsigned long)offset, (unsigned long)(offset + length - 1));
 
         /* Build SecurityToken Header */
         SafeString securityTokenHeader("x-amz-security-token:%s", credential->sessionToken);
@@ -105,15 +112,23 @@ struct S3CurlIODriver::impl
         SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
 
         /* Build Authorization Header */
-        char hash[EVP_MAX_MD_SIZE];
-        int hash_size = EVP_MAX_MD_SIZE;
-        HMAC(EVP_sha1(), credential->secretAccessKey, strlen(credential->secretAccessKey), stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
-        SafeString authorizationHeader("Authorization: AWS %s:%s", credential->accessKeyId, stringToSign.getString());
+        unsigned char hash[EVP_MAX_MD_SIZE];
+        unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
+        HMAC(EVP_sha1(), credential->secretAccessKey, StringLib::size(credential->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
+        SafeString encodedHash(64, hash, hash_size);
+        encodedHash.urlize();
+        SafeString authorizationHeader("Authorization: AWS %s:%s", credential->accessKeyId, encodedHash.getString());
 
+        /* Set Request Headers */
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, dateHeader.getString());
+        headers = curl_slist_append(headers, rangeHeader.getString());
+        headers = curl_slist_append(headers, authorizationHeader.getString());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
         /* Setup Buffer for Callback */
         data_t data = {
-            .buffer = buffer;
+            .buffer = buffer,
             .size = length,
             .index = 0
         };
@@ -124,9 +139,6 @@ struct S3CurlIODriver::impl
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, DEFAULT_READ_TIMEOUT);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, DEFAULT_SSL_VERIFYPEER);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, DEFAULT_SSL_VERIFYHOST);
-
-        /* Build Request Headers */
-        // TODO
 
         /* Perform Request */
         CURLcode res = curl_easy_perform(curl);
@@ -179,8 +191,8 @@ struct S3CurlIODriver::impl
  * Static Data
  *----------------------------------------------------------------------------*/
 Mutex S3CurlIODriver::clientsMut;
-Dictionary<S3CurlIODriver*> S3CurlIODriver::clients(STARTING_NUM_CLIENTS);
-const char* S3CurlIODriver::FORMAT = "s3curl"
+Dictionary<S3CurlIODriver::client_t*> S3CurlIODriver::clients(STARTING_NUM_CLIENTS);
+const char* S3CurlIODriver::FORMAT = "s3curl";
 
 /*----------------------------------------------------------------------------
  * init
@@ -196,11 +208,11 @@ void S3CurlIODriver::deinit (void)
 {
     clientsMut.lock();
     {
-        S3CurlIODriver* client;
+        client_t* client;
         const char* key = clients.first(&client);
         while(key != NULL)
         {
-            delete client->s3_client;
+            delete client->s3_handle;
             delete [] client->asset_name;
             delete client;
             key = clients.next(&client);
@@ -212,7 +224,7 @@ void S3CurlIODriver::deinit (void)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-IODriver* S3CurlIODriver::create (const Asset* _asset)
+Asset::IODriver* S3CurlIODriver::create (const Asset* _asset)
 {
     return new S3CurlIODriver(_asset);
 }
@@ -288,7 +300,7 @@ void S3CurlIODriver::ioClose (void)
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
-    asset(client);
+    assert(client);
     client->s3_handle->get(ioBucket, ioKey, pos, size, data);
     return size;
 }
@@ -309,7 +321,7 @@ S3CurlIODriver::S3CurlIODriver (const Asset* _asset)
  *----------------------------------------------------------------------------*/
 S3CurlIODriver::~S3CurlIODriver (void)
 {
-    destroyClient();
+    destroyClient(client);
 
     /*
      * Delete Memory Allocated for ioBucket
@@ -322,21 +334,20 @@ S3CurlIODriver::~S3CurlIODriver (void)
 /*----------------------------------------------------------------------------
  * destroyClient
  *----------------------------------------------------------------------------*/
-void S3CurlIODriver::destroyClient (void)
+void S3CurlIODriver::destroyClient (client_t* _client)
 {
-    assert(client);
-    assert(client->reference_count > 0);
+    assert(_client);
+    assert(_client->reference_count > 0);
 
     clientsMut.lock();
     {
-        client->reference_count--;
-        if(client->decommissioned && (client->reference_count == 0))
+        _client->reference_count--;
+        if(_client->decommissioned && (_client->reference_count == 0))
         {
-            clients.remove(client->asset_name);
-            delete client->s3_client;
-            delete [] client->asset_name;
-            delete client->s3_handle;
-            delete client;
+            clients.remove(_client->asset_name);
+            delete [] _client->asset_name;
+            delete _client->s3_handle;
+            delete _client;
         }
     }
     clientsMut.unlock();

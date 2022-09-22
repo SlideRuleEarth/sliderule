@@ -41,6 +41,24 @@
 #include <limits.h>
 
 /******************************************************************************
+ * STRING STATIC DATA
+ ******************************************************************************/
+
+const char* StringLib::B64CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+const int StringLib::B64INDEX[256] =
+{
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  62, 63, 62, 62, 63,
+    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 0,  0,  0,  0,  0,  0,
+    0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0,  0,  0,  0,  63,
+    0,  26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
+};
+
+/******************************************************************************
  * STRING PUBLIC METHODS
  ******************************************************************************/
 
@@ -93,6 +111,27 @@ SafeString::String(const SafeString& other)
     LocalLib::set(str, 0, maxlen);
     len = other.len;
     StringLib::copy(str, other.str, len);
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor (ENCODE)
+ *----------------------------------------------------------------------------*/
+SafeString::String (int base, unsigned char* buffer, int size)
+{
+    if(base == 64)
+    {
+        int encoded_len = size;
+        str = StringLib::b64encode(buffer, &encoded_len);
+        maxlen = encoded_len;
+        len = encoded_len;
+    }
+    else
+    {
+        maxlen = DEFAULT_STR_SIZE;
+        str = new char[maxlen];
+        LocalLib::set(str, 0, maxlen);
+        len = 1;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -214,6 +253,68 @@ bool SafeString::replace(const char* oldtxt, const char* newtxt)
     }
 
     return status;
+}
+
+/*----------------------------------------------------------------------------
+ * urlize
+ *
+ * ! 	    # 	    $ 	    & 	    ' 	    ( 	    ) 	    * 	    +
+ * %21 	    %23 	%24 	%26 	%27 	%28 	%29 	%2A 	%2B
+ *
+ * ,        / 	    : 	    ; 	    = 	    ? 	    @ 	    [ 	    ]
+ * %2C      %2F 	%3A 	%3B 	%3D 	%3F 	%40 	%5B 	%5D
+ *----------------------------------------------------------------------------*/
+SafeString& SafeString::urlize(void)
+{
+    /* Allocate enough room to hold urlized string */
+    if(maxlen < (len * 3))
+    {
+        maxlen = len * 3;
+    }
+
+    /* Setup pointers to new and old strings */
+    char* alloc_str = new char [maxlen];
+    char* new_str = alloc_str;
+    char* old_str = str;
+
+    /* Translate old string into new string */
+    while(*old_str != '\0')
+    {
+        switch (*old_str)
+        {
+            case '!':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '1';   break;
+            case '#':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '3';   break;
+            case '$':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '4';   break;
+            case '&':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '6';   break;
+            case '\'':  *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '7';   break;
+            case '(':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '8';   break;
+            case ')':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '9';   break;
+            case '*':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'A';   break;
+            case '+':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'B';   break;
+            case ',':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'C';   break;
+            case '/':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'F';   break;
+            case ':':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'A';   break;
+            case ';':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'B';   break;
+            case '=':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'D';   break;
+            case '?':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'F';   break;
+            case '@':   *new_str++ = '%';   *new_str++ = '4';   *new_str++ = '0';   break;
+            case '[':   *new_str++ = '%';   *new_str++ = '5';   *new_str++ = 'B';   break;
+            case ']':   *new_str++ = '%';   *new_str++ = '5';   *new_str++ = 'D';   break;
+            default:    *new_str++ = *old_str;  break;
+        }
+        old_str++;
+    }
+    *new_str = '\0';
+
+    /* Calculate length of new string */
+    len = new_str - alloc_str + 1;
+
+    /* Replace member string */
+    delete [] str;
+    str = new_str;
+
+    /* Return Self */
+    return *this;
 }
 
 /*----------------------------------------------------------------------------
@@ -839,4 +940,95 @@ char* StringLib::checkNullStr (const char* str)
     {
         return (char*)str;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * b64encode
+ *
+ * Code based on https://stackoverflow.com/questions/180947/base64-decode-snippet-in-c/13935718
+ * Author: polfosol
+ * License: assumed to be CC BY-SA 3.0
+ *----------------------------------------------------------------------------*/
+char* StringLib::b64encode(const void* data, int* size)
+{
+    assert(size);
+
+    int len = *size;
+    int encoded_len = (len + 2) / 3 * 4;
+    char* str = new char [encoded_len + 1];
+    str[encoded_len] = '\0';
+    str[encoded_len - 1] = '=';
+    str[encoded_len - 2] = '=';
+
+    unsigned char *p = (unsigned  char*) data;
+    size_t j = 0, pad = len % 3;
+    const size_t last = len - pad;
+
+    for (size_t i = 0; i < last; i += 3)
+    {
+        int n = int(p[i]) << 16 | int(p[i + 1]) << 8 | p[i + 2];
+        str[j++] = B64CHARS[n >> 18];
+        str[j++] = B64CHARS[n >> 12 & 0x3F];
+        str[j++] = B64CHARS[n >> 6 & 0x3F];
+        str[j++] = B64CHARS[n & 0x3F];
+    }
+
+    if (pad)  /// Set padding
+    {
+        int n = --pad ? int(p[last]) << 8 | p[last + 1] : p[last];
+        str[j++] = B64CHARS[pad ? n >> 10 & 0x3F : n >> 2];
+        str[j++] = B64CHARS[pad ? n >> 4 & 0x03F : n << 4 & 0x3F];
+        str[j++] = pad ? B64CHARS[n << 2 & 0x3F] : '=';
+    }
+
+    *size = encoded_len + 1;
+    return str;
+}
+
+/*----------------------------------------------------------------------------
+ * b64encode
+ *
+ * Code based on https://stackoverflow.com/questions/180947/base64-decode-snippet-in-c/13935718
+ * Author: polfosol
+ * License: assumed to be CC BY-SA 3.0
+ *----------------------------------------------------------------------------*/
+unsigned char* StringLib::b64decode(const void* data, int* size)
+{
+    assert(size);
+
+    int len = *size;
+    if (len == 0) return (unsigned char*)"";
+
+    unsigned char *p = (unsigned char*) data;
+    size_t j = 0,
+        pad1 = len % 4 || p[len - 1] == '=',
+        pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
+    const size_t last = (len - pad1) / 4 << 2;
+
+    int decoded_len = last / 4 * 3 + pad1 + pad2;
+    unsigned char* str = new unsigned char [decoded_len];
+    str[decoded_len - 1] = '\0';
+    str[decoded_len - 2] = '\0';
+
+    for (size_t i = 0; i < last; i += 4)
+    {
+        int n = B64INDEX[p[i]] << 18 | B64INDEX[p[i + 1]] << 12 | B64INDEX[p[i + 2]] << 6 | B64INDEX[p[i + 3]];
+        str[j++] = n >> 16;
+        str[j++] = n >> 8 & 0xFF;
+        str[j++] = n & 0xFF;
+    }
+
+    if (pad1)
+    {
+        int n = B64INDEX[p[last]] << 18 | B64INDEX[p[last + 1]] << 12;
+        str[j++] = n >> 16;
+        if (pad2)
+        {
+            n |= B64INDEX[p[last + 2]] << 6;
+            str[j++] = n >> 8 & 0xFF;
+        }
+    }
+
+    *size = decoded_len;
+    return str;
 }

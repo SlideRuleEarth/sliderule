@@ -68,6 +68,7 @@ class StringLib
                                 String      (long _maxlen=DEFAULT_STR_SIZE);
                                 String      (const char* _str, ...) VARG_CHECK(printf, 2, 3);
                                 String      (const String& other);
+                                String      (int base, unsigned char* buffer, int size);
                                 ~String     (void);
 
                 const char*     getString   (bool duplicate = false);
@@ -76,6 +77,7 @@ class StringLib
                 int             findChar    (char c, int start=0);
                 String&         setChar     (char c, int index);
                 bool            replace     (const char* oldtxt, const char* newtxt);
+                String&         urlize      (void);
                 List<String>*   split       (char separator, bool strip=true);
                 char            operator[]  (int index);
                 String&         operator+=  (const String& rhs);
@@ -101,28 +103,39 @@ class StringLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static char*        duplicate       (const char* str, int size=MAX_STR_SIZE);
-        static char*        concat          (const char* str1, const char* str2, const char* str3=NULL);
-        static void         concat          (char* str1, const char* str2, int size);
-        static char*        format          (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
-        static int          formats         (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
-        static char*        copy            (char* dst, const char* src, int _size);
-        static char*        find            (const char* big, const char* little, int len=MAX_STR_SIZE);
-        static char*        find            (const char* str, const char c, bool first=true);
-        static int          size            (const char* str, int len=MAX_STR_SIZE);
-        static bool         match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
-        static TokenList*   split           (const char* str, int len, char separator, bool strip);
-        static void         convertUpper    (char* str);
-        static char*        convertUpper    (char* src, char* dst);
-        static int          tokenizeLine    (const char* str, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE]);
-        static int          getLine         (char* str, int* ret_len, int max_str_size, FILE* fptr);
-        static bool         str2bool        (const char* str, bool* val);
-        static bool         str2long        (const char* str, long* val, int base=0);
-        static bool         str2ulong       (const char* str, unsigned long* val, int base=0);
-        static bool         str2llong       (const char* str, long long* val, int base=0);
-        static bool         str2ullong      (const char* str, unsigned long long* val, int base=0);
-        static bool         str2double      (const char* str, double* val);
-        static char*        checkNullStr    (const char* str);
+        static char*            duplicate       (const char* str, int size=MAX_STR_SIZE);
+        static char*            concat          (const char* str1, const char* str2, const char* str3=NULL);
+        static void             concat          (char* str1, const char* str2, int size);
+        static char*            format          (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
+        static int              formats         (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
+        static char*            copy            (char* dst, const char* src, int _size);
+        static char*            find            (const char* big, const char* little, int len=MAX_STR_SIZE);
+        static char*            find            (const char* str, const char c, bool first=true);
+        static int              size            (const char* str, int len=MAX_STR_SIZE);
+        static bool             match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
+        static TokenList*       split           (const char* str, int len, char separator, bool strip);
+        static void             convertUpper    (char* str);
+        static char*            convertUpper    (char* src, char* dst);
+        static int              tokenizeLine    (const char* str, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE]);
+        static int              getLine         (char* str, int* ret_len, int max_str_size, FILE* fptr);
+        static bool             str2bool        (const char* str, bool* val);
+        static bool             str2long        (const char* str, long* val, int base=0);
+        static bool             str2ulong       (const char* str, unsigned long* val, int base=0);
+        static bool             str2llong       (const char* str, long long* val, int base=0);
+        static bool             str2ullong      (const char* str, unsigned long long* val, int base=0);
+        static bool             str2double      (const char* str, double* val);
+        static char*            checkNullStr    (const char* str);
+        static char*            b64encode       (const void* data, int* size);
+        static unsigned char*   b64decode       (const void* data, int* size);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* B64CHARS;
+        static const int B64INDEX[256];
 };
 
 /*---------------------------------------------------------------------------
