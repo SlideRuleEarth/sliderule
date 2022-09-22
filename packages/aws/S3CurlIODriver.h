@@ -64,9 +64,6 @@ class S3CurlIODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init            (void);
-        static void         deinit          (void);
-
         static IODriver*    create          (const Asset* _asset);
         virtual void        ioOpen          (const char* resource) override;
         virtual void        ioClose         (void) override;
@@ -78,35 +75,28 @@ class S3CurlIODriver: public Asset::IODriver
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        struct impl; // private implementation of client code
-
         typedef struct {
-            struct impl*                s3_handle;
-            CredentialStore::Credential credential;
-            const char*                 asset_name;
-            int32_t                     reference_count;
-            bool                        decommissioned;
-        } client_t;
+            uint8_t*    buffer;
+            long        size;
+            long        index;
+        } data_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            S3CurlIODriver  (const Asset* _asset);
-        virtual             ~S3CurlIODriver (void);
-        static void         destroyClient   (client_t* _client);
+                        S3CurlIODriver      (const Asset* _asset);
+        virtual         ~S3CurlIODriver     (void);
+        static size_t   curlWriteCallback   (void *buffer, size_t size, size_t nmemb, void *userp);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static Mutex clientsMut;
-        static Dictionary<client_t*> clients;
-
-        client_t*       client;
-        const Asset*    asset;
-        char*           ioBucket;
-        char*           ioKey;
+        const Asset*                asset;
+        CredentialStore::Credential credentials;
+        char*                       ioBucket;
+        char*                       ioKey;
 };
 
 #endif  /* __s3_curl_io_driver__ */

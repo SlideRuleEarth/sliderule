@@ -164,7 +164,6 @@ void initaws (void)
 
     /* Initialize Modules */
     CredentialStore::init();
-    S3CurlIODriver::init();
 
     /* Register I/O Drivers */
     Asset::registerDriver(S3IODriver::FORMAT, S3IODriver::create);
@@ -184,7 +183,6 @@ void initaws (void)
 void deinitaws (void)
 {
     /* Uninitialize Modules */
-    S3CurlIODriver::deinit();
     CredentialStore::deinit();
 
     /* Uninitialize AWS SDK */

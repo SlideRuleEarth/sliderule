@@ -39,187 +39,16 @@
 
 #include <curl/curl.h>
 #include <openssl/hmac.h>
-#include <openssl/bio.h>
-#include <openssl/evp.h>
-#include <openssl/buffer.h>
 
 /******************************************************************************
- * PRIVATE IMPLEMENTATION
+ * STATIC DATA
  ******************************************************************************/
 
-struct S3CurlIODriver::impl
-{
-    /*-----------------------------------------------
-     * Data Typedef
-     *-----------------------------------------------*/
-    typedef struct {
-        uint8_t*    buffer;
-        long        size;
-        long        index;
-    } data_t;
-
-    /*-----------------------------------------------
-     * Constructor
-     *-----------------------------------------------*/
-    impl(CredentialStore::Credential* _credential, const char* _region):
-        credential(_credential),
-        region(_region)
-    {
-        /* Initialize cURL */
-        curl = curl_easy_init();
-        if(curl)
-        {
-            /* Set cURL Options */
-            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONNECTION_TIMEOUT); // seconds
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCallback);
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to initialize curl");
-        }
-    }
-
-    /*-----------------------------------------------
-     * Destructor
-     *-----------------------------------------------*/
-    ~impl()
-    {
-        curl_easy_cleanup(curl);
-    }
-
-    /*-----------------------------------------------
-     * get
-     *-----------------------------------------------*/
-    void get (const char* bucket, const char* key, long offset, long length, uint8_t* buffer)
-    {
-        /* Build Host and URL String */
-        SafeString host("%s.%s.s3.amazonaws.com", bucket, region);
-        SafeString url("https://%s/%s", host.getString(), key);
-
-        /* Build Date String and Date Header */
-        TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
-        TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
-        SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
-        SafeString dateHeader("Date: %s", date.getString());
-
-        /* Build Range Header */
-        SafeString rangeHeader("Range: bytes=%lu-%lu", (unsigned long)offset, (unsigned long)(offset + length - 1));
-
-        /* Build SecurityToken Header */
-        SafeString securityTokenHeader("x-amz-security-token:%s", credential->sessionToken);
-
-        /* Build StringToSign */
-        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
-
-        /* Build Authorization Header */
-        unsigned char hash[EVP_MAX_MD_SIZE];
-        unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), credential->secretAccessKey, StringLib::size(credential->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
-        SafeString encodedHash(64, hash, hash_size);
-        encodedHash.urlize();
-        SafeString authorizationHeader("Authorization: AWS %s:%s", credential->accessKeyId, encodedHash.getString());
-
-        /* Set Request Headers */
-        struct curl_slist* headers = NULL;
-        headers = curl_slist_append(headers, dateHeader.getString());
-        headers = curl_slist_append(headers, rangeHeader.getString());
-        headers = curl_slist_append(headers, authorizationHeader.getString());
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-        /* Setup Buffer for Callback */
-        data_t data = {
-            .buffer = buffer,
-            .size = length,
-            .index = 0
-        };
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-
-        /* Set Options */
-        curl_easy_setopt(curl, CURLOPT_URL, url.getString());
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, DEFAULT_READ_TIMEOUT);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, DEFAULT_SSL_VERIFYPEER);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, DEFAULT_SSL_VERIFYHOST);
-
-        /* Perform Request */
-        CURLcode res = curl_easy_perform(curl);
-        if(res == CURLE_OK)
-        {
-            /* Get HTTP Code */
-            long http_code = 0;
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if(http_code != 200)
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Http error <%ld> returned from S3 request", http_code);
-            }
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed: %ld", (long)res);
-        }
-    }
-
-    /*-----------------------------------------------
-     * curlWriteCallback
-     *-----------------------------------------------*/
-    static size_t curlWriteCallback(void *buffer, size_t size, size_t nmemb, void *userp)
-    {
-        data_t* data = (data_t*)userp;
-
-        size_t rsps_size = size * nmemb;
-        size_t bytes_available = data->size - data->index;
-        size_t bytes_to_copy = MIN(rsps_size, bytes_available);
-
-        LocalLib::copy(&data->buffer[data->index], buffer, bytes_to_copy);
-        data->index += bytes_to_copy;
-
-        return bytes_to_copy;
-    }
-
-    /*-----------------------------------------------
-     * Data
-     *-----------------------------------------------*/
-    CredentialStore::Credential* credential;
-    const char* region;
-    CURL* curl;
-};
+const char* S3CurlIODriver::FORMAT = "s3curl";
 
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Static Data
- *----------------------------------------------------------------------------*/
-Mutex S3CurlIODriver::clientsMut;
-Dictionary<S3CurlIODriver::client_t*> S3CurlIODriver::clients(STARTING_NUM_CLIENTS);
-const char* S3CurlIODriver::FORMAT = "s3curl";
-
-/*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void S3CurlIODriver::init (void)
-{
-}
-
-/*----------------------------------------------------------------------------
- * deinit
- *----------------------------------------------------------------------------*/
-void S3CurlIODriver::deinit (void)
-{
-    clientsMut.lock();
-    {
-        client_t* client;
-        const char* key = clients.first(&client);
-        while(key != NULL)
-        {
-            delete client->s3_handle;
-            delete [] client->asset_name;
-            delete client;
-            key = clients.next(&client);
-        }
-    }
-    clientsMut.unlock();
-}
 
 /*----------------------------------------------------------------------------
  * create
@@ -252,39 +81,7 @@ void S3CurlIODriver::ioOpen (const char* resource)
     ioKey++;
 
     /* Get Latest Credentials */
-    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
-    clientsMut.lock();
-    {
-        /* Try to Get Existing Client */
-        if(clients.find(asset->getName(), &client))
-        {
-            client->reference_count++;
-        }
-
-        /* Check Need for New Client */
-        if( (client == NULL) || // could not find an existing client
-            (latest_credential.provided && (client->credential.expirationGps < latest_credential.expirationGps)) ) // existing client has outdated credentials
-        {
-            /* Destroy Old Client */
-            if(client)
-            {
-                client->decommissioned = true;
-                destroyClient(client);
-            }
-
-            /* Create Client */
-            client = new client_t;
-            client->credential = latest_credential;
-            client->asset_name = StringLib::duplicate(asset->getName());
-            client->reference_count = 1;
-            client->decommissioned = false;
-            client->s3_handle = new S3CurlIODriver::impl(&client->credential, asset->getRegion());
-
-            /* Register New Client */
-            clients.add(asset->getName(), client);
-        }
-    }
-    clientsMut.unlock();
+    credentials = CredentialStore::get(asset->getName());
 }
 
 /*----------------------------------------------------------------------------
@@ -300,8 +97,90 @@ void S3CurlIODriver::ioClose (void)
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
-    assert(client);
-    client->s3_handle->get(ioBucket, ioKey, pos, size, data);
+    /* Build Host and URL String */
+    SafeString host("%s.%s.s3.amazonaws.com", ioBucket, asset->getRegion());
+    SafeString url("https://%s/%s", host.getString(), ioKey);
+
+    /* Build Date String and Date Header */
+    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+    SafeString dateHeader("Date: %s", date.getString());
+
+    /* Build Range Header */
+    SafeString rangeHeader("Range: bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size - 1));
+
+    /* Build SecurityToken Header */
+    SafeString securityTokenHeader("x-amz-security-token:%s", credentials.sessionToken);
+
+    /* Build StringToSign */
+    SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), ioBucket, ioKey);
+
+    /* Build Authorization Header */
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
+    HMAC(EVP_sha1(), credentials.secretAccessKey, StringLib::size(credentials.secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
+    SafeString encodedHash(64, hash, hash_size);
+    encodedHash.urlize();
+    SafeString authorizationHeader("Authorization: AWS %s:%s", credentials.accessKeyId, encodedHash.getString());
+
+    /* Initialize cURL */
+    CURL* curl = curl_easy_init();
+    try
+    {
+        if(!curl)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to initialize curl");
+        }
+
+        /* Set Request Headers */
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, dateHeader.getString());
+        headers = curl_slist_append(headers, rangeHeader.getString());
+        headers = curl_slist_append(headers, authorizationHeader.getString());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        /* Setup Buffer for Callback */
+        data_t info = {
+            .buffer = data,
+            .size = size,
+            .index = 0
+        };
+
+        /* Set Options */
+        curl_easy_setopt(curl, CURLOPT_URL, url.getString());
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, DEFAULT_READ_TIMEOUT);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONNECTION_TIMEOUT); // seconds
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, DEFAULT_SSL_VERIFYPEER);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, DEFAULT_SSL_VERIFYHOST);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &info);
+
+        /* Perform Request */
+        CURLcode res = curl_easy_perform(curl);
+        if(res == CURLE_OK)
+        {
+            /* Get HTTP Code */
+            long http_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if(http_code != 200)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Http error <%ld> returned from S3 request", http_code);
+            }
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed: %ld", (long)res);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        curl_easy_cleanup(curl);
+        throw; // rethrow after cleaning up curl
+    }
+
+    /* Return Success */
+    curl_easy_cleanup(curl);
     return size;
 }
 
@@ -311,7 +190,6 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 S3CurlIODriver::S3CurlIODriver (const Asset* _asset)
 {
     asset = _asset;
-    client = NULL;
     ioBucket = NULL;
     ioKey = NULL;
 }
@@ -321,8 +199,6 @@ S3CurlIODriver::S3CurlIODriver (const Asset* _asset)
  *----------------------------------------------------------------------------*/
 S3CurlIODriver::~S3CurlIODriver (void)
 {
-    destroyClient(client);
-
     /*
      * Delete Memory Allocated for ioBucket
      *  only ioBucket is freed because ioKey only points
@@ -332,23 +208,18 @@ S3CurlIODriver::~S3CurlIODriver (void)
 }
 
 /*----------------------------------------------------------------------------
- * destroyClient
+ * curlWriteCallback
  *----------------------------------------------------------------------------*/
-void S3CurlIODriver::destroyClient (client_t* _client)
+size_t S3CurlIODriver::curlWriteCallback(void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    assert(_client);
-    assert(_client->reference_count > 0);
+    data_t* data = (data_t*)userp;
 
-    clientsMut.lock();
-    {
-        _client->reference_count--;
-        if(_client->decommissioned && (_client->reference_count == 0))
-        {
-            clients.remove(_client->asset_name);
-            delete [] _client->asset_name;
-            delete _client->s3_handle;
-            delete _client;
-        }
-    }
-    clientsMut.unlock();
+    size_t rsps_size = size * nmemb;
+    size_t bytes_available = data->size - data->index;
+    size_t bytes_to_copy = MIN(rsps_size, bytes_available);
+
+    LocalLib::copy(&data->buffer[data->index], buffer, bytes_to_copy);
+    data->index += bytes_to_copy;
+
+    return bytes_to_copy;
 }
