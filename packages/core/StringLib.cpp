@@ -282,36 +282,36 @@ SafeString& SafeString::urlize(void)
     {
         switch (*old_str)
         {
-            case '!':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '1';   break;
-            case '#':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '3';   break;
-            case '$':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '4';   break;
-            case '&':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '6';   break;
-            case '\'':  *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '7';   break;
-            case '(':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '8';   break;
-            case ')':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = '9';   break;
-            case '*':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'A';   break;
-            case '+':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'B';   break;
-            case ',':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'C';   break;
-            case '/':   *new_str++ = '%';   *new_str++ = '2';   *new_str++ = 'F';   break;
-            case ':':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'A';   break;
-            case ';':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'B';   break;
-            case '=':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'D';   break;
-            case '?':   *new_str++ = '%';   *new_str++ = '3';   *new_str++ = 'F';   break;
-            case '@':   *new_str++ = '%';   *new_str++ = '4';   *new_str++ = '0';   break;
-            case '[':   *new_str++ = '%';   *new_str++ = '5';   *new_str++ = 'B';   break;
-            case ']':   *new_str++ = '%';   *new_str++ = '5';   *new_str++ = 'D';   break;
-            default:    *new_str++ = *old_str;  break;
+            case '!':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '1';   break;
+            case '#':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '3';   break;
+            case '$':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '4';   break;
+            case '&':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '6';   break;
+            case '\'':  *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '7';   break;
+            case '(':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '8';   break;
+            case ')':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '9';   break;
+            case '*':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'A';   break;
+            case '+':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'B';   break;
+            case ',':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'C';   break;
+            case '/':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'F';   break;
+            case ':':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'A';   break;
+            case ';':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'B';   break;
+            case '=':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'D';   break;
+            case '?':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'F';   break;
+            case '@':   *(new_str++) = '%';   *(new_str++) = '4';   *(new_str++) = '0';   break;
+            case '[':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'B';   break;
+            case ']':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'D';   break;
+            default:    *(new_str++) = *old_str;  break;
         }
         old_str++;
     }
-    *new_str = '\0';
+    *(new_str++) = '\0';
 
     /* Calculate length of new string */
-    len = new_str - alloc_str + 1;
+    len = new_str - alloc_str;
 
     /* Replace member string */
     delete [] str;
-    str = new_str;
+    str = alloc_str;
 
     /* Return Self */
     return *this;
@@ -1031,4 +1031,23 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
 
     *size = decoded_len;
     return str;
+}
+
+/*----------------------------------------------------------------------------
+ * printify
+ *----------------------------------------------------------------------------*/
+int StringLib::printify (char* buffer, int size)
+{
+    int replacements = 0;
+    for(int i = 0; i < size; i++)
+    {
+        /* Check if in Printable Range */
+        if(buffer[i] < 32 || buffer[i] > 126)
+        {
+            replacements++;
+            buffer[i] = '.';
+        }
+    }
+    buffer[size - 1] = '\0';
+    return replacements;
 }

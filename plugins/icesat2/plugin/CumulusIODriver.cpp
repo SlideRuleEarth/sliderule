@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "CumulusIODriver.h"
-#include "S3IODriver.h"
+#include "S3CurlIODriver.h"
 #include "core.h"
 
 /******************************************************************************
@@ -86,13 +86,13 @@ void CumulusIODriver::ioOpen (const char* resource)
     SafeString updated_resource("ATLAS/%s/%s/%s/%s/%s/%s", product, version, year, month, day, resource);
 
     /* Call Parent Open */
-    S3IODriver::ioOpen(updated_resource.getString());
+    S3CurlIODriver::ioOpen(updated_resource.getString());
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CumulusIODriver::CumulusIODriver (const Asset* _asset): S3IODriver(_asset)
+CumulusIODriver::CumulusIODriver (const Asset* _asset): S3CurlIODriver(_asset)
 {
 }
 

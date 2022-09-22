@@ -97,6 +97,8 @@ void S3CurlIODriver::ioClose (void)
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
+    //TODO: Handle when credentials are not provided
+
     /* Build Host and URL String */
     SafeString host("%s.%s.s3.amazonaws.com", ioBucket, asset->getRegion());
     SafeString url("https://%s/%s", host.getString(), ioKey);
@@ -165,7 +167,9 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
             if(http_code != 200)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Http error <%ld> returned from S3 request", http_code);
+                StringLib::printify((char*)info.buffer, info.index);
+                mlog(INFO, "%s", info.buffer);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "S3 get returned http error <%ld>", http_code);
             }
         }
         else

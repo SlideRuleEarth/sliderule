@@ -127,6 +127,7 @@ class StringLib
         static char*            checkNullStr    (const char* str);
         static char*            b64encode       (const void* data, int* size);
         static unsigned char*   b64decode       (const void* data, int* size);
+        static int              printify        (char* buffer, int size);
 
     private:
 
