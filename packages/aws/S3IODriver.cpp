@@ -180,6 +180,8 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
  *----------------------------------------------------------------------------*/
 S3IODriver::S3IODriver (const Asset* _asset)
 {
+    pimpl = new S3IODriver::impl;
+    pimpl->s3_client = NULL;
     asset = _asset;
     ioBucket = NULL;
     ioKey = NULL;
@@ -191,4 +193,5 @@ S3IODriver::S3IODriver (const Asset* _asset)
 S3IODriver::~S3IODriver (void)
 {
     ioClose();
+    delete pimpl;
 }

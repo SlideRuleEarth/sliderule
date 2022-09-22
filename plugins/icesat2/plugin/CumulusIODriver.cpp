@@ -83,23 +83,10 @@ void CumulusIODriver::ioOpen (const char* resource)
     LocalLib::copy(&day[0], &date[6], 3);
     day[2] = '\0';
 
-    SafeString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s/%s", asset->getPath(), product, version, year, month, day, resource);
-    mlog(DEBUG, "Opening resource: %s", resourcepath.getString());
+    SafeString updated_resource("ATLAS/%s/%s/%s/%s/%s/%s", product, version, year, month, day, resource);
 
-    /* Allocate Memory for ioBucket */
-    ioBucket = StringLib::duplicate(resourcepath.getString());
-
-    /*
-    * Differentiate Bucket and Key
-    *  <bucket_name>/<path_to_file>/<filename>
-    *  |             |
-    * ioBucket      ioKey
-    */
-    ioKey = ioBucket;
-    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-    if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
-    ioKey++;
+    /* Call Parent Open */
+    S3IODriver::ioOpen(updated_resource.getString());
 }
 
 /*----------------------------------------------------------------------------
