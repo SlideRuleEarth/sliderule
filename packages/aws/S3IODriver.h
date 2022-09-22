@@ -79,7 +79,6 @@ class S3IODriver: public Asset::IODriver
         struct impl; // private implementation of client code
 
         struct impl*                pimpl;
-        CredentialStore::Credential credential;
         const Asset*                asset;
         char*                       ioBucket;
         char*                       ioKey;
