@@ -4,8 +4,8 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_engine_endpoint.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_source_endpoint.lua
+        ${CMAKE_CURRENT_LIST_DIR}/selftests/example_engine_endpoint.lua
+        ${CMAKE_CURRENT_LIST_DIR}/selftests/example_source_endpoint.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5p.lua

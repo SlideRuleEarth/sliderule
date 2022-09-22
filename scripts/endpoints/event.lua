@@ -29,8 +29,8 @@ userevents:attach(core.monitor(type, level, format, rspq), "eventrec")
 userevents:run()
 
 -- Bounds check duration
-if duration > 300 then
-    duration = 300
+if duration > 600 then
+    duration = 600
 end
 
 -- Watch response queue
