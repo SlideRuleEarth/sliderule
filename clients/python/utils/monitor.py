@@ -101,11 +101,16 @@ def console_output(origins):
         display_trace(trace, 1)
 
 def sta_output(idlist, depth, names, traces):
+    global origins
     # Build list of events and names
     events = []
     perf_ids = {}
-    for trace_id in idlist:
-        build_event_list(traces[trace_id], 1, depth, names, events, perf_ids)
+    if len(idlist) > 0:
+        for trace_id in idlist:
+            build_event_list(traces[trace_id], 1, depth, names, events, perf_ids)
+    else:
+        for trace in origins:
+            build_event_list(trace, 1, depth, names, events, perf_ids)
     # Build and sort data frame
     df = pandas.DataFrame(events)
     df = df.sort_values("time")
@@ -156,7 +161,7 @@ if __name__ == '__main__':
         "url": "localhost",
         "organization": None,
         "fmt": "console",
-        "depth": 1,
+        "depth": 0,
         "ids": []
     }
 
