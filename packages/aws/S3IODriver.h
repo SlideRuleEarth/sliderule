@@ -53,6 +53,8 @@ class S3IODriver: public Asset::IODriver
          *--------------------------------------------------------------------*/
 
         static const char* FORMAT;
+        static const char* DEFAULT_REGION;
+        static const char* DEFAULT_ENDPOINT;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -62,6 +64,8 @@ class S3IODriver: public Asset::IODriver
         virtual void        ioOpen  (const char* resource);
         virtual void        ioClose (void);
         virtual int64_t     ioRead  (uint8_t* data, int64_t size, uint64_t pos);
+
+        static int          luaGet  (lua_State* L);
 
     protected:
 

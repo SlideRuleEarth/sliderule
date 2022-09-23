@@ -34,9 +34,6 @@
  ******************************************************************************/
 
 #include <aws/core/Aws.h>
-#include <aws/s3-crt/S3CrtClient.h>
-#include <aws/s3-crt/model/GetObjectRequest.h>
-#include <aws/core/auth/AWSCredentials.h>
 
 #include "core.h"
 #include "aws.h"
@@ -46,9 +43,6 @@
  ******************************************************************************/
 
 #define LUA_AWS_LIBNAME         "aws"
-
-#define AWS_DEFAULT_REGION      "us-west-2"
-#define AWS_DEFAULT_ENDPOINT    "https://s3.us-west-2.amazonaws.com"
 
 /******************************************************************************
  * FILE DATA
@@ -61,71 +55,6 @@ Aws::SDKOptions options;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * aws_s3_get - s3get(<bucket>, <key>, [<region>], [<endpoint>]) -> contents
- *----------------------------------------------------------------------------*/
-int aws_s3_get(lua_State* L)
-{
-    bool status = false;
-    int num_rets = 1;
-    Aws::S3Crt::S3CrtClient* s3_client = NULL;
-
-    try
-    {
-        /* Get Parameters */
-        const char* bucket      = LuaObject::getLuaString(L, 1);
-        const char* key         = LuaObject::getLuaString(L, 2);
-        const char* region      = LuaObject::getLuaString(L, 3, true, AWS_DEFAULT_REGION);
-        const char* endpoint    = LuaObject::getLuaString(L, 4, true, AWS_DEFAULT_ENDPOINT);
-
-        /* Initialize Variables for Read */
-        char* data = NULL;
-        int64_t bytes_read = 0;
-        Aws::S3Crt::Model::GetObjectRequest object_request;
-
-        /* Set Bucket and Key */
-        object_request.SetBucket(bucket);
-        object_request.SetKey(key);
-
-        /* Create S3 Client */
-        Aws::S3Crt::ClientConfiguration client_config;
-        client_config.endpointOverride = endpoint;
-        client_config.region = region;
-        s3_client = new Aws::S3Crt::S3CrtClient(client_config);
-
-        /* Make Request */
-        Aws::S3Crt::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
-        if(response.IsSuccess())
-        {
-            bytes_read = (int64_t)response.GetResult().GetContentLength();
-            data = new char [bytes_read];
-            std::streambuf* sbuf = response.GetResult().GetBody().rdbuf();
-            std::istream reader(sbuf);
-            reader.read((char*)data, bytes_read);
-
-            /* Push Contents */
-            lua_pushlstring(L, data, bytes_read);
-            status = true;
-            num_rets++;
-        }
-        else
-        {
-            mlog(CRITICAL, "Http error getting S3 object: %s", response.GetError().GetMessage().c_str());
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error getting S3 object: %s", e.what());
-    }
-
-    /* Free S3 Client */
-    if(s3_client) delete s3_client;
-
-    /* Return Results */
-    lua_pushboolean(L, status);
-    return num_rets;
-}
-
-/*----------------------------------------------------------------------------
  * aws_open
  *----------------------------------------------------------------------------*/
 int aws_open (lua_State *L)
@@ -133,7 +62,7 @@ int aws_open (lua_State *L)
     static const struct luaL_Reg aws_functions[] = {
         {"csget",       CredentialStore::luaGet},
         {"csput",       CredentialStore::luaPut},
-        {"s3get",       aws_s3_get},
+        {"s3get",       S3IODriver::luaGet},
         {"s3cache",     S3CacheIODriver::luaCreateCache},
         {NULL,          NULL}
     };

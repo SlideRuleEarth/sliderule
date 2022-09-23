@@ -4,7 +4,7 @@ list ( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
 list ( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
 
 # Find AWS libraries
-find_package(AWSSDK REQUIRED COMPONENTS s3-crt transfer)
+find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
 
 # Build package
 if (AWSSDK_LINK_LIBRARIES)

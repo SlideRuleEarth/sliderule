@@ -38,8 +38,8 @@
 #include "Asset.h"
 
 #include <aws/core/Aws.h>
-#include <aws/s3-crt/S3CrtClient.h>
-#include <aws/s3-crt/model/GetObjectRequest.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetObjectRequest.h>
 #include <aws/core/auth/AWSCredentials.h>
 
 /******************************************************************************
@@ -48,7 +48,7 @@
 
 struct S3IODriver::impl
 {
-    Aws::S3Crt::S3CrtClient* s3_client;
+    Aws::S3::S3Client* s3_client;
 };
 
 /******************************************************************************
@@ -56,6 +56,8 @@ struct S3IODriver::impl
  ******************************************************************************/
 
 const char* S3IODriver::FORMAT = "s3";
+const char* S3IODriver::DEFAULT_REGION = "us-west-2";
+const char* S3IODriver::DEFAULT_ENDPOINT = "https://s3.us-west-2.amazonaws.com";
 
 /******************************************************************************
  * FILE IO DRIVER CLASS
@@ -95,8 +97,9 @@ void S3IODriver::ioOpen (const char* resource)
     CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
 
     /* Create S3 Client Configuration */
-    Aws::S3Crt::ClientConfiguration client_config;
+    Aws::Client::ClientConfiguration client_config;
     client_config.region = asset->getRegion();
+    client_config.endpointOverride = asset->getEndpoint();
 
     /* Create S3 Client */
     if(latest_credential.provided)
@@ -105,11 +108,11 @@ void S3IODriver::ioOpen (const char* resource)
         const Aws::String secretAccessKey(latest_credential.secretAccessKey);
         const Aws::String sessionToken(latest_credential.sessionToken);
         Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
-        pimpl->s3_client = new Aws::S3Crt::S3CrtClient(awsCredentials, client_config);
+        pimpl->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
     }
     else
     {
-        pimpl->s3_client = new Aws::S3Crt::S3CrtClient(client_config);
+        pimpl->s3_client = new Aws::S3::S3Client(client_config);
     }
 }
 
@@ -142,7 +145,7 @@ void S3IODriver::ioClose (void)
 int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     int64_t bytes_read = 0;
-    Aws::S3Crt::Model::GetObjectRequest object_request;
+    Aws::S3::Model::GetObjectRequest object_request;
 
     /* Set Bucket and Key */
     object_request.SetBucket(ioBucket);
@@ -153,7 +156,7 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     object_request.SetRange(s3_rqst_range.getString());
 
     /* Make Request */
-    Aws::S3Crt::Model::GetObjectOutcome response = pimpl->s3_client->GetObject(object_request);
+    Aws::S3::Model::GetObjectOutcome response = pimpl->s3_client->GetObject(object_request);
     bool status = response.IsSuccess();
 
     /* Read Response */
@@ -172,6 +175,71 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     }
 
     return bytes_read;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGet - s3get(<bucket>, <key>, [<region>], [<endpoint>]) -> contents
+ *----------------------------------------------------------------------------*/
+int S3IODriver::luaGet(lua_State* L)
+{
+    bool status = false;
+    int num_rets = 1;
+    Aws::S3::S3Client* s3_client = NULL;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* region      = LuaObject::getLuaString(L, 3, true, DEFAULT_REGION);
+        const char* endpoint    = LuaObject::getLuaString(L, 4, true, DEFAULT_ENDPOINT);
+
+        /* Initialize Variables for Read */
+        char* data = NULL;
+        int64_t bytes_read = 0;
+        Aws::S3::Model::GetObjectRequest object_request;
+
+        /* Set Bucket and Key */
+        object_request.SetBucket(bucket);
+        object_request.SetKey(key);
+
+        /* Create S3 Client */
+        Aws::Client::ClientConfiguration client_config;
+        client_config.endpointOverride = endpoint;
+        client_config.region = region;
+        s3_client = new Aws::S3::S3Client(client_config);
+
+        /* Make Request */
+        Aws::S3::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
+        if(response.IsSuccess())
+        {
+            bytes_read = (int64_t)response.GetResult().GetContentLength();
+            data = new char [bytes_read];
+            std::streambuf* sbuf = response.GetResult().GetBody().rdbuf();
+            std::istream reader(sbuf);
+            reader.read((char*)data, bytes_read);
+
+            /* Push Contents */
+            lua_pushlstring(L, data, bytes_read);
+            status = true;
+            num_rets++;
+        }
+        else
+        {
+            mlog(CRITICAL, "Http error getting S3 object: %s", response.GetError().GetMessage().c_str());
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Free S3 Client */
+    if(s3_client) delete s3_client;
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return num_rets;
 }
 
 /*----------------------------------------------------------------------------
