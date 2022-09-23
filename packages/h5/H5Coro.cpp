@@ -221,8 +221,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
     try
     {
         /* Initialize Driver */
-        ioDriver = asset->createDriver();
-        ioDriver->ioOpen(resource);
+        ioDriver = asset->createDriver(resource);
 
         /* Set or Create I/O Context */
         if(context)
@@ -329,7 +328,6 @@ void H5FileBuffer::tearDown (void)
     /* Close I/O Resources */
     if(ioDriver)
     {
-        ioDriver->ioClose();
         delete ioDriver;
     }
 

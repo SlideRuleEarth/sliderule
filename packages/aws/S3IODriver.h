@@ -60,11 +60,8 @@ class S3IODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-        static IODriver*    create  (const Asset* _asset);
-        virtual void        ioOpen  (const char* resource);
-        virtual void        ioClose (void);
+        static IODriver*    create  (const Asset* _asset, const char* resource);
         virtual int64_t     ioRead  (uint8_t* data, int64_t size, uint64_t pos);
-
         static int          luaGet  (lua_State* L);
 
     protected:
@@ -73,7 +70,7 @@ class S3IODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-                S3IODriver  (const Asset* _asset);
+                S3IODriver  (const Asset* _asset, const char* resource);
         virtual ~S3IODriver (void);
 
         /*--------------------------------------------------------------------

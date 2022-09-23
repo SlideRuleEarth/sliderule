@@ -66,77 +66,9 @@ const char* S3IODriver::DEFAULT_ENDPOINT = "https://s3.us-west-2.amazonaws.com";
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-Asset::IODriver* S3IODriver::create (const Asset* _asset)
+Asset::IODriver* S3IODriver::create (const Asset* _asset, const char* resource)
 {
-    return new S3IODriver(_asset);
-}
-
-/*----------------------------------------------------------------------------
- * ioOpen
- *----------------------------------------------------------------------------*/
-void S3IODriver::ioOpen (const char* resource)
-{
-    SafeString resourcepath("%s/%s", asset->getPath(), resource);
-
-    /* Allocate Memory */
-    ioBucket = StringLib::duplicate(resourcepath.getString());
-
-    /*
-    * Differentiate Bucket and Key
-    *  <bucket_name>/<path_to_file>/<filename>
-    *  |             |
-    * ioBucket      ioKey
-    */
-    ioKey = ioBucket;
-    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-    if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
-    ioKey++;
-
-    /* Get Latest Credentials */
-    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
-
-    /* Create S3 Client Configuration */
-    Aws::Client::ClientConfiguration client_config;
-    client_config.region = asset->getRegion();
-    client_config.endpointOverride = asset->getEndpoint();
-
-    /* Create S3 Client */
-    if(latest_credential.provided)
-    {
-        const Aws::String accessKeyId(latest_credential.accessKeyId);
-        const Aws::String secretAccessKey(latest_credential.secretAccessKey);
-        const Aws::String sessionToken(latest_credential.sessionToken);
-        Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
-        pimpl->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
-    }
-    else
-    {
-        pimpl->s3_client = new Aws::S3::S3Client(client_config);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * ioClose
- *----------------------------------------------------------------------------*/
-void S3IODriver::ioClose (void)
-{
-    if(pimpl->s3_client)
-    {
-        delete pimpl->s3_client;
-        pimpl->s3_client = NULL;
-    }
-
-    /*
-     * Delete Memory Allocated for ioBucket
-     *  only ioBucket is freed because ioKey only points
-     *  into the memory allocated to ioBucket
-     */
-    if(ioBucket)
-    {
-        delete [] ioBucket;
-        ioBucket = NULL;
-    }
+    return new S3IODriver(_asset, resource);
 }
 
 /*----------------------------------------------------------------------------
@@ -245,13 +177,48 @@ int S3IODriver::luaGet(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-S3IODriver::S3IODriver (const Asset* _asset)
+S3IODriver::S3IODriver (const Asset* _asset, const char* resource):
+    asset(_asset)
 {
+    SafeString resourcepath("%s/%s", asset->getPath(), resource);
+
+    /* Allocate Memory */
+    ioBucket = StringLib::duplicate(resourcepath.getString());
+
+    /*
+    * Differentiate Bucket and Key
+    *  <bucket_name>/<path_to_file>/<filename>
+    *  |             |
+    * ioBucket      ioKey
+    */
+    ioKey = ioBucket;
+    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
+    if(*ioKey == '/') *ioKey = '\0';
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
+    ioKey++;
+
+    /* Get Latest Credentials */
+    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
+
+    /* Create S3 Client Configuration */
+    Aws::Client::ClientConfiguration client_config;
+    client_config.region = asset->getRegion();
+    client_config.endpointOverride = asset->getEndpoint();
+
+    /* Create S3 Client */
     pimpl = new S3IODriver::impl;
-    pimpl->s3_client = NULL;
-    asset = _asset;
-    ioBucket = NULL;
-    ioKey = NULL;
+    if(latest_credential.provided)
+    {
+        const Aws::String accessKeyId(latest_credential.accessKeyId);
+        const Aws::String secretAccessKey(latest_credential.secretAccessKey);
+        const Aws::String sessionToken(latest_credential.sessionToken);
+        Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
+        pimpl->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
+    }
+    else
+    {
+        pimpl->s3_client = new Aws::S3::S3Client(client_config);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -259,6 +226,17 @@ S3IODriver::S3IODriver (const Asset* _asset)
  *----------------------------------------------------------------------------*/
 S3IODriver::~S3IODriver (void)
 {
-    ioClose();
+    delete pimpl->s3_client;
     delete pimpl;
+
+    /*
+     * Delete Memory Allocated for ioBucket
+     *  only ioBucket is freed because ioKey only points
+     *  into the memory allocated to ioBucket
+     */
+    if(ioBucket)
+    {
+        delete [] ioBucket;
+        ioBucket = NULL;
+    }
 }

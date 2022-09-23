@@ -45,6 +45,8 @@
  ******************************************************************************/
 
 const char* S3CurlIODriver::FORMAT = "s3curl";
+const char* S3CurlIODriver::DEFAULT_REGION = "us-west-2";
+const char* S3CurlIODriver::DEFAULT_ENDPOINT = "https://s3.us-west-2.amazonaws.com";
 
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
@@ -53,15 +55,66 @@ const char* S3CurlIODriver::FORMAT = "s3curl";
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-Asset::IODriver* S3CurlIODriver::create (const Asset* _asset)
+Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resource)
 {
-    return new S3CurlIODriver(_asset);
+    return new S3CurlIODriver(_asset, resource);
 }
 
 /*----------------------------------------------------------------------------
  * ioOpen
  *----------------------------------------------------------------------------*/
-void S3CurlIODriver::ioOpen (const char* resource)
+int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
+{
+    return get(data, size, pos, ioBucket, ioKey, asset->getRegion(), &latestCredentials);
+}
+
+/*----------------------------------------------------------------------------
+ * luaGet - s3curlget(<bucket>, <key>, [<region>], [<endpoint>]) -> contents
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaGet(lua_State* L)
+{
+    bool status = false;
+    int num_rets = 1;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
+//        const char* endpoint    = LuaObject::getLuaString(L, 4, true, DEFAULT_ENDPOINT);
+
+        /* Make Request */
+        uint8_t* rsps_data = NULL;
+        int64_t rsps_size = get(&rsps_data, bucket, key, region, NULL);
+
+        /* Push Contents */
+        if(*rsps_data)
+        {
+            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            status = true;
+            num_rets++;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return num_rets;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
+    asset(_asset)
 {
     SafeString resourcepath("%s/%s", asset->getPath(), resource);
 
@@ -81,50 +134,106 @@ void S3CurlIODriver::ioOpen (const char* resource)
     ioKey++;
 
     /* Get Latest Credentials */
-    credentials = CredentialStore::get(asset->getName());
+    latestCredentials = CredentialStore::get(asset->getName());
 }
 
 /*----------------------------------------------------------------------------
- * ioOpen
+ * Destructor
  *----------------------------------------------------------------------------*/
-void S3CurlIODriver::ioClose (void)
+S3CurlIODriver::~S3CurlIODriver (void)
 {
-
+    /*
+     * Delete Memory Allocated for ioBucket
+     *  only ioBucket is freed because ioKey only points
+     *  into the memory allocated to ioBucket
+     */
+    if(ioBucket) delete [] ioBucket;
 }
 
 /*----------------------------------------------------------------------------
- * ioOpen
+ * curlWriteFixed
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
+size_t S3CurlIODriver::curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    //TODO: Handle when credentials are not provided
+    fixed_data_t* data = (fixed_data_t*)userp;
 
-    /* Build Host and URL String */
-    SafeString host("%s.%s.s3.amazonaws.com", ioBucket, asset->getRegion());
-    SafeString url("https://%s/%s", host.getString(), ioKey);
+    size_t rsps_size = size * nmemb;
+    size_t bytes_available = data->size - data->index;
+    size_t bytes_to_copy = MIN(rsps_size, bytes_available);
+
+    LocalLib::copy(&data->buffer[data->index], buffer, bytes_to_copy);
+    data->index += bytes_to_copy;
+
+    return bytes_to_copy;
+}
+
+/*----------------------------------------------------------------------------
+ * curlWriteStreaming
+ *----------------------------------------------------------------------------*/
+size_t S3CurlIODriver::curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    List<streaming_data_t>* rsps_set = (List<streaming_data_t>*)userp;
+
+    streaming_data_t rsps;
+    rsps.size = size * nmemb;
+    rsps.data = new char [rsps.size];
+    LocalLib::copy(rsps.data, buffer, rsps.size);
+    rsps_set->add(rsps);
+
+    return rsps.size;
+}
+
+/*----------------------------------------------------------------------------
+ * buildHeaders
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::headers_t S3CurlIODriver::buildHeaders (const char* bucket, const char* key, CredentialStore::Credential* credentials)
+{
+    /* Initial HTTP Header List */
+    struct curl_slist* headers = NULL;
 
     /* Build Date String and Date Header */
     TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
     TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     SafeString dateHeader("Date: %s", date.getString());
+    headers = curl_slist_append(headers, dateHeader.getString());
+
+    if(credentials && credentials->provided)
+    {
+        /* Build SecurityToken Header */
+        SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+        headers = curl_slist_append(headers, securityTokenHeader.getString());
+
+        /* Build Authorization Header */
+        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
+        unsigned char hash[EVP_MAX_MD_SIZE];
+        unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
+        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
+        SafeString encodedHash(64, hash, hash_size);
+        encodedHash.urlize();
+        SafeString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash.getString());
+        headers = curl_slist_append(headers, authorizationHeader.getString());
+    }
+
+    /* Return */
+    return headers;
+}
+
+/*----------------------------------------------------------------------------
+ * get - fixed
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+{
+    /* Build Host and URL String */
+    SafeString host("%s.%s.s3.amazonaws.com", bucket, region);
+    SafeString url("https://%s/%s", host.getString(), key);
+
+    /* Build Headers */
+    struct curl_slist* headers = buildHeaders(bucket, key, credentials);
 
     /* Build Range Header */
     SafeString rangeHeader("Range: bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size - 1));
-
-    /* Build SecurityToken Header */
-    SafeString securityTokenHeader("x-amz-security-token:%s", credentials.sessionToken);
-
-    /* Build StringToSign */
-    SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), ioBucket, ioKey);
-
-    /* Build Authorization Header */
-    unsigned char hash[EVP_MAX_MD_SIZE];
-    unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-    HMAC(EVP_sha1(), credentials.secretAccessKey, StringLib::size(credentials.secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
-    SafeString encodedHash(64, hash, hash_size);
-    encodedHash.urlize();
-    SafeString authorizationHeader("Authorization: AWS %s:%s", credentials.accessKeyId, encodedHash.getString());
+    headers = curl_slist_append(headers, rangeHeader.getString());
 
     /* Initialize cURL */
     CURL* curl = curl_easy_init();
@@ -135,15 +244,8 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to initialize curl");
         }
 
-        /* Set Request Headers */
-        struct curl_slist* headers = NULL;
-        headers = curl_slist_append(headers, dateHeader.getString());
-        headers = curl_slist_append(headers, rangeHeader.getString());
-        headers = curl_slist_append(headers, authorizationHeader.getString());
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
         /* Setup Buffer for Callback */
-        data_t info = {
+        fixed_data_t info = {
             .buffer = data,
             .size = size,
             .index = 0
@@ -151,11 +253,12 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 
         /* Set Options */
         curl_easy_setopt(curl, CURLOPT_URL, url.getString());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, DEFAULT_READ_TIMEOUT);
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONNECTION_TIMEOUT); // seconds
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, DEFAULT_SSL_VERIFYPEER);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, DEFAULT_SSL_VERIFYHOST);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteFixed);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &info);
 
         /* Perform Request */
@@ -189,41 +292,89 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 }
 
 /*----------------------------------------------------------------------------
- * constructor
+ * get - streaming
  *----------------------------------------------------------------------------*/
-S3CurlIODriver::S3CurlIODriver (const Asset* _asset)
+int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
 {
-    asset = _asset;
-    ioBucket = NULL;
-    ioKey = NULL;
-}
+    assert(data);
+    *data = NULL;
+    int64_t rsps_size = 0;
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::~S3CurlIODriver (void)
-{
-    /*
-     * Delete Memory Allocated for ioBucket
-     *  only ioBucket is freed because ioKey only points
-     *  into the memory allocated to ioBucket
-     */
-    if(ioBucket) delete [] ioBucket;
-}
+    /* Build Host and URL String */
+    SafeString host("%s.%s.s3.amazonaws.com", bucket, region);
+    SafeString url("https://%s/%s", host.getString(), key);
 
-/*----------------------------------------------------------------------------
- * curlWriteCallback
- *----------------------------------------------------------------------------*/
-size_t S3CurlIODriver::curlWriteCallback(void *buffer, size_t size, size_t nmemb, void *userp)
-{
-    data_t* data = (data_t*)userp;
+    /* Build Headers */
+    struct curl_slist* headers = buildHeaders(bucket, key, credentials);
 
-    size_t rsps_size = size * nmemb;
-    size_t bytes_available = data->size - data->index;
-    size_t bytes_to_copy = MIN(rsps_size, bytes_available);
+    /* Initialize cURL */
+    CURL* curl = curl_easy_init();
+    try
+    {
+        if(!curl)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to initialize curl");
+        }
 
-    LocalLib::copy(&data->buffer[data->index], buffer, bytes_to_copy);
-    data->index += bytes_to_copy;
+        /* Setup Streaming Data for Callback */
+        List<streaming_data_t> rsps_set;
 
-    return bytes_to_copy;
+        /* Set Options */
+        curl_easy_setopt(curl, CURLOPT_URL, url.getString());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, DEFAULT_READ_TIMEOUT);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONNECTION_TIMEOUT); // seconds
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, DEFAULT_SSL_VERIFYPEER);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, DEFAULT_SSL_VERIFYHOST);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteStreaming);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
+
+        /* Perform Request */
+        CURLcode res = curl_easy_perform(curl);
+        if(res == CURLE_OK)
+        {
+            /* Get Response Size */
+            for(int i = 0; i < rsps_set.length(); i++)
+            {
+                rsps_size += rsps_set[i].size;
+            }
+
+            /* Allocate and Populate Response */
+            int rsps_index = 0;
+            *data = new uint8_t [rsps_size + 1];
+            uint8_t* rsps = *data; // reads easier below
+            for(int i = 0; i < rsps_set.length(); i++)
+            {
+                LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
+                rsps_index += rsps_set[i].size;
+                delete [] rsps_set[i].data;
+            }
+            rsps[rsps_index] = '\0';
+
+            /* Get HTTP Code */
+            long http_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if(http_code != 200)
+            {
+                StringLib::printify((char*)rsps, rsps_size + 1);
+                mlog(INFO, "%s", (const char*)rsps);
+                delete [] *data; // clean up memory
+                *data = NULL;
+                throw RunTimeException(CRITICAL, RTE_ERROR, "S3 get returned http error <%ld>", http_code);
+            }
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed: %ld", (long)res);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        curl_easy_cleanup(curl);
+        throw; // rethrow after cleaning up curl
+    }
+
+    /* Return Success */
+    curl_easy_cleanup(curl);
+    return rsps_size;
 }

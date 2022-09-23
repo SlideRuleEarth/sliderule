@@ -50,31 +50,9 @@ const char* FileIODriver::FORMAT = "file";
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-Asset::IODriver* FileIODriver::create (const Asset* _asset)
+Asset::IODriver* FileIODriver::create (const Asset* _asset, const char* resource)
 {
-    return new FileIODriver(_asset);
-}
-
-/*----------------------------------------------------------------------------
- * ioOpen
- *----------------------------------------------------------------------------*/
-void FileIODriver::ioOpen (const char* resource)
-{
-    SafeString filepath("%s/%s", asset->getPath(), resource);
-    ioFile = fopen(filepath.getString(), "r");
-    if(ioFile == NULL)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * ioClose
- *----------------------------------------------------------------------------*/
-void FileIODriver::ioClose (void)
-{
-    if(ioFile) fclose(ioFile);
-    ioFile = NULL;
+    return new FileIODriver(_asset, resource);
 }
 
 /*----------------------------------------------------------------------------
@@ -95,10 +73,15 @@ int64_t FileIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-FileIODriver::FileIODriver (const Asset* _asset)
+FileIODriver::FileIODriver (const Asset* _asset, const char* resource):
+    asset(_asset)
 {
-    asset = _asset;
-    ioFile = NULL;
+    SafeString filepath("%s/%s", asset->getPath(), resource);
+    ioFile = fopen(filepath.getString(), "r");
+    if(ioFile == NULL)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -106,5 +89,6 @@ FileIODriver::FileIODriver (const Asset* _asset)
  *----------------------------------------------------------------------------*/
 FileIODriver::~FileIODriver (void)
 {
-    ioClose();
+    if(ioFile) fclose(ioFile);
+    ioFile = NULL;
 }

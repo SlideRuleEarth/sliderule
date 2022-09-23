@@ -80,9 +80,9 @@ void S3CacheIODriver::init (void)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-Asset::IODriver* S3CacheIODriver::create (const Asset* _asset)
+Asset::IODriver* S3CacheIODriver::create (const Asset* _asset, const char* resource)
 {
-    return new S3CacheIODriver(_asset);
+    return new S3CacheIODriver(_asset, resource);
 }
 
 /*----------------------------------------------------------------------------
@@ -180,10 +180,28 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
 }
 
 /*----------------------------------------------------------------------------
- * ioOpen
+ * ioRead
  *----------------------------------------------------------------------------*/
-void S3CacheIODriver::ioOpen (const char* resource)
+int64_t S3CacheIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
+    /* Seek to New Position */
+    if(fseek(ioFile, pos, SEEK_SET) != 0)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to go to I/O position: 0x%lx", pos);
+    }
+
+    /* Read Data */
+    return fread(data, 1, size, ioFile);
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+S3CacheIODriver::S3CacheIODriver (const Asset* _asset, const char* resource):
+    asset(_asset)
+{
+    ioFile = NULL;
+
     /* Check if Cache Created */
     if(cacheRoot == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "cache has not been created yet");
 
@@ -220,40 +238,10 @@ void S3CacheIODriver::ioOpen (const char* resource)
     delete [] bucket;
 
     /* Check if File Opened */
-    if(ioFile == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");
-}
-
-/*----------------------------------------------------------------------------
- * ioClose
- *----------------------------------------------------------------------------*/
-void S3CacheIODriver::ioClose (void)
-{
-    if(ioFile) fclose(ioFile);
-    ioFile = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * ioRead
- *----------------------------------------------------------------------------*/
-int64_t S3CacheIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
-{
-    /* Seek to New Position */
-    if(fseek(ioFile, pos, SEEK_SET) != 0)
+    if(ioFile == NULL)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to go to I/O position: 0x%lx", pos);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");
     }
-
-    /* Read Data */
-    return fread(data, 1, size, ioFile);
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-S3CacheIODriver::S3CacheIODriver (const Asset* _asset)
-{
-    asset = _asset;
-    ioFile = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -261,7 +249,8 @@ S3CacheIODriver::S3CacheIODriver (const Asset* _asset)
  *----------------------------------------------------------------------------*/
 S3CacheIODriver::~S3CacheIODriver (void)
 {
-    ioClose();
+    if(ioFile) fclose(ioFile);
+    ioFile = NULL;
 }
 
 /*----------------------------------------------------------------------------

@@ -64,12 +64,9 @@ class S3CacheIODriver: Asset::IODriver
          *--------------------------------------------------------------------*/
 
         static void         init            (void);
-        static IODriver*    create          (const Asset* _asset);
+        static IODriver*    create          (const Asset* _asset, const char* resource);
         static int          luaCreateCache  (lua_State* L);
         static int          createCache     (const char* cache_root=DEFAULT_CACHE_ROOT, int max_files=DEFAULT_MAX_CACHE_FILES);
-
-        void                ioOpen          (const char* resource);
-        void                ioClose         (void);
         int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos);
 
     private:
@@ -78,7 +75,7 @@ class S3CacheIODriver: Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-                S3CacheIODriver     (const Asset* _asset);
+                S3CacheIODriver     (const Asset* _asset, const char* resource);
                 ~S3CacheIODriver    (void);
 
         bool    fileGet             (const char* bucket, const char* key, const char** file);

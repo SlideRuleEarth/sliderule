@@ -58,16 +58,17 @@ class S3CurlIODriver: public Asset::IODriver
         static const long DEFAULT_SSL_VERIFYPEER = 0;
         static const long DEFAULT_SSL_VERIFYHOST = 0;
         static const int STARTING_NUM_CLIENTS = 32;
+        static const char* DEFAULT_REGION;
+        static const char* DEFAULT_ENDPOINT;
         static const char* FORMAT;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static IODriver*    create          (const Asset* _asset);
-        virtual void        ioOpen          (const char* resource) override;
-        virtual void        ioClose         (void) override;
+        static IODriver*    create          (const Asset* _asset, const char* resource);
         virtual int64_t     ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
+        static int          luaGet          (lua_State* L);
 
     protected:
 
@@ -79,22 +80,44 @@ class S3CurlIODriver: public Asset::IODriver
             uint8_t*    buffer;
             long        size;
             long        index;
-        } data_t;
+        } fixed_data_t;
+
+        typedef struct {
+            char*       data;
+            long        size;
+        } streaming_data_t;
+
+
+        typedef struct curl_slist* headers_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        S3CurlIODriver      (const Asset* _asset);
-        virtual         ~S3CurlIODriver     (void);
-        static size_t   curlWriteCallback   (void *buffer, size_t size, size_t nmemb, void *userp);
+                            S3CurlIODriver      (const Asset* _asset, const char* resource);
+        virtual             ~S3CurlIODriver     (void);
+
+        static size_t       curlWriteFixed      (void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t       curlWriteStreaming  (void *buffer, size_t size, size_t nmemb, void *userp);
+        static headers_t    buildHeaders        (const char* bucket, const char* key,
+                                                 CredentialStore::Credential* credentials);
+
+        // fixed GET - memory preallocated
+        static int64_t      get                 (uint8_t* data, int64_t size, uint64_t pos,
+                                                 const char* bucket, const char* key, const char* region,
+                                                 CredentialStore::Credential* credentials);
+
+        // streaming GET - memory allocated and returned
+        static int64_t      get                 (uint8_t** data,
+                                                 const char* bucket, const char* key, const char* region,
+                                                 CredentialStore::Credential* credentials);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         const Asset*                asset;
-        CredentialStore::Credential credentials;
+        CredentialStore::Credential latestCredentials;
         char*                       ioBucket;
         char*                       ioKey;
 };

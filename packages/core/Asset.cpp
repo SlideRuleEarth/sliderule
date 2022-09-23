@@ -147,9 +147,9 @@ bool Asset::registerDriver (const char* _format, new_driver_t driver)
 /*----------------------------------------------------------------------------
  * createDriver
  *----------------------------------------------------------------------------*/
-Asset::IODriver* Asset::createDriver (void) const
+Asset::IODriver* Asset::createDriver (const char* resource) const
 {
-    if(driver)  return driver(this);
+    if(driver)  return driver(this, resource);
     else        return NULL;
 }
 

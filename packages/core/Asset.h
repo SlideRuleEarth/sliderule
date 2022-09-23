@@ -70,8 +70,6 @@ class Asset: public LuaObject
                                 IODriver    (void) {};
                 virtual         ~IODriver   (void) {};
 
-                virtual void    ioOpen      (const char* resource) = 0;
-                virtual void    ioClose     (void) = 0;
                 virtual int64_t ioRead      (uint8_t* data, int64_t size, uint64_t pos) = 0;
         };
 
@@ -91,7 +89,7 @@ class Asset: public LuaObject
             Dictionary<double>  attributes{ASSET_STARTING_ATTRIBUTES_PER_RESOURCE};
         } resource_t;
 
-        typedef IODriver* (*new_driver_t) (const Asset* _asset);
+        typedef IODriver* (*new_driver_t) (const Asset* _asset, const char* resource);
 
         /*--------------------------------------------------------------------
          * Methods
@@ -101,7 +99,7 @@ class Asset: public LuaObject
         static Asset*   pythonCreate    (const char* format, const char* path, const char* index, const char* region, const char* endpoint);
         static bool     registerDriver  (const char* _format, new_driver_t driver);
 
-        IODriver*       createDriver    (void) const;
+        IODriver*       createDriver    (const char* resource) const;
 
         virtual         ~Asset          (void);
 

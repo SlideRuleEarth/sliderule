@@ -37,13 +37,13 @@
  ******************************************************************************/
 
 #include "Asset.h"
-#include "S3CurlIODriver.h"
+#include "S3IODriver.h"
 
 /******************************************************************************
  * S3 IO DRIVER CLASS
  ******************************************************************************/
 
-class CumulusIODriver: S3CurlIODriver
+class CumulusIODriver: S3IODriver
 {
     public:
 
@@ -57,8 +57,7 @@ class CumulusIODriver: S3CurlIODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-        static Asset::IODriver* create  (const Asset* _asset);
-        void                    ioOpen  (const char* resource);
+        static Asset::IODriver* create  (const Asset* _asset, const char* resource);
 
     private:
 
@@ -66,7 +65,7 @@ class CumulusIODriver: S3CurlIODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-        CumulusIODriver (const Asset* _asset);
+        CumulusIODriver (const Asset* _asset, const char* resource);
         ~CumulusIODriver (void);
 };
 

@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "CumulusIODriver.h"
-#include "S3CurlIODriver.h"
+#include "S3IODriver.h"
 #include "core.h"
 
 /******************************************************************************
@@ -50,18 +50,21 @@ const char* CumulusIODriver::FORMAT = "cumulus";
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-Asset::IODriver* CumulusIODriver::create (const Asset* _asset)
+Asset::IODriver* CumulusIODriver::create (const Asset* _asset, const char* resource)
 {
-    return new CumulusIODriver(_asset);
+    return new CumulusIODriver(_asset, resource);
 }
 
 /*----------------------------------------------------------------------------
- * ioOpen
+ * Constructor
  *
  *  Example: /ATLAS/ATL06/004/2019/06/26/ATL06_20190626143632_13640310_004_01.h5
  *----------------------------------------------------------------------------*/
-void CumulusIODriver::ioOpen (const char* resource)
+CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
+    S3IODriver(_asset, resource)
 {
+
+    /* Build Updated Resource Path Name */
     const int NUM_ELEMENTS = 5;
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
@@ -85,15 +88,23 @@ void CumulusIODriver::ioOpen (const char* resource)
 
     SafeString updated_resource("ATLAS/%s/%s/%s/%s/%s/%s", product, version, year, month, day, resource);
 
-    /* Call Parent Open */
-    S3CurlIODriver::ioOpen(updated_resource.getString());
-}
+    /*
+     * REDO the ioBucket and ioKey
+     */
+    delete [] ioBucket;
+    ioBucket = updated_resource.getString(true);
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-CumulusIODriver::CumulusIODriver (const Asset* _asset): S3CurlIODriver(_asset)
-{
+    /*
+    * Differentiate Bucket and Key
+    *  <bucket_name>/<path_to_file>/<filename>
+    *  |             |
+    * ioBucket      ioKey
+    */
+    ioKey = ioBucket;
+    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
+    if(*ioKey == '/') *ioKey = '\0';
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
+    ioKey++;
 }
 
 /*----------------------------------------------------------------------------
