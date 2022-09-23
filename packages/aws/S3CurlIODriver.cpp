@@ -225,7 +225,7 @@ S3CurlIODriver::headers_t S3CurlIODriver::buildHeaders (const char* bucket, cons
 int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
 {
     /* Build Host and URL String */
-    SafeString host("%s.%s.s3.amazonaws.com", bucket, region);
+    SafeString host("%s.s3.%s.amazonaws.com", bucket, region);
     SafeString url("https://%s/%s", host.getString(), key);
 
     /* Build Headers */
@@ -301,7 +301,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     int64_t rsps_size = 0;
 
     /* Build Host and URL String */
-    SafeString host("%s.%s.s3.amazonaws.com", bucket, region);
+    SafeString host("%s.s3.%s.amazonaws.com", bucket, region);
     SafeString url("https://%s/%s", host.getString(), key);
 
     /* Build Headers */

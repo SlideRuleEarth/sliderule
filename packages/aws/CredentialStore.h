@@ -57,10 +57,17 @@ class CredentialStore
         static const char* LIBRARY_NAME;
         static const char* EXPIRATION_GPS_METRIC;
 
+        // Baseline EarthData Login Keys
         static const char* ACCESS_KEY_ID_STR;
         static const char* SECRET_ACCESS_KEY_STR;
         static const char* SESSION_TOKEN_STR;
         static const char* EXPIRATION_STR;
+
+        // AWS MetaData Keys
+        static const char* ACCESS_KEY_ID_STR1;
+        static const char* SECRET_ACCESS_KEY_STR1;
+        static const char* SESSION_TOKEN_STR1;
+        static const char* EXPIRATION_STR1;
 
         /*--------------------------------------------------------------------
          * Typdefs

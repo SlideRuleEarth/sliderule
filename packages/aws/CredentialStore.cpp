@@ -52,8 +52,13 @@ const char* CredentialStore::EXPIRATION_GPS_METRIC = "exp_gps";
 
 const char* CredentialStore::ACCESS_KEY_ID_STR = "accessKeyId";
 const char* CredentialStore::SECRET_ACCESS_KEY_STR = "secretAccessKey";
-const char* CredentialStore::SESSION_TOKEN_STR="sessionToken";
+const char* CredentialStore::SESSION_TOKEN_STR = "sessionToken";
 const char* CredentialStore::EXPIRATION_STR = "expiration";
+
+const char* CredentialStore::ACCESS_KEY_ID_STR1 = "AccessKeyId";
+const char* CredentialStore::SECRET_ACCESS_KEY_STR1 = "SecretAccessKey";
+const char* CredentialStore::SESSION_TOKEN_STR1 = "Token";
+const char* CredentialStore::EXPIRATION_STR1 = "Expiration";
 
 /******************************************************************************
  * CREDENTIAL STORE CLASS
@@ -204,19 +209,39 @@ int CredentialStore::luaPut(lua_State* L)
         int index = 2;
         if(lua_type(L, index) == LUA_TTABLE)
         {
-            lua_getfield(L, index, ACCESS_KEY_ID_STR);
+            /* Get Access Key */
+            if(lua_getfield(L, index, ACCESS_KEY_ID_STR) != LUA_TSTRING)
+            {
+                lua_pop(L, 1);
+                lua_getfield(L, index, ACCESS_KEY_ID_STR1);
+            }
             access_key_id_str = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
 
-            lua_getfield(L, index, SECRET_ACCESS_KEY_STR);
+            /* Get Secret Access Key */
+            if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR) != LUA_TSTRING)
+            {
+                lua_pop(L, 1);
+                lua_getfield(L, index, SECRET_ACCESS_KEY_STR1);
+            }
             secret_access_key_str = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
 
-            lua_getfield(L, index, SESSION_TOKEN_STR);
+            /* Get Session Token */
+            if(lua_getfield(L, index, SESSION_TOKEN_STR) != LUA_TSTRING)
+            {
+                lua_pop(L, 1);
+                lua_getfield(L, index, SESSION_TOKEN_STR1);
+            }
             session_token_str = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
 
-            lua_getfield(L, index, EXPIRATION_STR);
+            /* Get Expiration Date */
+            if(lua_getfield(L, index, EXPIRATION_STR) != LUA_TSTRING)
+            {
+                lua_pop(L, 1);
+                lua_getfield(L, index, EXPIRATION_STR1);
+            }
             expiration_str  = LuaObject::getLuaString(L, -1);
             lua_pop(L, 1);
         }
