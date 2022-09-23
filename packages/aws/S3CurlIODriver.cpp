@@ -120,7 +120,6 @@ static headers_t buildHeaders (const char* bucket, const char* key, CredentialSt
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
         HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
         SafeString encodedHash(64, hash, hash_size);
-        encodedHash.urlize();
         SafeString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash.getString());
         headers = curl_slist_append(headers, authorizationHeader.getString());
     }
@@ -134,13 +133,8 @@ static headers_t buildHeaders (const char* bucket, const char* key, CredentialSt
  *----------------------------------------------------------------------------*/
 static CURL* initializeRequest (const char* bucket, const char* key, const char* region, headers_t headers, write_cb_t write_cb, void* write_parm)
 {
-    /* Massage Key */
-    const char* key_ptr = key;
-    if(key_ptr[0] == '/') key_ptr++;
-
-    /* Build Host and URL String */
-    SafeString host("%s.s3.%s.amazonaws.com", bucket, region);
-    SafeString url("https://%s/%s", host.getString(), key_ptr);
+    /* Build URL String */
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
 
     /* Initialize cURL */
     CURL* curl = curl_easy_init();
@@ -285,8 +279,12 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
 {
     bool status = false;
 
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
     /* Build Headers */
-    struct curl_slist* headers = buildHeaders(bucket, key, credentials);
+    struct curl_slist* headers = buildHeaders(bucket, key_ptr, credentials);
     SafeString rangeHeader("Range: bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size - 1));
     headers = curl_slist_append(headers, rangeHeader.getString());
 
@@ -298,7 +296,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     };
 
     /* Initialize cURL Request */
-    CURL* curl = initializeRequest(bucket, key, region, headers, curlWriteFixed, &info);
+    CURL* curl = initializeRequest(bucket, key_ptr, region, headers, curlWriteFixed, &info);
     if(curl)
     {
         /* Perform Request */
@@ -346,14 +344,18 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     int64_t rsps_size = 0;
     *data = NULL;
 
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
     /* Build Headers */
-    struct curl_slist* headers = buildHeaders(bucket, key, credentials);
+    struct curl_slist* headers = buildHeaders(bucket, key_ptr, credentials);
 
     /* Setup Streaming Data for Callback */
     List<streaming_data_t> rsps_set;
 
     /* Initialize cURL Request */
-    CURL* curl = initializeRequest(bucket, key, region, headers, curlWriteStreaming, &rsps_set);
+    CURL* curl = initializeRequest(bucket, key_ptr, region, headers, curlWriteStreaming, &rsps_set);
     if(curl)
     {
         /* Perform Request */

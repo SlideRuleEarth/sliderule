@@ -253,10 +253,10 @@ int CredentialStore::luaPut(lua_State* L)
         /* Populate Credentials */
         Credential credential;
         credential.provided = true;
-        credential.accessKeyId = StringLib::duplicate(access_key_id_str);
-        credential.secretAccessKey = StringLib::duplicate(secret_access_key_str);
-        credential.sessionToken = StringLib::duplicate(session_token_str);
-        credential.expiration = StringLib::duplicate(expiration_str);
+        credential.accessKeyId = StringLib::duplicate(access_key_id_str, MAX_KEY_SIZE);
+        credential.secretAccessKey = StringLib::duplicate(secret_access_key_str, MAX_KEY_SIZE);
+        credential.sessionToken = StringLib::duplicate(session_token_str, MAX_KEY_SIZE);
+        credential.expiration = StringLib::duplicate(expiration_str, MAX_KEY_SIZE);
         credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
 
         /* Put Credentials */

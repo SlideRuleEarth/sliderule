@@ -53,6 +53,7 @@ class CredentialStore
          *--------------------------------------------------------------------*/
 
         static const int STARTING_STORE_SIZE = 8;
+        static const int MAX_KEY_SIZE = 2048;
 
         static const char* LIBRARY_NAME;
         static const char* EXPIRATION_GPS_METRIC;
@@ -119,10 +120,10 @@ class CredentialStore
 
                 void copy (const Credential& c) {
                     provided = c.provided;
-                    accessKeyId = StringLib::duplicate(c.accessKeyId);
-                    secretAccessKey = StringLib::duplicate(c.secretAccessKey);
-                    sessionToken = StringLib::duplicate(c.sessionToken);
-                    expiration = StringLib::duplicate(c.expiration);
+                    accessKeyId = StringLib::duplicate(c.accessKeyId, MAX_KEY_SIZE);
+                    secretAccessKey = StringLib::duplicate(c.secretAccessKey, MAX_KEY_SIZE);
+                    sessionToken = StringLib::duplicate(c.sessionToken, MAX_KEY_SIZE);
+                    expiration = StringLib::duplicate(c.expiration, MAX_KEY_SIZE);
                     expirationGps = c.expirationGps;
                 }
         };
