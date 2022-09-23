@@ -7,6 +7,7 @@
 --              {
 --                  "dem-asset":    "<name of asset to use>"
 --                  "dem-type":     "<strip or mosaic>"
+--                  "dem-sampling": "<NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss>"
 --                  "coordinates": [
 --                      [<longitude>, <latitude>],
 --                      [<longitude>, <latitude>]...
@@ -22,6 +23,7 @@ local json = require("json")
 local rqst = json.decode(arg[1])
 local dem_asset = rqst["dem-asset"] or "arcticdem-local"
 local dem_type = rqst["dem-type"] or "mosaic"
+local dem_sampling = rqst["dem-sampling"] or "NearestNeighbour"
 local coord = rqst["coordinates"]
 
 local el, status, lat, lon
@@ -29,7 +31,7 @@ local elevations = {}
 
 
 -- Get Elevation --
-local dem = arcticdem.raster(dem_type)
+local dem = arcticdem.raster(dem_type, dem_sampling)
 
 
 for _, position in ipairs(coord) do

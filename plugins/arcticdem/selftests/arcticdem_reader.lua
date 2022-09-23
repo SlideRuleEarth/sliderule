@@ -4,6 +4,10 @@ asset = require("asset")
 csv = require("csv")
 json = require("json")
 
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
+
+
 -- Setup --
 
 local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
@@ -13,23 +17,22 @@ local arcticdem_local = core.getbyname(asset_name)
 -- Unit Test --
 
 -------------
-local lon = -74.60
-local lat = 82.86
-local dem = arcticdem.raster("strip")
-
+samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
 
 print('\n------------------\nTest: Strip Elevations\n------------')
 
-local etbl = dem:elevations(lon, lat)
+local lon = -74.60
+local lat = 82.86
 
-print('All strip elevations for:', lon, lat)
-for i, elevetaion in ipairs(etbl) do
-    local el = elevetaion["value"]
-    local date = elevetaion["date"]
-    print(i, el, date)
+for i = 1, 8 do
+    local dem = arcticdem.raster("mosaic", samplingAlgs[i])
+    local el, status = dem:elevation(lon, lat)
+    print(string.format("%20s  %f", samplingAlgs[i], el))
 end
 
--- os.exit()
+
+
+os.exit()
 
 
 -------------
@@ -45,9 +48,9 @@ for dems = 1, 2 do
     print('\n------------------\nTest: Reading milion points\n------------')
 
     if dems == 1 then
-        dem = arcticdem.raster("mosaic")
+        dem = arcticdem.raster("mosaic", "NearestNeighbour")
     else
-        dem = arcticdem.raster("strip")
+        dem = arcticdem.raster("strip", "NearestNeighbour")
     end
 
     runner.check(dem ~= nil)
