@@ -30,17 +30,22 @@ if status then
                 sys.log(core.INFO, string.format("New IAM role %s credentials fetched, expiration: %s", role, credential.Expiration))
 
                 -- store credentials for use by server
-                aws.csput(asset, credential)
+                rc = aws.csput(asset, credential)
 
-                -- calculate next fetch time
-                local now = time.gps()
-                local credential_gps = time.gmt2gps(credential.Expiration)
-                local credential_duration = credential_gps - now
-                local next_fetch_time = now + (credential_duration / 2)
+                if rc then
+                    -- calculate next fetch time
+                    local now = time.gps()
+                    local credential_gps = time.gmt2gps(credential.Expiration)
+                    local credential_duration = credential_gps - now
+                    local next_fetch_time = now + (credential_duration / 2)
 
-                -- wait until next fetch time
-                while sys.alive() and time.gps() < next_fetch_time do
-                    sys.wait(5)
+                    -- wait until next fetch time
+                    while sys.alive() and time.gps() < next_fetch_time do
+                        sys.wait(5)
+                    end
+                else
+                    sys.log(core.CRITICAL, string.format("Failed to process IAM role %s credentials, retrying in 60 seconds", role))
+                    sys.wait(60)
                 end
             else
                 sys.log(core.CRITICAL, string.format("Failed to retrieve IAM role %s credentials, retrying in 60 seconds", role))

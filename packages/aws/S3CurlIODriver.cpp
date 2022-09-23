@@ -110,11 +110,12 @@ static headers_t buildHeaders (const char* bucket, const char* key, CredentialSt
     if(credentials && credentials->provided)
     {
         /* Build SecurityToken Header */
-        SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+        SafeString securityTokenHeaderToSign("x-amz-security-token:%s", credentials->sessionToken);
+        SafeString securityTokenHeader("X-AMZ-Security-Token: %s", credentials->sessionToken);
         headers = curl_slist_append(headers, securityTokenHeader.getString());
 
         /* Build Authorization Header */
-        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
+        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeaderToSign.getString(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
         HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
@@ -133,9 +134,13 @@ static headers_t buildHeaders (const char* bucket, const char* key, CredentialSt
  *----------------------------------------------------------------------------*/
 static CURL* initializeRequest (const char* bucket, const char* key, const char* region, headers_t headers, write_cb_t write_cb, void* write_parm)
 {
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
     /* Build Host and URL String */
     SafeString host("%s.s3.%s.amazonaws.com", bucket, region);
-    SafeString url("https://%s/%s", host.getString(), key);
+    SafeString url("https://%s/%s", host.getString(), key_ptr);
 
     /* Initialize cURL */
     CURL* curl = curl_easy_init();
@@ -205,7 +210,7 @@ int S3CurlIODriver::luaGet(lua_State* L)
         const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);;
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
 
         /* Make Request */
         uint8_t* rsps_data = NULL;
