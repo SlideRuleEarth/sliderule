@@ -5,7 +5,7 @@
 local json = require("json")
 
 local aws_meta_url = "http://169.254.169.254/latest/meta-data/iam/security-credentials"
-local asset = "iam-role"
+local asset = arg[1] or "iam-role"
 
 -- get current EC2 role
 local response, status = netsvc.get(aws_meta_url)

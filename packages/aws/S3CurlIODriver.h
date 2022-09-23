@@ -59,7 +59,7 @@ class S3CurlIODriver: public Asset::IODriver
         static const long DEFAULT_SSL_VERIFYHOST = 0;
         static const int STARTING_NUM_CLIENTS = 32;
         static const char* DEFAULT_REGION;
-        static const char* DEFAULT_ENDPOINT;
+        static const char* DEFAULT_ASSET_NAME;
         static const char* FORMAT;
 
         /*--------------------------------------------------------------------
@@ -73,34 +73,11 @@ class S3CurlIODriver: public Asset::IODriver
     protected:
 
         /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            uint8_t*    buffer;
-            long        size;
-            long        index;
-        } fixed_data_t;
-
-        typedef struct {
-            char*       data;
-            long        size;
-        } streaming_data_t;
-
-
-        typedef struct curl_slist* headers_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                             S3CurlIODriver      (const Asset* _asset, const char* resource);
         virtual             ~S3CurlIODriver     (void);
-
-        static size_t       curlWriteFixed      (void *buffer, size_t size, size_t nmemb, void *userp);
-        static size_t       curlWriteStreaming  (void *buffer, size_t size, size_t nmemb, void *userp);
-        static headers_t    buildHeaders        (const char* bucket, const char* key,
-                                                 CredentialStore::Credential* credentials);
 
         // fixed GET - memory preallocated
         static int64_t      get                 (uint8_t* data, int64_t size, uint64_t pos,

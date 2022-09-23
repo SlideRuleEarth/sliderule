@@ -40,13 +40,133 @@
 #include <curl/curl.h>
 #include <openssl/hmac.h>
 
+
+/******************************************************************************
+ * LOCAL TYPEDEFS
+ ******************************************************************************/
+
+typedef struct {
+    uint8_t*    buffer;
+    long        size;
+    long        index;
+} fixed_data_t;
+
+typedef struct {
+    char*       data;
+    long        size;
+} streaming_data_t;
+
+typedef struct curl_slist* headers_t;
+
+typedef size_t (*write_cb_t)(void*, size_t, size_t, void*);
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * curlWriteFixed
+ *----------------------------------------------------------------------------*/
+static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    fixed_data_t* data = (fixed_data_t*)userp;
+    size_t rsps_size = size * nmemb;
+    size_t bytes_available = data->size - data->index;
+    size_t bytes_to_copy = MIN(rsps_size, bytes_available);
+    LocalLib::copy(&data->buffer[data->index], buffer, bytes_to_copy);
+    data->index += bytes_to_copy;
+    return bytes_to_copy;
+}
+
+/*----------------------------------------------------------------------------
+ * curlWriteStreaming
+ *----------------------------------------------------------------------------*/
+static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    List<streaming_data_t>* rsps_set = (List<streaming_data_t>*)userp;
+    streaming_data_t rsps;
+    rsps.size = size * nmemb;
+    rsps.data = new char [rsps.size];
+    LocalLib::copy(rsps.data, buffer, rsps.size);
+    rsps_set->add(rsps);
+    return rsps.size;
+}
+
+/*----------------------------------------------------------------------------
+ * buildHeaders
+ *----------------------------------------------------------------------------*/
+static headers_t buildHeaders (const char* bucket, const char* key, CredentialStore::Credential* credentials)
+{
+    /* Initial HTTP Header List */
+    struct curl_slist* headers = NULL;
+
+    /* Build Date String and Date Header */
+    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+    SafeString dateHeader("Date: %s", date.getString());
+    headers = curl_slist_append(headers, dateHeader.getString());
+
+    if(credentials && credentials->provided)
+    {
+        /* Build SecurityToken Header */
+        SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+        headers = curl_slist_append(headers, securityTokenHeader.getString());
+
+        /* Build Authorization Header */
+        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
+        unsigned char hash[EVP_MAX_MD_SIZE];
+        unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
+        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
+        SafeString encodedHash(64, hash, hash_size);
+        encodedHash.urlize();
+        SafeString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash.getString());
+        headers = curl_slist_append(headers, authorizationHeader.getString());
+    }
+
+    /* Return */
+    return headers;
+}
+
+/*----------------------------------------------------------------------------
+ * initializeRequest
+ *----------------------------------------------------------------------------*/
+static CURL* initializeRequest (const char* bucket, const char* key, const char* region, headers_t headers, write_cb_t write_cb, void* write_parm)
+{
+    /* Build Host and URL String */
+    SafeString host("%s.s3.%s.amazonaws.com", bucket, region);
+    SafeString url("https://%s/%s", host.getString(), key);
+
+    /* Initialize cURL */
+    CURL* curl = curl_easy_init();
+    if(curl)
+    {
+        /* Set Options */
+        curl_easy_setopt(curl, CURLOPT_URL, url.getString());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, S3CurlIODriver::DEFAULT_READ_TIMEOUT);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, S3CurlIODriver::DEFAULT_CONNECTION_TIMEOUT); // seconds
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, S3CurlIODriver::DEFAULT_SSL_VERIFYPEER);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, S3CurlIODriver::DEFAULT_SSL_VERIFYHOST);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, write_parm);
+    }
+    else
+    {
+        mlog(CRITICAL, "cURL failed to initialize");
+    }
+
+    /* Return Handle */
+    return curl;
+}
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* S3CurlIODriver::FORMAT = "s3curl";
 const char* S3CurlIODriver::DEFAULT_REGION = "us-west-2";
-const char* S3CurlIODriver::DEFAULT_ENDPOINT = "https://s3.us-west-2.amazonaws.com";
+const char* S3CurlIODriver::DEFAULT_ASSET_NAME = "iam-role";
+const char* S3CurlIODriver::FORMAT = "s3curl";
 
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
@@ -82,11 +202,14 @@ int S3CurlIODriver::luaGet(lua_State* L)
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
         const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
-//        const char* endpoint    = LuaObject::getLuaString(L, 4, true, DEFAULT_ENDPOINT);
+        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);;
 
         /* Make Request */
         uint8_t* rsps_data = NULL;
-        int64_t rsps_size = get(&rsps_data, bucket, key, region, NULL);
+        int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(*rsps_data)
@@ -151,116 +274,28 @@ S3CurlIODriver::~S3CurlIODriver (void)
 }
 
 /*----------------------------------------------------------------------------
- * curlWriteFixed
- *----------------------------------------------------------------------------*/
-size_t S3CurlIODriver::curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *userp)
-{
-    fixed_data_t* data = (fixed_data_t*)userp;
-
-    size_t rsps_size = size * nmemb;
-    size_t bytes_available = data->size - data->index;
-    size_t bytes_to_copy = MIN(rsps_size, bytes_available);
-
-    LocalLib::copy(&data->buffer[data->index], buffer, bytes_to_copy);
-    data->index += bytes_to_copy;
-
-    return bytes_to_copy;
-}
-
-/*----------------------------------------------------------------------------
- * curlWriteStreaming
- *----------------------------------------------------------------------------*/
-size_t S3CurlIODriver::curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
-{
-    List<streaming_data_t>* rsps_set = (List<streaming_data_t>*)userp;
-
-    streaming_data_t rsps;
-    rsps.size = size * nmemb;
-    rsps.data = new char [rsps.size];
-    LocalLib::copy(rsps.data, buffer, rsps.size);
-    rsps_set->add(rsps);
-
-    return rsps.size;
-}
-
-/*----------------------------------------------------------------------------
- * buildHeaders
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::headers_t S3CurlIODriver::buildHeaders (const char* bucket, const char* key, CredentialStore::Credential* credentials)
-{
-    /* Initial HTTP Header List */
-    struct curl_slist* headers = NULL;
-
-    /* Build Date String and Date Header */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
-    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
-    SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
-    SafeString dateHeader("Date: %s", date.getString());
-    headers = curl_slist_append(headers, dateHeader.getString());
-
-    if(credentials && credentials->provided)
-    {
-        /* Build SecurityToken Header */
-        SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
-        headers = curl_slist_append(headers, securityTokenHeader.getString());
-
-        /* Build Authorization Header */
-        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
-        unsigned char hash[EVP_MAX_MD_SIZE];
-        unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
-        SafeString encodedHash(64, hash, hash_size);
-        encodedHash.urlize();
-        SafeString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash.getString());
-        headers = curl_slist_append(headers, authorizationHeader.getString());
-    }
-
-    /* Return */
-    return headers;
-}
-
-/*----------------------------------------------------------------------------
  * get - fixed
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
 {
-    /* Build Host and URL String */
-    SafeString host("%s.s3.%s.amazonaws.com", bucket, region);
-    SafeString url("https://%s/%s", host.getString(), key);
+    bool status = false;
 
     /* Build Headers */
     struct curl_slist* headers = buildHeaders(bucket, key, credentials);
-
-    /* Build Range Header */
     SafeString rangeHeader("Range: bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size - 1));
     headers = curl_slist_append(headers, rangeHeader.getString());
 
-    /* Initialize cURL */
-    CURL* curl = curl_easy_init();
-    try
+    /* Setup Buffer for Callback */
+    fixed_data_t info = {
+        .buffer = data,
+        .size = size,
+        .index = 0
+    };
+
+    /* Initialize cURL Request */
+    CURL* curl = initializeRequest(bucket, key, region, headers, curlWriteFixed, &info);
+    if(curl)
     {
-        if(!curl)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to initialize curl");
-        }
-
-        /* Setup Buffer for Callback */
-        fixed_data_t info = {
-            .buffer = data,
-            .size = size,
-            .index = 0
-        };
-
-        /* Set Options */
-        curl_easy_setopt(curl, CURLOPT_URL, url.getString());
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, DEFAULT_READ_TIMEOUT);
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONNECTION_TIMEOUT); // seconds
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, DEFAULT_SSL_VERIFYPEER);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, DEFAULT_SSL_VERIFYHOST);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteFixed);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &info);
-
         /* Perform Request */
         CURLcode res = curl_easy_perform(curl);
         if(res == CURLE_OK)
@@ -268,26 +303,31 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
             /* Get HTTP Code */
             long http_code = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if(http_code != 200)
+            if(http_code == 200)
             {
+                /* Request Succeeded */
+                status = true;
+            }
+            else
+            {
+                /* Request Failed */
                 StringLib::printify((char*)info.buffer, info.index);
                 mlog(INFO, "%s", info.buffer);
-                throw RunTimeException(CRITICAL, RTE_ERROR, "S3 get returned http error <%ld>", http_code);
+                mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
             }
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed: %ld", (long)res);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
+
+        /* Clean Up cURL */
         curl_easy_cleanup(curl);
-        throw; // rethrow after cleaning up curl
+    }
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed");
     }
 
     /* Return Success */
-    curl_easy_cleanup(curl);
     return size;
 }
 
@@ -296,39 +336,21 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
 {
-    assert(data);
-    *data = NULL;
+    /* Initialize Function Parameters */
+    bool status = false;
     int64_t rsps_size = 0;
-
-    /* Build Host and URL String */
-    SafeString host("%s.s3.%s.amazonaws.com", bucket, region);
-    SafeString url("https://%s/%s", host.getString(), key);
+    *data = NULL;
 
     /* Build Headers */
     struct curl_slist* headers = buildHeaders(bucket, key, credentials);
 
-    /* Initialize cURL */
-    CURL* curl = curl_easy_init();
-    try
+    /* Setup Streaming Data for Callback */
+    List<streaming_data_t> rsps_set;
+
+    /* Initialize cURL Request */
+    CURL* curl = initializeRequest(bucket, key, region, headers, curlWriteStreaming, &rsps_set);
+    if(curl)
     {
-        if(!curl)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to initialize curl");
-        }
-
-        /* Setup Streaming Data for Callback */
-        List<streaming_data_t> rsps_set;
-
-        /* Set Options */
-        curl_easy_setopt(curl, CURLOPT_URL, url.getString());
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, DEFAULT_READ_TIMEOUT);
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONNECTION_TIMEOUT); // seconds
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, DEFAULT_SSL_VERIFYPEER);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, DEFAULT_SSL_VERIFYHOST);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteStreaming);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
-
         /* Perform Request */
         CURLcode res = curl_easy_perform(curl);
         if(res == CURLE_OK)
@@ -347,34 +369,44 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
             {
                 LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
                 rsps_index += rsps_set[i].size;
-                delete [] rsps_set[i].data;
             }
             rsps[rsps_index] = '\0';
 
             /* Get HTTP Code */
             long http_code = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if(http_code != 200)
+            if(http_code == 200)
             {
+                /* Request Succeeded */
+                status = true;
+            }
+            else
+            {
+                /* Request Failed */
                 StringLib::printify((char*)rsps, rsps_size + 1);
                 mlog(INFO, "%s", (const char*)rsps);
                 delete [] *data; // clean up memory
                 *data = NULL;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "S3 get returned http error <%ld>", http_code);
+                mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
             }
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed: %ld", (long)res);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
+
+        /* Clean Up cURL */
         curl_easy_cleanup(curl);
-        throw; // rethrow after cleaning up curl
+    }
+
+    /* Clean Up Response List */
+    for(int i = 0; i < rsps_set.length(); i++)
+    {
+        delete [] rsps_set[i].data;
+    }
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed");
     }
 
     /* Return Success */
-    curl_easy_cleanup(curl);
     return rsps_size;
 }
