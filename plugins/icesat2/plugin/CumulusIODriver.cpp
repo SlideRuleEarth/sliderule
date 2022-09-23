@@ -92,7 +92,7 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
      * REDO the ioBucket and ioKey
      */
     delete [] ioBucket;
-    ioBucket = updated_resource.getString(true);
+    ioBucket = (char*)updated_resource.getString(true);
 
     /*
     * Differentiate Bucket and Key
