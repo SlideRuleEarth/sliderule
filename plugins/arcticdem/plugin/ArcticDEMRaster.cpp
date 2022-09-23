@@ -133,9 +133,11 @@ int ArcticDEMRaster::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 ArcticDEMRaster* ArcticDEMRaster::create (lua_State* L, int index)
 {
+    const char* dem_sampling = getLuaString(L, -1);
+    lua_pop(L, 1);
     const char* dem_type = getLuaString(L, -1);
     lua_pop(L, 1);
-    return new ArcticDEMRaster(L, dem_type);
+    return new ArcticDEMRaster(L, dem_type, dem_sampling);
 }
 
 
@@ -311,31 +313,57 @@ float ArcticDEMRaster::readRaster(OGRPoint* p)
         if(rdset)
         {
             /* Raster row, col for point */
-            uint32_t col = (p->getX() - bbox.lon_min) / cellsize;
-            uint32_t row = (bbox.lat_max - p->getY()) / cellsize;
-
-            /* Raster offsets to block of interest */
-            uint32_t xblk = col / xblocksize;
-            uint32_t yblk = row / yblocksize;
+            const uint32_t col = (p->getX() - bbox.lon_min) / cellsize;
+            const uint32_t row = (bbox.lat_max - p->getY()) / cellsize;
 
             GDALRasterBand *band = rdset->GetRasterBand(1);
             CHECKPTR(band);
-            GDALRasterBlock *block = band->GetLockedBlockRef(xblk, yblk, false);
-            CHECKPTR(block);
 
-            float *p = (float *)block->GetDataRef();
-            CHECKPTR(p);
+            if(resamplingAlg == GRIORA_NearestNeighbour)
+            {
+                /* Raster offsets to block of interest */
+                uint32_t xblk = col / xblocksize;
+                uint32_t yblk = row / yblocksize;
 
-            /* Block row, col for point */
-            uint32_t  _col = col % xblocksize;
-            uint32_t  _row = row % yblocksize;
-            uint32_t  offset = _row * xblocksize + _col;
+                GDALRasterBlock *block = band->GetLockedBlockRef(xblk, yblk, false);
+                CHECKPTR(block);
 
-            // mlog(DEBUG, "col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
-            //      col, row, xblk, yblk, _col, _row, offset);
+                float *p = (float *)block->GetDataRef();
+                CHECKPTR(p);
 
-            elevation = p[offset];
-            block->DropLock();
+                /* Block row, col for point */
+                uint32_t _col = col % xblocksize;
+                uint32_t _row = row % yblocksize;
+                uint32_t offset = _row * xblocksize + _col;
+
+                elevation = p[offset];
+                block->DropLock();
+
+                mlog(DEBUG, "Elevation: %f, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
+                     elevation, col, row, xblk, yblk, _col, _row, offset);
+            }
+            else
+            {
+                float rbuf[1] = {0};
+
+                int mycol = col-15;
+                int myrow = row-15;
+
+                if(mycol<0) mycol = 0;
+                if(myrow<0) myrow = 0;
+
+                int size = 32;
+
+                GDALRasterIOExtraArg args;
+                INIT_RASTERIO_EXTRA_ARG(args);
+                args.eResampleAlg = resamplingAlg;
+                CPLErr err = band->RasterIO(GF_Read, mycol, myrow, size, size,
+                                              rbuf, 1, 1, GDT_Float32,
+                                              0, 0, &args);
+
+                elevation = rbuf[0];
+                mlog(DEBUG, "Resampled elevation:  %f", rbuf[0]);
+            }
         }
     }
     catch(const RunTimeException& e)
@@ -359,25 +387,38 @@ static const char *getUuid(char *uuid_str)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type):
+ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char* dem_sampling):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool objCreated = false;
 
     CHECKPTR(dem_type);
+    CHECKPTR(dem_sampling);
 
-    if (!strncasecmp(dem_type, "mosaic", strlen("mosaic")))
+    if (!strcasecmp(dem_type, "mosaic"))
     {
         indexfname = "/data/ArcticDEM/mosaic/ArcticDEM_Tile_Index_Rel7/ArcticDEM_Tile_Index_Rel7.shp";
         ismosaic = true;
     }
-    else if(!strncasecmp(dem_type, "strip" , strlen("strip")))
+    else if(!strcasecmp(dem_type, "strip"))
     {
         indexfname = "/data/ArcticDEM/strip/ArcticDEM_Strip_Index_Rel7/ArcticDEM_Strip_Index_Rel7.shp";
         ismosaic = false;
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid dem_type: %s:", dem_type);
+
+
+    if     (!strcasecmp(dem_sampling, "NearestNeighbour")) resamplingAlg = GRIORA_NearestNeighbour;
+    else if(!strcasecmp(dem_sampling, "Bilinear"))         resamplingAlg = GRIORA_Bilinear;
+    else if(!strcasecmp(dem_sampling, "Cubic"))            resamplingAlg = GRIORA_Cubic;
+    else if(!strcasecmp(dem_sampling, "CubicSpline"))      resamplingAlg = GRIORA_CubicSpline;
+    else if(!strcasecmp(dem_sampling, "Lanczos"))          resamplingAlg = GRIORA_Lanczos;
+    else if(!strcasecmp(dem_sampling, "Average"))          resamplingAlg = GRIORA_Average;
+    else if(!strcasecmp(dem_sampling, "Mode"))             resamplingAlg = GRIORA_Mode;
+    else if(!strcasecmp(dem_sampling, "Gauss"))            resamplingAlg = GRIORA_Gauss;
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid dem_sampling: %s:", dem_sampling);
+
 
     /* Initialize Class Data Members */
     rdset = NULL;
@@ -602,7 +643,6 @@ int ArcticDEMRaster::luaElevations(lua_State *L)
                 LuaEngine::setAttrStr(L, "date",  el.date.c_str());
                 lua_rawseti(L, -2, i+1);
             }
-
 
             num_ret++;
             status = true;

@@ -104,7 +104,7 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDEMRaster     (lua_State* L, const char* dem_type);
+        ArcticDEMRaster     (lua_State* L, const char* dem_type, const char* dem_sampling);
         bool  findNewRaster (OGRPoint* p, bool reset=true);
         float readRaster    (OGRPoint* p);
 
@@ -131,6 +131,7 @@ class ArcticDEMRaster: public LuaObject
         OGRCoordinateTransformation *latlon2xy;
         OGRSpatialReference source;
         OGRSpatialReference target;
+        GDALRIOResampleAlg  resamplingAlg;
 
         /*--------------------------------------------------------------------
          * Methods
