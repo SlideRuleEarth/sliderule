@@ -83,7 +83,7 @@ jobs:
        sudo echo "#define __tracing__" >> /usr/local/include/sliderule/platform.h
        sudo echo "#define __terminal__" >> /usr/local/include/sliderule/platform.h
        make icesat2-config
-       make
+       make icesat2
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
