@@ -54,7 +54,7 @@ int aws_open (lua_State *L)
     static const struct luaL_Reg aws_functions[] = {
         {"csget",       CredentialStore::luaGet},
         {"csput",       CredentialStore::luaPut},
-        {"s3curlget",   S3CurlIODriver::luaGet},
+        {"s3get",       S3CurlIODriver::luaGet},
         {"s3cache",     S3CacheIODriver::luaCreateCache},
         {NULL,          NULL}
     };

@@ -11,6 +11,6 @@ local auth_script = core.script(auth):name("AuthScript")
 print("waiting...")
 sys.wait(3)
 
-local response, _ = aws.s3curlget(bucket, key, region, asset)
+local response, _ = aws.s3get(bucket, key, region, asset)
 
 print(response)

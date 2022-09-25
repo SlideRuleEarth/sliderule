@@ -182,7 +182,7 @@ static CURL* initializeRequest (const char* bucket, const char* key, const char*
 
 const char* S3CurlIODriver::DEFAULT_REGION = "us-west-2";
 const char* S3CurlIODriver::DEFAULT_ASSET_NAME = "iam-role";
-const char* S3CurlIODriver::FORMAT = "s3curl";
+const char* S3CurlIODriver::FORMAT = "s3";
 
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
@@ -205,7 +205,7 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 }
 
 /*----------------------------------------------------------------------------
- * luaGet - s3curlget(<bucket>, <key>, [<region>], [<endpoint>]) -> contents
+ * luaGet - s3get(<bucket>, <key>, [<region>], [<endpoint>]) -> contents
  *----------------------------------------------------------------------------*/
 int S3CurlIODriver::luaGet(lua_State* L)
 {
