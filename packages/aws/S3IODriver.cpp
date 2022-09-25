@@ -38,9 +38,9 @@
 #include "Asset.h"
 
 #include <aws/core/Aws.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/model/GetObjectRequest.h>
 #include <aws/core/auth/AWSCredentials.h>
+#include <aws/s3-crt/S3CrtClient.h>
+#include <aws/s3-crt/model/GetObjectRequest.h>
 
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
@@ -48,7 +48,7 @@
 
 struct S3IODriver::impl
 {
-    Aws::S3::S3Client* s3_client;
+    Aws::S3Crt::S3CrtClient* s3_client;
 };
 
 /******************************************************************************
@@ -77,7 +77,7 @@ Asset::IODriver* S3IODriver::create (const Asset* _asset, const char* resource)
 int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     int64_t bytes_read = 0;
-    Aws::S3::Model::GetObjectRequest object_request;
+    Aws::S3Crt::Model::GetObjectRequest object_request;
 
     /* Set Bucket and Key */
     object_request.SetBucket(ioBucket);
@@ -88,7 +88,7 @@ int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     object_request.SetRange(s3_rqst_range.getString());
 
     /* Make Request */
-    Aws::S3::Model::GetObjectOutcome response = pimpl->s3_client->GetObject(object_request);
+    Aws::S3Crt::Model::GetObjectOutcome response = pimpl->s3_client->GetObject(object_request);
     bool status = response.IsSuccess();
 
     /* Read Response */
@@ -116,7 +116,7 @@ int S3IODriver::luaGet(lua_State* L)
 {
     bool status = false;
     int num_rets = 1;
-    Aws::S3::S3Client* s3_client = NULL;
+    Aws::S3Crt::S3CrtClient* s3_client = NULL;
 
     try
     {
@@ -129,20 +129,20 @@ int S3IODriver::luaGet(lua_State* L)
         /* Initialize Variables for Read */
         char* data = NULL;
         int64_t bytes_read = 0;
-        Aws::S3::Model::GetObjectRequest object_request;
+        Aws::S3Crt::Model::GetObjectRequest object_request;
 
         /* Set Bucket and Key */
         object_request.SetBucket(bucket);
         object_request.SetKey(key);
 
         /* Create S3 Client */
-        Aws::Client::ClientConfiguration client_config;
+        Aws::S3Crt::ClientConfiguration client_config;
         client_config.endpointOverride = endpoint;
         client_config.region = region;
-        s3_client = new Aws::S3::S3Client(client_config);
+        s3_client = new Aws::S3Crt::S3CrtClient(client_config);
 
         /* Make Request */
-        Aws::S3::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
+        Aws::S3Crt::Model::GetObjectOutcome response = s3_client->GetObject(object_request);
         if(response.IsSuccess())
         {
             bytes_read = (int64_t)response.GetResult().GetContentLength();
@@ -201,7 +201,7 @@ S3IODriver::S3IODriver (const Asset* _asset, const char* resource):
     CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
 
     /* Create S3 Client Configuration */
-    Aws::Client::ClientConfiguration client_config;
+    Aws::S3Crt::ClientConfiguration client_config;
     client_config.region = asset->getRegion();
     client_config.endpointOverride = asset->getEndpoint();
 
@@ -213,11 +213,11 @@ S3IODriver::S3IODriver (const Asset* _asset, const char* resource):
         const Aws::String secretAccessKey(latest_credential.secretAccessKey);
         const Aws::String sessionToken(latest_credential.sessionToken);
         Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
-        pimpl->s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
+        pimpl->s3_client = new Aws::S3Crt::S3CrtClient(awsCredentials, client_config);
     }
     else
     {
-        pimpl->s3_client = new Aws::S3::S3Client(client_config);
+        pimpl->s3_client = new Aws::S3Crt::S3CrtClient(client_config);
     }
 }
 

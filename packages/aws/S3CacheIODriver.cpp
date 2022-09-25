@@ -34,20 +34,16 @@
  ******************************************************************************/
 
 #include "S3CacheIODriver.h"
+#include "S3CurlIODriver.h"
 #include "CredentialStore.h"
 #include "OsApi.h"
 #include "Asset.h"
-
-#include <aws/core/Aws.h>
-#include <aws/transfer/TransferManager.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/model/GetObjectRequest.h>
-#include <aws/core/auth/AWSCredentials.h>
 
 #include <assert.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <dirent.h>
+#include <string.h>
 
 /******************************************************************************
  * STATIC DATA
@@ -198,44 +194,20 @@ int64_t S3CacheIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
  * Constructor
  *----------------------------------------------------------------------------*/
 S3CacheIODriver::S3CacheIODriver (const Asset* _asset, const char* resource):
-    asset(_asset)
+    S3CurlIODriver(_asset, resource)
 {
     ioFile = NULL;
 
     /* Check if Cache Created */
     if(cacheRoot == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "cache has not been created yet");
 
-    /* Create Path to Resource */
-    SafeString resourcepath("%s/%s", asset->getPath(), resource);
-
-    /* Allocate Bucket String */
-    char* bucket = StringLib::duplicate(resourcepath.getString());
-
-    /*
-    * Differentiate Bucket and Key
-    *  <bucket_name>/<path_to_file>/<filename>
-    *  |             |
-    * ioBucket      ioKey
-    */
-    char* key = bucket;
-    while(*key != '\0' && *key != '/') key++;
-    if(*key == '/')
+    /* Get Cached File */
+    const char* filename = NULL;
+    if(fileGet(ioBucket, ioKey, &filename))
     {
-        /* Terminate Bucket and Set Key */
-        *key = '\0';
-        key++;
-
-        /* Get Cached File */
-        const char* filename = NULL;
-        if(fileGet(bucket, key, &filename))
-        {
-            ioFile = fopen(filename, "r");
-            delete [] filename;
-        }
+        ioFile = fopen(filename, "r");
+        delete [] filename;
     }
-
-    /* Free Bucket String */
-    delete [] bucket;
 
     /* Check if File Opened */
     if(ioFile == NULL)
@@ -258,8 +230,6 @@ S3CacheIODriver::~S3CacheIODriver (void)
  *----------------------------------------------------------------------------*/
 bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char** file)
 {
-    const char* ALLOC_TAG = __FUNCTION__;
-
     /* Check Cache */
     bool found_in_cache = false;
     cacheMut.lock();
@@ -291,57 +261,11 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
         return true;
     }
 
-    /* Build AWS String Parameters */
-    const Aws::String bucket_name = bucket;
-    const Aws::String key_name = key;
-    const Aws::String file_name = cache_filepath.getString();
-
-    /* Get Latest Credentials */
-    CredentialStore::Credential latest_credential = CredentialStore::get(asset->getName());
-
-    /* Create S3 Client Configuration */
-    Aws::Client::ClientConfiguration client_config;
-    client_config.endpointOverride = asset->getEndpoint();
-    client_config.region = asset->getRegion();
-
-    /* Create S3 Client */
-    Aws::S3::S3Client* s3_client;
-    if(latest_credential.provided)
-    {
-        const Aws::String accessKeyId(latest_credential.accessKeyId);
-        const Aws::String secretAccessKey(latest_credential.secretAccessKey);
-        const Aws::String sessionToken(latest_credential.sessionToken);
-        Aws::Auth::AWSCredentials awsCredentials(accessKeyId, secretAccessKey, sessionToken);
-        s3_client = new Aws::S3::S3Client(awsCredentials, client_config);
-    }
-    else
-    {
-        s3_client = new Aws::S3::S3Client(client_config);
-    }
-
-    /* Create Transfer Configuration */
-    auto thread_executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(ALLOC_TAG, 4);
-    Aws::Transfer::TransferManagerConfiguration transfer_config(thread_executor.get());
-    std::shared_ptr<Aws::S3::S3Client> transfer_client(s3_client);
-    transfer_config.s3Client = transfer_client;
-
-    /* Create Transfer Manager */
-    auto transfer_manager = Aws::Transfer::TransferManager::Create(transfer_config);
-
     /* Download File */
-    auto transfer_handle = transfer_manager->DownloadFile(bucket_name, key_name, file_name);
-
-    /* Wait for Download to Complete */
-    transfer_handle->WaitUntilFinished();
-    auto transfer_status = transfer_handle->GetStatus();
-
-    /* Clean Up Transfer Configuration */
-    delete s3_client;
-
-    /* Handle Status */
-    if(transfer_status != Aws::Transfer::TransferStatus::COMPLETED)
+    int64_t bytes_read = get(cache_filepath.getString(), bucket, key, asset->getRegion(), &latestCredentials);
+    if(bytes_read <= 0)
     {
-        mlog(CRITICAL, "Failed to transfer S3 object: %d", (int)transfer_status);
+        mlog(CRITICAL, "Failed to download S3 object: %ld", (long int)bytes_read);
         return false;
     }
 

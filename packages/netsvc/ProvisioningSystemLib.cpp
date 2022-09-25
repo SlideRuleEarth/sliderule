@@ -160,6 +160,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
 
             /* Always Cleanup */
             curl_easy_cleanup(curl);
+            curl_slist_free_all(headers);
         }
     }
     catch(const RunTimeException& e)
@@ -229,6 +230,7 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
 
             /* Always Cleanup */
             curl_easy_cleanup(curl);
+            curl_slist_free_all(headers);
         }
     }
     catch(const RunTimeException& e)

@@ -56,6 +56,11 @@ typedef struct {
     long        size;
 } streaming_data_t;
 
+typedef struct {
+    FILE*       fd;
+    long        size;
+} file_data_t;
+
 typedef struct curl_slist* headers_t;
 
 typedef size_t (*write_cb_t)(void*, size_t, size_t, void*);
@@ -82,6 +87,18 @@ static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *user
  * curlWriteStreaming
  *----------------------------------------------------------------------------*/
 static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    file_data_t* data = (file_data_t*)userp;
+    size_t rsps_size = size * nmemb;
+    size_t bytes_written = fwrite(buffer, rsps_size, 1, data->fd);
+    if(bytes_written > 0) data->size += rsps_size;
+    return bytes_written;
+}
+
+/*----------------------------------------------------------------------------
+ * curlWriteFile
+ *----------------------------------------------------------------------------*/
+static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp)
 {
     List<streaming_data_t>* rsps_set = (List<streaming_data_t>*)userp;
     streaming_data_t rsps;
@@ -337,6 +354,9 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         curl_easy_cleanup(curl);
     }
 
+    /* Clean Up Headers */
+    curl_slist_free_all(headers);
+
     /* Throw Exception on Failure */
     if(!status)
     {
@@ -415,6 +435,9 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
         curl_easy_cleanup(curl);
     }
 
+    /* Clean Up Headers */
+    curl_slist_free_all(headers);
+
     /* Clean Up Response List */
     for(int i = 0; i < rsps_set.length(); i++)
     {
@@ -429,4 +452,68 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
 
     /* Return Success */
     return rsps_size;
+}
+
+/*----------------------------------------------------------------------------
+ * get - file
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+{
+    bool status = false;
+
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
+    /* Build Headers */
+    struct curl_slist* headers = buildHeaders(bucket, key_ptr, credentials);
+
+    /* Setup File Data for Callback */
+    file_data_t data;
+    data.size = 0;
+    data.fd = fopen(filename, "w");
+    if(data.fd)
+    {
+        /* Initialize cURL Request */
+        CURL* curl = initializeRequest(bucket, key_ptr, region, headers, curlWriteFile, &data);
+        if(curl)
+        {
+            /* Perform Request */
+            CURLcode res = curl_easy_perform(curl);
+            if(res == CURLE_OK)
+            {
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code < 300)
+                {
+                    /* Request Succeeded */
+                    status = true;
+                }
+                else
+                {
+                    /* Request Failed */
+                    mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                }
+            }
+
+            /* Clean Up cURL */
+            curl_easy_cleanup(curl);
+        }
+
+        /* Close File */
+        fclose(data.fd);
+    }
+
+    /* Clean Up Headers */
+    curl_slist_free_all(headers);
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed");
+    }
+
+    /* Return Success */
+    return data.size;
 }

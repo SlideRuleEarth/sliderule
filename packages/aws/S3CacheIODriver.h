@@ -41,12 +41,13 @@
 #include "LuaEngine.h"
 #include "Ordering.h"
 #include "Dictionary.h"
+#include "S3CurlIODriver.h"
 
 /******************************************************************************
  * S3 CACHE IO DRIVER CLASS
  ******************************************************************************/
 
-class S3CacheIODriver: Asset::IODriver
+class S3CacheIODriver: public S3CurlIODriver
 {
     public:
 

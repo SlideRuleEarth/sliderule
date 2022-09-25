@@ -57,7 +57,6 @@ class S3CurlIODriver: public Asset::IODriver
         static const long DEFAULT_READ_TIMEOUT = 10; // seconds
         static const long DEFAULT_SSL_VERIFYPEER = 0;
         static const long DEFAULT_SSL_VERIFYHOST = 0;
-        static const int STARTING_NUM_CLIENTS = 32;
         static const char* DEFAULT_REGION;
         static const char* DEFAULT_ASSET_NAME;
         static const char* FORMAT;
@@ -87,6 +86,11 @@ class S3CurlIODriver: public Asset::IODriver
 
         // streaming GET - memory allocated and returned
         static int64_t      get                 (uint8_t** data,
+                                                 const char* bucket, const char* key, const char* region,
+                                                 CredentialStore::Credential* credentials);
+
+        // file GET - data written directly to file
+        static int64_t      get                 (const char* filename,
                                                  const char* bucket, const char* key, const char* region,
                                                  CredentialStore::Credential* credentials);
 
