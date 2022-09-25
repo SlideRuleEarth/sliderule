@@ -1,19 +1,15 @@
-
-# Prefer static over shared
-list ( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
-list ( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
-
-# Find AWS libraries
-find_package(AWSSDK REQUIRED COMPONENTS s3-crt)
+# Find cURL Library
+find_package (CURL)
 
 # Build package
-if (AWSSDK_LINK_LIBRARIES)
+if (CURL_FOUND)
 
     message (STATUS "Including aws package")
 
     target_compile_definitions (slideruleLib PUBLIC __aws__)
 
-    target_link_libraries (slideruleLib PUBLIC ${AWSSDK_LINK_LIBRARIES})
+    target_link_libraries (slideruleLib PUBLIC ${CURL_LIBRARIES})
+    target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
 
     target_sources(slideruleLib
         PRIVATE
