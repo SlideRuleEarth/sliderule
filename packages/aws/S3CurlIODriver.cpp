@@ -233,6 +233,19 @@ int S3CurlIODriver::luaGet(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor - for derived classes
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::S3CurlIODriver (const Asset* _asset):
+    asset(_asset)
+{
+    ioBucket = NULL;
+    ioKey = NULL;
+
+    /* Get Latest Credentials */
+    latestCredentials = CredentialStore::get(asset->getName());
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
@@ -306,7 +319,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
             /* Get HTTP Code */
             long http_code = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if(http_code == 200)
+            if(http_code < 300)
             {
                 /* Request Succeeded */
                 status = true;
@@ -382,7 +395,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
             /* Get HTTP Code */
             long http_code = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if(http_code == 200)
+            if(http_code < 300)
             {
                 /* Request Succeeded */
                 status = true;

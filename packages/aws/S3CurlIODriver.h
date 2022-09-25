@@ -76,6 +76,7 @@ class S3CurlIODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
+                            S3CurlIODriver      (const Asset* _asset);
                             S3CurlIODriver      (const Asset* _asset, const char* resource);
         virtual             ~S3CurlIODriver     (void);
 
