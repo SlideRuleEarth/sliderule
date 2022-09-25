@@ -13,15 +13,12 @@ if (AWSSDK_LINK_LIBRARIES)
 
     target_compile_definitions (slideruleLib PUBLIC __aws__)
 
-    target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-DENABLE_AWS_LOGGING>")
-
     target_link_libraries (slideruleLib PUBLIC ${AWSSDK_LINK_LIBRARIES})
 
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/aws.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.cpp
             ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.cpp
     )
@@ -36,7 +33,6 @@ if (AWSSDK_LINK_LIBRARIES)
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/aws.h
             ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.h
-            ${CMAKE_CURRENT_LIST_DIR}/S3IODriver.h
             ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.h
             ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.h
         DESTINATION

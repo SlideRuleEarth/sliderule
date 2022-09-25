@@ -33,8 +33,6 @@
  *INCLUDES
  ******************************************************************************/
 
-#include <aws/core/Aws.h>
-
 #include "core.h"
 #include "aws.h"
 
@@ -43,12 +41,6 @@
  ******************************************************************************/
 
 #define LUA_AWS_LIBNAME         "aws"
-
-/******************************************************************************
- * FILE DATA
- ******************************************************************************/
-
-Aws::SDKOptions options;
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -62,7 +54,6 @@ int aws_open (lua_State *L)
     static const struct luaL_Reg aws_functions[] = {
         {"csget",       CredentialStore::luaGet},
         {"csput",       CredentialStore::luaPut},
-        {"s3get",       S3IODriver::luaGet},
         {"s3curlget",   S3CurlIODriver::luaGet},
         {"s3cache",     S3CacheIODriver::luaCreateCache},
         {NULL,          NULL}
@@ -81,22 +72,10 @@ int aws_open (lua_State *L)
 extern "C" {
 void initaws (void)
 {
-    /* Configure AWS Logging */
-    #ifdef ENABLE_AWS_LOGGING
-    options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
-    #endif
-
-    /* Configure AWS to Handle Broken Pipes */
-    options.httpOptions.installSigPipeHandler = true;
-
-    /* Initialize AWS SDK */
-    Aws::InitAPI(options);
-
     /* Initialize Modules */
     CredentialStore::init();
 
     /* Register I/O Drivers */
-    Asset::registerDriver(S3IODriver::FORMAT, S3IODriver::create);
     Asset::registerDriver(S3CacheIODriver::FORMAT, S3CacheIODriver::create);
     Asset::registerDriver(S3CurlIODriver::FORMAT, S3CurlIODriver::create);
 
@@ -114,8 +93,5 @@ void deinitaws (void)
 {
     /* Uninitialize Modules */
     CredentialStore::deinit();
-
-    /* Uninitialize AWS SDK */
-    Aws::ShutdownAPI(options);
 }
 }

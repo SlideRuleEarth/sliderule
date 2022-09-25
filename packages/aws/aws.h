@@ -37,7 +37,6 @@
  ******************************************************************************/
 
 #include "CredentialStore.h"
-#include "S3IODriver.h"
 #include "S3CacheIODriver.h"
 #include "S3CurlIODriver.h"
 
