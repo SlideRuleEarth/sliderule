@@ -1,11 +1,16 @@
 local console = require("console")
 
-local bucket = arg[1] or "icesat2-sliderule"
-local key = arg[2] or "/config/netrc"
+local bucket    = arg[1] or "icesat2-sliderule"
+local key       = arg[2] or "/config/netrc"
+local auth      = arg[3] or "iam_role_auth"
+local region    = arg[4] or "us-west-2"
+local asset     = arg[5] or "iam-role"
 
-local auth_script = core.script("iam_role_auth"):name("AuthScript")
-sys.wait(2)
+local auth_script = core.script(auth):name("AuthScript")
 
-local response, status = aws.s3curlget("icesat2-sliderule", "/config/netrc")
+print("waiting...")
+sys.wait(3)
+
+local response, _ = aws.s3curlget(bucket, key, region, asset)
 
 print(response)

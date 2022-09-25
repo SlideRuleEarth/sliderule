@@ -1,5 +1,7 @@
 ROOT = $(shell pwd)
-BUILD = $(ROOT)/build
+BUILD = $(ROOT)/build/sliderule
+ATLAS_BUILD = $(ROOT)/build/atlas
+ICESAT2_BUILD = $(ROOT)/build/icesat2
 
 # when using the llvm toolchain to build the source
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -7,9 +9,9 @@ CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverri
 # for a MacOSX host to have this ip command you must install homebrew(see https://brew.sh/) then run 'brew install iproute2mac' on your mac host
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 
-######################
-# Development Targets
-######################
+########################
+# Core Framework Targets
+########################
 
 all: default-build
 
@@ -38,6 +40,16 @@ development-config: prep ## configure make for development version of sliderule 
 development-config-debug: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
 
+install: ## install sliderule to system
+	make -C $(BUILD) install
+
+uninstall: ## uninstall most recent install of sliderule from system
+	xargs rm < $(BUILD)/install_manifest.txt
+
+########################
+# Python Binding Targets
+########################
+
 PYTHONCFG  = -DPYTHON_BINDINGS=ON
 PYTHONCFG += -DUSE_H5_PACKAGE=ON
 PYTHONCFG += -DUSE_AWS_PACKAGE=ON
@@ -53,14 +65,48 @@ PYTHONCFG += -DICESAT2_PLUGIN_INCPATH=/usr/local/include/sliderule
 python-config: prep ## configure make for python bindings
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
 
+########################
+# Shared Library Targets
+########################
+
 library-config: prep ## configure make for shared library libsliderule.so
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(ROOT)
+
+########################
+# Atlas Plugin Targets
+########################
 
 atlas-config: prep ## configure make for atlas plugin
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/atlas
+	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/atlas
+
+atlas-build: ## build atlas plugin
+	make -j4 -C $(ATLAS_BUILD)
+
+atlas-install: ## install altas plugin to system
+	make -C $(ATLAS_BUILD) install
+
+atlas-uninstall: ## uninstall most recent install of atlas plugin from system
+	xargs rm < $(ATLAS_BUILD)/install_manifest.txt
+
+########################
+# Icesat2 Plugin Targets
+########################
 
 icesat2-config: prep ## configure make for icesat2 plugin
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
+	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
+
+icesat2-build: ## build icesat2 plugin
+	make -j4 -C $(ICESAT2_BUILD)
+
+icesat2-install: ## install icesat2 plugin to system
+	make -C $(ICESAT2_BUILD) install
+
+icesat2-uninstall: ## uninstall most recent install of icesat2 plugin from system
+	xargs rm < $(ICESAT2_BUILD)/install_manifest.txt
+
+########################
+# Development Targets
+########################
 
 scan: prep ## perform static analysis
 	cd $(BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
@@ -73,12 +119,6 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 ctags: development-config ## generate ctags
 	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)
 	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
-
-install: ## install sliderule to system
-	make -C $(BUILD) install
-
-uninstall: ## uninstall most recent install of sliderule from system
-	xargs rm < $(BUILD)/install_manifest.txt
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
@@ -104,14 +144,24 @@ testpy: ## run python binding test
 	cp scripts/systests/coro.py $(BUILD)
 	cd $(BUILD); /usr/bin/python3 coro.py
 
+########################
+# Global Targets
+########################
+
 prep: ## create necessary build directories
 	mkdir -p $(BUILD)
+	mkdir -p $(ATLAS_BUILD)
+	mkdir -p $(ICESAT2_BUILD)
 
 clean: ## clean last build
 	- make -C $(BUILD) clean
+	- make -C $(ATLAS_BUILD) clean
+	- make -C $(ICESAT2_BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
+	- rm -Rf $(ATLAS_BUILD)
+	- rm -Rf $(ICESAT2_BUILD)
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

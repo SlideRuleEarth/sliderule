@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "CumulusIODriver.h"
-#include "S3IODriver.h"
+#include "S3CurlIODriver.h"
 #include "core.h"
 
 /******************************************************************************
@@ -61,7 +61,7 @@ Asset::IODriver* CumulusIODriver::create (const Asset* _asset, const char* resou
  *  Example: /ATLAS/ATL06/004/2019/06/26/ATL06_20190626143632_13640310_004_01.h5
  *----------------------------------------------------------------------------*/
 CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
-    S3IODriver(_asset, resource)
+    S3CurlIODriver(_asset, resource)
 {
 
     /* Build Updated Resource Path Name */

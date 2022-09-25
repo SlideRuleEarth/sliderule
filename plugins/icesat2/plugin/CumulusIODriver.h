@@ -37,13 +37,13 @@
  ******************************************************************************/
 
 #include "Asset.h"
-#include "S3IODriver.h"
+#include "S3CurlIODriver.h"
 
 /******************************************************************************
  * S3 IO DRIVER CLASS
  ******************************************************************************/
 
-class CumulusIODriver: S3IODriver
+class CumulusIODriver: S3CurlIODriver
 {
     public:
 
