@@ -79,7 +79,7 @@ library-config: prep ## configure make for shared library libsliderule.so
 atlas-config: prep ## configure make for atlas plugin
 	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/atlas
 
-atlas-build: ## build atlas plugin
+atlas: ## build atlas plugin
 	make -j4 -C $(ATLAS_BUILD)
 
 atlas-install: ## install altas plugin to system
@@ -95,7 +95,7 @@ atlas-uninstall: ## uninstall most recent install of atlas plugin from system
 icesat2-config: prep ## configure make for icesat2 plugin
 	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
 
-icesat2-build: ## build icesat2 plugin
+icesat2: ## build icesat2 plugin
 	make -j4 -C $(ICESAT2_BUILD)
 
 icesat2-install: ## install icesat2 plugin to system
