@@ -88,18 +88,6 @@ static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *user
  *----------------------------------------------------------------------------*/
 static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    file_data_t* data = (file_data_t*)userp;
-    size_t rsps_size = size * nmemb;
-    size_t bytes_written = fwrite(buffer, rsps_size, 1, data->fd);
-    if(bytes_written > 0) data->size += rsps_size;
-    return bytes_written;
-}
-
-/*----------------------------------------------------------------------------
- * curlWriteFile
- *----------------------------------------------------------------------------*/
-static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp)
-{
     List<streaming_data_t>* rsps_set = (List<streaming_data_t>*)userp;
     streaming_data_t rsps;
     rsps.size = size * nmemb;
@@ -107,6 +95,18 @@ static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp
     LocalLib::copy(rsps.data, buffer, rsps.size);
     rsps_set->add(rsps);
     return rsps.size;
+}
+
+/*----------------------------------------------------------------------------
+ * curlWriteFile
+ *----------------------------------------------------------------------------*/
+static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    file_data_t* data = (file_data_t*)userp;
+    size_t rsps_size = size * nmemb;
+    size_t bytes_written = fwrite(buffer, rsps_size, 1, data->fd);
+    if(bytes_written > 0) data->size += rsps_size;
+    return bytes_written;
 }
 
 /*----------------------------------------------------------------------------

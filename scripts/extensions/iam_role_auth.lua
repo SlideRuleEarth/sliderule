@@ -8,18 +8,15 @@ local aws_meta_url = "http://169.254.169.254/latest/meta-data/iam/security-crede
 local asset = arg[1] or "iam-role"
 
 -- get current EC2 role
-local response, status = netsvc.get(aws_meta_url)
+local role, status = netsvc.get(aws_meta_url)
 if status then
-
-    -- assign role
-    local role = response
 
     -- maintain aws credentials
     while sys.alive() do
         sys.log(core.DEBUG, "Fetching IAM role credentials...")
 
         -- get new credentials
-        response, status = netsvc.get(aws_meta_url.."/"..role)
+        local response, status = netsvc.get(aws_meta_url.."/"..role)
 
         -- convert reponse to credential table
         if status then
@@ -48,9 +45,12 @@ if status then
                     sys.wait(60)
                 end
             else
-                sys.log(core.CRITICAL, string.format("Failed to retrieve IAM role %s credentials, retrying in 60 seconds", role))
+                sys.log(core.CRITICAL, string.format("Failed to decode IAM role %s response, retrying in 60 seconds", role))
                 sys.wait(60)
             end
+        else
+            sys.log(core.CRITICAL, string.format("Failed to retrieve IAM role %s credentials, retrying in 60 seconds", role))
+            sys.wait(60)
         end
     end
 end
