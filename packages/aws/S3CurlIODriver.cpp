@@ -127,12 +127,12 @@ static headers_t buildHeaders (const char* bucket, const char* key, CredentialSt
     if(credentials && credentials->provided)
     {
         /* Build SecurityToken Header */
-        SafeString securityTokenHeaderToSign("x-amz-security-token:%s", credentials->sessionToken);
-        SafeString securityTokenHeader("X-AMZ-Security-Token: %s", credentials->sessionToken);
+        SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+//        SafeString securityTokenHeader("X-AMZ-Security-Token: %s", credentials->sessionToken);
         headers = curl_slist_append(headers, securityTokenHeader.getString());
 
         /* Build Authorization Header */
-        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeaderToSign.getString(), bucket, key);
+        SafeString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.getString(), securityTokenHeader.getString(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
         HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
