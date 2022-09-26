@@ -227,9 +227,10 @@ int S3CurlIODriver::luaGet(lua_State* L)
         int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
 
         /* Push Contents */
-        if(*rsps_data)
+        if(rsps_data)
         {
             lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            delete [] rsps_data;
             status = true;
             num_rets++;
         }
@@ -282,6 +283,58 @@ int S3CurlIODriver::luaDownload(lua_State* L)
     /* Return Results */
     lua_pushboolean(L, status);
     return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaRead - s3read(<bucket>, <key>, <size>, <pos>, [<region>], [<asset>]) -> contents
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaRead(lua_State* L)
+{
+    bool status = false;
+    int num_rets = 1;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        long size               = LuaObject::getLuaInteger(L, 3);
+        long pos                = LuaObject::getLuaInteger(L, 4);
+        const char* region      = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* asset_name  = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+
+        /* Check Parameters */
+        if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid size: %ld", size);
+        else if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+
+        /* Make Request */
+        uint8_t* rsps_data = new uint8_t [size];
+        int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
+
+        /* Push Contents */
+        if(rsps_size > 0)
+        {
+            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            delete [] rsps_data;
+            status = true;
+            num_rets++;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return num_rets;
 }
 
 /*----------------------------------------------------------------------------
