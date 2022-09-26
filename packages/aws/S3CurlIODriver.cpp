@@ -128,7 +128,6 @@ static headers_t buildHeaders (const char* bucket, const char* key, CredentialSt
     {
         /* Build SecurityToken Header */
         SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
-//        SafeString securityTokenHeader("X-AMZ-Security-Token: %s", credentials->sessionToken);
         headers = curl_slist_append(headers, securityTokenHeader.getString());
 
         /* Build Authorization Header */
