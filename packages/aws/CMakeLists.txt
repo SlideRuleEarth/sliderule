@@ -9,6 +9,9 @@ if (CURL_FOUND)
     target_compile_definitions (slideruleLib PUBLIC __aws__)
 
     target_link_libraries (slideruleLib PUBLIC ${CURL_LIBRARIES})
+    target_link_libraries (slideruleLib PUBLIC ssl)
+    target_link_libraries (slideruleLib PUBLIC crypto)
+
     target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
 
     target_sources(slideruleLib
