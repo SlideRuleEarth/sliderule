@@ -429,7 +429,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
     /* Create Listen Socket */
     int listen_socket = sockcreate(SOCK_STREAM, ip_addr, port, true, NULL);
-    if(listen_socket != INVALID_RC)
+    if(listen_socket >= 0)
     {
         /* Make Socket a Listen Socket */
         if(listen(listen_socket, 1) == 0)
@@ -446,11 +446,14 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         {
             dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
             listen_socket = INVALID_RC;
+            status = -1;
         }
     }
     else
     {
         dlog("Unable to establish socket server on %s:%d, failed to create listen socket", ip_addr ? ip_addr : "0.0.0.0", port);
+        listen_socket = INVALID_RC;
+        status = -1;
     }
 
     if(listen_socket != INVALID_RC)
@@ -599,8 +602,8 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         }
         catch(const std::exception& e)
         {
-            status = -1;
             dlog("Caught fatal exception, aborting http server thread: %s", e.what());
+            status = -1;
         }
 
         /* Close Listening Socket */
@@ -617,8 +620,8 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         }
         catch(const std::exception& e)
         {
-            status = -1;
             dlog("Caught exception on disconnect: %s", e.what());
+            status = -1;
         }
         sockclose(polllist[i].fd);
     }
