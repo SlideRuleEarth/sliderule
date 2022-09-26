@@ -67,7 +67,9 @@ class S3CurlIODriver: public Asset::IODriver
 
         static IODriver*    create          (const Asset* _asset, const char* resource);
         virtual int64_t     ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
+
         static int          luaGet          (lua_State* L);
+        static int          luaDownload     (lua_State* L);
 
     protected:
 

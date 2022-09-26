@@ -104,7 +104,7 @@ static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp
 {
     file_data_t* data = (file_data_t*)userp;
     size_t rsps_size = size * nmemb;
-    size_t bytes_written = fwrite(buffer, rsps_size, 1, data->fd);
+    size_t bytes_written = fwrite(buffer, 1, rsps_size, data->fd);
     if(bytes_written > 0) data->size += rsps_size;
     return bytes_written;
 }
@@ -204,7 +204,7 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 }
 
 /*----------------------------------------------------------------------------
- * luaGet - s3get(<bucket>, <key>, [<region>], [<endpoint>]) -> contents
+ * luaGet - s3get(<bucket>, <key>, [<region>], [<asset>]) -> contents
  *----------------------------------------------------------------------------*/
 int S3CurlIODriver::luaGet(lua_State* L)
 {
@@ -246,6 +246,42 @@ int S3CurlIODriver::luaGet(lua_State* L)
     /* Return Results */
     lua_pushboolean(L, status);
     return num_rets;
+}
+
+/*----------------------------------------------------------------------------
+ * luaDownload - s3download(<bucket>, <key>, [<region>], [<asset>]) -> file
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaDownload(lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+        const char* filename    = LuaObject::getLuaString(L, 5, true, key);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+
+        /* Make Request */
+        int64_t rsps_size = get(filename, bucket, key, region, &credentials);
+
+        /* Push Contents */
+        if(rsps_size > 0)   status = true;
+        else                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -495,13 +531,25 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
                     mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
                 }
             }
+            else
+            {
+                mlog(CRITICAL, "cURL called failed when performing request: %d", res);
+            }
 
             /* Clean Up cURL */
             curl_easy_cleanup(curl);
         }
+        else
+        {
+            mlog(CRITICAL, "Failed to initialize cURL request");
+        }
 
         /* Close File */
         fclose(data.fd);
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, LocalLib::err2str(errno));
     }
 
     /* Clean Up Headers */
