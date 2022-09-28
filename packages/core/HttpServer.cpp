@@ -173,6 +173,11 @@ void HttpServer::deinitConnection (connection_t* connection)
     if(connection->rsps_state.stream_buf) delete [] connection->rsps_state.stream_buf;
 
     /* Free Message Queue */
+    if(connection->rsps_state.ref_status > 0)
+    {
+        connection->rsps_state.rspq->dereference(connection->rsps_state.ref);
+        connection->rsps_state.ref_status = 0;
+    }
     delete connection->rsps_state.rspq;
 
     /* Free Id */

@@ -7,7 +7,6 @@ local json = require("json")
 endpoint = core.endpoint()
 server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
 
-
 -- Unit Test --
 
 client = core.http("127.0.0.1", 9081)
