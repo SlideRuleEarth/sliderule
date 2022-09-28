@@ -121,6 +121,15 @@ HttpServer::~HttpServer(void)
         endpoint->releaseLuaObject();
         key = routeTable.next(&endpoint);
     }
+
+    connection_t* connection = NULL;
+    int fd = connections.first(&connection);
+    while(fd != (int)INVALID_KEY)
+    {
+        deinitConnection(connection);
+        delete connection;
+        fd = connections.next(&connection);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -318,16 +327,13 @@ int HttpServer::pollHandler(int fd, short* events, void* parm)
     connection_t* connection = s->connections[fd];
     rsps_state_t* state = &connection->rsps_state;
 
-    /* Set Polling Flags */
-    *events |= IO_READ_FLAG;
-    if(state->ref_status > 0)
-    {
-        *events |= IO_WRITE_FLAG;
-    }
-    else
-    {
-        *events &= ~IO_WRITE_FLAG;
-    }
+    /* Set Read Polling Flag (if request is ready) */
+    if(connection->request) *events |= IO_READ_FLAG;
+    else *events &= ~IO_READ_FLAG;
+
+    /* Set Write Polling Flag (if data to write) */
+    if(state->ref_status > 0) *events |= IO_WRITE_FLAG;
+    else *events &= ~IO_WRITE_FLAG;
 
     return 0;
 }
