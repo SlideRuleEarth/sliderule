@@ -303,7 +303,9 @@ int ProvisioningSystemLib::luaLogin(lua_State* L)
         const char* organization    = LuaObject::getLuaString(L, 3);
         bool verbose                = LuaObject::getLuaBoolean(L, 4, true, false);
 
-        lua_pushstring(L, login(username, password, organization, verbose));
+        const char* rsps = login(username, password, organization, verbose);
+        lua_pushstring(L, rsps);
+        delete [] rsps;
     }
     catch(const RunTimeException& e)
     {
