@@ -307,7 +307,7 @@ void* EndpointProxy::proxyThread (void* parm)
                 {
                     OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
                     if(!nodes)                      throw RunTimeException(CRITICAL, RTE_ERROR, "unable to reach orchestrator");
-                    else if(nodes->length() > 0)    rqst->node = nodes->get(0);
+                    else if(nodes->length() > 0)    rqst->node = nodes->get(0); // freed in collator
                     else                            LocalLib::sleep(1);
                     delete nodes;
                 }

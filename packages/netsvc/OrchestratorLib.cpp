@@ -107,6 +107,8 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
         status = false;
     }
 
+    if(rsps.response) delete [] rsps.response;
+
     return status;
 }
 
@@ -122,32 +124,48 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", rqst.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
-        rapidjson::Document json;
-        json.Parse(rsps.response);
-
-        unsigned int num_members = json["members"].Size();
-        unsigned int num_transactions = json["transactions"].Size();
-        if(num_members == num_transactions)
+        try
         {
-            nodes = new NodeList; // allocate node list to be returned
-            for(rapidjson::SizeType i = 0; i < num_members; i++)
+            rapidjson::Document json;
+            json.Parse(rsps.response);
+
+            unsigned int num_members = json["members"].Size();
+            unsigned int num_transactions = json["transactions"].Size();
+            if(num_members == num_transactions)
             {
-                const char* name = json["members"][i].GetString();
-                double transaction = json["transactions"][i].GetDouble();
-                Node* node = new Node(name, transaction);
-                nodes->add(node);
+                nodes = new NodeList; // allocate node list to be returned
+                for(rapidjson::SizeType i = 0; i < num_members; i++)
+                {
+                    const char* name = json["members"][i].GetString();
+                    double transaction = json["transactions"][i].GetDouble();
+                    Node* node = new Node(name, transaction);
+                    nodes->add(node);
+                }
+            }
+            else
+            {
+                mlog(CRITICAL, "Missing information from locked response; %d members != %d transactions", num_members, num_transactions);
+            }
+
+            if(verbose)
+            {
+                for(int i = 0; i < nodes->length(); i++)
+                {
+                    mlog(INFO, "Locked - %s <%ld>", nodes->get(i)->member, nodes->get(i)->transaction);
+                }
             }
         }
-        else
+        catch(const std::exception& e)
         {
-            mlog(CRITICAL, "Missing information from locked response; %d members != %d transactions", num_members, num_transactions);
-        }
-
-        if(verbose)
-        {
-            for(int i = 0; i < nodes->length(); i++)
+            mlog(CRITICAL, "Failed process response to lock: %s", rsps.response);
+            if(nodes)
             {
-                mlog(INFO, "Locked - %s <%ld>", nodes->get(i)->member, nodes->get(i)->transaction);
+                for(int i = 0; i < nodes->length(); i++)
+                {
+                    delete nodes->get(i);
+                }
+                delete nodes;
+                nodes = NULL;
             }
         }
     }
@@ -155,6 +173,8 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
     {
         mlog(CRITICAL, "Encountered HTTP error <%d> when locking nodes on %s", rsps.code, service);
     }
+
+    if(rsps.response) delete [] rsps.response;
 
     return nodes;
 }
@@ -177,15 +197,22 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/unlock", rqst.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
-        if(verbose)
+        try
         {
-            rapidjson::Document json;
-            json.Parse(rsps.response);
+            if(verbose)
+            {
+                rapidjson::Document json;
+                json.Parse(rsps.response);
 
-            int completed = json["complete"].GetInt();
-            int failed = json["fail"].GetInt();
+                int completed = json["complete"].GetInt();
+                int failed = json["fail"].GetInt();
 
-            mlog(INFO, "Completed %d transactions%s", completed, failed ? " with failures" : " successfully");
+                mlog(INFO, "Completed %d transactions%s", completed, failed ? " with failures" : " successfully");
+            }
+        }
+        catch(const std::exception& e)
+        {
+            mlog(CRITICAL, "Failed process response to unlock: %s", rsps.response);
         }
     }
     else
@@ -193,6 +220,8 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
         mlog(CRITICAL, "Failed to unlock %d transactions", num_transactions);
         status = false;
     }
+
+    if(rsps.response) delete [] rsps.response;
 
     return status;
 }
@@ -209,12 +238,21 @@ bool OrchestratorLib::health (void)
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/health", NULL, false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
-        rapidjson::Document json;
-        json.Parse(rsps.response);
+        try
+        {
+            rapidjson::Document json;
+            json.Parse(rsps.response);
 
-        rapidjson::Value& s = json["health"];
-        status = s.GetBool();
+            rapidjson::Value& s = json["health"];
+            status = s.GetBool();
+        }
+        catch(const std::exception& e)
+        {
+            mlog(CRITICAL, "Failed process response to health: %s", rsps.response);
+        }
     }
+
+    if(rsps.response) delete [] rsps.response;
 
     return status;
 }
@@ -328,6 +366,8 @@ int OrchestratorLib::luaUnlock(lua_State* L)
 
             bool status = unlock(transactions, num_transactions, verbose);
             lua_pushboolean(L, status);
+
+            delete [] transactions;
         }
     }
     catch(const RunTimeException& e)
