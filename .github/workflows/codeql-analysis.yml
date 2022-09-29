@@ -82,7 +82,7 @@ jobs:
        sudo echo "#define CONFDIR \"/usr/local/etc/sliderule\"" >> /usr/local/include/sliderule/platform.h
        sudo echo "#define __tracing__" >> /usr/local/include/sliderule/platform.h
        sudo echo "#define __terminal__" >> /usr/local/include/sliderule/platform.h
-       make icesat2-config
+       make config-icesat2
        make icesat2
 
     - name: Perform CodeQL Analysis
