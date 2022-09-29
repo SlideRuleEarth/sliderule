@@ -32,6 +32,10 @@ local resource = rqst["resource"]
 local parms = rqst["parms"]
 local timeout = rqst["timeout"] or icesat2.API_TIMEOUT
 
+-- Initialize Timeouts --
+local duration = 0
+local interval = 10 -- seconds
+
 -- Get Asset --
 local asset = core.getbyname(atl03_asset)
 if not asset then
@@ -61,8 +65,6 @@ userlog:sendlog(core.INFO, string.format("request <%s> atl06 processing initiate
 local atl03_reader = icesat2.atl03(asset, resource, recq, parms, true)
 
 -- Wait Until Reader Completion --
-local duration = 0
-local interval = 10 -- seconds
 while (userlog:numsubs() > 0) and not atl03_reader:waiton(interval * 1000) do
     duration = duration + interval
     -- Check for Timeout --
@@ -78,8 +80,6 @@ local atl03_stats = atl03_reader:stats(false)
 userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, atl03_stats.read, atl03_stats.filtered, atl03_stats.dropped))
 
 -- Wait Until Dispatch Completion --
-local duration = 0
-local interval = 10 -- seconds
 while (userlog:numsubs() > 0) and not atl06_disp:waiton(interval * 1000) do
     duration = duration + interval
     -- Check for Timeout --
