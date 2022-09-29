@@ -1,6 +1,6 @@
 # H5 Overview
 
-See http://icesat2sliderule.org/h5coro/
+See https://slideruleearth.io/h5coro/
 
 ## Install zlib
 
