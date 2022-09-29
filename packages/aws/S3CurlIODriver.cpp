@@ -411,7 +411,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     };
 
     /* Build URL */
-    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
     /* Initialize cURL Request */
     CURL* curl = initializeRequest(url, headers, curlWriteFixed, &info);
@@ -476,7 +476,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     List<streaming_data_t> rsps_set;
 
     /* Build URL */
-    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
     /* Initialize cURL Request */
     CURL* curl = initializeRequest(url, headers, curlWriteStreaming, &rsps_set);
@@ -566,7 +566,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     if(data.fd)
     {
         /* Build URL */
-        SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
+        SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
         /* Initialize cURL Request */
         CURL* curl = initializeRequest(url, headers, curlWriteFile, &data);
