@@ -19,23 +19,36 @@ local arcticdem_local = core.getbyname(asset_name)
 -------------
 samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
 
-print('\n------------------\nTest: Strip Elevations\n------------')
+print('\n------------------\nTest: Sampling Elevations\n------------')
+
+local dem, el, status
 
 local lon = -74.60
 local lat = 82.86
 
-for i = 1, 8 do
-    local dem = arcticdem.raster("mosaic", samplingAlgs[i])
-    local el, status = dem:elevation(lon, lat)
-    print(string.format("%20s  %f", samplingAlgs[i], el))
+for radius = 0, 2 do
+    for i = 1, 8 do
+        dem = arcticdem.raster("mosaic", samplingAlgs[i], radius)
+        el, status = dem:sample(lon, lat)
+        print(string.format("%20s (%02d)  %f", samplingAlgs[i], radius, el))
+    end
+    print('\n-------------------------------------------')
 end
 
 
+print('\n------------------\nTest: Strip multiple points in time\n------------')
+dem = arcticdem.raster("strip", "NearestNeighbour", 0)
+local tbl, status = dem:samples(lon, lat)
 
-os.exit()
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local date = v["date"]
+    print(i, el, date)
+end
 
 
--------------
+-- os.exit()
+
 
 
 for dems = 1, 2 do
@@ -48,9 +61,9 @@ for dems = 1, 2 do
     print('\n------------------\nTest: Reading milion points\n------------')
 
     if dems == 1 then
-        dem = arcticdem.raster("mosaic", "NearestNeighbour")
+        dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
     else
-        dem = arcticdem.raster("strip", "NearestNeighbour")
+        dem = arcticdem.raster("strip", "NearestNeighbour", 0)
     end
 
     runner.check(dem ~= nil)
@@ -58,7 +71,7 @@ for dems = 1, 2 do
     local starttime = time.latch();
     for i = 1, 1000000
     do
-        el, status = dem:elevation(lon, lat)
+        el, status = dem:sample(lon, lat)
         if status ~= true then
             print(i, status, el)
         end
@@ -78,7 +91,7 @@ for dems = 1, 2 do
 -- 'hole' in the raster
     lat =  82.898092
     lon = -74.418638
-    el, status = dem:elevation(lon, lat)
+    el, status = dem:sample(lon, lat)
     print('hole in raster', status, el)
 
     print('\n------------------\nTest: dim\n------------------')
@@ -100,6 +113,8 @@ for dems = 1, 2 do
     print("cellsize: ", cellsize)
     runner.check(cellsize == 2.0)
 end
+
+
 
 -- Clean Up --
 -- Report Results --
