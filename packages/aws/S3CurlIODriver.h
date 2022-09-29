@@ -53,8 +53,8 @@ class S3CurlIODriver: public Asset::IODriver
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const long DEFAULT_CONNECTION_TIMEOUT = 10; // seconds
-        static const long DEFAULT_READ_TIMEOUT = 10; // seconds
+        static const long DEFAULT_CONNECTION_TIMEOUT = 300; // seconds
+        static const long DEFAULT_READ_TIMEOUT = 600; // seconds
         static const long DEFAULT_SSL_VERIFYPEER = 0;
         static const long DEFAULT_SSL_VERIFYHOST = 0;
         static const char* DEFAULT_REGION;
