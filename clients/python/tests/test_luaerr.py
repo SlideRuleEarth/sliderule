@@ -17,8 +17,8 @@ GLOBAL_callbacks = {'eventrec': catchlogs, 'exceptrec': catchexceptions}
 
 @pytest.mark.network
 class TestAtl03s:
-    def test_badasset(self, server):
-        icesat2.init(server)
+    def test_badasset(self, server, organization):
+        icesat2.init(server, organization=organization)
         invalid_asset = "invalid-asset"
         rqst = {
             "atl03-asset" : "invalid-asset",
@@ -45,8 +45,8 @@ class TestAtl03s:
 
 @pytest.mark.network
 class TestAtl06:
-    def test_badasset(self, server):
-        icesat2.init(server)
+    def test_badasset(self, server, organization):
+        icesat2.init(server, organization=organization)
         invalid_asset = "invalid-asset"
         rqst = {
             "atl03-asset" : "invalid-asset",
@@ -57,8 +57,8 @@ class TestAtl06:
         assert(len(rsps) == 0)
         assert("invalid asset specified: {}".format(invalid_asset) == GLOBAL_message)
 
-    def test_timeout(self, server, asset):
-        icesat2.init(server)
+    def test_timeout(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         resource = "ATL03_20220208000041_07291401_005_01.h5"
         rqst = {
             "atl03-asset" : asset,

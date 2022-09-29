@@ -41,7 +41,7 @@ from datetime import datetime, timedelta
 # GLOBALS
 ###############################################################################
 
-PUBLIC_URL = "icesat2sliderule.org"
+PUBLIC_URL = "slideruleearth.io"
 PUBLIC_ORG = "sliderule"
 
 service_url = PUBLIC_URL
@@ -359,7 +359,7 @@ def source (api, parm={}, stream=False, callbacks={}):
     Examples
     --------
         >>> import sliderule
-        >>> sliderule.set_url("icesat2sliderule.org")
+        >>> sliderule.set_url("slideruleearth.io")
         >>> rqst = {
         ...     "time": "NOW",
         ...     "input": "NOW",
@@ -635,7 +635,7 @@ def get_definition (rectype, fieldname):
     Examples
     --------
         >>> import sliderule
-        >>> sliderule.set_url("icesat2sliderule.org")
+        >>> sliderule.set_url("slideruleearth.io")
         >>> sliderule.get_definition("atl03rec", "cycle")
         {'fmt': 'H', 'size': 2, 'nptype': <class 'numpy.uint16'>}
     '''

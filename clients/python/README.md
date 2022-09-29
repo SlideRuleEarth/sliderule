@@ -6,7 +6,7 @@
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
-Detailed [documentation](http://icesat2sliderule.org/rtd/) on installing and using this client can be found at [icesat2sliderule.org](http://icesat2sliderule.org).
+Detailed [documentation](https://www.slideruleearth.org/rtd/) on installing and using this client can be found at [slideruleearth.io](https://www.slideruleearth.org).
 
 ## I. Installing the SlideRule Python Client
 
@@ -14,7 +14,7 @@ Detailed [documentation](http://icesat2sliderule.org/rtd/) on installing and usi
 conda install -c conda-forge sliderule
 ```
 
-For alternate methods to install SlideRule, including options for developers, please see the [installation instructions](http://icesat2sliderule.org/rtd/getting_started/Install.html) on icesat2sliderule.org.
+For alternate methods to install SlideRule, including options for developers, please see the [installation instructions](https://www.slideruleearth.org/rtd/getting_started/Install.html) on slideruleearth.io.
 
 ### Dependencies
 
@@ -32,7 +32,7 @@ Example usage:
 from sliderule import icesat2
 
 # initialize
-icesat2.init("icesat2sliderule.org", verbose=True)
+icesat2.init("slideruleearth.io", verbose=True)
 
 # region of interest
 region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},
@@ -59,7 +59,7 @@ More extensive examples in the form of Jupyter Notebooks can be found in the [ex
 
 ## III. Reference and User's Guide
 
-Please see our [documentation](http://icesat2sliderule.org/rtd/) page for reference and user's guide material.
+Please see our [documentation](https://www.slideruleearth.org/rtd/) page for reference and user's guide material.
 
 ## IV. Licensing
 

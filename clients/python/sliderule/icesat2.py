@@ -683,7 +683,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Examples
     --------
         >>> from sliderule import icesat2
-        >>> icesat2.init("icesat2sliderule.org", True)
+        >>> icesat2.init("slideruleearth.io", True)
         >>> parms = { "cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1 }
         >>> resources = ["ATL03_20181019065445_03150111_003_01.h5"]
         >>> atl03_asset = "atlas-local"
@@ -1063,7 +1063,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         >>> region_filename = sys.argv[1]
         >>> region = icesat2.toregion(region_filename)
         >>> # Configure SlideRule #
-        >>> icesat2.init("icesat2sliderule.org", False)
+        >>> icesat2.init("slideruleearth.io", False)
         >>> # Build ATL06 Request #
         >>> parms = {
         ...     "poly": region["poly"],
