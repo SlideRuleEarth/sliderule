@@ -83,8 +83,8 @@ class ArcticDEMRaster: public LuaObject
         static int              luaCreate      (lua_State* L);
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
-        float                   elevation      (double lon, double lat);
-        void                    elevations     (double lon, double lat, List<elevation_t>& elist);
+        float                   sample         (double lon, double lat);
+        void                    samples        (double lon, double lat, List<elevation_t>& elist);
         virtual                ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
@@ -104,7 +104,7 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDEMRaster     (lua_State* L, const char* dem_type, const char* dem_sampling);
+        ArcticDEMRaster     (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
         bool  findNewRaster (OGRPoint* p, bool reset=true);
         float readRaster    (OGRPoint* p);
 
@@ -131,7 +131,8 @@ class ArcticDEMRaster: public LuaObject
         OGRCoordinateTransformation *latlon2xy;
         OGRSpatialReference source;
         OGRSpatialReference target;
-        GDALRIOResampleAlg  resamplingAlg;
+        GDALRIOResampleAlg  algorithm;
+        int32_t             radius;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -140,8 +141,8 @@ class ArcticDEMRaster: public LuaObject
         static int luaDimensions    (lua_State* L);
         static int luaBoundingBox   (lua_State* L);
         static int luaCellSize      (lua_State* L);
-        static int luaElevation     (lua_State* L);
-        static int luaElevations    (lua_State* L);
+        static int luaSample        (lua_State* L);
+        static int luaSamples       (lua_State* L);
 };
 
 #endif  /* __arcticdem_raster__ */

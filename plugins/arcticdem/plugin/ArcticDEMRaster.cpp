@@ -84,8 +84,8 @@ const struct luaL_Reg ArcticDEMRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
     {"bbox",        luaBoundingBox},
     {"cell",        luaCellSize},
-    {"elevation",   luaElevation},
-    {"elevations",  luaElevations},
+    {"sample",      luaSample},
+    {"samples",     luaSamples},
     {NULL,          NULL}
 };
 
@@ -133,18 +133,20 @@ int ArcticDEMRaster::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 ArcticDEMRaster* ArcticDEMRaster::create (lua_State* L, int index)
 {
+    const int radius = getLuaInteger(L, -1);
+    lua_pop(L, 1);
     const char* dem_sampling = getLuaString(L, -1);
     lua_pop(L, 1);
     const char* dem_type = getLuaString(L, -1);
     lua_pop(L, 1);
-    return new ArcticDEMRaster(L, dem_type, dem_sampling);
+    return new ArcticDEMRaster(L, dem_type, dem_sampling, radius);
 }
 
 
 /*----------------------------------------------------------------------------
- * elevation
+ * sample
  *----------------------------------------------------------------------------*/
-float ArcticDEMRaster::elevation (double lon, double lat)
+float ArcticDEMRaster::sample (double lon, double lat)
 {
     OGRPoint p  = {lon, lat};
 
@@ -176,7 +178,7 @@ float ArcticDEMRaster::elevation (double lon, double lat)
 /*----------------------------------------------------------------------------
  * elevations
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::elevations (double lon, double lat, List<ArcticDEMRaster::elevation_t>& elist)
+void ArcticDEMRaster::samples(double lon, double lat, List<ArcticDEMRaster::elevation_t>& elist)
 {
     OGRPoint p  = {lon, lat};
 
@@ -319,7 +321,8 @@ float ArcticDEMRaster::readRaster(OGRPoint* p)
             GDALRasterBand *band = rdset->GetRasterBand(1);
             CHECKPTR(band);
 
-            if(resamplingAlg == GRIORA_NearestNeighbour)
+            /* Use fast 'lookup' method for nearest neighbour. */
+            if (algorithm == GRIORA_NearestNeighbour)
             {
                 /* Raster offsets to block of interest */
                 uint32_t xblk = col / xblocksize;
@@ -345,24 +348,30 @@ float ArcticDEMRaster::readRaster(OGRPoint* p)
             else
             {
                 float rbuf[1] = {0};
+                int _cellsize = cellsize;
+                int  radius_in_meters = ((radius + _cellsize - 1) / _cellsize) * _cellsize;  // Round to multiple of cellsize
+                int  radius_in_pixels = (radius_in_meters == 0) ? 1 : radius_in_meters / _cellsize;
+                int _col = col - radius_in_pixels;
+                int _row = row - radius_in_pixels;
+                int size = radius_in_pixels + 1 + radius_in_pixels;
 
-                int mycol = col-15;
-                int myrow = row-15;
+                /* If 8 pixels around pixel of interest are not in the raster boundries return pixel value. */
+                if (_col < 0 || _row < 0)
+                {
+                    _col = col;
+                    _row = row;
+                    size = 1;
+                    algorithm = GRIORA_NearestNeighbour;
+                }
 
-                if(mycol<0) mycol = 0;
-                if(myrow<0) myrow = 0;
-
-                int size = 32;
 
                 GDALRasterIOExtraArg args;
                 INIT_RASTERIO_EXTRA_ARG(args);
-                args.eResampleAlg = resamplingAlg;
-                CPLErr err = band->RasterIO(GF_Read, mycol, myrow, size, size,
-                                              rbuf, 1, 1, GDT_Float32,
-                                              0, 0, &args);
+                args.eResampleAlg = algorithm;
+                CPLErr err = band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float32, 0, 0, &args);
 
                 elevation = rbuf[0];
-                mlog(DEBUG, "Resampled elevation:  %f", rbuf[0]);
+                mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
             }
         }
     }
@@ -387,7 +396,7 @@ static const char *getUuid(char *uuid_str)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char* dem_sampling):
+ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char* dem_sampling, const int sampling_radius):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     char uuid_str[UUID_STR_LEN] = {0};
@@ -408,16 +417,19 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char*
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid dem_type: %s:", dem_type);
 
+    if     (!strcasecmp(dem_sampling, "NearestNeighbour")) algorithm = GRIORA_NearestNeighbour;
+    else if(!strcasecmp(dem_sampling, "Bilinear"))         algorithm = GRIORA_Bilinear;
+    else if(!strcasecmp(dem_sampling, "Cubic"))            algorithm = GRIORA_Cubic;
+    else if(!strcasecmp(dem_sampling, "CubicSpline"))      algorithm = GRIORA_CubicSpline;
+    else if(!strcasecmp(dem_sampling, "Lanczos"))          algorithm = GRIORA_Lanczos;
+    else if(!strcasecmp(dem_sampling, "Average"))          algorithm = GRIORA_Average;
+    else if(!strcasecmp(dem_sampling, "Mode"))             algorithm = GRIORA_Mode;
+    else if(!strcasecmp(dem_sampling, "Gauss"))            algorithm = GRIORA_Gauss;
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
 
-    if     (!strcasecmp(dem_sampling, "NearestNeighbour")) resamplingAlg = GRIORA_NearestNeighbour;
-    else if(!strcasecmp(dem_sampling, "Bilinear"))         resamplingAlg = GRIORA_Bilinear;
-    else if(!strcasecmp(dem_sampling, "Cubic"))            resamplingAlg = GRIORA_Cubic;
-    else if(!strcasecmp(dem_sampling, "CubicSpline"))      resamplingAlg = GRIORA_CubicSpline;
-    else if(!strcasecmp(dem_sampling, "Lanczos"))          resamplingAlg = GRIORA_Lanczos;
-    else if(!strcasecmp(dem_sampling, "Average"))          resamplingAlg = GRIORA_Average;
-    else if(!strcasecmp(dem_sampling, "Mode"))             resamplingAlg = GRIORA_Mode;
-    else if(!strcasecmp(dem_sampling, "Gauss"))            resamplingAlg = GRIORA_Gauss;
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid dem_sampling: %s:", dem_sampling);
+    if(sampling_radius>=0)
+        radius = sampling_radius;
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
 
 
     /* Initialize Class Data Members */
@@ -573,9 +585,9 @@ int ArcticDEMRaster::luaCellSize(lua_State *L)
 
 
 /*----------------------------------------------------------------------------
- * luaElevation - :elevation(lon, lat) --> in|out
+ * luaSample - :sample(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaElevation(lua_State *L)
+int ArcticDEMRaster::luaSample(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -590,7 +602,7 @@ int ArcticDEMRaster::luaElevation(lua_State *L)
         double lat = getLuaFloat(L, 3);
 
         /* Get Elevation */
-        float el = lua_obj->elevation(lon, lat);
+        float el = lua_obj->sample(lon, lat);
         lua_pushnumber(L, el);
         num_ret++;
 
@@ -608,9 +620,9 @@ int ArcticDEMRaster::luaElevation(lua_State *L)
 }
 
 /*----------------------------------------------------------------------------
- * luaElevations - :elevations(lon, lat) --> in|out
+ * luaSamples - :samples(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaElevations(lua_State *L)
+int ArcticDEMRaster::luaSamples(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -627,7 +639,7 @@ int ArcticDEMRaster::luaElevations(lua_State *L)
         List<ArcticDEMRaster::elevation_t> elist;
 
         /* Get Elevations */
-        lua_obj->elevations(lon, lat, elist);
+        lua_obj->samples(lon, lat, elist);
 
         if(elist.length() > 0)
         {
