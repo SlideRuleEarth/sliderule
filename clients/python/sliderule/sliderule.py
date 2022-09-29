@@ -50,8 +50,6 @@ service_org = PUBLIC_ORG
 ps_refresh_token = None
 ps_access_token = None
 
-max_attempts_per_request = 1
-
 verbose = False
 
 request_timeout = (10, 60) # (connection, read) in seconds
@@ -114,6 +112,16 @@ codedtype2str = {
     11: "TIME8",
     12: "STRING"
 }
+
+###############################################################################
+# CLIENT EXCEPTIONS
+###############################################################################
+
+class FatalError(RuntimeError):
+    pass
+
+class TransientError(RuntimeError):
+    pass
 
 ###############################################################################
 # UTILITIES
@@ -263,7 +271,7 @@ def __parse_native(data, callbacks):
                     raw = b''.join(rec_size_rsps)
                     rec_version, rec_type_size, rec_data_size = struct.unpack('>hhi', raw)
                     if rec_version != 2:
-                        raise SystemError("Invalid record format: %d" % (rec_version))
+                        raise FatalError("Invalid record format: %d" % (rec_version))
                     rec_size = rec_type_size + rec_data_size
                     rec_size_rsps.clear()
                 i += bytes_to_append
@@ -313,9 +321,9 @@ def __logeventrec(rec):
         eventlogger[rec['level']]('%s' % (rec["attr"]))
 
 #
-#  __raiseexceptrec
+#  __exceptrec
 #
-def __raiseexceptrec(rec):
+def __exceptrec(rec):
     if verbose:
         if rec["code"] >= 0:
             eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
@@ -325,7 +333,7 @@ def __raiseexceptrec(rec):
 #
 #  Globals
 #
-__callbacks = {'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}
+__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec}
 
 ###############################################################################
 # APIs
@@ -369,8 +377,7 @@ def source (api, parm={}, stream=False, callbacks={}):
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
-    global service_url, service_org, max_attempts_per_request
-    attempts = max_attempts_per_request
+    global service_url, service_org
     rqst = json.dumps(parm)
     rsps = {}
     headers = None
@@ -386,40 +393,37 @@ def source (api, parm={}, stream=False, callbacks={}):
     else:
         url = 'http://%s/source/%s' % (service_url, api)
     # Attempt Request #
-    while attempts > 0:
-        attempts -= 1
-        try:
-            # Perform Request
-            if not stream:
-                data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
-            else:
-                data = requests.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
-            data.raise_for_status()
-            # Parse Response
-            format = data.headers['Content-Type']
-            if format == 'text/plain':
-                rsps = __parse_json(data)
-            elif format == 'application/octet-stream':
-                rsps = __parse_native(data, callbacks)
-            else:
-                raise TypeError('unsupported content type: %s' % (format))
-            # Complete
-            break
-        except requests.exceptions.SSLError as e:
-            logger.error("Unable to verify SSL certificate: {}".format(e))
-        except requests.ConnectionError as e:
-            logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
-        except requests.Timeout as e:
-            logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))
-        except requests.exceptions.ChunkedEncodingError as e:
-            logger.error("Unexpected termination of response from endpoint {} ... retrying request".format(url))
-        except requests.HTTPError as e:
-            if e.response.status_code == 503:
-                logger.error("Server experiencing heavy load, stalling on request to {} ... will retry".format(url))
-            else:
-                logger.error("HTTP error {} from endpoint {} ... retrying request".format(e.response.status_code, url))
-        except:
-            raise
+    try:
+        # Perform Request
+        if not stream:
+            data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
+        else:
+            data = requests.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
+        data.raise_for_status()
+        # Parse Response
+        format = data.headers['Content-Type']
+        if format == 'text/plain':
+            rsps = __parse_json(data)
+        elif format == 'application/octet-stream':
+            rsps = __parse_native(data, callbacks)
+        else:
+            raise FatalError('unsupported content type: %s' % (format))
+    except requests.exceptions.SSLError as e:
+        raise FatalError("Unable to verify SSL certificate: {}".format(e))
+    except requests.ConnectionError as e:
+        raise FatalError("Failed to connect to endpoint {}".format(url))
+    except requests.Timeout as e:
+        raise TransientError("Timed-out waiting for response from endpoint {}".format(url))
+    except requests.exceptions.ChunkedEncodingError as e:
+        raise RuntimeError("Unexpected termination of response from endpoint {}".format(url))
+    except requests.HTTPError as e:
+        if e.response.status_code == 503:
+            raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
+        else:
+            raise FatalError("HTTP error {} from endpoint {}".format(e.response.status_code, url))
+    except:
+        raise
+    # Return Response
     return rsps
 
 #
@@ -501,7 +505,7 @@ def set_rqst_timeout (timeout):
     if type(timeout) == tuple:
         request_timeout = timeout
     else:
-        raise TypeError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+        raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
 
 #
 # AUTHENTICATE

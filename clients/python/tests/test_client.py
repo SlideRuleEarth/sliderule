@@ -20,6 +20,7 @@ class TestLocal:
 @pytest.mark.network
 class TestRemote:
     def test_init_badurl(self):
-        with pytest.raises( (ConnectTimeout, ConnectionError) ):
+        with pytest.raises( (sliderule.FatalError) ):
             sliderule.set_rqst_timeout((1, 60))
             sliderule.set_url('incorrect.org:8877')
+            sliderule.source("version")

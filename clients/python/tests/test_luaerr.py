@@ -68,4 +68,4 @@ class TestAtl06:
         }
         rsps = sliderule.source("atl06", rqst, stream=True, callbacks=GLOBAL_callbacks)
         assert(len(rsps) == 0)
-        assert("request for {} timed-out after 10 seconds".format(resource) == GLOBAL_message)
+        assert("{} timed-out after 10 seconds".format(resource) in GLOBAL_message)
