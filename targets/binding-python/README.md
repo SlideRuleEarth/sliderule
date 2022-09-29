@@ -33,7 +33,7 @@ $ conda install zlib openssl
 The Python bindings must be built for each target they are used on, and the resulting .so file must either be accessible from the **PYTHONPATH** or be installed into the current Python environment or copied to the same directory as the Python script that is importing it is run from.
 
 To build the bindings:
-1. `make python-config`
+1. `make config-python`
 2. `make`
 
 The results are found in the `build` directory:

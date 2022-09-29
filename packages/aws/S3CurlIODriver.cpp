@@ -147,11 +147,8 @@ static headers_t buildHeaders (const char* bucket, const char* key, CredentialSt
 /*----------------------------------------------------------------------------
  * initializeRequest
  *----------------------------------------------------------------------------*/
-static CURL* initializeRequest (const char* bucket, const char* key, const char* region, headers_t headers, write_cb_t write_cb, void* write_parm)
+static CURL* initializeRequest (SafeString& url, headers_t headers, write_cb_t write_cb, void* write_parm)
 {
-    /* Build URL String */
-    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
-
     /* Initialize cURL */
     CURL* curl = curl_easy_init();
     if(curl)
@@ -413,8 +410,11 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         .index = 0
     };
 
+    /* Build URL */
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
+
     /* Initialize cURL Request */
-    CURL* curl = initializeRequest(bucket, key_ptr, region, headers, curlWriteFixed, &info);
+    CURL* curl = initializeRequest(url, headers, curlWriteFixed, &info);
     if(curl)
     {
         /* Perform Request */
@@ -475,8 +475,11 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     /* Setup Streaming Data for Callback */
     List<streaming_data_t> rsps_set;
 
+    /* Build URL */
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
+
     /* Initialize cURL Request */
-    CURL* curl = initializeRequest(bucket, key_ptr, region, headers, curlWriteStreaming, &rsps_set);
+    CURL* curl = initializeRequest(url, headers, curlWriteStreaming, &rsps_set);
     if(curl)
     {
         /* Perform Request */
@@ -562,8 +565,11 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     data.fd = fopen(filename, "w");
     if(data.fd)
     {
+        /* Build URL */
+        SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key);
+
         /* Initialize cURL Request */
-        CURL* curl = initializeRequest(bucket, key_ptr, region, headers, curlWriteFile, &data);
+        CURL* curl = initializeRequest(url, headers, curlWriteFile, &data);
         if(curl)
         {
             /* Perform Request */

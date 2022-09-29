@@ -68,7 +68,8 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     const int NUM_ELEMENTS = 5;
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
-    StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    if(num_toks < 5) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cumulus resource: %s", resource);
 
     const char* product = elements[0];
     const char* version = elements[3];

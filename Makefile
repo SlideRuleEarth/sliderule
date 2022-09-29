@@ -18,12 +18,12 @@ all: default-build
 default-build: ## default build of sliderule
 	make -j4 -C $(BUILD)
 
-config: release-config ## configure make for default build
+config: config-release ## configure make for default build
 
-release-config: prep ## configure make for release version of sliderule binary
+config-release: prep ## configure make for release version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
 
-debug-config: prep ## configure make for release version of sliderule binary
+config-debug: prep ## configure make for release version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
 
 DEVCFG  = -DUSE_AWS_PACKAGE=ON
@@ -34,10 +34,10 @@ DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
 DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
 
-development-config: prep ## configure make for development version of sliderule binary
+config-development: prep ## configure make for development version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
 
-development-config-debug: prep ## configure make for debug version of sliderule binary
+config-development-debug: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
 
 install: ## install sliderule to system
@@ -62,46 +62,49 @@ PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
 PYTHONCFG += -DICESAT2_PLUGIN_LIBPATH=/usr/local/etc/sliderule/icesat2.so
 PYTHONCFG += -DICESAT2_PLUGIN_INCPATH=/usr/local/include/sliderule
 
-python-config: prep ## configure make for python bindings
+config-python: prep ## configure make for python bindings
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
 
 ########################
 # Shared Library Targets
 ########################
 
-library-config: prep ## configure make for shared library libsliderule.so
+config-library: prep ## configure make for shared library libsliderule.so
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(ROOT)
 
 ########################
 # Atlas Plugin Targets
 ########################
 
-atlas-config: prep ## configure make for atlas plugin
+config-atlas: prep ## configure make for atlas plugin
 	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/atlas
 
 atlas: ## build atlas plugin
 	make -j4 -C $(ATLAS_BUILD)
 
-atlas-install: ## install altas plugin to system
+install-atlas: ## install altas plugin to system
 	make -C $(ATLAS_BUILD) install
 
-atlas-uninstall: ## uninstall most recent install of atlas plugin from system
+uninstall-atlas: ## uninstall most recent install of atlas plugin from system
 	xargs rm < $(ATLAS_BUILD)/install_manifest.txt
 
 ########################
 # Icesat2 Plugin Targets
 ########################
 
-icesat2-config: prep ## configure make for icesat2 plugin
+config-icesat2: prep ## configure make for icesat2 plugin
 	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
+
+config-debug-icesat2: prep ## configure make for icesat2 plugin
+	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/icesat2
 
 icesat2: ## build icesat2 plugin
 	make -j4 -C $(ICESAT2_BUILD)
 
-icesat2-install: ## install icesat2 plugin to system
+install-icesat2: ## install icesat2 plugin to system
 	make -C $(ICESAT2_BUILD) install
 
-icesat2-uninstall: ## uninstall most recent install of icesat2 plugin from system
+uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from system
 	xargs rm < $(ICESAT2_BUILD)/install_manifest.txt
 
 ########################
@@ -116,7 +119,7 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd $(BUILD); make
 
-ctags: development-config ## generate ctags
+ctags: config-development ## generate ctags
 	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)
 	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
 
