@@ -74,6 +74,7 @@ endif()
 # Version Information #
 
 file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
+string(REPLACE "v" "" TGTVER ${TGTVER})
 
 # C++ Version #
 

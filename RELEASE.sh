@@ -9,7 +9,7 @@ if [[ "$VERSION" != *"."*"."* ]]; then
     echo "Invalid version number"
     exit 1
 fi
-if git tag -l | grep -w v$VERSION; then
+if git tag -l | grep -w $VERSION; then
     echo "Git tag already exists"
 	exit 1
 fi
@@ -24,11 +24,11 @@ rm sliderule-$VERSION.tar.gz 2> /dev/null
 #
 echo $VERSION > version.txt
 git add version.txt
-git commit -m "Version v$VERSION"
+git commit -m "Version $VERSION"
 
 #
 # Create tag and acrhive
 #
-git tag -a v$VERSION -m "version $VERSION"
-git archive --format=tar.gz --prefix=sliderule/ v$VERSION > sliderule-$VERSION.tar.gz
+git tag -a $VERSION -m "version $VERSION"
+git archive --format=tar.gz --prefix=sliderule/ $VERSION > sliderule-$VERSION.tar.gz
 
