@@ -12,6 +12,8 @@ with open('requirements.txt') as fh:
 # get version
 with open('version.txt') as fh:
     version = fh.read().strip()
+    if version[0] == 'v':
+        version = version[1:]
 
 # list of all utility scripts to be included with package
 scripts=[os.path.join('utils',f) for f in os.listdir('utils') if f.endswith('.py')]
