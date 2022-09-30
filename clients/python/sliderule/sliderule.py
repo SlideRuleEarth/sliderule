@@ -361,7 +361,7 @@ def source (api, parm={}, stream=False, callbacks={}):
 
     Returns
     -------
-    bytearray
+    dictionary
         response data
 
     Examples
@@ -506,6 +506,36 @@ def set_rqst_timeout (timeout):
         request_timeout = timeout
     else:
         raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+
+#
+# UPDATE_AVAIABLE_SERVERS
+#
+def update_available_servers (desired_nodes=None):
+    '''
+    Manages the number of servers in the cluster.
+    If the desired_nodes parameter is set, then a request is made to change the number of servers in the cluster to the number specified.
+    In all cases, the number of nodes currently running in the cluster are returned - even if desired_nodes is set;
+    subsequent calls to this function is needed to check when the current number of nodes matches the desired_nodes.
+
+    Parameters
+    ----------
+        desired_nodes:  int
+                        the desired number of nodes in the cluster
+
+    Returns
+    -------
+    int
+        number of nodes currently in the cluster
+    int
+        number of nodes available for work in the cluster
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> num_servers, max_workers = sliderule.update_available_servers(10)
+    '''
+    # placeholder until functionality implemented
+    return 7,7
 
 #
 # AUTHENTICATE
