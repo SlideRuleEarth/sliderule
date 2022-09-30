@@ -181,18 +181,28 @@ float ArcticDEMRaster::sample (double lon, double lat)
 void ArcticDEMRaster::samples(double lon, double lat, List<ArcticDEMRaster::elevation_t>& elist)
 {
     OGRPoint p  = {lon, lat};
+    elevation_t el;
 
-    if(p.transform(latlon2xy) == OGRERR_NONE)
+    elist.clear();
+
+    if (ismosaic)
     {
-        bool reset = true;
-        elist.clear();
-
-        while(findNewRaster(&p, reset))
+        el.value    = sample(lon, lat);
+        el.filename = rasterfname;
+        elist.add(el);
+    }
+    else
+    {
+        if (p.transform(latlon2xy) == OGRERR_NONE)
         {
-            elevation_t el = {readRaster(&p), rasterdate};
-            elist.add(el);
-
-            reset = false; /* Don't reset feature reading ptr */
+            bool reset = true;
+            while (findNewRaster(&p, reset))
+            {
+                el.value    = readRaster(&p);
+                el.filename = rasterfname;
+                elist.add(el);
+                reset = false; /* Don't reset feature reading ptr */
+            }
         }
     }
 }
@@ -217,6 +227,7 @@ ArcticDEMRaster::~ArcticDEMRaster(void)
 bool ArcticDEMRaster::findNewRaster(OGRPoint* p, bool reset)
 {
     bool rasterFound = false;
+    std::string filename;
 
     try
     {
@@ -228,7 +239,6 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p, bool reset)
             bbox = {0.0, 0.0, 0.0, 0.0};
             cellsize = rows = cols = xblocksize = yblocksize = 0;
             rasterfname.clear();
-            rasterdate.clear();
         }
 
         /* Index shapefile was already opened in constructor */
@@ -245,21 +255,19 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p, bool reset)
                 if (poly->Contains(p))
                 {
                     /* Found polygon with point in it, get the name of raster directory/file */
-                    std::string rname = feature->GetFieldAsString("name");
+                    std::string name = feature->GetFieldAsString("name");
                     if (ismosaic)
                     {
-                        rasterfname = "/data/ArcticDEM/mosaic/" + rname + "/" + rname + "_reg_dem.tif";
-                        rasterdate = feature->GetFieldAsString("creationda");
+                        rasterfname = name + "_reg_dem.tif";
+                        filename = "/data/ArcticDEM/mosaic/" + name + "/" + rasterfname;
                     }
                     else
                     {
-                        rasterfname = "/data/ArcticDEM/strip/" + rname + "/" + rname + "_dem.tif";
-                        rasterdate = feature->GetFieldAsString("acquisitio");
+                        rasterfname = name + "_dem.tif";
+                        filename = "/data/ArcticDEM/strip/" + name + "/" + rasterfname;
                     }
 
-                    mlog(DEBUG, "Raster %s, point(%0.2f, %0.2f)", rasterfname.c_str(), p->getX(), p->getY());
-                    mlog(DEBUG, "Raster Date: %s\n", rasterdate.c_str());
-
+                    mlog(DEBUG, "Raster %s, point(%0.2f, %0.2f)", filename.c_str(), p->getX(), p->getY());
                     rasterFound = true;
                     break;
                 }
@@ -270,7 +278,7 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p, bool reset)
         /* Open new raster, store it's info */
         if (rasterFound)
         {
-            rdset = (GDALDataset *)GDALOpenEx(rasterfname.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+            rdset = (GDALDataset *)GDALOpenEx(filename.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
             CHECKPTR(rdset);
 
             /* Store information about raster */
@@ -447,7 +455,6 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char*
     source.Clear();
     target.Clear();
     rasterfname.clear();
-    rasterdate.clear();
 
     try
     {
@@ -651,8 +658,8 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
                 elevation_t el = elist.get(i);
 
                 lua_createtable(L, 0, 2);
+                LuaEngine::setAttrStr(L, "file",  el.filename.c_str());
                 LuaEngine::setAttrNum(L, "value", el.value);
-                LuaEngine::setAttrStr(L, "date",  el.date.c_str());
                 lua_rawseti(L, -2, i+1);
             }
 
