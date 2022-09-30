@@ -71,7 +71,7 @@ class ArcticDEMRaster: public LuaObject
 
         typedef struct {
             double      value;
-            std::string date;
+            std::string filename;
         } elevation_t;
 
         /*--------------------------------------------------------------------
@@ -115,7 +115,6 @@ class ArcticDEMRaster: public LuaObject
          *--------------------------------------------------------------------*/
         std::string       indexfname;
         std::string       rasterfname;
-        std::string       rasterdate;
         bool              ismosaic;
         GDALDataset*      idset;
         OGRLayer*         ilayer;

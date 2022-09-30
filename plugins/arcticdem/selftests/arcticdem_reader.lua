@@ -26,7 +26,7 @@ local dem, el, status
 local lon = -74.60
 local lat = 82.86
 
-for radius = 0, 2 do
+for radius = 0, 5 do
     for i = 1, 8 do
         dem = arcticdem.raster("mosaic", samplingAlgs[i], radius)
         el, status = dem:sample(lon, lat)
@@ -42,8 +42,19 @@ local tbl, status = dem:samples(lon, lat)
 
 for i, v in ipairs(tbl) do
     local el = v["value"]
-    local date = v["date"]
-    print(i, el, date)
+    local fname = v["file"]
+    print(i, el, fname)
+end
+
+
+print('\n------------------\nTest: Mosaic multiple points in time\n------------')
+dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
+local tbl, status = dem:samples(lon, lat)
+
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local fname = v["file"]
+    print(i, el, fname)
 end
 
 

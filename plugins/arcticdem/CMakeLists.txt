@@ -71,8 +71,7 @@ target_include_directories (arcticdem
 # Script Installation #
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/mosaic_sample.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/strip_sample.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/samples.lua
     DESTINATION
         ${CONFDIR}/api
 )
