@@ -1,5 +1,6 @@
 requests
 numpy
+fiona==1.8
 geopandas
 shapely<2
 scikit-learn
