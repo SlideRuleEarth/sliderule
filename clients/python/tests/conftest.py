@@ -22,6 +22,6 @@ def asset(request):
 @pytest.fixture(scope='session')
 def organization(request):
     organization_value = request.config.option.organization
-    if organization_value is None:
-        pytest.skip()
+    if organization_value == "None":
+        organization_value = None
     return organization_value
