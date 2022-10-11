@@ -42,7 +42,6 @@
 
 #define ATL06_DEFAULT_SURFACE_TYPE              SRT_LAND_ICE
 #define ATL06_DEFAULT_SIGNAL_CONFIDENCE         CNF_SURFACE_LOW
-#define ATL06_DEFAULT_QUALITY                   QUALITY_NOMINAL
 #define ATL06_DEFAULT_YAPC_SCORE                0
 #define ATL06_DEFAULT_YAPC_VERSION              3
 #define ALT06_DEFAULT_YAPC_WIN_X                15.0
