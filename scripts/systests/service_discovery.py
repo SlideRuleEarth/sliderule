@@ -44,7 +44,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         server = sys.argv[1]
     url = "http://" + server + ":8050/discovery/"
-    scrub_interval = 5
+    scrub_interval = 1
     num_locks_per_node = 3
 
     ###################
@@ -58,11 +58,11 @@ if __name__ == '__main__':
     # TEST - Repeated Posts
     ###################
 
-    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'localhost'})
+    rsps = http_post(url+"register", {'service':'test', 'lifetime':1, 'address':'localhost'})
     assert rsps['localhost'][0] == 'test'
-    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'localhost'})
+    rsps = http_post(url+"register", {'service':'test', 'lifetime':1, 'address':'localhost'})
     assert rsps['localhost'][0] == 'test'
-    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'localhost'})
+    rsps = http_post(url+"register", {'service':'test', 'lifetime':1, 'address':'localhost'})
     assert rsps['localhost'][0] == 'test'
 
     sleep(2)
@@ -71,22 +71,22 @@ if __name__ == '__main__':
     # TEST - Get Member
     ###################
 
-    rsps = http_post(url, {'service':'test', 'lifetime':2, 'name':'bob'})
+    rsps = http_post(url+"register", {'service':'test', 'lifetime':2, 'address':'bob'})
     assert rsps['bob'][0] == 'test'
-    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
+    rsps = http_post(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
     assert rsps['members'][0] == 'bob'
     transactions = rsps['transactions']
-    rsps = http_get(url+"unlock", {'transactions':[transactions[0]]})
+    rsps = http_post(url+"unlock", {'transactions':[transactions[0]]})
     assert rsps['complete'] == 1
 
     ###################
     # TEST - Expire Member
     ###################
 
-    rsps = http_post(url, {'service':'test', 'lifetime':1, 'name':'bob'})
+    rsps = http_post(url+"register", {'service':'test', 'lifetime':1, 'address':'bob'})
     assert rsps['bob'][0] == 'test'
     sleep(2 + scrub_interval)
-    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 5})
+    rsps = http_post(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 5})
     assert len(rsps['members']) == 0
     assert len(rsps['transactions']) == 0
 
@@ -94,22 +94,24 @@ if __name__ == '__main__':
     # TEST - Expire Transaction
     ###################
 
-    rsps = http_post(url, {'service':'test', 'lifetime':(scrub_interval + 10), 'name':'bob'})
+    rsps = http_post(url+"register", {'service':'test', 'lifetime':(scrub_interval + 10), 'address':'bob'})
     assert rsps['bob'][0] == 'test'
-    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': num_locks_per_node, 'timeout': 1})
+    rsps = http_post(url+"lock", {'service':'test', 'nodesNeeded': num_locks_per_node, 'timeout': 1})
     assert len(rsps['members']) == num_locks_per_node
     assert len(rsps['transactions']) == num_locks_per_node
     assert rsps['members'][0] == 'bob'
     # no nodes should be available at this point
-    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
+    rsps = http_post(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
     assert len(rsps['members']) == 0
     assert len(rsps['transactions']) == 0
     # wait for transactions to expire
     sleep(1 + scrub_interval)
-    rsps = http_get(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
+    rsps = http_post(url+"lock", {'service':'test', 'nodesNeeded': 1, 'timeout': 1})
     assert len(rsps['members']) == 1
     assert len(rsps['transactions']) == 1
     assert rsps['members'][0] == 'bob'
+
+    sleep(1 + scrub_interval)
 
     ###################
     # TEST - Prometheus
@@ -124,7 +126,7 @@ if __name__ == '__main__':
             metrics[elements[0]] = int(elements[1])
     assert metrics['num_requests'] > 0
     assert metrics['num_complete'] > 0
-    assert metrics['num_failures'] == 0
+    assert metrics['num_failures'] > 0
     assert metrics['num_timeouts'] > 0
-    assert metrics['num_active_locks'] == 1
-    assert metrics['test_members'] == 1
+    assert metrics['num_active_locks'] == 0
+    assert metrics['test_members'] == 0

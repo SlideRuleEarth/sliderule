@@ -61,6 +61,7 @@ package.path = package.path .. ';/usr/local/etc/haproxy/?.lua'
 -- Imports
 --
 local json = require("json")
+local prettyprint = require("prettyprint")
 
 --
 -- Service Catalog
@@ -214,10 +215,13 @@ local function api_lock(applet)
     local nodesNeeded = request["nodesNeeded"]
     local timeout = request["timeout"] < MaxTimeout and request["timeout"] or MaxTimeout
 
+    -- initialize error count
+    local error_count = 0
+
     -- sort records by locks
     local function sort_by_locks(registry)
         local addresses = {}
-        for address in pairs(registry) do
+        for address,_ in pairs(registry) do
           table.insert(addresses, address)
         end
         table.sort(addresses, function(address1, address2)
@@ -232,40 +236,48 @@ local function api_lock(applet)
     local service_registry = ServiceCatalog[service]
     if service_registry ~= nil then
         local sorted_addresses = sort_by_locks(service_registry)
-        local i = 1
-        while nodesNeeded > 0 do
-            -- check if end of list
-            if i > #sorted_addresses then i = 0 end
-            -- pull out member
-            local address = sorted_addresses[i]
-            local member = service_registry[address]
-            -- check if number of locks exceeds max
-            if member["locks"] >= MaxLocksPerNode then
-                if i == 0 then break -- full capacity
-                else i = 0 end -- go back to beginning of sorted list
-            else
-                -- create transaction
-                local transaction = {
-                    service_registry,
-                    address,
-                    timeout
-                }
-                -- lock member
-                nodesNeeded = nodesNeeded - 1 -- need one less node now
-                member["locks"] = member["locks"] + 1 -- member has one more lock
-                table.insert(member_list, string.format('"%s"', member["address"])) -- populate member list that gets returned
-                table.insert(transaction_list, TransactionId) -- populate list of transaction ids that get returned
-                TransactionTable[TransactionId] = transaction -- register transaction
-                TransactionId = TransactionId + 1
+        if #sorted_addresses > 0 then
+            local i = 1
+            while nodesNeeded > 0 do
+                -- check if end of list
+                if i > #sorted_addresses then i = 1 end
+                -- pull out member
+                local address = sorted_addresses[i]
+                local member = service_registry[address]
+                -- check if number of locks exceeds max
+                if member["locks"] >= MaxLocksPerNode then
+                    if i == 1 then break -- full capacity
+                    else i = 1 end -- go back to beginning of sorted list
+                else
+                    -- create transaction
+                    local transaction = {
+                        service_registry,
+                        address,
+                        timeout
+                    }
+                    -- lock member
+                    nodesNeeded = nodesNeeded - 1 -- need one less node now
+                    member["locks"] = member["locks"] + 1 -- member has one more lock
+                    table.insert(member_list, string.format('"%s"', member["address"])) -- populate member list that gets returned
+                    table.insert(transaction_list, TransactionId) -- populate list of transaction ids that get returned
+                    TransactionTable[TransactionId] = transaction -- register transaction
+                    TransactionId = TransactionId + 1
+                end
+                -- goto next entry in address list
+                i = i + 1
             end
-            -- goto next entry in address list
-            i = i + 1
+        else
+            core.log(core.warning, string.format("No addresses found in registry %s", service))
+            error_count = error_count + 1
         end
+    else
+        core.log(core.warning, string.format("Service %s not found", service))
+        error_count = error_count + 1
     end
 
     -- update statistics
     StatData["numRequests"] = StatData["numRequests"] + 1
-    StatData["numFailures"] = StatData["numFailures"] + 1
+    StatData["numFailures"] = StatData["numFailures"] + error_count
 
     -- send response
     local response = string.format([[{"members": [%s], "transactions": [%s]}]], table.concat(member_list, ","), table.concat(transaction_list, ","))
@@ -304,7 +316,7 @@ local function api_unlock(applet)
     local error_count = 0
 
     -- loop through each transaction
-    for id in pairs(transactions) do
+    for _,id in pairs(transactions) do
         local transaction = TransactionTable[id]
         if transaction ~= nil then
             local service_registry = transaction[1]
@@ -323,7 +335,7 @@ local function api_unlock(applet)
                 error_count = error_count + 1
             end
             -- remove transaction from transaction table
-            table.remove(TransactionTable, id)
+            TransactionTable[id] = nil
         else
             core.log(core.warning, string.format("Missing transaction id %d", id))
             error_count = error_count + 1
@@ -351,6 +363,7 @@ end
 --
 local function api_prometheus(applet)
 
+    -- build initial response
     local response = string.format([[
 # TYPE num_requests counter
 num_requests %d
@@ -367,12 +380,22 @@ num_timeouts %d
 # TYPE num_active_locks counter
 num_active_locks %d
 ]], StatData["numRequests"], StatData["numComplete"], StatData["numFailures"], StatData["numTimeouts"], #TransactionTable)
-    for member_metric in pairs(StatData["memberCounts"]) do
+
+    -- add member counts to response
+    for member_metric,_ in pairs(StatData["memberCounts"]) do
         response = response .. string.format([[
+
 # TYPE %s counter
 %s %d
 ]], member_metric, member_metric, StatData["memberCounts"][member_metric])
     end
+
+    -- send response
+    applet:set_status(200)
+    applet:add_header("content-length", string.len(response))
+    applet:add_header("content-type", "text/plain")
+    applet:start_response()
+    applet:send(response)
 end
 
 --
@@ -408,7 +431,7 @@ local function backgroud_scrubber()
                 end
             end
             -- delete (expire) members
-            for address in pairs(members_to_delete) do
+            for _,address in pairs(members_to_delete) do
                 service_registry[address] = nil
             end
         end
@@ -429,15 +452,15 @@ local function backgroud_scrubber()
                     if member["locks"] > 0 then
                         member["locks"] = member["locks"] - 1
                     else
-                        core.log(core.err, string.format("transaction timed-out on %s with no locks", address))
+                        core.log(core.err, string.format("transaction %d timed-out on %s with no locks", id, address))
                     end
                 else
-                    core.log(core.err, string.format("transaction associated with an unknown address %s", address))
+                    core.log(core.err, string.format("transaction %d associated with an unknown address %s", id, address))
                 end
             end
         end
         -- delete (time-out) transactions
-        for id in pairs(transactions_to_delete) do
+        for _,id in pairs(transactions_to_delete) do
             TransactionTable[id] = nil
         end
         -- update statistics
