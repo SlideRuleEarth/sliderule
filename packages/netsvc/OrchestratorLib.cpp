@@ -68,14 +68,14 @@ void OrchestratorLib::deinit (void)
 /*----------------------------------------------------------------------------
  * registerService
  *----------------------------------------------------------------------------*/
-bool OrchestratorLib::registerService (const char* service, int lifetime, const char* name, bool verbose)
+bool OrchestratorLib::registerService (const char* service, int lifetime, const char* address, bool verbose)
 {
     bool status = true;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"name\": \"%s\"}", service, lifetime, name);
+    SafeString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/", rqst.getString(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/register", rqst.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -85,8 +85,8 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
                 rapidjson::Document json;
                 json.Parse(rsps.response);
 
-                const char* membership = json[name][0].GetString();
-                double expiration = json[name][1].GetDouble();
+                const char* membership = json[address][0].GetString();
+                double expiration = json[address][1].GetDouble();
 
                 int64_t exp_unix_ms = (expiration * 1000);
                 int64_t exp_gps_ms = TIME_UNIX_TO_GPS(exp_unix_ms);
@@ -103,7 +103,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
     }
     else
     {
-        mlog(CRITICAL, "Failed to register %s to %s", name, service);
+        mlog(CRITICAL, "Failed to register %s to %s", address, service);
         status = false;
     }
 
@@ -121,7 +121,7 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
     HttpClient orchestrator(NULL, URL);
     SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/lock", rqst.getString(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/lock", rqst.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -194,7 +194,7 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
     for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(txstrbuf, 64, ",%ld", transactions[t]);
     rqst += "]}";
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/unlock", rqst.getString(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/unlock", rqst.getString(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -282,7 +282,7 @@ int OrchestratorLib::luaUrl(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaRegisterService - orchreg(<service>, <lifetime>, <name>)
+ * luaRegisterService - orchreg(<service>, <lifetime>, <address>)
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaRegisterService(lua_State* L)
 {
@@ -291,10 +291,10 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
     {
         const char* service = LuaObject::getLuaString(L, 1);
         int lifetime        = LuaObject::getLuaInteger(L, 2);
-        const char* name    = LuaObject::getLuaString(L, 3);
+        const char* address = LuaObject::getLuaString(L, 3);
         bool verbose        = LuaObject::getLuaBoolean(L, 4, true, false);
 
-        status = registerService(service, lifetime, name, verbose);
+        status = registerService(service, lifetime, address, verbose);
     }
     catch(const RunTimeException& e)
     {

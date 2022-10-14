@@ -1,6 +1,5 @@
 local runner = require("test_executive")
 local console = require("console")
-local json = require("json")
 
 --
 -- API: health
@@ -9,7 +8,7 @@ local h = netsvc.orchhealth()
 runner.check(h, "orchestrator unhealthy")
 
 --
--- API: <register>
+-- API: register
 --
 local reg_status = netsvc.orchreg('test', 5, 'bob', true)
 runner.check(reg_status, "failed to register")

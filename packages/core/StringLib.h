@@ -116,6 +116,8 @@ class StringLib
         static TokenList*       split           (const char* str, int len, char separator, bool strip);
         static void             convertUpper    (char* str);
         static char*            convertUpper    (char* src, char* dst);
+        static void             convertLower    (char* str);
+        static char*            convertLower    (char* src, char* dst);
         static int              tokenizeLine    (const char* str, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE]);
         static int              getLine         (char* str, int* ret_len, int max_str_size, FILE* fptr);
         static bool             str2bool        (const char* str, bool* val);

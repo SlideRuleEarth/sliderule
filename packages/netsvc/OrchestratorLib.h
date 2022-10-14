@@ -74,7 +74,7 @@ class OrchestratorLib
         static void         init                (void);
         static void         deinit              (void);
 
-        static bool         registerService     (const char* service, int lifetime, const char* name, bool verbose=false);
+        static bool         registerService     (const char* service, int lifetime, const char* address, bool verbose=false);
         static NodeList*    lock                (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
         static bool         unlock              (long transactions[], int num_transactions, bool verbose=false);
         static bool         health              (void);

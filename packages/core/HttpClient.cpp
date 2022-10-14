@@ -351,9 +351,10 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             else
                             {
                                 hdr_kv_t hdr = parseHeaderLine(line_start, line_term);
+                                StringLib::convertLower(hdr.key);
 
                                 /* Process Content Length Header */
-                                if(StringLib::match(hdr.key, "Content-Length"))
+                                if(StringLib::match(hdr.key, "content-length"))
                                 {
                                     if(StringLib::str2long(hdr.value, &content_remaining))
                                     {
@@ -365,7 +366,8 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid content length header => %s: %s", hdr.key, hdr.value);
                                     }
                                 }
-                                else if(StringLib::match(hdr.key, "Transfer-Encoding"))
+                                /* Process Transfer Encoding Header */
+                                else if(StringLib::match(hdr.key, "transfer-encoding"))
                                 {
                                     if(StringLib::match(hdr.value, "chunked"))
                                     {

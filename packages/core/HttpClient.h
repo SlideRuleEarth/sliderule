@@ -106,8 +106,8 @@ class HttpClient: public LuaObject
         } rqst_t;
 
         typedef struct {
-            const char*                 key;
-            const char*                 value;
+            char*                       key;
+            char*                       value;
         } hdr_kv_t;
 
         typedef struct {

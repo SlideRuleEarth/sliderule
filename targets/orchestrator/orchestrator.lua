@@ -179,7 +179,7 @@ local function api_register(applet)
     ServiceCatalog[service][address] = member
 
     -- send response
-    local response = string.format([[{"%s": ["%s", "%d"]}]], address, service, member["expiration"])
+    local response = string.format([[{"%s": ["%s", %d]}]], address, service, member["expiration"])
     applet:set_status(200)
     applet:add_header("content-length", string.len(response))
     applet:add_header("content-type", "application/json")

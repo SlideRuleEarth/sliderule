@@ -734,6 +734,45 @@ char* StringLib::convertUpper(char* dst, char* src)
 }
 
 /*----------------------------------------------------------------------------
+ * convertLower
+ *
+ *  converts in place
+ *----------------------------------------------------------------------------*/
+void StringLib::convertLower(char* str1)
+{
+    int slen = (int)strlen(str1) + 1;
+    for(int i = 0; i < slen; i++)
+    {
+        if(isalpha(str1[i]) && isupper(str1[i]))
+        {
+            str1[i] = tolower(str1[i]);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertLower
+ *
+ *  converts from src to dst, returns dst for c syntax convenience
+ *----------------------------------------------------------------------------*/
+char* StringLib::convertLower(char* dst, char* src)
+{
+    int slen = (int)strlen(src) + 1;
+    for(int i = 0; i < slen; i++)
+    {
+        if(isalpha(src[i]) && isupper(src[i]))
+        {
+            dst[i] = tolower(src[i]);
+        }
+        else
+        {
+            dst[i] = src[i];
+        }
+    }
+    return dst;
+}
+
+/*----------------------------------------------------------------------------
  * tokenizeLine
  *
  *  characters inside quotation marks will ignore separator
