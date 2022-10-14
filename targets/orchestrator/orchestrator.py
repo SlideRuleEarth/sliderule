@@ -308,10 +308,10 @@ def scrubber_thread():
         sleep(serverSettings["scrubInterval"])
         now = time()
         # Scrub Expired Member Registrations
-        members_to_delete = []
         for service_name, service in serviceCatalog.items():
             statData["memberCounts"][service_name + "_members"] = len(service)
             with serverLock:
+                members_to_delete = []
                 for _, member in service.items():
                     if member['expiration'] <= now:
                         members_to_delete.append(member['name'])
