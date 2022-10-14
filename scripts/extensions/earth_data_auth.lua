@@ -10,11 +10,16 @@
 --
 --              curl -L -n -c .cookies https://data.nsidc.earthdatacloud.nasa.gov/s3credentials
 --
+--          It is assumed that the credentials for earthdata login are stored in a .netrc file
+--          that is either located in the local home directory, it is stored in an S3 bucket
+--
 
 local json = require("json")
 
 local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
 local asset = "nsidc-s3"
+local bucket = "sliderule" or arg[1]
+local netrc_key = "/config/netrc" or arg[2]
 
 -- download netrc
 local netrc_present = false
@@ -23,7 +28,7 @@ local filename = home.."/.netrc"
 local f = io.open(filename, "r")
 if f == nil then
     while not netrc_present and sys.alive() do
-        local netrc = aws.s3get("icesat2-sliderule", "/config/netrc")
+        local netrc = aws.s3get(bucket, netrc_key)
         if netrc then
             local f = io.open(filename, "w")
             if f ~= nil then
