@@ -64,6 +64,24 @@ local json = require("json")
 local prettyprint = require("prettyprint")
 
 --
+-- Local Functions
+--
+local function sort_by_locks(registry)
+    local addresses = {}
+    local num_addresses = 0
+    for address,_ in pairs(registry) do
+        table.insert(addresses, address)
+        num_addresses = num_addresses + 1
+    end
+    table.sort(addresses, function(address1, address2)
+        return registry[address1]["locks"] < registry[address2]["locks"]
+    end)
+    return addresses, num_addresses
+end
+
+local function entries_in_table(tbl)
+end
+--
 -- Service Catalog
 --
 --  {
@@ -125,6 +143,7 @@ StatData = {
     numComplete = 0,
     numFailures = 0,
     numTimeouts = 0,
+    numActiveLocks = 0,
     memberCounts = {}
 }
 
@@ -218,29 +237,17 @@ local function api_lock(applet)
     -- initialize error count
     local error_count = 0
 
-    -- sort records by locks
-    local function sort_by_locks(registry)
-        local addresses = {}
-        for address,_ in pairs(registry) do
-          table.insert(addresses, address)
-        end
-        table.sort(addresses, function(address1, address2)
-          return registry[address1]["locks"] < registry[address2]["locks"]
-        end)
-        return addresses
-    end
-
     -- loop through service registry and return addresses with least locks
     local member_list = {} -- list of member addresses returned
     local transaction_list = {} -- list of transaction ids returned
     local service_registry = ServiceCatalog[service]
     if service_registry ~= nil then
-        local sorted_addresses = sort_by_locks(service_registry)
-        if #sorted_addresses > 0 then
+        local sorted_addresses, num_adresses = sort_by_locks(service_registry)
+        if num_adresses > 0 then
             local i = 1
             while nodesNeeded > 0 do
                 -- check if end of list
-                if i > #sorted_addresses then i = 1 end
+                if i > num_adresses then i = 1 end
                 -- pull out member
                 local address = sorted_addresses[i]
                 local member = service_registry[address]
@@ -312,11 +319,13 @@ local function api_unlock(applet)
     local request = json.decode(body)
     local transactions = request["transactions"]
 
-    -- initialize count of errors
+    -- initialize count
     local error_count = 0
+    local num_transactions = 0
 
     -- loop through each transaction
     for _,id in pairs(transactions) do
+        num_transactions = num_transactions + 1
         local transaction = TransactionTable[id]
         if transaction ~= nil then
             local service_registry = transaction[1]
@@ -343,11 +352,11 @@ local function api_unlock(applet)
     end
 
     -- update statistics
-    StatData["numComplete"] = StatData["numComplete"] + #transactions
+    StatData["numComplete"] = StatData["numComplete"] + num_transactions
     StatData["numFailures"] = StatData["numFailures"] + error_count
 
     -- send response
-    local response = string.format([[{"complete": %d, "fail": %d}]], #transactions, error_count)
+    local response = string.format([[{"complete": %d, "fail": %d}]], num_transactions, error_count)
     applet:set_status(200)
     applet:add_header("content-length", string.len(response))
     applet:add_header("content-type", "application/json")
@@ -379,7 +388,7 @@ num_timeouts %d
 
 # TYPE num_active_locks counter
 num_active_locks %d
-]], StatData["numRequests"], StatData["numComplete"], StatData["numFailures"], StatData["numTimeouts"], #TransactionTable)
+]], StatData["numRequests"], StatData["numComplete"], StatData["numFailures"], StatData["numTimeouts"], StatData["numActiveLocks"])
 
     -- add member counts to response
     for member_metric,_ in pairs(StatData["memberCounts"]) do
@@ -421,11 +430,11 @@ local function backgroud_scrubber()
         local now = os.time()
         -- scrub expired member registrations
         for service, service_registry in pairs(ServiceCatalog) do
-            -- set member count
-            StatData["memberCounts"][service.."_members"] = #service_registry
             -- build list of members to delete (expire)
+            local total_num_members = 0
             local members_to_delete = {}
             for address, member in pairs(service_registry) do
+                total_num_members = total_num_members + 1
                 if member["expiration"] <= now then
                     table.insert(members_to_delete, address)
                 end
@@ -434,9 +443,12 @@ local function backgroud_scrubber()
             for _,address in pairs(members_to_delete) do
                 service_registry[address] = nil
             end
+            -- set member count
+            StatData["memberCounts"][service.."_members"] = total_num_members
         end
         -- scrub timed-out transactions
         local num_timeouts = 0
+        local num_transactions = 0
         local transactions_to_delete = {}
         for id, transaction in pairs(TransactionTable) do
             local service_registry = transaction[1]
@@ -452,11 +464,13 @@ local function backgroud_scrubber()
                     if member["locks"] > 0 then
                         member["locks"] = member["locks"] - 1
                     else
-                        core.log(core.err, string.format("transaction %d timed-out on %s with no locks", id, address))
+                        core.log(core.err, string.format("Transaction %d timed-out on %s with no locks", id, address))
                     end
                 else
-                    core.log(core.err, string.format("transaction %d associated with an unknown address %s", id, address))
+                    core.log(core.err, string.format("Transaction %d associated with an unknown address %s", id, address))
                 end
+            else
+                num_transactions = num_transactions + 1
             end
         end
         -- delete (time-out) transactions
@@ -465,6 +479,36 @@ local function backgroud_scrubber()
         end
         -- update statistics
         StatData["numTimeouts"] = StatData["numTimeouts"] + num_timeouts
+        StatData["numActiveLocks"] = num_transactions
+    end
+end
+
+--
+-- Fetch: next_node
+--
+local function orchestrator_next_node(txn, service)
+    local service_registry = ServiceCatalog[service]
+    if service_registry ~= nil then
+        -- sort members by number of locks
+        local sorted_addresses, num_addresses = sort_by_locks(service_registry)
+        if num_addresses > 0 then
+            -- get set of nodes with same minimal number of locks
+            local min_num_locks = service_registry[sorted_addresses[1]]["locks"]
+            local num_members_with_min_locks = 1
+            local i = 2
+            while i <= num_addresses do
+                if service_registry[sorted_addresses[i]]["locks"] <= min_num_locks then
+                    num_members_with_min_locks = num_members_with_min_locks + 1
+                end
+                i = i + 1
+            end
+            -- choose address randomly from set of minimally locked members
+            return sorted_addresses[math.random(1, num_members_with_min_locks)]
+        else
+            core.log(core.warning, string.format("No nodes available on service %s", service))
+        end
+    else
+        core.log(core.warning, string.format("Unknown service %s", service))
     end
 end
 
@@ -477,4 +521,5 @@ core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
 core.register_task(backgroud_scrubber)
+core.register_fetches("next_node", orchestrator_next_node)
 

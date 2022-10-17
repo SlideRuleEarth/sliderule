@@ -45,7 +45,6 @@ local app_port                  = cfgtbl["app_port"] or 9081
 local probe_port                = cfgtbl["probe_port"] or 10081
 local authenticate_to_earthdata = cfgtbl["authenticate_to_earthdata"] -- nil is false
 local register_as_service       = cfgtbl["register_as_service"] -- nil is false
-local initialize_proxy          = cfgtbl["initialize_proxy"] -- nil is false
 local asset_directory           = cfgtbl["asset_directory"] or __confdir.."/asset_directory.csv"
 local normal_mem_thresh         = cfgtbl["normal_mem_thresh"] or 1.0
 local stream_mem_thresh         = cfgtbl["stream_mem_thresh"] or 0.75
@@ -53,6 +52,7 @@ local msgq_depth                = cfgtbl["msgq_depth"] or 10000
 local orchestrator_url          = cfgtbl["orchestrator"] or os.getenv("ORCHESTRATOR")
 local org_name                  = cfgtbl["cluster"] or os.getenv("CLUSTER")
 local ps_url                    = cfgtbl["provisioning_system"] or os.getenv("PROVISIONING_SYSTEM")
+local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
 
 --------------------------------------------------
 -- System Configuration
@@ -73,9 +73,6 @@ dispatcher:run()
 -- Configure Assets --
 local assets = asset.loaddir(asset_directory, true)
 
--- Initialize Orchestrator --
-netsvc.orchurl(orchestrator_url)
-
 -- Run IAM Role Authentication Script -
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
 
@@ -84,7 +81,8 @@ if authenticate_to_earthdata then
     local earthdata_auth_script = core.script("earth_data_auth", ""):name("EarthdataAuthScript")
 end
 
--- Run Service Registry Script --
+-- Initialize Orchestrator --
+netsvc.orchurl(orchestrator_url)
 if register_as_service then
     local service_script = core.script("service_registry", "http://"..sys.ipv4()..":"..tostring(app_port)):name("ServiceScript")
 end
@@ -106,7 +104,7 @@ end
 -- Configure Provisioning System Authentication --
 netsvc.psurl(ps_url)
 netsvc.psorg(org_name)
-if initialize_proxy then
+if ps_auth then
     local authenticator = netsvc.psauth()
     source_endpoint:auth(authenticator)
 end
