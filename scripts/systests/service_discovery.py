@@ -129,4 +129,4 @@ if __name__ == '__main__':
     assert metrics['num_failures'] > 0
     assert metrics['num_timeouts'] > 0
     assert metrics['num_active_locks'] == 0
-    assert metrics['test_members'] == 0
+    assert metrics['test_members'] == 1
