@@ -600,7 +600,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         rqst = {"username": ps_username, "password": ps_password, "org_name": ps_organization}
         headers = {'Content-Type': 'application/json'}
         try:
-            api = "https://" + ps_url + "/ps/api/org_token/"
+            api = "https://" + ps_url + "/api/org_token/"
             rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout).json()
             ps_refresh_token = rsps["refresh"]
             ps_access_token = rsps["access"]
