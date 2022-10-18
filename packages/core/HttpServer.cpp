@@ -273,8 +273,9 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
         try
         {
-            const char* key = (*keyvalue_list)[0].getString();
+            char* key = (char*)(*keyvalue_list)[0].getString();
             const char* value = (*keyvalue_list)[1].getString(true);
+            StringLib::convertLower(key);
             request->headers.add(key, value, true);
         }
         catch(const RunTimeException& e)
@@ -429,7 +430,7 @@ int HttpServer::onRead(int fd)
                     /* Get Content Length */
                     try
                     {
-                        if(StringLib::str2long(connection->request->headers["Content-Length"], &connection->request->length))
+                        if(StringLib::str2long(connection->request->headers["content-length"], &connection->request->length))
                         {
                             /* Allocate and Prepopulate Request Body */
                             connection->request->body = new uint8_t[connection->request->length + 1];
@@ -440,7 +441,7 @@ int HttpServer::onRead(int fd)
                         }
                         else
                         {
-                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["Content-Length"]);
+                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["content-length"]);
                             status = INVALID_RC; // will close socket
                         }
                     }
@@ -452,7 +453,7 @@ int HttpServer::onRead(int fd)
                     /* Get Keep Alive Setting */
                     try
                     {
-                        if(StringLib::match(connection->request->headers["Connection"], "keep-alive"))
+                        if(StringLib::match(connection->request->headers["connection"], "keep-alive"))
                         {
                             connection->keep_alive = true;
                         }
