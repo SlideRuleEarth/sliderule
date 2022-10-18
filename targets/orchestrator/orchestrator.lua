@@ -513,6 +513,22 @@ local function orchestrator_next_node(txn, service)
 end
 
 --
+-- Converter: extract_ip
+--
+local function orchestrator_extract_ip(address)
+    local protocol, _, ip, __, port = address:match('(.*)(://)(.*)(:)(.*)')
+    return ip
+end
+
+--
+-- Converter: extract_port
+--
+local function orchestrator_extract_port(address)
+    local protocol, _, ip, __, port = address:match('(.*)(://)(.*)(:)(.*)')
+    return port
+end
+
+--
 -- Register with HAProxy
 --
 core.register_service("orchestrator_register", "http", api_register)
@@ -522,4 +538,5 @@ core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)
-
+core.register_converters("extract_ip", orchestrator_extract_ip)
+core.register_converters("extract_port", orchestrator_extract_port)
