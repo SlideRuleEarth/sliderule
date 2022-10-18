@@ -90,7 +90,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
     try
     {
         /* Build API URL */
-        SafeString url_str("%s/ps/api/org_token/", URL);
+        SafeString url_str("%s/api/org_token/", URL);
 
         /* Build Bearer Token Header */
         SafeString hdr_str("Content-Type: application/json");
@@ -184,7 +184,7 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
     try
     {
         /* Build API URL */
-        SafeString url_str("%s/ps/api/get_membership_status/%s/", URL, Organization);
+        SafeString url_str("%s/api/membership_status/%s/", URL, Organization);
 
         /* Build Bearer Token Header */
         SafeString hdr_str("Authorization: Bearer %s", access_token);
