@@ -17,14 +17,45 @@ local arcticdem_local = core.getbyname(asset_name)
 -- Unit Test --
 
 -------------
-samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
-
-print('\n------------------\nTest: Sampling Elevations\n------------')
-
 local dem, el, status
 
 local lon = -74.60
 local lat = 82.86
+
+print('\n------------------\nTest: Strip multiple points in time\n------------')
+dem = arcticdem.raster("strip", "NearestNeighbour", 0)
+local starttime = time.latch();
+local tbl, status = dem:samples(lon, lat)
+local stoptime = time.latch();
+local dtime = stoptime - starttime
+
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local fname = v["file"]
+    print(i, el, fname)
+end
+print('ExecTime:', dtime * 1000, '\n')
+
+
+print('\n------------------\nTest: Mosaic multiple points in time\n------------')
+dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
+starttime = time.latch();
+tbl, status = dem:samples(lon, lat)
+stoptime = time.latch();
+dtime = stoptime - starttime
+
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local fname = v["file"]
+    print(i, el, fname)
+end
+print('ExecTime:', dtime * 1000, '\n')
+
+--os.exit()
+
+local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
+
+print('\n------------------\nTest: Sampling Elevations\n------------')
 
 for radius = 0, 5 do
     for i = 1, 8 do
@@ -34,29 +65,6 @@ for radius = 0, 5 do
     end
     print('\n-------------------------------------------')
 end
-
-
-print('\n------------------\nTest: Strip multiple points in time\n------------')
-dem = arcticdem.raster("strip", "NearestNeighbour", 0)
-local tbl, status = dem:samples(lon, lat)
-
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    print(i, el, fname)
-end
-
-
-print('\n------------------\nTest: Mosaic multiple points in time\n------------')
-dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
-local tbl, status = dem:samples(lon, lat)
-
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    print(i, el, fname)
-end
-
 
 -- os.exit()
 
