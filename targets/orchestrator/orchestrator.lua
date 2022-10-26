@@ -509,6 +509,7 @@ local function orchestrator_next_node(txn, service)
     else
         core.log(core.warning, string.format("Unknown service %s", service))
     end
+    return "127.0.0.1:9081"
 end
 
 --
