@@ -79,8 +79,6 @@ local function sort_by_locks(registry)
     return addresses, num_addresses
 end
 
-local function entries_in_table(tbl)
-end
 --
 -- Service Catalog
 --
@@ -233,6 +231,7 @@ local function api_lock(applet)
     local service = request["service"]
     local nodesNeeded = request["nodesNeeded"]
     local timeout = request["timeout"] < MaxTimeout and request["timeout"] or MaxTimeout
+    local expiration = os.time() + timeout
 
     -- initialize error count
     local error_count = 0
@@ -260,7 +259,7 @@ local function api_lock(applet)
                     local transaction = {
                         service_registry,
                         address,
-                        timeout
+                        expiration
                     }
                     -- lock member
                     nodesNeeded = nodesNeeded - 1 -- need one less node now
@@ -453,9 +452,9 @@ local function backgroud_scrubber()
         for id, transaction in pairs(TransactionTable) do
             local service_registry = transaction[1]
             local address = transaction[2]
-            local timeout = transaction[3]
+            local expiration = transaction[3]
             local member = service_registry[address]
-            if timeout <= now then
+            if expiration <= now then
                 -- add id to list of transactions to delete (time-out)
                 table.insert(transactions_to_delete, id)
                 num_timeouts = num_timeouts + 1
