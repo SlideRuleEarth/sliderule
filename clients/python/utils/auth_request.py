@@ -22,16 +22,16 @@ if __name__ == '__main__':
         url = sys.argv[4]
 
     # Authentication Request
-    url = "https://ps." + url + "/api/org_token/"
+    host = "https://ps." + url + "/api/org_token/"
     rqst = {"username": username, "password": password, "org_name": organization}
     headers = {'Content-Type': 'application/json'}
-    rsps = requests.post(url, data=json.dumps(rqst), headers=headers, timeout=(60,10)).json()
+    rsps = requests.post(host, data=json.dumps(rqst), headers=headers, timeout=(60,10)).json()
     print("Login Response: ", rsps)
     refresh = rsps["refresh"]
     access = rsps["access"]
 
     # Organization Access Request
-    url = "https://ps." + url + "/api/membership_status/" + organization + "/"
+    host = "https://ps." + url + "/api/membership_status/" + organization + "/"
     headers = {'Authorization': 'Bearer ' + access}
-    rsps = requests.get(url, headers=headers, timeout=(60,10)).json()
+    rsps = requests.get(host, headers=headers, timeout=(60,10)).json()
     print("Validation Response: ", rsps)
