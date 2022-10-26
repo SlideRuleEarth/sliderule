@@ -231,6 +231,10 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
             info->track = parms->track;
             subsettingThread(info);
         }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid track specified <%d>, must be 1 to 3, or 0 for all", parms->track);
+        }
     }
     catch(const RunTimeException& e)
     {
