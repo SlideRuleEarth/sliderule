@@ -129,67 +129,6 @@ class TransientError(RuntimeError):
 ###############################################################################
 
 #
-<<<<<<< HEAD
-#  get the ip address of an available sliderule server
-#
-def __getserv(stream):
-    global server_table
-    with server_lock:
-        try:
-            server_available = False
-            while not server_available:
-                serv = min(server_table.items(), key=lambda x:x[1]["pending"])[0]
-                if stream:
-                    if server_table[serv]["pending"] < max_pending_per_server:
-                        server_table[serv]["pending"] += 1
-                        server_available = True
-                    else:
-                        if not server_lock.wait(1.0):
-                            logger.debug("Timeout occurred waiting for thread to be notified")
-                else:
-                    server_available = True
-        except:
-            raise RuntimeError('No available urls')
-    return serv
-
-#
-#  __errserv
-#
-def __errserv(serv, stream):
-    global server_table, max_errors_per_server
-    with server_lock:
-        try:
-            if stream:
-                server_table[serv]["pending"] -= 1
-            server_table[serv]["errors"] += 1
-            logger.warning(serv + " encountered consecutive error " + str(server_table[serv]["errors"]))
-            if server_table[serv]["errors"] > max_errors_per_server:
-                logger.critical("Removing " + serv + " from list of available servers due to too many consecutive errors")
-                server_table.pop(serv, None)
-        except Exception as e:
-            logger.debug(serv + " already removed from table")
-        finally:
-            if stream:
-                server_lock.notify()
-
-#
-#  __clrserv
-#
-def __clrserv(serv, stream):
-    global server_table
-    with server_lock:
-        try:
-            if stream:
-                server_table[serv]["pending"] -= 1
-            server_table[serv]["errors"] = 0
-        except Exception as e:
-            pass
-        finally:
-            server_lock.notify()
-
-#
-=======
->>>>>>> development
 #  __populate
 #
 def __populate(rectype):
