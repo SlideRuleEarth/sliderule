@@ -620,7 +620,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
     service_org = ps_organization
 
     # check for direct or public access
-    if service_org == None or service_org == PUBLIC_ORG:
+    if service_org == None:
         return True
 
     # attempt retrieving from environment
@@ -644,7 +644,6 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         headers = {'Content-Type': 'application/json'}
         try:
             api = "https://" + ps_url + "/api/org_token/"
-            print("cred", api, ps_username, ps_password, ps_organization)
             rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
             rsps.raise_for_status()
             rsps = rsps.json()
