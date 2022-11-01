@@ -329,7 +329,7 @@ def __build_auth_header():
             rsps = requests.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
             ps_refresh_token = rsps["refresh"]
             ps_access_token = rsps["access"]
-            ps_token_exp =  time.time() + (rsps["access_lifetime"] / 2)
+            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
         # Build Authentication Header
         headers = {'Authorization': 'Bearer ' + ps_access_token}
     return headers
@@ -411,14 +411,14 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     for c in __callbacks:
         if c not in callbacks:
             callbacks[c] = __callbacks[c]
-    # Construct Request URL and Authorization
-    if service_org:
-        url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
-        headers = __build_auth_header()
-    else:
-        url = 'http://%s%s/%s' % (service_url, path, api)
     # Attempt Request
     try:
+        # Construct Request URL and Authorization
+        if service_org:
+            url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
+            headers = __build_auth_header()
+        else:
+            url = 'http://%s%s/%s' % (service_url, path, api)
         # Perform Request
         if not stream:
             data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
@@ -566,9 +566,9 @@ def update_available_servers (desired_nodes=None):
 
     # Update number of nodes
     if type(desired_nodes) == int:
-        host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes)
+        host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
         headers = __build_auth_header()
-        rsps = requests.get(host, headers=headers, timeout=request_timeout).json()
+        rsps = requests.put(host, headers=headers, timeout=request_timeout)
         rsps.raise_for_status()
 
     # Get number of nodes currently registered
@@ -640,10 +640,13 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         headers = {'Content-Type': 'application/json'}
         try:
             api = "https://" + ps_url + "/api/org_token/"
-            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout).json()
+            print("cred", api, ps_username, ps_password, ps_organization)
+            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
+            rsps.raise_for_status()
+            rsps = rsps.json()
             ps_refresh_token = rsps["refresh"]
             ps_access_token = rsps["access"]
-            ps_token_exp =  time.time() + (rsps["access_lifetime"] / 2)
+            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
             login_status = True
         except:
             logger.error("Unable to authenticate user %s to %s" % (ps_username, api))
