@@ -1,15 +1,9 @@
 import pytest
 
 def pytest_addoption(parser):
-    parser.addoption("--server", action="store", default="icesat2sliderule.org")
+    parser.addoption("--server", action="store", default="slideruleearth.io")
     parser.addoption("--asset", action="store", default="nsidc-s3")
-
-#def pytest_generate_tests(metafunc):
-#    # This is called for every test. Only get/set command line arguments
-#    # if the argument is specified in the list of test "fixturenames".
-#    option_value = metafunc.config.option.server
-#    if 'server' in metafunc.fixturenames and option_value is not None:
-#        metafunc.parametrize("server", [option_value])
+    parser.addoption("--organization", action="store", default="sliderule")
 
 @pytest.fixture(scope='session')
 def server(request):
@@ -24,3 +18,10 @@ def asset(request):
     if asset_value is None:
         pytest.skip()
     return asset_value
+
+@pytest.fixture(scope='session')
+def organization(request):
+    organization_value = request.config.option.organization
+    if organization_value == "None":
+        organization_value = None
+    return organization_value

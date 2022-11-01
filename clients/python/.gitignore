@@ -132,3 +132,4 @@ dmypy.json
 .vscode/
 .DS_Store
 .DS_Store?
+pytrace.*

@@ -12,13 +12,13 @@ INVALID_FILE = "ATL99_20032_2342.h5"
 
 @pytest.mark.network
 class TestApi:
-    def test_happy_case(self, server, asset):
-        icesat2.init(server)
+    def test_happy_case(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         epoch_offset = icesat2.h5("ancillary_data/atlas_sdp_gps_epoch", ATL03_FILE1, asset)[0]
         assert epoch_offset == 1198800018.0
 
-    def test_h5_types(self, server, asset):
-        icesat2.init(server)
+    def test_h5_types(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         heights_64 = icesat2.h5("/gt1l/land_ice_segments/h_li", ATL06_FILE1, asset)
         expected_64 = [45.95665, 45.999374, 46.017857, 46.015575, 46.067562, 46.099796, 46.14037, 46.105526, 46.096024, 46.12297]
         heights_32 = icesat2.h5("/gt1l/land_ice_segments/h_li", ATL06_FILE2, asset)
@@ -28,22 +28,22 @@ class TestApi:
         for c in zip(heights_64, expected_64, heights_32, expected_32, bckgrd_32nf, expected_32nf):
             assert (round(c[0]) == round(c[1])) and (round(c[2]) == round(c[3])) and (round(c[4]) == round(c[5]))
 
-    def test_variable_length(self, server, asset):
-        icesat2.init(server)
+    def test_variable_length(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", ATL03_FILE1, asset)
         assert v[0] == 258 and v[1] == 256 and v[2] == 273
 
-    def test_invalid_file(self, server, asset):
-        icesat2.init(server)
+    def test_invalid_file(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", INVALID_FILE, asset)
         assert len(v) == 0
 
-    def test_invalid_asset(self, server):
-        icesat2.init(server)
+    def test_invalid_asset(self, server, organization):
+        icesat2.init(server, organization=organization)
         v = icesat2.h5("/gt1r/geolocation/segment_ph_cnt", ATL03_FILE1, "invalid-asset")
         assert len(v) == 0
 
-    def test_invalid_path(self, server, asset):
-        icesat2.init(server)
+    def test_invalid_path(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         v = icesat2.h5("/gt1r/invalid-path", ATL03_FILE1, asset)
         assert len(v) == 0

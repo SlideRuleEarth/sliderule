@@ -20,6 +20,7 @@ import time
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from sliderule import icesat2
+from utils import parse_command_line
 
 ###############################################################################
 # LOCAL FUNCTIONS
@@ -58,31 +59,26 @@ def process_atl06_algorithm(parms, asset):
 
 if __name__ == '__main__':
 
-    url = ["127.0.0.1"]
-    asset = "atlas-local"
+    # Set Script Defaults
+    cfg = {
+        "url":          'localhost',
+        "organization": None,
+        "asset":        'atlas-local',
+        "region":       'examples/grandmesa.geojson',
+        "verbose":      True
+    }
 
+    # Parse Configuration Parameters
+    parse_command_line(sys.argv, cfg)
+
+    # Configure Logging
     logging.basicConfig(level=logging.INFO)
 
     # Region of Interest #
-    region_filename = sys.argv[1]
-    region = icesat2.toregion(region_filename)
-
-    # Set URL #
-    if len(sys.argv) > 2:
-        url = sys.argv[2]
-        asset = "nsidc-s3" # unlikely to use local if overriding url
-
-    # Set Asset #
-    if len(sys.argv) > 3:
-        asset = sys.argv[3]
-
-    # Bypass service discovery if url supplied
-    if len(sys.argv) > 4:
-        if sys.argv[4] == "bypass":
-            url = [url]
+    region = icesat2.toregion(cfg["region"])
 
     # Configure SlideRule #
-    icesat2.init(url, False)
+    icesat2.init(cfg["url"], cfg["verbose"], organization=cfg["organization"])
 
     # Build ATL06 Request #
     parms = {
@@ -98,8 +94,11 @@ if __name__ == '__main__':
         "maxi": 1
     }
 
+    # Parse Algorithm Parameters
+    parse_command_line(sys.argv, parms)
+
     # Get ATL06 Elevations
-    atl06 = process_atl06_algorithm(parms, asset)
+    atl06 = process_atl06_algorithm(parms, cfg["asset"])
 
     # Check Results Present
     if len(atl06) == 0:

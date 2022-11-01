@@ -15,7 +15,7 @@ Detailed [documentation](https://slideruleearth.io/rtd/) on installing and using
 conda install -c conda-forge sliderule
 ```
 
-For alternate methods to install SlideRule, including options for developers, please see the detailed [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html).
+For alternate methods to install SlideRule, including options for developers, please see the [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html).
 
 ### Dependencies
 
@@ -33,7 +33,7 @@ Example usage:
 from sliderule import icesat2
 
 # initialize
-icesat2.init("icesat2sliderule.org", verbose=True)
+icesat2.init("slideruleearth.io", verbose=True)
 
 # region of interest
 region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},

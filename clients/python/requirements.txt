@@ -1,6 +1,6 @@
 requests
 numpy
+fiona
 geopandas
-shapely
-gdal
+shapely<2
 scikit-learn

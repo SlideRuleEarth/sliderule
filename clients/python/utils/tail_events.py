@@ -10,13 +10,7 @@ import sys
 import logging
 from sliderule import sliderule
 from sliderule import icesat2
-
-###############################################################################
-# GLOBAL CODE
-###############################################################################
-
-# configure logging
-logging.basicConfig(level=logging.INFO)
+from utils import parse_command_line
 
 ###############################################################################
 # MAIN
@@ -24,22 +18,25 @@ logging.basicConfig(level=logging.INFO)
 
 if __name__ == '__main__':
 
-    # Override server URL from command line
-    url = ["127.0.0.1"]
-    if len(sys.argv) > 1:
-        url = [sys.argv[1]]
+    # Set Script Defaults
+    cfg = {
+        "url":          'localhost',
+        "organization": None,
+        "monitor":      'EventMonitor'
+    }
 
-    # Override monitor name
-    monitor = "EventMonitor"
-    if len(sys.argv) > 2:
-        monitor = int(sys.argv[2])
+    # Parse Configuration Parameters
+    parse_command_line(sys.argv, cfg)
+
+    # configure logging
+    logging.basicConfig(level=logging.INFO)
 
     # Initialize ICESat2/SlideRule Package
-    icesat2.init(url, True)
+    icesat2.init(cfg["url"], True, organization=cfg["organization"])
 
     # Build Logging Request
     rqst = {
-        "monitor": monitor
+        "monitor": cfg["monitor"]
     }
 
     # Retrieve logs

@@ -25,26 +25,27 @@ logging.basicConfig(level=logging.INFO)
 
 if __name__ == '__main__':
 
-    # Override server URL from command line
-    url = ["127.0.0.1"]
-    if len(sys.argv) > 1:
-        url = [sys.argv[1]]
-
-    # Override monitor name
+    url = "127.0.0.1"
     attr = "SourceEndpoint"
+    organization = None
+
+    # Override server URL from command line
+    if len(sys.argv) > 1:
+        url = sys.argv[1]
+
+    # Override organization
     if len(sys.argv) > 2:
-        attr = sys.argv[2]
+        organization = sys.argv[2]
 
-    # Initialize ICESat2/SlideRule Package
-    icesat2.init(url, True)
+    # Override group of endpoints to query
+    if len(sys.argv) > 3:
+        attr = sys.argv[3]
 
-    # Build Metric Request
-    rqst = {
-        "attr": attr
-    }
+    # Initialize ICESat2/SlideRule package
+    icesat2.init(url, True, organization=organization)
 
-    # Retrieve Metrics
-    rsps = sliderule.source("metric", rqst, stream=False)
+    # Retrieve metrics
+    rsps = sliderule.source("metric", { "attr": attr }, stream=False)
 
-    # Display Metrics
+    # Display metrics
     print(json.dumps(rsps, indent=2))

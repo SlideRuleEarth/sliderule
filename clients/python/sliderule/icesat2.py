@@ -27,6 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 import itertools
 import copy
 import json
@@ -34,20 +35,15 @@ import ssl
 import urllib.request
 import datetime
 import logging
-import concurrent.futures
 import warnings
 import numpy
 import geopandas
-import uuid
-import base64
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
 from sklearn.cluster import KMeans
 import sliderule
 from sliderule import version
+import os
 
 ###############################################################################
 # GLOBALS
@@ -100,53 +96,7 @@ SC_FORWARD = 1
 # gps-based epoch for delta times #
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 
-###############################################################################
-# ICESAT2 UTILITIES
-###############################################################################
 
-#
-# __calcspot
-#
-def __calcspot(sc_orient, track, pair):
-
-    # spacecraft in forward orientation
-    if sc_orient == SC_BACKWARD:
-        if track == 1:
-            if pair == LEFT_PAIR:
-                return 1
-            elif pair == RIGHT_PAIR:
-                return 2
-        elif track == 2:
-            if pair == LEFT_PAIR:
-                return 3
-            elif pair == RIGHT_PAIR:
-                return 4
-        elif track == 3:
-            if pair == LEFT_PAIR:
-                return 5
-            elif pair == RIGHT_PAIR:
-                return 6
-
-    # spacecraft in backward orientation
-    elif sc_orient == SC_FORWARD:
-        if track == 1:
-            if pair == LEFT_PAIR:
-                return 6
-            elif pair == RIGHT_PAIR:
-                return 5
-        elif track == 2:
-            if pair == LEFT_PAIR:
-                return 4
-            elif pair == RIGHT_PAIR:
-                return 3
-        elif track == 3:
-            if pair == LEFT_PAIR:
-                return 2
-            elif pair == RIGHT_PAIR:
-                return 1
-
-    # unknown spot
-    return 0
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -163,6 +113,10 @@ def __calcspot(sc_orient, track, pair):
 # Software is furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
+
+
+# WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
+EPSG_MERCATOR = "EPSG:4326"
 
 CMR_URL = 'https://cmr.earthdata.nasa.gov'
 CMR_PAGE_SIZE = 2000
@@ -291,11 +245,55 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     return (urls,polys)
 
 ###############################################################################
-# SLIDERULE UTILITIES
+# LOCAL FUNCTIONS
 ###############################################################################
 
 #
-#  __get_values
+# Calculate Laser Spot
+#
+def __calcspot(sc_orient, track, pair):
+
+    # spacecraft in forward orientation
+    if sc_orient == SC_BACKWARD:
+        if track == 1:
+            if pair == LEFT_PAIR:
+                return 1
+            elif pair == RIGHT_PAIR:
+                return 2
+        elif track == 2:
+            if pair == LEFT_PAIR:
+                return 3
+            elif pair == RIGHT_PAIR:
+                return 4
+        elif track == 3:
+            if pair == LEFT_PAIR:
+                return 5
+            elif pair == RIGHT_PAIR:
+                return 6
+
+    # spacecraft in backward orientation
+    elif sc_orient == SC_FORWARD:
+        if track == 1:
+            if pair == LEFT_PAIR:
+                return 6
+            elif pair == RIGHT_PAIR:
+                return 5
+        elif track == 2:
+            if pair == LEFT_PAIR:
+                return 4
+            elif pair == RIGHT_PAIR:
+                return 3
+        elif track == 3:
+            if pair == LEFT_PAIR:
+                return 2
+            elif pair == RIGHT_PAIR:
+                return 1
+
+    # unknown spot
+    return 0
+
+#
+#  Get Values from Raw Buffer
 #
 def __get_values(data, dtype, size):
     """
@@ -305,7 +303,21 @@ def __get_values(data, dtype, size):
     """
 
     raw = bytes(data)
-    datatype = sliderule.basictypes[sliderule.codedtype2str[dtype]]["nptype"]
+    datatype = {
+        "INT8":     numpy.int8,
+        "INT16":    numpy.int16,
+        "INT32":    numpy.int32,
+        "INT64":    numpy.int64,
+        "UINT8":    numpy.uint8,
+        "UINT16":   numpy.uint16,
+        "UINT32":   numpy.uint32,
+        "UINT64":   numpy.uint64,
+        "BITFIELD": numpy.byte, # unsupported
+        "FLOAT":    numpy.single,
+        "DOUBLE":   numpy.double,
+        "TIME8":    numpy.byte,
+        "STRING":   numpy.byte
+    }[sliderule.codedtype2str[dtype]]
     num_elements = int(size / numpy.dtype(datatype).itemsize)
     slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
@@ -313,7 +325,7 @@ def __get_values(data, dtype, size):
     return values
 
 #
-#  __query_resources
+#  Query Resources from CMR
 #
 def __query_resources(parm, version, return_polygons=False):
 
@@ -376,20 +388,20 @@ def __query_resources(parm, version, return_polygons=False):
         return resources
 
 #
-#  __emptyframe
+#  Create Empty GeoDataFrame
 #
 def __emptyframe(**kwargs):
     # set default keyword arguments
-    kwargs['crs'] = "EPSG:4326"
+    kwargs['crs'] = EPSG_MERCATOR
     return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
 
 #
-#  __todataframe
+#  Dictionary to GeoDataFrame
 #
 def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", **kwargs):
     # set default keyword arguments
     kwargs['index_key'] = "time"
-    kwargs['crs'] = "EPSG:4326"
+    kwargs['crs'] = EPSG_MERCATOR
 
     # Check Empty Columns
     if len(columns) <= 0:
@@ -408,7 +420,7 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     # Create Pandas DataFrame object
     df = geopandas.pd.DataFrame(columns)
 
-    # Build GeoDataFrame (default geometry is crs="EPSG:4326")
+    # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
     gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
 
     # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
@@ -422,7 +434,7 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     return gdf
 
 #
-# __gdf2ploy
+# GeoDataFrame to Polygon
 #
 def __gdf2poly(gdf):
     # pull out coordinates
@@ -443,181 +455,14 @@ def __gdf2poly(gdf):
     # return polygon
     return polygon
 
-#
-#  __atl06
-#
-def __atl06 (parm, resource, asset):
-
-    # Build ATL06 Request
-    rqst = {
-        "atl03-asset" : asset,
-        "resource": resource,
-        "parms": parm
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("atl06", rqst, stream=True)
-
-    # Flatten Responses
-    columns = {}
-    if len(rsps) <= 0:
-        logger.debug("no response returned for %s", resource)
-    elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
-        logger.debug("invalid response returned for %s: %s", resource, rsps[0]['__rectype'])
-    else:
-        # Determine Record Type
-        if rsps[0]['__rectype'] == 'atl06rec':
-            rectype = 'atl06rec.elevation'
-        else:
-            rectype = 'atl06rec-compact.elevation'
-        # Count Rows
-        num_rows = 0
-        for rsp in rsps:
-            num_rows += len(rsp["elevation"])
-        # Build Columns
-        for field in rsps[0]["elevation"][0].keys():
-            fielddef = sliderule.get_definition(rectype, field)
-            if len(fielddef) > 0:
-                columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-        # Populate Columns
-        elev_cnt = 0
-        for rsp in rsps:
-            for elevation in rsp["elevation"]:
-                for field in elevation.keys():
-                    if field in columns:
-                        columns[field][elev_cnt] = elevation[field]
-                elev_cnt += 1
-
-    # Return Response
-    return __todataframe(columns, "delta_time", "lon", "lat"), resource
-
-
-#
-#  __atl03s
-#
-def __atl03s (parm, resource, asset):
-
-    # Build ATL06 Request
-    rqst = {
-        "atl03-asset" : asset,
-        "resource": resource,
-        "parms": parm
-    }
-
-    # Execute ATL06 Algorithm
-    rsps = sliderule.source("atl03s", rqst, stream=True)
-
-    # Flatten Responses
-    columns = {}
-    if len(rsps) <= 0:
-        logger.debug("no response returned for %s", resource)
-    elif rsps[0]['__rectype'] != 'atl03rec':
-        logger.debug("invalid response returned for %s: %s", resource, rsps[0]['__rectype'])
-    else:
-        # Count Rows
-        num_rows = 0
-        for rsp in rsps:
-            num_rows += len(rsp["data"])
-        # Build Columns
-        for rsp in rsps:
-            if len(rsp["data"]) > 0:
-                # Allocate Columns
-                for field in rsp.keys():
-                    fielddef = sliderule.get_definition("atl03rec", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-                for field in rsp["data"][0].keys():
-                    fielddef = sliderule.get_definition("atl03rec.photons", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-                break
-        # Populate Columns
-        ph_cnt = 0
-        for rsp in rsps:
-            ph_index = 0
-            pair = 0
-            left_cnt = rsp["count"][0]
-            for photon in rsp["data"]:
-                if ph_index >= left_cnt:
-                    pair = 1
-                for field in rsp.keys():
-                    if field in columns:
-                        if field == "count":
-                            columns[field][ph_cnt] = pair
-                        elif type(rsp[field]) is tuple:
-                            columns[field][ph_cnt] = rsp[field][pair]
-                        else:
-                            columns[field][ph_cnt] = rsp[field]
-                for field in photon.keys():
-                    if field in columns:
-                        columns[field][ph_cnt] = photon[field]
-                ph_cnt += 1
-                ph_index += 1
-        # Rename Count Column to Pair Column
-        columns["pair"] = columns.pop("count")
-
-        # Create DataFrame
-        df = __todataframe(columns, "delta_time", "longitude", "latitude")
-
-        # Calculate Spot Column
-        df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
-
-        # Return Response
-        return df, resource
-
-    # Error Case
-    return __emptyframe(), resource
-
-#
-#  __parallelize
-#
-def __parallelize(callback, function, parm, resources, *args):
-
-    # Update Available Servers #
-    num_servers, max_workers = sliderule.update_available_servers()
-
-    # Check if Servers are Available #
-    if num_servers <= 0:
-        logger.error("There are no servers available to fulfill this request")
-        return __emptyframe()
-
-    # Check Callback
-    if callback == None:
-        results = []
-
-    # Make Parallel Processing Requests
-    total_resources = len(resources)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(function, parm, resource, *args) for resource in resources]
-
-        # Wait for Results
-        result_cnt = 0
-        for future in concurrent.futures.as_completed(futures):
-            result_cnt += 1
-            result, resource = future.result()
-            if len(result) > 0:
-                if callback == None:
-                    results.append(result)
-                else:
-                    callback(resource, result, result_cnt, total_resources)
-            logger.info("%d points returned for %s (%d out of %d resources)", len(result), resource, result_cnt, total_resources)
-
-    # Return Results
-    if callback == None:
-        if len(results) > 0:
-            results.sort(key=lambda result: result.iloc[0]['delta_time'])
-            return geopandas.pd.concat(results)
-        else:
-            return __emptyframe()
-
 ###############################################################################
 # APIs
 ###############################################################################
 
 #
-#  INIT
+#  Initialize
 #
-def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max_errors=3, loglevel=logging.CRITICAL):
+def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org):
     '''
     Initializes the underlying SlideRule module.  Must be called before other ICESat-2 API calls.
     This function is the same as calling the sliderule module functions: `set_url`, `set_verbose`, `set_max_errors`, along with the local `set_max_resources` function.
@@ -628,29 +473,28 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, max
                         the IP address or hostname of the SlideRule service (note, there is a special case where the url is provided as a list of strings instead of just a string; when a list is provided, the client hardcodes the set of servers that are used to process requests to the exact set provided; this is used for testing and for local installations and can be ignored by most users)
         verbose :       bool
                         whether or not user level log messages received from SlideRule generate a Python log message (see `sliderule.set_verbose <../user_guide/SlideRule.html#set_verbose>`_)
-        max_errors :    int
-                        the number of errors returned by a SlideRule server before the client drops it from the available server list
         max_resources : int
                         the maximum number of resources that are allowed to be processed in a single request
         loglevel :      int
                         minimum severity of log message to output
+        organization:   str
+                        SlideRule provisioning system organization user belongs to (see sliderule.authenticate for details)
 
     Examples
     --------
         >>> from sliderule import icesat2
         >>> icesat2.init("my-sliderule-service.my-company.com", True)
     '''
-
     if verbose:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
-    sliderule.set_max_errors(max_errors)
+    sliderule.authenticate(organization)
     set_max_resources(max_resources)
 
 #
-#  SET MAX RESOURCES
+#  Set Maximum Resources
 #
 def set_max_resources (max_resources):
     '''
@@ -670,7 +514,7 @@ def set_max_resources (max_resources):
     max_requested_resources = max_resources
 
 #
-#  COMMON METADATA REPOSITORY
+#  Common Metadata Repository
 #
 def cmr(**kwargs):
     '''
@@ -813,15 +657,51 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     -------
     GeoDataFrame
         gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+    '''
+    return atl06p(parm, asset=asset, resources=[resource])
+
+#
+#  Parallel ATL06
+#
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None):
+    '''
+    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  This function expects that the **parm** argument
+    includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
+    then any polygon or resource filtering options supplied in **parm** are ignored.
+
+    Warnings
+    --------
+        It is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
+        do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
+        for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement
+        to that effect; this can be ignored and indicates no issue with the data processing.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+        asset:          str
+                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+        version:        str
+                        the version of the ATL03 data to use for processing
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+
+    Returns
+    -------
+    GeoDataFrame
+        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
 
     Examples
     --------
         >>> from sliderule import icesat2
-        >>> icesat2.init("icesat2sliderule.org", True)
+        >>> icesat2.init("slideruleearth.io", True)
         >>> parms = { "cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1 }
-        >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
+        >>> resources = ["ATL03_20181019065445_03150111_003_01.h5"]
         >>> atl03_asset = "atlas-local"
-        >>> rsps = icesat2.atl06(parms, resource, atl03_asset)
+        >>> rsps = icesat2.atl06p(parms, asset=atl03_asset, resources=resources)
         >>> rsps
                 dh_fit_dx  w_surface_window_final  ...                       time                     geometry
         0        0.000042               61.157661  ... 2018-10-19 06:54:46.104937  POINT (-63.82088 -79.00266)
@@ -839,46 +719,54 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
         [622412 rows x 16 columns]
     '''
     try:
-        return __atl06(parm, resource, asset)[0]
-    except RuntimeError as e:
-        logger.critical(e)
-        return __emptyframe()
-
-#
-#  PARALLEL ATL06
-#
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
-    '''
-    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  Unlike the `atl06 <#atl06>`_ function,
-    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
-    is used to fetch all available resources from the CMR system automatically.
-
-    Warnings
-    --------
-        Note, it is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
-        do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
-        for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement to that effect; this can be ignored and indicates no issue with the data processing.
-
-    Parameters
-    ----------
-        parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
-        asset:          str
-                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
-        version:        str
-                        the version of the ATL03 data to use for processing
-        callback:       bool
-                        a callback function that is called for each resource and its results; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
-
-    Returns
-    -------
-    GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
-    '''
-    try:
+        # Get List of Resources from CMR (if not supplied)
         if resources == None:
             resources = __query_resources(parm, version)
-        return __parallelize(callback, __atl06, parm, resources, asset)
+
+        # Build ATL06 Request
+        rqst = {
+            "atl03-asset" : asset,
+            "resources": resources,
+            "parms": parm
+        }
+
+        # Make API Processing Request
+        rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
+
+        # Flatten Responses
+        columns = {}
+        if len(rsps) <= 0:
+            logger.debug("no response returned")
+        elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
+            logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
+        else:
+            # Determine Record Type
+            if rsps[0]['__rectype'] == 'atl06rec':
+                rectype = 'atl06rec.elevation'
+            else:
+                rectype = 'atl06rec-compact.elevation'
+            # Count Rows
+            num_rows = 0
+            for rsp in rsps:
+                num_rows += len(rsp["elevation"])
+            # Build Columns
+            for field in rsps[0]["elevation"][0].keys():
+                fielddef = sliderule.get_definition(rectype, field)
+                if len(fielddef) > 0:
+                    columns[field] = numpy.empty(num_rows, fielddef["nptype"])
+            # Populate Columns
+            elev_cnt = 0
+            for rsp in rsps:
+                for elevation in rsp["elevation"]:
+                    for field in elevation.keys():
+                        if field in columns:
+                            columns[field][elev_cnt] = elevation[field]
+                    elev_cnt += 1
+
+        # Return Response
+        return __todataframe(columns, "delta_time", "lon", "lat")
+
+    # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -904,16 +792,12 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         ATL03 extents (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
-    try:
-        return __atl03s(parm, resource, asset)[0]
-    except RuntimeError as e:
-        logger.critical(e)
-        return __emptyframe()
+    return atl03sp(parm, asset=asset, resources=[resource])
 
 #
-#  PARALLEL SUBSETTED ATL03
+#  Parallel Subsetted ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callback=None, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -933,8 +817,10 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to return
-        callback:       bool
-                        a callback function that is called for each resource and its results; when set, the API does not return anything (see `Callbacks <../user_guide/ICESat-2.html#callbacks>`_)
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
 
     Returns
     -------
@@ -942,9 +828,82 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
+        # Get List of Resources from CMR (if not specified)
         if resources == None:
             resources = __query_resources(parm, version)
-        return __parallelize(callback, __atl03s, parm, resources, asset)
+
+        # Build ATL03 Subsetting Request
+        rqst = {
+            "atl03-asset" : asset,
+            "resources": resources,
+            "parms": parm
+        }
+
+        # Make API Processing Request
+        rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
+
+        # Flatten Responses
+        columns = {}
+        if len(rsps) <= 0:
+            logger.debug("no response returned")
+        elif rsps[0]['__rectype'] != 'atl03rec':
+            logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
+        else:
+            # Count Rows
+            num_rows = 0
+            for rsp in rsps:
+                num_rows += len(rsp["data"])
+            # Build Columns
+            for rsp in rsps:
+                if len(rsp["data"]) > 0:
+                    # Allocate Columns
+                    for field in rsp.keys():
+                        fielddef = sliderule.get_definition("atl03rec", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_rows, fielddef["nptype"])
+                    for field in rsp["data"][0].keys():
+                        fielddef = sliderule.get_definition("atl03rec.photons", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_rows, fielddef["nptype"])
+                    break
+            # Populate Columns
+            ph_cnt = 0
+            for rsp in rsps:
+                ph_index = 0
+                pair = 0
+                left_cnt = rsp["count"][0]
+                for photon in rsp["data"]:
+                    if ph_index >= left_cnt:
+                        pair = 1
+                    for field in rsp.keys():
+                        if field in columns:
+                            if field == "count":
+                                columns[field][ph_cnt] = pair
+                            elif type(rsp[field]) is tuple:
+                                columns[field][ph_cnt] = rsp[field][pair]
+                            else:
+                                columns[field][ph_cnt] = rsp[field]
+                    for field in photon.keys():
+                        if field in columns:
+                            columns[field][ph_cnt] = photon[field]
+                    ph_cnt += 1
+                    ph_index += 1
+            # Rename Count Column to Pair Column
+            columns["pair"] = columns.pop("count")
+
+            # Create DataFrame
+            df = __todataframe(columns, "delta_time", "longitude", "latitude")
+
+            # Calculate Spot Column
+            df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+
+            # Return Response
+            return df
+
+        # Error Case
+        return __emptyframe()
+
+    # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
         return __emptyframe()
@@ -958,11 +917,9 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
 
     This function provides an easy way for locally run scripts to get direct access to HDF5 data stored in a cloud environment.
     But it should be noted that this method is not the most efficient way to access remote H5 data, as the data is accessed one dataset at a time.
-    Future versions may provide the ability to read multiple datasets at once, but in the meantime, if the user finds themselves needing direct
-    access to a lot of HDF5 data residing in the cloud, then use of the H5Coro Python package is recommended as it provides a native Python package
-    for performant direct access to HDF5 data in the cloud.
+    The ``h5p`` api is the preferred solution for reading multiple datasets.
 
-    One of the difficulties in reading HDF5 data directly from a Python script is converting format of the data as it is stored in the HDF5 to a data
+    One of the difficulties in reading HDF5 data directly from a Python script is converting the format of the data as it is stored in HDF5 to a data
     format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the
     returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.
 
@@ -980,7 +937,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets <#assets>`_)
+                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
@@ -1003,45 +960,15 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         >>> longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
         >>> df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
     '''
-    # Baseline Request
-    rqst = {
-        "asset" : asset,
-        "resource": resource,
-        "dataset": dataset,
-        "datatype": datatype,
-        "col": col,
-        "startrow": startrow,
-        "numrows": numrows,
-        "id": 0
-    }
-
-    # Read H5 File
-    try:
-        rsps = sliderule.source("h5", rqst, stream=True)
-    except RuntimeError as e:
-        logger.critical(e)
+    datasets = [ { "dataset": dataset, "datatype": datatype, "col": col, "startrow": startrow, "numrows": numrows } ]
+    values = h5p(datasets, resource, asset=asset)
+    if len(values) > 0:
+        return values[dataset]
+    else:
         return numpy.empty(0)
-
-    # Check if Data Returned
-    if len(rsps) <= 0:
-        return numpy.empty(0)
-
-    # Build Record Data
-    rsps_datatype = rsps[0]["datatype"]
-    rsps_data = bytearray()
-    rsps_size = 0
-    for d in rsps:
-        rsps_data += bytearray(d["data"])
-        rsps_size += d["size"]
-
-    # Get Values
-    values = __get_values(rsps_data, rsps_datatype, rsps_size)
-
-    # Return Response
-    return values
 
 #
-#  H5P
+#  Parallel H5
 #
 def h5p (datasets, resource, asset=DEFAULT_ASSET):
     '''
@@ -1118,7 +1045,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     return results
 
 #
-# TO REGION
+# Format Region Specification
 #
 def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     '''
@@ -1127,7 +1054,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     Parameters
     ----------
         filename:   str
-                    file name of GeoJSON formatted regions of interest, file **must** have named with the .geojson suffix
+                    file name of GeoJSON formatted regions of interest, file **must** have name with the .geojson suffix
+                    file name of ESRI Shapefile formatted regions of interest, file **must** have name with the .shp suffix
         tolerance:  float
                     tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
         cellsize:   float
@@ -1138,18 +1066,9 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     Returns
     -------
     dict
-        a raster image and a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule
-        region = {
-            "poly": [{"lat": <lat1>, "lon": <lon1>, ... }],
-            "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...],
-            "raster": {
-                "image": <base64 encoded geotiff image string>,
-                "imagelength": <length of base64 encoded image>,
-                "dimension": (<number of rows>, <number of columns>),
-                "bbox": (<minimum longitutde>, <minimum latitude>, <maximum longitude>, <maximum latitude>),
-                "cellsize": <cell size in degrees>
-            }
-        }
+        a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule.
+
+        region = {"poly": [{"lat": <lat1>, "lon": <lon1>, ... }], "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...], "raster": {"data": <geojson file as string>, "length": <length of geojson file>, "cellsize": <parameter cellsize>}}
 
     Examples
     --------
@@ -1158,7 +1077,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         >>> region_filename = sys.argv[1]
         >>> region = icesat2.toregion(region_filename)
         >>> # Configure SlideRule #
-        >>> icesat2.init("icesat2sliderule.org", False)
+        >>> icesat2.init("slideruleearth.io", False)
         >>> # Build ATL06 Request #
         >>> parms = {
         ...     "poly": region["poly"],
@@ -1173,25 +1092,17 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         >>> # Get ATL06 Elevations
         >>> atl06 = icesat2.atl06p(parms)
     '''
-    # create:
-    #   gdf - geodataframe
-    #   inp_lyr - input layer
+
+    tempfile = "temp.geojson"
+
     if isinstance(source, geopandas.GeoDataFrame):
         # user provided GeoDataFrame instead of a file
         gdf = source
-
-        # create input layer
-        proj = osr.SpatialReference()
-        proj.ImportFromEPSG(4326)
-        rast_ogr_ds = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
-        inp_lyr = rast_ogr_ds.CreateLayer('poly', srs=proj)
-
-        # add polygons to input layer
-        for polygon in gdf.geometry:
-            geom = ogr.CreateGeometryFromWkt(polygon.wkt)
-            feat = ogr.Feature(inp_lyr.GetLayerDefn())
-            feat.SetGeometryDirectly(geom)
-            inp_lyr.CreateFeature(feat)
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
 
     elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
         # create lat/lon lists
@@ -1204,116 +1115,81 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
         # create geodataframe
         p = Polygon([point for point in zip(lons, lats)])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs="EPSG:4326")
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_MERCATOR)
 
-        # create input layer
-        proj = osr.SpatialReference()
-        proj.ImportFromEPSG(4326)
-        rast_ogr_ds = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
-        inp_lyr = rast_ogr_ds.CreateLayer('poly', srs=proj)
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
 
-        # add polygons to input layer
-        for polygon in gdf.geometry:
-            geom = ogr.CreateGeometryFromWkt(polygon.wkt)
-            feat = ogr.Feature(inp_lyr.GetLayerDefn())
-            feat.SetGeometryDirectly(geom)
-            inp_lyr.CreateFeature(feat)
-
-    elif isinstance(source, str) and ((source.find(".geojson") > 1) or (source.find(".shp") > 1)):
+    elif isinstance(source, str) and (source.find(".shp") > 1):
         # create geodataframe
         gdf = geopandas.read_file(source)
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
 
-        # create input driver
-        if (source.find(".geojson") > 1):
-            inp_driver = ogr.GetDriverByName('GeoJSON')
-        else: # (source.find(".shp") > 1)
-            inp_driver = ogr.GetDriverByName('ESRI Shapefile')
-
-        # create input layer
-        inp_source = inp_driver.Open(source, 0)
-        inp_lyr = inp_source.GetLayer()
+    elif isinstance(source, str) and (source.find(".geojson") > 1):
+        # create geodataframe
+        gdf = geopandas.read_file(source)
+        with open(source, mode='rt') as file:
+            datafile = file.read()
 
     else:
         raise TypeError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
 
-    # get extent of raster
-    x_min, x_max, y_min, y_max = inp_lyr.GetExtent()
-    x_ncells = int((x_max - x_min) / cellsize)
-    y_ncells = int((y_max - y_min) / cellsize)
 
-    # setup raster output
-    out_driver = gdal.GetDriverByName('GTiff')
-    out_filename = str(uuid.uuid4())
-    out_source = out_driver.Create('/vsimem/' + out_filename, x_ncells, y_ncells, 1, gdal.GDT_Byte, options = [ 'COMPRESS=DEFLATE' ])
-    out_source.SetGeoTransform((x_min, cellsize, 0, y_max, 0, -cellsize))
-    out_source.SetProjection(inp_lyr.GetSpatialRef().ExportToWkt())
-    out_lyr = out_source.GetRasterBand(1)
-    out_lyr.SetNoDataValue(200)
+    # If user provided raster we don't have gdf, geopandas cannot easily convert it
+    polygon = clusters = None
+    if gdf is not None:
+        # simplify polygon
+        if(tolerance > 0.0):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                gdf = gdf.buffer(tolerance)
+                gdf = gdf.simplify(tolerance)
 
-    # rasterize
-    gdal.RasterizeLayer(out_source, [1], inp_lyr, burn_values=[1])
+        # generate polygon
+        polygon = __gdf2poly(gdf)
 
-    # close the data sources
-    inp_source = None
-    rast_ogr_ds = None
-    out_source = None
+        # generate clusters
+        clusters = []
+        if n_clusters > 1:
+            # pull out centroids of each geometry object
+            if "CenLon" in gdf and "CenLat" in gdf:
+                X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+            else:
+                s = gdf.centroid
+                X = numpy.column_stack((s.x, s.y))
+            # run k means clustering algorithm against polygons in gdf
+            kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+            y_kmeans = kmeans.fit_predict(X)
+            k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+            gdf = gdf.join(k)
+            # build polygon for each cluster
+            for n in range(n_clusters):
+                c_gdf = gdf[gdf["cluster"] == n]
+                c_poly = __gdf2poly(c_gdf)
+                clusters.append(c_poly)
 
-    # read out raster data
-    f = gdal.VSIFOpenL('/vsimem/' + out_filename, 'rb')
-    gdal.VSIFSeekL(f, 0, 2)  # seek to end
-    size = gdal.VSIFTellL(f)
-    gdal.VSIFSeekL(f, 0, 0)  # seek to beginning
-    raster = gdal.VSIFReadL(1, size, f)
-    gdal.VSIFCloseL(f)
-
-    # simplify polygon
-    if(tolerance > 0.0):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            gdf = gdf.buffer(tolerance)
-            gdf = gdf.simplify(tolerance)
-
-    # generate polygon
-    polygon = __gdf2poly(gdf)
-
-    # generate clusters
-    clusters = []
-    if n_clusters > 1:
-        # pull out centroids of each geometry object
-        if "CenLon" in gdf and "CenLat" in gdf:
-            X = numpy.column_stack((gdf["CenLon"],gdf["CenLat"]))
-        else:
-            s = gdf.centroid
-            X = numpy.column_stack((s.x, s.y))
-        # run k means clustering algorithm against polygons in gdf
-        kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
-        y_kmeans = kmeans.fit_predict(X)
-        k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
-        gdf = gdf.join(k)
-        # build polygon for each cluster
-        for n in range(n_clusters):
-            c_gdf = gdf[gdf["cluster"] == n]
-            c_poly = __gdf2poly(c_gdf)
-            clusters.append(c_poly)
-
-    # encode image in base64
-    b64image = base64.b64encode(raster).decode('UTF-8')
 
     # return region #
     return {
+        "gdf": gdf,
         "poly": polygon, # convex hull of polygons
         "clusters": clusters, # list of polygon clusters for cmr request
         "raster": {
-            "image": b64image, # geotiff image
-            "imagelength": len(b64image), # encoded image size of geotiff
-            "dimension": (y_ncells, x_ncells), # rows x cols
-            "bbox": (x_min, y_min, x_max, y_max), # lon1, lat1 x lon2, lat2
-            "cellsize": cellsize # in degrees
+            "data": datafile, # geojson file
+            "length": len(datafile), # geojson file length
+            "cellsize": cellsize  # untis are in crs/projection
         }
     }
 
 #
-# GET VERSION
+# Get Version
 #
 def get_version ():
     '''

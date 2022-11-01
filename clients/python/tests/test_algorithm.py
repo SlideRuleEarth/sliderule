@@ -4,16 +4,12 @@ import pytest
 from pyproj import Transformer
 from shapely.geometry import Polygon, Point
 import pandas as pd
-from requests.exceptions import ConnectTimeout, ConnectionError
-import sliderule
 from sliderule import icesat2
-from pathlib import Path
-import os.path
 
 @pytest.mark.network
 class TestAlgorithm:
-    def test_atl06(self, server, asset):
-        icesat2.init(server)
+    def test_atl06(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         resource = "ATL03_20181019065445_03150111_004_01.h5"
         parms = { "cnf": "atl03_high",
                   "ats": 20.0,
@@ -26,8 +22,22 @@ class TestAlgorithm:
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622423
 
-    def test_atl03(self, server, asset):
-        icesat2.init(server)
+    def test_atl06p(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
+        resource = "ATL03_20181019065445_03150111_004_01.h5"
+        parms = { "cnf": "atl03_high",
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "maxi": 1 }
+        gdf = icesat2.atl06p(parms, asset, resources=[resource])
+        assert min(gdf["rgt"]) == 315
+        assert min(gdf["cycle"]) == 1
+        assert len(gdf["h_mean"]) == 622423
+
+    def test_atl03s(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         resource = "ATL03_20181019065445_03150111_004_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
@@ -50,8 +60,32 @@ class TestAlgorithm:
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488673
 
-    def test_atl08(self, server, asset):
-        icesat2.init(server)
+    def test_atl03sp(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
+        resource = "ATL03_20181019065445_03150111_004_01.h5"
+        region = [ { "lat": -80.75, "lon": -70.00 },
+                   { "lat": -81.00, "lon": -70.00 },
+                   { "lat": -81.00, "lon": -65.00 },
+                   { "lat": -80.75, "lon": -65.00 },
+                   { "lat": -80.75, "lon": -70.00 } ]
+        parms = { "poly": region,
+                  "track": 1,
+                  "cnf": 0,
+                  "pass_invalid": True,
+                  "yapc": { "score": 0 },
+                  "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"],
+                  "ats": 10.0,
+                  "cnt": 5,
+                  "len": 20.0,
+                  "res": 20.0,
+                  "maxi": 1 }
+        gdf = icesat2.atl03sp(parms, asset, resources=[resource])
+        assert min(gdf["rgt"]) == 315
+        assert min(gdf["cycle"]) == 1
+        assert len(gdf["height"]) == 488673
+
+    def test_atl08(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         resource = "ATL03_20181213075606_11560106_004_01.h5"
         track = 1
         region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
@@ -79,8 +113,8 @@ class TestAlgorithm:
         assert len(gdf[gdf["atl08_class"] == 3]) == 18298
         assert len(gdf[gdf["atl08_class"] == 4]) == 16050
 
-    def test_gs(self, server, asset):
-        icesat2.init(server)
+    def test_gs(self, server, asset, organization):
+        icesat2.init(server, organization=organization)
         resource_prefix = "20210114170723_03311012_004_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                    {"lon": 114.29798416287946, "lat": -70.08880029415151},

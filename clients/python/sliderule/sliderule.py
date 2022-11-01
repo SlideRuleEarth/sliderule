@@ -27,26 +27,29 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
+import netrc
 import requests
-import numpy
 import json
 import struct
 import ctypes
+import time
 import logging
-import threading
 from datetime import datetime, timedelta
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
 
-service_url = None
-server_lock = threading.Condition()
-server_table = {}
+PUBLIC_URL = "slideruleearth.io"
+PUBLIC_ORG = "sliderule"
 
-max_errors_per_server = 3
-max_pending_per_server = 3
-max_retries_per_request = 5
+service_url = PUBLIC_URL
+service_org = PUBLIC_ORG
+
+ps_refresh_token = None
+ps_access_token = None
+ps_token_exp = None
 
 verbose = False
 
@@ -72,13 +75,6 @@ eventlogger = {
     4: logger.critical
 }
 
-handleexcept = {
-    0: {"name": "ERROR",                    "fatal": True,  "expected": False },
-    1: {"name": "TIMEOUT",                  "fatal": False, "expected": True },
-    2: {"name": "RESOURCE_DOES_NOT_EXIST",  "fatal": True,  "expected": True },
-    3: {"name": "EMPTY_SUBSET",             "fatal": True,  "expected": True }
-}
-
 datatypes = {
     "TEXT":     0,
     "REAL":     1,
@@ -87,19 +83,19 @@ datatypes = {
 }
 
 basictypes = {
-    "INT8":     { "fmt": 'b', "size": 1, "nptype": numpy.int8 },
-    "INT16":    { "fmt": 'h', "size": 2, "nptype": numpy.int16 },
-    "INT32":    { "fmt": 'i', "size": 4, "nptype": numpy.int32 },
-    "INT64":    { "fmt": 'q', "size": 8, "nptype": numpy.int64 },
-    "UINT8":    { "fmt": 'B', "size": 1, "nptype": numpy.uint8 },
-    "UINT16":   { "fmt": 'H', "size": 2, "nptype": numpy.uint16 },
-    "UINT32":   { "fmt": 'I', "size": 4, "nptype": numpy.uint32 },
-    "UINT64":   { "fmt": 'Q', "size": 8, "nptype": numpy.uint64 },
-    "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte },    # unsupported
-    "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
-    "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
-    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.byte },
-    "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte }
+    "INT8":     { "fmt": 'b', "size": 1 },
+    "INT16":    { "fmt": 'h', "size": 2 },
+    "INT32":    { "fmt": 'i', "size": 4 },
+    "INT64":    { "fmt": 'q', "size": 8 },
+    "UINT8":    { "fmt": 'B', "size": 1 },
+    "UINT16":   { "fmt": 'H', "size": 2 },
+    "UINT32":   { "fmt": 'I', "size": 4 },
+    "UINT64":   { "fmt": 'Q', "size": 8 },
+    "BITFIELD": { "fmt": 'x', "size": 0 },  # unsupported
+    "FLOAT":    { "fmt": 'f', "size": 4 },
+    "DOUBLE":   { "fmt": 'd', "size": 8 },
+    "TIME8":    { "fmt": 'Q', "size": 8 },
+    "STRING":   { "fmt": 's', "size": 1 }
 }
 
 codedtype2str = {
@@ -119,11 +115,13 @@ codedtype2str = {
 }
 
 ###############################################################################
-# CLASSES
+# CLIENT EXCEPTIONS
 ###############################################################################
 
-class TransientError(Exception):
-    """Processing exception that can be retried"""
+class FatalError(RuntimeError):
+    pass
+
+class TransientError(RuntimeError):
     pass
 
 ###############################################################################
@@ -131,6 +129,7 @@ class TransientError(Exception):
 ###############################################################################
 
 #
+<<<<<<< HEAD
 #  get the ip address of an available sliderule server
 #
 def __getserv(stream):
@@ -189,6 +188,8 @@ def __clrserv(serv, stream):
             server_lock.notify()
 
 #
+=======
+>>>>>>> development
 #  __populate
 #
 def __populate(rectype):
@@ -198,9 +199,22 @@ def __populate(rectype):
     return recdef_table[rectype]
 
 #
-#  __decode
+#  __parse_json
 #
-def __decode(rectype, rawdata):
+def __parse_json(data):
+    """
+    data: request response
+    """
+    lines = []
+    for line in data.iter_content(None):
+        lines.append(line)
+    response = b''.join(lines)
+    return json.loads(response)
+
+#
+#  __decode_native
+#
+def __decode_native(rectype, rawdata):
     """
     rectype: record type supplied in response (string)
     rawdata: payload supplied in response (byte array)
@@ -278,24 +292,24 @@ def __decode(rectype, rawdata):
             if is_array:
                 rec[fieldname] = []
                 for e in range(elems):
-                    rec[fieldname].append(__decode(ftype, rawdata[offset:]))
+                    rec[fieldname].append(__decode_native(ftype, rawdata[offset:]))
                     offset += subrecdef["__datasize"]
             else:
-                rec[fieldname] = __decode(ftype, rawdata[offset:])
+                rec[fieldname] = __decode_native(ftype, rawdata[offset:])
 
     # return record #
     return rec
 
 #
-#  __parse
+#  __parse_native
 #
-def __parse(stream, callbacks):
+def __parse_native(data, callbacks):
     """
-    stream: request response stream
+    data: request response
     """
     recs = []
 
-    rec_size_size = 4
+    rec_hdr_size = 8
     rec_size_index = 0
     rec_size_rsps = []
 
@@ -303,21 +317,24 @@ def __parse(stream, callbacks):
     rec_index = 0
     rec_rsps = []
 
-    for line in stream.iter_content(None):
+    for line in data.iter_content(None):
 
         i = 0
         while i < len(line):
 
             # Parse Record Size
-            if(rec_size_index < rec_size_size):
-                bytes_available = len(line)  - i
-                bytes_remaining = rec_size_size - rec_size_index
+            if(rec_size_index < rec_hdr_size):
+                bytes_available = len(line) - i
+                bytes_remaining = rec_hdr_size - rec_size_index
                 bytes_to_append = min(bytes_available, bytes_remaining)
                 rec_size_rsps.append(line[i:i+bytes_to_append])
                 rec_size_index += bytes_to_append
-                if(rec_size_index >= rec_size_size):
+                if(rec_size_index >= rec_hdr_size):
                     raw = b''.join(rec_size_rsps)
-                    rec_size = struct.unpack('<i', raw)[0]
+                    rec_version, rec_type_size, rec_data_size = struct.unpack('>hhi', raw)
+                    if rec_version != 2:
+                        raise FatalError("Invalid record format: %d" % (rec_version))
+                    rec_size = rec_type_size + rec_data_size
                     rec_size_rsps.clear()
                 i += bytes_to_append
 
@@ -333,7 +350,7 @@ def __parse(stream, callbacks):
                     rawbits = b''.join(rec_rsps)
                     rectype = ctypes.create_string_buffer(rawbits).value.decode('ascii')
                     rawdata = rawbits[len(rectype) + 1:]
-                    rec     = __decode(rectype, rawdata)
+                    rec     = __decode_native(rectype, rawdata)
                     if callbacks != None and rectype in callbacks:
                         # Execute Call-Back on Record
                         callbacks[rectype](rec)
@@ -347,7 +364,41 @@ def __parse(stream, callbacks):
                     rec_index = 0
                 i += bytes_to_append
 
+            # Zero Sized Record
+            else:
+                rec_size_index = 0
+                rec_index = 0
+
     return recs
+
+#
+#  __build_auth_header
+#
+def __build_auth_header():
+    """
+    Build authentication header for use with provisioning system
+    """
+
+    global service_url, ps_access_token, ps_refresh_token, ps_token_exp
+    headers = None
+    if ps_access_token:
+        # Check if Refresh Needed
+        if time.time() > ps_token_exp:
+            host = "https://ps." + service_url + "/api/org_token/refresh/"
+            rqst = {"refresh": ps_refresh_token}
+            hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
+            rsps = requests.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
+            ps_refresh_token = rsps["refresh"]
+            ps_access_token = rsps["access"]
+            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+        # Build Authentication Header
+        headers = {'Authorization': 'Bearer ' + ps_access_token}
+    return headers
+
+
+###############################################################################
+# Default Record Processing
+###############################################################################
 
 #
 #  __logeventrec
@@ -357,17 +408,19 @@ def __logeventrec(rec):
         eventlogger[rec['level']]('%s' % (rec["attr"]))
 
 #
-#  __raiseexceptrec
+#  __exceptrec
 #
-def __raiseexceptrec(rec):
-    rc = rec["code"]
-    if rc in handleexcept:
-        if verbose:
-            logger.info("%s exception <%d>: %s", handleexcept[rc]["name"], rc, rec["text"])
-        if not handleexcept[rc]["expected"]:
-            logger.critical("Unexpected error: %s", handleexcept[rc]["name"])
-        if not handleexcept[rc]["fatal"]:
-            raise TransientError()
+def __exceptrec(rec):
+    if verbose:
+        if rec["code"] >= 0:
+            eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
+        else:
+            eventlogger[rec["level"]]("%s", rec["text"])
+
+#
+#  Globals
+#
+__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec}
 
 ###############################################################################
 # APIs
@@ -376,7 +429,7 @@ def __raiseexceptrec(rec):
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'exceptrec': __raiseexceptrec}):
+def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     '''
     Perform API call to SlideRule service
 
@@ -390,16 +443,18 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'e
                     whether the request is a **normal** service or a **stream** service (see `De-serialization <./SlideRule.html#de-serialization>`_ for more details)
         callbacks:  dict
                     record type callbacks (advanced use)
+        path:       str
+                    path to api being requested
 
     Returns
     -------
-    bytearray
+    dictionary
         response data
 
     Examples
     --------
         >>> import sliderule
-        >>> sliderule.set_url("icesat2sliderule.org")
+        >>> sliderule.set_url("slideruleearth.io")
         >>> rqst = {
         ...     "time": "NOW",
         ...     "input": "NOW",
@@ -409,51 +464,60 @@ def source (api, parm={}, stream=False, callbacks={'eventrec': __logeventrec, 'e
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
+    global service_url, service_org
     rqst = json.dumps(parm)
-    complete = False
-    retries = max_retries_per_request
-    rsps = []
-    while (not complete) and (retries > 0):
-        retries -= 1
-        serv = __getserv(stream) # it throws a RuntimeError that must be caught by calling function
-        try:
-            url  = '%s/source/%s' % (serv, api)
-            if not stream:
-                rsps = requests.get(url, data=rqst, timeout=request_timeout).json()
-            else:
-                data = requests.post(url, data=rqst, timeout=request_timeout, stream=True)
-                data.raise_for_status()
-                rsps = __parse(data, callbacks)
-            __clrserv(serv, stream)
-            complete = True
-        except requests.ConnectionError as e:
-            logger.error("Failed to connect to endpoint {} ... retrying request".format(url))
-            __errserv(serv, stream)
-        except requests.Timeout as e:
-            logger.error("Timed-out waiting for response from endpoint {} ... retrying request".format(url))
-            __errserv(serv, stream)
-        except requests.exceptions.ChunkedEncodingError as e:
-            logger.error("Unexpected termination of response from endpoint {} ... retrying request".format(url))
-            __errserv(serv, stream)
-        except requests.HTTPError as e:
-            if e.response.status_code == 503:
-                logger.error("Server experiencing heavy load, stalling on request to {} ... will retry".format(url))
-                __clrserv(serv, stream)
-            else:
-                logger.error("Invalid HTTP response from endpoint {} ... retrying request".format(url))
-                __errserv(serv, stream)
-        except TransientError as e:
-            logger.warning("Recoverable error occurred at {} ... retrying request".format(url))
-            __clrserv(serv, stream)
-        except:
-            __errserv(serv, stream)
-            raise
+    rsps = {}
+    headers = None
+    # Build Callbacks
+    for c in __callbacks:
+        if c not in callbacks:
+            callbacks[c] = __callbacks[c]
+    # Attempt Request
+    try:
+        # Construct Request URL and Authorization
+        if service_org:
+            url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
+            headers = __build_auth_header()
+        else:
+            url = 'http://%s%s/%s' % (service_url, path, api)
+        # Perform Request
+        if not stream:
+            data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
+        else:
+            data = requests.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
+        data.raise_for_status()
+        # Parse Response
+        format = data.headers['Content-Type']
+        if format == 'text/plain':
+            rsps = __parse_json(data)
+        elif format == 'application/json':
+            rsps = __parse_json(data)
+        elif format == 'application/octet-stream':
+            rsps = __parse_native(data, callbacks)
+        else:
+            raise FatalError('unsupported content type: %s' % (format))
+    except requests.exceptions.SSLError as e:
+        raise FatalError("Unable to verify SSL certificate: {}".format(e))
+    except requests.ConnectionError as e:
+        raise FatalError("Failed to connect to endpoint {}".format(url))
+    except requests.Timeout as e:
+        raise TransientError("Timed-out waiting for response from endpoint {}".format(url))
+    except requests.exceptions.ChunkedEncodingError as e:
+        raise RuntimeError("Unexpected termination of response from endpoint {}".format(url))
+    except requests.HTTPError as e:
+        if e.response.status_code == 503:
+            raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
+        else:
+            raise FatalError("HTTP error {} from endpoint {}".format(e.response.status_code, url))
+    except:
+        raise
+    # Return Response
     return rsps
 
 #
 #  SET_URL
 #
-def set_url (urls):
+def set_url (url):
     '''
     Configure sliderule package with URL of service
 
@@ -469,50 +533,8 @@ def set_url (urls):
         >>> import sliderule
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
-    global server_table, service_url
-    with server_lock:
-        service_url = None
-        server_table = {}
-        if type(urls) == list: # hardcoded list of sliderule server IP addresses
-            for serv in urls:
-                server_table["http://" + serv] = {"pending": 0, "errors": 0}
-        elif type(urls) == str: # IP address of sliderule's service discovery
-            service_url = "http://" + urls + "/discovery/"
-        else:
-            raise TypeError('expected ip address or hostname as a string or list of strings')
-    # then update server table
-    update_available_servers()
-
-#
-#  UPDATE_AVAIABLE_SERVERS
-#
-def update_available_servers ():
-    '''
-    Causes the SlideRule Python client to refresh the list of available processing nodes. This is useful when performing large processing
-    requests where there is time for auto-scaling to change the number of nodes running.
-
-    This function does nothing if the client has been initialized with a hardcoded list of servers.
-
-    Returns
-    -------
-    int
-        the number of available processing nodes
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.update_available_servers()
-    '''
-    global server_table, service_url
-    with server_lock:
-        if service_url != None:
-            server_table = {}
-            response = requests.get(service_url, data='{"service":"sliderule"}', timeout=request_timeout).json()
-            for entry in response['members']:
-                server_table["http://" + entry] = {"pending": 0, "errors": 0}
-        num_servers = len(server_table)
-        max_workers = num_servers * max_pending_per_server
-    return (num_servers, max_workers)
+    global service_url
+    service_url = url
 
 #
 #  SET_VERBOSE
@@ -549,70 +571,6 @@ def set_verbose (enable):
     verbose = (enable == True)
 
 #
-#  SET_MAX_ERRORS
-#
-def set_max_errors (max_errors):
-    '''
-    Configure sliderule package's maximum number of errors per node setting.  When the client makes a request to a processing node,
-    if there is an error, it will retry the request to a different processing node (if available), but will keep the original processing
-    node in the list of available nodes and increment the number of errors associated with it.  But if a processing node accumulates up
-    to the **max_errors** number of errors, then the node is removed from the list of available nodes and will not be used in future
-    processing requests.
-
-    A call to ``update_available_servers`` or ``set_url`` is needed to restore a removed node to the list of available servers.
-
-    Parameters
-    ----------
-        max_errors:     int
-                        sets the maximum number of errors per node
-
-    Raises
-    ------
-    TypeError
-        max_errors must be a positive integer
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.set_max_errors(3)
-    '''
-    global max_errors_per_server
-    if max_errors > 0:
-        max_errors_per_server = max_errors
-    else:
-        raise TypeError('max errors must be greater than zero')
-
-#
-#  SET_MAX_PENDING
-#
-def set_max_pending (max_pending):
-    '''
-    Configure sliderule package's maximum number of pending requests per node setting.  When the client makes a request, it first finds the processing
-    node with the fewest requests in progress (i.e. pending), and sends the request to that node.  If the node with the fewest pending requests has
-    `max_pending` requests, it will wait until a processing node becomes available with less than `max_pending` requests.
-
-    Parameters
-    ----------
-        max_pending:    int
-                        sets the maximum number of pending requests per node
-
-    Raises
-    ------
-    TypeError
-        max_pending must be a positive integer
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.set_max_pending(1)
-    '''
-    global max_pending_per_server
-    if max_pending > 0:
-        max_pending_per_server = max_pending
-    else:
-        raise TypeError('max pending must be greater than zero')
-
-#
 # SET_REQUEST_TIMEOUT
 #
 def set_rqst_timeout (timeout):
@@ -635,7 +593,130 @@ def set_rqst_timeout (timeout):
     if type(timeout) == tuple:
         request_timeout = timeout
     else:
-        raise TypeError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+        raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+
+#
+# UPDATE_AVAIABLE_SERVERS
+#
+def update_available_servers (desired_nodes=None, time_to_live=None):
+    '''
+    Manages the number of servers in the cluster.
+    If the desired_nodes parameter is set, then a request is made to change the number of servers in the cluster to the number specified.
+    In all cases, the number of nodes currently running in the cluster are returned - even if desired_nodes is set;
+    subsequent calls to this function is needed to check when the current number of nodes matches the desired_nodes.
+
+    Parameters
+    ----------
+        desired_nodes:  int
+                        the desired number of nodes in the cluster
+        time_to_live:   int
+                        number of minutes for the desired nodes to run
+
+    Returns
+    -------
+    int
+        number of nodes currently in the cluster
+    int
+        number of nodes available for work in the cluster
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> num_servers, max_workers = sliderule.update_available_servers(10)
+    '''
+
+    global service_url, service_org, request_timeout
+
+    # Update number of nodes
+    if type(desired_nodes) == int:
+        host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
+        if type(time_to_live) == int:
+            host = host + str(time_to_live) + "/"
+        headers = __build_auth_header()
+        rsps = requests.put(host, headers=headers, timeout=request_timeout)
+        rsps.raise_for_status()
+
+    # Get number of nodes currently registered
+    rsps = source("status", parm={"service":"sliderule"}, path="/discovery")
+    available_servers = rsps["nodes"]
+    return available_servers, available_servers
+
+#
+# AUTHENTICATE
+#
+def authenticate (ps_organization, ps_username=None, ps_password=None):
+    '''
+    Authenticate to SlideRule Provisioning System
+    The username and password can be provided the following way in order of priority:
+    (1) The passed in arguments `ps_username' and 'ps_password';
+    (2) The O.S. environment variables 'PS_USERNAME' and 'PS_PASSWORD';
+    (3) The `ps.<url>` entry in the .netrc file in your home directory
+
+    Parameters
+    ----------
+        ps_organization:    str
+                            name of the SlideRule organization the user belongs to
+
+        ps_username:        str
+                            SlideRule provisioning system account name
+
+        ps_password:        str
+                            SlideRule provisioning system account password
+    Returns
+    -------
+    status
+        True of successful, False if unsuccessful
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.authenticate("myorg")
+        True
+    '''
+    global service_org, ps_refresh_token, ps_access_token, ps_token_exp
+    login_status = False
+    ps_url = "ps." + service_url
+
+    # set organization on any authentication request
+    service_org = ps_organization
+
+    # check for direct or public access
+    if service_org == None:
+        return True
+
+    # attempt retrieving from environment
+    if not ps_username or not ps_password:
+        ps_username = os.environ.get("PS_USERNAME")
+        ps_password = os.environ.get("PS_PASSWORD")
+
+    # attempt retrieving from netrc file
+    if not ps_username or not ps_password:
+        try:
+            netrc_file = netrc.netrc()
+            login_credentials = netrc_file.hosts[ps_url]
+            ps_username = login_credentials[0]
+            ps_password = login_credentials[2]
+        except Exception as e:
+            logger.error("Failed to retrieve username and password from netrc file: {}".format(e))
+
+    # authenticate to provisioning system
+    if ps_username and ps_password:
+        rqst = {"username": ps_username, "password": ps_password, "org_name": ps_organization}
+        headers = {'Content-Type': 'application/json'}
+        try:
+            api = "https://" + ps_url + "/api/org_token/"
+            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
+            rsps.raise_for_status()
+            rsps = rsps.json()
+            ps_refresh_token = rsps["refresh"]
+            ps_access_token = rsps["access"]
+            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+            login_status = True
+        except:
+            logger.error("Unable to authenticate user %s to %s" % (ps_username, api))
+
+    # return login status
+    return login_status
 
 #
 # GPS2UTC
@@ -695,7 +776,7 @@ def get_definition (rectype, fieldname):
     Examples
     --------
         >>> import sliderule
-        >>> sliderule.set_url("icesat2sliderule.org")
+        >>> sliderule.set_url("slideruleearth.io")
         >>> sliderule.get_definition("atl03rec", "cycle")
         {'fmt': 'H', 'size': 2, 'nptype': <class 'numpy.uint16'>}
     '''

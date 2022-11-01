@@ -38,17 +38,18 @@ class TestLocal:
 @pytest.mark.network
 class TestRemote:
     def test_init_badurl(self):
-        with pytest.raises( (ConnectTimeout, ConnectionError) ):
+        with pytest.raises( (sliderule.FatalError) ):
             icesat2.init('incorrect.org:8877')
+            sliderule.source("version")
 
-    def test_get_version(self, server):
-        icesat2.init(server)
+    def test_get_version(self, server, organization):
+        icesat2.init(server, organization=organization)
         version = icesat2.get_version()
         assert isinstance(version, dict)
         assert {'icesat2', 'server', 'client'} <= version.keys()
 
-    def test_cmr(self, grandmesa, server):
-        icesat2.init(server)
+    def test_cmr(self, grandmesa, server, organization):
+        icesat2.init(server, organization=organization)
         granules = icesat2.cmr(polygon=grandmesa,
             time_start='2018-10-01',
             time_end='2018-12-01')
