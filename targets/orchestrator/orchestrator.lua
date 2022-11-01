@@ -421,6 +421,56 @@ local function api_health(applet)
 end
 
 --
+-- API: /discovery/status
+--
+--  Returns status of cluster
+--
+--  INPUT:
+--  {
+--      "service": "<service name>"
+--  }
+--
+--  OUTPUT:
+--  {
+--      "nodes": <number of registered nodes>,
+--  }
+--
+local function api_status(applet)
+
+    -- process request
+    local body = applet:receive()
+    local request = json.decode(body)
+    local service = request["service"]
+
+    -- initialize error count
+    local error_count = 0
+
+    -- loop through service registry and return number of addresses
+    local num_addresses = 0
+    local service_registry = ServiceCatalog[service]
+    if service_registry ~= nil then
+        for _,_ in pairs(service_registry) do
+            num_addresses = num_addresses + 1
+        end
+    else
+        core.log(core.warning, string.format("Service %s not found", service))
+        error_count = error_count + 1
+    end
+
+    -- update statistics
+    StatData["numFailures"] = StatData["numFailures"] + error_count
+
+    -- send response
+    local response = string.format([[{"nodes": %d}]], num_addresses)
+    applet:set_status(200)
+    applet:add_header("content-length", string.len(response))
+    applet:add_header("content-type", "application/json")
+    applet:start_response()
+    applet:send(response)
+
+end
+
+--
 -- Task: scrubber
 --
 local function backgroud_scrubber()
@@ -536,6 +586,7 @@ core.register_service("orchestrator_lock", "http", api_lock)
 core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
+core.register_service("orchestrator_status", "http", api_status)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)
 core.register_converters("extract_ip", orchestrator_extract_ip)
