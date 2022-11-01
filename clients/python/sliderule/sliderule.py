@@ -310,6 +310,31 @@ def __parse_native(data, callbacks):
 
     return recs
 
+#
+#  __build_auth_header
+#
+def __build_auth_header():
+    """
+    Build authentication header for use with provisioning system
+    """
+
+    global service_url, ps_access_token, ps_refresh_token, ps_token_exp
+    headers = None
+    if ps_access_token:
+        # Check if Refresh Needed
+        if time.time() > ps_token_exp:
+            host = "https://ps." + service_url + "/api/org_token/refresh/"
+            rqst = {"refresh": ps_refresh_token}
+            hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
+            rsps = requests.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
+            ps_refresh_token = rsps["refresh"]
+            ps_access_token = rsps["access"]
+            ps_token_exp =  time.time() + (rsps["access_lifetime"] / 2)
+        # Build Authentication Header
+        headers = {'Authorization': 'Bearer ' + ps_access_token}
+    return headers
+
+
 ###############################################################################
 # Default Record Processing
 ###############################################################################
@@ -378,7 +403,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
-    global service_url, service_org, ps_access_token, ps_refresh_token, ps_token_exp
+    global service_url, service_org
     rqst = json.dumps(parm)
     rsps = {}
     headers = None
@@ -389,18 +414,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     # Construct Request URL and Authorization
     if service_org:
         url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
-        if ps_access_token:
-            # Check if Refresh Needed
-            if time.time() > ps_token_exp:
-                refresh_host = "https://ps." + url + "/api/org_token/refresh/"
-                refresh_rqst = {"refresh": ps_refresh_token}
-                refresh_headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
-                refresh_rsps = requests.post(refresh_host, data=json.dumps(refresh_rqst), headers=refresh_headers, timeout=(60,10)).json()
-                ps_refresh_token = refresh_rsps["refresh"]
-                ps_access_token = refresh_rsps["access"]
-                ps_token_exp =  time.time() + (refresh_rsps["access_lifetime"] / 2)
-            # Build Authentication Header
-            headers = {'Authorization': 'Bearer ' + ps_access_token}
+        headers = __build_auth_header()
     else:
         url = 'http://%s%s/%s' % (service_url, path, api)
     # Attempt Request
@@ -548,6 +562,16 @@ def update_available_servers (desired_nodes=None):
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
 
+    global service_url, service_org, request_timeout
+
+    # Update number of nodes
+    if type(desired_nodes) == int:
+        host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes)
+        headers = __build_auth_header()
+        rsps = requests.get(host, headers=headers, timeout=request_timeout).json()
+        rsps.raise_for_status()
+
+    # Get number of nodes currently registered
     rsps = source("status", parm={"service":"sliderule"}, path="/discovery")
     available_servers = rsps["nodes"]
     return available_servers, available_servers
