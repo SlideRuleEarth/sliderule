@@ -30,10 +30,10 @@
 import os
 import netrc
 import requests
-import numpy
 import json
 import struct
 import ctypes
+import time
 import logging
 from datetime import datetime, timedelta
 
@@ -49,6 +49,7 @@ service_org = PUBLIC_ORG
 
 ps_refresh_token = None
 ps_access_token = None
+ps_token_exp = None
 
 verbose = False
 
@@ -82,19 +83,19 @@ datatypes = {
 }
 
 basictypes = {
-    "INT8":     { "fmt": 'b', "size": 1, "nptype": numpy.int8 },
-    "INT16":    { "fmt": 'h', "size": 2, "nptype": numpy.int16 },
-    "INT32":    { "fmt": 'i', "size": 4, "nptype": numpy.int32 },
-    "INT64":    { "fmt": 'q', "size": 8, "nptype": numpy.int64 },
-    "UINT8":    { "fmt": 'B', "size": 1, "nptype": numpy.uint8 },
-    "UINT16":   { "fmt": 'H', "size": 2, "nptype": numpy.uint16 },
-    "UINT32":   { "fmt": 'I', "size": 4, "nptype": numpy.uint32 },
-    "UINT64":   { "fmt": 'Q', "size": 8, "nptype": numpy.uint64 },
-    "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte },    # unsupported
-    "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
-    "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
-    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.byte },
-    "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte }
+    "INT8":     { "fmt": 'b', "size": 1 },
+    "INT16":    { "fmt": 'h', "size": 2 },
+    "INT32":    { "fmt": 'i', "size": 4 },
+    "INT64":    { "fmt": 'q', "size": 8 },
+    "UINT8":    { "fmt": 'B', "size": 1 },
+    "UINT16":   { "fmt": 'H', "size": 2 },
+    "UINT32":   { "fmt": 'I', "size": 4 },
+    "UINT64":   { "fmt": 'Q', "size": 8 },
+    "BITFIELD": { "fmt": 'x', "size": 0 },  # unsupported
+    "FLOAT":    { "fmt": 'f', "size": 4 },
+    "DOUBLE":   { "fmt": 'd', "size": 8 },
+    "TIME8":    { "fmt": 'Q', "size": 8 },
+    "STRING":   { "fmt": 's', "size": 1 }
 }
 
 codedtype2str = {
@@ -342,7 +343,7 @@ __callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec}
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, callbacks={}):
+def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     '''
     Perform API call to SlideRule service
 
@@ -354,10 +355,10 @@ def source (api, parm={}, stream=False, callbacks={}):
                     dictionary of request parameters
         stream:     bool
                     whether the request is a **normal** service or a **stream** service (see `De-serialization <./SlideRule.html#de-serialization>`_ for more details)
-        format:     str
-                    format of the data being returned in the response: native, json
         callbacks:  dict
                     record type callbacks (advanced use)
+        path:       str
+                    path to api being requested
 
     Returns
     -------
@@ -377,22 +378,32 @@ def source (api, parm={}, stream=False, callbacks={}):
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
-    global service_url, service_org
+    global service_url, service_org, ps_access_token, ps_refresh_token, ps_token_exp
     rqst = json.dumps(parm)
     rsps = {}
     headers = None
-    # Build callbacks
+    # Build Callbacks
     for c in __callbacks:
         if c not in callbacks:
             callbacks[c] = __callbacks[c]
-    # Construct Request URL and Authorization #
+    # Construct Request URL and Authorization
     if service_org:
-        url = 'https://%s.%s/source/%s' % (service_org, service_url, api)
+        url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
         if ps_access_token:
+            # Check if Refresh Needed
+            if time.time() > ps_token_exp:
+                refresh_host = "https://ps." + url + "/api/org_token/refresh/"
+                refresh_rqst = {"refresh": ps_refresh_token}
+                refresh_headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
+                refresh_rsps = requests.post(refresh_host, data=json.dumps(refresh_rqst), headers=refresh_headers, timeout=(60,10)).json()
+                ps_refresh_token = refresh_rsps["refresh"]
+                ps_access_token = refresh_rsps["access"]
+                ps_token_exp =  time.time() + (refresh_rsps["access_lifetime"] / 2)
+            # Build Authentication Header
             headers = {'Authorization': 'Bearer ' + ps_access_token}
     else:
-        url = 'http://%s/source/%s' % (service_url, api)
-    # Attempt Request #
+        url = 'http://%s%s/%s' % (service_url, path, api)
+    # Attempt Request
     try:
         # Perform Request
         if not stream:
@@ -403,6 +414,8 @@ def source (api, parm={}, stream=False, callbacks={}):
         # Parse Response
         format = data.headers['Content-Type']
         if format == 'text/plain':
+            rsps = __parse_json(data)
+        elif format == 'application/json':
             rsps = __parse_json(data)
         elif format == 'application/octet-stream':
             rsps = __parse_native(data, callbacks)
@@ -534,8 +547,10 @@ def update_available_servers (desired_nodes=None):
         >>> import sliderule
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
-    # placeholder until functionality implemented
-    return 7,7
+
+    rsps = source("status", parm={"service":"sliderule"}, path="/discovery")
+    available_servers = rsps["nodes"]
+    return available_servers, available_servers
 
 #
 # AUTHENTICATE
@@ -569,7 +584,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         >>> sliderule.authenticate("myorg")
         True
     '''
-    global service_org, ps_refresh_token, ps_access_token
+    global service_org, ps_refresh_token, ps_access_token, ps_token_exp
     login_status = False
     ps_url = "ps." + service_url
 
@@ -604,6 +619,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
             rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout).json()
             ps_refresh_token = rsps["refresh"]
             ps_access_token = rsps["access"]
+            ps_token_exp =  time.time() + (rsps["access_lifetime"] / 2)
             login_status = True
         except:
             logger.error("Unable to authenticate user %s to %s" % (ps_username, api))
