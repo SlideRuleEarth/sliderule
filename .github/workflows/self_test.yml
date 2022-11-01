@@ -30,6 +30,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
+        sudo apt update
         sudo apt install build-essential libreadline-dev liblua5.3-dev                   #basic config
         sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev #aws h5 pistache gdal
         sudo add-apt-repository ppa:pistache+team/unstable    #pistache
