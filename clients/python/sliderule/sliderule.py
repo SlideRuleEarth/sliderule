@@ -537,7 +537,7 @@ def set_rqst_timeout (timeout):
 #
 # UPDATE_AVAIABLE_SERVERS
 #
-def update_available_servers (desired_nodes=None):
+def update_available_servers (desired_nodes=None, time_to_live=None):
     '''
     Manages the number of servers in the cluster.
     If the desired_nodes parameter is set, then a request is made to change the number of servers in the cluster to the number specified.
@@ -548,6 +548,8 @@ def update_available_servers (desired_nodes=None):
     ----------
         desired_nodes:  int
                         the desired number of nodes in the cluster
+        time_to_live:   int
+                        number of minutes for the desired nodes to run
 
     Returns
     -------
@@ -567,6 +569,8 @@ def update_available_servers (desired_nodes=None):
     # Update number of nodes
     if type(desired_nodes) == int:
         host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
+        if type(time_to_live) == int:
+            host = host + str(time_to_live) + "/"
         headers = __build_auth_header()
         rsps = requests.put(host, headers=headers, timeout=request_timeout)
         rsps.raise_for_status()
