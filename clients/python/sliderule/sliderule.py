@@ -36,6 +36,7 @@ import ctypes
 import time
 import logging
 from datetime import datetime, timedelta
+import numpy
 
 ###############################################################################
 # GLOBALS
@@ -83,19 +84,19 @@ datatypes = {
 }
 
 basictypes = {
-    "INT8":     { "fmt": 'b', "size": 1 },
-    "INT16":    { "fmt": 'h', "size": 2 },
-    "INT32":    { "fmt": 'i', "size": 4 },
-    "INT64":    { "fmt": 'q', "size": 8 },
-    "UINT8":    { "fmt": 'B', "size": 1 },
-    "UINT16":   { "fmt": 'H', "size": 2 },
-    "UINT32":   { "fmt": 'I', "size": 4 },
-    "UINT64":   { "fmt": 'Q', "size": 8 },
-    "BITFIELD": { "fmt": 'x', "size": 0 },  # unsupported
-    "FLOAT":    { "fmt": 'f', "size": 4 },
-    "DOUBLE":   { "fmt": 'd', "size": 8 },
-    "TIME8":    { "fmt": 'Q', "size": 8 },
-    "STRING":   { "fmt": 's', "size": 1 }
+    "INT8":     { "fmt": 'b', "size": 1, "nptype": numpy.int8   },
+    "INT16":    { "fmt": 'h', "size": 2, "nptype": numpy.int16  },
+    "INT32":    { "fmt": 'i', "size": 4, "nptype": numpy.int32  },
+    "INT64":    { "fmt": 'q', "size": 8, "nptype": numpy.int64  },
+    "UINT8":    { "fmt": 'B', "size": 1, "nptype": numpy.uint8  },
+    "UINT16":   { "fmt": 'H', "size": 2, "nptype": numpy.uint16 },
+    "UINT32":   { "fmt": 'I', "size": 4, "nptype": numpy.uint32 },
+    "UINT64":   { "fmt": 'Q', "size": 8, "nptype": numpy.uint64 },
+    "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte   },  # unsupported
+    "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
+    "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
+    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.byte   },
+    "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte   }
 }
 
 codedtype2str = {

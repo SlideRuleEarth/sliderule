@@ -303,21 +303,7 @@ def __get_values(data, dtype, size):
     """
 
     raw = bytes(data)
-    datatype = {
-        "INT8":     numpy.int8,
-        "INT16":    numpy.int16,
-        "INT32":    numpy.int32,
-        "INT64":    numpy.int64,
-        "UINT8":    numpy.uint8,
-        "UINT16":   numpy.uint16,
-        "UINT32":   numpy.uint32,
-        "UINT64":   numpy.uint64,
-        "BITFIELD": numpy.byte, # unsupported
-        "FLOAT":    numpy.single,
-        "DOUBLE":   numpy.double,
-        "TIME8":    numpy.byte,
-        "STRING":   numpy.byte
-    }[sliderule.codedtype2str[dtype]]
+    datatype = sliderule.basictypes[sliderule.codedtype2str[dtype]]["nptype"]
     num_elements = int(size / numpy.dtype(datatype).itemsize)
     slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
