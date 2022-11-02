@@ -35,6 +35,7 @@ import logging
 import datetime
 import traceback
 import numpy as np
+import collections.abc
 import geopandas as gpd
 import matplotlib.lines
 import matplotlib.cm as cm
@@ -250,7 +251,7 @@ class widgets:
 
         # slider for setting for YAPC along-track distance window
         self.yapc_win_x = ipywidgets.FloatSlider(
-            value=21.0,
+            value=15.0,
             min=0.1,
             max=100,
             step=0.1,
@@ -418,7 +419,7 @@ class widgets:
             style=self.style,
         )
 
-        # dropdown menu for setting map projection for polygons
+        # dropdown menu for setting map projection
         # Global: Web Mercator (EPSG:3857)
         # North: Alaska Polar Stereographic (EPSG:5936)
         # South: Polar Stereographic South (EPSG:3031)
@@ -496,7 +497,7 @@ class widgets:
         )
 
         # selection for adding layers to map
-        layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS']
+        layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS','RGI']
         self.layers = ipywidgets.SelectMultiple(
             options=layer_options,
             description='Add Layers:',
@@ -506,8 +507,20 @@ class widgets:
             style=self.style,
         )
 
+        # selection for adding raster functions to map
+        self.raster_functions = ipywidgets.Dropdown(
+            options=[],
+            description='Raster Layer:',
+            description_tooltip=("Raster Layer: contextual raster "
+                "functions to add to leaflet map"),
+            disabled=False,
+            style=self.style,
+        )
+        self.raster_functions.layout.display = 'none'
+
         # watch widgets for changes
         self.projection.observe(self.set_layers)
+        self.layers.observe(self.set_raster_functions)
 
         # single plot widgets
         # single plot kind
@@ -711,13 +724,55 @@ class widgets:
         """function for updating available map layers
         """
         if (self.projection.value == 'Global'):
-            layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS']
+            layer_options = ['3DEP','ASTER GDEM','ESRI imagery','GLIMS','RGI']
         elif (self.projection.value == 'North'):
             layer_options = ['ESRI imagery','ArcticDEM']
         elif (self.projection.value == 'South'):
-            layer_options = ['LIMA','MOA','RAMP']
+            layer_options = ['LIMA','MOA','RAMP','REMA']
         self.layers.options=layer_options
         self.layers.value=[]
+
+    # function for setting available raster functions
+    def set_raster_functions(self, sender):
+        """sets available raster functions for image service layers
+        """
+        # available raster functions for each DEM
+        if ('ArcticDEM' in self.layers.value):
+            # set options for raster functions
+            self.raster_functions.options = [
+                "Aspect Map",
+                "Hillshade Elevation Tinted",
+                "Hillshade Gray",
+                "Height Ellipsoidal",
+                "Height Orthometric",
+                "Slope Map",
+                "Contour 25",
+                "Contour Smoothed 25"]
+            self.raster_functions.value = "Hillshade Gray"
+            self.raster_functions.layout.display = 'inline-flex'
+        elif ('REMA' in self.layers.value):
+            # set options for raster functions
+            self.raster_functions.options = [
+                "Aspect Map",
+                "Hillshade Elevation Tinted",
+                "Hillshade Gray",
+                "Height Orthometric",
+                "Slope Degrees Map",
+                "Contour 25",
+                "Smooth Contour 25"]
+            self.raster_functions.value = "Hillshade Gray"
+            self.raster_functions.layout.display = 'inline-flex'
+        else:
+            # set options for raster functions
+            self.raster_functions.options = []
+            self.raster_functions.value = None
+            self.raster_functions.layout.display = 'none'
+
+    @property
+    def rendering_rule(self):
+        """sets rendering rule from a raster function value
+        """
+        return {"rasterFunction": self.raster_functions.value}
 
     # function for setting single track plot kind
     def set_plot_kind(self, sender):
@@ -1218,7 +1273,7 @@ class widgets:
 projections = Bunch(
     # Alaska Polar Stereographic (WGS84)
     EPSG5936=Bunch(
-        Basemap=dict(
+        ESRIBasemap=dict(
             name='EPSG:5936',
             custom=True,
             proj4def="""+proj=stere +lat_0=90 +lat_ts=90 +lon_0=-150 +k=0.994
@@ -1267,7 +1322,7 @@ projections = Bunch(
     ,
     # Polar Stereographic South (WGS84)
     EPSG3031 = Bunch(
-        Basemap = dict(
+        ESRIBasemap = dict(
             name='EPSG:3031',
             custom=True,
             proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
@@ -1289,7 +1344,7 @@ projections = Bunch(
                 [4524449.4877656475,4524583.193633042]
             ]
         ),
-        Imagery = dict(
+        ESRIImagery = dict(
             name='EPSG:3031',
             custom=True,
             proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
@@ -1324,6 +1379,12 @@ projections = Bunch(
                 [-9913957.327914657,-5730886.461772691],
                 [9913957.327914657,5730886.461773157]
             ]
+        ),
+        REMA=dict(
+            name='EPSG:3031',
+            custom=True,
+            proj4def="""+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1
+                +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs""",
         ),
         LIMA = dict(
             name='EPSG:3031',
@@ -1381,31 +1442,31 @@ providers = {
     "Esri": {
         "ArcticOceanBase": {
             "name": 'Esri.ArcticOceanBase',
-            "crs": projections.EPSG5936.Basemap,
+            "crs": projections.EPSG5936.ESRIBasemap,
             "attribution": esri_attribution,
             "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
         },
         "ArcticImagery": {
             "name": 'Esri.ArcticImagery',
-            "crs": projections.EPSG5936.Basemap,
+            "crs": projections.EPSG5936.ESRIBasemap,
             "attribution": "Earthstar Geographics",
             "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Imagery/MapServer/tile/{z}/{y}/{x}'
         },
         "ArcticOceanReference": {
             "name": 'Esri.ArcticOceanReference',
-            "crs": projections.EPSG5936.Basemap,
+            "crs": projections.EPSG5936.ESRIBasemap,
             "attribution": esri_attribution,
             "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Arctic_Ocean_Reference/MapServer/tile/{z}/{y}/{x}'
         },
         "AntarcticBasemap": {
             "name": 'Esri.AntarcticBasemap',
-            "crs": projections.EPSG3031.Basemap,
+            "crs": projections.EPSG3031.ESRIBasemap,
             "attribution":noaa_attribution,
             "url": 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/Antarctic_Basemap/MapServer/tile/{z}/{y}/{x}'
         },
         "AntarcticImagery": {
             "name": 'Esri.AntarcticImagery',
-            "crs": projections.EPSG3031.Imagery,
+            "crs": projections.EPSG3031.ESRIImagery,
             "attribution": "Earthstar Geographics",
             "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/Polar/Antarctic_Imagery/MapServer/tile/{z}/{y}/{x}'
         },
@@ -1422,12 +1483,37 @@ providers = {
 # define background ipyleaflet WMS layers
 layers = Bunch(
     GLIMS = Bunch(
-        Glaciers = ipyleaflet.WMSLayer(
-            name="GLIMS_GLACIERS",
+        GLACIERS = ipyleaflet.WMSLayer(
+            name="GLIMS.GLACIERS",
             attribution=glims_attribution,
             layers='GLIMS_GLACIERS',
             format='image/png',
-            url='https://www.glims.org/mapservice'
+            transparent=True,
+            url='https://www.glims.org/geoserver/GLIMS/wms'
+        ),
+        RGI = ipyleaflet.WMSLayer(
+            name="GLIMS.RGI",
+            attribution=glims_attribution,
+            layers='RGI',
+            format='image/png',
+            transparent=True,
+            url='https://www.glims.org/geoserver/GLIMS/wms'
+        ),
+        DCW = ipyleaflet.WMSLayer(
+            name="GLIMS.DCW",
+            attribution=glims_attribution,
+            layers='dcw_glaciers',
+            format='image/png',
+            transparent=True,
+            url='https://www.glims.org/geoserver/GLIMS/wms'
+        ),
+        WGI = ipyleaflet.WMSLayer(
+            name="GLIMS.WGI",
+            attribution=glims_attribution,
+            layers='WGI_points',
+            format='image/png',
+            transparent=True,
+            url='https://www.glims.org/geoserver/GLIMS/wms'
         )
     ),
     USGS = Bunch(
@@ -1466,18 +1552,37 @@ layers = Bunch(
             crs=projections.EPSG3031.RAMP
         )
     ),
-    PGC = Bunch(
-        ArcticDEM = ipyleaflet.WMSLayer(
-            name="ArcticDEM",
-            attribution=pgc_attribution,
-            layers="0",
-            format='image/png',
-            transparent=True,
-            url='http://elevation2.arcgis.com/arcgis/services/Polar/ArcticDEM/ImageServer/WMSserver',
-            crs=projections.EPSG5936.ArcticDEM
-        )
-    )
+    PGC = Bunch()
 )
+
+# attempt to add PGC imageservice layers
+try:
+    layers.PGC.ArcticDEM = ipyleaflet.ImageService(
+        name="ArcticDEM",
+        attribution=pgc_attribution,
+        format='jpgpng',
+        transparent=True,
+        url='https://elevation2.arcgis.com/arcgis/rest/services/Polar/ArcticDEM/ImageServer',
+        crs=projections.EPSG5936.ArcticDEM
+    )
+    layers.PGC.REMA = ipyleaflet.ImageService(
+        name="REMA",
+        attribution=pgc_attribution,
+        format='jpgpng',
+        transparent=True,
+        url='https://elevation2.arcgis.com/arcgis/rest/services/Polar/AntarcticDEM/ImageServer',
+        crs=projections.EPSG3031.REMA
+    )
+except NameError:
+    layers.PGC.ArcticDEM = ipyleaflet.WMSLayer(
+        name="ArcticDEM",
+        attribution=pgc_attribution,
+        layers="0",
+        format='image/png',
+        transparent=True,
+        url='http://elevation2.arcgis.com/arcgis/services/Polar/ArcticDEM/ImageServer/WMSserver',
+        crs=projections.EPSG5936.ArcticDEM
+    )
 
 # load basemap providers from dict
 # https://github.com/geopandas/xyzservices/blob/main/xyzservices/lib.py
@@ -1502,6 +1607,7 @@ basemaps = _load_dict(providers)
 class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
+        kwargs.setdefault('map',None)
         kwargs.setdefault('attribution',False)
         kwargs.setdefault('zoom_control',False)
         kwargs.setdefault('scale_control',False)
@@ -1520,21 +1626,27 @@ class leaflet:
             self.map = ipyleaflet.Map(center=(90,0),
                 zoom=5, max_zoom=24,
                 attribution_control=kwargs['attribution'],
-                basemap=basemaps.Esri.ArcticOceanBase,
-                crs=projections.EPSG5936.Basemap)
-            self.map.add_layer(basemaps.Esri.ArcticOceanReference)
+                basemap=ipyleaflet.basemaps.Esri.ArcticOceanBase,
+                crs=ipyleaflet.projections.EPSG5936.ESRIBasemap)
+            # add arctic ocean reference basemap
+            reference = ipyleaflet.basemaps.Esri.ArcticOceanReference
+            self.map.add(ipyleaflet.basemap_to_tiles(reference))
             self.crs = 'EPSG:5936'
         elif (projection == 'South'):
             self.map = ipyleaflet.Map(center=(-90,0),
                 zoom=2, max_zoom=9,
                 attribution_control=kwargs['attribution'],
-                basemap=basemaps.Esri.AntarcticBasemap,
-                crs=projections.EPSG3031.Basemap)
+                basemap=ipyleaflet.basemaps.Esri.AntarcticBasemap,
+                crs=ipyleaflet.projections.EPSG3031.ESRIBasemap)
             self.crs = 'EPSG:3031'
+        else:
+            # use a predefined ipyleaflet map
+            self.map = kwargs['map']
+            self.crs = self.map.crs['name']
         # add control for layers
         if kwargs['layer_control']:
             self.layer_control = ipyleaflet.LayersControl(position='topleft')
-            self.map.add_control(self.layer_control)
+            self.map.add(self.layer_control)
             self.layers = self.map.layers
         # add control for zoom
         if kwargs['zoom_control']:
@@ -1543,17 +1655,17 @@ class leaflet:
             ipywidgets.jslink((zoom_slider, 'value'), (self.map, 'zoom'))
             zoom_control = ipyleaflet.WidgetControl(widget=zoom_slider,
                 position='topright')
-            self.map.add_control(zoom_control)
+            self.map.add(zoom_control)
         # add control for spatial scale bar
         if kwargs['scale_control']:
             scale_control = ipyleaflet.ScaleControl(position='topright')
-            self.map.add_control(scale_control)
+            self.map.add(scale_control)
         # add control for cursor position
         if kwargs['cursor_control']:
             self.cursor = ipywidgets.Label()
             cursor_control = ipyleaflet.WidgetControl(widget=self.cursor,
                 position='bottomleft')
-            self.map.add_control(cursor_control)
+            self.map.add(cursor_control)
             # keep track of cursor position
             self.map.on_interaction(self.handle_interaction)
         # add control for drawing polygons or bounding boxes
@@ -1567,7 +1679,7 @@ class leaflet:
         # create regions
         self.regions = []
         draw_control.on_draw(self.handle_draw)
-        self.map.add_control(draw_control)
+        self.map.add(draw_control)
         # initialize data and colorbars
         self.geojson = None
         self.tooltip = None
@@ -1596,7 +1708,7 @@ class leaflet:
                 weight=kwargs['weight'],
             )
             # add region to map
-            self.map.add_layer(polygon)
+            self.map.add(polygon)
             # add to regions list
             self.regions.append(region)
         return self
@@ -1606,37 +1718,68 @@ class leaflet:
         """wrapper function for adding selected layers to leaflet maps
         """
         kwargs.setdefault('layers', [])
+        kwargs.setdefault('rendering_rule', None)
         # verify layers are iterable
         if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
+            kwargs['layers'] = [kwargs['layers']]
+        elif not isinstance(kwargs['layers'],collections.abc.Iterable):
             kwargs['layers'] = [kwargs['layers']]
         # add each layer to map
         for layer in kwargs['layers']:
             # try to add the layer
             try:
                 if isinstance(layer,xyzservices.TileProvider):
-                    self.map.add_layer(layer)
+                    self.map.add(layer)
                 elif isinstance(layer,dict):
-                    self.map.add_layer(_load_dict(layer))
+                    self.map.add(_load_dict(layer))
                 elif isinstance(layer,str) and (layer == 'GLIMS'):
-                    self.map.add_layer(layers.GLIMS.Glaciers)
+                    self.map.add(layers.GLIMS.GLACIERS)
+                elif isinstance(layer,str) and (layer == 'RGI'):
+                    self.map.add(layers.GLIMS.RGI)
                 elif isinstance(layer,str) and (layer == '3DEP'):
-                    self.map.add_layer(layers.USGS.Elevation)
+                    self.map.add(layers.USGS.Elevation)
                 elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
-                    self.map.add_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
+                    self.map.add(ipyleaflet.basemap_to_tiles(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief))
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
-                    self.map.add_layer(ipyleaflet.basemaps.Esri.WorldImagery)
+                    self.map.add(ipyleaflet.basemap_to_tiles(ipyleaflet.basemaps.Esri.WorldImagery))
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
-                    self.map.add_layer(basemaps.Esri.ArcticImagery)
+                    self.map.add(ipyleaflet.basemap_to_tiles(basemaps.Esri.ArcticImagery))
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
-                    self.map.add_layer(layers.PGC.ArcticDEM)
+                    # set raster layer
+                    im = layers.PGC.ArcticDEM
+                    # remove previous versions of raster map
+                    if (im in self.map.layers):
+                        self.map.remove(im)
+                    # update raster map rendering rule
+                    im.rendering_rule = kwargs['rendering_rule']
+                    self.map.add(im)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
-                    self.map.add_layer(layers.USGS.LIMA)
+                    self.map.add(layers.USGS.LIMA)
                 elif isinstance(layer,str) and (layer == 'MOA'):
-                    self.map.add_layer(layers.USGS.MOA)
+                    self.map.add(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
-                    self.map.add_layer(layers.USGS.RAMP)
+                    self.map.add(layers.USGS.RAMP)
+                elif isinstance(layer,str) and (layer == 'REMA'):
+                    # set raster layer
+                    im = layers.PGC.REMA
+                    # remove previous versions of raster map
+                    if (im in self.map.layers):
+                        self.map.remove(im)
+                    # update raster map rendering rule
+                    im.rendering_rule = kwargs['rendering_rule']
+                    self.map.add(im)
+                else:
+                    # simply attempt to add the layer or control
+                    self.map.add(layer)
             except ipyleaflet.LayerException as e:
                 logging.info(f"Layer {layer} already on map")
+                pass
+            except ipyleaflet.ControlException as e:
+                logging.info(f"Control {layer} already on map")
+                pass
+            except Exception as e:
+                logging.critical(f"Could add layer {layer}")
+                logging.error(traceback.format_exc())
                 pass
 
     # remove map layers
@@ -1644,35 +1787,51 @@ class leaflet:
         """wrapper function for removing selected layers from leaflet maps
         """
         kwargs.setdefault('layers', [])
+        kwargs.setdefault('rendering_rule', None)
         # verify layers are iterable
         if isinstance(kwargs['layers'],(xyzservices.TileProvider,dict,str)):
+            kwargs['layers'] = [kwargs['layers']]
+        elif not isinstance(kwargs['layers'],collections.abc.Iterable):
             kwargs['layers'] = [kwargs['layers']]
         # remove each layer to map
         for layer in kwargs['layers']:
             # try to remove layer from map
             try:
                 if isinstance(layer,xyzservices.TileProvider):
-                    self.map.remove_layer(layer)
+                    self.map.remove(layer)
                 elif isinstance(layer,dict):
-                    self.map.remove_layer(_load_dict(layer))
+                    self.map.remove(_load_dict(layer))
                 elif isinstance(layer,str) and (layer == 'GLIMS'):
-                    self.map.remove_layer(layers.GLIMS.Glaciers)
+                    self.map.remove(layers.GLIMS.GLACIERS)
+                elif isinstance(layer,str) and (layer == 'RGI'):
+                    self.map.remove(layers.GLIMS.RGI)
                 elif isinstance(layer,str) and (layer == '3DEP'):
-                    self.map.remove_layer(layers.USGS.Elevation)
+                    self.map.remove(layers.USGS.Elevation)
                 elif isinstance(layer,str) and (layer == 'ASTER GDEM'):
-                    self.map.remove_layer(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief)
+                    self.map.remove(ipyleaflet.basemap_to_tiles(basemaps.NASAGIBS.ASTER_GDEM_Greyscale_Shaded_Relief))
                 elif isinstance(layer,str) and (self.crs == 'EPSG:3857') and (layer == 'ESRI imagery'):
-                    self.map.remove_layer(ipyleaflet.basemaps.Esri.WorldImagery)
+                    self.map.add(ipyleaflet.basemap_to_tiles(ipyleaflet.basemaps.Esri.WorldImagery))
                 elif isinstance(layer,str) and (self.crs == 'EPSG:5936') and (layer == 'ESRI imagery'):
-                    self.map.remove_layer(basemaps.Esri.ArcticImagery)
+                    self.map.remove(ipyleaflet.basemap_to_tiles(basemaps.Esri.ArcticImagery))
                 elif isinstance(layer,str) and (layer == 'ArcticDEM'):
-                    self.map.remove_layer(layers.PGC.ArcticDEM)
+                    self.map.remove(layers.PGC.ArcticDEM)
                 elif isinstance(layer,str) and (layer == 'LIMA'):
-                    self.map.remove_layer(layers.USGS.LIMA)
+                    self.map.remove(layers.USGS.LIMA)
                 elif isinstance(layer,str) and (layer == 'MOA'):
-                    self.map.remove_layer(layers.USGS.MOA)
+                    self.map.remove(layers.USGS.MOA)
                 elif isinstance(layer,str) and (layer == 'RAMP'):
-                    self.map.remove_layer(layers.USGS.RAMP)
+                    self.map.remove(layers.USGS.RAMP)
+                elif isinstance(layer,str) and (layer == 'REMA'):
+                    self.map.remove(layers.PGC.REMA)
+                else:
+                    # simply attempt to remove the layer or control
+                    self.map.remove(layer)
+            except ipyleaflet.LayerException as e:
+                logging.info(f"Layer {layer} already removed from map")
+                pass
+            except ipyleaflet.ControlException as e:
+                logging.info(f"Control {layer} already removed from map")
+                pass
             except Exception as e:
                 logging.critical(f"Could not remove layer {layer}")
                 logging.error(traceback.format_exc())
@@ -1710,11 +1869,11 @@ class leaflet:
             self.regions.remove(region)
         # remove any prior instances of a data layer
         if (action == 'deleted') and self.geojson is not None:
-            self.map.remove_layer(self.geojson)
+            self.map.remove(self.geojson)
             self.geojson = None
         # remove any prior instances of a colorbar
         if (action == 'deleted') and self.colorbar is not None:
-            self.map.remove_control(self.colorbar)
+            self.map.remove(self.colorbar)
             self.colorbar = None
         return self
 
@@ -1755,7 +1914,7 @@ class leaflet:
         kwargs.setdefault('position', 'topright')
         # remove any prior instances of a data layer
         if self.geojson is not None:
-            self.map.remove_layer(self.geojson)
+            self.map.remove(self.geojson)
         if kwargs['stride'] is not None:
             stride = np.copy(kwargs['stride'])
         elif (gdf.shape[0] > kwargs['max_plot_points']):
@@ -1793,7 +1952,7 @@ class leaflet:
         self.geojson = ipyleaflet.GeoJSON(data=geodataframe.__geo_interface__,
             point_style=point_style, style_callback=self.style_callback)
         # add GeoJSON object to map
-        self.map.add_layer(self.geojson)
+        self.map.add(self.geojson)
         # fields for tooltip views
         if kwargs['fields'] is None:
             self.fields = geodataframe.columns.drop(
@@ -1837,7 +1996,7 @@ class leaflet:
         self.tooltip.layout.width = "220px"
         self.tooltip.layout.height = "300px"
         self.tooltip.layout.visibility = 'visible'
-        self.map.add_control(self.hover_control)
+        self.map.add(self.hover_control)
 
     def handle_mouseout(self, _, content, buffers):
         """callback for removing hover tooltips upon mouseout
@@ -1848,7 +2007,7 @@ class leaflet:
             self.tooltip.layout.width = "0px"
             self.tooltip.layout.height = "0px"
             self.tooltip.layout.visibility = 'hidden'
-            self.map.remove_control(self.hover_control)
+            self.map.remove(self.hover_control)
 
     # functional calls for click events
     def handle_click(self, feature, **kwargs):
@@ -1887,7 +2046,7 @@ class leaflet:
         kwargs.setdefault('height', 0.4)
         # remove any prior instances of a colorbar
         if self.colorbar is not None:
-            self.map.remove_control(self.colorbar)
+            self.map.remove(self.colorbar)
         # colormap for colorbar
         cmap = copy.copy(cm.get_cmap(kwargs['cmap']))
         # create matplotlib colorbar
@@ -1907,7 +2066,7 @@ class leaflet:
         self.colorbar = ipyleaflet.WidgetControl(widget=output,
             transparent_bg=True, position=kwargs['position'])
         # add colorbar
-        self.map.add_control(self.colorbar)
+        self.map.add(self.colorbar)
         plt.close()
 
     @staticmethod

@@ -1,12 +1,13 @@
 # sliderule-python
 [![Tests](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml)
+[![Read the Docs](https://readthedocs.org/projects/sliderule-python/badge/?version=latest)](https://slideruleearth.io/rtd/)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://gke.mybinder.org/v2/gh/ICESat2-SlideRule/sliderule-python/main?urlpath=lab)
 [![badge](https://img.shields.io/static/v1.svg?logo=Jupyter&label=PangeoBinderAWS&message=us-west-2&color=orange)](https://aws-uswest2-binder.pangeo.io/v2/gh/ICESat2-SlideRule/sliderule-python/main?urlpath=lab)
 [![DOI](https://zenodo.org/badge/311384982.svg)](https://zenodo.org/badge/latestdoi/311384982)
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
-Detailed [documentation](https://www.slideruleearth.org/rtd/) on installing and using this client can be found at [slideruleearth.io](https://www.slideruleearth.org).
+Detailed [documentation](https://slideruleearth.io/rtd/) on installing and using this client can be found at [slideruleearth.io](https://slideruleearth.io/).
 
 ## I. Installing the SlideRule Python Client
 
@@ -14,7 +15,7 @@ Detailed [documentation](https://www.slideruleearth.org/rtd/) on installing and 
 conda install -c conda-forge sliderule
 ```
 
-For alternate methods to install SlideRule, including options for developers, please see the [installation instructions](https://www.slideruleearth.org/rtd/getting_started/Install.html) on slideruleearth.io.
+For alternate methods to install SlideRule, including options for developers, please see the [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html).
 
 ### Dependencies
 
@@ -59,7 +60,7 @@ More extensive examples in the form of Jupyter Notebooks can be found in the [ex
 
 ## III. Reference and User's Guide
 
-Please see our [documentation](https://www.slideruleearth.org/rtd/) page for reference and user's guide material.
+Please see our [documentation](https://slideruleearth.io/rtd/) page for reference and user's guide material.
 
 ## IV. Licensing
 

@@ -30,12 +30,13 @@
 import os
 import netrc
 import requests
-import numpy
 import json
 import struct
 import ctypes
+import time
 import logging
 from datetime import datetime, timedelta
+import numpy
 
 ###############################################################################
 # GLOBALS
@@ -49,6 +50,7 @@ service_org = PUBLIC_ORG
 
 ps_refresh_token = None
 ps_access_token = None
+ps_token_exp = None
 
 verbose = False
 
@@ -82,19 +84,19 @@ datatypes = {
 }
 
 basictypes = {
-    "INT8":     { "fmt": 'b', "size": 1, "nptype": numpy.int8 },
-    "INT16":    { "fmt": 'h', "size": 2, "nptype": numpy.int16 },
-    "INT32":    { "fmt": 'i', "size": 4, "nptype": numpy.int32 },
-    "INT64":    { "fmt": 'q', "size": 8, "nptype": numpy.int64 },
-    "UINT8":    { "fmt": 'B', "size": 1, "nptype": numpy.uint8 },
+    "INT8":     { "fmt": 'b', "size": 1, "nptype": numpy.int8   },
+    "INT16":    { "fmt": 'h', "size": 2, "nptype": numpy.int16  },
+    "INT32":    { "fmt": 'i', "size": 4, "nptype": numpy.int32  },
+    "INT64":    { "fmt": 'q', "size": 8, "nptype": numpy.int64  },
+    "UINT8":    { "fmt": 'B', "size": 1, "nptype": numpy.uint8  },
     "UINT16":   { "fmt": 'H', "size": 2, "nptype": numpy.uint16 },
     "UINT32":   { "fmt": 'I', "size": 4, "nptype": numpy.uint32 },
     "UINT64":   { "fmt": 'Q', "size": 8, "nptype": numpy.uint64 },
-    "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte },    # unsupported
+    "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte   },  # unsupported
     "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
     "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
-    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.byte },
-    "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte }
+    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.byte   },
+    "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte   }
 }
 
 codedtype2str = {
@@ -309,6 +311,31 @@ def __parse_native(data, callbacks):
 
     return recs
 
+#
+#  __build_auth_header
+#
+def __build_auth_header():
+    """
+    Build authentication header for use with provisioning system
+    """
+
+    global service_url, ps_access_token, ps_refresh_token, ps_token_exp
+    headers = None
+    if ps_access_token:
+        # Check if Refresh Needed
+        if time.time() > ps_token_exp:
+            host = "https://ps." + service_url + "/api/org_token/refresh/"
+            rqst = {"refresh": ps_refresh_token}
+            hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
+            rsps = requests.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
+            ps_refresh_token = rsps["refresh"]
+            ps_access_token = rsps["access"]
+            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+        # Build Authentication Header
+        headers = {'Authorization': 'Bearer ' + ps_access_token}
+    return headers
+
+
 ###############################################################################
 # Default Record Processing
 ###############################################################################
@@ -342,7 +369,7 @@ __callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec}
 #
 #  SOURCE
 #
-def source (api, parm={}, stream=False, callbacks={}):
+def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     '''
     Perform API call to SlideRule service
 
@@ -354,10 +381,10 @@ def source (api, parm={}, stream=False, callbacks={}):
                     dictionary of request parameters
         stream:     bool
                     whether the request is a **normal** service or a **stream** service (see `De-serialization <./SlideRule.html#de-serialization>`_ for more details)
-        format:     str
-                    format of the data being returned in the response: native, json
         callbacks:  dict
                     record type callbacks (advanced use)
+        path:       str
+                    path to api being requested
 
     Returns
     -------
@@ -381,19 +408,18 @@ def source (api, parm={}, stream=False, callbacks={}):
     rqst = json.dumps(parm)
     rsps = {}
     headers = None
-    # Build callbacks
+    # Build Callbacks
     for c in __callbacks:
         if c not in callbacks:
             callbacks[c] = __callbacks[c]
-    # Construct Request URL and Authorization #
-    if service_org:
-        url = 'https://%s.%s/source/%s' % (service_org, service_url, api)
-        if ps_access_token:
-            headers = {'Authorization': 'Bearer ' + ps_access_token}
-    else:
-        url = 'http://%s/source/%s' % (service_url, api)
-    # Attempt Request #
+    # Attempt Request
     try:
+        # Construct Request URL and Authorization
+        if service_org:
+            url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
+            headers = __build_auth_header()
+        else:
+            url = 'http://%s%s/%s' % (service_url, path, api)
         # Perform Request
         if not stream:
             data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
@@ -403,6 +429,8 @@ def source (api, parm={}, stream=False, callbacks={}):
         # Parse Response
         format = data.headers['Content-Type']
         if format == 'text/plain':
+            rsps = __parse_json(data)
+        elif format == 'application/json':
             rsps = __parse_json(data)
         elif format == 'application/octet-stream':
             rsps = __parse_native(data, callbacks)
@@ -510,7 +538,7 @@ def set_rqst_timeout (timeout):
 #
 # UPDATE_AVAIABLE_SERVERS
 #
-def update_available_servers (desired_nodes=None):
+def update_available_servers (desired_nodes=None, time_to_live=None):
     '''
     Manages the number of servers in the cluster.
     If the desired_nodes parameter is set, then a request is made to change the number of servers in the cluster to the number specified.
@@ -521,6 +549,8 @@ def update_available_servers (desired_nodes=None):
     ----------
         desired_nodes:  int
                         the desired number of nodes in the cluster
+        time_to_live:   int
+                        number of minutes for the desired nodes to run
 
     Returns
     -------
@@ -534,8 +564,22 @@ def update_available_servers (desired_nodes=None):
         >>> import sliderule
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
-    # placeholder until functionality implemented
-    return 7,7
+
+    global service_url, service_org, request_timeout
+
+    # Update number of nodes
+    if type(desired_nodes) == int:
+        host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
+        if type(time_to_live) == int:
+            host = host + str(time_to_live) + "/"
+        headers = __build_auth_header()
+        rsps = requests.put(host, headers=headers, timeout=request_timeout)
+        rsps.raise_for_status()
+
+    # Get number of nodes currently registered
+    rsps = source("status", parm={"service":"sliderule"}, path="/discovery")
+    available_servers = rsps["nodes"]
+    return available_servers, available_servers
 
 #
 # AUTHENTICATE
@@ -569,7 +613,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         >>> sliderule.authenticate("myorg")
         True
     '''
-    global service_org, ps_refresh_token, ps_access_token
+    global service_org, ps_refresh_token, ps_access_token, ps_token_exp
     login_status = False
     ps_url = "ps." + service_url
 
@@ -577,7 +621,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
     service_org = ps_organization
 
     # check for direct or public access
-    if service_org == None or service_org == PUBLIC_ORG:
+    if service_org == None:
         return True
 
     # attempt retrieving from environment
@@ -593,7 +637,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
             ps_username = login_credentials[0]
             ps_password = login_credentials[2]
         except Exception as e:
-            logger.error("Failed to retrieve username and password from netrc file: {}".format(e))
+            logger.warning("Failed to retrieve username and password from netrc file: {}".format(e))
 
     # authenticate to provisioning system
     if ps_username and ps_password:
@@ -601,9 +645,12 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         headers = {'Content-Type': 'application/json'}
         try:
             api = "https://" + ps_url + "/api/org_token/"
-            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout).json()
+            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
+            rsps.raise_for_status()
+            rsps = rsps.json()
             ps_refresh_token = rsps["refresh"]
             ps_access_token = rsps["access"]
+            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
             login_status = True
         except:
             logger.error("Unable to authenticate user %s to %s" % (ps_username, api))

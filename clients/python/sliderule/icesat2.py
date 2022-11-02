@@ -362,8 +362,7 @@ def __query_resources(parm, version, return_polygons=False):
 
     # Check Resources are Under Limit #
     if(len(resources) > max_requested_resources):
-        logger.error("Exceeded maximum requested resources: %d (current max is %d)\nConsider using icesat2.set_max_resources to set a higher limit.", len(resources), max_requested_resources)
-        resources = []
+        raise RuntimeError('Exceeded maximum requested granules: {} (current max is {})\nConsider using icesat2.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(resources))
 
