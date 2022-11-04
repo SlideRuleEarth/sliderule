@@ -1,5 +1,5 @@
 #
-# Build index file (catalog) of ArcticDem hosted on AWS
+# Build index file list and create vrt
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -21,25 +21,29 @@ if __name__ == '__main__':
     col = pystac.read_file(collection_stac)
 
     item_list = []
+    cnt = 0
 
     for link in col.links:
         if link.rel == pystac.RelType.CHILD:
             subcat = pystac.read_file(link.target)
             print(subcat)
+            # if cnt == 2:
+            #     break
+            # cnt += 1
 
             for _link in subcat.links:
                 if _link.rel == pystac.RelType.CHILD:
                     item = pystac.read_file(_link.target)
-                    item_list.append(item)
+                    dem = item.to_dict()['assets']['dem']['href']
+                    dem = dem.replace(".", "", 1)
+                    path = link.target.replace("https:/", "/vsis3")
+                    path = path.replace(".s3.us-west-2.amazonaws.com", "", 1)
+                    path = path.replace(".json", dem)
+                    item_list.append(path)
 
     print(f"Number of features: {len(item_list)}")
 
-    # Geopandas ignores list-valued keys when opening, so this moves asset hrefs to properties for convenience
-    for item in item_list:
-        item.clear_links()
-        asset_hrefs = pd.DataFrame(
-            item.to_dict()['assets']).T['href'].to_dict()
-        item.properties.update(asset_hrefs)
+    with open('/data/ArcticDem/mosaic_vrt_list.txt', 'w') as f:
+        for line in item_list:
+            f.write(f"{line}\n")
 
-    items = pystac.ItemCollection(item_list)
-    items.save_object('/data/ArcticDem/mosaic.geojson')
