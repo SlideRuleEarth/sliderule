@@ -1573,7 +1573,7 @@ try:
         url='https://elevation2.arcgis.com/arcgis/rest/services/Polar/AntarcticDEM/ImageServer',
         crs=projections.EPSG3031.REMA
     )
-except NameError:
+except (NameError, AttributeError):
     layers.PGC.ArcticDEM = ipyleaflet.WMSLayer(
         name="ArcticDEM",
         attribution=pgc_attribution,
@@ -1927,7 +1927,7 @@ class leaflet:
         geodataframe['data'] = geodataframe[column_name]
         # set colorbar limits to 2-98 percentile
         # if not using a defined plot range
-        clim = gdf[column_name].quantile((0.02, 0.98)).values
+        clim = geodataframe['data'].quantile((0.02, 0.98)).values
         if kwargs['vmin'] is None:
             vmin = clim[0]
         else:
