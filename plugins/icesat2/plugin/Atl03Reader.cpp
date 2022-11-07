@@ -106,7 +106,7 @@ int Atl03Reader::luaCreate (lua_State* L)
         Asset* asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        atl06_parms_t* parms = getLuaAtl06Parms(L, 4);
+        icesat2_parms_t* parms = getLuaIcesat2Parms(L, 4);
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -140,7 +140,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, atl06_parms_t* _parms, bool _send_terminator):
+Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, icesat2_parms_t* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(_asset);

@@ -184,14 +184,14 @@ class Atl06Dispatch: public DispatchObject
         Mutex                   elevationMutex;
         int                     elevationIndex;
 
-        const atl06_parms_t*    parms;
+        const icesat2_parms_t*    parms;
         stats_t                 stats;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06Dispatch                   (lua_State* L, const char* outq_name, const atl06_parms_t* _parms);
+                        Atl06Dispatch                   (lua_State* L, const char* outq_name, const icesat2_parms_t* _parms);
                         ~Atl06Dispatch                  (void);
 
         bool            processRecord                   (RecordObject* record, okey_t key) override;

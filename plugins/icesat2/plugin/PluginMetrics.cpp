@@ -324,7 +324,7 @@ PluginMetrics::region_t* PluginMetrics::region2struct (regions_t region)
 /*----------------------------------------------------------------------------
  * setRegion
  *----------------------------------------------------------------------------*/
-bool PluginMetrics::setRegion (atl06_parms_t* parms)
+bool PluginMetrics::setRegion (icesat2_parms_t* parms)
 {
     if(parms->polygon.length() > 0)
     {

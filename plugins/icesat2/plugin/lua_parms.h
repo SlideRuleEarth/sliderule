@@ -88,6 +88,12 @@
 #define LUA_PARM_QUALITY_AFTERPULSE             "atl03_quality_afterpulse"
 #define LUA_PARM_QUALITY_IMPULSE_RESPONSE       "atl03_quality_impulse_response"
 #define LUA_PARM_QUALITY_TEP                    "atl03_quality_tep"
+#define LUA_PARM_ATL03_GRANULE_FIELDS           "atl03_granule_fields"
+#define LUA_PARM_ATL03_GEOLOCATION_FIELDS       "atl03_geolocation_fields"
+#define LUA_PARM_ATL03_GEOCORRECTION_FIELDS     "atl03_geocorrection_fields"
+#define LUA_PARM_ATL03_HEIGHT_FIELDS            "atl03_height_fields"
+#define LUA_PARM_ATL08_GRANULE_FIELDS           "atl08_granule_fields"
+#define LUA_PARM_ATL08_SIGNAL_PHOTON_FIELDS     "atl08_signal_photon_fields"
 
 /******************************************************************************
  * TYPEDEFS
@@ -213,12 +219,18 @@ typedef struct {
     double                  maximum_robust_dispersion;      // sigma_r
     double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
     double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-} atl06_parms_t;
+    List<SafeString>*       atl03_granule_fields;           // list of atl03 granule fields to associate with an extent
+    List<SafeString>*       atl03_geolocation_fields;       // list of atl03 geolocation fields to associate with an extent
+    List<SafeString>*       atl03_geocorrection_fields;     // list of atl03 geolocation correction fields to associate with an extent
+    List<SafeString>*       atl03_height_fields;            // list of atl03 height fields to associate with an extent
+    List<SafeString>*       atl08_granule_fields;           // list of atl08 granule fields to associate with an extent
+    List<SafeString>*       atl08_signal_photon_fields;     // list of atl08 signal photon fields to associate with an extent
+} icesat2_parms_t;
 
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
 
-atl06_parms_t* getLuaAtl06Parms (lua_State* L, int index);
+icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index);
 
 #endif  /* __lua_parms__ */

@@ -62,7 +62,7 @@
  * FILE DATA
  ******************************************************************************/
 
-const atl06_parms_t DefaultParms = {
+const icesat2_parms_t DefaultParms = {
     .surface_type               = ATL06_DEFAULT_SURFACE_TYPE,
     .pass_invalid               = ATL06_DEFAULT_PASS_INVALID,
     .dist_in_seg                = ATL06_DEFAULT_DIST_IN_SEG,
@@ -85,7 +85,13 @@ const atl06_parms_t DefaultParms = {
     .minimum_window             = ATL06_DEFAULT_MIN_WINDOW,
     .maximum_robust_dispersion  = ATL06_DEFAULT_MAX_ROBUST_DISPERSION,
     .extent_length              = ATL06_DEFAULT_EXTENT_LENGTH,
-    .extent_step                = ATL06_DEFAULT_EXTENT_STEP
+    .extent_step                = ATL06_DEFAULT_EXTENT_STEP,
+    .atl03_granule_fields       = NULL,
+    .atl03_geolocation_fields   = NULL,
+    .atl03_geocorrection_fields = NULL,
+    .atl03_height_fields        = NULL,
+    .atl08_granule_fields       = NULL,
+    .atl08_signal_photon_fields = NULL
 };
 
 /******************************************************************************
@@ -135,7 +141,7 @@ static atl08_classification_t str2atl08class (const char* classifiction_str)
 /*----------------------------------------------------------------------------
  * get_lua_atl03_cnf
  *----------------------------------------------------------------------------*/
-static void get_lua_atl03_cnf (lua_State* L, int index, atl06_parms_t* parms, bool* provided)
+static void get_lua_atl03_cnf (lua_State* L, int index, icesat2_parms_t* parms, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -241,7 +247,7 @@ static void get_lua_atl03_cnf (lua_State* L, int index, atl06_parms_t* parms, bo
 /*----------------------------------------------------------------------------
  * get_lua_atl03_quality
  *----------------------------------------------------------------------------*/
-static void get_lua_atl03_quality (lua_State* L, int index, atl06_parms_t* parms, bool* provided)
+static void get_lua_atl03_quality (lua_State* L, int index, icesat2_parms_t* parms, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -347,7 +353,7 @@ static void get_lua_atl03_quality (lua_State* L, int index, atl06_parms_t* parms
 /*----------------------------------------------------------------------------
  * get_lua_atl08_class
  *----------------------------------------------------------------------------*/
-static void get_lua_atl08_class (lua_State* L, int index, atl06_parms_t* parms, bool* provided)
+static void get_lua_atl08_class (lua_State* L, int index, icesat2_parms_t* parms, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -446,7 +452,7 @@ static void get_lua_atl08_class (lua_State* L, int index, atl06_parms_t* parms, 
 /*----------------------------------------------------------------------------
  * get_lua_polygon
  *----------------------------------------------------------------------------*/
-static void get_lua_polygon (lua_State* L, int index, atl06_parms_t* parms, bool* provided)
+static void get_lua_polygon (lua_State* L, int index, icesat2_parms_t* parms, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -488,7 +494,7 @@ static void get_lua_polygon (lua_State* L, int index, atl06_parms_t* parms, bool
 /*----------------------------------------------------------------------------
  * get_lua_raster
  *----------------------------------------------------------------------------*/
-static void get_lua_raster (lua_State* L, int index, atl06_parms_t* parms, bool* provided)
+static void get_lua_raster (lua_State* L, int index, icesat2_parms_t* parms, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -511,7 +517,7 @@ static void get_lua_raster (lua_State* L, int index, atl06_parms_t* parms, bool*
 /*----------------------------------------------------------------------------
  * get_lua_yapc
  *----------------------------------------------------------------------------*/
-static void get_lua_yapc (lua_State* L, int index, atl06_parms_t* parms, bool* provided)
+static void get_lua_yapc (lua_State* L, int index, icesat2_parms_t* parms, bool* provided)
 {
     bool field_provided;
 
@@ -555,16 +561,63 @@ static void get_lua_yapc (lua_State* L, int index, atl06_parms_t* parms, bool* p
     }
 }
 
+/*----------------------------------------------------------------------------
+ * get_lua_field_list
+ *----------------------------------------------------------------------------*/
+static void get_lua_field_list (lua_State* L, int index, List<SafeString>** field_list, bool* provided)
+{
+    /* Reset Provided */
+    *provided = false;
+
+    /* Must be table of fields specified as strings */
+    if(lua_istable(L, index))
+    {
+        /* Allocate Field List */
+        *field_list = new List<SafeString>;
+        *provided = true;
+
+        /* Get number of fields in table */
+        int num_fields = lua_rawlen(L, index);
+        if(num_fields > 0 && provided) *provided = true;
+
+        /* Iterate through each fields in table */
+        for(int i = 0; i < num_fields; i++)
+        {
+            /* Get classification */
+            lua_rawgeti(L, index, i+1);
+
+            if(lua_isstring(L, -1))
+            {
+                const char* field_str = LuaObject::getLuaString(L, -1);
+                SafeString field("%s", field_str);
+                (*field_list)->add(field);
+                mlog(DEBUG, "Adding %s to list of ancillary fields", field_str);
+            }
+            else
+            {
+                mlog(ERROR, "Invalid field specified - must be a string");
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "Field lists must be provided as a table");
+    }
+}
+
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * getLuaAtl06Parms
+ * getLuaIcesat2Parms
  *----------------------------------------------------------------------------*/
-atl06_parms_t* getLuaAtl06Parms (lua_State* L, int index)
+icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
 {
-    atl06_parms_t* parms = new atl06_parms_t; // freed in ATL03Reader and ATL06Dispatch destructor
+    icesat2_parms_t* parms = new icesat2_parms_t; // freed in ATL03Reader and ATL06Dispatch destructor
     *parms = DefaultParms; // initialize with defaults
 
     if(lua_type(L, index) == LUA_TTABLE)
@@ -659,6 +712,36 @@ atl06_parms_t* getLuaAtl06Parms (lua_State* L, int index)
             lua_getfield(L, index, LUA_PARM_EXTENT_STEP);
             parms->extent_step = LuaObject::getLuaFloat(L, -1, true, parms->extent_step, &provided);
             if(provided) mlog(DEBUG, "Setting %s to %lf", LUA_PARM_EXTENT_STEP, parms->extent_step);
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_ATL03_GRANULE_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl03_granule_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL03 granule fields added");
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_ATL03_GEOLOCATION_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl03_geolocation_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL03 geolocation fields added");
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_ATL03_GEOCORRECTION_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl03_geocorrection_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL03 geocorrection fields added");
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_ATL03_HEIGHT_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl03_height_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL03 height fields added");
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_ATL08_GRANULE_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl08_granule_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL08 granule fields added");
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_ATL08_SIGNAL_PHOTON_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl08_signal_photon_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL08 signal photon fields added");
             lua_pop(L, 1);
         }
         catch(const RunTimeException& e)

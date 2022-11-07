@@ -147,7 +147,7 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        atl06_parms_t* atl06_parms = getLuaAtl06Parms(L, 2);
+        icesat2_parms_t* atl06_parms = getLuaIcesat2Parms(L, 2);
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, atl06_parms));
@@ -192,7 +192,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const atl06_parms_t* _parms):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const icesat2_parms_t* _parms):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);

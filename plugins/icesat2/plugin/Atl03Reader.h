@@ -239,7 +239,7 @@ class Atl03Reader: public LuaObject
         const char*         resource08;
         bool                sendTerminator;
         Publisher*          outQ;
-        atl06_parms_t*      parms;
+        icesat2_parms_t*    parms;
         stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file
@@ -254,7 +254,7 @@ class Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, atl06_parms_t* _parms, bool _send_terminator=true);
+                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, icesat2_parms_t* _parms, bool _send_terminator=true);
                             ~Atl03Reader            (void);
 
         static void*        subsettingThread        (void* parm);
