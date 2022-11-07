@@ -6,7 +6,7 @@ local console = require("console")
 
 sys.setlvl(core.LOG, core.INFO)
 
--- Run Core Unit Tests --
+-- Run Core Self Tests --
 
 if __core__ then
     runner.script(td .. "tcp_socket.lua")
@@ -21,32 +21,32 @@ if __core__ then
     runner.script(td .. "lua_script.lua")
 end
 
--- Run AWS Unit Tests --
+-- Run AWS Self Tests --
 
 if __aws__ then
     runner.script(td .. "asset_index.lua")
     runner.script(td .. "credential_store.lua")
 end
 
--- Run H5 Unit Tests --
+-- Run H5 Self Tests --
 
 if __h5__ then
     runner.script(td .. "hdf5_file.lua")
 end
 
--- Run Pistache Unit Tests --
+-- Run Pistache Self Tests --
 
 if __pistache__ then
     runner.script(td .. "pistache_endpoint.lua")
 end
 
--- Run Raster Unit Tests --
+-- Run Raster Self Tests --
 
 if __raster__ then
     runner.script(td .. "geojson_raster.lua")
 end
 
--- Run Legacy Unit Tests --
+-- Run Legacy Self Tests --
 
 if __legacy__ then
     runner.script(td .. "message_queue.lua")
@@ -58,6 +58,15 @@ if __legacy__ then
     runner.script(td .. "cfs_interface.lua")
     runner.script(td .. "record_dispatcher.lua")
     runner.script(td .. "limit_dispatch.lua")
+end
+
+-- Run ICESat-2 Plugin Self Tests
+if __icesat2__ then
+    runner.script(td .. "plugin_unittest.lua")
+    runner.script(td .. "atl06_elements.lua")
+    runner.script(td .. "atl03_indexer.lua")
+    runner.script(td .. "h5_file.lua")
+    runner.script(td .. "s3_driver.lua")
 end
 
 -- Report Results --
