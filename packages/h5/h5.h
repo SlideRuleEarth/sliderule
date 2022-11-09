@@ -38,8 +38,9 @@
 
 #include "H5Coro.h"
 #include "H5Array.h"
-#include "H5File.h"
+#include "H5DArray.h"
 #include "H5DatasetDevice.h"
+#include "H5File.h"
 
 /******************************************************************************
  * PROTOTYPES

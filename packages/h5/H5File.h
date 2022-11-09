@@ -54,7 +54,7 @@ class H5File: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_NAME_STR = 128;
+        static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
 
         static const char* ObjectType;
         static const char* LuaMetaName;

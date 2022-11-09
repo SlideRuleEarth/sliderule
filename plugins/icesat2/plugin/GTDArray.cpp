@@ -29,99 +29,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gtarray__
-#define __gtarray__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include "GTDArray.h"
 #include "lua_parms.h"
-#include "H5Array.h"
-#include "StringLib.h"
-#include "Asset.h"
-
-/******************************************************************************
- * GTArray TEMPLATE
- ******************************************************************************/
-
-template <class T>
-class GTArray
-{
-    public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const long DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK];
-        static const long DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK];
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                    GTArray     (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
-        virtual     ~GTArray    (void);
-
-        bool        trim        (long* prt_offset);
-        bool        join        (int timeout, bool throw_exception);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        H5Array<T> gt[PAIR_TRACKS_PER_GROUND_TRACK];
-};
+#include "core.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-template <class T>
-const long GTArray<T>::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
 
-template <class T>
-const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
+const long GTDArray::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
+const long GTDArray::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
 
 /******************************************************************************
- * GTArray METHODS
+ * GT DYNAMIC ARRAY CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5Array<T>(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
-        H5Array<T>(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
+GTDArray::GTDArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col, const long* prt_startrow, const long* prt_numrows):
+    gt{ H5DArray(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
+        H5DArray(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
 {
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T>
-GTArray<T>::~GTArray(void)
+GTDArray::~GTDArray(void)
 {
-}
-
-/*----------------------------------------------------------------------------
- * trim
- *----------------------------------------------------------------------------*/
-template <class T>
-bool GTArray<T>::trim(long* prt_offset)
-{
-    if(!prt_offset) return false;
-    else return (gt[PRT_LEFT].trim(prt_offset[PRT_LEFT]) && gt[PRT_RIGHT].trim(prt_offset[PRT_RIGHT]));
 }
 
 /*----------------------------------------------------------------------------
  * join
  *----------------------------------------------------------------------------*/
-template <class T>
-bool GTArray<T>::join(int timeout, bool throw_exception)
+bool GTDArray::join(int timeout, bool throw_exception)
 {
     return (gt[PRT_LEFT].join(timeout, throw_exception) && gt[PRT_RIGHT].join(timeout, throw_exception));
 }
-
-#endif  /* __gtarray__ */

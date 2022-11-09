@@ -29,24 +29,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gtarray__
-#define __gtarray__
+#ifndef __gt_dynamic_array__
+#define __gt_dynamic_array__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include "H5DArray.h"
 #include "lua_parms.h"
-#include "H5Array.h"
 #include "StringLib.h"
 #include "Asset.h"
 
 /******************************************************************************
- * GTArray TEMPLATE
+ * GT DYNAMIC ARRAY CLASS
  ******************************************************************************/
 
-template <class T>
-class GTArray
+class GTDArray
 {
     public:
 
@@ -61,67 +60,16 @@ class GTArray
          * Methods
          *--------------------------------------------------------------------*/
 
-                    GTArray     (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
-        virtual     ~GTArray    (void);
+                    GTDArray    (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
+        virtual     ~GTDArray   (void);
 
-        bool        trim        (long* prt_offset);
         bool        join        (int timeout, bool throw_exception);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        H5Array<T> gt[PAIR_TRACKS_PER_GROUND_TRACK];
+        H5DArray gt[PAIR_TRACKS_PER_GROUND_TRACK];
 };
 
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-template <class T>
-const long GTArray<T>::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
-
-template <class T>
-const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
-
-/******************************************************************************
- * GTArray METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template <class T>
-GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5Array<T>(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
-        H5Array<T>(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-template <class T>
-GTArray<T>::~GTArray(void)
-{
-}
-
-/*----------------------------------------------------------------------------
- * trim
- *----------------------------------------------------------------------------*/
-template <class T>
-bool GTArray<T>::trim(long* prt_offset)
-{
-    if(!prt_offset) return false;
-    else return (gt[PRT_LEFT].trim(prt_offset[PRT_LEFT]) && gt[PRT_RIGHT].trim(prt_offset[PRT_RIGHT]));
-}
-
-/*----------------------------------------------------------------------------
- * join
- *----------------------------------------------------------------------------*/
-template <class T>
-bool GTArray<T>::join(int timeout, bool throw_exception)
-{
-    return (gt[PRT_LEFT].join(timeout, throw_exception) && gt[PRT_RIGHT].join(timeout, throw_exception));
-}
-
-#endif  /* __gtarray__ */
+#endif  /* __gt_dynamic_array__ */

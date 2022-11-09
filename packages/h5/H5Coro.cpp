@@ -3290,16 +3290,16 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
         if((info.numcols > 1) && (col != ALL_COLS))
         {
             /* Allocate Column Buffer */
-            int tbuf_size = info.datasize / info.numcols;
+            int64_t tbuf_size = info.datasize / info.numcols;
             uint8_t* tbuf = new uint8_t [tbuf_size];
 
             /* Copy Column into Buffer */
-            int tbuf_row_size = info.datasize / info.numrows;
-            int tbuf_col_size = tbuf_row_size / info.numcols;
+            int64_t tbuf_row_size = info.datasize / info.numrows;
+            int64_t tbuf_col_size = tbuf_row_size / info.numcols;
             for(int row = 0; row < info.numrows; row++)
             {
-                int tbuf_offset = (row * tbuf_col_size);
-                int data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
+                int64_t tbuf_offset = (row * tbuf_col_size);
+                int64_t data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
                 LocalLib::copy(&tbuf[tbuf_offset], &info.data[data_offset], tbuf_col_size);
             }
 
@@ -3470,7 +3470,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    mlog(DEBUG, "Read %d elements (%d bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
+    mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
 
     /* Return Info */
     return info;

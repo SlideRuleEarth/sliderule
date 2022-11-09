@@ -88,12 +88,16 @@
 #define LUA_PARM_QUALITY_AFTERPULSE             "atl03_quality_afterpulse"
 #define LUA_PARM_QUALITY_IMPULSE_RESPONSE       "atl03_quality_impulse_response"
 #define LUA_PARM_QUALITY_TEP                    "atl03_quality_tep"
-#define LUA_PARM_ATL03_GRANULE_FIELDS           "atl03_granule_fields"
 #define LUA_PARM_ATL03_GEOLOCATION_FIELDS       "atl03_geolocation_fields"
 #define LUA_PARM_ATL03_GEOCORRECTION_FIELDS     "atl03_geocorrection_fields"
 #define LUA_PARM_ATL03_HEIGHT_FIELDS            "atl03_height_fields"
-#define LUA_PARM_ATL08_GRANULE_FIELDS           "atl08_granule_fields"
 #define LUA_PARM_ATL08_SIGNAL_PHOTON_FIELDS     "atl08_signal_photon_fields"
+
+#define PAIR_TRACKS_PER_GROUND_TRACK            2
+#define PRT_LEFT                                0
+#define PRT_RIGHT                               1
+
+#define EXPECTED_NUM_ANC_FIELDS                 8 // a typical number of ancillary fields requested
 
 /******************************************************************************
  * TYPEDEFS
@@ -198,6 +202,8 @@ typedef enum {
     NUM_STAGES = 3
 } atl06_stages_t;
 
+typedef List<SafeString, EXPECTED_NUM_ANC_FIELDS> ancillary_list_t;
+
 /* Extraction Parameters */
 typedef struct {
     surface_type_t          surface_type;                   // surface reference type (used to select signal confidence column)
@@ -219,12 +225,10 @@ typedef struct {
     double                  maximum_robust_dispersion;      // sigma_r
     double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
     double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-    List<SafeString>*       atl03_granule_fields;           // list of atl03 granule fields to associate with an extent
-    List<SafeString>*       atl03_geolocation_fields;       // list of atl03 geolocation fields to associate with an extent
-    List<SafeString>*       atl03_geocorrection_fields;     // list of atl03 geolocation correction fields to associate with an extent
-    List<SafeString>*       atl03_height_fields;            // list of atl03 height fields to associate with an extent
-    List<SafeString>*       atl08_granule_fields;           // list of atl08 granule fields to associate with an extent
-    List<SafeString>*       atl08_signal_photon_fields;     // list of atl08 signal photon fields to associate with an extent
+    ancillary_list_t*       atl03_geolocation_fields;       // list of atl03 geolocation fields to associate with an extent
+    ancillary_list_t*       atl03_geocorrection_fields;     // list of atl03 geolocation correction fields to associate with an extent
+    ancillary_list_t*       atl03_height_fields;            // list of atl03 height fields to associate with an extent
+    ancillary_list_t*       atl08_signal_photon_fields;     // list of atl08 signal photon fields to associate with an extent
 } icesat2_parms_t;
 
 /******************************************************************************

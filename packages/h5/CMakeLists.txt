@@ -13,6 +13,7 @@ if (ZLIB_FOUND)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/h5.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5Coro.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/H5DArray.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5File.cpp
     )
@@ -28,6 +29,7 @@ if (ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/h5.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Array.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Coro.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5DArray.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.h
             ${CMAKE_CURRENT_LIST_DIR}/H5File.h
         DESTINATION

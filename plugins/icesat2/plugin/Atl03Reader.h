@@ -46,6 +46,7 @@
 #include "StringLib.h"
 
 #include "GTArray.h"
+#include "GTDArray.h"
 #include "lua_parms.h"
 
 /******************************************************************************
@@ -55,6 +56,24 @@
 class Atl03Reader: public LuaObject
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int H5_READ_TIMEOUT_MS = 60000; // 60 seconds
+        static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
+
+        static const char* phRecType;
+        static const RecordObject::fieldDef_t phRecDef[];
+
+        static const char* exRecType;
+        static const RecordObject::fieldDef_t exRecDef[];
+
+        static const char* OBJECT_TYPE;
+
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Types
@@ -90,6 +109,24 @@ class Atl03Reader: public LuaObject
             photon_t        photons[]; // zero length field
         } extent_t;
 
+        /* Ancillary Extent Record */
+        typedef struct {
+            key_t           extent_id;
+            int             num_values;
+            //              values[]
+        } extent_anc_t;
+
+        /* Ancillary Record */
+        typedef struct {
+            uint16_t                    reference_ground_track;
+            uint16_t                    cycle;
+            uint8_t                     sdp; // 03, 08
+            char                        name[MAX_NAME_STR];
+            RecordObject::fieldType_t   type;
+            int                         num_extents;
+            extent_anc_t                extents[]; // zero length field
+        } atlxx_anc_t;
+
         /* Statistics */
         typedef struct {
             uint32_t segments_read;
@@ -98,23 +135,6 @@ class Atl03Reader: public LuaObject
             uint32_t extents_dropped;
             uint32_t extents_retried;
         } stats_t;
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int H5_READ_TIMEOUT_MS = 60000; // 60 seconds
-
-        static const char* phRecType;
-        static const RecordObject::fieldDef_t phRecDef[];
-
-        static const char* exRecType;
-        static const RecordObject::fieldDef_t exRecDef[];
-
-        static const char* OBJECT_TYPE;
-
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -180,6 +200,10 @@ class Atl03Reader: public LuaObject
                 GTArray<double>     delta_time;
                 GTArray<double>     bckgrd_delta_time;
                 GTArray<float>      bckgrd_rate;
+
+                MgDictionary<GTDArray*> anc_geolocation;
+                MgDictionary<GTDArray*> anc_geocorrection;
+                MgDictionary<GTDArray*> anc_height;
         };
 
         /* Atl08 Classification Subclass */
@@ -202,6 +226,8 @@ class Atl03Reader: public LuaObject
                 GTArray<int32_t>    atl08_segment_id;
                 GTArray<int32_t>    atl08_pc_indx;
                 GTArray<int8_t>     atl08_pc_flag;
+
+                MgDictionary<GTDArray*> anc_signal_photons;
         };
 
         /* YAPC Score Subclass */

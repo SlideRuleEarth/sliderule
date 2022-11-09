@@ -86,11 +86,9 @@ const icesat2_parms_t DefaultParms = {
     .maximum_robust_dispersion  = ATL06_DEFAULT_MAX_ROBUST_DISPERSION,
     .extent_length              = ATL06_DEFAULT_EXTENT_LENGTH,
     .extent_step                = ATL06_DEFAULT_EXTENT_STEP,
-    .atl03_granule_fields       = NULL,
     .atl03_geolocation_fields   = NULL,
     .atl03_geocorrection_fields = NULL,
     .atl03_height_fields        = NULL,
-    .atl08_granule_fields       = NULL,
     .atl08_signal_photon_fields = NULL
 };
 
@@ -564,7 +562,7 @@ static void get_lua_yapc (lua_State* L, int index, icesat2_parms_t* parms, bool*
 /*----------------------------------------------------------------------------
  * get_lua_field_list
  *----------------------------------------------------------------------------*/
-static void get_lua_field_list (lua_State* L, int index, List<SafeString>** field_list, bool* provided)
+static void get_lua_field_list (lua_State* L, int index, ancillary_list_t** field_list, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -573,7 +571,7 @@ static void get_lua_field_list (lua_State* L, int index, List<SafeString>** fiel
     if(lua_istable(L, index))
     {
         /* Allocate Field List */
-        *field_list = new List<SafeString>;
+        *field_list = new ancillary_list_t;
         *provided = true;
 
         /* Get number of fields in table */
@@ -714,11 +712,6 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
             if(provided) mlog(DEBUG, "Setting %s to %lf", LUA_PARM_EXTENT_STEP, parms->extent_step);
             lua_pop(L, 1);
 
-            lua_getfield(L, index, LUA_PARM_ATL03_GRANULE_FIELDS);
-            get_lua_field_list (L, -1, &parms->atl03_granule_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL03 granule fields added");
-            lua_pop(L, 1);
-
             lua_getfield(L, index, LUA_PARM_ATL03_GEOLOCATION_FIELDS);
             get_lua_field_list (L, -1, &parms->atl03_geolocation_fields, &provided);
             if(provided) mlog(DEBUG, "ATL03 geolocation fields added");
@@ -732,11 +725,6 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
             lua_getfield(L, index, LUA_PARM_ATL03_HEIGHT_FIELDS);
             get_lua_field_list (L, -1, &parms->atl03_height_fields, &provided);
             if(provided) mlog(DEBUG, "ATL03 height fields added");
-            lua_pop(L, 1);
-
-            lua_getfield(L, index, LUA_PARM_ATL08_GRANULE_FIELDS);
-            get_lua_field_list (L, -1, &parms->atl08_granule_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL08 granule fields added");
             lua_pop(L, 1);
 
             lua_getfield(L, index, LUA_PARM_ATL08_SIGNAL_PHOTON_FIELDS);

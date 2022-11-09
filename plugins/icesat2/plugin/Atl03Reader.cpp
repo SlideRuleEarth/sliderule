@@ -529,9 +529,49 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     lon_ph              (info->reader->asset, info->reader->resource, info->track, "heights/lon_ph",              &info->reader->context, 0, region->first_photon,  region->num_photons),
     delta_time          (info->reader->asset, info->reader->resource, info->track, "heights/delta_time",          &info->reader->context, 0, region->first_photon,  region->num_photons),
     bckgrd_delta_time   (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/delta_time",     &info->reader->context),
-    bckgrd_rate         (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/bckgrd_rate",    &info->reader->context)
+    bckgrd_rate         (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/bckgrd_rate",    &info->reader->context),
+    anc_geolocation     (EXPECTED_NUM_ANC_FIELDS),
+    anc_geocorrection   (EXPECTED_NUM_ANC_FIELDS),
+    anc_height          (EXPECTED_NUM_ANC_FIELDS)
 {
-    /* Join Reads */
+    ancillary_list_t* geolocation_fields = info->reader->parms->atl03_geolocation_fields;
+    ancillary_list_t* geocorrection_fields = info->reader->parms->atl03_geocorrection_fields;
+    ancillary_list_t* height_fields = info->reader->parms->atl03_height_fields;
+
+    /* Read Ancillary Geolocation Fields */
+    if(geolocation_fields)
+    {
+        for(int i = 0; i < geolocation_fields->length(); i++)
+        {
+            SafeString dataset_name("geolocation/%s", (*geolocation_fields)[i].getString());
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_segment, region->num_segments);
+            anc_geolocation.add(dataset_name.getString(), array);
+        }
+    }
+
+    /* Read Ancillary Geocorrection Fields */
+    if(geocorrection_fields)
+    {
+        for(int i = 0; i < geocorrection_fields->length(); i++)
+        {
+            SafeString dataset_name("geophys_corr/%s", (*geocorrection_fields)[i].getString());
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_segment, region->num_segments);
+            anc_geocorrection.add(dataset_name.getString(), array);
+        }
+    }
+
+    /* Read Ancillary Geocorrection Fields */
+    if(height_fields)
+    {
+        for(int i = 0; i < height_fields->length(); i++)
+        {
+            SafeString dataset_name("heights/%s", (*height_fields)[i].getString());
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_photon,  region->num_photons);
+            anc_height.add(dataset_name.getString(), array);
+        }
+    }
+
+    /* Join Hardcoded Reads */
     velocity_sc.join(H5_READ_TIMEOUT_MS, true);
     segment_delta_time.join(H5_READ_TIMEOUT_MS, true);
     segment_id.join(H5_READ_TIMEOUT_MS, true);
@@ -545,6 +585,39 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     delta_time.join(H5_READ_TIMEOUT_MS, true);
     bckgrd_delta_time.join(H5_READ_TIMEOUT_MS, true);
     bckgrd_rate.join(H5_READ_TIMEOUT_MS, true);
+
+    /* Join Ancillary Geolocation Reads */
+    {
+        GTDArray* array = NULL;
+        const char* dataset_name = anc_geolocation.first(&array);
+        while(dataset_name != NULL)
+        {
+            array->join(H5_READ_TIMEOUT_MS, true);
+            dataset_name = anc_geolocation.next(&array);
+        }
+    }
+
+    /* Join Ancillary Geocorrection Reads */
+    {
+        GTDArray* array = NULL;
+        const char* dataset_name = anc_geocorrection.first(&array);
+        while(dataset_name != NULL)
+        {
+            array->join(H5_READ_TIMEOUT_MS, true);
+            dataset_name = anc_geocorrection.next(&array);
+        }
+    }
+
+    /* Join Ancillary Geocorrection Reads */
+    {
+        GTDArray* array = NULL;
+        const char* dataset_name = anc_height.first(&array);
+        while(dataset_name != NULL)
+        {
+            array->join(H5_READ_TIMEOUT_MS, true);
+            dataset_name = anc_height.next(&array);
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -562,8 +635,32 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     gt                  {NULL, NULL},
     atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",   &info->reader->context08),
     atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx", &info->reader->context08),
-    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08)
+    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08),
+    anc_signal_photons  (EXPECTED_NUM_ANC_FIELDS)
 {
+    ancillary_list_t* signal_photon_fields = info->reader->parms->atl08_signal_photon_fields;
+
+    /* Read Ancillary Signal Photon Fields */
+    if(enabled && signal_photon_fields)
+    {
+        for(int i = 0; i < signal_photon_fields->length(); i++)
+        {
+            SafeString dataset_name("signal_photons/%s", (*signal_photon_fields)[i].getString());
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource08, info->track, dataset_name.getString(), &info->reader->context08);
+            anc_signal_photons.add(dataset_name.getString(), array);
+        }
+    }
+
+    /* Join Ancillary Signal Photon Reads */
+    {
+        GTDArray* array = NULL;
+        const char* dataset_name = anc_signal_photons.first(&array);
+        while(dataset_name != NULL)
+        {
+            array->join(H5_READ_TIMEOUT_MS, true);
+            dataset_name = anc_signal_photons.next(&array);
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------

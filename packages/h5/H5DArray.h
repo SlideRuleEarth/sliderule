@@ -29,33 +29,48 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
+#ifndef __h5_dynamic_array__
+#define __h5_dynamic_array__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "lua_parms.h"
-#include "Atl03Reader.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "CumulusIODriver.h"
-#include "EndpointProxy.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "PluginMetrics.h"
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
+#include "Asset.h"
+#include "H5Coro.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * H5 DYNAMIC ARRAY CLASS
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-}
+class H5DArray
+{
+    public:
 
-#endif  /* __icesat2_plugin__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
+                H5DArray        (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
+        virtual ~H5DArray       (void);
 
+        bool    join            (int timeout, bool throw_exception);
+
+        int     numElements     (void);
+        int     elementSize     (void);
+        void    includeElement  (int i);
+        void    excludeElement  (int i);
+        bool    elementStatus   (int i);
+        int64_t serializedSize  (void);
+        void    serialize       (uint8_t* buffer);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        const char*         name;
+        H5Future*           h5f;
+        bool*               mask; // false: included, true: excluded
+};
+
+#endif  /* __h5_dynamic_array__ */
