@@ -40,6 +40,7 @@
 #include "OsApi.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
+#include <vrtdataset.h>
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
@@ -55,6 +56,7 @@ class ArcticDEMRaster: public LuaObject
         static const int   ARCTIC_DEM_INVALID_ELELVATION = -1000000;
         static const int   RASTER_BLOCK_SIZE = 25000;
         static const int   RASTER_PHOTON_CRS = 4326;
+        static const int   RASTER_ARCTIC_DEM_CRS = 3413;
 
 
         /*--------------------------------------------------------------------
@@ -105,43 +107,42 @@ class ArcticDEMRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         ArcticDEMRaster     (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
-        bool  findNewRaster (OGRPoint* p, bool reset=true);
+        bool  findNewRaster (OGRPoint* p);
         float readRaster    (OGRPoint* p);
-
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        std::string       indexfname;
-        std::string       rasterfname;
-        bool              ismosaic;
-        GDALDataset*      idset;
-        OGRLayer*         ilayer;
-        GDALDataset*      rdset;
+        std::string vrtfilename;
+        std::string rasterfname;
+        bool ismosaic;
+        VRTDataset    *vrtdset;
+        GDALDataset    *rdset;
+        double invgeot[6];
 
-        uint32_t  rows;
-        uint32_t  cols;
-        bbox_t    bbox;
-        double    cellsize;
-        int32_t   xblocksize;
-        int32_t   yblocksize;
+        uint32_t rows;
+        uint32_t cols;
+        bbox_t bbox;
+        double cellsize;
+        int32_t xblocksize;
+        int32_t yblocksize;
 
-        OGRCoordinateTransformation *latlon2xy;
-        OGRSpatialReference source;
-        OGRSpatialReference target;
-        GDALRIOResampleAlg  algorithm;
-        int32_t             radius;
+        OGRCoordinateTransformation *transf;
+        OGRSpatialReference srcsrs;
+        OGRSpatialReference trgsrs;
+        GDALRIOResampleAlg algorithm;
+        int32_t radius;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaDimensions    (lua_State* L);
-        static int luaBoundingBox   (lua_State* L);
-        static int luaCellSize      (lua_State* L);
-        static int luaSample        (lua_State* L);
-        static int luaSamples       (lua_State* L);
+        static int luaDimensions(lua_State *L);
+        static int luaBoundingBox(lua_State *L);
+        static int luaCellSize(lua_State *L);
+        static int luaSample(lua_State *L);
+        static int luaSamples(lua_State *L);
 };
 
 #endif  /* __arcticdem_raster__ */
