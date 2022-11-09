@@ -117,7 +117,8 @@ class ArcticDEMRaster: public LuaObject
         std::string vrtfilename;
         std::string rasterfname;
         bool ismosaic;
-        VRTDataset    *vrtdset;
+        VRTDataset     *vrtdset;
+        GDALRasterBand *vrtband;
         GDALDataset    *rdset;
         double invgeot[6];
 

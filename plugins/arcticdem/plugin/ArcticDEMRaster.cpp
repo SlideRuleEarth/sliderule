@@ -243,18 +243,15 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p)
             rasterfname.clear();
         }
 
-        uint32_t col = static_cast<uint32_t>(floor(invgeot[0] + invgeot[1] * p->getX() + invgeot[2] * p->getY()));
-        uint32_t row = static_cast<uint32_t>(floor(invgeot[3] + invgeot[4] * p->getX() + invgeot[5] * p->getY()));
+        const uint32_t col = static_cast<uint32_t>(floor(invgeot[0] + invgeot[1] * p->getX() + invgeot[2] * p->getY()));
+        const uint32_t row = static_cast<uint32_t>(floor(invgeot[3] + invgeot[4] * p->getX() + invgeot[5] * p->getY()));
 
         if (col < vrtdset->GetRasterXSize() && row < vrtdset->GetRasterYSize())
         {
-            GDALRasterBand *band = vrtdset->GetRasterBand(1);
-            CHECKPTR(band);
-
             CPLString str;
             str.Printf("Pixel_%d_%d", col, row);
 
-            const char *mdata = band->GetMetadataItem(str, "LocationInfo");
+            const char *mdata = vrtband->GetMetadataItem(str, "LocationInfo");
             if (mdata)
             {
                 CPLXMLNode *root = CPLParseXMLString(mdata);
@@ -283,8 +280,8 @@ bool ArcticDEMRaster::findNewRaster(OGRPoint* p)
             CHECKPTR(rdset);
 
             /* Store information about raster */
-            rows = rdset->GetRasterYSize();
             cols = rdset->GetRasterXSize();
+            rows = rdset->GetRasterYSize();
 
             /* Get raster boundry box */
             double geot[6] = {0, 0, 0, 0, 0, 0};
@@ -340,7 +337,7 @@ float ArcticDEMRaster::readRaster(OGRPoint* p)
             float *p = (float *)block->GetDataRef();
             CHECKPTR(p);
 
-            /* Block row, col for point */
+            /* col, row inside of block */
             uint32_t _col = col % xblocksize;
             uint32_t _row = row % yblocksize;
             uint32_t offset = _row * xblocksize + _col;
@@ -439,6 +436,7 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char*
     /* Initialize Class Data Members */
     rdset = NULL;
     vrtdset = NULL;
+    vrtband = NULL;
     xblocksize = 0;
     yblocksize = 0;
     bbox = {0.0, 0.0, 0.0, 0.0};
@@ -459,8 +457,8 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char*
         vrtdset = (VRTDataset*)GDALOpenEx(vrtfilename.c_str(), GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
         CHECKPTR(vrtdset);
 
-        // mlog(DEBUG, "%s", vrtdset->GetMetadata("xml:VRT")[0]);
-        // mlog(DEBUG, "%s", vrtdset->GetProjectionRef());
+        vrtband = vrtdset->GetRasterBand(1);
+        CHECKPTR(vrtband);
 
         /* Get inverted geo transfer for vrt */
         double geot[6] = {};
@@ -474,10 +472,17 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char* dem_type, const char*
 
         ogrerr = srcsrs.importFromEPSG(RASTER_PHOTON_CRS);
         CHECK_GDALERR(ogrerr);
-        ogrerr = trgsrs.importFromEPSG(RASTER_ARCTIC_DEM_CRS);
-        const char* pref = GDALGetProjectionRef(vrtdset);
-        CHECKPTR(pref);
-        ogrerr = trgsrs.importFromProj4(pref);
+        const char* projref = vrtdset->GetProjectionRef();
+        if( projref )
+        {
+            mlog(DEBUG, "%s", projref);
+            ogrerr = trgsrs.importFromProj4(projref);
+        }
+        else
+        {
+            /* In case vrt file does not have projection info, use default */
+            ogrerr = trgsrs.importFromEPSG(RASTER_ARCTIC_DEM_CRS);
+        }
         CHECK_GDALERR(ogrerr);
 
         /* Force traditional axis order to avoid lat,lon and lon,lat API madness */

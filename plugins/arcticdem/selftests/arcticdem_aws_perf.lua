@@ -36,12 +36,12 @@ print('1	440.092803955081	34_37_1_1_2m_v3.0_reg_dem.tif')
 -- os.exit()
 
 local el, status
+local max_cnt = 1000000
 
-print('\n------------------\nTest: Reading milion points\n------------')
+print('\n------------------\nTest: Reading', max_cnt, '  points\n------------')
 
 starttime = time.latch();
-for i = 1, 1000000
--- for i = 1, 1000
+for i = 1, max_cnt
 do
     el, status = dem:sample(lon, lat)
     if status ~= true then
