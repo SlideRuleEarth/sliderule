@@ -70,6 +70,9 @@ class Atl03Reader: public LuaObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
+        static const char* ancRecType;
+        static const RecordObject::fieldDef_t ancRecDef[];
+
         static const char* OBJECT_TYPE;
 
         static const char* LuaMetaName;
@@ -99,6 +102,7 @@ class Atl03Reader: public LuaObject
             uint8_t         spacecraft_orientation; // sc_orient_t
             uint16_t        reference_ground_track_start;
             uint16_t        cycle_start;
+            uint64_t        extent_id;
             uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK];
             double          segment_distance[PAIR_TRACKS_PER_GROUND_TRACK];
             double          extent_length[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
@@ -111,29 +115,25 @@ class Atl03Reader: public LuaObject
 
         /* Ancillary Extent Record */
         typedef struct {
-            key_t           extent_id;
-            int             num_values;
-            //              values[]
         } extent_anc_t;
 
         /* Ancillary Record */
         typedef struct {
-            uint16_t                    reference_ground_track;
-            uint16_t                    cycle;
-            uint8_t                     sdp; // 03, 08
-            char                        name[MAX_NAME_STR];
-            RecordObject::fieldType_t   type;
-            int                         num_extents;
-            extent_anc_t                extents[]; // zero length field
+            uint64_t        extent_id;  // [RGT: 63-48][CYCLE: 47-32][RPT: 31-30][ID: 29-0]
+            uint8_t         field_index; // position in request parameter list
+            uint8_t         list_type; // ancillary_list_type_t
+            uint8_t         data_type; // RecordObject::fieldType_t
+            uint32_t        num_elements[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint8_t         data[];
         } atlxx_anc_t;
 
         /* Statistics */
         typedef struct {
-            uint32_t segments_read;
-            uint32_t extents_filtered;
-            uint32_t extents_sent;
-            uint32_t extents_dropped;
-            uint32_t extents_retried;
+            uint32_t        segments_read;
+            uint32_t        extents_filtered;
+            uint32_t        extents_sent;
+            uint32_t        extents_dropped;
+            uint32_t        extents_retried;
         } stats_t;
 
         /*--------------------------------------------------------------------
@@ -284,6 +284,9 @@ class Atl03Reader: public LuaObject
                             ~Atl03Reader            (void);
 
         static void*        subsettingThread        (void* parm);
+
+        bool                postRecord              (RecordObject* record, stats_t* local_stats);
+        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, ancillary_list_type_t field_type, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats);
 
         static int          luaParms                (lua_State* L);
         static int          luaStats                (lua_State* L);

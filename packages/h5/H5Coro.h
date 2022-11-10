@@ -62,9 +62,9 @@ class H5Future
         *--------------------------------------------------------------------*/
 
         typedef struct {
-            int                         elements;   // number of elements in dataset
-            int                         typesize;   // number of bytes per element
-            int64_t                     datasize;   // total number of bytes in dataset
+            uint32_t                    elements;   // number of elements in dataset
+            uint32_t                    typesize;   // number of bytes per element
+            uint64_t                    datasize;   // total number of bytes in dataset
             uint8_t*                    data;       // point to allocated data buffer
             RecordObject::fieldType_t   datatype;   // data type of elements
             int                         numcols;    // number of columns - anything past the second dimension is grouped together

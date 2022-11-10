@@ -202,7 +202,16 @@ typedef enum {
     NUM_STAGES = 3
 } atl06_stages_t;
 
+/* Ancillary List */
 typedef List<SafeString, EXPECTED_NUM_ANC_FIELDS> ancillary_list_t;
+
+/* Ancillary List Types */
+typedef enum {
+    ANC_GEOLOCATION = 0,
+    ANC_GEOCORRECTION = 1,
+    ANC_HEIGHT = 2,
+    ANC_SIGNAL_PHOTON = 3
+} ancillary_list_type_t;
 
 /* Extraction Parameters */
 typedef struct {
@@ -225,10 +234,10 @@ typedef struct {
     double                  maximum_robust_dispersion;      // sigma_r
     double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
     double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-    ancillary_list_t*       atl03_geolocation_fields;       // list of atl03 geolocation fields to associate with an extent
-    ancillary_list_t*       atl03_geocorrection_fields;     // list of atl03 geolocation correction fields to associate with an extent
-    ancillary_list_t*       atl03_height_fields;            // list of atl03 height fields to associate with an extent
-    ancillary_list_t*       atl08_signal_photon_fields;     // list of atl08 signal photon fields to associate with an extent
+    ancillary_list_t*       atl03_geolocation_fields;       // list of ANC_GEOLOCATION fields to associate with an extent
+    ancillary_list_t*       atl03_geocorrection_fields;     // list of ANC_GEOCORRECTION correction fields to associate with an extent
+    ancillary_list_t*       atl03_height_fields;            // list of ANC_HEIGHT fields to associate with an extent
+    ancillary_list_t*       atl08_signal_photon_fields;     // list of ANC_SIGNAL_PHOTON fields to associate with an extent
 } icesat2_parms_t;
 
 /******************************************************************************

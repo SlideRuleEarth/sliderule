@@ -49,7 +49,6 @@ H5DArray::H5DArray(const Asset* asset, const char* resource, const char* dataset
     else        h5f = NULL;
 
     name    = StringLib::duplicate(dataset);
-    mask    = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -59,7 +58,6 @@ H5DArray::~H5DArray(void)
 {
     if(h5f)  delete h5f;
     if(name) delete [] name;
-    if(mask) delete [] mask;
 }
 
 /*----------------------------------------------------------------------------
@@ -75,8 +73,6 @@ bool H5DArray::join(int timeout, bool throw_exception)
         if(rc == H5Future::COMPLETE)
         {
             status = true;
-            mask = new bool[h5f->info.elements];
-            LocalLib::set(mask, 0, h5f->info.elements * sizeof(bool));
         }
         else
         {
@@ -121,85 +117,63 @@ int H5DArray::elementSize (void)
 }
 
 /*----------------------------------------------------------------------------
- * includeElement
+ * elementType
  *----------------------------------------------------------------------------*/
-void H5DArray::includeElement (int i)
+H5DArray::type_t H5DArray::elementType (void)
 {
-    mask[i] = false;
-}
-
-/*----------------------------------------------------------------------------
- * excludeElement
- *----------------------------------------------------------------------------*/
-void H5DArray::excludeElement (int i)
-{
-    mask[i] = true;
-}
-
-/*----------------------------------------------------------------------------
- * elementStatus
- *----------------------------------------------------------------------------*/
-bool H5DArray::elementStatus (int i)
-{
-    return mask[i];
-}
-
-/*----------------------------------------------------------------------------
- * serializedSize
- *----------------------------------------------------------------------------*/
-int64_t H5DArray::serializedSize (void)
-{
-    int num_included_elements = 0;
-    for(int i = 0; i < h5f->info.elements; i++)
-    {
-        num_included_elements += mask[i];
-    }
-    return num_included_elements * h5f->info.typesize;
+    return h5f->info.datatype;
 }
 
 /*----------------------------------------------------------------------------
  * serialize
  *----------------------------------------------------------------------------*/
-void H5DArray::serialize (uint8_t* buffer)
+uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t num_elements)
 {
+    /* Serialize Elements of Array */
     if(h5f->info.typesize == 8)
     {
         uint64_t* src = (uint64_t*)h5f->info.data;
         uint64_t* dst = (uint64_t*)buffer;
-        for(int i = 0; i < h5f->info.elements; i++)
+        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
-            if(!mask[i]) *dst++ = src[i];
+            *dst++ = src[i];
         }
     }
     else if(h5f->info.typesize == 4)
     {
         uint32_t* src = (uint32_t*)h5f->info.data;
         uint32_t* dst = (uint32_t*)buffer;
-        for(int i = 0; i < h5f->info.elements; i++)
+        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
-            if(!mask[i]) *dst++ = src[i];
+            *dst++ = src[i];
         }
     }
     else if(h5f->info.typesize == 2)
     {
         uint16_t* src = (uint16_t*)h5f->info.data;
         uint16_t* dst = (uint16_t*)buffer;
-        for(int i = 0; i < h5f->info.elements; i++)
+        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
-            if(!mask[i]) *dst++ = src[i];
+            *dst++ = src[i];
         }
     }
     else if(h5f->info.typesize == 1)
     {
         uint8_t* src = (uint8_t*)h5f->info.data;
         uint8_t* dst = (uint8_t*)buffer;
-        for(int i = 0; i < h5f->info.elements; i++)
+        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
-            if(!mask[i]) *dst++ = src[i];
+            *dst++ = src[i];
         }
     }
     else
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid typesize of %d for %s when trying to serialize", h5f->info.typesize, name);
     }
+
+    /* Return Number of Bytes Serialized */
+    int64_t elements_available = h5f->info.elements - start_element;
+    if(elements_available < 0) elements_available = 0;
+    uint64_t elements_copied = MIN(elements_available, num_elements);
+    return elements_copied * h5f->info.typesize;
 }

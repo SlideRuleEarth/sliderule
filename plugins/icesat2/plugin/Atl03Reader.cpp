@@ -74,11 +74,22 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"sc_orient",   RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation),         1,  NULL, NATIVE_FLAGS},
     {"rgt",         RecordObject::UINT16,   offsetof(extent_t, reference_ground_track_start),   1,  NULL, NATIVE_FLAGS},
     {"cycle",       RecordObject::UINT16,   offsetof(extent_t, cycle_start),                    1,  NULL, NATIVE_FLAGS},
+    {"extent_id",   RecordObject::UINT64,   offsetof(extent_t, extent_id),                      1,  NULL, NATIVE_FLAGS},
     {"segment_id",  RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),                  2,  NULL, NATIVE_FLAGS},
     {"segment_dist",RecordObject::DOUBLE,   offsetof(extent_t, segment_distance[0]),            2,  NULL, NATIVE_FLAGS}, // distance from equator
     {"count",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),                2,  NULL, NATIVE_FLAGS},
     {"photons",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),               2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
     {"data",        RecordObject::USER,     sizeof(extent_t),                                   0,  phRecType, NATIVE_FLAGS} // variable length
+};
+
+const char* Atl03Reader::ancRecType = "atlxxrec";
+const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
+    {"extent_id",   RecordObject::UINT64,   offsetof(atlxx_anc_t, extent_id),       1,  NULL, NATIVE_FLAGS},
+    {"field_index", RecordObject::UINT8,    offsetof(atlxx_anc_t, field_index),     1,  NULL, NATIVE_FLAGS},
+    {"list_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, list_type),       1,  NULL, NATIVE_FLAGS},
+    {"data_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, data_type),       1,  NULL, NATIVE_FLAGS},
+    {"num_elements",RecordObject::UINT32,   offsetof(atlxx_anc_t, num_elements),    1,  NULL, NATIVE_FLAGS},
+    {"data",        RecordObject::UINT8,    sizeof(atlxx_anc_t),                    0,  NULL, NATIVE_FLAGS} // variable length
 };
 
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
@@ -134,6 +145,12 @@ void Atl03Reader::init (void)
     if(ph_rc != RecordObject::SUCCESS_DEF)
     {
         mlog(CRITICAL, "Failed to define %s: %d", phRecType, ph_rc);
+    }
+
+    RecordObject::recordDefErr_t anc_rc = RecordObject::defineRecord(ancRecType, NULL, sizeof(atlxx_anc_t), ancRecDef, sizeof(ancRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(anc_rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", ancRecType, anc_rc);
     }
 }
 
@@ -587,6 +604,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     bckgrd_rate.join(H5_READ_TIMEOUT_MS, true);
 
     /* Join Ancillary Geolocation Reads */
+    if(geolocation_fields)
     {
         GTDArray* array = NULL;
         const char* dataset_name = anc_geolocation.first(&array);
@@ -598,6 +616,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     }
 
     /* Join Ancillary Geocorrection Reads */
+    if(geocorrection_fields)
     {
         GTDArray* array = NULL;
         const char* dataset_name = anc_geocorrection.first(&array);
@@ -609,6 +628,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     }
 
     /* Join Ancillary Geocorrection Reads */
+    if(height_fields)
     {
         GTDArray* array = NULL;
         const char* dataset_name = anc_height.first(&array);
@@ -652,6 +672,7 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     }
 
     /* Join Ancillary Signal Photon Reads */
+    if(enabled && signal_photon_fields)
     {
         GTDArray* array = NULL;
         const char* dataset_name = anc_signal_photons.first(&array);
@@ -1100,6 +1121,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     info_t* info = (info_t*)parm;
     Atl03Reader* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
+    uint32_t extent_counter = 0;
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
@@ -1357,6 +1379,12 @@ void* Atl03Reader::subsettingThread (void* parm)
                 extent->reference_ground_track_start = (*reader->start_rgt)[0];
                 extent->cycle_start = (*reader->start_cycle)[0];
 
+                /* Populate Extent ID */
+                extent->extent_id = ((uint64_t)extent->reference_ground_track_start << 48) |
+                                    ((uint64_t)extent->cycle_start << 32) |
+                                    (((uint64_t)extent->reference_pair_track & 0x2) << 30) |
+                                    extent_counter;
+
                 /* Populate Extent */
                 uint32_t ph_out = 0;
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
@@ -1439,30 +1467,19 @@ void* Atl03Reader::subsettingThread (void* parm)
                 extent->photon_offset[PRT_RIGHT] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[PRT_LEFT]);
 
                 /* Post Segment Record */
-                uint8_t* rec_buf = NULL;
-                int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-                int post_status = MsgQ::STATE_TIMEOUT;
-                while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
-                {
-                    local_stats.extents_retried++;
-                }
+                reader->postRecord(&record, &local_stats);
 
-                /* Update Statistics */
-                if(post_status > 0)
-                {
-                    local_stats.extents_sent++;
-                }
-                else
-                {
-                    mlog(ERROR, "Atl03 reader failed to post to stream %s: %d", reader->outQ->getName(), post_status);
-                    local_stats.extents_dropped++;
-                }
+                /* Send Ancillary Records */
+                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geolocation_fields, ANC_GEOLOCATION, &atl03.anc_geolocation, extent_segment, &local_stats);
+                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geolocation_fields, ANC_GEOCORRECTION, &atl03.anc_geocorrection, extent_segment, &local_stats);
             }
             else // neither pair in extent valid
             {
                 local_stats.extents_filtered++;
             }
 
+            /* Bump Extent Counter */
+            extent_counter++;
         }
     }
     catch(const RunTimeException& e)
@@ -1502,6 +1519,72 @@ void* Atl03Reader::subsettingThread (void* parm)
 
     /* Return */
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * postRecord
+ *----------------------------------------------------------------------------*/
+bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
+{
+    uint8_t* rec_buf = NULL;
+    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+    int post_status = MsgQ::STATE_TIMEOUT;
+    while(active && (post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+    {
+        local_stats->extents_retried++;
+    }
+
+    /* Update Statistics */
+    if(post_status > 0)
+    {
+        local_stats->extents_sent++;
+        return true;
+    }
+    else
+    {
+        mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
+        local_stats->extents_dropped++;
+        return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * sendAncillaryRecords
+ *----------------------------------------------------------------------------*/
+bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, ancillary_list_type_t field_type, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats)
+{
+    if(field_list)
+    {
+        for(int i = 0; i < field_list->length(); i++)
+        {
+            /* Get Data Array */
+            GTDArray* array = field_dict->get((*field_list)[i].getString());
+
+            /* Create Ancillary Record */
+            int record_size = sizeof(atlxx_anc_t) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
+            RecordObject record(ancRecType, record_size);
+            atlxx_anc_t* data = (atlxx_anc_t*)record.getRecordData();
+
+            /* Populate Ancillary Record */
+            data->extent_id = extent_id;
+            data->field_index = i;
+            data->list_type = field_type;
+            data->data_type = array->gt[PRT_LEFT].elementType();
+            data->num_elements[PRT_LEFT] = 1;
+            data->num_elements[PRT_RIGHT] = 1;
+
+            /* Populate Ancillary Data */
+            array->serialize(&data->data[0], start_element, data->num_elements);
+
+            /* Post Ancillary Record */
+            postRecord(&record, local_stats);
+        }
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 /*----------------------------------------------------------------------------

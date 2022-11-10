@@ -60,10 +60,11 @@ class GTDArray
          * Methods
          *--------------------------------------------------------------------*/
 
-                    GTDArray    (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
-        virtual     ~GTDArray   (void);
+                    GTDArray        (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
+        virtual     ~GTDArray       (void);
 
-        bool        join        (int timeout, bool throw_exception);
+        bool        join            (int timeout, bool throw_exception);
+        uint64_t    serialize       (uint8_t* buffer, int32_t* start_element, uint32_t* num_elements);
 
         /*--------------------------------------------------------------------
          * Data

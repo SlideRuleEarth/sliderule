@@ -3320,7 +3320,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             if(info.datatype == RecordObject::FLOAT)
             {
                 float* dptr = (float*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (int)dptr[i];
                 }
@@ -3329,7 +3329,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::DOUBLE)
             {
                 double* dptr = (double*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (int)dptr[i];
                 }
@@ -3338,7 +3338,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
             {
                 uint8_t* dptr = (uint8_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (int)dptr[i];
                 }
@@ -3347,7 +3347,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
                 uint16_t* dptr = (uint16_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (int)dptr[i];
                 }
@@ -3356,7 +3356,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
             {
                 uint32_t* dptr = (uint32_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (int)dptr[i];
                 }
@@ -3365,7 +3365,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
             {
                 uint64_t* dptr = (uint64_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (int)dptr[i];
                 }
@@ -3391,7 +3391,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             if(info.datatype == RecordObject::FLOAT)
             {
                 float* dptr = (float*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (double)dptr[i];
                 }
@@ -3400,7 +3400,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::DOUBLE)
             {
                 double* dptr = (double*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (double)dptr[i];
                 }
@@ -3409,7 +3409,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
             {
                 uint8_t* dptr = (uint8_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (double)dptr[i];
                 }
@@ -3418,7 +3418,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
                 uint16_t* dptr = (uint16_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (double)dptr[i];
                 }
@@ -3427,7 +3427,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
             {
                 uint32_t* dptr = (uint32_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (double)dptr[i];
                 }
@@ -3436,7 +3436,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
             {
                 uint64_t* dptr = (uint64_t*)info.data;
-                for(int i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = (double)dptr[i];
                 }

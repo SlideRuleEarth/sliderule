@@ -71,3 +71,12 @@ bool GTDArray::join(int timeout, bool throw_exception)
 {
     return (gt[PRT_LEFT].join(timeout, throw_exception) && gt[PRT_RIGHT].join(timeout, throw_exception));
 }
+
+/*----------------------------------------------------------------------------
+ * serialize
+ *----------------------------------------------------------------------------*/
+uint64_t GTDArray::serialize (uint8_t* buffer, int32_t* start_element, uint32_t* num_elements)
+{
+    uint64_t bytes_written = gt[PRT_LEFT].serialize(&buffer[0], start_element[PRT_LEFT], num_elements[PRT_LEFT]);
+    return gt[PRT_LEFT].serialize(&buffer[bytes_written], start_element[PRT_RIGHT], num_elements[PRT_RIGHT]);
+}

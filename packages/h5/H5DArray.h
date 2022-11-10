@@ -38,6 +38,7 @@
 
 #include "Asset.h"
 #include "H5Coro.h"
+#include "RecordObject.h"
 
 /******************************************************************************
  * H5 DYNAMIC ARRAY CLASS
@@ -48,21 +49,24 @@ class H5DArray
     public:
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef RecordObject::fieldType_t type_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5DArray        (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
-        virtual ~H5DArray       (void);
+                    H5DArray        (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
+        virtual     ~H5DArray       (void);
 
-        bool    join            (int timeout, bool throw_exception);
+        bool        join            (int timeout, bool throw_exception);
 
-        int     numElements     (void);
-        int     elementSize     (void);
-        void    includeElement  (int i);
-        void    excludeElement  (int i);
-        bool    elementStatus   (int i);
-        int64_t serializedSize  (void);
-        void    serialize       (uint8_t* buffer);
+        int         numElements     (void);
+        int         elementSize     (void);
+        type_t      elementType     (void);
+        uint64_t    serialize       (uint8_t* buffer, int32_t start_element, uint32_t num_elements);
 
         /*--------------------------------------------------------------------
          * Data
@@ -70,7 +74,6 @@ class H5DArray
 
         const char*         name;
         H5Future*           h5f;
-        bool*               mask; // false: included, true: excluded
 };
 
 #endif  /* __h5_dynamic_array__ */
