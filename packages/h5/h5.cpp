@@ -79,6 +79,7 @@ void inith5 (void)
 {
     /* Initialize Modules */
     H5Coro::init(H5CORO_THREAD_POOL_SIZE);
+    H5DArray::init();
     H5DatasetDevice::init();
     H5File::init();
 

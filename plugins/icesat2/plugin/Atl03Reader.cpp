@@ -560,9 +560,10 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     {
         for(int i = 0; i < geolocation_fields->length(); i++)
         {
-            SafeString dataset_name("geolocation/%s", (*geolocation_fields)[i].getString());
+            const char* field_name = (*geolocation_fields)[i].getString();
+            SafeString dataset_name("geolocation/%s", field_name);
             GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_segment, region->num_segments);
-            anc_geolocation.add(dataset_name.getString(), array);
+            anc_geolocation.add(field_name, array);
         }
     }
 
@@ -571,9 +572,10 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     {
         for(int i = 0; i < geocorrection_fields->length(); i++)
         {
-            SafeString dataset_name("geophys_corr/%s", (*geocorrection_fields)[i].getString());
+            const char* field_name = (*geocorrection_fields)[i].getString();
+            SafeString dataset_name("geophys_corr/%s", field_name);
             GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_segment, region->num_segments);
-            anc_geocorrection.add(dataset_name.getString(), array);
+            anc_geocorrection.add(field_name, array);
         }
     }
 
@@ -582,9 +584,10 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     {
         for(int i = 0; i < height_fields->length(); i++)
         {
-            SafeString dataset_name("heights/%s", (*height_fields)[i].getString());
+            const char* field_name = (*height_fields)[i].getString();
+            SafeString dataset_name("heights/%s", field_name);
             GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_photon,  region->num_photons);
-            anc_height.add(dataset_name.getString(), array);
+            anc_height.add(field_name, array);
         }
     }
 
@@ -665,9 +668,10 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     {
         for(int i = 0; i < signal_photon_fields->length(); i++)
         {
-            SafeString dataset_name("signal_photons/%s", (*signal_photon_fields)[i].getString());
+            const char* field_name = (*signal_photon_fields)[i].getString();
+            SafeString dataset_name("signal_photons/%s", field_name);
             GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource08, info->track, dataset_name.getString(), &info->reader->context08);
-            anc_signal_photons.add(dataset_name.getString(), array);
+            anc_signal_photons.add(field_name, array);
         }
     }
 
@@ -1471,7 +1475,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                 /* Send Ancillary Records */
                 reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geolocation_fields, ANC_GEOLOCATION, &atl03.anc_geolocation, extent_segment, &local_stats);
-                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geolocation_fields, ANC_GEOCORRECTION, &atl03.anc_geocorrection, extent_segment, &local_stats);
+                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geocorrection_fields, ANC_GEOCORRECTION, &atl03.anc_geocorrection, extent_segment, &local_stats);
             }
             else // neither pair in extent valid
             {

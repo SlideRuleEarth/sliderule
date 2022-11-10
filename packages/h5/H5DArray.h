@@ -58,6 +58,8 @@ class H5DArray
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void init            (void);
+
                     H5DArray        (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
         virtual     ~H5DArray       (void);
 
