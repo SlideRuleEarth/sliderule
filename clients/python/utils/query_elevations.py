@@ -45,7 +45,8 @@ if __name__ == '__main__':
         "cnt": 10,
         "len": 40.0,
         "res": 20.0,
-        "maxi": 1
+        "maxi": 1#,
+#        "atl03_geolocation_fields": ["solar_elevation"]
     }
 
     # Request ATL06 Data

@@ -44,6 +44,7 @@ from sklearn.cluster import KMeans
 import sliderule
 from sliderule import version
 import os
+import time
 
 ###############################################################################
 # GLOBALS
@@ -718,24 +719,31 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         # Make API Processing Request
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
+        start_time = time.perf_counter()
         # Flatten Responses
         columns = {}
+        rectype = None
+        num_rows = 0
+        sample_rec = None
         if len(rsps) <= 0:
-            logger.debug("no response returned")
-        elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
-            logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
+            logger.debug("No response returned")
         else:
-            # Determine Record Type
-            if rsps[0]['__rectype'] == 'atl06rec':
-                rectype = 'atl06rec.elevation'
-            else:
-                rectype = 'atl06rec-compact.elevation'
-            # Count Rows
-            num_rows = 0
             for rsp in rsps:
+                # Determine Record Type
+                if rectype == None:
+                    if rsp['__rectype'] == 'atl06rec':
+                        rectype = 'atl06rec.elevation'
+                        sample_rec = rsp
+                    elif rsp['__rectype'] == 'atl06rec-compact':
+                        rectype = 'atl06rec-compact.elevation'
+                        sample_rec = rsp
+                # Count Rows
                 num_rows += len(rsp["elevation"])
+            # Check Valid ATL06 Record Returned
+            if rectype == None:
+                raise RuntimeError("Invalid record types returned for this api")
             # Build Columns
-            for field in rsps[0]["elevation"][0].keys():
+            for field in sample_rec["elevation"][0].keys():
                 fielddef = sliderule.get_definition(rectype, field)
                 if len(fielddef) > 0:
                     columns[field] = numpy.empty(num_rows, fielddef["nptype"])
@@ -743,13 +751,15 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             elev_cnt = 0
             for rsp in rsps:
                 for elevation in rsp["elevation"]:
-                    for field in elevation.keys():
-                        if field in columns:
-                            columns[field][elev_cnt] = elevation[field]
+                    for field in columns:
+                        columns[field][elev_cnt] = elevation[field]
                     elev_cnt += 1
 
         # Return Response
-        return __todataframe(columns, "delta_time", "lon", "lat")
+        gdf = __todataframe(columns, "delta_time", "lon", "lat")
+        end_time = time.perf_counter()
+        print("Execution Time: {} seconds".format(end_time - start_time))
+        return gdf
 
     # Handle Runtime Errors
     except RuntimeError as e:
