@@ -88,7 +88,7 @@ const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
     {"field_index", RecordObject::UINT8,    offsetof(atlxx_anc_t, field_index),     1,  NULL, NATIVE_FLAGS},
     {"list_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, list_type),       1,  NULL, NATIVE_FLAGS},
     {"data_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, data_type),       1,  NULL, NATIVE_FLAGS},
-    {"num_elements",RecordObject::UINT32,   offsetof(atlxx_anc_t, num_elements),    1,  NULL, NATIVE_FLAGS},
+    {"num_elements",RecordObject::UINT32,   offsetof(atlxx_anc_t, num_elements),    2,  NULL, NATIVE_FLAGS},
     {"data",        RecordObject::UINT8,    sizeof(atlxx_anc_t),                    0,  NULL, NATIVE_FLAGS} // variable length
 };
 
@@ -1384,10 +1384,11 @@ void* Atl03Reader::subsettingThread (void* parm)
                 extent->cycle_start = (*reader->start_cycle)[0];
 
                 /* Populate Extent ID */
-                extent->extent_id = ((uint64_t)extent->reference_ground_track_start << 48) |
-                                    ((uint64_t)extent->cycle_start << 32) |
-                                    (((uint64_t)extent->reference_pair_track & 0x2) << 30) |
-                                    extent_counter;
+                extent->extent_id = ((uint64_t)extent->reference_ground_track_start << 52) |
+                                    ((uint64_t)extent->cycle_start << 36) |
+                                    (((uint64_t)extent->reference_pair_track & 0x2) << 34) |
+                                    ((uint64_t)extent_counter << 2) |
+                                    EXTENT_ID_PHOTONS;
 
                 /* Populate Extent */
                 uint32_t ph_out = 0;

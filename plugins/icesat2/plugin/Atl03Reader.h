@@ -119,7 +119,7 @@ class Atl03Reader: public LuaObject
 
         /* Ancillary Record */
         typedef struct {
-            uint64_t        extent_id;  // [RGT: 63-48][CYCLE: 47-32][RPT: 31-30][ID: 29-0]
+            uint64_t        extent_id;  // [RGT: 63-52][CYCLE: 51-36][RPT: 35-34][ID: 33-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
             uint8_t         field_index; // position in request parameter list
             uint8_t         list_type; // ancillary_list_type_t
             uint8_t         data_type; // RecordObject::fieldType_t

@@ -96,6 +96,8 @@
 #define PAIR_TRACKS_PER_GROUND_TRACK            2
 #define PRT_LEFT                                0
 #define PRT_RIGHT                               1
+#define EXTENT_ID_PHOTONS                       0x0
+#define EXTENT_ID_ELEVATION                     0x2
 
 #define EXPECTED_NUM_ANC_FIELDS                 8 // a typical number of ancillary fields requested
 

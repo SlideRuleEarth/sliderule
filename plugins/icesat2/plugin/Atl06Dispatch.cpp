@@ -102,6 +102,7 @@ const RecordObject::fieldDef_t Atl06Dispatch::atCompactRecDef[] = {
 
 const char* Atl06Dispatch::elRecType = "atl06rec.elevation"; // extended elevation measurement record
 const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
+    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),           1,  NULL, NATIVE_FLAGS},
     {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
     {"n_fit_photons",           RecordObject::INT32,    offsetof(elevation_t, photon_count),        1,  NULL, NATIVE_FLAGS},
     {"pflags",                  RecordObject::UINT16,   offsetof(elevation_t, pflags),              1,  NULL, NATIVE_FLAGS},
@@ -290,6 +291,7 @@ void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
         /* Elevation Attributes */
+        result[t].elevation.extent_id = extent->extent_id | EXTENT_ID_ELEVATION | t;
         result[t].elevation.segment_id = extent->segment_id[t];
         result[t].elevation.rgt = extent->reference_ground_track_start;
         result[t].elevation.cycle = extent->cycle_start;

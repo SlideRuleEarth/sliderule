@@ -714,22 +714,22 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
 
             lua_getfield(L, index, LUA_PARM_ATL03_GEOLOCATION_FIELDS);
             get_lua_field_list (L, -1, &parms->atl03_geolocation_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL03 geolocation fields added");
+            if(provided) mlog(DEBUG, "ATL03 geolocation field array detected");
             lua_pop(L, 1);
 
             lua_getfield(L, index, LUA_PARM_ATL03_GEOCORRECTION_FIELDS);
             get_lua_field_list (L, -1, &parms->atl03_geocorrection_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL03 geocorrection fields added");
+            if(provided) mlog(DEBUG, "ATL03 geocorrection field array detected");
             lua_pop(L, 1);
 
             lua_getfield(L, index, LUA_PARM_ATL03_HEIGHT_FIELDS);
             get_lua_field_list (L, -1, &parms->atl03_height_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL03 height fields added");
+            if(provided) mlog(DEBUG, "ATL03 height field array detected");
             lua_pop(L, 1);
 
             lua_getfield(L, index, LUA_PARM_ATL08_SIGNAL_PHOTON_FIELDS);
             get_lua_field_list (L, -1, &parms->atl08_signal_photon_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL08 signal photon fields added");
+            if(provided) mlog(DEBUG, "ATL08 signal photon field array detected");
             lua_pop(L, 1);
         }
         catch(const RunTimeException& e)

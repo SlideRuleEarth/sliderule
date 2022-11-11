@@ -114,7 +114,8 @@ class Atl06Dispatch: public DispatchObject
 
         /* (Normal) Elevation Measurement */
         typedef struct {
-            uint32_t            segment_id;
+            uint64_t            extent_id;              // unique identifier
+            uint32_t            segment_id;             // closest atl06 segment
             int32_t             photon_count;           // number of photons used in final elevation calculation
             uint16_t            pflags;                 // processing flags
             uint16_t            rgt;                    // reference ground track
