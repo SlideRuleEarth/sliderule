@@ -53,6 +53,9 @@ import time
 # create logger
 logger = logging.getLogger(__name__)
 
+# profiling times for each major function
+profiles = {}
+
 # default asset
 DEFAULT_ASSET="nsidc-s3"
 
@@ -94,10 +97,22 @@ RIGHT_PAIR = 1
 SC_BACKWARD = 0
 SC_FORWARD = 1
 
-# gps-based epoch for delta times #
+# gps-based epoch for delta times
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 
+# ancillary list types
+ATL03_GEOLOCATION = 0
+ATL03_GEOCORRECTION = 1
+ATL03_HEIGHT = 2
+ATL08_SIGNAL_PHOTON = 3
 
+# ancillary list type matching
+ancillary_lists = {
+    ATL03_GEOLOCATION:      "atl03_geolocation_fields",
+    ATL03_GEOCORRECTION:    "atl03_geocorrection_fields",
+    ATL03_HEIGHT:           "atl03_height_fields",
+    ATL08_SIGNAL_PHOTON:    "atl08_signal_photon_fields"
+}
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -114,7 +129,6 @@ ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 # Software is furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
-
 
 # WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
 EPSG_MERCATOR = "EPSG:4326"
@@ -316,29 +330,32 @@ def __get_values(data, dtype, size):
 #
 def __query_resources(parm, version, return_polygons=False):
 
+    # Latch Start Time
+    tstart = time.perf_counter()
+
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
         logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
         return []
 
-    # Submission Arguments for CRM #
+    # Submission Arguments for CMR
     kwargs = {}
     kwargs['version'] = version
     kwargs['return_polygons'] = return_polygons
 
-    # Pull Out Polygon #
+    # Pull Out Polygon
     if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
         kwargs['polygon'] = parm["clusters"]
     elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
         kwargs['polygon'] = parm["poly"]
 
-    # Pull Out Time Period #
+    # Pull Out Time Period
     if "t0" in parm:
         kwargs['time_start'] = parm["t0"]
     if "t1" in parm:
         kwargs['time_end'] = parm["t1"]
 
-    # Build Filters #
+    # Build Filters
     name_filter_enabled = False
     rgt_filter = '????'
     if "rgt" in parm:
@@ -355,19 +372,22 @@ def __query_resources(parm, version, return_polygons=False):
     if name_filter_enabled:
         kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
 
-    # Make CMR Request #
+    # Make CMR Request
     if return_polygons:
         resources,polygons = cmr(**kwargs)
     else:
         resources = cmr(**kwargs)
 
-    # Check Resources are Under Limit #
+    # Check Resources are Under Limit
     if(len(resources) > max_requested_resources):
         raise RuntimeError('Exceeded maximum requested granules: {} (current max is {})\nConsider using icesat2.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(resources))
 
-    # Return Resources #
+    # Update Profile
+    profiles[__query_resources.__name__] = time.perf_counter() - tstart
+
+    # Return Resources
     if return_polygons:
         return (resources,polygons)
     else:
@@ -385,7 +405,11 @@ def __emptyframe(**kwargs):
 #  Dictionary to GeoDataFrame
 #
 def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", **kwargs):
-    # set default keyword arguments
+
+    # Latch Start Time
+    tstart = time.perf_counter()
+
+    # Set Default Keyword Arguments
     kwargs['index_key'] = "time"
     kwargs['crs'] = EPSG_MERCATOR
 
@@ -416,6 +440,9 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     # Sort values for reproducible output despite async processing
     gdf.sort_index(inplace=True)
 
+    # Update Profile
+    profiles[__todataframe.__name__] = time.perf_counter() - tstart
+
     # Return GeoDataFrame
     return gdf
 
@@ -423,6 +450,10 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
 # GeoDataFrame to Polygon
 #
 def __gdf2poly(gdf):
+
+    # latch start time
+    tstart = time.perf_counter()
+
     # pull out coordinates
     hull = gdf.unary_union.convex_hull
     polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
@@ -437,6 +468,9 @@ def __gdf2poly(gdf):
             ccw_poly.append(polygon[i - 1])
         # replace region with counter-clockwise version #
         polygon = ccw_poly
+
+    # Update Profile
+    profiles[__gdf2poly.__name__] = time.perf_counter() - tstart
 
     # return polygon
     return polygon
@@ -705,6 +739,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         [622412 rows x 16 columns]
     '''
     try:
+        tstart = time.perf_counter()
+
         # Get List of Resources from CMR (if not supplied)
         if resources == None:
             resources = __query_resources(parm, version)
@@ -719,46 +755,62 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         # Make API Processing Request
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
-        start_time = time.perf_counter()
         # Flatten Responses
+        tstart_flatten = time.perf_counter()
         columns = {}
-        rectype = None
-        num_rows = 0
-        sample_rec = None
-        if len(rsps) <= 0:
-            logger.debug("No response returned")
+        elevation_records = []
+        num_elevations = 0
+        field_dictionary = {}
+        if len(rsps) > 0:
+            # Sort Records
+            for rsp in rsps:
+                if 'atl06rec' in rsp['__rectype']:
+                    elevation_records += rsp,
+                    num_elevations += len(rsp['elevation'])
+                elif 'atlxxrec' in rsp['__rectype']:
+                    if rsp['list_type'] == ATL03_GEOLOCATION or rsp['list_type'] == ATL03_GEOCORRECTION:
+                        field_name = parm[ancillary_lists[rsp['list_type']]][rsp['field_index']]
+                        if field_name in field_dictionary:
+                            data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                            # Add Left Pair Track Entry
+                            field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
+                            field_dictionary[field_name][field_name] += data[0],
+                            # Add Right Pair Track Entry
+                            field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
+                            field_dictionary[field_name][field_name] += data[1],
+                        else:
+                            field_dictionary[field_name] = {"extent_id": [], field_name: []}
+            # Build Elevation Columns
+            if num_elevations > 0:
+                # Initialize Columns
+                sample_elevation_record = elevation_records[0]["elevation"][0]
+                for field in sample_elevation_record.keys():
+                    fielddef = sliderule.get_definition(sample_elevation_record['__rectype'], field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.empty(num_elevations, fielddef["nptype"])
+                # Populate Columns
+                elev_cnt = 0
+                for record in elevation_records:
+                    for elevation in record["elevation"]:
+                        for field in columns:
+                            columns[field][elev_cnt] = elevation[field]
+                        elev_cnt += 1
         else:
-            for rsp in rsps:
-                # Determine Record Type
-                if rectype == None:
-                    if rsp['__rectype'] == 'atl06rec':
-                        rectype = 'atl06rec.elevation'
-                        sample_rec = rsp
-                    elif rsp['__rectype'] == 'atl06rec-compact':
-                        rectype = 'atl06rec-compact.elevation'
-                        sample_rec = rsp
-                # Count Rows
-                num_rows += len(rsp["elevation"])
-            # Check Valid ATL06 Record Returned
-            if rectype == None:
-                raise RuntimeError("Invalid record types returned for this api")
-            # Build Columns
-            for field in sample_rec["elevation"][0].keys():
-                fielddef = sliderule.get_definition(rectype, field)
-                if len(fielddef) > 0:
-                    columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-            # Populate Columns
-            elev_cnt = 0
-            for rsp in rsps:
-                for elevation in rsp["elevation"]:
-                    for field in columns:
-                        columns[field][elev_cnt] = elevation[field]
-                    elev_cnt += 1
+            logger.debug("No response returned")
+        profiles["flatten"] = time.perf_counter() - tstart_flatten
+
+        # Build GeoDataFrame
+        gdf = __todataframe(columns, "delta_time", "lon", "lat")
+
+        # Merge Ancillary Fields
+        tstart_merge = time.perf_counter()
+        for field in field_dictionary:
+            df = geopandas.pd.DataFrame(field_dictionary[field])
+            gdf = gdf.merge(df, on='extent_id', how='inner')
+        profiles["merge"] = time.perf_counter() - tstart_merge
 
         # Return Response
-        gdf = __todataframe(columns, "delta_time", "lon", "lat")
-        end_time = time.perf_counter()
-        print("Execution Time: {} seconds".format(end_time - start_time))
+        profiles[atl06p.__name__] = time.perf_counter() - tstart
         return gdf
 
     # Handle Runtime Errors
@@ -823,6 +875,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
+        tstart = time.perf_counter()
+
         # Get List of Resources from CMR (if not specified)
         if resources == None:
             resources = __query_resources(parm, version)
@@ -838,6 +892,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
+        tstart_flatten = time.perf_counter()
         columns = {}
         if len(rsps) <= 0:
             logger.debug("no response returned")
@@ -885,6 +940,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     ph_index += 1
             # Rename Count Column to Pair Column
             columns["pair"] = columns.pop("count")
+            profiles["flatten"] = time.perf_counter() - tstart_flatten
 
             # Create DataFrame
             df = __todataframe(columns, "delta_time", "longitude", "latitude")
@@ -893,6 +949,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
             df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
 
             # Return Response
+            profiles[atl03sp.__name__] = time.perf_counter() - tstart
             return df
 
         # Error Case
@@ -955,9 +1012,11 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         >>> longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
         >>> df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
     '''
+    tstart = time.perf_counter()
     datasets = [ { "dataset": dataset, "datatype": datatype, "col": col, "startrow": startrow, "numrows": numrows } ]
     values = h5p(datasets, resource, asset=asset)
     if len(values) > 0:
+        profiles[h5.__name__] = time.perf_counter() - tstart
         return values[dataset]
     else:
         return numpy.empty(0)
@@ -1017,6 +1076,9 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
          '/gt1r/land_ice_segments/h_li': array([45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948]),
          '/gt3r/land_ice_segments/h_li': array([45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806])}
     '''
+    # Latch Start Time
+    tstart = time.perf_counter()
+
     # Baseline Request
     rqst = {
         "asset" : asset,
@@ -1035,6 +1097,9 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     results = {}
     for result in rsps:
         results[result["dataset"]] = __get_values(result["data"], result["datatype"], result["size"])
+
+    # Update Profiles
+    profiles[h5p.__name__] = time.perf_counter() - tstart
 
     # Return Results
     return results
@@ -1088,6 +1153,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         >>> atl06 = icesat2.atl06p(parms)
     '''
 
+    tstart = time.perf_counter()
     tempfile = "temp.geojson"
 
     if isinstance(source, geopandas.GeoDataFrame):
@@ -1170,8 +1236,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
                 c_poly = __gdf2poly(c_gdf)
                 clusters.append(c_poly)
 
+    # update timing profiles
+    profiles[toregion.__name__] = time.perf_counter() - tstart
 
-    # return region #
+    # return region
     return {
         "gdf": gdf,
         "poly": polygon, # convex hull of polygons

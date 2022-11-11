@@ -16,11 +16,23 @@ if __name__ == '__main__':
 
     # Set Script Defaults
     cfg = {
-        "url":          'localhost',
-        "organization": None,
-        "asset":        'atlas-local',
-        "region":       'examples/grandmesa.geojson',
-        "resource":     'ATL03_20181017222812_02950102_005_01.h5'
+        "url":                          'localhost',
+        "organization":                 None,
+        "asset":                        'atlas-local',
+        "region":                       'examples/grandmesa.geojson',
+        "resource":                     'ATL03_20181017222812_02950102_005_01.h5',
+        "srt":                          icesat2.SRT_LAND,
+        "cnf":                          icesat2.CNF_SURFACE_HIGH,
+        "ats":                          10.0,
+        "cnt":                          10,
+        "len":                          40.0,
+        "res":                          20.0,
+        "maxi":                         1,
+        "atl03_geolocation_fields":     [],
+        "atl03_geocorrection_fields":   [],
+        "atl03_height_fields":          [],
+        "atl08_signal_photon_fields":   [],
+        "profile":                      True
     }
 
     # Parse Configuration Parameters
@@ -37,16 +49,19 @@ if __name__ == '__main__':
 
     # Build ATL06 Request #
     parms = {
-        "poly": region["poly"],
-        "raster": region["raster"],
-        "srt": icesat2.SRT_LAND,
-        "cnf": icesat2.CNF_SURFACE_HIGH,
-        "ats": 10.0,
-        "cnt": 10,
-        "len": 40.0,
-        "res": 20.0,
-        "maxi": 1#,
-#        "atl03_geolocation_fields": ["solar_elevation"]
+        "poly":                         region['poly'],
+        "raster":                       region['raster'],
+        "srt":                          cfg['srt'],
+        "cnf":                          cfg['cnf'],
+        "ats":                          cfg['ats'],
+        "cnt":                          cfg['cnt'],
+        "len":                          cfg['len'],
+        "res":                          cfg['res'],
+        "maxi":                         cfg['maxi'],
+        "atl03_geolocation_fields":     cfg['atl03_geolocation_fields'],
+        "atl03_geocorrection_fields":   cfg['atl03_geocorrection_fields'],
+        "atl03_height_fields":          cfg['atl03_height_fields'],
+        "atl08_signal_photon_fields":   cfg['atl08_signal_photon_fields']
     }
 
     # Request ATL06 Data
@@ -65,3 +80,7 @@ if __name__ == '__main__':
     else:
         print("No elevations were returned")
 
+    # Display Profile
+    print("\nTiming Profiles")
+    for key in icesat2.profiles:
+        print("{:16}: {:.6f} secs".format(key, icesat2.profiles[key]))
