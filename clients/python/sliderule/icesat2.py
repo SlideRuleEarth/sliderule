@@ -770,16 +770,16 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                 elif 'atlxxrec' in rsp['__rectype']:
                     if rsp['list_type'] == ATL03_GEOLOCATION or rsp['list_type'] == ATL03_GEOCORRECTION:
                         field_name = parm[ancillary_lists[rsp['list_type']]][rsp['field_index']]
-                        if field_name in field_dictionary:
-                            data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
-                            # Add Left Pair Track Entry
-                            field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
-                            field_dictionary[field_name][field_name] += data[0],
-                            # Add Right Pair Track Entry
-                            field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
-                            field_dictionary[field_name][field_name] += data[1],
-                        else:
+                        if field_name not in field_dictionary:
                             field_dictionary[field_name] = {"extent_id": [], field_name: []}
+                        # Parse Ancillary Data
+                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        # Add Left Pair Track Entry
+                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
+                        field_dictionary[field_name][field_name] += data[0],
+                        # Add Right Pair Track Entry
+                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
+                        field_dictionary[field_name][field_name] += data[1],
             # Build Elevation Columns
             if num_elevations > 0:
                 # Initialize Columns
