@@ -79,7 +79,7 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"segment_dist",RecordObject::DOUBLE,   offsetof(extent_t, segment_distance[0]),            2,  NULL, NATIVE_FLAGS}, // distance from equator
     {"count",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),                2,  NULL, NATIVE_FLAGS},
     {"photons",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),               2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
-    {"data",        RecordObject::USER,     sizeof(extent_t),                                   0,  phRecType, NATIVE_FLAGS} // variable length
+    {"data",        RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* Atl03Reader::ancRecType = "atlxxrec";
@@ -89,7 +89,7 @@ const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
     {"list_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, list_type),       1,  NULL, NATIVE_FLAGS},
     {"data_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, data_type),       1,  NULL, NATIVE_FLAGS},
     {"num_elements",RecordObject::UINT32,   offsetof(atlxx_anc_t, num_elements),    2,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    sizeof(atlxx_anc_t),                    0,  NULL, NATIVE_FLAGS} // variable length
+    {"data",        RecordObject::UINT8,    offsetof(atlxx_anc_t, data),            0,  NULL, NATIVE_FLAGS} // variable length
 };
 
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
