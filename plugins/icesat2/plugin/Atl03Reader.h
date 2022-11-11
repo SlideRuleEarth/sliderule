@@ -70,8 +70,11 @@ class Atl03Reader: public LuaObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
-        static const char* ancRecType;
-        static const RecordObject::fieldDef_t ancRecDef[];
+        static const char* geoAncRecType;
+        static const RecordObject::fieldDef_t geoAncRecDef[];
+
+        static const char* phAncRecType;
+        static const RecordObject::fieldDef_t phAncRecDef[];
 
         static const char* OBJECT_TYPE;
 
@@ -102,7 +105,7 @@ class Atl03Reader: public LuaObject
             uint8_t         spacecraft_orientation; // sc_orient_t
             uint16_t        reference_ground_track_start;
             uint16_t        cycle_start;
-            uint64_t        extent_id;
+            uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][RPT: 35-34][ID: 33-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
             uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK];
             double          segment_distance[PAIR_TRACKS_PER_GROUND_TRACK];
             double          extent_length[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
@@ -117,15 +120,22 @@ class Atl03Reader: public LuaObject
         typedef struct {
         } extent_anc_t;
 
-        /* Ancillary Record */
+        /* Geo Ancillary Record */
         typedef struct {
-            uint64_t        extent_id;  // [RGT: 63-52][CYCLE: 51-36][RPT: 35-34][ID: 33-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
+            uint64_t        extent_id;
             uint8_t         field_index; // position in request parameter list
-            uint8_t         list_type; // ancillary_list_type_t
+            uint8_t         data_type; // RecordObject::fieldType_t
+            uint8_t         data[];
+        } geo_anc_t;
+
+        /* Photon Ancillary Record */
+        typedef struct {
+            uint64_t        extent_id;
+            uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
             uint32_t        num_elements[PAIR_TRACKS_PER_GROUND_TRACK];
             uint8_t         data[];
-        } atlxx_anc_t;
+        } ph_anc_t;
 
         /* Statistics */
         typedef struct {
@@ -201,9 +211,8 @@ class Atl03Reader: public LuaObject
                 GTArray<double>     bckgrd_delta_time;
                 GTArray<float>      bckgrd_rate;
 
-                MgDictionary<GTDArray*> anc_geolocation;
-                MgDictionary<GTDArray*> anc_geocorrection;
-                MgDictionary<GTDArray*> anc_height;
+                MgDictionary<GTDArray*> anc_geo_data;
+                MgDictionary<GTDArray*> anc_photon_data;
         };
 
         /* Atl08 Classification Subclass */
@@ -220,14 +229,12 @@ class Atl03Reader: public LuaObject
                 SafeString          resource;
 
                 /* Generated Data */
-                uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK];    // [num_photons]
+                uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]
 
                 /* Read Data */
                 GTArray<int32_t>    atl08_segment_id;
                 GTArray<int32_t>    atl08_pc_indx;
                 GTArray<int8_t>     atl08_pc_flag;
-
-                MgDictionary<GTDArray*> anc_signal_photons;
         };
 
         /* YAPC Score Subclass */
@@ -242,7 +249,7 @@ class Atl03Reader: public LuaObject
                 void yapcV3         (info_t* info, Region* region, Atl03Data* data);
 
                 /* Generated Data */
-                uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK];    // [num_photons]
+                uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]
         };
 
         /*--------------------------------------------------------------------
@@ -286,7 +293,8 @@ class Atl03Reader: public LuaObject
         static void*        subsettingThread        (void* parm);
 
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
-        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, ancillary_list_type_t field_type, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats);
+        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats);
+        bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, List<int32_t>** photon_indices, stats_t* local_stats);
 
         static int          luaParms                (lua_State* L);
         static int          luaStats                (lua_State* L);

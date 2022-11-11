@@ -233,8 +233,8 @@ Atl06Dispatch::~Atl06Dispatch(void)
 {
     delete outQ;
     delete recObj;
-    if(parms->raster) delete parms->raster;
-    delete parms;
+
+    freeLuaIcesat2Parms(parms);
 }
 
 /*----------------------------------------------------------------------------

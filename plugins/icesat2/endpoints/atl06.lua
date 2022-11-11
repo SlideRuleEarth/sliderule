@@ -56,7 +56,7 @@ local atl06_algo = icesat2.atl06(rspq, parms)
 local atl06_disp = core.dispatcher(recq)
 atl06_disp:attach(atl06_algo, "atl03rec")
 atl06_disp:attach(except_pub, "exceptrec") -- exception records
-atl06_disp:attach(except_pub, "atlxxrec") -- ancillary records
+atl06_disp:attach(except_pub, "ga3rec") -- ancillary records
 atl06_disp:run()
 
 -- Post Initial Status Progress --

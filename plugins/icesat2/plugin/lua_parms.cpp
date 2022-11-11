@@ -86,10 +86,8 @@ const icesat2_parms_t DefaultParms = {
     .maximum_robust_dispersion  = ATL06_DEFAULT_MAX_ROBUST_DISPERSION,
     .extent_length              = ATL06_DEFAULT_EXTENT_LENGTH,
     .extent_step                = ATL06_DEFAULT_EXTENT_STEP,
-    .atl03_geolocation_fields   = NULL,
-    .atl03_geocorrection_fields = NULL,
-    .atl03_height_fields        = NULL,
-    .atl08_signal_photon_fields = NULL
+    .atl03_geo_fields           = NULL,
+    .atl03_photon_fields        = NULL
 };
 
 /******************************************************************************
@@ -712,24 +710,14 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
             if(provided) mlog(DEBUG, "Setting %s to %lf", LUA_PARM_EXTENT_STEP, parms->extent_step);
             lua_pop(L, 1);
 
-            lua_getfield(L, index, LUA_PARM_ATL03_GEOLOCATION_FIELDS);
-            get_lua_field_list (L, -1, &parms->atl03_geolocation_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL03 geolocation field array detected");
+            lua_getfield(L, index, LUA_PARM_ATL03_GEO_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl03_geo_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL03 geo field array detected");
             lua_pop(L, 1);
 
-            lua_getfield(L, index, LUA_PARM_ATL03_GEOCORRECTION_FIELDS);
-            get_lua_field_list (L, -1, &parms->atl03_geocorrection_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL03 geocorrection field array detected");
-            lua_pop(L, 1);
-
-            lua_getfield(L, index, LUA_PARM_ATL03_HEIGHT_FIELDS);
-            get_lua_field_list (L, -1, &parms->atl03_height_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL03 height field array detected");
-            lua_pop(L, 1);
-
-            lua_getfield(L, index, LUA_PARM_ATL08_SIGNAL_PHOTON_FIELDS);
-            get_lua_field_list (L, -1, &parms->atl08_signal_photon_fields, &provided);
-            if(provided) mlog(DEBUG, "ATL08 signal photon field array detected");
+            lua_getfield(L, index, LUA_PARM_ATL03_PHOTON_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl03_photon_fields, &provided);
+            if(provided) mlog(DEBUG, "ATL03 photon field array detected");
             lua_pop(L, 1);
         }
         catch(const RunTimeException& e)
@@ -740,4 +728,15 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
     }
 
     return parms;
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaIcesat2Parms
+ *----------------------------------------------------------------------------*/
+void freeLuaIcesat2Parms (const icesat2_parms_t* parms)
+{
+    if(parms->raster) delete parms->raster;
+    if(parms->atl03_geo_fields) delete parms->atl03_geo_fields;
+    if(parms->atl03_photon_fields) delete parms->atl03_photon_fields;
+    delete parms;
 }

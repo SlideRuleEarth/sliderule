@@ -82,14 +82,21 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"data",        RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const char* Atl03Reader::ancRecType = "atlxxrec";
-const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(atlxx_anc_t, extent_id),       1,  NULL, NATIVE_FLAGS},
-    {"field_index", RecordObject::UINT8,    offsetof(atlxx_anc_t, field_index),     1,  NULL, NATIVE_FLAGS},
-    {"list_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, list_type),       1,  NULL, NATIVE_FLAGS},
-    {"data_type",   RecordObject::UINT8,    offsetof(atlxx_anc_t, data_type),       1,  NULL, NATIVE_FLAGS},
-    {"num_elements",RecordObject::UINT32,   offsetof(atlxx_anc_t, num_elements),    2,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(atlxx_anc_t, data),            0,  NULL, NATIVE_FLAGS} // variable length
+const char* Atl03Reader::geoAncRecType = "ga3rec"; // geo ancillary atl03 record
+const RecordObject::fieldDef_t Atl03Reader::geoAncRecDef[] = {
+    {"extent_id",   RecordObject::UINT64,   offsetof(geo_anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
+    {"field_index", RecordObject::UINT8,    offsetof(geo_anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
+    {"data_type",   RecordObject::UINT8,    offsetof(geo_anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
+    {"data",        RecordObject::UINT8,    offsetof(geo_anc_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
+};
+
+const char* Atl03Reader::phAncRecType = "pa3rec"; // photon ancillary atl03 record
+const RecordObject::fieldDef_t Atl03Reader::phAncRecDef[] = {
+    {"extent_id",   RecordObject::UINT64,   offsetof(ph_anc_t, extent_id),      1,  NULL, NATIVE_FLAGS},
+    {"field_index", RecordObject::UINT8,    offsetof(ph_anc_t, field_index),    1,  NULL, NATIVE_FLAGS},
+    {"data_type",   RecordObject::UINT8,    offsetof(ph_anc_t, data_type),      1,  NULL, NATIVE_FLAGS},
+    {"num_elements",RecordObject::UINT32,   offsetof(ph_anc_t, num_elements),   2,  NULL, NATIVE_FLAGS},
+    {"data",        RecordObject::UINT8,    offsetof(ph_anc_t, data),           0,  NULL, NATIVE_FLAGS} // variable length
 };
 
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
@@ -135,22 +142,30 @@ int Atl03Reader::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::init (void)
 {
-    RecordObject::recordDefErr_t ex_rc = RecordObject::defineRecord(exRecType, "track", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(ex_rc != RecordObject::SUCCESS_DEF)
+    RecordObject::recordDefErr_t rc;
+
+    rc = RecordObject::defineRecord(exRecType, "track", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d", exRecType, ex_rc);
+        mlog(CRITICAL, "Failed to define %s: %d", exRecType, rc);
     }
 
-    RecordObject::recordDefErr_t ph_rc = RecordObject::defineRecord(phRecType, NULL, sizeof(photon_t), phRecDef, sizeof(phRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(ph_rc != RecordObject::SUCCESS_DEF)
+    rc = RecordObject::defineRecord(phRecType, NULL, sizeof(photon_t), phRecDef, sizeof(phRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d", phRecType, ph_rc);
+        mlog(CRITICAL, "Failed to define %s: %d", phRecType, rc);
     }
 
-    RecordObject::recordDefErr_t anc_rc = RecordObject::defineRecord(ancRecType, NULL, sizeof(atlxx_anc_t), ancRecDef, sizeof(ancRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(anc_rc != RecordObject::SUCCESS_DEF)
+    rc = RecordObject::defineRecord(geoAncRecType, NULL, sizeof(geo_anc_t), geoAncRecDef, sizeof(geoAncRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d", ancRecType, anc_rc);
+        mlog(CRITICAL, "Failed to define %s: %d", geoAncRecType, rc);
+    }
+
+    rc = RecordObject::defineRecord(phAncRecType, NULL, sizeof(ph_anc_t), phAncRecDef, sizeof(phAncRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", phAncRecType, rc);
     }
 }
 
@@ -281,8 +296,9 @@ Atl03Reader::~Atl03Reader (void)
     }
 
     delete outQ;
-    if(parms->raster) delete parms->raster;
-    delete parms;
+
+    freeLuaIcesat2Parms(parms);
+
     delete [] resource;
     delete [] resource08;
 
@@ -547,47 +563,41 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     delta_time          (info->reader->asset, info->reader->resource, info->track, "heights/delta_time",          &info->reader->context, 0, region->first_photon,  region->num_photons),
     bckgrd_delta_time   (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/delta_time",     &info->reader->context),
     bckgrd_rate         (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/bckgrd_rate",    &info->reader->context),
-    anc_geolocation     (EXPECTED_NUM_ANC_FIELDS),
-    anc_geocorrection   (EXPECTED_NUM_ANC_FIELDS),
-    anc_height          (EXPECTED_NUM_ANC_FIELDS)
+    anc_geo_data        (EXPECTED_NUM_ANC_FIELDS),
+    anc_photon_data     (EXPECTED_NUM_ANC_FIELDS)
 {
-    ancillary_list_t* geolocation_fields = info->reader->parms->atl03_geolocation_fields;
-    ancillary_list_t* geocorrection_fields = info->reader->parms->atl03_geocorrection_fields;
-    ancillary_list_t* height_fields = info->reader->parms->atl03_height_fields;
+    ancillary_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
+    ancillary_list_t* photon_fields = info->reader->parms->atl03_photon_fields;
 
     /* Read Ancillary Geolocation Fields */
-    if(geolocation_fields)
+    if(geo_fields)
     {
-        for(int i = 0; i < geolocation_fields->length(); i++)
+        for(int i = 0; i < geo_fields->length(); i++)
         {
-            const char* field_name = (*geolocation_fields)[i].getString();
-            SafeString dataset_name("geolocation/%s", field_name);
+            const char* field_name = (*geo_fields)[i].getString();
+            const char* group_name = "geolocation";
+            if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
+                (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
+                (field_name[0] == 'd' && field_name[1] == 'e' && field_name[2] == 'm') ||
+                (field_name[0] == 'd' && field_name[1] == 'a' && field_name[2] == 'c') )
+            {
+                group_name = "geophys_corr";
+            }
+            SafeString dataset_name("%s/%s", group_name, field_name);
             GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_segment, region->num_segments);
-            anc_geolocation.add(field_name, array);
+            anc_geo_data.add(field_name, array);
         }
     }
 
     /* Read Ancillary Geocorrection Fields */
-    if(geocorrection_fields)
+    if(photon_fields)
     {
-        for(int i = 0; i < geocorrection_fields->length(); i++)
+        for(int i = 0; i < photon_fields->length(); i++)
         {
-            const char* field_name = (*geocorrection_fields)[i].getString();
-            SafeString dataset_name("geophys_corr/%s", field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_segment, region->num_segments);
-            anc_geocorrection.add(field_name, array);
-        }
-    }
-
-    /* Read Ancillary Geocorrection Fields */
-    if(height_fields)
-    {
-        for(int i = 0; i < height_fields->length(); i++)
-        {
-            const char* field_name = (*height_fields)[i].getString();
+            const char* field_name = (*photon_fields)[i].getString();
             SafeString dataset_name("heights/%s", field_name);
             GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region->first_photon,  region->num_photons);
-            anc_height.add(field_name, array);
+            anc_photon_data.add(field_name, array);
         }
     }
 
@@ -607,38 +617,26 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     bckgrd_rate.join(H5_READ_TIMEOUT_MS, true);
 
     /* Join Ancillary Geolocation Reads */
-    if(geolocation_fields)
+    if(geo_fields)
     {
         GTDArray* array = NULL;
-        const char* dataset_name = anc_geolocation.first(&array);
+        const char* dataset_name = anc_geo_data.first(&array);
         while(dataset_name != NULL)
         {
             array->join(H5_READ_TIMEOUT_MS, true);
-            dataset_name = anc_geolocation.next(&array);
+            dataset_name = anc_geo_data.next(&array);
         }
     }
 
     /* Join Ancillary Geocorrection Reads */
-    if(geocorrection_fields)
+    if(photon_fields)
     {
         GTDArray* array = NULL;
-        const char* dataset_name = anc_geocorrection.first(&array);
+        const char* dataset_name = anc_photon_data.first(&array);
         while(dataset_name != NULL)
         {
             array->join(H5_READ_TIMEOUT_MS, true);
-            dataset_name = anc_geocorrection.next(&array);
-        }
-    }
-
-    /* Join Ancillary Geocorrection Reads */
-    if(height_fields)
-    {
-        GTDArray* array = NULL;
-        const char* dataset_name = anc_height.first(&array);
-        while(dataset_name != NULL)
-        {
-            array->join(H5_READ_TIMEOUT_MS, true);
-            dataset_name = anc_height.next(&array);
+            dataset_name = anc_photon_data.next(&array);
         }
     }
 }
@@ -658,34 +656,8 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     gt                  {NULL, NULL},
     atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",   &info->reader->context08),
     atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx", &info->reader->context08),
-    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08),
-    anc_signal_photons  (EXPECTED_NUM_ANC_FIELDS)
+    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08)
 {
-    ancillary_list_t* signal_photon_fields = info->reader->parms->atl08_signal_photon_fields;
-
-    /* Read Ancillary Signal Photon Fields */
-    if(enabled && signal_photon_fields)
-    {
-        for(int i = 0; i < signal_photon_fields->length(); i++)
-        {
-            const char* field_name = (*signal_photon_fields)[i].getString();
-            SafeString dataset_name("signal_photons/%s", field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource08, info->track, dataset_name.getString(), &info->reader->context08);
-            anc_signal_photons.add(field_name, array);
-        }
-    }
-
-    /* Join Ancillary Signal Photon Reads */
-    if(enabled && signal_photon_fields)
-    {
-        GTDArray* array = NULL;
-        const char* dataset_name = anc_signal_photons.first(&array);
-        while(dataset_name != NULL)
-        {
-            array->join(H5_READ_TIMEOUT_MS, true);
-            dataset_name = anc_signal_photons.next(&array);
-        }
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1126,6 +1098,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     Atl03Reader* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
     uint32_t extent_counter = 0;
+    List<int32_t>* photon_indices[PAIR_TRACKS_PER_GROUND_TRACK] = {NULL, NULL};
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
@@ -1172,6 +1145,15 @@ void* Atl03Reader::subsettingThread (void* parm)
             List<photon_t> extent_photons[PAIR_TRACKS_PER_GROUND_TRACK];
             int32_t extent_segment[PAIR_TRACKS_PER_GROUND_TRACK];
             bool extent_valid[PAIR_TRACKS_PER_GROUND_TRACK] = { true, true };
+
+            /* Ancillary Photon Fields */
+            bool index_photons = false;
+            if(reader->parms->atl03_photon_fields)
+            {
+                photon_indices[PRT_LEFT] = new List<int32_t>;
+                photon_indices[PRT_RIGHT] = new List<int32_t>;
+                index_photons = true;
+            }
 
             /* Select Photons for Extent from each Track */
             for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
@@ -1306,6 +1288,12 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 .yapc_score = yapc_score
                             };
                             extent_photons[t].add(ph);
+
+                            /* Index Photon for Ancillary Fields */
+                            if(index_photons)
+                            {
+                                photon_indices[t]->add(current_photon);
+                            }
                         } while(false);
                     }
                     else
@@ -1373,7 +1361,7 @@ void* Atl03Reader::subsettingThread (void* parm)
             {
                 /* Calculate Extent Record Size */
                 int num_photons = extent_photons[PRT_LEFT].length() + extent_photons[PRT_RIGHT].length();
-                int extent_bytes = sizeof(extent_t) + (sizeof(photon_t) * num_photons);
+                int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
                 /* Allocate and Initialize Extent Record */
                 RecordObject record(exRecType, extent_bytes);
@@ -1475,8 +1463,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                 reader->postRecord(&record, &local_stats);
 
                 /* Send Ancillary Records */
-                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geolocation_fields, ANC_GEOLOCATION, &atl03.anc_geolocation, extent_segment, &local_stats);
-                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geocorrection_fields, ANC_GEOCORRECTION, &atl03.anc_geocorrection, extent_segment, &local_stats);
+                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geo_fields, &atl03.anc_geo_data, extent_segment, &local_stats);
+                reader->sendAncillaryPhRecords(extent->extent_id, info->reader->parms->atl03_photon_fields, &atl03.anc_photon_data, &photon_indices[0], &local_stats);
             }
             else // neither pair in extent valid
             {
@@ -1516,6 +1504,10 @@ void* Atl03Reader::subsettingThread (void* parm)
     }
     reader->threadMut.unlock();
 
+    /* Clean Up Photon Indices */
+    if(photon_indices[PRT_LEFT]) delete photon_indices[PRT_LEFT];
+    if(photon_indices[PRT_RIGHT]) delete photon_indices[PRT_RIGHT];
+
     /* Clean Up Info */
     delete info;
 
@@ -1554,9 +1546,9 @@ bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
 }
 
 /*----------------------------------------------------------------------------
- * sendAncillaryRecords
+ * sendAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, ancillary_list_type_t field_type, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1566,20 +1558,65 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t*
             GTDArray* array = field_dict->get((*field_list)[i].getString());
 
             /* Create Ancillary Record */
-            int record_size = sizeof(atlxx_anc_t) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
-            RecordObject record(ancRecType, record_size);
-            atlxx_anc_t* data = (atlxx_anc_t*)record.getRecordData();
+            int record_size = offsetof(geo_anc_t, data) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
+            RecordObject record(geoAncRecType, record_size);
+            geo_anc_t* data = (geo_anc_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
             data->field_index = i;
-            data->list_type = field_type;
             data->data_type = array->gt[PRT_LEFT].elementType();
-            data->num_elements[PRT_LEFT] = 1;
-            data->num_elements[PRT_RIGHT] = 1;
 
             /* Populate Ancillary Data */
-            array->serialize(&data->data[0], start_element, data->num_elements);
+            uint32_t num_elements[PAIR_TRACKS_PER_GROUND_TRACK] = {1, 1};
+            array->serialize(&data->data[0], start_element, num_elements);
+
+            /* Post Ancillary Record */
+            postRecord(&record, local_stats);
+        }
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * sendAncillaryPhRecords
+ *----------------------------------------------------------------------------*/
+bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, List<int32_t>** photon_indices, stats_t* local_stats)
+{
+    if(field_list)
+    {
+        for(int i = 0; i < field_list->length(); i++)
+        {
+            /* Get Data Array */
+            GTDArray* array = field_dict->get((*field_list)[i].getString());
+
+            /* Create Ancillary Record */
+            int record_size =   offsetof(ph_anc_t, data) +
+                                (array->gt[PRT_LEFT].elementSize() * photon_indices[PRT_LEFT]->length()) +
+                                (array->gt[PRT_RIGHT].elementSize() * photon_indices[PRT_RIGHT]->length());
+            RecordObject record(phAncRecType, record_size);
+            ph_anc_t* data = (ph_anc_t*)record.getRecordData();
+
+            /* Populate Ancillary Record */
+            data->extent_id = extent_id;
+            data->field_index = i;
+            data->data_type = array->gt[PRT_LEFT].elementType();
+            data->num_elements[PRT_LEFT] = photon_indices[PRT_LEFT]->length();
+            data->num_elements[PRT_RIGHT] = photon_indices[PRT_RIGHT]->length();
+
+            /* Populate Ancillary Data */
+            uint64_t bytes_written = 0;
+            for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+            {
+                for(int p = 0; p < photon_indices[t]->length(); p++)
+                {
+                    bytes_written += array->gt[t].serialize(&data->data[bytes_written], photon_indices[t]->get(p), 1);
+                }
+            }
 
             /* Post Ancillary Record */
             postRecord(&record, local_stats);
