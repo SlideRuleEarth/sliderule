@@ -20,38 +20,7 @@ import time
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from sliderule import icesat2
-from utils import parse_command_line
-
-###############################################################################
-# LOCAL FUNCTIONS
-###############################################################################
-
-def process_atl06_algorithm(parms, asset):
-
-    # Latch Start Time
-    perf_start = time.perf_counter()
-
-    # Request ATL06 Data
-    gdf = icesat2.atl06p(parms, asset)
-
-    # Latch Stop Time
-    perf_stop = time.perf_counter()
-
-    # Build DataFrame of SlideRule Responses
-    num_elevations = len(gdf)
-
-    # Display Statistics
-    perf_duration = perf_stop - perf_start
-    print("Completed in {:.3f} seconds of wall-clock time".format(perf_duration))
-    if num_elevations > 0:
-        print("Reference Ground Tracks: {}".format(gdf["rgt"].unique()))
-        print("Cycles: {}".format(gdf["cycle"].unique()))
-        print("Received {} elevations".format(num_elevations))
-    else:
-        print("No elevations were returned")
-
-    # Return DataFrame
-    return gdf
+from utils import initialize_client
 
 ###############################################################################
 # MAIN
@@ -59,55 +28,35 @@ def process_atl06_algorithm(parms, asset):
 
 if __name__ == '__main__':
 
-    # Set Script Defaults
-    cfg = {
-        "url":          'localhost',
-        "organization": None,
-        "asset":        'atlas-local',
-        "region":       'examples/grandmesa.geojson',
-        "verbose":      True
-    }
-
-    # Parse Configuration Parameters
-    parse_command_line(sys.argv, cfg)
-
     # Configure Logging
     logging.basicConfig(level=logging.INFO)
 
-    # Region of Interest #
-    region = icesat2.toregion(cfg["region"])
-
-    # Configure SlideRule #
-    icesat2.init(cfg["url"], cfg["verbose"], organization=cfg["organization"])
-
-    # Build ATL06 Request #
-    parms = {
-        "poly": region["poly"],
-        "raster": region["raster"],
-        "srt": icesat2.SRT_LAND,
-        "cnf": icesat2.CNF_SURFACE_HIGH,
-        "atl08_class": ["atl08_ground"],
-        "ats": 10.0,
-        "cnt": 10,
-        "len": 40.0,
-        "res": 20.0,
-        "maxi": 1
-    }
-
-    # Parse Algorithm Parameters
-    parse_command_line(sys.argv, parms)
+    # Initialize Client #
+    parms, cfg = initialize_client(sys.argv)
 
     # Get ATL06 Elevations
-    atl06 = process_atl06_algorithm(parms, cfg["asset"])
+    tstart = time.perf_counter()
+    atl06 = icesat2.atl06p(parms, cfg["asset"])
+    perf_duration = time.perf_counter() - tstart
 
-    # Check Results Present
-    if len(atl06) == 0:
-        print("No ATL06 data available")
+    # Display Statistics
+    print("Completed in {:.3f} seconds of wall-clock time".format(perf_duration))
+    if len(atl06) > 0:
+        print("Reference Ground Tracks: {}".format(atl06["rgt"].unique()))
+        print("Cycles: {}".format(atl06["cycle"].unique()))
+        print("Received {} elevations".format(len(atl06)))
+    else:
+        print("No elevations were returned")
         sys.exit()
 
+    # Display Profile
+    print("\nTiming Profiles")
+    for key in icesat2.profiles:
+        print("{:16}: {:.6f} secs".format(key, icesat2.profiles[key]))
+
     # Calculate Extent
-    lons = [p["lon"] for p in region["poly"]]
-    lats = [p["lat"] for p in region["poly"]]
+    lons = [p["lon"] for p in parms["poly"]]
+    lats = [p["lat"] for p in parms["poly"]]
     lon_margin = (max(lons) - min(lons)) * 0.1
     lat_margin = (max(lats) - min(lats)) * 0.1
     extent = (min(lons) - lon_margin, max(lons) + lon_margin, min(lats) - lat_margin, max(lats) + lat_margin)

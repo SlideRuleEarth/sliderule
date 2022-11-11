@@ -27,7 +27,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
+import os
+import time
 import itertools
 import copy
 import json
@@ -43,8 +44,6 @@ from shapely.geometry import Polygon
 from sklearn.cluster import KMeans
 import sliderule
 from sliderule import version
-import os
-import time
 
 ###############################################################################
 # GLOBALS
@@ -99,20 +98,6 @@ SC_FORWARD = 1
 
 # gps-based epoch for delta times
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
-
-# ancillary list types
-ATL03_GEOLOCATION = 0
-ATL03_GEOCORRECTION = 1
-ATL03_HEIGHT = 2
-ATL08_SIGNAL_PHOTON = 3
-
-# ancillary list type matching
-ancillary_lists = {
-    ATL03_GEOLOCATION:      "atl03_geolocation_fields",
-    ATL03_GEOCORRECTION:    "atl03_geocorrection_fields",
-    ATL03_HEIGHT:           "atl03_height_fields",
-    ATL08_SIGNAL_PHOTON:    "atl08_signal_photon_fields"
-}
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -767,19 +752,18 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                 if 'atl06rec' in rsp['__rectype']:
                     elevation_records += rsp,
                     num_elevations += len(rsp['elevation'])
-                elif 'atlxxrec' in rsp['__rectype']:
-                    if rsp['list_type'] == ATL03_GEOLOCATION or rsp['list_type'] == ATL03_GEOCORRECTION:
-                        field_name = parm[ancillary_lists[rsp['list_type']]][rsp['field_index']]
-                        if field_name not in field_dictionary:
-                            field_dictionary[field_name] = {"extent_id": [], field_name: []}
-                        # Parse Ancillary Data
-                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
-                        # Add Left Pair Track Entry
-                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
-                        field_dictionary[field_name][field_name] += data[0],
-                        # Add Right Pair Track Entry
-                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
-                        field_dictionary[field_name][field_name] += data[1],
+                elif 'ga3rec' == rsp['__rectype']:
+                    field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                    if field_name not in field_dictionary:
+                        field_dictionary[field_name] = {"extent_id": [], field_name: []}
+                    # Parse Ancillary Data
+                    data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                    # Add Left Pair Track Entry
+                    field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
+                    field_dictionary[field_name][field_name] += data[0],
+                    # Add Right Pair Track Entry
+                    field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
+                    field_dictionary[field_name][field_name] += data[1],
             # Build Elevation Columns
             if num_elevations > 0:
                 # Initialize Columns
