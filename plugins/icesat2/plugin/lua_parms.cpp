@@ -87,7 +87,7 @@ const icesat2_parms_t DefaultParms = {
     .extent_length              = ATL06_DEFAULT_EXTENT_LENGTH,
     .extent_step                = ATL06_DEFAULT_EXTENT_STEP,
     .atl03_geo_fields           = NULL,
-    .atl03_photon_fields        = NULL
+    .atl03_ph_fields            = NULL
 };
 
 /******************************************************************************
@@ -715,8 +715,8 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
             if(provided) mlog(DEBUG, "ATL03 geo field array detected");
             lua_pop(L, 1);
 
-            lua_getfield(L, index, LUA_PARM_ATL03_PHOTON_FIELDS);
-            get_lua_field_list (L, -1, &parms->atl03_photon_fields, &provided);
+            lua_getfield(L, index, LUA_PARM_ATL03_PH_FIELDS);
+            get_lua_field_list (L, -1, &parms->atl03_ph_fields, &provided);
             if(provided) mlog(DEBUG, "ATL03 photon field array detected");
             lua_pop(L, 1);
         }
@@ -737,6 +737,6 @@ void freeLuaIcesat2Parms (const icesat2_parms_t* parms)
 {
     if(parms->raster) delete parms->raster;
     if(parms->atl03_geo_fields) delete parms->atl03_geo_fields;
-    if(parms->atl03_photon_fields) delete parms->atl03_photon_fields;
+    if(parms->atl03_ph_fields) delete parms->atl03_ph_fields;
     delete parms;
 }

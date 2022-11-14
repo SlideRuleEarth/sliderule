@@ -70,8 +70,8 @@ class Atl03Reader: public LuaObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
-        static const char* geoAncRecType;
-        static const RecordObject::fieldDef_t geoAncRecDef[];
+        static const char* extAncRecType;
+        static const RecordObject::fieldDef_t extAncRecDef[];
 
         static const char* phAncRecType;
         static const RecordObject::fieldDef_t phAncRecDef[];
@@ -116,17 +116,13 @@ class Atl03Reader: public LuaObject
             photon_t        photons[]; // zero length field
         } extent_t;
 
-        /* Ancillary Extent Record */
-        typedef struct {
-        } extent_anc_t;
-
-        /* Geo Ancillary Record */
+        /* Extent Ancillary Record */
         typedef struct {
             uint64_t        extent_id;
             uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
             uint8_t         data[];
-        } geo_anc_t;
+        } ext_anc_t;
 
         /* Photon Ancillary Record */
         typedef struct {

@@ -89,7 +89,7 @@
 #define LUA_PARM_QUALITY_IMPULSE_RESPONSE       "atl03_quality_impulse_response"
 #define LUA_PARM_QUALITY_TEP                    "atl03_quality_tep"
 #define LUA_PARM_ATL03_GEO_FIELDS               "atl03_geo_fields"
-#define LUA_PARM_ATL03_PHOTON_FIELDS            "atl03_photon_fields"
+#define LUA_PARM_ATL03_PH_FIELDS                "atl03_ph_fields"
 
 #define PAIR_TRACKS_PER_GROUND_TRACK            2
 #define PRT_LEFT                                0
@@ -227,7 +227,7 @@ typedef struct {
     double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
     double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
     ancillary_list_t*       atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
-    ancillary_list_t*       atl03_photon_fields;            // list of per-photon fields to associate with an extent
+    ancillary_list_t*       atl03_ph_fields;            // list of per-photon fields to associate with an extent
 } icesat2_parms_t;
 
 /******************************************************************************

@@ -82,15 +82,15 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"data",        RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const char* Atl03Reader::geoAncRecType = "ga3rec"; // geo ancillary atl03 record
-const RecordObject::fieldDef_t Atl03Reader::geoAncRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(geo_anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
-    {"field_index", RecordObject::UINT8,    offsetof(geo_anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
-    {"data_type",   RecordObject::UINT8,    offsetof(geo_anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(geo_anc_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
+const char* Atl03Reader::extAncRecType = "extrec"; // extent ancillary atl03 record
+const RecordObject::fieldDef_t Atl03Reader::extAncRecDef[] = {
+    {"extent_id",   RecordObject::UINT64,   offsetof(ext_anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
+    {"field_index", RecordObject::UINT8,    offsetof(ext_anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
+    {"data_type",   RecordObject::UINT8,    offsetof(ext_anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
+    {"data",        RecordObject::UINT8,    offsetof(ext_anc_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
 };
 
-const char* Atl03Reader::phAncRecType = "pa3rec"; // photon ancillary atl03 record
+const char* Atl03Reader::phAncRecType = "phrec"; // photon ancillary atl03 record
 const RecordObject::fieldDef_t Atl03Reader::phAncRecDef[] = {
     {"extent_id",   RecordObject::UINT64,   offsetof(ph_anc_t, extent_id),      1,  NULL, NATIVE_FLAGS},
     {"field_index", RecordObject::UINT8,    offsetof(ph_anc_t, field_index),    1,  NULL, NATIVE_FLAGS},
@@ -156,10 +156,10 @@ void Atl03Reader::init (void)
         mlog(CRITICAL, "Failed to define %s: %d", phRecType, rc);
     }
 
-    rc = RecordObject::defineRecord(geoAncRecType, NULL, sizeof(geo_anc_t), geoAncRecDef, sizeof(geoAncRecDef) / sizeof(RecordObject::fieldDef_t));
+    rc = RecordObject::defineRecord(extAncRecType, NULL, sizeof(ext_anc_t), extAncRecDef, sizeof(extAncRecDef) / sizeof(RecordObject::fieldDef_t));
     if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d", geoAncRecType, rc);
+        mlog(CRITICAL, "Failed to define %s: %d", extAncRecType, rc);
     }
 
     rc = RecordObject::defineRecord(phAncRecType, NULL, sizeof(ph_anc_t), phAncRecDef, sizeof(phAncRecDef) / sizeof(RecordObject::fieldDef_t));
@@ -567,7 +567,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     anc_photon_data     (EXPECTED_NUM_ANC_FIELDS)
 {
     ancillary_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
-    ancillary_list_t* photon_fields = info->reader->parms->atl03_photon_fields;
+    ancillary_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
 
     /* Read Ancillary Geolocation Fields */
     if(geo_fields)
@@ -1148,7 +1148,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
             /* Ancillary Photon Fields */
             bool index_photons = false;
-            if(reader->parms->atl03_photon_fields)
+            if(reader->parms->atl03_ph_fields)
             {
                 photon_indices[PRT_LEFT] = new List<int32_t>;
                 photon_indices[PRT_RIGHT] = new List<int32_t>;
@@ -1464,7 +1464,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                 /* Send Ancillary Records */
                 reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geo_fields, &atl03.anc_geo_data, extent_segment, &local_stats);
-                reader->sendAncillaryPhRecords(extent->extent_id, info->reader->parms->atl03_photon_fields, &atl03.anc_photon_data, &photon_indices[0], &local_stats);
+                reader->sendAncillaryPhRecords(extent->extent_id, info->reader->parms->atl03_ph_fields, &atl03.anc_photon_data, &photon_indices[0], &local_stats);
             }
             else // neither pair in extent valid
             {
@@ -1558,9 +1558,9 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t*
             GTDArray* array = field_dict->get((*field_list)[i].getString());
 
             /* Create Ancillary Record */
-            int record_size = offsetof(geo_anc_t, data) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
-            RecordObject record(geoAncRecType, record_size);
-            geo_anc_t* data = (geo_anc_t*)record.getRecordData();
+            int record_size = offsetof(ext_anc_t, data) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
+            RecordObject record(extAncRecType, record_size);
+            ext_anc_t* data = (ext_anc_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
