@@ -1,13 +1,21 @@
+import sys
+import time
 from sliderule import icesat2
+
+#
+# Globals
+#
+tstart = 0.0
 
 #
 # Parse Command Line
 #
 def parse_command_line(args, cfg):
+
     i = 1
-    while i < len(args):
+    for i in range(1,len(args)):
         for entry in cfg:
-            if i < len(args) and args[i] == '--'+entry:
+            if args[i] == '--'+entry:
                 if type(cfg[entry]) is str or cfg[entry] == None:
                     cfg[entry] = args[i + 1]
                 elif type(cfg[entry]) is list:
@@ -26,14 +34,13 @@ def parse_command_line(args, cfg):
                         cfg[entry] = True
                     elif args[i + 1] == "False" or args[i + 1] == "false":
                         cfg[entry] = False
-                i += 1
-        i += 1
-    return cfg
 
 #
 # Initialize Client
 #
 def initialize_client(args):
+
+    global tstart
 
     # Set Script Defaults
     cfg = {
@@ -52,21 +59,21 @@ def initialize_client(args):
         "res":                  20.0,
         "maxi":                 1,
         "atl03_geo_fields":     [],
-        "atl03_photon_fields":  [],
+        "atl03_ph_fields":      [],
         "profile":              True,
         "verbose":              True
     }
 
-    # Parse Configuration Parameters #
+    # Parse Configuration Parameters
     parse_command_line(args, cfg)
 
-    # Region of Interest #
+    # Region of Interest
     region = icesat2.toregion(cfg["region"])
 
-    # Configure SlideRule #
+    # Configure SlideRule
     icesat2.init(cfg["url"], cfg["verbose"], organization=cfg["organization"])
 
-    # Build Initial Parameters #
+    # Build Initial Parameters
     parms = {
         "poly": region['poly'],
         "srt":  cfg['srt'],
@@ -78,19 +85,43 @@ def initialize_client(args):
         "maxi": cfg['maxi'],
     }
 
-    # Add Raster #
+    # Add Raster
     if cfg["raster"]:
         parms["raster"] = region['raster']
 
-    # Add Ancillary Fields #
+    # Add Ancillary Fields
     if len(cfg['atl03_geo_fields']) > 0:
         parms['atl03_geo_fields'] = cfg['atl03_geo_fields']
-    if len(cfg['atl03_photon_fields']) > 0:
-        parms['atl03_photon_fields'] = cfg['atl03_photon_fields']
+    if len(cfg['atl03_ph_fields']) > 0:
+        parms['atl03_ph_fields'] = cfg['atl03_ph_fields']
 
-    # Add ATL08 Classification #
+    # Add ATL08 Classification
     if len(cfg['atl08_class']) > 0:
         parms['atl08_class'] = cfg['atl08_class']
 
-    # Return Parameters and Configuration #
+    # Latch Start Time
+    tstart = time.perf_counter()
+
+    # Return Parameters and Configuration
     return parms, cfg
+
+#
+# Display Statistics
+#
+def display_statistics(gdf, name):
+
+    global tstart
+
+    perf_duration = time.perf_counter() - tstart
+    print("Completed in {:.3f} seconds of wall-clock time".format(perf_duration))
+    if len(gdf) > 0:
+        print("Reference Ground Tracks: {}".format(gdf["rgt"].unique()))
+        print("Cycles: {}".format(gdf["cycle"].unique()))
+        print("Received {} {}".format(len(gdf), name))
+    else:
+        print("No {} were returned".format(name))
+        sys.exit(0)
+
+    print("\nTiming Profiles")
+    for key in icesat2.profiles:
+        print("{:16}: {:.6f} secs".format(key, icesat2.profiles[key]))

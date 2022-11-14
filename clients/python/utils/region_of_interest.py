@@ -16,11 +16,10 @@
 
 import sys
 import logging
-import time
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from sliderule import icesat2
-from utils import initialize_client
+from utils import initialize_client, display_statistics
 
 ###############################################################################
 # MAIN
@@ -35,24 +34,10 @@ if __name__ == '__main__':
     parms, cfg = initialize_client(sys.argv)
 
     # Get ATL06 Elevations
-    tstart = time.perf_counter()
     atl06 = icesat2.atl06p(parms, cfg["asset"])
-    perf_duration = time.perf_counter() - tstart
 
     # Display Statistics
-    print("Completed in {:.3f} seconds of wall-clock time".format(perf_duration))
-    if len(atl06) > 0:
-        print("Reference Ground Tracks: {}".format(atl06["rgt"].unique()))
-        print("Cycles: {}".format(atl06["cycle"].unique()))
-        print("Received {} elevations".format(len(atl06)))
-    else:
-        print("No elevations were returned")
-        sys.exit()
-
-    # Display Profile
-    print("\nTiming Profiles")
-    for key in icesat2.profiles:
-        print("{:16}: {:.6f} secs".format(key, icesat2.profiles[key]))
+    display_statistics(atl06, "elevations")
 
     # Calculate Extent
     lons = [p["lon"] for p in parms["poly"]]
