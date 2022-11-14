@@ -72,9 +72,20 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
-            double      value;
-            std::string filename;
-        } elevation_t;
+            GDALDataset    *dset;
+            GDALRasterBand *band;
+            std::string     fname;
+            double           value;
+
+            uint32_t rows;
+            uint32_t cols;
+            bbox_t   bbox;
+            double   cellsize;
+            int32_t  xblocksize;
+            int32_t  yblocksize;
+
+        } raster_info_t;
+
 
         /*--------------------------------------------------------------------
          * Methods
@@ -85,8 +96,7 @@ class ArcticDEMRaster: public LuaObject
         static int              luaCreate      (lua_State* L);
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
-        float                   sample         (double lon, double lat);
-        void                    samples        (double lon, double lat, List<elevation_t>& elist);
+        void                    samples        (double lon, double lat);
         virtual                ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
@@ -107,27 +117,27 @@ class ArcticDEMRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         ArcticDEMRaster     (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
-        bool  findNewRaster (OGRPoint* p);
-        float readRaster    (OGRPoint* p);
+        bool  findRasters   (OGRPoint* p);
+        bool  readRasters   (OGRPoint* p);
+        bool  openVrtDset   (const char* fname);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+        bool isstrip;
         std::string vrtfilename;
-        std::string rasterfname;
-        bool ismosaic;
         VRTDataset     *vrtdset;
         GDALRasterBand *vrtband;
-        GDALDataset    *rdset;
+        List<raster_info_t> rlist;
         double invgeot[6];
 
-        uint32_t rows;
-        uint32_t cols;
-        bbox_t bbox;
-        double cellsize;
-        int32_t xblocksize;
-        int32_t yblocksize;
+        // uint32_t rows;
+        // uint32_t cols;
+        // bbox_t bbox;
+        // double cellsize;
+        // int32_t xblocksize;
+        // int32_t yblocksize;
 
         OGRCoordinateTransformation *transf;
         OGRSpatialReference srcsrs;
@@ -142,7 +152,6 @@ class ArcticDEMRaster: public LuaObject
         static int luaDimensions(lua_State *L);
         static int luaBoundingBox(lua_State *L);
         static int luaCellSize(lua_State *L);
-        static int luaSample(lua_State *L);
         static int luaSamples(lua_State *L);
 };
 

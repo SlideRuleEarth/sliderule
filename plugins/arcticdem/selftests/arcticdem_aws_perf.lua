@@ -14,9 +14,14 @@ local assets = asset.loaddir() -- looks for asset_directory.csv in same director
 local asset_name = "arcticdem-local"
 local arcticdem_local = core.getbyname(asset_name)
 
-local lon = -74.60
-local lat = 82.86
 
+local  lon = -178.0
+local  lat =   51.7
+local _lon = lon
+local _lat = lat
+
+--[[
+--]]
 print('\n------------------\nTest: AWS mosaic\n------------')
 local dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
 local starttime = time.latch();
@@ -30,10 +35,6 @@ for i, v in ipairs(tbl) do
     print(i, el, fname)
 end
 print('ExecTime:', dtime * 1000, '\n')
-print('********** Exepcted result is:\n')
-print('1	440.092803955081	34_37_1_1_2m_v3.0_reg_dem.tif')
-
--- os.exit()
 
 local el, status
 local max_cnt = 1000000
@@ -41,29 +42,96 @@ local max_cnt = 1000000
 print('\n------------------\nTest: Reading', max_cnt, '  points\n------------')
 
 starttime = time.latch();
+intervaltime = starttime
+
 for i = 1, max_cnt
 do
-    el, status = dem:sample(lon, lat)
+    el, status = dem:samples(lon, lat)
     if status ~= true then
         print(i, status, el)
     end
-    if (i % 2600 == 0) then
-        lon = -74.60
-        lat =  82.86
+
+    -- Keep all points in the same mosaic raster (may be different for strips)
+    if (i % 2000 == 0) then
+        lon = _lon
+        lat = _lat
     else
         lon = lon + 0.0001
         lat = lat + 0.0001
     end
 
-    -- if (i % 50 == 0) then
-    --     print('Running:', i)
-    -- end
+    modulovalue = 100000
+    if (i % modulovalue == 0) then
+        midtime = time.latch();
+        dtime = midtime-intervaltime
+        print('Points eric read:', i, dtime*1000)
+        intervaltime = time.latch();
+    end
 
 end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
-print('ExecTime:', dtime*1000)
+print('\n')
+print(max_cnt, 'points read time', dtime*1000, 'msecs')
+
+-- os.exit()
+
+
+local lon = -178.0
+local lat =   51.7
+
+print('\n------------------\nTest: AWS strip\n------------')
+local dem = arcticdem.raster("strip", "NearestNeighbour", 0)
+local starttime = time.latch();
+local tbl, status = dem:samples(lon, lat)
+local stoptime = time.latch();
+local dtime = stoptime - starttime
+
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local fname = v["file"]
+    print(i, el, fname)
+end
+print('ExecTime:', dtime * 1000, '\n')
+
+local el, status
+local max_cnt = 1000000
+
+print('\n------------------\nTest: Reading', max_cnt, '  points\n------------')
+
+starttime = time.latch();
+intervaltime = starttime
+
+for i = 1, max_cnt
+do
+    el, status = dem:samples(lon, lat)
+    if status ~= true then
+        print(i, status, el)
+    end
+
+    -- if (i % 2000 == 0) then
+    --     lon = _lon
+    --     lat = _lat
+    -- else
+    --     lon = lon + 0.0001
+    --     lat = lat + 0.0001
+    -- end
+
+    modulovalue = 100000
+    if (i % modulovalue == 0) then
+        midtime = time.latch();
+        dtime = midtime-intervaltime
+        print('Points read:', i, dtime*1000)
+        intervaltime = time.latch();
+    end
+
+end
+
+stoptime = time.latch();
+dtime = stoptime-starttime
+print('\n')
+print(max_cnt, 'points read time', dtime*1000, 'msecs')
 
 
 os.exit()
