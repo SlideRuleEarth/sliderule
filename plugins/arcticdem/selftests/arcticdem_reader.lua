@@ -17,12 +17,12 @@ local arcticdem_local = core.getbyname(asset_name)
 -- Unit Test --
 
 -------------
-local dem, el, status
+local dem, tbl, status
 
-local lon = -74.60
-local lat = 82.86
+local lon = -178.0
+local lat =   51.7
 
-print('\n------------------\nTest: Strip multiple points in time\n------------')
+print('\n------------------\nTest: Strips\n------------')
 dem = arcticdem.raster("strip", "NearestNeighbour", 0)
 local starttime = time.latch();
 local tbl, status = dem:samples(lon, lat)
@@ -32,12 +32,12 @@ local dtime = stoptime - starttime
 for i, v in ipairs(tbl) do
     local el = v["value"]
     local fname = v["file"]
-    print(i, el, fname)
+    print(string.format("(%02d) %20f     %s", i, el, fname))
 end
 print('ExecTime:', dtime * 1000, '\n')
 
 
-print('\n------------------\nTest: Mosaic multiple points in time\n------------')
+print('\n------------------\nTest: Mosaic\n------------')
 dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
 starttime = time.latch();
 tbl, status = dem:samples(lon, lat)
@@ -47,7 +47,7 @@ dtime = stoptime - starttime
 for i, v in ipairs(tbl) do
     local el = v["value"]
     local fname = v["file"]
-    print(i, el, fname)
+    print(string.format("(%02d) %20f     %s", i, el, fname))
 end
 print('ExecTime:', dtime * 1000, '\n')
 
@@ -60,8 +60,15 @@ print('\n------------------\nTest: Sampling Elevations\n------------')
 for radius = 0, 5 do
     for i = 1, 8 do
         dem = arcticdem.raster("mosaic", samplingAlgs[i], radius)
-        el, status = dem:sample(lon, lat)
-        print(string.format("%20s (%02d)  %f", samplingAlgs[i], radius, el))
+        tbl, status = dem:samples(lon, lat)
+
+        local el, file
+        for i, v in ipairs(tbl) do
+            el = v["value"]
+            fname = v["file"]
+        end
+
+        print(string.format("%20s (%02d) %15f", samplingAlgs[i], radius, el))
     end
     print('\n-------------------------------------------')
 end
@@ -69,49 +76,54 @@ end
 -- os.exit()
 
 
+local max_cnt = 1000000
 
 for dems = 1, 2 do
 
-    local lon = -74.60
-    local lat =  82.86
+    local lon = -178.0
+    local lat =   51.7
+    local _lon = lon
+    local _lat = lat
     local el, status
     local dem
 
-    print('\n------------------\nTest: Reading milion points\n------------')
 
     if dems == 1 then
+        print('\n------------------\nTest: Mosaic Reading', max_cnt, ' different points\n------------')
         dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
     else
+        print('\n------------------\nTest: Strips Reading', max_cnt, ' the same point\n------------')
         dem = arcticdem.raster("strip", "NearestNeighbour", 0)
     end
 
     runner.check(dem ~= nil)
 
     local starttime = time.latch();
-    for i = 1, 1000000
+    for i = 1, max_cnt
     do
-        el, status = dem:sample(lon, lat)
+        tbl, status = dem:samples(lon, lat)
         if status ~= true then
-            print(i, status, el)
+            print(i, status)
         end
-        if (i % 1000 == 0) then
-            lon = -74.60
-            lat =  82.86
-        else
-            lon = lon + 0.0001
-            lat = lat + 0.0001
+
+        -- Do it only for mosaic, strips are too slow
+        if dems == 1 then
+            if (i % 2000 == 0) then
+                lon = _lon
+                lat = _lat
+            else
+                lon = lon + 0.0001
+                lat = lat + 0.0001
+            end
         end
+
     end
+
     local stoptime = time.latch();
     local dtime = stoptime-starttime
     print('ExecTime:',dtime*1000, '\n')
 
 
--- 'hole' in the raster
-    lat =  82.898092
-    lon = -74.418638
-    el, status = dem:sample(lon, lat)
-    print('hole in raster', status, el)
 
     print('\n------------------\nTest: dim\n------------------')
     local rows, cols = dem:dim()

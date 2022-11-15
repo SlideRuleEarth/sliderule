@@ -32,7 +32,7 @@ local dtime = stoptime - starttime
 for i, v in ipairs(tbl) do
     local el = v["value"]
     local fname = v["file"]
-    print(i, el, fname)
+    print(string.format("(%02d) %20f     %s", i, el, fname))
 end
 print('ExecTime:', dtime * 1000, '\n')
 
@@ -46,9 +46,9 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    el, status = dem:samples(lon, lat)
+    tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(i, status, el)
+        print(i, status)
     end
 
     -- Keep all points in the same mosaic raster (may be different for strips)
@@ -64,7 +64,7 @@ do
     if (i % modulovalue == 0) then
         midtime = time.latch();
         dtime = midtime-intervaltime
-        print('Points eric read:', i, dtime*1000)
+        print('Points read:', i, dtime*1000)
         intervaltime = time.latch();
     end
 
@@ -91,12 +91,13 @@ local dtime = stoptime - starttime
 for i, v in ipairs(tbl) do
     local el = v["value"]
     local fname = v["file"]
-    print(i, el, fname)
+    print(string.format("(%02d) %20f     %s", i, el, fname))
 end
 print('ExecTime:', dtime * 1000, '\n')
 
 local el, status
 local max_cnt = 1000000
+-- local max_cnt = 5000
 
 print('\n------------------\nTest: Reading', max_cnt, '  points\n------------')
 
@@ -105,9 +106,9 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    el, status = dem:samples(lon, lat)
+    tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(i, status, el)
+        print(i, status)
     end
 
     -- if (i % 2000 == 0) then

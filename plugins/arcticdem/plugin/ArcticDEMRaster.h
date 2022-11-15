@@ -74,15 +74,15 @@ class ArcticDEMRaster: public LuaObject
         typedef struct {
             GDALDataset    *dset;
             GDALRasterBand *band;
-            std::string     fname;
-            double           value;
+            std::string     fileName;
+            double          value;
 
             uint32_t rows;
             uint32_t cols;
             bbox_t   bbox;
-            double   cellsize;
-            int32_t  xblocksize;
-            int32_t  yblocksize;
+            double   cellSize;
+            int32_t  xBlockSize;
+            int32_t  yBlockSize;
 
         } raster_info_t;
 
@@ -119,30 +119,28 @@ class ArcticDEMRaster: public LuaObject
         ArcticDEMRaster     (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
         bool  findRasters   (OGRPoint* p);
         bool  readRasters   (OGRPoint* p);
-        bool  openVrtDset   (const char* fname);
+        bool  openVrtDset   (const char* fileName);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        bool isstrip;
-        std::string vrtfilename;
-        VRTDataset     *vrtdset;
-        GDALRasterBand *vrtband;
-        List<raster_info_t> rlist;
+        bool               isStrip;
+        std::string        vrtFileName;
+        VRTDataset         *vrtDset;
+        GDALRasterBand     *vrtBand;
+        List<raster_info_t> rastersList;
         double invgeot[6];
 
-        // uint32_t rows;
-        // uint32_t cols;
-        // bbox_t bbox;
-        // double cellsize;
-        // int32_t xblocksize;
-        // int32_t yblocksize;
+        uint32_t vrtRows;
+        uint32_t vrtCols;
+        double   vrtCellSize;
+        bbox_t   vrtBbox;
 
         OGRCoordinateTransformation *transf;
-        OGRSpatialReference srcsrs;
-        OGRSpatialReference trgsrs;
-        GDALRIOResampleAlg algorithm;
+        OGRSpatialReference srcSrs;
+        OGRSpatialReference trgSrs;
+        GDALRIOResampleAlg  sampleAlg;
         int32_t radius;
 
         /*--------------------------------------------------------------------
