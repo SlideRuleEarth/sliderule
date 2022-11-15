@@ -1,5 +1,5 @@
 #
-# Perform a proxy request for atl06-sr elevations
+# Perform a proxy request for photons
 #
 
 import sys
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parms, cfg = initialize_client(sys.argv)
 
     # Request ATL06 Data
-    gdf = icesat2.atl06p(parms, asset=cfg["asset"], resources=[cfg["resource"]])
+    gdf = icesat2.atl03sp(parms, asset=cfg["asset"], resources=[cfg["resource"]])
 
     # Display Statistics
-    display_statistics(gdf, "elevations")
+    display_statistics(gdf, "photons")

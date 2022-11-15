@@ -27,7 +27,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
+import os
+import time
 import itertools
 import copy
 import json
@@ -43,7 +44,6 @@ from shapely.geometry import Polygon
 from sklearn.cluster import KMeans
 import sliderule
 from sliderule import version
-import os
 
 ###############################################################################
 # GLOBALS
@@ -51,6 +51,9 @@ import os
 
 # create logger
 logger = logging.getLogger(__name__)
+
+# profiling times for each major function
+profiles = {}
 
 # default asset
 DEFAULT_ASSET="nsidc-s3"
@@ -93,10 +96,8 @@ RIGHT_PAIR = 1
 SC_BACKWARD = 0
 SC_FORWARD = 1
 
-# gps-based epoch for delta times #
+# gps-based epoch for delta times
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
-
-
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -113,7 +114,6 @@ ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 # Software is furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
-
 
 # WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
 EPSG_MERCATOR = "EPSG:4326"
@@ -315,29 +315,32 @@ def __get_values(data, dtype, size):
 #
 def __query_resources(parm, version, return_polygons=False):
 
+    # Latch Start Time
+    tstart = time.perf_counter()
+
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
         logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
         return []
 
-    # Submission Arguments for CRM #
+    # Submission Arguments for CMR
     kwargs = {}
     kwargs['version'] = version
     kwargs['return_polygons'] = return_polygons
 
-    # Pull Out Polygon #
+    # Pull Out Polygon
     if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
         kwargs['polygon'] = parm["clusters"]
     elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
         kwargs['polygon'] = parm["poly"]
 
-    # Pull Out Time Period #
+    # Pull Out Time Period
     if "t0" in parm:
         kwargs['time_start'] = parm["t0"]
     if "t1" in parm:
         kwargs['time_end'] = parm["t1"]
 
-    # Build Filters #
+    # Build Filters
     name_filter_enabled = False
     rgt_filter = '????'
     if "rgt" in parm:
@@ -354,19 +357,22 @@ def __query_resources(parm, version, return_polygons=False):
     if name_filter_enabled:
         kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
 
-    # Make CMR Request #
+    # Make CMR Request
     if return_polygons:
         resources,polygons = cmr(**kwargs)
     else:
         resources = cmr(**kwargs)
 
-    # Check Resources are Under Limit #
+    # Check Resources are Under Limit
     if(len(resources) > max_requested_resources):
         raise RuntimeError('Exceeded maximum requested granules: {} (current max is {})\nConsider using icesat2.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(resources))
 
-    # Return Resources #
+    # Update Profile
+    profiles[__query_resources.__name__] = time.perf_counter() - tstart
+
+    # Return Resources
     if return_polygons:
         return (resources,polygons)
     else:
@@ -384,7 +390,11 @@ def __emptyframe(**kwargs):
 #  Dictionary to GeoDataFrame
 #
 def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", **kwargs):
-    # set default keyword arguments
+
+    # Latch Start Time
+    tstart = time.perf_counter()
+
+    # Set Default Keyword Arguments
     kwargs['index_key'] = "time"
     kwargs['crs'] = EPSG_MERCATOR
 
@@ -415,6 +425,9 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     # Sort values for reproducible output despite async processing
     gdf.sort_index(inplace=True)
 
+    # Update Profile
+    profiles[__todataframe.__name__] = time.perf_counter() - tstart
+
     # Return GeoDataFrame
     return gdf
 
@@ -422,6 +435,10 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
 # GeoDataFrame to Polygon
 #
 def __gdf2poly(gdf):
+
+    # latch start time
+    tstart = time.perf_counter()
+
     # pull out coordinates
     hull = gdf.unary_union.convex_hull
     polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
@@ -436,6 +453,9 @@ def __gdf2poly(gdf):
             ccw_poly.append(polygon[i - 1])
         # replace region with counter-clockwise version #
         polygon = ccw_poly
+
+    # Update Profile
+    profiles[__gdf2poly.__name__] = time.perf_counter() - tstart
 
     # return polygon
     return polygon
@@ -704,6 +724,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         [622412 rows x 16 columns]
     '''
     try:
+        tstart = time.perf_counter()
+
         # Get List of Resources from CMR (if not supplied)
         if resources == None:
             resources = __query_resources(parm, version)
@@ -719,37 +741,62 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
+        tstart_flatten = time.perf_counter()
         columns = {}
-        if len(rsps) <= 0:
-            logger.debug("no response returned")
-        elif (rsps[0]['__rectype'] != 'atl06rec' and rsps[0]['__rectype'] != 'atl06rec-compact'):
-            logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
-        else:
-            # Determine Record Type
-            if rsps[0]['__rectype'] == 'atl06rec':
-                rectype = 'atl06rec.elevation'
-            else:
-                rectype = 'atl06rec-compact.elevation'
-            # Count Rows
-            num_rows = 0
+        elevation_records = []
+        num_elevations = 0
+        field_dictionary = {} # ['field_name'] = {"extent_id": [], field_name: []}
+        if len(rsps) > 0:
+            # Sort Records
             for rsp in rsps:
-                num_rows += len(rsp["elevation"])
-            # Build Columns
-            for field in rsps[0]["elevation"][0].keys():
-                fielddef = sliderule.get_definition(rectype, field)
-                if len(fielddef) > 0:
-                    columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-            # Populate Columns
-            elev_cnt = 0
-            for rsp in rsps:
-                for elevation in rsp["elevation"]:
-                    for field in elevation.keys():
-                        if field in columns:
+                if 'atl06rec' in rsp['__rectype']:
+                    elevation_records += rsp,
+                    num_elevations += len(rsp['elevation'])
+                elif 'extrec' == rsp['__rectype']:
+                    field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                    if field_name not in field_dictionary:
+                        field_dictionary[field_name] = {"extent_id": [], field_name: []}
+                    # Parse Ancillary Data
+                    data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                    # Add Left Pair Track Entry
+                    field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
+                    field_dictionary[field_name][field_name] += data[LEFT_PAIR],
+                    # Add Right Pair Track Entry
+                    field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
+                    field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+            # Build Elevation Columns
+            if num_elevations > 0:
+                # Initialize Columns
+                sample_elevation_record = elevation_records[0]["elevation"][0]
+                for field in sample_elevation_record.keys():
+                    fielddef = sliderule.get_definition(sample_elevation_record['__rectype'], field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.empty(num_elevations, fielddef["nptype"])
+                # Populate Columns
+                elev_cnt = 0
+                for record in elevation_records:
+                    for elevation in record["elevation"]:
+                        for field in columns:
                             columns[field][elev_cnt] = elevation[field]
-                    elev_cnt += 1
+                        elev_cnt += 1
+        else:
+            logger.debug("No response returned")
+
+        profiles["flatten"] = time.perf_counter() - tstart_flatten
+
+        # Build GeoDataFrame
+        gdf = __todataframe(columns, "delta_time", "lon", "lat")
+
+        # Merge Ancillary Fields
+        tstart_merge = time.perf_counter()
+        for field in field_dictionary:
+            df = geopandas.pd.DataFrame(field_dictionary[field])
+            gdf = gdf.merge(df, on='extent_id', how='inner').set_axis(gdf.index)
+        profiles["merge"] = time.perf_counter() - tstart_merge
 
         # Return Response
-        return __todataframe(columns, "delta_time", "lon", "lat")
+        profiles[atl06p.__name__] = time.perf_counter() - tstart
+        return gdf
 
     # Handle Runtime Errors
     except RuntimeError as e:
@@ -813,6 +860,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
+        tstart = time.perf_counter()
+
         # Get List of Resources from CMR (if not specified)
         if resources == None:
             resources = __query_resources(parm, version)
@@ -828,70 +877,127 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
+        tstart_flatten = time.perf_counter()
         columns = {}
-        if len(rsps) <= 0:
-            logger.debug("no response returned")
-        elif rsps[0]['__rectype'] != 'atl03rec':
-            logger.debug("invalid response returned: %s", rsps[0]['__rectype'])
+        sample_photon_record = None
+        photon_records = []
+        num_photons = 0
+        extent_dictionary = {}
+        extent_field_types = {} # ['field_name'] = nptype
+        photon_dictionary = {}
+        photon_field_types = {} # ['field_name'] = nptype
+        if len(rsps) > 0:
+            # Sort Records
+            for rsp in rsps:
+                extent_id = rsp['extent_id']
+                if 'atl03rec' in rsp['__rectype']:
+                    photon_records += rsp,
+                    num_photons += len(rsp['data'])
+                    if sample_photon_record == None and len(rsp['data']) > 0:
+                        sample_photon_record = rsp
+                elif 'extrec' == rsp['__rectype']:
+                    # Get Field Type
+                    field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                    if field_name not in extent_field_types:
+                        extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                    # Initialize Extent Dictionary Entry
+                    if extent_id not in extent_dictionary:
+                        extent_dictionary[extent_id] = {}
+                    # Save of Values per Extent ID per Field Name
+                    data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                    extent_dictionary[extent_id][field_name] = data
+                elif 'phrec' == rsp['__rectype']:
+                    # Get Field Type
+                    field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                    if field_name not in photon_field_types:
+                        photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                    # Initialize Extent Dictionary Entry
+                    if extent_id not in photon_dictionary:
+                        photon_dictionary[extent_id] = {}
+                    # Save of Values per Extent ID per Field Name
+                    data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                    photon_dictionary[extent_id][field_name] = data
+            # Build Elevation Columns
+            if num_photons > 0:
+                # Initialize Columns
+                for field in sample_photon_record.keys():
+                    fielddef = sliderule.get_definition("atl03rec", field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                for field in sample_photon_record["data"][0].keys():
+                    fielddef = sliderule.get_definition("atl03rec.photons", field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                for field in extent_field_types.keys():
+                    columns[field] = numpy.empty(num_photons, extent_field_types[field])
+                for field in photon_field_types.keys():
+                    columns[field] = numpy.empty(num_photons, photon_field_types[field])
+                # Populate Columns
+                ph_cnt = 0
+                for record in photon_records:
+                    ph_index = 0
+                    pair = 0
+                    left_cnt = record["count"][0]
+                    extent_id = record['extent_id']
+                    # Get Extent Fields to Add to Extent
+                    extent_field_dictionary = {}
+                    if extent_id in extent_dictionary:
+                        extent_field_dictionary = extent_dictionary[extent_id]
+                    # Get Photon Fields to Add to Extent
+                    photon_field_dictionary = {}
+                    if extent_id in photon_dictionary:
+                        photon_field_dictionary = photon_dictionary[extent_id]
+                    # For Each Photon in Extent
+                    for photon in record["data"]:
+                        if ph_index >= left_cnt:
+                            pair = 1
+                        # Add per Extent Fields
+                        for field in record.keys():
+                            if field in columns:
+                                if field == "count":
+                                    columns[field][ph_cnt] = pair # count gets changed to pair id
+                                elif type(record[field]) is tuple:
+                                    columns[field][ph_cnt] = record[field][pair]
+                                else:
+                                    columns[field][ph_cnt] = record[field]
+                        # Add per Photon Fields
+                        for field in photon.keys():
+                            if field in columns:
+                                columns[field][ph_cnt] = photon[field]
+                        # Add Ancillary Extent Fields
+                        for field in extent_field_dictionary:
+                            columns[field][ph_cnt] = extent_field_dictionary[field][pair]
+                        # Add Ancillary Extent Fields
+                        for field in photon_field_dictionary:
+                            columns[field][ph_cnt] = photon_field_dictionary[field][ph_index]
+                        # Goto Next Photon
+                        ph_cnt += 1
+                        ph_index += 1
+                # Rename Count Column to Pair Column
+                columns["pair"] = columns.pop("count")
+
+                profiles["flatten"] = time.perf_counter() - tstart_flatten
+
+                # Create DataFrame
+                gdf = __todataframe(columns, "delta_time", "longitude", "latitude")
+
+                # Calculate Spot Column
+                gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+
+                # Return Response
+                profiles[atl03sp.__name__] = time.perf_counter() - tstart
+                return gdf
+            else:
+                logger.debug("No photons returned")
         else:
-            # Count Rows
-            num_rows = 0
-            for rsp in rsps:
-                num_rows += len(rsp["data"])
-            # Build Columns
-            for rsp in rsps:
-                if len(rsp["data"]) > 0:
-                    # Allocate Columns
-                    for field in rsp.keys():
-                        fielddef = sliderule.get_definition("atl03rec", field)
-                        if len(fielddef) > 0:
-                            columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-                    for field in rsp["data"][0].keys():
-                        fielddef = sliderule.get_definition("atl03rec.photons", field)
-                        if len(fielddef) > 0:
-                            columns[field] = numpy.empty(num_rows, fielddef["nptype"])
-                    break
-            # Populate Columns
-            ph_cnt = 0
-            for rsp in rsps:
-                ph_index = 0
-                pair = 0
-                left_cnt = rsp["count"][0]
-                for photon in rsp["data"]:
-                    if ph_index >= left_cnt:
-                        pair = 1
-                    for field in rsp.keys():
-                        if field in columns:
-                            if field == "count":
-                                columns[field][ph_cnt] = pair
-                            elif type(rsp[field]) is tuple:
-                                columns[field][ph_cnt] = rsp[field][pair]
-                            else:
-                                columns[field][ph_cnt] = rsp[field]
-                    for field in photon.keys():
-                        if field in columns:
-                            columns[field][ph_cnt] = photon[field]
-                    ph_cnt += 1
-                    ph_index += 1
-            # Rename Count Column to Pair Column
-            columns["pair"] = columns.pop("count")
-
-            # Create DataFrame
-            df = __todataframe(columns, "delta_time", "longitude", "latitude")
-
-            # Calculate Spot Column
-            df['spot'] = df.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
-
-            # Return Response
-            return df
-
-        # Error Case
-        return __emptyframe()
+            logger.debug("No response returned")
 
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return __emptyframe()
+
+    # Error or No Data
+    return __emptyframe()
 
 #
 #  H5
@@ -945,9 +1051,11 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         >>> longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
         >>> df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
     '''
+    tstart = time.perf_counter()
     datasets = [ { "dataset": dataset, "datatype": datatype, "col": col, "startrow": startrow, "numrows": numrows } ]
     values = h5p(datasets, resource, asset=asset)
     if len(values) > 0:
+        profiles[h5.__name__] = time.perf_counter() - tstart
         return values[dataset]
     else:
         return numpy.empty(0)
@@ -1007,6 +1115,9 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
          '/gt1r/land_ice_segments/h_li': array([45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948]),
          '/gt3r/land_ice_segments/h_li': array([45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806])}
     '''
+    # Latch Start Time
+    tstart = time.perf_counter()
+
     # Baseline Request
     rqst = {
         "asset" : asset,
@@ -1025,6 +1136,9 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     results = {}
     for result in rsps:
         results[result["dataset"]] = __get_values(result["data"], result["datatype"], result["size"])
+
+    # Update Profiles
+    profiles[h5p.__name__] = time.perf_counter() - tstart
 
     # Return Results
     return results
@@ -1078,6 +1192,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         >>> atl06 = icesat2.atl06p(parms)
     '''
 
+    tstart = time.perf_counter()
     tempfile = "temp.geojson"
 
     if isinstance(source, geopandas.GeoDataFrame):
@@ -1160,8 +1275,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
                 c_poly = __gdf2poly(c_gdf)
                 clusters.append(c_poly)
 
+    # update timing profiles
+    profiles[toregion.__name__] = time.perf_counter() - tstart
 
-    # return region #
+    # return region
     return {
         "gdf": gdf,
         "poly": polygon, # convex hull of polygons
