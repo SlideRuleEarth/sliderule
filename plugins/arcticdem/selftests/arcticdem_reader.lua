@@ -57,7 +57,7 @@ local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "L
 
 print('\n------------------\nTest: Sampling Elevations\n------------')
 
-for radius = 0, 5 do
+for radius = 0, 8 do
     for i = 1, 8 do
         dem = arcticdem.raster("mosaic", samplingAlgs[i], radius)
         tbl, status = dem:samples(lon, lat)

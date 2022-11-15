@@ -128,7 +128,6 @@ int ArcticDEMRaster::luaCreate( lua_State* L )
     }
 }
 
-
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
@@ -144,6 +143,7 @@ ArcticDEMRaster* ArcticDEMRaster::create( lua_State* L, int index )
 }
 
 
+
 static void getVrtName( double lon, double lat, std::string& vrtFile )
 {
     int ilat = floor(lat);
@@ -155,6 +155,7 @@ static void getVrtName( double lon, double lat, std::string& vrtFile )
                std::to_string(abs(ilon)) +
                ".vrt";
 }
+
 
 /*----------------------------------------------------------------------------
  * samples
@@ -168,20 +169,19 @@ void ArcticDEMRaster::samples( double lon, double lat )
         double _lon = p.getX();
         double _lat = p.getY();
 
-        /* Is point in VRT raster? */
+        /* Is point in VRT dataset? */
         if (vrtDset &&
             (_lon >= vrtBbox.lon_min) &&
             (_lon <= vrtBbox.lon_max) &&
             (_lat >= vrtBbox.lat_min) &&
             (_lat <= vrtBbox.lat_max))
         {
-            bool foundSample = false;
+            bool pointInRasters = false;
 
-            /* Point is in VRT dataset */
             if (rastersList.length() > 0)
-                foundSample = readRasters(&p);
+                pointInRasters = readRasters(&p);
 
-            if (!foundSample)
+            if (!pointInRasters)
             {
                 if (findRasters(&p))
                     readRasters(&p);
@@ -189,6 +189,7 @@ void ArcticDEMRaster::samples( double lon, double lat )
         }
         else
         {
+             /* Point not in VRT dataset */
             if (isStrip)
             {
                 /* Find VRT file for scene with this point */
@@ -201,9 +202,15 @@ void ArcticDEMRaster::samples( double lon, double lat )
                 if (findRasters(&p))
                     readRasters(&p);
             }
+            else
+            {
+                /* Do nothing, user error, wrong lon/lat for ArcticDem area */
+            }
         }
     }
 }
+
+
 
 /*----------------------------------------------------------------------------
  * Destructor
@@ -366,6 +373,22 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
                 }
                 else
                 {
+#if 0
+     FROM gdal.h
+     What are these kernels? How do I use them to read one pixel with resampling?
+     Below is an attempt to do it but I am 99.999% sure it is wrong.
+
+    /*! Nearest neighbour */                            GRIORA_NearestNeighbour = 0,
+    /*! Bilinear (2x2 kernel) */                        GRIORA_Bilinear = 1,
+    /*! Cubic Convolution Approximation (4x4 kernel) */ GRIORA_Cubic = 2,
+    /*! Cubic B-Spline Approximation (4x4 kernel) */    GRIORA_CubicSpline = 3,
+    /*! Lanczos windowed sinc interpolation (6x6 kernel) */ GRIORA_Lanczos = 4,
+    /*! Average */                                      GRIORA_Average = 5,
+    /*! Mode (selects the value which appears most often of all the sampled points) */
+                                                        GRIORA_Mode = 6,
+    /*! Gauss blurring */                               GRIORA_Gauss = 7
+#endif
+
                     float rbuf[1] = {0};
                     int _cellsize = rinfo.cellSize;
                     int radius_in_meters = ((radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
@@ -391,6 +414,7 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
                     rinfo.value = rbuf[0];
                     rastersList.set(i, rinfo);
                     mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
+                    // print2term("Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
                 }
             }
             else
