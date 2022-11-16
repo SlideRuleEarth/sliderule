@@ -57,8 +57,8 @@ class HttpClient: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_RQST_BUF_LEN   = 65536;
-        static const int MAX_RSPS_BUF_LEN   = 65536;
+        static const int MAX_RQST_BUF_LEN   = 0x10000; // 64K
+        static const int MAX_RSPS_BUF_LEN   = 0x100000; // 1M
         static const int MAX_UNBOUNDED_RSPS = 1048576;
         static const int MAX_URL_LEN        = 1024;
         static const int MAX_TIMEOUTS       = 5;

@@ -326,6 +326,8 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
             {
                 int line_start = 0;
                 int line_term = 0;
+                bytes_read += rsps_buf_index;
+                rsps_buf_index = 0;
                 while(line_start < bytes_read)
                 {
                     //////////////////////////
@@ -378,7 +380,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
 
                             /* Go To Next Header */
                             line_start = line_term;
-                            rsps_buf_index = 0;
                             header_num++;
                         }
                         else if(line_term < 0) // end of headers reached
@@ -392,7 +393,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             int bytes_remaining = bytes_read - line_start;
                             LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
-                            break;
+                            line_start += bytes_remaining;
                         }
                     }
                     //////////////////////////
@@ -425,7 +426,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                             int bytes_remaining = bytes_read - line_start;
                             LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
-                            break;
+                            line_start += bytes_remaining;
                         }
                     }
                     //////////////////////////
@@ -457,7 +458,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         rsps_index += rsps_bytes;
                         line_start += rsps_bytes;
 
-                        /* Check if Respose Complete */
+                        /* Check if Response Complete */
                         if(!unbounded_content)
                         {
                             content_remaining -= rsps_bytes;
@@ -533,12 +534,12 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing trailer");
                         }
-                        else // chunk header not complete
+                        else // chunk trailer not complete
                         {
                             int bytes_remaining = bytes_read - line_start;
                             LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
-                            break;
+                            line_start += bytes_remaining;
                         }
                     }
                     //////////////////////////
