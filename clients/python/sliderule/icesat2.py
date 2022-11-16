@@ -489,14 +489,14 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
         >>> from sliderule import icesat2
         >>> icesat2.init("my-sliderule-service.my-company.com", True)
     '''
+    set_max_resources(max_resources)
     if verbose:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
-    sliderule.check_version(plugins=['icesat2'])
     sliderule.authenticate(organization)
-    set_max_resources(max_resources)
+    sliderule.check_version(plugins=['icesat2'])
 
 #
 #  Set Maximum Resources
