@@ -57,20 +57,22 @@
 do                                                                            \
 {                                                                             \
     assert(p);                                                                \
-    if ((p) == NULL)                                                          \
+    if ((p) == nullptr)                                                       \
     {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR, "NULL pointer detected"); \
+        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
+              "NULL pointer detected (%s():%d)", __FUNCTION__, __LINE__);     \
     }                                                                         \
 } while (0)
 
 
-#define CHECK_GDALERR(e)                                                          \
-do                                                                                \
-{                                                                                 \
-    if ((e))   /* CPLErr and OGRErr types have 0 for no error  */                 \
-    {                                                                             \
-        throw RunTimeException(CRITICAL, RTE_ERROR, "GDAL ERROR detected: %d", e);\
-    }                                                                             \
+#define CHECK_GDALERR(e)                                                      \
+do                                                                            \
+{                                                                             \
+    if ((e))   /* CPLErr and OGRErr types have 0 for no error  */             \
+    {                                                                         \
+        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
+              "GDAL ERROR detected: %d (%s():%d)", e, __FUNCTION__, __LINE__);\
+    }                                                                         \
 } while (0)
 
 
@@ -311,7 +313,7 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error creating ArcticDEMRaster: %s", e.what());
+        mlog(e.level(), "Error creating raster: %s", e.what());
     }
 
     return foundRaster;
@@ -354,7 +356,13 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
                     uint32_t xblk = col / rinfo.xBlockSize;
                     uint32_t yblk = row / rinfo.yBlockSize;
 
-                    GDALRasterBlock *block = rinfo.band->GetLockedBlockRef(xblk, yblk, false);
+                    GDALRasterBlock *block = nullptr;
+                    int cnt = 1;
+                    do
+                    {
+                        /* Retry read if error */
+                        block = rinfo.band->GetLockedBlockRef(xblk, yblk, false);
+                    } while ( block == nullptr && cnt-- );
                     CHECKPTR(block);
 
                     float *p = (float *)block->GetDataRef();
@@ -409,7 +417,13 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
                     GDALRasterIOExtraArg args;
                     INIT_RASTERIO_EXTRA_ARG(args);
                     args.eResampleAlg = sampleAlg;
-                    CPLErr err = rinfo.band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float32, 0, 0, &args);
+                    CPLErr err = CE_None;
+                    int cnt = 1;
+                    do
+                    {
+                        /* Retry read if error */
+                        err = rinfo.band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float32, 0, 0, &args);
+                    } while ( err != CE_None && cnt-- );
                     CHECK_GDALERR(err);
                     rinfo.value = rbuf[0];
                     rastersList.set(i, rinfo);
@@ -427,7 +441,7 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error reading ArcticDEMRaster: %s", e.what());
+        mlog(e.level(), "Error reading raster: %s", e.what());
     }
 
     return containsPoint;

@@ -111,13 +111,13 @@ do
         print(i, status)
     end
 
-    -- if (i % 2000 == 0) then
-    --     lon = _lon
-    --     lat = _lat
-    -- else
-    --     lon = lon + 0.0001
-    --     lat = lat + 0.0001
-    -- end
+    if (i % 2000 == 0) then
+        lon = _lon
+        lat = _lat
+    else
+        lon = lon + 0.0001
+        lat = lat + 0.0001
+    end
 
     modulovalue = 100000
     if (i % modulovalue == 0) then
