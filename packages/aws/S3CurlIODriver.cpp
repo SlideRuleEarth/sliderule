@@ -163,10 +163,6 @@ static CURL* initializeRequest (SafeString& url, headers_t headers, write_cb_t w
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, write_parm);
     }
-    else
-    {
-        mlog(CRITICAL, "cURL failed to initialize");
-    }
 
     /* Return Handle */
     return curl;
@@ -437,9 +433,17 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                 mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
             }
         }
+        else
+        {
+            mlog(CRITICAL, "cURL called failed when performing request: %d", res);
+        }
 
         /* Clean Up cURL */
         curl_easy_cleanup(curl);
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to initialize cURL request");
     }
 
     /* Clean Up Headers */
@@ -448,7 +452,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL fixed request to S3 failed");
     }
 
     /* Return Success */
@@ -521,9 +525,17 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
             }
         }
+        else
+        {
+            mlog(CRITICAL, "cURL called failed when performing request: %d", res);
+        }
 
         /* Clean Up cURL */
         curl_easy_cleanup(curl);
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to initialize cURL request");
     }
 
     /* Clean Up Headers */
@@ -538,7 +550,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL streaming request to S3 failed");
     }
 
     /* Return Success */
@@ -617,7 +629,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL request to S3 failed");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL file request to S3 failed");
     }
 
     /* Return Success */

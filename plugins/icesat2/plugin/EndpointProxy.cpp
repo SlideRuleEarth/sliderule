@@ -184,7 +184,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     }
 
     /* Free Node List (individual nodes still remain) */
-    delete nodes;
+    if(nodes) delete nodes;
 
     /* Start Collator Thread */
     collatorPid = new Thread(collatorThread, this);

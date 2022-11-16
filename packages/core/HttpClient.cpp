@@ -642,6 +642,10 @@ HttpClient::status_line_t HttpClient::parseStatusLine (int start, int term)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid code: %s", code_str);
         }
     }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse status line");
+    }
 
     /* Return Code */
     return status;

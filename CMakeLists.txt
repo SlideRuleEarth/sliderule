@@ -74,7 +74,7 @@ endif()
 # Version Information #
 
 file(STRINGS ${PROJECT_SOURCE_DIR}/version.txt TGTVER)
-string(REPLACE "v" "" TGTVER ${TGTVER})
+string(REPLACE "v" "" LIBVER ${TGTVER})
 
 # C++ Version #
 
@@ -116,7 +116,7 @@ endif()
 
 # Target Properties #
 
-set_target_properties (slideruleLib PROPERTIES VERSION ${TGTVER})
+set_target_properties (slideruleLib PROPERTIES VERSION ${LIBVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
 set_target_properties (slideruleLib PROPERTIES CXX_STANDARD ${CXX_VERSION})

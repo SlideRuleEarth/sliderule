@@ -273,11 +273,11 @@ local function api_lock(applet)
                 i = i + 1
             end
         else
-            core.log(core.warning, string.format("No addresses found in registry %s", service))
+            core.log(core.err, string.format("No addresses found in registry %s", service))
             error_count = error_count + 1
         end
     else
-        core.log(core.warning, string.format("Service %s not found", service))
+        core.log(core.err, string.format("Service %s not found", service))
         error_count = error_count + 1
     end
 
@@ -345,7 +345,7 @@ local function api_unlock(applet)
             -- remove transaction from transaction table
             TransactionTable[id] = nil
         else
-            core.log(core.warning, string.format("Missing transaction id %d", id))
+            core.log(core.err, string.format("Missing transaction id %d", id))
             error_count = error_count + 1
         end
     end
@@ -453,7 +453,7 @@ local function api_status(applet)
             num_addresses = num_addresses + 1
         end
     else
-        core.log(core.warning, string.format("Service %s not found", service))
+        core.log(core.err, string.format("Service %s not found", service))
         error_count = error_count + 1
     end
 
@@ -554,10 +554,10 @@ local function orchestrator_next_node(txn, service)
             -- choose address randomly from set of minimally locked members
             return sorted_addresses[math.random(1, num_members_with_min_locks)]
         else
-            core.log(core.warning, string.format("No nodes available on service %s", service))
+            core.log(core.err, string.format("No nodes available on service %s", service))
         end
     else
-        core.log(core.warning, string.format("Unknown service %s", service))
+        core.log(core.err, string.format("Unknown service %s", service))
     end
     return "127.0.0.1:9081"
 end
