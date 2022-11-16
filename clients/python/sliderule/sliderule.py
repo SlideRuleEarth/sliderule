@@ -35,8 +35,9 @@ import struct
 import ctypes
 import time
 import logging
-from datetime import datetime, timedelta
 import numpy
+from datetime import datetime, timedelta
+from sliderule import version
 
 ###############################################################################
 # GLOBALS
@@ -367,7 +368,7 @@ __callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec}
 ###############################################################################
 
 #
-#  SOURCE
+#  source
 #
 def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     '''
@@ -455,7 +456,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     return rsps
 
 #
-#  SET_URL
+#  set_url
 #
 def set_url (url):
     '''
@@ -477,7 +478,7 @@ def set_url (url):
     service_url = url
 
 #
-#  SET_VERBOSE
+#  set_verbose
 #
 def set_verbose (enable):
     '''
@@ -511,7 +512,7 @@ def set_verbose (enable):
     verbose = (enable == True)
 
 #
-# SET_REQUEST_TIMEOUT
+# set_rqst_timeout
 #
 def set_rqst_timeout (timeout):
     '''
@@ -536,7 +537,7 @@ def set_rqst_timeout (timeout):
         raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
 
 #
-# UPDATE_AVAIABLE_SERVERS
+# update_available_servers
 #
 def update_available_servers (desired_nodes=None, time_to_live=None):
     '''
@@ -582,7 +583,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
     return available_servers, available_servers
 
 #
-# AUTHENTICATE
+# authenticate
 #
 def authenticate (ps_organization, ps_username=None, ps_password=None):
     '''
@@ -659,7 +660,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
     return login_status
 
 #
-# GPS2UTC
+# gps2utc
 #
 def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
     '''
@@ -695,7 +696,7 @@ def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
         return utc_timestamp
 
 #
-# GET DEFINITION
+# get_definition
 #
 def get_definition (rectype, fieldname):
     '''
@@ -725,3 +726,62 @@ def get_definition (rectype, fieldname):
         return basictypes[recdef[fieldname]["type"]]
     else:
         return {}
+
+#
+# get_version
+#
+def get_version ():
+    '''
+    Get the version information for the running servers and Python client
+
+    Returns
+    -------
+    dict
+        dictionary of version information
+    '''
+    rsps = source("version", {})
+    rsps["client"] = {"version": version.full_version}
+    return rsps
+
+#
+# check_version
+#
+def check_version (plugins=[]):
+    '''
+    Check that the version of the client matches the version of the server and any additionally requested plugins
+
+    Parameters
+    ----------
+    plugins:    list
+                list of package names (as strings) to check the version on
+
+    Returns
+    -------
+    bool
+        True if at least minor version matches; False if major or minor version doesn't match
+    '''
+    status = True
+    info = get_version()
+    # populate version info
+    versions = {}
+    for entity in ['server', 'client'] + plugins:
+        s = info[entity]['version'][1:].split('.')
+        versions[entity] = (int(s[0]), int(s[1]), int(s[2]))
+    # check major version mismatches
+    if versions['server'][0] != versions['client'][0]:
+        raise RuntimeError("Client (version {}) is incompatible with the server (version {})".format(versions['server'], versions['client']))
+    else:
+        for pkg in plugins:
+            if versions[pkg][0] != versions['client'][0]:
+                raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['server'], pkg, versions['icesat2']))
+    # check minor version mismatches
+    if versions['server'][1] > versions['client'][1]:
+        logger.warning("Client (version {}) is out of date with the server (version {})".format(versions['server'], versions['client']))
+        status = False
+    else:
+        for pkg in plugins:
+            if versions[pkg][1] > versions['client'][1]:
+                logger.warning("Client (version {}) is out of date with the {} plugin (version {})".format(versions['server'], pkg, versions['client']))
+                status = False
+    # return if version check is successful
+    return status

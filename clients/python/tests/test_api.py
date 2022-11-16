@@ -118,7 +118,7 @@ class TestApi:
             "rectype": "atl06rec.elevation",
         }
         d = sliderule.source("definition", rqst)
-        assert d["delta_time"]["offset"] == 192
+        assert d["delta_time"]["offset"] == 256
 
     def test_version(self, server, organization):
         icesat2.init(server, organization=organization)

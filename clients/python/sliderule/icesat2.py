@@ -43,7 +43,6 @@ from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
 from sklearn.cluster import KMeans
 import sliderule
-from sliderule import version
 
 ###############################################################################
 # GLOBALS
@@ -469,8 +468,8 @@ def __gdf2poly(gdf):
 #
 def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org):
     '''
-    Initializes the underlying SlideRule module.  Must be called before other ICESat-2 API calls.
-    This function is the same as calling the sliderule module functions: `set_url`, `set_verbose`, `set_max_errors`, along with the local `set_max_resources` function.
+    Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
+    This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
 
     Parameters
     ----------
@@ -483,7 +482,7 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
         loglevel :      int
                         minimum severity of log message to output
         organization:   str
-                        SlideRule provisioning system organization user belongs to (see sliderule.authenticate for details)
+                        SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
 
     Examples
     --------
@@ -495,6 +494,7 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
     logging.basicConfig(level=loglevel)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
+    sliderule.check_version(plugins=['icesat2'])
     sliderule.authenticate(organization)
     set_max_resources(max_resources)
 
@@ -1302,6 +1302,4 @@ def get_version ():
     dict
         dictionary of version information
     '''
-    rsps = sliderule.source("version", {})
-    rsps["client"] = {"version": version.full_version}
-    return rsps
+    return sliderule.get_version()
