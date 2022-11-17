@@ -19,6 +19,11 @@ class TestLocal:
 
 @pytest.mark.network
 class TestRemote:
+    def test_check_version(self, server, organization):
+        sliderule.set_url(server)
+        sliderule.authenticate(organization)
+        sliderule.check_version(plugins=['icesat2'])
+
     def test_init_badurl(self):
         with pytest.raises( (sliderule.FatalError) ):
             sliderule.set_rqst_timeout((1, 60))

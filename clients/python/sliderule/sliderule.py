@@ -49,6 +49,9 @@ PUBLIC_ORG = "sliderule"
 service_url = PUBLIC_URL
 service_org = PUBLIC_ORG
 
+session = requests.Session()
+session.trust_env = False
+
 ps_refresh_token = None
 ps_access_token = None
 ps_token_exp = None
@@ -328,7 +331,7 @@ def __build_auth_header():
             host = "https://ps." + service_url + "/api/org_token/refresh/"
             rqst = {"refresh": ps_refresh_token}
             hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
-            rsps = requests.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
+            rsps = session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
             ps_refresh_token = rsps["refresh"]
             ps_access_token = rsps["access"]
             ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
@@ -423,9 +426,9 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
             url = 'http://%s%s/%s' % (service_url, path, api)
         # Perform Request
         if not stream:
-            data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
+            data = session.get(url, data=rqst, headers=headers, timeout=request_timeout)
         else:
-            data = requests.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
+            data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
         data.raise_for_status()
         # Parse Response
         format = data.headers['Content-Type']
@@ -574,7 +577,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         if type(time_to_live) == int:
             host = host + str(time_to_live) + "/"
         headers = __build_auth_header()
-        rsps = requests.put(host, headers=headers, timeout=request_timeout)
+        rsps = session.put(host, headers=headers, timeout=request_timeout)
         rsps.raise_for_status()
 
     # Get number of nodes currently registered
@@ -646,7 +649,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         headers = {'Content-Type': 'application/json'}
         try:
             api = "https://" + ps_url + "/api/org_token/"
-            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
+            rsps = session.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
             rsps.raise_for_status()
             rsps = rsps.json()
             ps_refresh_token = rsps["refresh"]
