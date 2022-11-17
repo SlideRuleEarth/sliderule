@@ -49,7 +49,7 @@ jobs:
       - name: Install netrc for authentication
         shell: bash -l {0}
         run: |
-          echo "${{ secrets.NETRC }}" &gt;&gt; $HOME/.netrc
+          echo "${{ secrets.NETRC }}" > $HOME/.netrc
           chmod 600 $HOME/.netrc
 
       - name: Run tests
