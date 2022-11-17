@@ -573,9 +573,10 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
 
     # Update number of nodes
     if type(desired_nodes) == int:
-        host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
         if type(time_to_live) == int:
-            host = host + str(time_to_live) + "/"
+            host = "https://ps." + service_url + "/api/desired_org_num_nodes_ttl/" + service_org + "/" + str(desired_nodes) + "/" + str(time_to_live) + "/"
+        else:
+            host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
         headers = __build_auth_header()
         rsps = session.put(host, headers=headers, timeout=request_timeout)
         rsps.raise_for_status()
