@@ -12,6 +12,15 @@ class TestProvisioning:
         status = sliderule.authenticate(organization)
         assert status
 
+    def test_num_nodes_update(self, server, organization):
+        sliderule.set_url(server)
+        status = sliderule.authenticate(organization)
+        assert status
+        result = sliderule.update_available_servers(7,20)
+        assert len(result) == 2
+        assert type(result[0]) == int
+        assert type(result[1]) == int
+
     def test_bad_org(self, server):
         sliderule.set_url(server)
         status = sliderule.authenticate("non_existent_org")
