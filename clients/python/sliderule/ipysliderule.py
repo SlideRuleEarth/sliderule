@@ -89,6 +89,19 @@ class widgets:
             style=self.style,
         )
 
+        # dropdown menu for ICESat-2 product
+        self.product = ipywidgets.Dropdown(
+            options=['ATL03','ATL06','ATL08'],
+            value='ATL03',
+            description='Product:',
+            description_tooltip=("Product: ICESat-2 data product "
+                "\n\tATL03: Global Geolocated Photon Data"
+                "\n\tATL06: Land Ice Height"
+                "\n\tATL08: Land and Vegetation Height"),
+            disabled=False,
+            style=self.style,
+        )
+
         # dropdown menu for setting data release
         self.release = ipywidgets.Dropdown(
             options=['003', '004', '005'],
