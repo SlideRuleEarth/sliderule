@@ -795,7 +795,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         profiles["merge"] = time.perf_counter() - tstart_merge
 
         # Delete Extent ID Column
-        del gdf["extent_id"]
+        if len(gdf) > 0:
+            del gdf["extent_id"]
 
         # Return Response
         profiles[atl06p.__name__] = time.perf_counter() - tstart
@@ -980,7 +981,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                 columns["pair"] = columns.pop("count")
 
                 # Delete Extent ID Column
-                del columns["extent_id"]
+                if "extent_id" in columns:
+                    del columns["extent_id"]
 
                 # Capture Time to Flatten
                 profiles["flatten"] = time.perf_counter() - tstart_flatten

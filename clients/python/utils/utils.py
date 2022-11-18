@@ -1,5 +1,6 @@
 import sys
 import time
+import json
 from sliderule import icesat2
 
 #
@@ -17,20 +18,31 @@ def parse_command_line(args, cfg):
         for entry in cfg:
             if args[i] == '--'+entry:
                 if type(cfg[entry]) is str or cfg[entry] == None:
-                    cfg[entry] = args[i + 1]
+                    if args[i + 1] == "None":
+                        cfg[entry] = None
+                    else:
+                        cfg[entry] = args[i + 1]
                 elif type(cfg[entry]) is list:
-                    l = []
-                    while (i + 1) < len(args) and '--' not in args[i + 1]:
-                        if args[i + 1].isnumeric():
-                            l.append(int(args[i + 1]))
-                        else:
-                            l.append(args[i + 1])
-                        i += 1
-                    cfg[entry] = l
+                    if args[i + 1] == "None":
+                        cfg[entry] = None
+                    else:
+                        l = []
+                        while (i + 1) < len(args) and '--' not in args[i + 1]:
+                            if args[i + 1].isnumeric():
+                                l.append(int(args[i + 1]))
+                            else:
+                                l.append(args[i + 1])
+                            i += 1
+                        cfg[entry] = l
                 elif type(cfg[entry]) is int:
-                    cfg[entry] = int(args[i + 1])
+                    if args[i + 1] == "None":
+                        cfg[entry] = None
+                    else:
+                        cfg[entry] = int(args[i + 1])
                 elif type(cfg[entry]) is bool:
-                    if args[i + 1] == "True" or args[i + 1] == "true":
+                    if args[i + 1] == "None":
+                        cfg[entry] = None
+                    elif args[i + 1] == "True" or args[i + 1] == "true":
                         cfg[entry] = True
                     elif args[i + 1] == "False" or args[i + 1] == "false":
                         cfg[entry] = False
@@ -61,21 +73,21 @@ def initialize_client(args):
         "atl03_geo_fields":     [],
         "atl03_ph_fields":      [],
         "profile":              True,
-        "verbose":              True
+        "verbose":              True,
+        "timeout":              0,
+        "rqst-timeout":         0,
+        "node-timeout":         0,
+        "read-timeout":         0
     }
 
     # Parse Configuration Parameters
     parse_command_line(args, cfg)
-
-    # Region of Interest
-    region = icesat2.toregion(cfg["region"])
 
     # Configure SlideRule
     icesat2.init(cfg["url"], cfg["verbose"], organization=cfg["organization"])
 
     # Build Initial Parameters
     parms = {
-        "poly": region['poly'],
         "srt":  cfg['srt'],
         "cnf":  cfg['cnf'],
         "ats":  cfg['ats'],
@@ -85,9 +97,12 @@ def initialize_client(args):
         "maxi": cfg['maxi'],
     }
 
-    # Add Raster
-    if cfg["raster"]:
-        parms["raster"] = region['raster']
+    # Region of Interest
+    if cfg["region"]:
+        region = icesat2.toregion(cfg["region"])
+        parms["poly"] = region['poly']
+        if cfg["raster"]:
+            parms["raster"] = region['raster']
 
     # Add Ancillary Fields
     if len(cfg['atl03_geo_fields']) > 0:
@@ -98,6 +113,19 @@ def initialize_client(args):
     # Add ATL08 Classification
     if len(cfg['atl08_class']) > 0:
         parms['atl08_class'] = cfg['atl08_class']
+
+    # Provide Timeouts
+    if cfg["timeout"] > 0:
+        parms["timeout"] = cfg["timeout"]
+        parms["rqst-timeout"] = cfg["timeout"]
+        parms["node-timeout"] = cfg["timeout"]
+        parms["read-timeout"] = cfg["timeout"]
+    if cfg["rqst-timeout"] > 0:
+        parms["rqst-timeout"] = cfg["rqst-timeout"]
+    if cfg["node-timeout"] > 0:
+        parms["node-timeout"] = cfg["node-timeout"]
+    if cfg["read-timeout"] > 0:
+        parms["read-timeout"] = cfg["read-timeout"]
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -125,3 +153,9 @@ def display_statistics(gdf, name):
     print("\nTiming Profiles")
     for key in icesat2.profiles:
         print("{:16}: {:.6f} secs".format(key, icesat2.profiles[key]))
+
+#
+# Pretty Print JSON
+#
+def pprint(obj):
+    print(json.dumps(obj, indent=2))
