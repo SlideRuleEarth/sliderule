@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <arrow/api.h>
+
 #include "MsgQ.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
@@ -80,7 +82,8 @@ class ArrowBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Publisher*              outQ;
+        MgDictionary<arrow::Schema*, 8> schemas;
+        Publisher*                      outQ;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -92,6 +95,12 @@ class ArrowBuilder: public DispatchObject
         bool            processRecord                   (RecordObject* record, okey_t key) override;
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
+
+        bool            buildAtl06Table                 (Atl06Dispatch::atl06_t* rec);
+        bool            buildAtl06CompactTable          (Atl06Dispatch::atl06_compact_t* rec);
+        bool            buildAtl03ExtentTable           (Atl03Reader::extent_t* rec);
+
+        bool            defineTableSchema               (const char* schema);
 };
 
 #endif  /* __arrow_buider__ */

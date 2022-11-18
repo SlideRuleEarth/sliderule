@@ -33,6 +33,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <arrow/api.h>
+
 #include "core.h"
 #include "icesat2.h"
 
@@ -74,6 +76,9 @@ int ArrowBuilder::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void ArrowBuilder::init (void)
 {
+    defineTableSchema(Atl06Dispatch::atRecType);
+    defineTableSchema(Atl06Dispatch::atCompactRecType);
+    defineTableSchema(Atl03Reader::exRecType);
 }
 
 /******************************************************************************
@@ -107,10 +112,17 @@ bool ArrowBuilder::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
-    Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
+    const char* rectype = record->getRecordType();
 
-    /* Return Status */
-    return true;
+         if(StringLib::match(rectype, Atl06Dispatch::atRecType))        return buildAtl06Table((Atl06Dispatch::atl06_t*)record->getRecordData());
+    else if(StringLib::match(rectype, Atl06Dispatch::atCompactRecType)) return buildAtl06CompactTable((Atl06Dispatch::atl06_compact_t*)record->getRecordData());
+    else if(StringLib::match(rectype, Atl03Reader::exRecType))          return buildAtl03ExtentTable((Atl03Reader::extent_t*)record->getRecordData());
+    else
+    {
+        mlog(CRITICAL, "Unexpected record received: %s", rectype);
+    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -129,4 +141,86 @@ bool ArrowBuilder::processTimeout (void)
 bool ArrowBuilder::processTermination (void)
 {
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * buildAtl06Table
+ *----------------------------------------------------------------------------*/
+bool ArrowBuilder::buildAtl06Table (Atl06Dispatch::atl06_t* rec)
+{
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * buildAtl06CompactTable
+ *----------------------------------------------------------------------------*/
+bool ArrowBuilder::buildAtl06CompactTable (Atl06Dispatch::atl06_compact_t* rec)
+{
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * buildAtl03ExtentTable
+ *----------------------------------------------------------------------------*/
+bool ArrowBuilder::buildAtl03ExtentTable (Atl03Reader::extent_t* rec)
+{
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * defineTableSchema
+ *----------------------------------------------------------------------------*/
+bool ArrowBuilder::defineTableSchema (const char* rectype)
+{
+    std::vector<std::shared_ptr<arrow::Field>> schema_vector;
+
+    /* Loop through fields */
+    char** field_names = NULL;
+    RecordObject::field_t** fields = NULL;
+    int num_fields = RecordObject::getRecordFields(rectype, &fieldnames, &fields);
+    for(int i = 0; i < num_fields; i++)
+    {
+        switch(fields[i]->type)
+        {
+            case INT8:      schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));       break;
+            case INT16:     schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));      break;
+            case INT32:     schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));      break;
+            case INT64:     schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));      break;
+            case UINT8:     schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));      break;
+            case UINT16:    schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));     break;
+            case UINT32:    schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));     break;
+            case UINT64:    schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));     break;
+            case FLOAT:     schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));    break;
+            case DOUBLE:    schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
+            case TIME8:     schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
+            case STRING:    schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
+            default:        break;
+        }
+    }
+
+    /* Create Schema */
+    arrow::Schema* schema = new arrow::Schema(schema_vector);
+
+    /* Clean Up */
+    if(fields) delete [] fields;
+    if(fieldnames) delete [] fieldnames;
+
+    /* Return Status */
+    return num_fields > 0;
+}
+
+/*----------------------------------------------------------------------------
+ * defineAtl06CompactTable
+ *----------------------------------------------------------------------------*/
+bool ArrowBuilder::defineAtl06CompactTable (void)
+{
+
+}
+
+/*----------------------------------------------------------------------------
+ * defineAtl03ExtentTable
+ *----------------------------------------------------------------------------*/
+bool ArrowBuilder::defineAtl03ExtentTable (void)
+{
+
 }

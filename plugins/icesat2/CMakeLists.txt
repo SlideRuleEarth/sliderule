@@ -16,6 +16,7 @@ cmake_policy(SET CMP0053 NEW) # simplified variable escape processing (recommend
 ###################
 
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
+option (INCLUDE_ARROW "Support for constructing server-side arrow tables from processing runs" ON)
 
 ###################
 # ICESat-2 Plugin #
@@ -45,9 +46,17 @@ if(ENABLE_ADDRESS_SANITIZER)
 	target_compile_options (icesat2 PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif()
 
-# Link Options #
+# Address Sanitizer Option #
 if(ENABLE_ADDRESS_SANITIZER)
 	target_link_options (icesat2 PUBLIC -fsanitize=address)
+endif()
+
+# Arrow Option #
+if(INCLUDE_ARROW)
+    find_package(Arrow)
+    target_compile_definitions (icesat2 PUBLIC __arrow__)
+    target_link_libraries(icesat2 PUBLIC Arrow::arrow_shared)
+    target_sources(icesat2 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/plugin/ArrowBuilder.cpp)
 endif()
 
 # Source Files #
@@ -55,7 +64,6 @@ target_sources(icesat2
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/lua_parms.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArrowBuilder.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.cpp
