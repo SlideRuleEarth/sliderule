@@ -8,7 +8,6 @@
 --                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>"
 --                  "resource":     "<url of hdf5 file or object>"
 --                  "parms":        {<table of parameters>}
---                  "timeout":      <milliseconds to wait for first response>
 --              }
 --
 --              rspq - output queue to stream results
@@ -30,7 +29,7 @@ local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"] or "nsidc-s3"
 local resource = rqst["resource"]
 local parms = rqst["parms"]
-local timeout = rqst["timeout"] or icesat2.API_TIMEOUT
+local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
 
 -- Initialize Timeouts --
 local duration = 0

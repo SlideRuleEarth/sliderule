@@ -99,7 +99,7 @@ int EndpointProxy::luaCreate (lua_State* L)
 
         /* Get Parameters Continued */
         const char* _parameters         = getLuaString(L, 4); // get request parameters
-        int         _timeout_secs       = getLuaInteger(L, 5, true, NODE_LOCK_TIMEOUT); // get timeout in seconds
+        int         _timeout_secs       = getLuaInteger(L, 5, true, PARM_DEFAULT_RQST_TIMEOUT); // get timeout in seconds
         const char* _outq_name          = getLuaString(L, 6); // get output queue
         long        _num_threads        = getLuaInteger(L, 7, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
         long        _rqst_queue_depth   = getLuaInteger(L, 8, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads

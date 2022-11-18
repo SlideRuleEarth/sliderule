@@ -90,6 +90,10 @@
 #define LUA_PARM_QUALITY_TEP                    "atl03_quality_tep"
 #define LUA_PARM_ATL03_GEO_FIELDS               "atl03_geo_fields"
 #define LUA_PARM_ATL03_PH_FIELDS                "atl03_ph_fields"
+#define LUA_PARM_RQST_TIMEOUT                   "rqst-timeout"
+#define LUA_PARM_NODE_TIMEOUT                   "node-timeout"
+#define LUA_PARM_READ_TIMEOUT                   "read-timeout"
+#define LUA_PARM_GLOBAL_TIMEOUT                 "timeout" // sets all timeouts at once
 
 #define PAIR_TRACKS_PER_GROUND_TRACK            2
 #define PRT_LEFT                                0
@@ -98,6 +102,10 @@
 #define EXTENT_ID_ELEVATION                     0x2
 
 #define EXPECTED_NUM_ANC_FIELDS                 8 // a typical number of ancillary fields requested
+
+#define PARM_DEFAULT_RQST_TIMEOUT               600 // seconds
+#define PARM_DEFAULT_NODE_TIMEOUT               600 // seconds
+#define PARM_DEFAULT_READ_TIMEOUT               600 // seconds
 
 /******************************************************************************
  * TYPEDEFS
@@ -227,7 +235,10 @@ typedef struct {
     double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
     double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
     ancillary_list_t*       atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
-    ancillary_list_t*       atl03_ph_fields;            // list of per-photon fields to associate with an extent
+    ancillary_list_t*       atl03_ph_fields;                // list of per-photon fields to associate with an extent
+    int                     rqst_timeout;                   // total time in seconds for request to be processed
+    int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
+    int                     read_timeout;                   // time in seconds for a single read of an asset to take
 } icesat2_parms_t;
 
 /******************************************************************************

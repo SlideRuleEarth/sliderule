@@ -41,7 +41,7 @@
  ******************************************************************************/
 
 #define ATL06_DEFAULT_SURFACE_TYPE              SRT_LAND_ICE
-#define ATL06_DEFAULT_SIGNAL_CONFIDENCE         CNF_SURFACE_LOW
+#define ATL06_DEFAULT_SIGNAL_CONFIDENCE         CNF_WITHIN_10M
 #define ATL06_DEFAULT_YAPC_SCORE                0
 #define ATL06_DEFAULT_YAPC_VERSION              3
 #define ALT06_DEFAULT_YAPC_WIN_X                15.0
@@ -87,7 +87,10 @@ const icesat2_parms_t DefaultParms = {
     .extent_length              = ATL06_DEFAULT_EXTENT_LENGTH,
     .extent_step                = ATL06_DEFAULT_EXTENT_STEP,
     .atl03_geo_fields           = NULL,
-    .atl03_ph_fields            = NULL
+    .atl03_ph_fields            = NULL,
+    .rqst_timeout               = PARM_DEFAULT_RQST_TIMEOUT,
+    .node_timeout               = PARM_DEFAULT_NODE_TIMEOUT,
+    .read_timeout               = PARM_DEFAULT_READ_TIMEOUT
 };
 
 /******************************************************************************
@@ -718,6 +721,34 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
             lua_getfield(L, index, LUA_PARM_ATL03_PH_FIELDS);
             get_lua_field_list (L, -1, &parms->atl03_ph_fields, &provided);
             if(provided) mlog(DEBUG, "ATL03 photon field array detected");
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_GLOBAL_TIMEOUT);
+            int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
+            if(provided)
+            {
+                parms->rqst_timeout = global_timeout;
+                parms->node_timeout = global_timeout;
+                parms->read_timeout = global_timeout;
+                mlog(DEBUG, "Setting %s to %d", LUA_PARM_RQST_TIMEOUT, global_timeout);
+                mlog(DEBUG, "Setting %s to %d", LUA_PARM_NODE_TIMEOUT, global_timeout);
+                mlog(DEBUG, "Setting %s to %d", LUA_PARM_READ_TIMEOUT, global_timeout);
+            }
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_RQST_TIMEOUT);
+            parms->rqst_timeout = LuaObject::getLuaInteger(L, -1, true, parms->rqst_timeout, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %d", LUA_PARM_RQST_TIMEOUT, parms->rqst_timeout);
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_NODE_TIMEOUT);
+            parms->node_timeout = LuaObject::getLuaInteger(L, -1, true, parms->node_timeout, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %d", LUA_PARM_NODE_TIMEOUT, parms->node_timeout);
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_READ_TIMEOUT);
+            parms->read_timeout = LuaObject::getLuaInteger(L, -1, true, parms->read_timeout, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %d", LUA_PARM_READ_TIMEOUT, parms->read_timeout);
             lua_pop(L, 1);
         }
         catch(const RunTimeException& e)

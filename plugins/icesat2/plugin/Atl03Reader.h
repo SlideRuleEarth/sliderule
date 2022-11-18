@@ -61,7 +61,6 @@ class Atl03Reader: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int H5_READ_TIMEOUT_MS = 60000; // 60 seconds
         static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
 
         static const char* phRecType;
@@ -267,6 +266,7 @@ class Atl03Reader: public LuaObject
         const char*         resource;
         const char*         resource08;
         bool                sendTerminator;
+        const int           read_timeout_ms;
         Publisher*          outQ;
         icesat2_parms_t*    parms;
         stats_t             stats;

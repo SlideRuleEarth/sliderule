@@ -5,7 +5,7 @@
 --              {
 --                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>"
 --                  "resources":    ["<name of hdf5 file or object>", ...]
---                  "timeout":      <milliseconds to wait for first response>
+--                  "timeout":      <seconds to wait for first response>
 --              }
 --
 --              rspq - output queue to stream results
@@ -27,7 +27,7 @@ local userlog = msg.publish(rspq)
 local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"] or "atlas-local"
 local resources = rqst["resources"]
-local timeout = rqst["timeout"] or icesat2.API_TIMEOUT
+local timeout = rqst["timeout"] or icesat2.RQST_TIMEOUT
 
 -- Post Initial Status Progress --
 userlog:sendlog(core.DEBUG, string.format("atl03 indexing initiated on %s data...", atl03_asset))

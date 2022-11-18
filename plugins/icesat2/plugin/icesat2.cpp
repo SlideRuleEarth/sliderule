@@ -102,7 +102,9 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "RPT_2",                               RPT_2);
     LuaEngine::setAttrInt(L, "RPT_3",                               RPT_3);
     LuaEngine::setAttrInt(L, "NUM_TRACKS",                          NUM_TRACKS);
-    LuaEngine::setAttrInt(L, "API_TIMEOUT",                         EndpointProxy::NODE_LOCK_TIMEOUT);
+    LuaEngine::setAttrInt(L, "RQST_TIMEOUT",                        PARM_DEFAULT_RQST_TIMEOUT);
+    LuaEngine::setAttrInt(L, "NODE_TIMEOUT",                        PARM_DEFAULT_NODE_TIMEOUT);
+    LuaEngine::setAttrInt(L, "READ_TIMEOUT",                        PARM_DEFAULT_READ_TIMEOUT);
     LuaEngine::setAttrInt(L, LUA_PARM_ATL08_CLASS_NOISE,            ATL08_NOISE);
     LuaEngine::setAttrInt(L, LUA_PARM_ATL08_CLASS_GROUND,           ATL08_GROUND);
     LuaEngine::setAttrInt(L, LUA_PARM_ATL08_CLASS_CANOPY,           ATL08_CANOPY);

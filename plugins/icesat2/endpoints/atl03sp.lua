@@ -8,7 +8,6 @@
 --                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>",
 --                  "resources":    ["<url of hdf5 file or object>", ...],
 --                  "parms":        {<table of parameters>},
---                  "timeout":      <seconds to wait for response>
 --              }
 --
 --              rspq - output queue to stream results
@@ -26,10 +25,11 @@ local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"]
 local resources = rqst["resources"]
 local parms = rqst["parms"]
-local timeout = rqst["timeout"] or icesat2.API_TIMEOUT
+local timeout = parms["rqst-timeout"] or parms["timeout"] or icesat2.RQST_TIMEOUT
+local node_timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
 
 -- Proxy Request --
-local proxy = icesat2.proxy("atl03s", atl03_asset, resources, json.encode(parms), timeout, rspq)
+local proxy = icesat2.proxy("atl03s", atl03_asset, resources, json.encode(parms), node_timeout, rspq)
 
 -- Wait Until Proxy Completes --
 local duration = 0

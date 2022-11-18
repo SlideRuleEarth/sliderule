@@ -173,7 +173,8 @@ void Atl03Reader::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, icesat2_parms_t* _parms, bool _send_terminator):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    read_timeout_ms(_parms->read_timeout * 1000)
 {
     assert(_asset);
     assert(_resource);
@@ -228,16 +229,16 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
 
         /* Set Metrics */
         PluginMetrics::setRegion(parms);
-
+printf("TIMEOUT: %d\n", read_timeout_ms);
         /* Join Global Data */
-        sc_orient->join(H5_READ_TIMEOUT_MS, true);
-        start_rgt->join(H5_READ_TIMEOUT_MS, true);
-        start_cycle->join(H5_READ_TIMEOUT_MS, true);
+        sc_orient->join(read_timeout_ms, true);
+        start_rgt->join(read_timeout_ms, true);
+        start_cycle->join(read_timeout_ms, true);
 
         /* Wait for ATL08 File (if necessary) */
         if(parms->stages[STAGE_ATL08])
         {
-            atl08_rgt->join(H5_READ_TIMEOUT_MS, true);
+            atl08_rgt->join(read_timeout_ms, true);
         }
 
         /* Read ATL03 Track Data */
@@ -321,9 +322,9 @@ Atl03Reader::Region::Region (info_t* info):
     inclusion_ptr  {NULL, NULL}
 {
     /* Join Reads */
-    segment_lat.join(H5_READ_TIMEOUT_MS, true);
-    segment_lon.join(H5_READ_TIMEOUT_MS, true);
-    segment_ph_cnt.join(H5_READ_TIMEOUT_MS, true);
+    segment_lat.join(info->reader->read_timeout_ms, true);
+    segment_lon.join(info->reader->read_timeout_ms, true);
+    segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
     /* Initialize Region */
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
@@ -602,19 +603,19 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
     }
 
     /* Join Hardcoded Reads */
-    velocity_sc.join(H5_READ_TIMEOUT_MS, true);
-    segment_delta_time.join(H5_READ_TIMEOUT_MS, true);
-    segment_id.join(H5_READ_TIMEOUT_MS, true);
-    segment_dist_x.join(H5_READ_TIMEOUT_MS, true);
-    dist_ph_along.join(H5_READ_TIMEOUT_MS, true);
-    h_ph.join(H5_READ_TIMEOUT_MS, true);
-    signal_conf_ph.join(H5_READ_TIMEOUT_MS, true);
-    quality_ph.join(H5_READ_TIMEOUT_MS, true);
-    lat_ph.join(H5_READ_TIMEOUT_MS, true);
-    lon_ph.join(H5_READ_TIMEOUT_MS, true);
-    delta_time.join(H5_READ_TIMEOUT_MS, true);
-    bckgrd_delta_time.join(H5_READ_TIMEOUT_MS, true);
-    bckgrd_rate.join(H5_READ_TIMEOUT_MS, true);
+    velocity_sc.join(info->reader->read_timeout_ms, true);
+    segment_delta_time.join(info->reader->read_timeout_ms, true);
+    segment_id.join(info->reader->read_timeout_ms, true);
+    segment_dist_x.join(info->reader->read_timeout_ms, true);
+    dist_ph_along.join(info->reader->read_timeout_ms, true);
+    h_ph.join(info->reader->read_timeout_ms, true);
+    signal_conf_ph.join(info->reader->read_timeout_ms, true);
+    quality_ph.join(info->reader->read_timeout_ms, true);
+    lat_ph.join(info->reader->read_timeout_ms, true);
+    lon_ph.join(info->reader->read_timeout_ms, true);
+    delta_time.join(info->reader->read_timeout_ms, true);
+    bckgrd_delta_time.join(info->reader->read_timeout_ms, true);
+    bckgrd_rate.join(info->reader->read_timeout_ms, true);
 
     /* Join Ancillary Geolocation Reads */
     if(geo_fields)
@@ -623,7 +624,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
         const char* dataset_name = anc_geo_data.first(&array);
         while(dataset_name != NULL)
         {
-            array->join(H5_READ_TIMEOUT_MS, true);
+            array->join(info->reader->read_timeout_ms, true);
             dataset_name = anc_geo_data.next(&array);
         }
     }
@@ -635,7 +636,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region* region):
         const char* dataset_name = anc_photon_data.first(&array);
         while(dataset_name != NULL)
         {
-            array->join(H5_READ_TIMEOUT_MS, true);
+            array->join(info->reader->read_timeout_ms, true);
             dataset_name = anc_photon_data.next(&array);
         }
     }
@@ -683,9 +684,9 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region* region, Atl03Data*
     }
 
     /* Wait for Reads to Complete */
-    atl08_segment_id.join(H5_READ_TIMEOUT_MS, true);
-    atl08_pc_indx.join(H5_READ_TIMEOUT_MS, true);
-    atl08_pc_flag.join(H5_READ_TIMEOUT_MS, true);
+    atl08_segment_id.join(info->reader->read_timeout_ms, true);
+    atl08_pc_indx.join(info->reader->read_timeout_ms, true);
+    atl08_pc_flag.join(info->reader->read_timeout_ms, true);
 
     /* Rename Segment Photon Counts (to easily identify with ATL03) */
     GTArray<int32_t>* atl03_segment_ph_cnt = &region->segment_ph_cnt;
