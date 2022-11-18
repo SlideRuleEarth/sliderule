@@ -185,7 +185,7 @@ class Atl06Dispatch: public DispatchObject
         Mutex                   elevationMutex;
         int                     elevationIndex;
 
-        const icesat2_parms_t*    parms;
+        const icesat2_parms_t*  parms;
         stats_t                 stats;
 
         /*--------------------------------------------------------------------
