@@ -160,56 +160,93 @@ static void getVrtName( double lon, double lat, std::string& vrtFile )
 
 
 /*----------------------------------------------------------------------------
- * samples
+ * containsPoint
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::samples( double lon, double lat )
+inline bool ArcticDEMRaster::containsPoint(GDALDataset *dset, ArcticDEMRaster::bbox_t *bbox, OGRPoint *p)
 {
-    OGRPoint p = {lon, lat};
+    return (dset && (p->getX() >= bbox->lon_min) && (p->getX() <= bbox->lon_max) &&
+                    (p->getY() >= bbox->lat_min) && (p->getY() <= bbox->lat_max));
+}
 
+
+/*----------------------------------------------------------------------------
+ * samplesMosaic
+ *----------------------------------------------------------------------------*/
+double ArcticDEMRaster::sampleMosaic(double lon, double lat)
+{
+    double sample = ARCTIC_DEM_INVALID_ELELVATION;
+
+    OGRPoint p = {lon, lat};
     if (p.transform(transf) == OGRERR_NONE)
     {
-        double _lon = p.getX();
-        double _lat = p.getY();
-
-        /* Is point in VRT dataset? */
-        if (vrtDset &&
-            (_lon >= vrtBbox.lon_min) &&
-            (_lon <= vrtBbox.lon_max) &&
-            (_lat >= vrtBbox.lat_min) &&
-            (_lat <= vrtBbox.lat_max))
+        /* Is point in big mosaic VRT dataset? */
+        if (containsPoint(vrtDset, &vrtBbox, &p))
         {
-            bool pointInRasters = false;
+            bool foundPoint = false;
+            if (rasterList.length() > 0)
+            {
+                rasterList[0].point = &p;
+                foundPoint = readRaster(&rasterList[0]);
+            }
 
-            if (rastersList.length() > 0)
-                pointInRasters = readRasters(&p);
-
-            if (!pointInRasters)
+            if (!foundPoint)
             {
                 if (findRasters(&p))
-                    readRasters(&p);
+                {
+                    if (rasterList.length() > 0)
+                    {
+                        rasterList[0].point = &p;
+                        readRaster(&rasterList[0]);
+                        sample = rasterList[0].value;
+                    }
+                }
             }
         }
         else
         {
-             /* Point not in VRT dataset */
-            if (isStrip)
-            {
-                /* Find VRT file for scene with this point */
-                std::string newVrtFile;
-                getVrtName(lon, lat, newVrtFile);
-
-                if (!openVrtDset(newVrtFile.c_str()))
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "ArcticDEMRaster get samples failed");
-
-                if (findRasters(&p))
-                    readRasters(&p);
-            }
-            else
-            {
-                /* Do nothing, user error, wrong lon/lat for ArcticDem area */
-            }
+            throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in mosaic VRT", lon, lat);
         }
     }
+
+    return sample;
+}
+
+
+/*----------------------------------------------------------------------------
+ * samplesStrips
+ *----------------------------------------------------------------------------*/
+void ArcticDEMRaster::sampleStrips(double lon, double lat)
+{
+    OGRPoint p = {lon, lat};
+    if (p.transform(transf) == OGRERR_NONE)
+    {
+        /* If point is not in current scene VRT dataset, open new scene */
+        if (!containsPoint(vrtDset, &vrtBbox, &p))
+        {
+            std::string newVrtFile;
+            getVrtName(lon, lat, newVrtFile);
+
+            if (!openVrtDset(newVrtFile.c_str()))
+                throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat:%lf not in strip VRT", lon, lat);
+        }
+
+        /*
+         * No smarts here, always get list of rasters with this point in the scene.
+         * Maybe only 28 rasters contained previous point but there may be thousands of rasters in a scene.
+         */
+        if (findRasters(&p))
+            readRasters(&p);
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * samples
+ *----------------------------------------------------------------------------*/
+void ArcticDEMRaster::samples(double lon, double lat)
+{
+    if      (demType == MOSAIC) sampleMosaic(lon, lat);
+    else if (demType == STRIPS) sampleStrips(lon, lat);
 }
 
 
@@ -220,11 +257,17 @@ void ArcticDEMRaster::samples( double lon, double lat )
 ArcticDEMRaster::~ArcticDEMRaster(void)
 {
     if (vrtDset) GDALClose((GDALDatasetH)vrtDset);
-    for (int i = 0; i < rastersList.length(); i++)
+    for (int i = 0; i < rasterList.length(); i++)
     {
-        raster_info_t rinfo = rastersList.get(i);
+        raster_info_t rinfo = rasterList.get(i);
         if (rinfo.dset) GDALClose((GDALDatasetH)rinfo.dset);
     }
+    for (int i = 0; i < threadCount; i++)
+    {
+        pthread_t tid = rasterRreader[i];
+        pthread_join(tid, nullptr);
+    }
+
     if (transf) OGRCoordinateTransformation::DestroyCT(transf);
 }
 
@@ -242,16 +285,12 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
     try
     {
         /* Close existing rasters */
-        const int length = rastersList.length();
-        if (length > 0)
+        for (int i = 0; i < rasterList.length(); i++)
         {
-            for (int i = 0; i < length; i++)
-            {
-                raster_info_t rinfo = rastersList.get(i);
-                if (rinfo.dset) GDALClose((GDALDatasetH)rinfo.dset);
-            }
-            rastersList.clear();
+            raster_info_t rinfo = rasterList.get(i);
+            if (rinfo.dset) GDALClose((GDALDatasetH)rinfo.dset);
         }
+        rasterList.clear();
 
         const int32_t col = static_cast<int32_t>(floor(invgeot[0] + invgeot[1] * p->getX() + invgeot[2] * p->getY()));
         const int32_t row = static_cast<int32_t>(floor(invgeot[3] + invgeot[4] * p->getX() + invgeot[5] * p->getY()));
@@ -271,38 +310,18 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
                     {
                         if (psNode->eType == CXT_Element && EQUAL(psNode->pszValue, "File") && psNode->psChild)
                         {
-                            raster_info_t rinfo = {nullptr, nullptr, "", ARCTIC_DEM_INVALID_ELELVATION};
+                            raster_info_t rinfo;
+                            bzero(&rinfo, sizeof(rinfo));
+
+                            rinfo.obj = this;
+                            rinfo.point = p;
+                            rinfo.value = ARCTIC_DEM_INVALID_ELELVATION;
 
                             char *fname = CPLUnescapeString(psNode->psChild->pszValue, nullptr, CPLES_XML);
                             CHECKPTR(fname);
                             rinfo.fileName = fname;
                             CPLFree(fname);
-                            mlog(DEBUG, "%s, contains VRT file point(%u, %u)", rinfo.fileName.c_str(), col, row);
-
-                            rinfo.dset = (GDALDataset *)GDALOpenEx(rinfo.fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
-                            CHECKPTR(rinfo.dset);
-
-                            /* Store information about raster */
-                            rinfo.cols = rinfo.dset->GetRasterXSize();
-                            rinfo.rows = rinfo.dset->GetRasterYSize();
-
-                            /* Get raster boundry box */
-                            double geot[6] = {0, 0, 0, 0, 0, 0};
-                            CPLErr err = rinfo.dset->GetGeoTransform(geot);
-                            CHECK_GDALERR(err);
-                            rinfo.bbox.lon_min = geot[0];
-                            rinfo.bbox.lon_max = geot[0] + rinfo.cols * geot[1];
-                            rinfo.bbox.lat_max = geot[3];
-                            rinfo.bbox.lat_min = geot[3] + rinfo.rows * geot[5];
-
-                            rinfo.cellSize = geot[1];
-
-                            /* Get raster block size */
-                            rinfo.band = rinfo.dset->GetRasterBand(1);
-                            CHECKPTR(rinfo.band);
-                            rinfo.band->GetBlockSize(&rinfo.xBlockSize, &rinfo.yBlockSize);
-                            mlog(DEBUG, "Raster xBlockSize: %d, yBlockSize: %d", rinfo.xBlockSize, rinfo.yBlockSize);
-                            rastersList.add(rinfo);
+                            rasterList.add(rinfo);
                             foundRaster = true;
                         }
                     }
@@ -319,68 +338,153 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
     return foundRaster;
 }
 
+
 /*----------------------------------------------------------------------------
  * readRasters
  *----------------------------------------------------------------------------*/
 bool ArcticDEMRaster::readRasters(OGRPoint *p)
 {
-    bool containsPoint = false;
+    bool pointInDset = false;
+    try
+    {
+        for (int i = 0; i < rasterList.length(); i++)
+        {
+            if(threadCount < MAX_READER_THREADS)
+            {
+                raster_info_t *rinfo = &(rasterList.get(i));
+
+                pthread_attr_t pthread_attr;
+                pthread_attr_init(&pthread_attr);
+                if( pthread_create(&rasterRreader[threadCount], &pthread_attr, readingThread, rinfo) )
+                {
+                    perror("pthread_create() error");
+                }
+                threadCount++;
+            }
+            else
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "list of rasters to read: %d, is greater than max reading threads %d\n",
+                                       rasterList.length(), MAX_READER_THREADS);
+            }
+        }
+
+        /* Wait for all readers to finish */
+        for (int i = 0; i < threadCount; i++ )
+        {
+            pthread_t tid = rasterRreader[i];
+            if( pthread_join(tid, nullptr) )
+            {
+                perror("pthread_join() error");
+            }
+        }
+        threadCount = 0;
+
+#if 0
+        for (int i = 0; i < rasterList.length(); i++)
+        {
+            print2term("%d, sample: %lf, readTime: %lf\n", i, rasterList[i].value, rasterList[i].readTime);
+        }
+#endif
+
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error reading rasters: %s", e.what());
+    }
+
+    return pointInDset;
+}
+
+/*----------------------------------------------------------------------------
+ * readingThread
+ *----------------------------------------------------------------------------*/
+void* ArcticDEMRaster::readingThread(void *param)
+{
+    raster_info_t *rinfo = (raster_info_t*)param;
+    rinfo->obj->readRaster(rinfo);
+    return nullptr;
+}
+
+
+/*----------------------------------------------------------------------------
+ * readingThread
+ *----------------------------------------------------------------------------*/
+bool ArcticDEMRaster::readRaster(raster_info_t* rinfo)
+{
+    bool foundPoint = false;
 
     try
     {
-        for (int i = 0; i < rastersList.length(); i++)
+        OGRPoint* p = rinfo->point;
+        double startTime = TimeLib::latchtime();
+
+        if(rinfo->dset == nullptr)
         {
-            raster_info_t rinfo = rastersList.get(i);
+            rinfo->dset = (GDALDataset *)GDALOpenEx(rinfo->fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+            CHECKPTR(rinfo->dset);
 
-            double lon = p->getX();
-            double lat = p->getY();
+            /* Store information about raster */
+            rinfo->cols = rinfo->dset->GetRasterXSize();
+            rinfo->rows = rinfo->dset->GetRasterYSize();
 
-            /* Is point in this raster? */
-            if (rinfo.dset &&
-                (lon >= rinfo.bbox.lon_min) &&
-                (lon <= rinfo.bbox.lon_max) &&
-                (lat >= rinfo.bbox.lat_min) &&
-                (lat <= rinfo.bbox.lat_max))
+            /* Get raster boundry box */
+            double geot[6] = {0};
+            CPLErr err = rinfo->dset->GetGeoTransform(geot);
+            CHECK_GDALERR(err);
+            rinfo->bbox.lon_min = geot[0];
+            rinfo->bbox.lon_max = geot[0] + rinfo->cols * geot[1];
+            rinfo->bbox.lat_max = geot[3];
+            rinfo->bbox.lat_min = geot[3] + rinfo->rows * geot[5];
+
+            rinfo->cellSize = geot[1];
+
+            /* Get raster block size */
+            rinfo->band = rinfo->dset->GetRasterBand(1);
+            CHECKPTR(rinfo->band);
+            rinfo->band->GetBlockSize(&rinfo->xBlockSize, &rinfo->yBlockSize);
+            mlog(DEBUG, "Raster xBlockSize: %d, yBlockSize: %d", rinfo->xBlockSize, rinfo->yBlockSize);
+        }
+
+        /* Is point in this raster? */
+        if (containsPoint(rinfo->dset, &rinfo->bbox, p))
+        {
+            /* Raster row, col for point */
+            const int32_t col = static_cast<int32_t>(floor((p->getX() - rinfo->bbox.lon_min) / rinfo->cellSize));
+            const int32_t row = static_cast<int32_t>(floor((rinfo->bbox.lat_max - p->getY()) / rinfo->cellSize));
+
+            foundPoint = true;
+
+            /* Use fast 'lookup' method for nearest neighbour. */
+            if (rinfo->obj->sampleAlg == GRIORA_NearestNeighbour)
             {
-                /* Raster row, col for point */
-                const int32_t col = static_cast<int32_t>(floor((p->getX() - rinfo.bbox.lon_min) / rinfo.cellSize));
-                const int32_t row = static_cast<int32_t>(floor((rinfo.bbox.lat_max - p->getY()) / rinfo.cellSize));
+                /* Raster offsets to block of interest */
+                uint32_t xblk = col / rinfo->xBlockSize;
+                uint32_t yblk = row / rinfo->yBlockSize;
 
-                /* At least one raster contains this point */
-                containsPoint = true;
-
-                /* Use fast 'lookup' method for nearest neighbour. */
-                if (sampleAlg == GRIORA_NearestNeighbour)
+                GDALRasterBlock *block = nullptr;
+                int cnt = 2;
+                do
                 {
-                    /* Raster offsets to block of interest */
-                    uint32_t xblk = col / rinfo.xBlockSize;
-                    uint32_t yblk = row / rinfo.yBlockSize;
+                    /* Retry read if error */
+                    block = rinfo->band->GetLockedBlockRef(xblk, yblk, false);
+                } while (block == nullptr && cnt--);
+                CHECKPTR(block);
 
-                    GDALRasterBlock *block = nullptr;
-                    int cnt = 1;
-                    do
-                    {
-                        /* Retry read if error */
-                        block = rinfo.band->GetLockedBlockRef(xblk, yblk, false);
-                    } while ( block == nullptr && cnt-- );
-                    CHECKPTR(block);
+                float *fp = (float *)block->GetDataRef();
+                CHECKPTR(fp);
 
-                    float *p = (float *)block->GetDataRef();
-                    CHECKPTR(p);
+                /* col, row inside of block */
+                uint32_t _col = col % rinfo->xBlockSize;
+                uint32_t _row = row % rinfo->yBlockSize;
+                uint32_t offset = _row * rinfo->xBlockSize + _col;
 
-                    /* col, row inside of block */
-                    uint32_t _col = col % rinfo.xBlockSize;
-                    uint32_t _row = row % rinfo.yBlockSize;
-                    uint32_t offset = _row * rinfo.xBlockSize + _col;
-
-                    rinfo.value = p[offset];
-                    block->DropLock();
-                    rastersList.set(i, rinfo);
-                    mlog(DEBUG, "Elevation: %f, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
-                         rinfo.value, col, row, xblk, yblk, _col, _row, offset);
-                }
-                else
-                {
+                rinfo->value = fp[offset];
+                block->DropLock();
+                mlog(DEBUG, "Elevation: %f, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
+                     rinfo->value, col, row, xblk, yblk, _col, _row, offset);
+            }
+            else
+            {
 #if 0
      FROM gdal.h
      What are these kernels? How do I use them to read one pixel with resampling?
@@ -397,55 +501,54 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
     /*! Gauss blurring */                               GRIORA_Gauss = 7
 #endif
 
-                    float rbuf[1] = {0};
-                    int _cellsize = rinfo.cellSize;
-                    int radius_in_meters = ((radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
-                    int radius_in_pixels = (radius_in_meters == 0) ? 1 : radius_in_meters / _cellsize;
-                    int _col = col - radius_in_pixels;
-                    int _row = row - radius_in_pixels;
-                    int size = radius_in_pixels + 1 + radius_in_pixels;
+                float rbuf[1] = {0};
+                int _cellsize = rinfo->cellSize;
+                int radius_in_meters = ((rinfo->obj->radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
+                int radius_in_pixels = (radius_in_meters == 0) ? 1 : radius_in_meters / _cellsize;
+                int _col = col - radius_in_pixels;
+                int _row = row - radius_in_pixels;
+                int size = radius_in_pixels + 1 + radius_in_pixels;
 
-                    /* If 8 pixels around pixel of interest are not in the raster boundries return pixel value. */
-                    if (_col < 0 || _row < 0)
-                    {
-                        _col = col;
-                        _row = row;
-                        size = 1;
-                        sampleAlg = GRIORA_NearestNeighbour;
-                    }
-
-                    GDALRasterIOExtraArg args;
-                    INIT_RASTERIO_EXTRA_ARG(args);
-                    args.eResampleAlg = sampleAlg;
-                    CPLErr err = CE_None;
-                    int cnt = 1;
-                    do
-                    {
-                        /* Retry read if error */
-                        err = rinfo.band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float32, 0, 0, &args);
-                    } while ( err != CE_None && cnt-- );
-                    CHECK_GDALERR(err);
-                    rinfo.value = rbuf[0];
-                    rastersList.set(i, rinfo);
-                    mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
-                    // print2term("Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
+                /* If 8 pixels around pixel of interest are not in the raster boundries return pixel value. */
+                if (_col < 0 || _row < 0)
+                {
+                    _col = col;
+                    _row = row;
+                    size = 1;
+                    rinfo->obj->sampleAlg = GRIORA_NearestNeighbour;
                 }
-            }
-            else
-            {
-                rinfo.value = ARCTIC_DEM_INVALID_ELELVATION;
-                rastersList.set(i, rinfo);
-                // print2term("%lf, %lf Point not in the raster: %d, %s\n", lon, lat, i, rinfo.fileName.c_str());
+
+                GDALRasterIOExtraArg args;
+                INIT_RASTERIO_EXTRA_ARG(args);
+                args.eResampleAlg = rinfo->obj->sampleAlg;
+                CPLErr err = CE_None;
+                int cnt = 2;
+                do
+                {
+                    /* Retry read if error */
+                    err = rinfo->band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float32, 0, 0, &args);
+                } while (err != CE_None && cnt--);
+                CHECK_GDALERR(err);
+                rinfo->value = rbuf[0];
+                mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], rinfo->obj->radius, radius_in_pixels, size);
+                // print2term("Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
             }
         }
+        else
+        {
+            rinfo->value = ARCTIC_DEM_INVALID_ELELVATION;
+        }
+
+        rinfo->readTime = TimeLib::latchtime() - startTime;
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error reading raster: %s", e.what());
     }
 
-    return containsPoint;
+    return foundPoint;
 }
+
 
 bool ArcticDEMRaster::openVrtDset(const char *fileName)
 {
@@ -522,6 +625,22 @@ bool ArcticDEMRaster::openVrtDset(const char *fileName)
         transf = OGRCreateCoordinateTransformation(&srcSrs, &trgSrs);
         CHECKPTR(transf);
         objCreated = true;
+#if 0
+        {
+            /* Get list of rasters in this vrt file */
+            char **fileLists = GDALGetFileList((GDALDatasetH)vrtDset);
+            int i;
+            for (i=1; fileLists[i] != nullptr; i++)
+            {
+                // print2term("%s\n", fileLists[i]);
+            }
+
+            print2term("First raster: %s\n", fileLists[1]);
+            print2term("Last  raster: %s\n", fileLists[i-1]);
+            print2term("There are %d rasters in %s\n", i, fileLists[0]);
+            CSLDestroy(fileLists);
+        }
+#endif
     }
     catch (const RunTimeException &e)
     {
@@ -551,18 +670,19 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
 
     CHECKPTR(dem_type);
     CHECKPTR(dem_sampling);
+    demType = INVALID;
 
     if (!strcasecmp(dem_type, "mosaic"))
     {
         // fname = "/data/ArcticDem/mosaic_short.vrt";
         fname = "/data/ArcticDem/mosaic.vrt";
-        isStrip = false;
+        demType = MOSAIC;
     }
     else if (!strcasecmp(dem_type, "strip"))
     {
         // fname = "/data/ArcticDem/strips/n51w178.vrt";
         fname = "/data/ArcticDem/strips/n51e156.vrt"; /* First strip file in catalog */
-        isStrip = true;
+        demType = STRIPS;
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid dem_type: %s:", dem_type);
 
@@ -584,8 +704,10 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
     /* Initialize Class Data Members */
     vrtDset = nullptr;
     vrtBand = nullptr;
-    rastersList.clear();
+    rasterList.clear();
+    bzero(rasterRreader, sizeof(rasterRreader));
     bzero(invgeot, sizeof(invgeot));
+    threadCount = 0;
     vrtRows = vrtCols = vrtCellSize = 0;
     bzero(&vrtBbox, sizeof(vrtBbox));
     transf = nullptr;
@@ -711,14 +833,14 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
         /* Get Elevations */
         lua_obj->samples(lon, lat);
 
-        if (lua_obj->rastersList.length() > 0)
+        if (lua_obj->rasterList.length() > 0)
         {
             /* Create Table */
-            lua_createtable(L, lua_obj->rastersList.length(), 0);
+            lua_createtable(L, lua_obj->rasterList.length(), 0);
 
-            for (int i = 0; i < lua_obj->rastersList.length(); i++)
+            for (int i = 0; i < lua_obj->rasterList.length(); i++)
             {
-                raster_info_t rinfo = lua_obj->rastersList.get(i);
+                raster_info_t rinfo = lua_obj->rasterList.get(i);
 
                 lua_createtable(L, 0, 2);
                 LuaEngine::setAttrStr(L, "file", rinfo.fileName.c_str());

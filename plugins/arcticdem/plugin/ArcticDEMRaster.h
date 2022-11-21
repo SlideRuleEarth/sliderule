@@ -58,6 +58,7 @@ class ArcticDEMRaster: public LuaObject
         static const int   RASTER_PHOTON_CRS = 4326;
         static const int   RASTER_ARCTIC_DEM_CRS = 3413;
 
+        static const int   MAX_READER_THREADS = 100;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -72,19 +73,30 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
-            GDALDataset    *dset;
-            GDALRasterBand *band;
-            std::string     fileName;
+            ArcticDEMRaster* obj;
+            GDALDataset*     dset;
+            GDALRasterBand*  band;
+            std::string      fileName;
+
+            uint32_t        rows;
+            uint32_t        cols;
+            bbox_t          bbox;
+            double          cellSize;
+            int32_t         xBlockSize;
+            int32_t         yBlockSize;
+
+            /* Last sample information */
+            OGRPoint*       point;
             double          value;
-
-            uint32_t rows;
-            uint32_t cols;
-            bbox_t   bbox;
-            double   cellSize;
-            int32_t  xBlockSize;
-            int32_t  yBlockSize;
-
+            double          readTime;
         } raster_info_t;
+
+
+        typedef enum {
+            MOSAIC  = 0,
+            STRIPS  = 1,
+            INVALID = 3
+        } dem_type_t;
 
 
         /*--------------------------------------------------------------------
@@ -97,7 +109,7 @@ class ArcticDEMRaster: public LuaObject
         static ArcticDEMRaster* create         (lua_State* L, int index);
 
         void                    samples        (double lon, double lat);
-        virtual                ~ArcticDEMRaster(void);
+        virtual ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -116,21 +128,22 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDEMRaster     (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
-        bool  findRasters   (OGRPoint* p);
-        bool  readRasters   (OGRPoint* p);
-        bool  openVrtDset   (const char* fileName);
+        ArcticDEMRaster      (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
+        double sampleMosaic   (double lon, double lat);
+        void   sampleStrips   (double lon, double lat);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        bool               isStrip;
-        std::string        vrtFileName;
-        VRTDataset         *vrtDset;
-        GDALRasterBand     *vrtBand;
-        List<raster_info_t> rastersList;
-        double invgeot[6];
+        std::string vrtFileName;
+        VRTDataset *vrtDset;
+        GDALRasterBand*     vrtBand;
+        List<raster_info_t> rasterList;
+        pthread_t           rasterRreader[MAX_READER_THREADS];
+        int                 threadCount;
+        dem_type_t          demType;
+        double              invgeot[6];
 
         uint32_t vrtRows;
         uint32_t vrtCols;
@@ -151,6 +164,14 @@ class ArcticDEMRaster: public LuaObject
         static int luaBoundingBox(lua_State *L);
         static int luaCellSize(lua_State *L);
         static int luaSamples(lua_State *L);
+
+        static bool  containsPoint  (GDALDataset *dset, bbox_t *bbox, OGRPoint *p);
+        static void* readingThread  (void *param);
+
+        bool  findRasters    (OGRPoint* p);
+        bool  readRasters    (OGRPoint* p);
+        bool  readRaster     (raster_info_t* rinfo);
+        bool  openVrtDset    (const char *fileName);
 };
 
 #endif  /* __arcticdem_raster__ */
