@@ -253,7 +253,7 @@ local function api_lock(applet)
                 -- check if number of locks exceeds max
                 if member["locks"] >= MaxLocksPerNode then
                     if i == 1 then break -- full capacity
-                    else i = 1 end -- go back to beginning of sorted list
+                    else i = 0 end -- go back to beginning of sorted list (goes to 1 below)
                 else
                     -- create transaction
                     local transaction = {
