@@ -115,6 +115,18 @@ class Atl03Reader: public LuaObject
             photon_t        photons[]; // zero length field
         } extent_t;
 
+        /* Flattened Extent Record */
+        typedef struct {
+            uint64_t        extent_id;
+            uint8_t         track; // 1, 2, 3
+            uint8_t         spot; // 1, 2, 3, 4, 5, 6
+            uint8_t         pt; // pair track - 0: left, 1: right
+            uint16_t        rgt;
+            uint16_t        cycle;
+            uint32_t        segment_id;
+            photon_t        photon;
+        } flat_extent_t;
+
         /* Extent Ancillary Record */
         typedef struct {
             uint64_t        extent_id;
@@ -188,7 +200,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Atl03Data           (info_t* info, Region* region);
+                Atl03Data           (info_t* info, Region& region);
                 ~Atl03Data          (void);
 
                 /* Read Data */
@@ -207,7 +219,7 @@ class Atl03Reader: public LuaObject
                 GTArray<float>      bckgrd_rate;
 
                 MgDictionary<GTDArray*> anc_geo_data;
-                MgDictionary<GTDArray*> anc_photon_data;
+                MgDictionary<GTDArray*> anc_ph_data;
         };
 
         /* Atl08 Classification Subclass */
@@ -217,7 +229,8 @@ class Atl03Reader: public LuaObject
 
                 Atl08Class          (info_t* info);
                 ~Atl08Class         (void);
-                void classify       (info_t* info, Region* region, Atl03Data* data);
+                void classify       (info_t* info, Region& region, Atl03Data& atl03);
+                uint8_t* operator[] (int t);
 
                 /* Class Data */
                 bool                enabled;
@@ -237,11 +250,13 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                YapcScore           (info_t* info, Region* region, Atl03Data* data);
+                YapcScore           (info_t* info, Region& region, Atl03Data& atl03);
                 ~YapcScore          (void);
 
-                void yapcV2         (info_t* info, Region* region, Atl03Data* data);
-                void yapcV3         (info_t* info, Region* region, Atl03Data* data);
+                void yapcV2         (info_t* info, Region& region, Atl03Data& atl03);
+                void yapcV3         (info_t* info, Region& region, Atl03Data& atl03);
+
+                uint8_t* operator[] (int t);
 
                 /* Generated Data */
                 uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]
