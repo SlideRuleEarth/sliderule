@@ -1110,9 +1110,31 @@ uint8_t* Atl03Reader::YapcScore::operator[] (int t)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
 {
-    LocalLib::set(&gt[0], 0, sizeof(gt));
-    gt[PRT_LEFT].start_distance = atl03.segment_dist_x[PRT_LEFT][0];
-    gt[PRT_RIGHT].start_distance = atl03.segment_dist_x[PRT_RIGHT][0];
+    gt[PRT_LEFT].ph_in              = 0;
+    gt[PRT_LEFT].seg_in             = 0;
+    gt[PRT_LEFT].seg_ph             = 0;
+    gt[PRT_LEFT].start_segment      = 0;
+    gt[PRT_LEFT].start_distance     = atl03.segment_dist_x[PRT_LEFT][0];
+    gt[PRT_LEFT].seg_distance       = 0.0;
+    gt[PRT_LEFT].start_seg_portion  = 0.0;
+    gt[PRT_LEFT].track_complete     = false;
+    gt[PRT_LEFT].bckgrd_in          = 0;
+    gt[PRT_LEFT].photon_indices     = NULL;
+    gt[PRT_LEFT].extent_segment     = 0;
+    gt[PRT_LEFT].extent_valid       = true;
+
+    gt[PRT_RIGHT].ph_in             = 0;
+    gt[PRT_RIGHT].seg_in            = 0;
+    gt[PRT_RIGHT].seg_ph            = 0;
+    gt[PRT_RIGHT].start_segment     = 0;
+    gt[PRT_RIGHT].start_distance    = atl03.segment_dist_x[PRT_RIGHT][0];
+    gt[PRT_RIGHT].seg_distance      = 0.0;
+    gt[PRT_RIGHT].start_seg_portion = 0.0;
+    gt[PRT_RIGHT].track_complete    = false;
+    gt[PRT_RIGHT].bckgrd_in         = 0;
+    gt[PRT_RIGHT].photon_indices    = NULL;
+    gt[PRT_RIGHT].extent_segment    = 0;
+    gt[PRT_RIGHT].extent_valid      = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -1178,16 +1200,12 @@ void* Atl03Reader::subsettingThread (void* parm)
         /* Traverse All Photons In Dataset */
         while( reader->active && (!state[PRT_LEFT].track_complete || !state[PRT_RIGHT].track_complete) )
         {
-            List<photon_t> extent_photons[PAIR_TRACKS_PER_GROUND_TRACK];
-            int32_t extent_segment[PAIR_TRACKS_PER_GROUND_TRACK];
-            bool extent_valid[PAIR_TRACKS_PER_GROUND_TRACK] = { true, true };
-
             /* Ancillary Photon Fields */
             bool index_photons = false;
             if(reader->parms->atl03_ph_fields)
             {
-                photon_indices[PRT_LEFT] = new List<int32_t>;
-                photon_indices[PRT_RIGHT] = new List<int32_t>;
+                state[PRT_LEFT].photon_indices = new List<int32_t>;
+                state[PRT_RIGHT].photon_indices = new List<int32_t>;
                 index_photons = true;
             }
 
@@ -1197,7 +1215,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 /* Skip Completed Tracks */
                 if(state[t].track_complete)
                 {
-                    extent_valid[t] = false;
+                    state[t].extent_valid = false;
                     continue;
                 }
 
@@ -1208,9 +1226,11 @@ void* Atl03Reader::subsettingThread (void* parm)
                 bool extent_complete = false;
                 bool step_complete = false;
 
-                /* Set Extent Segment */
-                extent_segment[t] = state[t].seg_in;
+                /* Set Extent State */
                 state[t].start_seg_portion = atl03.dist_ph_along[t][current_photon] / ATL03_SEGMENT_LENGTH;
+                state[t].extent_segment = state[t].seg_in;
+                state[t].extent_valid = true;
+                state[t].extent_photons.clear();
 
                 /* Traverse Photons Until Desired Along Track Distance Reached */
                 while(!extent_complete || !step_complete)
@@ -1235,7 +1255,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                     /* Update Along Track Distance and Progress */
                     double delta_distance = atl03.segment_dist_x[t][current_segment] - state[t].start_distance;
                     double along_track_distance = delta_distance + atl03.dist_ph_along[t][current_photon];
-                    int32_t along_track_segments = current_segment - extent_segment[t];
+                    int32_t along_track_segments = current_segment - state[t].extent_segment;
 
                     /* Set Next Extent's First Photon */
                     if((!step_complete) &&
@@ -1323,7 +1343,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 .quality_ph = (int8_t)quality_ph,
                                 .yapc_score = yapc_score
                             };
-                            extent_photons[t].add(ph);
+                            state[t].extent_photons.add(ph);
 
                             /* Index Photon for Ancillary Fields */
                             if(index_photons)
@@ -1367,7 +1387,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
                 else // distance in segments
                 {
-                    int32_t next_segment = extent_segment[t] + (int32_t)reader->parms->extent_step;
+                    int32_t next_segment = state[t].extent_segment + (int32_t)reader->parms->extent_step;
                     if(next_segment < atl03.segment_dist_x[t].size)
                     {
                         state[t].start_distance = atl03.segment_dist_x[t][next_segment]; // set start distance to next extent's segment distance
@@ -1375,28 +1395,28 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
 
                 /* Check Photon Count */
-                if(extent_photons[t].length() < reader->parms->minimum_photon_count)
+                if(state[t].extent_photons.length() < reader->parms->minimum_photon_count)
                 {
-                    extent_valid[t] = false;
+                    state[t].extent_valid = false;
                 }
 
                 /* Check Along Track Spread */
-                if(extent_photons[t].length() > 1)
+                if(state[t].extent_photons.length() > 1)
                 {
-                    int32_t last = extent_photons[t].length() - 1;
-                    double along_track_spread = extent_photons[t][last].distance - extent_photons[t][0].distance;
+                    int32_t last = state[t].extent_photons.length() - 1;
+                    double along_track_spread = state[t].extent_photons[last].distance - state[t].extent_photons[0].distance;
                     if(along_track_spread < reader->parms->along_track_spread)
                     {
-                        extent_valid[t] = false;
+                        state[t].extent_valid = false;
                     }
                 }
             }
 
             /* Create Extent Record */
-            if(extent_valid[PRT_LEFT] || extent_valid[PRT_RIGHT] || reader->parms->pass_invalid)
+            if(state[PRT_LEFT].extent_valid || state[PRT_RIGHT].extent_valid || reader->parms->pass_invalid)
             {
                 /* Calculate Extent Record Size */
-                int num_photons = extent_photons[PRT_LEFT].length() + extent_photons[PRT_RIGHT].length();
+                int num_photons = state[PRT_LEFT].extent_photons.length() + state[PRT_RIGHT].extent_photons.length();
                 int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
                 /* Allocate and Initialize Extent Record */
@@ -1423,7 +1443,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                     while(state[t].bckgrd_in < atl03.bckgrd_rate[t].size)
                     {
                         double curr_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in];
-                        double segment_time = atl03.segment_delta_time[t][extent_segment[t]];
+                        double segment_time = atl03.segment_delta_time[t][state[t].extent_segment];
                         if(curr_bckgrd_time >= segment_time)
                         {
                             /* Interpolate Background Rate */
@@ -1454,14 +1474,14 @@ void* Atl03Reader::subsettingThread (void* parm)
                     }
 
                     /* Calculate Spacecraft Velocity */
-                    int32_t sc_v_offset = extent_segment[t] * 3;
+                    int32_t sc_v_offset = state[t].extent_segment * 3;
                     double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
                     double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
                     double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
                     double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
 
                     /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
-                    double atl06_segment_id = (double)atl03.segment_id[t][extent_segment[t]];                // start with first segment in extent
+                    double atl06_segment_id = (double)atl03.segment_id[t][state[t].extent_segment];                // start with first segment in extent
                     if(!reader->parms->dist_in_seg)
                     {
                         atl06_segment_id += state[t].start_seg_portion;                                               // add portion of first segment that first photon is included
@@ -1473,20 +1493,20 @@ void* Atl03Reader::subsettingThread (void* parm)
                     }
 
                     /* Populate Attributes */
-                    extent->valid[t]                = extent_valid[t];
+                    extent->valid[t]                = state[t].extent_valid;
                     extent->segment_id[t]           = (uint32_t)(atl06_segment_id + 0.5);
                     extent->segment_distance[t]     = state[t].seg_distance;
                     extent->extent_length[t]        = extent_distance;
                     extent->spacecraft_velocity[t]  = spacecraft_velocity;
                     extent->background_rate[t]      = background_rate;
-                    extent->photon_count[t]         = extent_photons[t].length();
+                    extent->photon_count[t]         = state[t].extent_photons.length();
 
                     /* Populate Photons */
                     if(num_photons > 0)
                     {
-                        for(int32_t p = 0; p < extent_photons[t].length(); p++)
+                        for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
                         {
-                            extent->photons[ph_out++] = extent_photons[t][p];
+                            extent->photons[ph_out++] = state[t].extent_photons[p];
                         }
                     }
                 }
@@ -1499,8 +1519,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                 reader->postRecord(&record, &local_stats);
 
                 /* Send Ancillary Records */
-                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geo_fields, &atl03.anc_geo_data, extent_segment, &local_stats);
-                reader->sendAncillaryPhRecords(extent->extent_id, info->reader->parms->atl03_ph_fields, &atl03.anc_ph_data, &photon_indices[0], &local_stats);
+                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geo_fields, &atl03.anc_geo_data, state, &local_stats);
+                reader->sendAncillaryPhRecords(extent->extent_id, info->reader->parms->atl03_ph_fields, &atl03.anc_ph_data, state, &local_stats);
             }
             else // neither pair in extent valid
             {
@@ -1539,10 +1559,6 @@ void* Atl03Reader::subsettingThread (void* parm)
         }
     }
     reader->threadMut.unlock();
-
-    /* Clean Up Photon Indices */
-    if(photon_indices[PRT_LEFT]) delete photon_indices[PRT_LEFT];
-    if(photon_indices[PRT_RIGHT]) delete photon_indices[PRT_RIGHT];
 
     /* Clean Up Info */
     delete info;
@@ -1584,7 +1600,7 @@ bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
 /*----------------------------------------------------------------------------
  * sendAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1605,6 +1621,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t*
 
             /* Populate Ancillary Data */
             uint32_t num_elements[PAIR_TRACKS_PER_GROUND_TRACK] = {1, 1};
+            int32_t start_element[PAIR_TRACKS_PER_GROUND_TRACK] = {state[PRT_LEFT].extent_segment, state[PRT_RIGHT].extent_segment};
             array->serialize(&data->data[0], start_element, num_elements);
 
             /* Post Ancillary Record */
@@ -1621,7 +1638,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t*
 /*----------------------------------------------------------------------------
  * sendAncillaryPhRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, List<int32_t>** photon_indices, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1632,8 +1649,8 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* 
 
             /* Create Ancillary Record */
             int record_size =   offsetof(ph_anc_t, data) +
-                                (array->gt[PRT_LEFT].elementSize() * photon_indices[PRT_LEFT]->length()) +
-                                (array->gt[PRT_RIGHT].elementSize() * photon_indices[PRT_RIGHT]->length());
+                                (array->gt[PRT_LEFT].elementSize() * state[PRT_LEFT].photon_indices->length()) +
+                                (array->gt[PRT_RIGHT].elementSize() * state[PRT_RIGHT].photon_indices->length());
             RecordObject record(phAncRecType, record_size);
             ph_anc_t* data = (ph_anc_t*)record.getRecordData();
 
@@ -1641,16 +1658,16 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* 
             data->extent_id = extent_id;
             data->field_index = i;
             data->data_type = array->gt[PRT_LEFT].elementType();
-            data->num_elements[PRT_LEFT] = photon_indices[PRT_LEFT]->length();
-            data->num_elements[PRT_RIGHT] = photon_indices[PRT_RIGHT]->length();
+            data->num_elements[PRT_LEFT] = state[PRT_LEFT].photon_indices->length();
+            data->num_elements[PRT_RIGHT] = state[PRT_RIGHT].photon_indices->length();
 
             /* Populate Ancillary Data */
             uint64_t bytes_written = 0;
             for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
             {
-                for(int p = 0; p < photon_indices[t]->length(); p++)
+                for(int p = 0; p < state[t].photon_indices->length(); p++)
                 {
-                    bytes_written += array->gt[t].serialize(&data->data[bytes_written], photon_indices[t]->get(p), 1);
+                    bytes_written += array->gt[t].serialize(&data->data[bytes_written], state[t].photon_indices->get(p), 1);
                 }
             }
 

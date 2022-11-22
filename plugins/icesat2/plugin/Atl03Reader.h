@@ -278,7 +278,10 @@ class Atl03Reader: public LuaObject
                     bool            track_complete;     // flag when track processing has finished
                     int32_t         bckgrd_in;          // bckgrd index
                     List<int32_t>*  photon_indices;     // used for ancillary data
-                } track_state_t;
+                    List<photon_t>  extent_photons;     // list of individual photons in extent
+                    int32_t         extent_segment;     // current segment extent is pulling photons from
+                    bool            extent_valid;       // flag for validity of extent (atl06 checks)
+               } track_state_t;
 
                 TrackState          (Atl03Data& atl03);
                 ~TrackState         (void);
@@ -330,8 +333,8 @@ class Atl03Reader: public LuaObject
         static void*        subsettingThread        (void* parm);
 
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
-        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats);
-        bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, List<int32_t>** photon_indices, stats_t* local_stats);
+        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
 
         static int          luaParms                (lua_State* L);
         static int          luaStats                (lua_State* L);

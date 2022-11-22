@@ -69,8 +69,10 @@ runner.check(p1.cnf[icesat2.CNF_SURFACE_HIGH], "Failed to set _high_")
 print('\n------------------\nTest02: Atl03 Extent Record\n------------------')
 
 recq = msg.subscribe("recq")
+tstart = time.latch()
 f2 = icesat2.atl03(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "recq", {cnf=4, track=icesat2.RPT_1})
 extentrec = recq:recvrecord(3000)
+print("Time to execute: "..tostring(time.latch() - tstart))
 recq:destroy()
 
 runner.check(extentrec, "Failed to read an extent record")
