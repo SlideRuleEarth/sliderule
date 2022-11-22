@@ -332,9 +332,11 @@ class Atl03Reader: public LuaObject
 
         static void*        subsettingThread        (void* parm);
 
-        bool                postRecord              (RecordObject* record, stats_t* local_stats);
+        double              calculateBackground     (int t, TrackState& state, Atl03Data& atl03);
+        bool                sendExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
         bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                postRecord              (RecordObject* record, stats_t* local_stats);
 
         static int          luaParms                (lua_State* L);
         static int          luaStats                (lua_State* L);

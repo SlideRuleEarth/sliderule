@@ -1194,8 +1194,8 @@ void* Atl03Reader::subsettingThread (void* parm)
         local_stats.segments_read = (region.segment_ph_cnt[PRT_LEFT].size + region.segment_ph_cnt[PRT_RIGHT].size);
 
         /* Calculate Length of Extent in Meters (used for distance) */
-        double extent_distance = reader->parms->extent_length;
-        if(reader->parms->dist_in_seg) extent_distance *= ATL03_SEGMENT_LENGTH;
+        state.extent_length = reader->parms->extent_length;
+        if(reader->parms->dist_in_seg) state.extent_length *= ATL03_SEGMENT_LENGTH;
 
         /* Traverse All Photons In Dataset */
         while( reader->active && (!state[PRT_LEFT].track_complete || !state[PRT_RIGHT].track_complete) )
@@ -1336,7 +1336,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 .delta_time = atl03.delta_time[t][current_photon],
                                 .latitude = atl03.lat_ph[t][current_photon],
                                 .longitude = atl03.lon_ph[t][current_photon],
-                                .distance = along_track_distance - (extent_distance / 2.0),
+                                .distance = along_track_distance - (state.extent_length / 2.0),
                                 .height = atl03.h_ph[t][current_photon],
                                 .atl08_class = (uint8_t)atl08_class,
                                 .atl03_cnf = (int8_t)atl03_cnf,
@@ -1369,7 +1369,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
 
                 /* Save Off Segment Distance to Include in Extent Record */
-                state[t].seg_distance = state[t].start_distance + (extent_distance / 2.0);
+                state[t].seg_distance = state[t].start_distance + (state.extent_length / 2.0);
 
                 /* Add Step to Start Distance */
                 if(!reader->parms->dist_in_seg)
@@ -1415,112 +1415,19 @@ void* Atl03Reader::subsettingThread (void* parm)
             /* Create Extent Record */
             if(state[PRT_LEFT].extent_valid || state[PRT_RIGHT].extent_valid || reader->parms->pass_invalid)
             {
-                /* Calculate Extent Record Size */
-                int num_photons = state[PRT_LEFT].extent_photons.length() + state[PRT_RIGHT].extent_photons.length();
-                int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
+                /* Generate Extent ID */
+                uint64_t extent_id = ((uint64_t)(*reader->start_rgt)[0] << 52) |
+                                     ((uint64_t)(*reader->start_cycle)[0] << 36) |
+                                     (((uint64_t)info->track & 0x2) << 34) |
+                                     ((uint64_t)extent_counter << 2) |
+                                     EXTENT_ID_PHOTONS;
 
-                /* Allocate and Initialize Extent Record */
-                RecordObject record(exRecType, extent_bytes);
-                extent_t* extent = (extent_t*)record.getRecordData();
-                extent->reference_pair_track = info->track;
-                extent->spacecraft_orientation = (*reader->sc_orient)[0];
-                extent->reference_ground_track_start = (*reader->start_rgt)[0];
-                extent->cycle_start = (*reader->start_cycle)[0];
-
-                /* Populate Extent ID */
-                extent->extent_id = ((uint64_t)extent->reference_ground_track_start << 52) |
-                                    ((uint64_t)extent->cycle_start << 36) |
-                                    (((uint64_t)extent->reference_pair_track & 0x2) << 34) |
-                                    ((uint64_t)extent_counter << 2) |
-                                    EXTENT_ID_PHOTONS;
-
-                /* Populate Extent */
-                uint32_t ph_out = 0;
-                for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
-                {
-                    /* Find Background */
-                    double background_rate = atl03.bckgrd_rate[t][atl03.bckgrd_rate[t].size - 1];
-                    while(state[t].bckgrd_in < atl03.bckgrd_rate[t].size)
-                    {
-                        double curr_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in];
-                        double segment_time = atl03.segment_delta_time[t][state[t].extent_segment];
-                        if(curr_bckgrd_time >= segment_time)
-                        {
-                            /* Interpolate Background Rate */
-                            if(state[t].bckgrd_in > 0)
-                            {
-                                double prev_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in - 1];
-                                double prev_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in - 1];
-                                double curr_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in];
-
-                                double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
-                                double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
-                                double segment_to_bckgrd_delta = segment_time - prev_bckgrd_time;
-
-                                background_rate = ((bckgrd_rise / bckgrd_run) * segment_to_bckgrd_delta) + prev_bckgrd_rate;
-                            }
-                            else
-                            {
-                                /* Use First Background Rate (no interpolation) */
-                                background_rate = atl03.bckgrd_rate[t][0];
-                            }
-                            break;
-                        }
-                        else
-                        {
-                            /* Go To Next Background Rate */
-                            state[t].bckgrd_in++;
-                        }
-                    }
-
-                    /* Calculate Spacecraft Velocity */
-                    int32_t sc_v_offset = state[t].extent_segment * 3;
-                    double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
-                    double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
-                    double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
-                    double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
-
-                    /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
-                    double atl06_segment_id = (double)atl03.segment_id[t][state[t].extent_segment];                // start with first segment in extent
-                    if(!reader->parms->dist_in_seg)
-                    {
-                        atl06_segment_id += state[t].start_seg_portion;                                               // add portion of first segment that first photon is included
-                        atl06_segment_id += (int)((reader->parms->extent_length / ATL03_SEGMENT_LENGTH) / 2.0); // add half the length of the extent
-                    }
-                    else // dist_in_seg is true
-                    {
-                        atl06_segment_id += (int)(reader->parms->extent_length / 2.0);
-                    }
-
-                    /* Populate Attributes */
-                    extent->valid[t]                = state[t].extent_valid;
-                    extent->segment_id[t]           = (uint32_t)(atl06_segment_id + 0.5);
-                    extent->segment_distance[t]     = state[t].seg_distance;
-                    extent->extent_length[t]        = extent_distance;
-                    extent->spacecraft_velocity[t]  = spacecraft_velocity;
-                    extent->background_rate[t]      = background_rate;
-                    extent->photon_count[t]         = state[t].extent_photons.length();
-
-                    /* Populate Photons */
-                    if(num_photons > 0)
-                    {
-                        for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
-                        {
-                            extent->photons[ph_out++] = state[t].extent_photons[p];
-                        }
-                    }
-                }
-
-                /* Set Photon Pointer Fields */
-                extent->photon_offset[PRT_LEFT] = sizeof(extent_t); // pointers are set to offset from start of record data
-                extent->photon_offset[PRT_RIGHT] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[PRT_LEFT]);
-
-                /* Post Segment Record */
-                reader->postRecord(&record, &local_stats);
+                /* Build and Send Extent Record */
+                reader->sendExtentRecord(extent_id, info->track, state, atl03, &local_stats);
 
                 /* Send Ancillary Records */
-                reader->sendAncillaryGeoRecords(extent->extent_id, info->reader->parms->atl03_geo_fields, &atl03.anc_geo_data, state, &local_stats);
-                reader->sendAncillaryPhRecords(extent->extent_id, info->reader->parms->atl03_ph_fields, &atl03.anc_ph_data, state, &local_stats);
+                reader->sendAncillaryGeoRecords(extent_id, info->reader->parms->atl03_geo_fields, &atl03.anc_geo_data, state, &local_stats);
+                reader->sendAncillaryPhRecords(extent_id, info->reader->parms->atl03_ph_fields, &atl03.anc_ph_data, state, &local_stats);
             }
             else // neither pair in extent valid
             {
@@ -1571,30 +1478,112 @@ void* Atl03Reader::subsettingThread (void* parm)
 }
 
 /*----------------------------------------------------------------------------
- * postRecord
+ * populateBackgroundRates
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
+double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& atl03)
 {
-    uint8_t* rec_buf = NULL;
-    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
-    int post_status = MsgQ::STATE_TIMEOUT;
-    while(active && (post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+    double background_rate = atl03.bckgrd_rate[t][atl03.bckgrd_rate[t].size - 1];
+    while(state[t].bckgrd_in < atl03.bckgrd_rate[t].size)
     {
-        local_stats->extents_retried++;
+        double curr_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in];
+        double segment_time = atl03.segment_delta_time[t][state[t].extent_segment];
+        if(curr_bckgrd_time >= segment_time)
+        {
+            /* Interpolate Background Rate */
+            if(state[t].bckgrd_in > 0)
+            {
+                double prev_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in - 1];
+                double prev_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in - 1];
+                double curr_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in];
+
+                double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
+                double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
+                double segment_to_bckgrd_delta = segment_time - prev_bckgrd_time;
+
+                background_rate = ((bckgrd_rise / bckgrd_run) * segment_to_bckgrd_delta) + prev_bckgrd_rate;
+            }
+            else
+            {
+                /* Use First Background Rate (no interpolation) */
+                background_rate = atl03.bckgrd_rate[t][0];
+            }
+            break;
+        }
+        else
+        {
+            /* Go To Next Background Rate */
+            state[t].bckgrd_in++;
+        }
+    }
+    return background_rate;
+}
+
+/*----------------------------------------------------------------------------
+ * sendExtentRecord
+ *----------------------------------------------------------------------------*/
+bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
+{
+    /* Calculate Extent Record Size */
+    int num_photons = state[PRT_LEFT].extent_photons.length() + state[PRT_RIGHT].extent_photons.length();
+    int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
+
+    /* Allocate and Initialize Extent Record */
+    RecordObject record(exRecType, extent_bytes);
+    extent_t* extent = (extent_t*)record.getRecordData();
+    extent->extent_id = extent_id;
+    extent->reference_pair_track = track;
+    extent->spacecraft_orientation = (*sc_orient)[0];
+    extent->reference_ground_track_start = (*start_rgt)[0];
+    extent->cycle_start = (*start_cycle)[0];
+
+    /* Populate Extent */
+    uint32_t ph_out = 0;
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        /* Calculate Spacecraft Velocity */
+        int32_t sc_v_offset = state[t].extent_segment * 3;
+        double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
+        double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
+        double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
+        double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
+
+        /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
+        double atl06_segment_id = (double)atl03.segment_id[t][state[t].extent_segment]; // start with first segment in extent
+        if(!parms->dist_in_seg)
+        {
+            atl06_segment_id += state[t].start_seg_portion; // add portion of first segment that first photon is included
+            atl06_segment_id += (int)((parms->extent_length / ATL03_SEGMENT_LENGTH) / 2.0); // add half the length of the extent
+        }
+        else // dist_in_seg is true
+        {
+            atl06_segment_id += (int)(parms->extent_length / 2.0);
+        }
+
+        /* Populate Attributes */
+        extent->valid[t]                = state[t].extent_valid;
+        extent->segment_id[t]           = (uint32_t)(atl06_segment_id + 0.5);
+        extent->segment_distance[t]     = state[t].seg_distance;
+        extent->extent_length[t]        = state.extent_length;
+        extent->spacecraft_velocity[t]  = spacecraft_velocity;
+        extent->background_rate[t]      = calculateBackground(t, state, atl03);
+        extent->photon_count[t]         = state[t].extent_photons.length();
+
+        /* Populate Photons */
+        if(num_photons > 0)
+        {
+            for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
+            {
+                extent->photons[ph_out++] = state[t].extent_photons[p];
+            }
+        }
     }
 
-    /* Update Statistics */
-    if(post_status > 0)
-    {
-        local_stats->extents_sent++;
-        return true;
-    }
-    else
-    {
-        mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
-        local_stats->extents_dropped++;
-        return false;
-    }
+    /* Set Photon Pointer Fields */
+    extent->photon_offset[PRT_LEFT] = sizeof(extent_t); // pointers are set to offset from start of record data
+    extent->photon_offset[PRT_RIGHT] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[PRT_LEFT]);
+
+    /* Post Segment Record */
+    return postRecord(&record, local_stats);
 }
 
 /*----------------------------------------------------------------------------
@@ -1678,6 +1667,33 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* 
     }
     else
     {
+        return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * postRecord
+ *----------------------------------------------------------------------------*/
+bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
+{
+    uint8_t* rec_buf = NULL;
+    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+    int post_status = MsgQ::STATE_TIMEOUT;
+    while(active && (post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+    {
+        local_stats->extents_retried++;
+    }
+
+    /* Update Statistics */
+    if(post_status > 0)
+    {
+        local_stats->extents_sent++;
+        return true;
+    }
+    else
+    {
+        mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
+        local_stats->extents_dropped++;
         return false;
     }
 }
