@@ -180,25 +180,50 @@ def __cmr_filter_urls(search_results):
 
     return urls
 
-def __cmr_granule_polygons(search_results):
-    """Get the polygons for CMR returned granules"""
+def __cmr_granule_metadata(search_results):
+    """Get the metadata for CMR returned granules"""
+    # GeoDataFrame with granule metadata
+    granule_metadata = __emptyframe()
+    # return empty dataframe if no CMR entries
     if 'feed' not in search_results or 'entry' not in search_results['feed']:
-        return []
-    granule_polygons = []
+        return granule_metadata
     # for each CMR entry
     for e in search_results['feed']['entry']:
-        # for each polygon
-        for polys in e['polygons']:
-            coords = [float(i) for i in polys[0].split()]
-            region = [{'lon':x,'lat':y} for y,x in zip(coords[::2],coords[1::2])]
-            granule_polygons.append(region)
-    # return granule polygons in sliderule region format
-    return granule_polygons
+        # columns for dataframe
+        columns = {}
+        # time start and time end of granule
+        columns['time_start'] = numpy.datetime64(e['time_start'])
+        columns['time_end'] = numpy.datetime64(e['time_end'])
+        columns['time_updated'] = numpy.datetime64(e['updated'])
+        # get the granule size and convert to bits
+        columns['granule_size'] = float(e['granule_size'])*(2.0**20)
+        # Create Pandas DataFrame object
+        # use granule id as index
+        df = geopandas.pd.DataFrame(columns, index=[e['id']])
+        # Generate Geometry Column
+        if 'polygons' in e:
+            coords = [float(i) for i in e['polygons'][0][0].split()]
+            geometry = Polygon(zip(coords[1::2], coords[::2]))
+        else:
+            geometry, = geopandas.points_from_xy([None], [None])
+        # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
+        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=EPSG_MERCATOR)
+        # append to combined GeoDataFrame and catch warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            granule_metadata = granule_metadata.append(gdf)
+    # return granule metadata
+    # - time start and time end
+    # - time granule was updated
+    # - granule size in bits
+    # - polygons as geodataframe geometry
+    return granule_metadata
 
 def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     """Perform a scrolling CMR query for files matching input criteria."""
     kwargs.setdefault('polygon',None)
-    kwargs.setdefault('return_polygons',False)
+    kwargs.setdefault('name_filter',None)
+    kwargs.setdefault('return_metadata',False)
     # build params
     params = '&short_name={0}'.format(short_name)
     params += __build_version_query_params(version)
@@ -217,7 +242,8 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     ctx.verify_mode = ssl.CERT_NONE
 
     urls = []
-    polys = []
+    # GeoDataFrame with granule metadata
+    metadata = __emptyframe()
     while True:
         req = urllib.request.Request(cmr_query_url)
         if cmr_scroll_id:
@@ -234,14 +260,17 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
         if not url_scroll_results:
             break
         urls += url_scroll_results
-        # append granule polygons
-        if kwargs['return_polygons']:
-            polygon_results = __cmr_granule_polygons(search_page)
+        # query for granule metadata and polygons
+        if kwargs['return_metadata']:
+            metadata_results = __cmr_granule_metadata(search_page)
         else:
-            polygon_results = [None for _ in url_scroll_results]
-        polys.extend(polygon_results)
+            metadata_results = [None for _ in url_scroll_results]
+        # append granule metadata and catch warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            metadata = metadata.append(metadata_results)
 
-    return (urls,polys)
+    return (urls,metadata)
 
 ###############################################################################
 # LOCAL FUNCTIONS
@@ -312,7 +341,7 @@ def __get_values(data, dtype, size):
 #
 #  Query Resources from CMR
 #
-def __query_resources(parm, version, return_polygons=False):
+def __query_resources(parm, version, **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -323,9 +352,8 @@ def __query_resources(parm, version, return_polygons=False):
         return []
 
     # Submission Arguments for CMR
-    kwargs = {}
     kwargs['version'] = version
-    kwargs['return_polygons'] = return_polygons
+    kwargs.setdefault('return_metadata', False)
 
     # Pull Out Polygon
     if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
@@ -357,8 +385,8 @@ def __query_resources(parm, version, return_polygons=False):
         kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
 
     # Make CMR Request
-    if return_polygons:
-        resources,polygons = cmr(**kwargs)
+    if kwargs['return_metadata']:
+        resources,metadata = cmr(**kwargs)
     else:
         resources = cmr(**kwargs)
 
@@ -372,8 +400,8 @@ def __query_resources(parm, version, return_polygons=False):
     profiles[__query_resources.__name__] = time.perf_counter() - tstart
 
     # Return Resources
-    if return_polygons:
-        return (resources,polygons)
+    if kwargs['return_metadata']:
+        return (resources,metadata)
     else:
         return resources
 
@@ -564,8 +592,8 @@ def cmr(**kwargs):
     # set default version and product short name
     kwargs.setdefault('version', DEFAULT_ICESAT2_SDP_VERSION)
     kwargs.setdefault('short_name','ATL03')
-    # return polygons for each requested granule
-    kwargs.setdefault('return_polygons', False)
+    # return metadata for each requested granule
+    kwargs.setdefault('return_metadata', False)
     # set default name filter
     kwargs.setdefault('name_filter', None)
 
@@ -583,7 +611,7 @@ def cmr(**kwargs):
     # iterate through each polygon (or none if none supplied)
     for polygon in polygons:
         urls = []
-        polys = []
+        metadata = __emptyframe()
 
         # issue CMR request
         for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
@@ -600,12 +628,12 @@ def cmr(**kwargs):
 
             # call into NSIDC routines to make CMR request
             try:
-                urls,polys = __cmr_search(kwargs['short_name'],
+                urls,metadata = __cmr_search(kwargs['short_name'],
                                             kwargs['version'],
                                             kwargs['time_start'],
                                             kwargs['time_end'],
                                             polygon=polystr,
-                                            return_polygons=kwargs['return_polygons'],
+                                            return_metadata=kwargs['return_metadata'],
                                             name_filter=kwargs['name_filter'])
                 break # exit loop because cmr search was successful
             except urllib.error.HTTPError as e:
@@ -630,15 +658,15 @@ def cmr(**kwargs):
                 break # exit here because nothing can be done
 
         # populate resources
-        for url, poly in zip(urls, polys):
-            resources[url] = poly
+        for i,url, in enumerate(urls):
+            resources[url] = metadata.iloc[i]
 
     # build return lists
     url_list = list(resources.keys())
-    poly_list = list(resources.values())
+    meta_list = list(resources.values())
 
-    if kwargs['return_polygons']:
-        return (url_list,poly_list)
+    if kwargs['return_metadata']:
+        return (url_list,meta_list)
     else:
         return url_list
 
