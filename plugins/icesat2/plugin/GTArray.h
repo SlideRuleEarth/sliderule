@@ -64,6 +64,7 @@ class GTArray
                     GTArray     (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
         virtual     ~GTArray    (void);
 
+        H5Array<T>& operator[]  (int t);
         bool        trim        (long* prt_offset);
         bool        join        (int timeout, bool throw_exception);
 
@@ -103,6 +104,15 @@ GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const c
 template <class T>
 GTArray<T>::~GTArray(void)
 {
+}
+
+/*----------------------------------------------------------------------------
+ * operator[]
+ *----------------------------------------------------------------------------*/
+template <class T>
+H5Array<T>& GTArray<T>::operator[] (int t)
+{
+    return gt[t];
 }
 
 /*----------------------------------------------------------------------------

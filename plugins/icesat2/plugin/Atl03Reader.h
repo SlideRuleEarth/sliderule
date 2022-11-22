@@ -233,6 +233,7 @@ class Atl03Reader: public LuaObject
                 Atl08Class          (info_t* info);
                 ~Atl08Class         (void);
                 void classify       (info_t* info, Region& region, Atl03Data& atl03);
+                uint8_t* operator[] (int t);
 
                 /* Class Data */
                 bool                enabled;
@@ -257,6 +258,8 @@ class Atl03Reader: public LuaObject
 
                 void yapcV2         (info_t* info, Region& region, Atl03Data& atl03);
                 void yapcV3         (info_t* info, Region& region, Atl03Data& atl03);
+
+                uint8_t* operator[] (int t);
 
                 /* Generated Data */
                 uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]

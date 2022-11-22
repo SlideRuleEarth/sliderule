@@ -410,12 +410,12 @@ void Atl03Reader::Region::polyregion (info_t* info)
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
         int segment = 0;
-        while(segment < segment_ph_cnt.gt[t].size)
+        while(segment < segment_ph_cnt[t].size)
         {
             bool inclusion = false;
 
             /* Project Segment Coordinate */
-            MathLib::coord_t segment_coord = {segment_lon.gt[t][segment], segment_lat.gt[t][segment]};
+            MathLib::coord_t segment_coord = {segment_lon[t][segment], segment_lat[t][segment]};
             MathLib::point_t segment_point = MathLib::coord2point(segment_coord, projection);
 
             /* Test Inclusion */
@@ -428,25 +428,25 @@ void Atl03Reader::Region::polyregion (info_t* info)
             if(!first_segment_found[t])
             {
                 /* If Coordinate Is In Polygon */
-                if(inclusion && segment_ph_cnt.gt[t][segment] != 0)
+                if(inclusion && segment_ph_cnt[t][segment] != 0)
                 {
                     /* Set First Segment */
                     first_segment_found[t] = true;
                     first_segment[t] = segment;
 
                     /* Include Photons From First Segment */
-                    num_photons[t] = segment_ph_cnt.gt[t][segment];
+                    num_photons[t] = segment_ph_cnt[t][segment];
                 }
                 else
                 {
                     /* Update Photon Index */
-                    first_photon[t] += segment_ph_cnt.gt[t][segment];
+                    first_photon[t] += segment_ph_cnt[t][segment];
                 }
             }
             else if(!last_segment_found[t])
             {
                 /* If Coordinate Is NOT In Polygon */
-                if(!inclusion && segment_ph_cnt.gt[t][segment] != 0)
+                if(!inclusion && segment_ph_cnt[t][segment] != 0)
                 {
                     /* Set Last Segment */
                     last_segment_found[t] = true;
@@ -455,7 +455,7 @@ void Atl03Reader::Region::polyregion (info_t* info)
                 else
                 {
                     /* Update Photon Index */
-                    num_photons[t] += segment_ph_cnt.gt[t][segment];
+                    num_photons[t] += segment_ph_cnt[t][segment];
                 }
             }
 
@@ -484,25 +484,25 @@ void Atl03Reader::Region::rasterregion (info_t* info)
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
         /* Check Size */
-        if(segment_ph_cnt.gt[t].size <= 0)
+        if(segment_ph_cnt[t].size <= 0)
         {
             continue;
         }
 
         /* Allocate Inclusion Mask */
-        inclusion_mask[t] = new bool [segment_ph_cnt.gt[t].size];
+        inclusion_mask[t] = new bool [segment_ph_cnt[t].size];
         inclusion_ptr[t] = inclusion_mask[t];
 
         /* Loop Throuh Segments */
         long curr_num_photons = 0;
         long last_segment = 0;
         int segment = 0;
-        while(segment < segment_ph_cnt.gt[t].size)
+        while(segment < segment_ph_cnt[t].size)
         {
-            if(segment_ph_cnt.gt[t][segment] != 0)
+            if(segment_ph_cnt[t][segment] != 0)
             {
                 /* Check Inclusion */
-                bool inclusion = info->reader->parms->raster->subset(segment_lon.gt[t][segment], segment_lat.gt[t][segment]);
+                bool inclusion = info->reader->parms->raster->subset(segment_lon[t][segment], segment_lat[t][segment]);
                 inclusion_mask[t][segment] = inclusion;
 
                 /* Check For First Segment */
@@ -518,19 +518,19 @@ void Atl03Reader::Region::rasterregion (info_t* info)
                         last_segment = segment;
 
                         /* Include Photons From First Segment */
-                        curr_num_photons = segment_ph_cnt.gt[t][segment];
+                        curr_num_photons = segment_ph_cnt[t][segment];
                         num_photons[t] = curr_num_photons;
                     }
                     else
                     {
                         /* Update Photon Index */
-                        first_photon[t] += segment_ph_cnt.gt[t][segment];
+                        first_photon[t] += segment_ph_cnt[t][segment];
                     }
                 }
                 else
                 {
                     /* Update Photon Count and Segment */
-                    curr_num_photons += segment_ph_cnt.gt[t][segment];
+                    curr_num_photons += segment_ph_cnt[t][segment];
 
                     /* If Coordinate Is In Raster */
                     if(inclusion)
@@ -707,39 +707,39 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
         /* Allocate ATL08 Classification Array */
-        int num_photons = atl03.dist_ph_along.gt[t].size;
+        int num_photons = atl03.dist_ph_along[t].size;
         gt[t] = new uint8_t [num_photons];
 
         /* Populate ATL08 Classifications */
         int32_t atl03_photon = 0;
         int32_t atl08_photon = 0;
-        for(int atl03_segment_index = 0; atl03_segment_index < atl03.segment_id.gt[t].size; atl03_segment_index++)
+        for(int atl03_segment_index = 0; atl03_segment_index < atl03.segment_id[t].size; atl03_segment_index++)
         {
-            int32_t atl03_segment = atl03.segment_id.gt[t][atl03_segment_index];
+            int32_t atl03_segment = atl03.segment_id[t][atl03_segment_index];
             int32_t atl03_segment_count = atl03_segment_ph_cnt->gt[t][atl03_segment_index];
             for(int atl03_count = 1; atl03_count <= atl03_segment_count; atl03_count++)
             {
                 /* Go To Segment */
-                while( (atl08_photon < atl08_segment_id.gt[t].size) && // atl08 photon is valid
-                       (atl08_segment_id.gt[t][atl08_photon] < atl03_segment) )
+                while( (atl08_photon < atl08_segment_id[t].size) && // atl08 photon is valid
+                       (atl08_segment_id[t][atl08_photon] < atl03_segment) )
                 {
                     atl08_photon++;
                 }
 
-                while( (atl08_photon < atl08_segment_id.gt[t].size) && // atl08 photon is valid
-                       (atl08_segment_id.gt[t][atl08_photon] == atl03_segment) &&
-                       (atl08_pc_indx.gt[t][atl08_photon] < atl03_count))
+                while( (atl08_photon < atl08_segment_id[t].size) && // atl08 photon is valid
+                       (atl08_segment_id[t][atl08_photon] == atl03_segment) &&
+                       (atl08_pc_indx[t][atl08_photon] < atl03_count))
                 {
                     atl08_photon++;
                 }
 
                 /* Check Match */
-                if( (atl08_photon < atl08_segment_id.gt[t].size) &&
-                    (atl08_segment_id.gt[t][atl08_photon] == atl03_segment) &&
-                    (atl08_pc_indx.gt[t][atl08_photon] == atl03_count) )
+                if( (atl08_photon < atl08_segment_id[t].size) &&
+                    (atl08_segment_id[t][atl08_photon] == atl03_segment) &&
+                    (atl08_pc_indx[t][atl08_photon] == atl03_count) )
                 {
                     /* Assign Classification */
-                    gt[t][atl03_photon] = (uint8_t)atl08_pc_flag.gt[t][atl08_photon];
+                    gt[t][atl03_photon] = (uint8_t)atl08_pc_flag[t][atl08_photon];
 
                     /* Go To Next ATL08 Photon */
                     atl08_photon++;
@@ -755,6 +755,14 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
             }
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * Atl08Class::operator[]
+ *----------------------------------------------------------------------------*/
+uint8_t* Atl03Reader::Atl08Class::operator[] (int t)
+{
+    return gt[t];
 }
 
 /*----------------------------------------------------------------------------
@@ -785,6 +793,17 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
 }
 
 /*----------------------------------------------------------------------------
+ * YapcScore::Destructor
+ *----------------------------------------------------------------------------*/
+Atl03Reader::YapcScore::~YapcScore (void)
+{
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        if(gt[t]) delete [] gt[t];
+    }
+}
+
+/*----------------------------------------------------------------------------
  * yapcV2
  *----------------------------------------------------------------------------*/
 void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& atl03)
@@ -805,7 +824,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
         /* Allocate ATL08 Classification Array */
-        int32_t num_photons = atl03.dist_ph_along.gt[t].size;
+        int32_t num_photons = atl03.dist_ph_along[t].size;
         gt[t] = new uint8_t [num_photons];
         LocalLib::set(gt[t], 0, num_photons);
 
@@ -816,17 +835,17 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
         int32_t ph_c1 = 0; // center end
 
         /* Loop Through Each ATL03 Segment */
-        int32_t num_segments = atl03.segment_id.gt[t].size;
+        int32_t num_segments = atl03.segment_id[t].size;
         for(int segment_index = 0; segment_index < num_segments; segment_index++)
         {
             /* Determine Indices */
-            ph_b0 += segment_index > 1 ? region.segment_ph_cnt.gt[t][segment_index - 2] : 0; // Center - 2
-            ph_c0 += segment_index > 0 ? region.segment_ph_cnt.gt[t][segment_index - 1] : 0; // Center - 1
-            ph_c1 += region.segment_ph_cnt.gt[t][segment_index]; // Center
-            ph_b1 += segment_index < (num_segments - 1) ? region.segment_ph_cnt.gt[t][segment_index + 1] : 0; // Center + 1
+            ph_b0 += segment_index > 1 ? region.segment_ph_cnt[t][segment_index - 2] : 0; // Center - 2
+            ph_c0 += segment_index > 0 ? region.segment_ph_cnt[t][segment_index - 1] : 0; // Center - 1
+            ph_c1 += region.segment_ph_cnt[t][segment_index]; // Center
+            ph_b1 += segment_index < (num_segments - 1) ? region.segment_ph_cnt[t][segment_index + 1] : 0; // Center + 1
 
             /* Calculate N and KNN */
-            int32_t N = region.segment_ph_cnt.gt[t][segment_index];
+            int32_t N = region.segment_ph_cnt[t][segment_index];
             int knn = (settings->knn != 0) ? settings->knn : MAX(1, (sqrt((double)N) + 0.5) / 2);
             knn = MIN(knn, MAX_KNN); // truncate if too large
 
@@ -834,14 +853,14 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
             if((N <= knn) || (N < info->reader->parms->minimum_photon_count)) continue;
 
             /* Calculate Distance and Height Spread */
-            double min_h = atl03.h_ph.gt[t][0];
+            double min_h = atl03.h_ph[t][0];
             double max_h = min_h;
-            double min_x = atl03.dist_ph_along.gt[t][0];
+            double min_x = atl03.dist_ph_along[t][0];
             double max_x = min_x;
             for(int n = 1; n < N; n++)
             {
-                double h = atl03.h_ph.gt[t][n];
-                double x = atl03.dist_ph_along.gt[t][n];
+                double h = atl03.h_ph[t][n];
+                double x = atl03.dist_ph_along[t][n];
                 if(h < min_h) min_h = h;
                 if(h > max_h) max_h = h;
                 if(x < min_x) min_x = x;
@@ -863,7 +882,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
             LocalLib::set(bins, 0, num_bins);
             for(int n = 0; n < N; n++)
             {
-                unsigned int bin = (unsigned int)((atl03.h_ph.gt[t][n] - min_h) / HSPREAD_BINSIZE);
+                unsigned int bin = (unsigned int)((atl03.h_ph[t][n] - min_h) / HSPREAD_BINSIZE);
                 bins[bin] = 1; // mark that photon present
             }
 
@@ -894,11 +913,11 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
                     if(y == x) continue;
 
                     /* Check Window */
-                    double delta_x = abs(atl03.dist_ph_along.gt[t][x] - atl03.dist_ph_along.gt[t][y]);
+                    double delta_x = abs(atl03.dist_ph_along[t][x] - atl03.dist_ph_along[t][y]);
                     if(delta_x > half_win_x) continue;
 
                     /*  Calculate Weighted Distance */
-                    double delta_h = abs(atl03.h_ph.gt[t][x] - atl03.h_ph.gt[t][y]);
+                    double delta_h = abs(atl03.h_ph[t][x] - atl03.h_ph[t][y]);
                     double proximity = half_win_h - delta_h;
 
                     /* Add to Nearest Neighbor */
@@ -973,8 +992,8 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
      */
     for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
     {
-        int32_t num_segments = atl03.segment_id.gt[t].size;
-        int32_t num_photons = atl03.dist_ph_along.gt[t].size;
+        int32_t num_segments = atl03.segment_id[t].size;
+        int32_t num_photons = atl03.dist_ph_along[t].size;
 
         /* Allocate Photon Arrays */
         gt[t] = new uint8_t [num_photons]; // class member freed in deconstructor
@@ -984,9 +1003,9 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
         int32_t ph_index = 0;
         for(int segment_index = 0; segment_index < num_segments; segment_index++)
         {
-            for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt.gt[t][segment_index]; ph_in_seg_index++)
+            for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[t][segment_index]; ph_in_seg_index++)
             {
-                ph_dist[ph_index] = atl03.segment_dist_x.gt[t][segment_index] + atl03.dist_ph_along.gt[t][ph_index];
+                ph_dist[ph_index] = atl03.segment_dist_x[t][segment_index] + atl03.dist_ph_along[t][ph_index];
                 ph_index++;
             }
         }
@@ -996,7 +1015,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
         for(int segment_index = 0; segment_index < num_segments; segment_index++)
         {
             /* Initialize Segment Parameters */
-            int32_t N = region.segment_ph_cnt.gt[t][segment_index];
+            int32_t N = region.segment_ph_cnt[t][segment_index];
             double* ph_weights = new double[N]; // local array freed below
             int max_knn = settings->min_knn;
             int32_t start_ph_index = ph_index;
@@ -1015,7 +1034,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
                     if(x_dist <= hWX)
                     {
                         /* Check Inside Vertical Window */
-                        double proximity = abs(atl03.h_ph.gt[t][ph_index] - atl03.h_ph.gt[t][neighbor_index]);
+                        double proximity = abs(atl03.h_ph[t][ph_index] - atl03.h_ph[t][neighbor_index]);
                         if(proximity <= hWZ)
                         {
                             proximities.add(proximity);
@@ -1038,7 +1057,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
                     if(x_dist <= hWX)
                     {
                         /* Check Inside Vertical Window */
-                        double proximity = abs(atl03.h_ph.gt[t][ph_index] - atl03.h_ph.gt[t][neighbor_index]);
+                        double proximity = abs(atl03.h_ph[t][ph_index] - atl03.h_ph[t][neighbor_index]);
                         if(proximity <= hWZ) // inside of height window
                         {
                             proximities.add(proximity);
@@ -1091,14 +1110,11 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
 }
 
 /*----------------------------------------------------------------------------
- * YapcScore::Destructor
+ * YapcScore::operator[]
  *----------------------------------------------------------------------------*/
-Atl03Reader::YapcScore::~YapcScore (void)
+uint8_t* Atl03Reader::YapcScore::operator[] (int t)
 {
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
-    {
-        if(gt[t]) delete [] gt[t];
-    }
+    return gt[t];
 }
 
 /*----------------------------------------------------------------------------
@@ -1203,31 +1219,31 @@ void* Atl03Reader::subsettingThread (void* parm)
                 state[t].extent_photons.clear();
                 state[t].extent_segment = state[t].seg_in;
                 state[t].extent_valid = true;
-                state[t].start_seg_portion = atl03.dist_ph_along.gt[t][current_photon] / ATL03_SEGMENT_LENGTH;
+                state[t].start_seg_portion = atl03.dist_ph_along[t][current_photon] / ATL03_SEGMENT_LENGTH;
 
                 /* Traverse Photons Until Desired Along Track Distance Reached */
                 while(!extent_complete || !step_complete)
                 {
                     /* Go to Photon's Segment */
                     current_count++;
-                    while((current_segment < region.segment_ph_cnt.gt[t].size) &&
-                          (current_count > region.segment_ph_cnt.gt[t][current_segment]))
+                    while((current_segment < region.segment_ph_cnt[t].size) &&
+                          (current_count > region.segment_ph_cnt[t][current_segment]))
                     {
                         current_count = 1; // reset photons in segment
                         current_segment++; // go to next segment
                     }
 
                     /* Check Current Segment */
-                    if(current_segment >= atl03.segment_dist_x.gt[t].size)
+                    if(current_segment >= atl03.segment_dist_x[t].size)
                     {
-                        mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->resource, info->track, current_segment, atl03.segment_dist_x.gt[t].size, region.num_segments[t]);
+                        mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->resource, info->track, current_segment, atl03.segment_dist_x[t].size, region.num_segments[t]);
                         state[t].track_complete = true;
                         break;
                     }
 
                     /* Update Along Track Distance and Progress */
-                    double delta_distance = atl03.segment_dist_x.gt[t][current_segment] - state[t].start_distance;
-                    double along_track_distance = delta_distance + atl03.dist_ph_along.gt[t][current_photon];
+                    double delta_distance = atl03.segment_dist_x[t][current_segment] - state[t].start_distance;
+                    double along_track_distance = delta_distance + atl03.dist_ph_along[t][current_photon];
                     int32_t along_track_segments = current_segment - state[t].extent_segment;
 
                     /* Set Next Extent's First Photon */
@@ -1248,7 +1264,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         do
                         {
                             /* Check Signal Confidence Level */
-                            int8_t atl03_cnf = atl03.signal_conf_ph.gt[t][current_photon];
+                            int8_t atl03_cnf = atl03.signal_conf_ph[t][current_photon];
                             if(atl03_cnf < CNF_POSSIBLE_TEP || atl03_cnf > CNF_SURFACE_HIGH)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
@@ -1259,7 +1275,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             }
 
                             /* Check ATL03 Photon Quality Level */
-                            int8_t quality_ph = atl03.quality_ph.gt[t][current_photon];
+                            int8_t quality_ph = atl03.quality_ph[t][current_photon];
                             if(quality_ph < QUALITY_NOMINAL || quality_ph > QUALITY_POSSIBLE_TEP)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
@@ -1271,9 +1287,9 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                             /* Check ATL08 Classification */
                             atl08_classification_t atl08_class = ATL08_UNCLASSIFIED;
-                            if(atl08.gt[t])
+                            if(atl08[t])
                             {
-                                atl08_class = (atl08_classification_t)atl08.gt[t][current_photon];
+                                atl08_class = (atl08_classification_t)atl08[t][current_photon];
                                 if(atl08_class < 0 || atl08_class >= NUM_ATL08_CLASSES)
                                 {
                                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
@@ -1286,9 +1302,9 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                             /* Check YAPC Score */
                             uint8_t yapc_score = 0;
-                            if(yapc.gt[t])
+                            if(yapc[t])
                             {
-                                yapc_score = yapc.gt[t][current_photon];
+                                yapc_score = yapc[t][current_photon];
                                 if(yapc_score < reader->parms->yapc.score)
                                 {
                                     break;
@@ -1306,11 +1322,11 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                             /* Add Photon to Extent */
                             photon_t ph = {
-                                .delta_time = atl03.delta_time.gt[t][current_photon],
-                                .latitude = atl03.lat_ph.gt[t][current_photon],
-                                .longitude = atl03.lon_ph.gt[t][current_photon],
+                                .delta_time = atl03.delta_time[t][current_photon],
+                                .latitude = atl03.lat_ph[t][current_photon],
+                                .longitude = atl03.lon_ph[t][current_photon],
                                 .distance = along_track_distance - (state.extent_length / 2.0),
-                                .height = atl03.h_ph.gt[t][current_photon],
+                                .height = atl03.h_ph[t][current_photon],
                                 .atl08_class = (uint8_t)atl08_class,
                                 .atl03_cnf = (int8_t)atl03_cnf,
                                 .quality_ph = (int8_t)quality_ph,
@@ -1334,7 +1350,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                     current_photon++;
 
                     /* Check Current Photon */
-                    if(current_photon >= atl03.dist_ph_along.gt[t].size)
+                    if(current_photon >= atl03.dist_ph_along[t].size)
                     {
                         state[t].track_complete = true;
                         break;
@@ -1350,10 +1366,10 @@ void* Atl03Reader::subsettingThread (void* parm)
                     state[t].start_distance += reader->parms->extent_step; // step start distance
 
                     /* Apply Segment Distance Correction and Update Start Segment */
-                    while( ((state[t].start_segment + 1) < atl03.segment_dist_x.gt[t].size) &&
-                            (state[t].start_distance >= atl03.segment_dist_x.gt[t][state[t].start_segment + 1]) )
+                    while( ((state[t].start_segment + 1) < atl03.segment_dist_x[t].size) &&
+                            (state[t].start_distance >= atl03.segment_dist_x[t][state[t].start_segment + 1]) )
                     {
-                        state[t].start_distance += atl03.segment_dist_x.gt[t][state[t].start_segment + 1] - atl03.segment_dist_x.gt[t][state[t].start_segment];
+                        state[t].start_distance += atl03.segment_dist_x[t][state[t].start_segment + 1] - atl03.segment_dist_x[t][state[t].start_segment];
                         state[t].start_distance -= ATL03_SEGMENT_LENGTH;
                         state[t].start_segment++;
                     }
@@ -1361,9 +1377,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                 else // distance in segments
                 {
                     int32_t next_segment = state[t].extent_segment + (int32_t)reader->parms->extent_step;
-                    if(next_segment < atl03.segment_dist_x.gt[t].size)
+                    if(next_segment < atl03.segment_dist_x[t].size)
                     {
-                        state[t].start_distance = atl03.segment_dist_x.gt[t][next_segment]; // set start distance to next extent's segment distance
+                        state[t].start_distance = atl03.segment_dist_x[t][next_segment]; // set start distance to next extent's segment distance
                     }
                 }
 
@@ -1474,13 +1490,13 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
     {
         /* Calculate Spacecraft Velocity */
         int32_t sc_v_offset = state[t].extent_segment * 3;
-        double sc_v1 = atl03.velocity_sc.gt[t][sc_v_offset + 0];
-        double sc_v2 = atl03.velocity_sc.gt[t][sc_v_offset + 1];
-        double sc_v3 = atl03.velocity_sc.gt[t][sc_v_offset + 2];
+        double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
+        double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
+        double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
         double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
 
         /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
-        double atl06_segment_id = (double)atl03.segment_id.gt[t][state[t].extent_segment]; // start with first segment in extent
+        double atl06_segment_id = (double)atl03.segment_id[t][state[t].extent_segment]; // start with first segment in extent
         if(!parms->dist_in_seg)
         {
             atl06_segment_id += state[t].start_seg_portion; // add portion of first segment that first photon is included
@@ -1631,19 +1647,19 @@ bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
  *----------------------------------------------------------------------------*/
 double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& atl03)
 {
-    double background_rate = atl03.bckgrd_rate.gt[t][atl03.bckgrd_rate.gt[t].size - 1];
-    while(state[t].bckgrd_in < atl03.bckgrd_rate.gt[t].size)
+    double background_rate = atl03.bckgrd_rate[t][atl03.bckgrd_rate[t].size - 1];
+    while(state[t].bckgrd_in < atl03.bckgrd_rate[t].size)
     {
-        double curr_bckgrd_time = atl03.bckgrd_delta_time.gt[t][state[t].bckgrd_in];
-        double segment_time = atl03.segment_delta_time.gt[t][state[t].extent_segment];
+        double curr_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in];
+        double segment_time = atl03.segment_delta_time[t][state[t].extent_segment];
         if(curr_bckgrd_time >= segment_time)
         {
             /* Interpolate Background Rate */
             if(state[t].bckgrd_in > 0)
             {
-                double prev_bckgrd_time = atl03.bckgrd_delta_time.gt[t][state[t].bckgrd_in - 1];
-                double prev_bckgrd_rate = atl03.bckgrd_rate.gt[t][state[t].bckgrd_in - 1];
-                double curr_bckgrd_rate = atl03.bckgrd_rate.gt[t][state[t].bckgrd_in];
+                double prev_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in - 1];
+                double prev_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in - 1];
+                double curr_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in];
 
                 double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
                 double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
@@ -1654,7 +1670,7 @@ double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& at
             else
             {
                 /* Use First Background Rate (no interpolation) */
-                background_rate = atl03.bckgrd_rate.gt[t][0];
+                background_rate = atl03.bckgrd_rate[t][0];
             }
             break;
         }
