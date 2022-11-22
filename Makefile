@@ -95,7 +95,7 @@ uninstall-atlas: ## uninstall most recent install of atlas plugin from system
 config-icesat2: prep ## configure make for icesat2 plugin
 	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
 
-config-debug-icesat2: prep ## configure make for icesat2 plugin
+config-icesat2-debug: prep ## configure make for icesat2 plugin
 	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/icesat2
 
 icesat2: ## build icesat2 plugin

@@ -1216,6 +1216,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 bool step_complete = false;
 
                 /* Initialize Extent State */
+                printf("ABOUT TO CLEAR %d\n", t);
                 state[t].extent_photons.clear();
                 state[t].extent_segment = state[t].seg_in;
                 state[t].extent_valid = true;

@@ -7,7 +7,7 @@ local console = require("console")
 sys.setlvl(core.LOG, core.INFO)
 
 -- Run Core Self Tests --
-
+--[[
 if __core__ then
     runner.script(td .. "tcp_socket.lua")
     runner.script(td .. "udp_socket.lua")
@@ -59,14 +59,15 @@ if __legacy__ then
     runner.script(td .. "record_dispatcher.lua")
     runner.script(td .. "limit_dispatch.lua")
 end
-
+]]
 -- Run ICESat-2 Plugin Self Tests
 if __icesat2__ then
-    runner.script(td .. "plugin_unittest.lua")
-    runner.script(td .. "atl06_elements.lua")
-    runner.script(td .. "atl03_indexer.lua")
-    runner.script(td .. "h5_file.lua")
-    runner.script(td .. "s3_driver.lua")
+    icesat2_td = td .. "../../plugins/icesat2/selftests/"
+    runner.script(icesat2_td .. "plugin_unittest.lua")
+    runner.script(icesat2_td .. "atl06_elements.lua")
+    runner.script(icesat2_td .. "atl03_indexer.lua")
+    runner.script(icesat2_td .. "h5_file.lua")
+    runner.script(icesat2_td .. "s3_driver.lua")
 end
 
 -- Report Results --

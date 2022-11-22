@@ -442,11 +442,8 @@ void List<T, LIST_BLOCK_SIZE>::clear(void)
         delete prev;
     }
 
-    /* Clean Up Parameters */
-    head.offset = 0;
-    head.next = NULL;
-    tail = &head;
-    len = 0;
+    /* Reset State of List */
+    initialize();
 }
 
 
@@ -632,6 +629,7 @@ MgList<T, LIST_BLOCK_SIZE, is_array>::~MgList(void)
 template <class T, int LIST_BLOCK_SIZE, bool is_array>
 void MgList<T, LIST_BLOCK_SIZE, is_array>::freeNode(typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index)
 {
+    printf("OOPS: %p %d\n", node, index);
     if(!is_array)   delete node->data[index];
     else            delete [] node->data[index];
 }
