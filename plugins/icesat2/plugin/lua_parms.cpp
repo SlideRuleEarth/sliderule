@@ -771,3 +771,48 @@ void freeLuaIcesat2Parms (const icesat2_parms_t* parms)
     if(parms->atl03_ph_fields) delete parms->atl03_ph_fields;
     delete parms;
 }
+
+/*----------------------------------------------------------------------------
+ * getSpotNumber
+ *----------------------------------------------------------------------------*/
+uint8_t getSpotNumber(sc_orient_t sc_orient, track_t track, int pair)
+{
+    if(sc_orient == SC_BACKWARD)
+    {
+        if(track == RPT_1)
+        {
+            if(pair == PRT_LEFT) return SPOT_1;
+            else if(pair == PRT_RIGHT) return SPOT_2;
+        }
+        else if(track == RPT_2)
+        {
+            if(pair == PRT_LEFT) return SPOT_3;
+            else if(pair == PRT_RIGHT) return SPOT_4;
+        }
+        else if(track == RPT_3)
+        {
+            if(pair == PRT_LEFT) return SPOT_5;
+            else if(pair == PRT_RIGHT) return SPOT_6;
+        }
+    }
+    else if(sc_orient == SC_FORWARD)
+    {
+        if(track == RPT_1)
+        {
+            if(pair == PRT_LEFT) return SPOT_6;
+            else if(pair == PRT_RIGHT) return SPOT_5;
+        }
+        else if(track == RPT_2)
+        {
+            if(pair == PRT_LEFT) return SPOT_4;
+            else if(pair == PRT_RIGHT) return SPOT_3;
+        }
+        else if(track == RPT_3)
+        {
+            if(pair == PRT_LEFT) return SPOT_2;
+            else if(pair == PRT_RIGHT) return SPOT_1;
+        }
+    }
+
+    return 0;
+}

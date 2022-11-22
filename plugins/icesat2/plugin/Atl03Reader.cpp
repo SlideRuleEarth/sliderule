@@ -82,21 +82,37 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"data",        RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const char* Atl03Reader::extAncRecType = "extrec"; // extent ancillary atl03 record
-const RecordObject::fieldDef_t Atl03Reader::extAncRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(ext_anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
-    {"field_index", RecordObject::UINT8,    offsetof(ext_anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
-    {"data_type",   RecordObject::UINT8,    offsetof(ext_anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(ext_anc_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
+const char* Atl03Reader::phFlatRecType = "flat03rec.photons";
+const RecordObject::fieldDef_t Atl03Reader::phFlatRecDef[] = {
+    {"extent_id",   RecordObject::UINT64,   offsetof(flat_photon_t, extent_id), 1,  NULL, NATIVE_FLAGS},
+    {"track",       RecordObject::UINT8,    offsetof(flat_photon_t, track),     1,  NULL, NATIVE_FLAGS},
+    {"spot",        RecordObject::UINT8,    offsetof(flat_photon_t, spot),      1,  NULL, NATIVE_FLAGS},
+    {"pair",        RecordObject::UINT8,    offsetof(flat_photon_t, pair),      1,  NULL, NATIVE_FLAGS},
+    {"rgt",         RecordObject::UINT16,   offsetof(flat_photon_t, rgt),       1,  NULL, NATIVE_FLAGS},
+    {"cycle",       RecordObject::UINT16,   offsetof(flat_photon_t, cycle),     1,  NULL, NATIVE_FLAGS},
+    {"photon",      RecordObject::USER,     offsetof(flat_photon_t, photon),    1,  phRecType, NATIVE_FLAGS}
+};
+
+const char* Atl03Reader::exFlatRecType = "flat03rec";
+const RecordObject::fieldDef_t Atl03Reader::exFlatRecDef[] = {
+    {"photons",     RecordObject::USER,     0,   0,  phFlatRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* Atl03Reader::phAncRecType = "phrec"; // photon ancillary atl03 record
 const RecordObject::fieldDef_t Atl03Reader::phAncRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(ph_anc_t, extent_id),      1,  NULL, NATIVE_FLAGS},
-    {"field_index", RecordObject::UINT8,    offsetof(ph_anc_t, field_index),    1,  NULL, NATIVE_FLAGS},
-    {"data_type",   RecordObject::UINT8,    offsetof(ph_anc_t, data_type),      1,  NULL, NATIVE_FLAGS},
-    {"num_elements",RecordObject::UINT32,   offsetof(ph_anc_t, num_elements),   2,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(ph_anc_t, data),           0,  NULL, NATIVE_FLAGS} // variable length
+    {"extent_id",   RecordObject::UINT64,   offsetof(anc_photon_t, extent_id),      1,  NULL, NATIVE_FLAGS},
+    {"field_index", RecordObject::UINT8,    offsetof(anc_photon_t, field_index),    1,  NULL, NATIVE_FLAGS},
+    {"data_type",   RecordObject::UINT8,    offsetof(anc_photon_t, data_type),      1,  NULL, NATIVE_FLAGS},
+    {"num_elements",RecordObject::UINT32,   offsetof(anc_photon_t, num_elements),   2,  NULL, NATIVE_FLAGS},
+    {"data",        RecordObject::UINT8,    offsetof(anc_photon_t, data),           0,  NULL, NATIVE_FLAGS} // variable length
+};
+
+const char* Atl03Reader::exAncRecType = "extrec"; // extent ancillary atl03 record
+const RecordObject::fieldDef_t Atl03Reader::exAncRecDef[] = {
+    {"extent_id",   RecordObject::UINT64,   offsetof(anc_extent_t, extent_id),     1,  NULL, NATIVE_FLAGS},
+    {"field_index", RecordObject::UINT8,    offsetof(anc_extent_t, field_index),   1,  NULL, NATIVE_FLAGS},
+    {"data_type",   RecordObject::UINT8,    offsetof(anc_extent_t, data_type),     1,  NULL, NATIVE_FLAGS},
+    {"data",        RecordObject::UINT8,    offsetof(anc_extent_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
 };
 
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
@@ -144,28 +160,40 @@ void Atl03Reader::init (void)
 {
     RecordObject::recordDefErr_t rc;
 
-    rc = RecordObject::defineRecord(exRecType, "track", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", exRecType, rc);
-    }
-
     rc = RecordObject::defineRecord(phRecType, NULL, sizeof(photon_t), phRecDef, sizeof(phRecDef) / sizeof(RecordObject::fieldDef_t));
     if(rc != RecordObject::SUCCESS_DEF)
     {
         mlog(CRITICAL, "Failed to define %s: %d", phRecType, rc);
     }
 
-    rc = RecordObject::defineRecord(extAncRecType, NULL, sizeof(ext_anc_t), extAncRecDef, sizeof(extAncRecDef) / sizeof(RecordObject::fieldDef_t));
+    rc = RecordObject::defineRecord(exRecType, "extent_id", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t));
     if(rc != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to define %s: %d", extAncRecType, rc);
+        mlog(CRITICAL, "Failed to define %s: %d", exRecType, rc);
     }
 
-    rc = RecordObject::defineRecord(phAncRecType, NULL, sizeof(ph_anc_t), phAncRecDef, sizeof(phAncRecDef) / sizeof(RecordObject::fieldDef_t));
+    rc = RecordObject::defineRecord(phFlatRecType, NULL, sizeof(flat_photon_t), phFlatRecDef, sizeof(phFlatRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", phFlatRecType, rc);
+    }
+
+    rc = RecordObject::defineRecord(exFlatRecType, "extent_id", 1, exFlatRecDef, sizeof(exFlatRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", exFlatRecType, rc);
+    }
+
+    rc = RecordObject::defineRecord(phAncRecType, NULL, sizeof(anc_photon_t), phAncRecDef, sizeof(phAncRecDef) / sizeof(RecordObject::fieldDef_t));
     if(rc != RecordObject::SUCCESS_DEF)
     {
         mlog(CRITICAL, "Failed to define %s: %d", phAncRecType, rc);
+    }
+
+    rc = RecordObject::defineRecord(exAncRecType, NULL, sizeof(anc_extent_t), exAncRecDef, sizeof(exAncRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", exAncRecType, rc);
     }
 }
 
@@ -1478,7 +1506,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 }
 
 /*----------------------------------------------------------------------------
- * populateBackgroundRates
+ * calculateBackground
  *----------------------------------------------------------------------------*/
 double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& atl03)
 {
@@ -1516,6 +1544,27 @@ double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& at
         }
     }
     return background_rate;
+}
+
+/*----------------------------------------------------------------------------
+ * calculateSegmentId
+ *----------------------------------------------------------------------------*/
+uint32_t Atl03Reader::calculateSegmentId (int t, TrackState& state, Atl03Data& atl03)
+{
+    /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
+    double atl06_segment_id = (double)atl03.segment_id[t][state[t].extent_segment]; // start with first segment in extent
+    if(!parms->dist_in_seg)
+    {
+        atl06_segment_id += state[t].start_seg_portion; // add portion of first segment that first photon is included
+        atl06_segment_id += (int)((parms->extent_length / ATL03_SEGMENT_LENGTH) / 2.0); // add half the length of the extent
+    }
+    else // dist_in_seg is true
+    {
+        atl06_segment_id += (int)(parms->extent_length / 2.0);
+    }
+
+    /* Round Up */
+    return (uint32_t)(atl06_segment_id + 0.5);
 }
 
 /*----------------------------------------------------------------------------
@@ -1561,7 +1610,7 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
 
         /* Populate Attributes */
         extent->valid[t]                = state[t].extent_valid;
-        extent->segment_id[t]           = (uint32_t)(atl06_segment_id + 0.5);
+        extent->segment_id[t]           = calculateSegmentId(t, state, atl03);
         extent->segment_distance[t]     = state[t].seg_distance;
         extent->extent_length[t]        = state.extent_length;
         extent->spacecraft_velocity[t]  = spacecraft_velocity;
@@ -1587,6 +1636,50 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
 }
 
 /*----------------------------------------------------------------------------
+ * sendFlatRecord
+ *----------------------------------------------------------------------------*/
+bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
+{
+    /* Calculate Extent Record Size */
+    int num_photons = state[PRT_LEFT].extent_photons.length() + state[PRT_RIGHT].extent_photons.length();
+    int extent_bytes = sizeof(flat_photon_t) * num_photons;
+
+    /* Allocate and Initialize Extent Record */
+    RecordObject record(exFlatRecType, extent_bytes);
+    flat_photon_t* extent = (flat_photon_t*)record.getRecordData();
+    uint8_t rgt = (*start_rgt)[0];
+    uint8_t cycle = (*start_cycle)[0];
+
+    /* Populate Extent */
+    uint32_t ph_out = 0;
+    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    {
+        uint8_t spot = getSpotNumber((sc_orient_t)(*sc_orient)[0], (track_t)track, t);
+        uint32_t segment_id = calculateSegmentId(t, state, atl03);
+
+        /* Populate Photons */
+        if(num_photons > 0)
+        {
+            for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
+            {
+                flat_photon_t* photon = &extent[ph_out++];
+                photon->extent_id = extent_id;
+                photon->track = track;
+                photon->spot = spot;
+                photon->pair = t;
+                photon->rgt = rgt;
+                photon->cycle = cycle;
+                photon->segment_id = segment_id;
+                photon->photon = state[t].extent_photons[p];
+            }
+        }
+    }
+
+    /* Post Segment Record */
+    return postRecord(&record, local_stats);
+}
+
+/*----------------------------------------------------------------------------
  * sendAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
 bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
@@ -1599,9 +1692,9 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t*
             GTDArray* array = field_dict->get((*field_list)[i].getString());
 
             /* Create Ancillary Record */
-            int record_size = offsetof(ext_anc_t, data) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
-            RecordObject record(extAncRecType, record_size);
-            ext_anc_t* data = (ext_anc_t*)record.getRecordData();
+            int record_size = offsetof(anc_extent_t, data) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
+            RecordObject record(exAncRecType, record_size);
+            anc_extent_t* data = (anc_extent_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
@@ -1637,11 +1730,11 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* 
             GTDArray* array = field_dict->get((*field_list)[i].getString());
 
             /* Create Ancillary Record */
-            int record_size =   offsetof(ph_anc_t, data) +
+            int record_size =   offsetof(anc_photon_t, data) +
                                 (array->gt[PRT_LEFT].elementSize() * state[PRT_LEFT].photon_indices->length()) +
                                 (array->gt[PRT_RIGHT].elementSize() * state[PRT_RIGHT].photon_indices->length());
             RecordObject record(phAncRecType, record_size);
-            ph_anc_t* data = (ph_anc_t*)record.getRecordData();
+            anc_photon_t* data = (anc_photon_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;

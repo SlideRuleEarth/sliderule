@@ -247,5 +247,6 @@ typedef struct {
 
 icesat2_parms_t*    getLuaIcesat2Parms  (lua_State* L, int index);
 void                freeLuaIcesat2Parms (const icesat2_parms_t* parms);
+uint8_t             getSpotNumber       (sc_orient_t sc_orient, track_t track, int pair);
 
 #endif  /* __lua_parms__ */

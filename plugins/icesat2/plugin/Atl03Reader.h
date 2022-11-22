@@ -69,11 +69,17 @@ class Atl03Reader: public LuaObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
-        static const char* extAncRecType;
-        static const RecordObject::fieldDef_t extAncRecDef[];
+        static const char* phFlatRecType;
+        static const RecordObject::fieldDef_t phFlatRecDef[];
+
+        static const char* exFlatRecType;
+        static const RecordObject::fieldDef_t exFlatRecDef[];
 
         static const char* phAncRecType;
         static const RecordObject::fieldDef_t phAncRecDef[];
+
+        static const char* exAncRecType;
+        static const RecordObject::fieldDef_t exAncRecDef[];
 
         static const char* OBJECT_TYPE;
 
@@ -115,25 +121,17 @@ class Atl03Reader: public LuaObject
             photon_t        photons[]; // zero length field
         } extent_t;
 
-        /* Flattened Extent Record */
+        /* Flattened Photon Fields */
         typedef struct {
             uint64_t        extent_id;
             uint8_t         track; // 1, 2, 3
             uint8_t         spot; // 1, 2, 3, 4, 5, 6
-            uint8_t         pt; // pair track - 0: left, 1: right
+            uint8_t         pair; // pair track - 0: left, 1: right
             uint16_t        rgt;
             uint16_t        cycle;
             uint32_t        segment_id;
             photon_t        photon;
-        } flat_extent_t;
-
-        /* Extent Ancillary Record */
-        typedef struct {
-            uint64_t        extent_id;
-            uint8_t         field_index; // position in request parameter list
-            uint8_t         data_type; // RecordObject::fieldType_t
-            uint8_t         data[];
-        } ext_anc_t;
+        } flat_photon_t;
 
         /* Photon Ancillary Record */
         typedef struct {
@@ -142,7 +140,15 @@ class Atl03Reader: public LuaObject
             uint8_t         data_type; // RecordObject::fieldType_t
             uint32_t        num_elements[PAIR_TRACKS_PER_GROUND_TRACK];
             uint8_t         data[];
-        } ph_anc_t;
+        } anc_photon_t;
+
+        /* Extent Ancillary Record */
+        typedef struct {
+            uint64_t        extent_id;
+            uint8_t         field_index; // position in request parameter list
+            uint8_t         data_type; // RecordObject::fieldType_t
+            uint8_t         data[];
+        } anc_extent_t;
 
         /* Statistics */
         typedef struct {
@@ -333,7 +339,9 @@ class Atl03Reader: public LuaObject
         static void*        subsettingThread        (void* parm);
 
         double              calculateBackground     (int t, TrackState& state, Atl03Data& atl03);
+        uint32_t            calculateSegmentId      (int t, TrackState& state, Atl03Data& atl03);
         bool                sendExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
+        bool                sendFlatRecord          (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
         bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
