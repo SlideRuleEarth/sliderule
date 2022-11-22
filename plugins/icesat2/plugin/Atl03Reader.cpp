@@ -229,7 +229,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
 
         /* Set Metrics */
         PluginMetrics::setRegion(parms);
-printf("TIMEOUT: %d\n", read_timeout_ms);
+
         /* Join Global Data */
         sc_orient->join(read_timeout_ms, true);
         start_rgt->join(read_timeout_ms, true);
@@ -381,8 +381,8 @@ void Atl03Reader::Region::polyregion (info_t* info)
 
     /* Determine Best Projection To Use */
     MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(segment_lat.gt[PRT_LEFT][0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(segment_lat.gt[PRT_LEFT][0] < -70.0) projection = MathLib::SOUTH_POLAR;
+    if(segment_lat[PRT_LEFT][0] > 70.0) projection = MathLib::NORTH_POLAR;
+    else if(segment_lat[PRT_LEFT][0] < -70.0) projection = MathLib::SOUTH_POLAR;
 
     /* Project Polygon */
     List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
@@ -1106,6 +1106,33 @@ uint8_t* Atl03Reader::YapcScore::operator[] (int t)
 }
 
 /*----------------------------------------------------------------------------
+ * TrackState::Constructor
+ *----------------------------------------------------------------------------*/
+Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
+{
+    LocalLib::set(&gt[0], 0, sizeof(gt));
+    gt[PRT_LEFT].start_distance = atl03.segment_dist_x[PRT_LEFT][0];
+    gt[PRT_RIGHT].start_distance = atl03.segment_dist_x[PRT_RIGHT][0];
+}
+
+/*----------------------------------------------------------------------------
+ * TrackState::Destructor
+ *----------------------------------------------------------------------------*/
+Atl03Reader::TrackState::~TrackState (void)
+{
+    if(gt[PRT_LEFT].photon_indices) delete gt[PRT_LEFT].photon_indices;
+    if(gt[PRT_RIGHT].photon_indices) delete gt[PRT_RIGHT].photon_indices;
+}
+
+/*----------------------------------------------------------------------------
+ * TrackState::operator[]
+ *----------------------------------------------------------------------------*/
+Atl03Reader::TrackState::track_state_t& Atl03Reader::TrackState::operator[](int t)
+{
+    return gt[t];
+}
+
+/*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
 void* Atl03Reader::subsettingThread (void* parm)
@@ -1143,14 +1170,14 @@ void* Atl03Reader::subsettingThread (void* parm)
         int32_t seg_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // segment index
         int32_t seg_ph[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // current photon index in segment
         int32_t start_segment[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // used to set start_distance
-        double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { atl03.segment_dist_x.gt[PRT_LEFT][0], atl03.segment_dist_x.gt[PRT_RIGHT][0] };
+        double  start_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { atl03.segment_dist_x[PRT_LEFT][0], atl03.segment_dist_x[PRT_RIGHT][0] };
         double  seg_distance[PAIR_TRACKS_PER_GROUND_TRACK] = { 0.0, 0.0 };
         double  start_seg_portion[PAIR_TRACKS_PER_GROUND_TRACK] = { 0.0, 0.0 };
         bool    track_complete[PAIR_TRACKS_PER_GROUND_TRACK] = { false, false };
         int32_t bckgrd_in[PAIR_TRACKS_PER_GROUND_TRACK] = { 0, 0 }; // bckgrd index
 
         /* Increment Read Statistics */
-        local_stats.segments_read = (region.segment_ph_cnt.gt[PRT_LEFT].size + region.segment_ph_cnt.gt[PRT_RIGHT].size);
+        local_stats.segments_read = (region.segment_ph_cnt[PRT_LEFT].size + region.segment_ph_cnt[PRT_RIGHT].size);
 
         /* Calculate Length of Extent in Meters (used for distance) */
         double extent_distance = reader->parms->extent_length;

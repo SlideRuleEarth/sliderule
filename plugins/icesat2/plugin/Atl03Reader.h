@@ -262,6 +262,32 @@ class Atl03Reader: public LuaObject
                 uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]
         };
 
+        /* Track State Subclass */
+        class TrackState
+        {
+            public:
+
+                typedef struct {
+                    int32_t         ph_in;              // photon index
+                    int32_t         seg_in;             // segment index
+                    int32_t         seg_ph;             // current photon index in segment
+                    int32_t         start_segment;      // used to set start_distance
+                    double          start_distance;     // distance to start of extent
+                    double          seg_distance;       // distance to start of atl03 segment
+                    double          start_seg_portion;  // portion of segment extent is starting from
+                    bool            track_complete;     // flag when track processing has finished
+                    int32_t         bckgrd_in;          // bckgrd index
+                    List<int32_t>*  photon_indices;     // used for ancillary data
+                } track_state_t;
+
+                TrackState          (Atl03Data& atl03);
+                ~TrackState         (void);
+                track_state_t&      operator[] (int t);
+
+                track_state_t       gt[PAIR_TRACKS_PER_GROUND_TRACK];
+                double              extent_length;
+        };
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
