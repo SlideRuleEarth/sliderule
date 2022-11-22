@@ -183,6 +183,8 @@ double ArcticDEMRaster::sampleMosaic(double lon, double lat)
         if (containsPoint(vrtDset, &vrtBbox, &p))
         {
             bool foundPoint = false;
+
+            /* Is point in currently opened raster? */
             if (rasterList.length() > 0)
             {
                 rasterList[0].point = &p;
@@ -196,11 +198,13 @@ double ArcticDEMRaster::sampleMosaic(double lon, double lat)
                     if (rasterList.length() > 0)
                     {
                         rasterList[0].point = &p;
-                        readRaster(&rasterList[0]);
-                        sample = rasterList[0].value;
+                        foundPoint = readRaster(&rasterList[0]);
                     }
                 }
             }
+
+            if (foundPoint)
+                sample = rasterList[0].value;
         }
         else
         {
