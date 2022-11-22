@@ -82,25 +82,21 @@ class ArrowBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        MgDictionary<arrow::Schema*, 8> schemas;
-        Publisher*                      outQ;
+        arrow::Schema*          schema;
+        Publisher*              outQ;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ArrowBuilder                    (lua_State* L, const char* outq_name);
-                        ~ArrowBuilder                   (void);
+                                ArrowBuilder                    (lua_State* L, const char* outq_name, const char* rec_type);
+                                ~ArrowBuilder                   (void);
 
-        bool            processRecord                   (RecordObject* record, okey_t key) override;
-        bool            processTimeout                  (void) override;
-        bool            processTermination              (void) override;
+        bool                    processRecord                   (RecordObject* record, okey_t key) override;
+        bool                    processTimeout                  (void) override;
+        bool                    processTermination              (void) override;
 
-        bool            buildAtl06Table                 (Atl06Dispatch::atl06_t* rec);
-        bool            buildAtl06CompactTable          (Atl06Dispatch::atl06_compact_t* rec);
-        bool            buildAtl03ExtentTable           (Atl03Reader::extent_t* rec);
-
-        bool            defineTableSchema               (const char* schema);
+        static arrow::Schema*   defineTableSchema               (const char* schema);
 };
 
 #endif  /* __arrow_buider__ */

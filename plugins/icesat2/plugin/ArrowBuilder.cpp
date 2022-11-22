@@ -52,7 +52,7 @@ const struct luaL_Reg ArrowBuilder::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :arrow(<outq name>)
+ * luaCreate - :arrow(<outq name>, <rec_type>)
  *----------------------------------------------------------------------------*/
 int ArrowBuilder::luaCreate (lua_State* L)
 {
@@ -60,9 +60,10 @@ int ArrowBuilder::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
+        const char* rec_type = getLuaString(L, 2);
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, outq_name));
+        return createLuaObject(L, new ArrowBuilder(L, outq_name, rec_type));
     }
     catch(const RunTimeException& e)
     {
@@ -76,9 +77,6 @@ int ArrowBuilder::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void ArrowBuilder::init (void)
 {
-    defineTableSchema(Atl06Dispatch::atRecType);
-    defineTableSchema(Atl06Dispatch::atCompactRecType);
-    defineTableSchema(Atl03Reader::exRecType);
 }
 
 /******************************************************************************
@@ -88,10 +86,13 @@ void ArrowBuilder::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name):
+ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec_type):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
+
+    /* Define Table Schema */
+    schema = defineTableSchema(rec_type);
 
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
@@ -113,14 +114,6 @@ bool ArrowBuilder::processRecord (RecordObject* record, okey_t key)
     (void)key;
 
     const char* rectype = record->getRecordType();
-
-         if(StringLib::match(rectype, Atl06Dispatch::atRecType))        return buildAtl06Table((Atl06Dispatch::atl06_t*)record->getRecordData());
-    else if(StringLib::match(rectype, Atl06Dispatch::atCompactRecType)) return buildAtl06CompactTable((Atl06Dispatch::atl06_compact_t*)record->getRecordData());
-    else if(StringLib::match(rectype, Atl03Reader::exRecType))          return buildAtl03ExtentTable((Atl03Reader::extent_t*)record->getRecordData());
-    else
-    {
-        mlog(CRITICAL, "Unexpected record received: %s", rectype);
-    }
 
     return false;
 }
@@ -144,83 +137,47 @@ bool ArrowBuilder::processTermination (void)
 }
 
 /*----------------------------------------------------------------------------
- * buildAtl06Table
- *----------------------------------------------------------------------------*/
-bool ArrowBuilder::buildAtl06Table (Atl06Dispatch::atl06_t* rec)
-{
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * buildAtl06CompactTable
- *----------------------------------------------------------------------------*/
-bool ArrowBuilder::buildAtl06CompactTable (Atl06Dispatch::atl06_compact_t* rec)
-{
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * buildAtl03ExtentTable
- *----------------------------------------------------------------------------*/
-bool ArrowBuilder::buildAtl03ExtentTable (Atl03Reader::extent_t* rec)
-{
-    return true;
-}
-
-/*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::defineTableSchema (const char* rectype)
+arrow::Schema* ArrowBuilder::defineTableSchema (const char* rectype)
 {
+    arrow::Schema* _schema = NULL;
     std::vector<std::shared_ptr<arrow::Field>> schema_vector;
 
     /* Loop through fields */
     char** field_names = NULL;
     RecordObject::field_t** fields = NULL;
-    int num_fields = RecordObject::getRecordFields(rectype, &fieldnames, &fields);
+    int num_fields = RecordObject::getRecordFields(rectype, &field_names, &fields);
     for(int i = 0; i < num_fields; i++)
     {
         switch(fields[i]->type)
         {
-            case INT8:      schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));       break;
-            case INT16:     schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));      break;
-            case INT32:     schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));      break;
-            case INT64:     schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));      break;
-            case UINT8:     schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));      break;
-            case UINT16:    schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));     break;
-            case UINT32:    schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));     break;
-            case UINT64:    schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));     break;
-            case FLOAT:     schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));    break;
-            case DOUBLE:    schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
-            case TIME8:     schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
-            case STRING:    schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
-            default:        break;
+            case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));       break;
+            case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));      break;
+            case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));      break;
+            case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));      break;
+            case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));      break;
+            case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));     break;
+            case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));     break;
+            case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));     break;
+            case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));    break;
+            case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
+            case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
+            case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
+            default:                    break;
         }
     }
 
     /* Create Schema */
-    arrow::Schema* schema = new arrow::Schema(schema_vector);
+    if(num_fields > 0)
+    {
+        _schema = new arrow::Schema(schema_vector);
+    }
 
     /* Clean Up */
     if(fields) delete [] fields;
-    if(fieldnames) delete [] fieldnames;
+    if(field_names) delete [] field_names;
 
-    /* Return Status */
-    return num_fields > 0;
-}
-
-/*----------------------------------------------------------------------------
- * defineAtl06CompactTable
- *----------------------------------------------------------------------------*/
-bool ArrowBuilder::defineAtl06CompactTable (void)
-{
-
-}
-
-/*----------------------------------------------------------------------------
- * defineAtl03ExtentTable
- *----------------------------------------------------------------------------*/
-bool ArrowBuilder::defineAtl03ExtentTable (void)
-{
-
+    /* Return Schema */
+    return _schema;
 }

@@ -69,8 +69,11 @@ class Atl03Reader: public LuaObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
-        static const char* extAncRecType;
-        static const RecordObject::fieldDef_t extAncRecDef[];
+        static const char* flatRecType;
+        static const RecordObject::fieldDef_t flatRecDef[];
+
+        static const char* exAncRecType;
+        static const RecordObject::fieldDef_t exAncRecDef[];
 
         static const char* phAncRecType;
         static const RecordObject::fieldDef_t phAncRecDef[];
@@ -114,6 +117,18 @@ class Atl03Reader: public LuaObject
             uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
             photon_t        photons[]; // zero length field
         } extent_t;
+
+        /* Flattened Extent Record */
+        typedef struct {
+            uint64_t        extent_id;
+            uint8_t         track; // 1, 2, 3
+            uint8_t         spot; // 1, 2, 3, 4, 5, 6
+            uint8_t         pt; // pair track - 0: left, 1: right
+            uint16_t        rgt;
+            uint16_t        cycle;
+            uint32_t        segment_id;
+            photon_t        photon;
+        } flat_extent_t;
 
         /* Extent Ancillary Record */
         typedef struct {
@@ -188,7 +203,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Atl03Data           (info_t* info, Region* region);
+                Atl03Data           (info_t* info, Region& region);
                 ~Atl03Data          (void);
 
                 /* Read Data */
@@ -207,7 +222,7 @@ class Atl03Reader: public LuaObject
                 GTArray<float>      bckgrd_rate;
 
                 MgDictionary<GTDArray*> anc_geo_data;
-                MgDictionary<GTDArray*> anc_photon_data;
+                MgDictionary<GTDArray*> anc_ph_data;
         };
 
         /* Atl08 Classification Subclass */
@@ -217,7 +232,7 @@ class Atl03Reader: public LuaObject
 
                 Atl08Class          (info_t* info);
                 ~Atl08Class         (void);
-                void classify       (info_t* info, Region* region, Atl03Data* data);
+                void classify       (info_t* info, Region& region, Atl03Data& atl03);
 
                 /* Class Data */
                 bool                enabled;
@@ -237,14 +252,43 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                YapcScore           (info_t* info, Region* region, Atl03Data* data);
+                YapcScore           (info_t* info, Region& region, Atl03Data& atl03);
                 ~YapcScore          (void);
 
-                void yapcV2         (info_t* info, Region* region, Atl03Data* data);
-                void yapcV3         (info_t* info, Region* region, Atl03Data* data);
+                void yapcV2         (info_t* info, Region& region, Atl03Data& atl03);
+                void yapcV3         (info_t* info, Region& region, Atl03Data& atl03);
 
                 /* Generated Data */
                 uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]
+        };
+
+        /* Track State Subclass */
+        class TrackState
+        {
+            public:
+
+                typedef struct {
+                    int32_t         ph_in;              // photon index
+                    int32_t         seg_in;             // segment index
+                    int32_t         seg_ph;             // current photon index in segment
+                    int32_t         start_segment;      // used to set start_distance
+                    double          start_distance;     // distance to start of extent
+                    double          seg_distance;       // distance to start of atl03 segment
+                    double          start_seg_portion;  // portion of segment extent is starting from
+                    bool            track_complete;     // flag when track processing has finished
+                    int32_t         bckgrd_in;          // bckgrd index
+                    List<int32_t>*  photon_indices;     // used for ancillary data
+                    List<photon_t>  extent_photons;     // list of individual photons in extent
+                    int32_t         extent_segment;     // current segment extent is pulling photons from
+                    bool            extent_valid;       // flag for validity of extent (atl06 checks)
+                } track_state_t;
+
+                TrackState          (Atl03Data& atl03);
+                ~TrackState         (void);
+                track_state_t&      operator[] (int t);
+
+                track_state_t       gt[PAIR_TRACKS_PER_GROUND_TRACK];
+                double              extent_length;
         };
 
         /*--------------------------------------------------------------------
@@ -288,9 +332,11 @@ class Atl03Reader: public LuaObject
 
         static void*        subsettingThread        (void* parm);
 
+        bool                sendExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
+        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
-        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, int32_t* start_element, stats_t* local_stats);
-        bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, List<int32_t>** photon_indices, stats_t* local_stats);
+        double              calculateBackground     (int t, TrackState& state, Atl03Data& atl03);
 
         static int          luaParms                (lua_State* L);
         static int          luaStats                (lua_State* L);
