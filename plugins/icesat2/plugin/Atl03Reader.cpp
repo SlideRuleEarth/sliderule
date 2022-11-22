@@ -1191,31 +1191,31 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                 /* Set Extent Segment */
                 extent_segment[t] = seg_in[t];
-                start_seg_portion[t] = atl03.dist_ph_along.gt[t][current_photon] / ATL03_SEGMENT_LENGTH;
+                start_seg_portion[t] = atl03.dist_ph_along[t][current_photon] / ATL03_SEGMENT_LENGTH;
 
                 /* Traverse Photons Until Desired Along Track Distance Reached */
                 while(!extent_complete || !step_complete)
                 {
                     /* Go to Photon's Segment */
                     current_count++;
-                    while((current_segment < region.segment_ph_cnt.gt[t].size) &&
-                          (current_count > region.segment_ph_cnt.gt[t][current_segment]))
+                    while((current_segment < region.segment_ph_cnt[t].size) &&
+                          (current_count > region.segment_ph_cnt[t][current_segment]))
                     {
                         current_count = 1; // reset photons in segment
                         current_segment++; // go to next segment
                     }
 
                     /* Check Current Segment */
-                    if(current_segment >= atl03.segment_dist_x.gt[t].size)
+                    if(current_segment >= atl03.segment_dist_x[t].size)
                     {
-                        mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->resource, info->track, current_segment, atl03.segment_dist_x.gt[t].size, region.num_segments[t]);
+                        mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->resource, info->track, current_segment, atl03.segment_dist_x[t].size, region.num_segments[t]);
                         track_complete[t] = true;
                         break;
                     }
 
                     /* Update Along Track Distance and Progress */
-                    double delta_distance = atl03.segment_dist_x.gt[t][current_segment] - start_distance[t];
-                    double along_track_distance = delta_distance + atl03.dist_ph_along.gt[t][current_photon];
+                    double delta_distance = atl03.segment_dist_x[t][current_segment] - start_distance[t];
+                    double along_track_distance = delta_distance + atl03.dist_ph_along[t][current_photon];
                     int32_t along_track_segments = current_segment - extent_segment[t];
 
                     /* Set Next Extent's First Photon */
@@ -1236,7 +1236,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         do
                         {
                             /* Check Signal Confidence Level */
-                            int8_t atl03_cnf = atl03.signal_conf_ph.gt[t][current_photon];
+                            int8_t atl03_cnf = atl03.signal_conf_ph[t][current_photon];
                             if(atl03_cnf < CNF_POSSIBLE_TEP || atl03_cnf > CNF_SURFACE_HIGH)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
@@ -1247,7 +1247,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             }
 
                             /* Check ATL03 Photon Quality Level */
-                            int8_t quality_ph = atl03.quality_ph.gt[t][current_photon];
+                            int8_t quality_ph = atl03.quality_ph[t][current_photon];
                             if(quality_ph < QUALITY_NOMINAL || quality_ph > QUALITY_POSSIBLE_TEP)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
@@ -1259,9 +1259,9 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                             /* Check ATL08 Classification */
                             atl08_classification_t atl08_class = ATL08_UNCLASSIFIED;
-                            if(atl08.gt[t])
+                            if(atl08[t])
                             {
-                                atl08_class = (atl08_classification_t)atl08.gt[t][current_photon];
+                                atl08_class = (atl08_classification_t)atl08[t][current_photon];
                                 if(atl08_class < 0 || atl08_class >= NUM_ATL08_CLASSES)
                                 {
                                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
@@ -1294,11 +1294,11 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                             /* Add Photon to Extent */
                             photon_t ph = {
-                                .delta_time = atl03.delta_time.gt[t][current_photon],
-                                .latitude = atl03.lat_ph.gt[t][current_photon],
-                                .longitude = atl03.lon_ph.gt[t][current_photon],
+                                .delta_time = atl03.delta_time[t][current_photon],
+                                .latitude = atl03.lat_ph[t][current_photon],
+                                .longitude = atl03.lon_ph[t][current_photon],
                                 .distance = along_track_distance - (extent_distance / 2.0),
-                                .height = atl03.h_ph.gt[t][current_photon],
+                                .height = atl03.h_ph[t][current_photon],
                                 .atl08_class = (uint8_t)atl08_class,
                                 .atl03_cnf = (int8_t)atl03_cnf,
                                 .quality_ph = (int8_t)quality_ph,
@@ -1322,7 +1322,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                     current_photon++;
 
                     /* Check Current Photon */
-                    if(current_photon >= atl03.dist_ph_along.gt[t].size)
+                    if(current_photon >= atl03.dist_ph_along[t].size)
                     {
                         track_complete[t] = true;
                         break;
@@ -1338,10 +1338,10 @@ void* Atl03Reader::subsettingThread (void* parm)
                     start_distance[t] += reader->parms->extent_step; // step start distance
 
                     /* Apply Segment Distance Correction and Update Start Segment */
-                    while( ((start_segment[t] + 1) < atl03.segment_dist_x.gt[t].size) &&
-                            (start_distance[t] >= atl03.segment_dist_x.gt[t][start_segment[t] + 1]) )
+                    while( ((start_segment[t] + 1) < atl03.segment_dist_x[t].size) &&
+                            (start_distance[t] >= atl03.segment_dist_x[t][start_segment[t] + 1]) )
                     {
-                        start_distance[t] += atl03.segment_dist_x.gt[t][start_segment[t] + 1] - atl03.segment_dist_x.gt[t][start_segment[t]];
+                        start_distance[t] += atl03.segment_dist_x[t][start_segment[t] + 1] - atl03.segment_dist_x[t][start_segment[t]];
                         start_distance[t] -= ATL03_SEGMENT_LENGTH;
                         start_segment[t]++;
                     }
@@ -1349,9 +1349,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                 else // distance in segments
                 {
                     int32_t next_segment = extent_segment[t] + (int32_t)reader->parms->extent_step;
-                    if(next_segment < atl03.segment_dist_x.gt[t].size)
+                    if(next_segment < atl03.segment_dist_x[t].size)
                     {
-                        start_distance[t] = atl03.segment_dist_x.gt[t][next_segment]; // set start distance to next extent's segment distance
+                        start_distance[t] = atl03.segment_dist_x[t][next_segment]; // set start distance to next extent's segment distance
                     }
                 }
 
@@ -1400,19 +1400,19 @@ void* Atl03Reader::subsettingThread (void* parm)
                 for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
                 {
                     /* Find Background */
-                    double background_rate = atl03.bckgrd_rate.gt[t][atl03.bckgrd_rate.gt[t].size - 1];
-                    while(bckgrd_in[t] < atl03.bckgrd_rate.gt[t].size)
+                    double background_rate = atl03.bckgrd_rate[t][atl03.bckgrd_rate[t].size - 1];
+                    while(bckgrd_in[t] < atl03.bckgrd_rate[t].size)
                     {
-                        double curr_bckgrd_time = atl03.bckgrd_delta_time.gt[t][bckgrd_in[t]];
-                        double segment_time = atl03.segment_delta_time.gt[t][extent_segment[t]];
+                        double curr_bckgrd_time = atl03.bckgrd_delta_time[t][bckgrd_in[t]];
+                        double segment_time = atl03.segment_delta_time[t][extent_segment[t]];
                         if(curr_bckgrd_time >= segment_time)
                         {
                             /* Interpolate Background Rate */
                             if(bckgrd_in[t] > 0)
                             {
-                                double prev_bckgrd_time = atl03.bckgrd_delta_time.gt[t][bckgrd_in[t] - 1];
-                                double prev_bckgrd_rate = atl03.bckgrd_rate.gt[t][bckgrd_in[t] - 1];
-                                double curr_bckgrd_rate = atl03.bckgrd_rate.gt[t][bckgrd_in[t]];
+                                double prev_bckgrd_time = atl03.bckgrd_delta_time[t][bckgrd_in[t] - 1];
+                                double prev_bckgrd_rate = atl03.bckgrd_rate[t][bckgrd_in[t] - 1];
+                                double curr_bckgrd_rate = atl03.bckgrd_rate[t][bckgrd_in[t]];
 
                                 double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
                                 double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
@@ -1423,7 +1423,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             else
                             {
                                 /* Use First Background Rate (no interpolation) */
-                                background_rate = atl03.bckgrd_rate.gt[t][0];
+                                background_rate = atl03.bckgrd_rate[t][0];
                             }
                             break;
                         }
@@ -1436,13 +1436,13 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                     /* Calculate Spacecraft Velocity */
                     int32_t sc_v_offset = extent_segment[t] * 3;
-                    double sc_v1 = atl03.velocity_sc.gt[t][sc_v_offset + 0];
-                    double sc_v2 = atl03.velocity_sc.gt[t][sc_v_offset + 1];
-                    double sc_v3 = atl03.velocity_sc.gt[t][sc_v_offset + 2];
+                    double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
+                    double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
+                    double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
                     double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
 
                     /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
-                    double atl06_segment_id = (double)atl03.segment_id.gt[t][extent_segment[t]];                // start with first segment in extent
+                    double atl06_segment_id = (double)atl03.segment_id[t][extent_segment[t]];                // start with first segment in extent
                     if(!reader->parms->dist_in_seg)
                     {
                         atl06_segment_id += start_seg_portion[t];                                               // add portion of first segment that first photon is included
