@@ -89,7 +89,13 @@ class ArcticDEMRaster: public LuaObject
             OGRPoint*       point;
             double          value;
             double          readTime;
-        } raster_info_t;
+        } raster_t;
+
+
+        typedef struct {
+            pthread_t  handle;
+            bool       isRunning;
+        } thread_t;
 
 
         typedef enum {
@@ -139,9 +145,10 @@ class ArcticDEMRaster: public LuaObject
         std::string vrtFileName;
         VRTDataset *vrtDset;
         GDALRasterBand*     vrtBand;
-        List<raster_info_t> rasterList;
-        pthread_t           rasterRreader[MAX_READER_THREADS];
+        List<raster_t>      rasterList;
+        thread_t            rasterRreader[MAX_READER_THREADS];
         int                 threadCount;
+        Mutex               threadMut;
         dem_type_t          demType;
         double              invgeot[6];
 
@@ -170,7 +177,7 @@ class ArcticDEMRaster: public LuaObject
 
         bool  findRasters    (OGRPoint* p);
         bool  readRasters    (OGRPoint* p);
-        bool  readRaster     (raster_info_t* rinfo);
+        bool  readRaster     (raster_t* raster);
         bool  openVrtDset    (const char *fileName);
 };
 
