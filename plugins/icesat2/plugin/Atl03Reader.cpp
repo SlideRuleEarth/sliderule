@@ -1192,7 +1192,6 @@ void* Atl03Reader::subsettingThread (void* parm)
     Atl03Reader* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
     uint32_t extent_counter = 0;
-    List<int32_t>* photon_indices[PAIR_TRACKS_PER_GROUND_TRACK] = {NULL, NULL};
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
@@ -1228,15 +1227,6 @@ void* Atl03Reader::subsettingThread (void* parm)
         /* Traverse All Photons In Dataset */
         while( reader->active && (!state[PRT_LEFT].track_complete || !state[PRT_RIGHT].track_complete) )
         {
-            /* Ancillary Photon Fields */
-            bool index_photons = false;
-            if(reader->parms->atl03_ph_fields)
-            {
-                state[PRT_LEFT].photon_indices = new List<int32_t>;
-                state[PRT_RIGHT].photon_indices = new List<int32_t>;
-                index_photons = true;
-            }
-
             /* Select Photons for Extent from each Track */
             for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
             {
@@ -1259,6 +1249,13 @@ void* Atl03Reader::subsettingThread (void* parm)
                 state[t].extent_segment = state[t].seg_in;
                 state[t].extent_valid = true;
                 state[t].extent_photons.clear();
+
+                /* Ancillary Photon Fields */
+                if(reader->parms->atl03_ph_fields)
+                {
+                    if(state[t].photon_indices) state[t].photon_indices->clear();
+                    else                        state[t].photon_indices = new List<int32_t>;
+                }
 
                 /* Traverse Photons Until Desired Along Track Distance Reached */
                 while(!extent_complete || !step_complete)
@@ -1374,9 +1371,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                             state[t].extent_photons.add(ph);
 
                             /* Index Photon for Ancillary Fields */
-                            if(index_photons)
+                            if(state[t].photon_indices)
                             {
-                                photon_indices[t]->add(current_photon);
+                                state[t].photon_indices->add(current_photon);
                             }
                         } while(false);
                     }
