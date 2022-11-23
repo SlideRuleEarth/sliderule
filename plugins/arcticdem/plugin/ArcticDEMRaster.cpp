@@ -266,7 +266,7 @@ ArcticDEMRaster::~ArcticDEMRaster(void)
         thread_t* thread = &rasterRreader[i];
         if( thread->isRunning)
         {
-            pthread_kill(thread->handle, SIGKILL);
+            pthread_cancel(thread->handle);
             thread->isRunning = false;
         }
     }
@@ -295,6 +295,8 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
 
     try
     {
+        tifList.clear();
+#if 0
         /* Close existing rasters */
         for (int i = 0; i < rasterList.length(); i++)
         {
@@ -302,7 +304,7 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
             if (raster.dset) GDALClose((GDALDatasetH)raster.dset);
         }
         rasterList.clear();
-
+#endif
         const int32_t col = static_cast<int32_t>(floor(invgeot[0] + invgeot[1] * p->getX() + invgeot[2] * p->getY()));
         const int32_t row = static_cast<int32_t>(floor(invgeot[3] + invgeot[4] * p->getX() + invgeot[5] * p->getY()));
 
@@ -321,6 +323,7 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
                     {
                         if (psNode->eType == CXT_Element && EQUAL(psNode->pszValue, "File") && psNode->psChild)
                         {
+#if 0
                             raster_t raster;
                             bzero(&raster, sizeof(raster));
 
@@ -333,6 +336,12 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
                             raster.fileName = fname;
                             CPLFree(fname);
                             rasterList.add(raster);
+#else
+                            char *fname = CPLUnescapeString(psNode->psChild->pszValue, nullptr, CPLES_XML);
+                            CHECKPTR(fname);
+                            tifList.add(fname);
+                            CPLFree(fname);
+#endif
                             foundRaster = true;
                         }
                     }
@@ -358,11 +367,80 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
     bool pointInDset = false;
     try
     {
+        // print2term("rasterList.len: %d, tifList.len: %d\n", rasterList.length(), tifList.length());
+
+        List<raster_t> tempRasterList;
+
+        /* Set all rasters alredy opened as invalid */
+        for (int i = 0; i < rasterList.length(); i++)
+            rasterList[i].isValid = false;
+
+        /* Check tif file list agains rasterList */
+        for (int i = 0; i < tifList.length(); i++)
+        {
+            bool foundRaster = false;
+            std::string tifFile = tifList[i];
+
+            for (int j = 0; j < rasterList.length(); j++)
+            {
+                raster_t* raster = &rasterList[j];
+                // print2term("rasterValid: %d\n", raster->isValid);
+
+                if (tifFile == raster->fileName)
+                {
+                    /* Update point to be read, mark as valid raster */
+                    raster->point = p;
+                    raster->isValid = true;
+                    foundRaster = true;
+                    break;
+                }
+            }
+
+            if(!foundRaster)
+            {
+                /* Create new raster for this tif file since it is not in the rasterList */
+                raster_t raster;
+                bzero(&raster, sizeof(raster));
+
+                raster.isValid = true;
+                raster.obj = this;
+                raster.point = p;
+                raster.value = ARCTIC_DEM_INVALID_ELELVATION;
+                raster.fileName = tifFile;
+                tempRasterList.add(raster);
+            }
+
+        }
+
+
+        /* Remove invalid rasters from rasterList */
+        for (int i = 0; i < rasterList.length(); i++)
+        {
+            raster_t* raster = &rasterList[i];
+            if(!raster->isValid)
+            {
+                /* Close this raster, no longer needed */
+                if (raster->dset)
+                    GDALClose((GDALDatasetH)raster->dset);
+
+                rasterList.remove(i);
+                i--; /* Correct for removed list item at index */
+            }
+        }
+
+        /* Append temp list to raster list */
+        for (int i = 0; i < tempRasterList.length(); i++)
+        {
+            rasterList.add(tempRasterList[i]);
+        }
+
+        /* Create reader threads */
+        threadCount = 0;
         for (int i = 0; i < rasterList.length(); i++)
         {
             if(threadCount < MAX_READER_THREADS)
             {
-                raster_t *raster = &(rasterList.get(i));
+                raster_t *raster = &rasterList[i];
                 thread_t *thread = &rasterRreader[threadCount];
 
                 pthread_attr_t pthread_attr;
@@ -380,7 +458,7 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
             }
         }
 
-        /* Wait for all readers to finish */
+        /* Wait for all reader threads to finish */
         for (int i = 0; i < threadCount; i++ )
         {
             thread_t *thread = &rasterRreader[i];
@@ -388,8 +466,8 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
             {
                 if (pthread_join(thread->handle, nullptr) != 0)
                 {
-                    /* If thread failed to join, kill it */
-                    pthread_kill(thread->handle, SIGKILL);
+                    /* If thread failed to join, cancel it */
+                    pthread_cancel(thread->handle);
                 }
                 thread->isRunning = false;
             }
@@ -722,6 +800,7 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
     /* Initialize Class Data Members */
     vrtDset = nullptr;
     vrtBand = nullptr;
+    tifList.clear();
     rasterList.clear();
     bzero(rasterRreader, sizeof(rasterRreader));
     bzero(invgeot, sizeof(invgeot));

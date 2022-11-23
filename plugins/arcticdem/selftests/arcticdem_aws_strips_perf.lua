@@ -36,11 +36,16 @@ print('ExecTime:', dtime, '\n')
 
 local el, status
 local max_cnt = 1000
+-- local max_cnt = 500
+
+--[[
+--]]
 
 print('\n------------------\nTest: Reading', max_cnt, '  points (THE SAME POINT)\n------------')
 
 starttime = time.latch();
 intervaltime = starttime
+
 
 for i = 1, max_cnt
 do
@@ -78,8 +83,13 @@ do
         print(i, status)
     end
 
-    lon = lon + 0.0001
-    lat = lat + 0.0001
+    if (i % 100 == 0) then
+        lon = _lon
+        lat = _lat
+    else
+        lon = lon + 0.01
+        lat = lat + 0.01
+    end
 
     modulovalue = 100
     if (i % modulovalue == 0) then

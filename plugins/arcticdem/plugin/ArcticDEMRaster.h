@@ -73,6 +73,7 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
+            bool             isValid;
             ArcticDEMRaster* obj;
             GDALDataset*     dset;
             GDALRasterBand*  band;
@@ -142,9 +143,10 @@ class ArcticDEMRaster: public LuaObject
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        std::string vrtFileName;
-        VRTDataset *vrtDset;
+        std::string         vrtFileName;
+        VRTDataset*         vrtDset;
         GDALRasterBand*     vrtBand;
+        List<std::string>   tifList;
         List<raster_t>      rasterList;
         thread_t            rasterRreader[MAX_READER_THREADS];
         int                 threadCount;
