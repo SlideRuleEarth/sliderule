@@ -93,12 +93,6 @@ class ArcticDEMRaster: public LuaObject
         } raster_t;
 
 
-        typedef struct {
-            pthread_t  handle;
-            bool       isRunning;
-        } thread_t;
-
-
         typedef enum {
             MOSAIC  = 0,
             STRIPS  = 1,
@@ -148,7 +142,7 @@ class ArcticDEMRaster: public LuaObject
         GDALRasterBand*     vrtBand;
         List<std::string>   tifList;
         List<raster_t>      rasterList;
-        thread_t            rasterRreader[MAX_READER_THREADS];
+        Thread*             rasterRreader[MAX_READER_THREADS];
         int                 threadCount;
         Mutex               threadMut;
         dem_type_t          demType;

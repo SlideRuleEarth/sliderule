@@ -265,12 +265,8 @@ ArcticDEMRaster::~ArcticDEMRaster(void)
     /* All reader threads should be terminated by now (joined) */
     for (int i = 0; i < threadCount; i++)
     {
-        thread_t* thread = &rasterRreader[i];
-        if( thread->isRunning)
-        {
-            pthread_cancel(thread->handle);
-            thread->isRunning = false;
-        }
+        Thread* thread = rasterRreader[i];
+        if (thread) delete thread;
     }
 
     /* Close all rasters */
@@ -427,14 +423,8 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
             if(threadCount < MAX_READER_THREADS)
             {
                 raster_t *raster = &rasterList[i];
-                thread_t *thread = &rasterRreader[threadCount];
-
-                pthread_attr_t pthread_attr;
-                pthread_attr_init(&pthread_attr);
-                if( pthread_create(&thread->handle, &pthread_attr, readingThread, raster) == 0)
-                {
-                    thread->isRunning = true;
-                }
+                Thread   *thread = new Thread(readingThread, raster);
+                rasterRreader[threadCount] = thread;
                 threadCount++;  /* Count thread even if create failed */
             }
             else
@@ -447,16 +437,8 @@ bool ArcticDEMRaster::readRasters(OGRPoint *p)
         /* Wait for all reader threads to finish */
         for (int i = 0; i < threadCount; i++ )
         {
-            thread_t *thread = &rasterRreader[i];
-            if (thread->isRunning)
-            {
-                if (pthread_join(thread->handle, nullptr) != 0)
-                {
-                    /* If thread failed to join, cancel it */
-                    pthread_cancel(thread->handle);
-                }
-                thread->isRunning = false;
-            }
+            Thread *thread = rasterRreader[i];
+            if (thread) delete thread;
         }
         threadCount = 0;
 
