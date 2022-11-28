@@ -94,6 +94,14 @@
 #define LUA_PARM_NODE_TIMEOUT                   "node-timeout"
 #define LUA_PARM_READ_TIMEOUT                   "read-timeout"
 #define LUA_PARM_GLOBAL_TIMEOUT                 "timeout" // sets all timeouts at once
+#define LUA_PARM_OUTPUT                         "output"
+#define LUA_PARM_OUTPUT_PATH                    "path"
+#define LUA_PARM_OUTPUT_FORMAT                  "format"
+#define LUA_PARM_OUTPUT_OPEN_ON_COMPLETE        "open_on_complete"
+#define LUA_PARM_OUTPUT_FORMAT_NATIVE           "native"
+#define LUA_PARM_OUTPUT_FORMAT_FEATHER          "feather"
+#define LUA_PARM_OUTPUT_FORMAT_PARQUET          "parquet"
+#define LUA_PARM_OUTPUT_FORMAT_CSV              "csv"
 
 #define PAIR_TRACKS_PER_GROUND_TRACK            2
 #define PRT_LEFT                                0
@@ -213,6 +221,22 @@ typedef enum {
 /* Ancillary List */
 typedef List<SafeString, EXPECTED_NUM_ANC_FIELDS> ancillary_list_t;
 
+/* Output Formats */
+typedef enum {
+    OUTPUT_FORMAT_NATIVE = 0,
+    OUTPUT_FORMAT_FEATHER = 1,
+    OUTPUT_FORMAT_PARQUET = 2,
+    OUTPUT_FORMAT_CSV = 3,
+    OUTPUT_FORMAT_UNSUPPORTED = 4
+} output_format_t;
+
+/* Output Settings */
+typedef struct {
+    const char*     path;
+    output_format_t format;
+    bool            open_on_complete;
+} output_file_t;
+
 /* Extraction Parameters */
 typedef struct {
     surface_type_t          surface_type;                   // surface reference type (used to select signal confidence column)
@@ -239,6 +263,7 @@ typedef struct {
     int                     rqst_timeout;                   // total time in seconds for request to be processed
     int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
     int                     read_timeout;                   // time in seconds for a single read of an asset to take
+    output_file_t           output;                         // output file parameters
 } icesat2_parms_t;
 
 /******************************************************************************

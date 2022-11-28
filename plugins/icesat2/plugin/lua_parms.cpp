@@ -36,61 +36,43 @@
 #include "core.h"
 #include "lua_parms.h"
 
-/******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define ATL06_DEFAULT_SURFACE_TYPE              SRT_LAND_ICE
-#define ATL06_DEFAULT_SIGNAL_CONFIDENCE         CNF_WITHIN_10M
-#define ATL06_DEFAULT_YAPC_SCORE                0
-#define ATL06_DEFAULT_YAPC_VERSION              3
-#define ALT06_DEFAULT_YAPC_WIN_X                15.0
-#define ALT06_DEFAULT_YAPC_WIN_H                6.0
-#define ALT06_DEFAULT_YAPC_MIN_KNN              5
-#define ATL06_DEFAULT_ALONG_TRACK_SPREAD        20.0 // meters
-#define ATL06_DEFAULT_MIN_PHOTON_COUNT          10
-#define ATL06_DEFAULT_EXTENT_LENGTH             40.0 // meters
-#define ATL06_DEFAULT_EXTENT_STEP               20.0 // meters
-#define ATL06_DEFAULT_MAX_ITERATIONS            5
-#define ATL06_DEFAULT_MIN_WINDOW                3.0 // meters
-#define ATL06_DEFAULT_MAX_ROBUST_DISPERSION     5.0 // meters
-#define ATL06_DEFAULT_COMPACT                   false
-#define ATL06_DEFAULT_PASS_INVALID              false
-#define ATL06_DEFAULT_DIST_IN_SEG               false
 
 /******************************************************************************
  * FILE DATA
  ******************************************************************************/
 
 const icesat2_parms_t DefaultParms = {
-    .surface_type               = ATL06_DEFAULT_SURFACE_TYPE,
-    .pass_invalid               = ATL06_DEFAULT_PASS_INVALID,
-    .dist_in_seg                = ATL06_DEFAULT_DIST_IN_SEG,
-    .compact                    = ATL06_DEFAULT_COMPACT,
+    .surface_type               = SRT_LAND_ICE,
+    .pass_invalid               = false,
+    .dist_in_seg                = false,
+    .compact                    = false,
     .atl03_cnf                  = { false, false, true, true, true, true, true },
     .quality_ph                 = { true, false, false, false },
     .atl08_class                = { false, false, false, false, false },
     .stages                     = { true, false, false },
-    .yapc                       = { .score = ATL06_DEFAULT_YAPC_SCORE,
-                                    .version = ATL06_DEFAULT_YAPC_VERSION,
-                                    .knn = 0, // calculated by default
-                                    .min_knn = ALT06_DEFAULT_YAPC_MIN_KNN,
-                                    .win_h = ALT06_DEFAULT_YAPC_WIN_H,
-                                    .win_x = ALT06_DEFAULT_YAPC_WIN_X },
+    .yapc                       = { .score      = 0,
+                                    .version    = 3,
+                                    .knn        = 0, // calculated by default
+                                    .min_knn    = 5,
+                                    .win_h      = 6.0,
+                                    .win_x      = 15.0 },
     .raster                     = NULL,
     .track                      = ALL_TRACKS,
-    .max_iterations             = ATL06_DEFAULT_MAX_ITERATIONS,
-    .minimum_photon_count       = ATL06_DEFAULT_MIN_PHOTON_COUNT,
-    .along_track_spread         = ATL06_DEFAULT_ALONG_TRACK_SPREAD,
-    .minimum_window             = ATL06_DEFAULT_MIN_WINDOW,
-    .maximum_robust_dispersion  = ATL06_DEFAULT_MAX_ROBUST_DISPERSION,
-    .extent_length              = ATL06_DEFAULT_EXTENT_LENGTH,
-    .extent_step                = ATL06_DEFAULT_EXTENT_STEP,
+    .max_iterations             = 5,
+    .minimum_photon_count       = 10,
+    .along_track_spread         = 20.0,
+    .minimum_window             = 3.0,
+    .maximum_robust_dispersion  = 5.0,
+    .extent_length              = 40.0,
+    .extent_step                = 20.0,
     .atl03_geo_fields           = NULL,
     .atl03_ph_fields            = NULL,
     .rqst_timeout               = PARM_DEFAULT_RQST_TIMEOUT,
     .node_timeout               = PARM_DEFAULT_NODE_TIMEOUT,
-    .read_timeout               = PARM_DEFAULT_READ_TIMEOUT
+    .read_timeout               = PARM_DEFAULT_READ_TIMEOUT,
+    .output                     = { .path               = NULL,
+                                    .format             = OUTPUT_FORMAT_NATIVE,
+                                    .open_on_complete   = false }
 };
 
 /******************************************************************************
@@ -135,6 +117,18 @@ static atl08_classification_t str2atl08class (const char* classifiction_str)
     else if(StringLib::match(classifiction_str, LUA_PARM_ATL08_CLASS_TOP_OF_CANOPY))    return ATL08_TOP_OF_CANOPY;
     else if(StringLib::match(classifiction_str, LUA_PARM_ATL08_CLASS_UNCLASSIFIED))     return ATL08_UNCLASSIFIED;
     else                                                                                return ATL08_INVALID_CLASSIFICATION;
+}
+
+/*----------------------------------------------------------------------------
+ * str2outputformat
+ *----------------------------------------------------------------------------*/
+static output_format_t str2outputformat (const char* fmt_str)
+{
+    if     (StringLib::match(fmt_str, LUA_PARM_OUTPUT_FORMAT_NATIVE))   return OUTPUT_FORMAT_NATIVE;
+    else if(StringLib::match(fmt_str, LUA_PARM_OUTPUT_FORMAT_FEATHER))  return OUTPUT_FORMAT_FEATHER;
+    else if(StringLib::match(fmt_str, LUA_PARM_OUTPUT_FORMAT_PARQUET))  return OUTPUT_FORMAT_PARQUET;
+    else if(StringLib::match(fmt_str, LUA_PARM_OUTPUT_FORMAT_CSV))      return OUTPUT_FORMAT_CSV;
+    else                                                                return OUTPUT_FORMAT_UNSUPPORTED;
 }
 
 /*----------------------------------------------------------------------------
@@ -607,6 +601,64 @@ static void get_lua_field_list (lua_State* L, int index, ancillary_list_t** fiel
     }
 }
 
+/*----------------------------------------------------------------------------
+ * get_lua_output
+ *----------------------------------------------------------------------------*/
+static void get_lua_output (lua_State* L, int index, icesat2_parms_t* parms, bool* provided)
+{
+    bool field_provided;
+
+    /* Reset Provided */
+    *provided = false;
+
+    /* Must be a Table */
+    if(lua_istable(L, index))
+    {
+        *provided = true;
+
+        /* Output Path */
+        lua_getfield(L, index, LUA_PARM_OUTPUT_PATH);
+        parms->output.path = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, parms->output.path, &field_provided));
+        if(field_provided) mlog(DEBUG, "Setting %s to %s", LUA_PARM_OUTPUT_PATH, parms->output.path);
+        lua_pop(L, 1);
+
+        /* Output Format */
+        lua_getfield(L, index, LUA_PARM_OUTPUT_FORMAT);
+        if(lua_isinteger(L, index))
+        {
+            parms->output.format = (output_format_t)LuaObject::getLuaInteger(L, -1, true, parms->output.format, &field_provided);
+            if(parms->output.format < 0 || parms->output.format >= OUTPUT_FORMAT_UNSUPPORTED)
+            {
+                    mlog(ERROR, "Output format is unsupported: %d", parms->output.format);
+            }
+        }
+        else if(lua_isstring(L, index))
+        {
+            const char* output_fmt = LuaObject::getLuaString(L, -1, true, LUA_PARM_OUTPUT_FORMAT_NATIVE, &field_provided);
+            if(field_provided)
+            {
+                parms->output.format = str2outputformat(output_fmt);
+                if(parms->output.format == OUTPUT_FORMAT_UNSUPPORTED)
+                {
+                    mlog(ERROR, "Output format is unsupported: %s", output_fmt);
+                }
+            }
+        }
+        else if(!lua_isnil(L, index))
+        {
+            mlog(ERROR, "Output format must be provided as an integer or string");
+        }
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", LUA_PARM_OUTPUT_FORMAT, (int)parms->output.format);
+        lua_pop(L, 1);
+
+        /* Output Open on Complete */
+        lua_getfield(L, index, LUA_PARM_OUTPUT_OPEN_ON_COMPLETE);
+        parms->output.open_on_complete = LuaObject::getLuaBoolean(L, -1, true, parms->output.open_on_complete, &field_provided);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", LUA_PARM_OUTPUT_OPEN_ON_COMPLETE, (int)parms->output.open_on_complete);
+        lua_pop(L, 1);
+    }
+}
+
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
@@ -749,6 +801,11 @@ icesat2_parms_t* getLuaIcesat2Parms (lua_State* L, int index)
             lua_getfield(L, index, LUA_PARM_READ_TIMEOUT);
             parms->read_timeout = LuaObject::getLuaInteger(L, -1, true, parms->read_timeout, &provided);
             if(provided) mlog(DEBUG, "Setting %s to %d", LUA_PARM_READ_TIMEOUT, parms->read_timeout);
+            lua_pop(L, 1);
+
+            lua_getfield(L, index, LUA_PARM_OUTPUT);
+            get_lua_output(L, -1, parms, &provided);
+            if(provided) mlog(DEBUG, "Setting %s by user", LUA_PARM_OUTPUT);
             lua_pop(L, 1);
         }
         catch(const RunTimeException& e)
