@@ -279,8 +279,8 @@ ArcticDEMRaster::~ArcticDEMRaster(void)
     {
         assert(raster);
         if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
-        rasterDict.remove(key);
         delete raster;
+        raster = NULL;
         key = rasterDict.next(&raster);
     }
 
@@ -392,16 +392,14 @@ bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
     while (key != NULL)
     {
         assert(raster);
-        if (raster->inUse)
-            key = rasterDict.next(&raster);
-        else
+        if (!raster->inUse)
         {
             if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
             rasterDict.remove(key);
             delete raster;
-            key = rasterDict.prev(&raster);
             deletedRasters++;
         }
+        key = rasterDict.next(&raster);
     }
 
     // print2term("B- rasterDic.len: %d, tifList.len: %d, newRasters: %d, recycledRasters: %d, deltedRasters: %d\n\n",
