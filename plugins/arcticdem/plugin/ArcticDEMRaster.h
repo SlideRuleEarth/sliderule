@@ -73,7 +73,7 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
-            bool             isValid;
+            bool             inUse;
             ArcticDEMRaster* obj;
             GDALDataset*     dset;
             GDALRasterBand*  band;
@@ -137,16 +137,16 @@ class ArcticDEMRaster: public LuaObject
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        std::string         vrtFileName;
-        VRTDataset*         vrtDset;
-        GDALRasterBand*     vrtBand;
-        List<std::string>   tifList;
-        List<raster_t>      rasterList;
-        Thread*             rasterRreader[MAX_READER_THREADS];
-        int                 threadCount;
-        Mutex               threadMut;
-        dem_type_t          demType;
-        double              invgeot[6];
+        std::string           vrtFileName;
+        VRTDataset*           vrtDset;
+        GDALRasterBand*       vrtBand;
+        List<std::string>     tifList;
+        Dictionary<raster_t*> rasterDict;
+        Thread*               rasterRreader[MAX_READER_THREADS];
+        int                   threadCount;
+        Mutex                 threadMut;
+        dem_type_t            demType;
+        double                invgeot[6];
 
         uint32_t vrtRows;
         uint32_t vrtCols;
@@ -173,7 +173,7 @@ class ArcticDEMRaster: public LuaObject
 
         bool  findRasters     (OGRPoint* p);
         bool  readRasters     (OGRPoint* p);
-        bool  updateRasterList(OGRPoint* p);
+        bool  updateDictionary(OGRPoint* p);
         bool  readRaster      (raster_t* raster);
         bool  openVrtDset     (const char *fileName);
 };
