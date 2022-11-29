@@ -239,7 +239,10 @@ void ArcticDEMRaster::sampleStrips(double lon, double lat)
         }
 
         if (findRasters(&p))
+        {
+            updateDictionary(&p);
             readRasters(&p);
+        }
     }
 }
 
@@ -407,10 +410,9 @@ bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
 bool ArcticDEMRaster::readRasters(OGRPoint* p)
 {
     bool pointInDset = false;
+
     try
     {
-        updateDictionary(p);
-
         /* Create reader threads */
         threadCount = 0;
         raster_t *raster = NULL;
