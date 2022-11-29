@@ -346,12 +346,13 @@ bool ArcticDEMRaster::findRasters(OGRPoint *p)
  *----------------------------------------------------------------------------*/
 bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
 {
-    // print2term("rasterDic.len: %d, tifList.len: %d\n", rasterDict.length(), tifList.length());
-
     raster_t *raster = NULL;
+    const char* key = NULL;
 
-    /* Set all rasters alredy opened as invalid */
-    const char* key = rasterDict.first(&raster);
+    int newRasters, recycledRasters, deletedRasters;
+    newRasters = recycledRasters = deletedRasters = 0;
+
+    // print2term("A- rasterDic.len: %d, tifList.len: %d\n", rasterDict.length(), tifList.length());
 
     /* Check new tif file list against rasters in dictionary */
     for (int i = 0; i < tifList.length(); i++)
@@ -368,6 +369,7 @@ bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
             assert(raster);
             raster->point = p;
             raster->inUse = true;
+            recycledRasters++;
         }
         else
         {
@@ -381,25 +383,29 @@ bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
             raster->value = ARCTIC_DEM_INVALID_ELELVATION;
             raster->fileName = fileName;
             rasterDict.add(key, raster);
+            newRasters++;
         }
     }
 
-    /* Remove invalid rasters (no longer needed) */
-    if( rasterDict.length() > 100 )
+    /* Remove no longer needed rasters */
+    key = rasterDict.first(&raster);
+    while (key != NULL)
     {
-        key = rasterDict.first(&raster);
-        while (key != NULL)
-        {
-            assert(raster);
-            if (!raster->inUse)
-            {
-                if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
-                rasterDict.remove(key);
-                delete raster;
-            }
+        assert(raster);
+        if (raster->inUse)
             key = rasterDict.next(&raster);
+        else
+        {
+            if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
+            rasterDict.remove(key);
+            delete raster;
+            key = rasterDict.prev(&raster);
+            deletedRasters++;
         }
     }
+
+    // print2term("B- rasterDic.len: %d, tifList.len: %d, newRasters: %d, recycledRasters: %d, deltedRasters: %d\n\n",
+    //             rasterDict.length(), tifList.length(), newRasters, recycledRasters, deletedRasters);
 
     return true;
 }
@@ -419,18 +425,22 @@ bool ArcticDEMRaster::readRasters(OGRPoint* p)
         const char *key = rasterDict.first(&raster);
         while (key != NULL)
         {
-            if(threadCount < MAX_READER_THREADS)
+            assert(raster);
+            if (raster->inUse)
             {
-                Thread *thread = new Thread(readingThread, raster);
-                rasterRreader[threadCount] = thread;
-                threadCount++;
-                key = rasterDict.next(&raster);
+                if (threadCount < MAX_READER_THREADS)
+                {
+                    Thread *thread = new Thread(readingThread, raster);
+                    rasterRreader[threadCount] = thread;
+                    threadCount++;
+                }
+                else
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "number of rasters to read: %d, is greater than max reading threads %d\n",
+                                           rasterDict.length(), MAX_READER_THREADS);
+                }
             }
-            else
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "number of rasters to read: %d, is greater than max reading threads %d\n",
-                                       rasterDict.length(), MAX_READER_THREADS);
-            }
+            key = rasterDict.next(&raster);
         }
 
         /* Wait for all reader threads to finish */
@@ -442,7 +452,7 @@ bool ArcticDEMRaster::readRasters(OGRPoint* p)
         threadCount = 0;
 
 #if 0
-        int i;
+        int i=0;
         key = rasterDict.first(&raster);
         while (key != NULL)
         {
