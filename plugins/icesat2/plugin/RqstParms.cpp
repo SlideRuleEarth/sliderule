@@ -448,8 +448,8 @@ RqstParms::atl08_classification_t RqstParms::str2atl08class (const char* classif
     else if(StringLib::match(classifiction_str, "atl08_ground")         || StringLib::match(classifiction_str, "ground"))          return ATL08_GROUND;
     else if(StringLib::match(classifiction_str, "atl08_canopy")         || StringLib::match(classifiction_str, "canopy"))          return ATL08_CANOPY;
     else if(StringLib::match(classifiction_str, "atl08_top_of_canopy")  || StringLib::match(classifiction_str, "top_of_canopy"))   return ATL08_TOP_OF_CANOPY;
-    else if(StringLib::match(classifiction_str, "atl08_unlassified")    || StringLib::match(classifiction_str, "unclassified"))    return ATL08_UNCLASSIFIED;
-    else                                                                                                                            return ATL08_INVALID_CLASSIFICATION;
+    else if(StringLib::match(classifiction_str, "atl08_unclassified")   || StringLib::match(classifiction_str, "unclassified"))    return ATL08_UNCLASSIFIED;
+    else                                                                                                                           return ATL08_INVALID_CLASSIFICATION;
 }
 
 /*----------------------------------------------------------------------------
