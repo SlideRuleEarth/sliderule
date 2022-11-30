@@ -97,6 +97,7 @@ class ArrowBuilder: public DispatchObject
         bool                    processTermination              (void) override;
 
         static arrow::Schema*   defineTableSchema               (const char* schema);
+        static bool             addFieldsToSchema               (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, const char* rectype);
 };
 
 #endif  /* __arrow_buider__ */

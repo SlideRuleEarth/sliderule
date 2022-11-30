@@ -141,10 +141,18 @@ bool ArrowBuilder::processTermination (void)
  *----------------------------------------------------------------------------*/
 arrow::Schema* ArrowBuilder::defineTableSchema (const char* rectype)
 {
-    arrow::Schema* _schema = NULL;
     std::vector<std::shared_ptr<arrow::Field>> schema_vector;
+    addFieldsToSchema(schema_vector, rectype);
+    arrow::Schema* _schema = new arrow::Schema(schema_vector);
+    return _schema;
+}
 
-    /* Loop through fields */
+/*----------------------------------------------------------------------------
+ * addFieldsToSchema
+ *----------------------------------------------------------------------------*/
+bool ArrowBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, const char* rectype)
+{
+    /* Loop Through Fields in Record */
     char** field_names = NULL;
     RecordObject::field_t** fields = NULL;
     int num_fields = RecordObject::getRecordFields(rectype, &field_names, &fields);
@@ -164,20 +172,15 @@ arrow::Schema* ArrowBuilder::defineTableSchema (const char* rectype)
             case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
             case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
             case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
+            case RecordObject::USER:    addFieldToSchema(schema_vector, fields[i]->exttype); break;
             default:                    break;
         }
-    }
-
-    /* Create Schema */
-    if(num_fields > 0)
-    {
-        _schema = new arrow::Schema(schema_vector);
     }
 
     /* Clean Up */
     if(fields) delete [] fields;
     if(field_names) delete [] field_names;
 
-    /* Return Schema */
-    return _schema;
+    /* Return Success */
+    return true;
 }
