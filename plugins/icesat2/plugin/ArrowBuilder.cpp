@@ -172,7 +172,7 @@ bool ArrowBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>
             case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
             case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
             case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
-            case RecordObject::USER:    addFieldToSchema(schema_vector, fields[i]->exttype); break;
+            case RecordObject::USER:    addFieldsToSchema(schema_vector, fields[i]->exttype); break;
             default:                    break;
         }
     }
