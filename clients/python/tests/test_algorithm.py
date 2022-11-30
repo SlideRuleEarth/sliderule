@@ -106,11 +106,11 @@ class TestAlgorithm:
         gdf = icesat2.atl03s(parms, resource, asset)
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 241125
-        assert len(gdf[gdf["atl08_class"] == 0]) == 30295
-        assert len(gdf[gdf["atl08_class"] == 1]) == 122759
-        assert len(gdf[gdf["atl08_class"] == 2]) == 53723
-        assert len(gdf[gdf["atl08_class"] == 3]) == 18298
+        assert len(gdf["height"]) == 243237
+        assert len(gdf[gdf["atl08_class"] == 0]) == 30493
+        assert len(gdf[gdf["atl08_class"] == 1]) == 123485
+        assert len(gdf[gdf["atl08_class"] == 2]) == 54251
+        assert len(gdf[gdf["atl08_class"] == 3]) == 18958
         assert len(gdf[gdf["atl08_class"] == 4]) == 16050
 
     def test_gs(self, server, asset, organization):
