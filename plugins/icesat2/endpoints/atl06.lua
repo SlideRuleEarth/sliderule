@@ -48,8 +48,11 @@ local recq = rspq .. "-atl03"
 -- Exception Forwarding --
 local except_pub = core.publish(rspq)
 
+-- Request Parameters */
+local rqst_parms = icesat2.parms(parms)
+
 -- ATL06 Dispatch Algorithm --
-local atl06_algo = icesat2.atl06(rspq, parms)
+local atl06_algo = icesat2.atl06(rspq, rqst_parms)
 
 -- ATL06 Dispatcher --
 local atl06_disp = core.dispatcher(recq)
@@ -62,7 +65,7 @@ atl06_disp:run()
 userlog:sendlog(core.INFO, string.format("request <%s> atl06 processing initiated on %s ...", rspq, resource))
 
 -- ATL03 Reader --
-local atl03_reader = icesat2.atl03(asset, resource, recq, parms, true)
+local atl03_reader = icesat2.atl03(asset, resource, recq, rqst_parms, true)
 
 -- Wait Until Reader Completion --
 while (userlog:numsubs() > 0) and not atl03_reader:waiton(interval * 1000) do

@@ -47,7 +47,7 @@
 
 #include "GTArray.h"
 #include "GTDArray.h"
-#include "lua_parms.h"
+#include "RqstParms.h"
 
 /******************************************************************************
  * ATL03 READER
@@ -105,19 +105,19 @@ class Atl03Reader: public LuaObject
 
         /* Extent Record */
         typedef struct {
-            bool            valid[PAIR_TRACKS_PER_GROUND_TRACK];
+            bool            valid[RqstParms::NUM_PAIR_TRACKS];
             uint8_t         reference_pair_track; // 1, 2, or 3
             uint8_t         spacecraft_orientation; // sc_orient_t
             uint16_t        reference_ground_track_start;
             uint16_t        cycle_start;
             uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][RPT: 35-34][ID: 33-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
-            uint32_t        segment_id[PAIR_TRACKS_PER_GROUND_TRACK];
-            double          segment_distance[PAIR_TRACKS_PER_GROUND_TRACK];
-            double          extent_length[PAIR_TRACKS_PER_GROUND_TRACK]; // meters
-            double          spacecraft_velocity[PAIR_TRACKS_PER_GROUND_TRACK]; // meters per second
-            double          background_rate[PAIR_TRACKS_PER_GROUND_TRACK]; // PE per second
-            uint32_t        photon_count[PAIR_TRACKS_PER_GROUND_TRACK];
-            uint32_t        photon_offset[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t        segment_id[RqstParms::NUM_PAIR_TRACKS];
+            double          segment_distance[RqstParms::NUM_PAIR_TRACKS];
+            double          extent_length[RqstParms::NUM_PAIR_TRACKS]; // meters
+            double          spacecraft_velocity[RqstParms::NUM_PAIR_TRACKS]; // meters per second
+            double          background_rate[RqstParms::NUM_PAIR_TRACKS]; // PE per second
+            uint32_t        photon_count[RqstParms::NUM_PAIR_TRACKS];
+            uint32_t        photon_offset[RqstParms::NUM_PAIR_TRACKS];
             photon_t        photons[]; // zero length field
         } extent_t;
 
@@ -138,7 +138,7 @@ class Atl03Reader: public LuaObject
             uint64_t        extent_id;
             uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
-            uint32_t        num_elements[PAIR_TRACKS_PER_GROUND_TRACK];
+            uint32_t        num_elements[RqstParms::NUM_PAIR_TRACKS];
             uint8_t         data[];
         } anc_photon_t;
 
@@ -192,13 +192,13 @@ class Atl03Reader: public LuaObject
                 GTArray<double>     segment_lon;
                 GTArray<int32_t>    segment_ph_cnt;
 
-                bool*               inclusion_mask[PAIR_TRACKS_PER_GROUND_TRACK];
-                bool*               inclusion_ptr[PAIR_TRACKS_PER_GROUND_TRACK];
+                bool*               inclusion_mask[RqstParms::NUM_PAIR_TRACKS];
+                bool*               inclusion_ptr[RqstParms::NUM_PAIR_TRACKS];
 
-                long                first_segment[PAIR_TRACKS_PER_GROUND_TRACK];
-                long                num_segments[PAIR_TRACKS_PER_GROUND_TRACK];
-                long                first_photon[PAIR_TRACKS_PER_GROUND_TRACK];
-                long                num_photons[PAIR_TRACKS_PER_GROUND_TRACK];
+                long                first_segment[RqstParms::NUM_PAIR_TRACKS];
+                long                num_segments[RqstParms::NUM_PAIR_TRACKS];
+                long                first_photon[RqstParms::NUM_PAIR_TRACKS];
+                long                num_photons[RqstParms::NUM_PAIR_TRACKS];
         };
 
         /* Atl03 Data Subclass */
@@ -243,7 +243,7 @@ class Atl03Reader: public LuaObject
                 SafeString          resource;
 
                 /* Generated Data */
-                uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]
+                uint8_t*            gt[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
 
                 /* Read Data */
                 GTArray<int32_t>    atl08_segment_id;
@@ -265,7 +265,7 @@ class Atl03Reader: public LuaObject
                 uint8_t* operator[] (int t);
 
                 /* Generated Data */
-                uint8_t*            gt[PAIR_TRACKS_PER_GROUND_TRACK]; // [num_photons]
+                uint8_t*            gt[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
         };
 
         /* Track State Subclass */
@@ -293,7 +293,7 @@ class Atl03Reader: public LuaObject
                 ~TrackState         (void);
                 track_state_t&      operator[] (int t);
 
-                track_state_t       gt[PAIR_TRACKS_PER_GROUND_TRACK];
+                track_state_t       gt[RqstParms::NUM_PAIR_TRACKS];
                 double              extent_length;
         };
 
@@ -308,7 +308,7 @@ class Atl03Reader: public LuaObject
          *--------------------------------------------------------------------*/
 
         bool                active;
-        Thread*             readerPid[NUM_TRACKS];
+        Thread*             readerPid[RqstParms::NUM_TRACKS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
@@ -318,7 +318,7 @@ class Atl03Reader: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        icesat2_parms_t*    parms;
+        RqstParms*          parms;
         stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file
@@ -333,7 +333,7 @@ class Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, icesat2_parms_t* _parms, bool _send_terminator=true);
+                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator=true);
                             ~Atl03Reader            (void);
 
         static void*        subsettingThread        (void* parm);
@@ -342,8 +342,8 @@ class Atl03Reader: public LuaObject
         uint32_t            calculateSegmentId      (int t, TrackState& state, Atl03Data& atl03);
         bool                sendExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
         bool                sendFlatRecord          (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
-        bool                sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
-        bool                sendAncillaryPhRecords  (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryPhRecords  (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
 
         static int          luaParms                (lua_State* L);

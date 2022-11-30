@@ -144,17 +144,19 @@ const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::luaCreate (lua_State* L)
 {
+    RqstParms* parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        icesat2_parms_t* atl06_parms = getLuaIcesat2Parms(L, 2);
+        parms = (RqstParms*)getLuaObject(L, 2, RqstParms::OBJECT_TYPE);
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new Atl06Dispatch(L, outq_name, atl06_parms));
+        return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
     }
     catch(const RunTimeException& e)
     {
+        if(parms) parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
@@ -193,7 +195,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, const icesat2_parms_t* _parms):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, RqstParms* _parms):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
@@ -233,8 +235,7 @@ Atl06Dispatch::~Atl06Dispatch(void)
 {
     delete outQ;
     delete recObj;
-
-    freeLuaIcesat2Parms(parms);
+    parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -244,7 +245,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
-    result_t result[PAIR_TRACKS_PER_GROUND_TRACK];
+    result_t result[RqstParms::NUM_PAIR_TRACKS];
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Bump Statistics */
@@ -252,7 +253,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 
     /* Execute Algorithm Stages */
     initializationStage(extent, result); // allocates photons[]
-    if(parms->stages[STAGE_LSF]) iterativeFitStage(extent, result);
+    if(parms->stages[RqstParms::STAGE_LSF]) iterativeFitStage(extent, result);
     postResult(result); // deallocates memory
 
     /* Return Status */
@@ -284,14 +285,14 @@ bool Atl06Dispatch::processTermination (void)
 void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t* result)
 {
     /* Clear Results */
-    LocalLib::set(result, 0, sizeof(result_t) * PAIR_TRACKS_PER_GROUND_TRACK);
+    LocalLib::set(result, 0, sizeof(result_t) * RqstParms::NUM_PAIR_TRACKS);
 
     /* Initialize Results */
     int first_photon = 0;
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         /* Elevation Attributes */
-        result[t].elevation.extent_id = extent->extent_id | EXTENT_ID_ELEVATION | t;
+        result[t].elevation.extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;
         result[t].elevation.segment_id = extent->segment_id[t];
         result[t].elevation.rgt = extent->reference_ground_track_start;
         result[t].elevation.cycle = extent->cycle_start;
@@ -311,56 +312,12 @@ void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t
     }
 
     /* Calcualte Beam Numbers */
-    sc_orient_t sc_orient = (sc_orient_t)extent->spacecraft_orientation;
-    track_t track = (track_t)extent->reference_pair_track;
-    if(sc_orient == SC_BACKWARD)
-    {
-        if(track == RPT_1)
-        {
-            result[PRT_LEFT].elevation.spot = SPOT_1;
-            result[PRT_RIGHT].elevation.spot = SPOT_2;
-            result[PRT_LEFT].elevation.gt = (uint8_t)GT1L;
-            result[PRT_RIGHT].elevation.gt = (uint8_t)GT1R;
-        }
-        else if(track == RPT_2)
-        {
-            result[PRT_LEFT].elevation.spot = SPOT_3;
-            result[PRT_RIGHT].elevation.spot = SPOT_4;
-            result[PRT_LEFT].elevation.gt = (uint8_t)GT2L;
-            result[PRT_RIGHT].elevation.gt = (uint8_t)GT2R;
-        }
-        else if(track == RPT_3)
-        {
-            result[PRT_LEFT].elevation.spot = SPOT_5;
-            result[PRT_RIGHT].elevation.spot = SPOT_6;
-            result[PRT_LEFT].elevation.gt = (uint8_t)GT3L;
-            result[PRT_RIGHT].elevation.gt = (uint8_t)GT3R;
-        }
-    }
-    else if(sc_orient == SC_FORWARD)
-    {
-        if(track == RPT_1)
-        {
-            result[PRT_LEFT].elevation.spot = SPOT_6;
-            result[PRT_RIGHT].elevation.spot = SPOT_5;
-            result[PRT_LEFT].elevation.gt = (uint8_t)GT1L;
-            result[PRT_RIGHT].elevation.gt = (uint8_t)GT1R;
-        }
-        else if(track == RPT_2)
-        {
-            result[PRT_LEFT].elevation.spot = SPOT_4;
-            result[PRT_RIGHT].elevation.spot = SPOT_3;
-            result[PRT_LEFT].elevation.gt = (uint8_t)GT2L;
-            result[PRT_RIGHT].elevation.gt = (uint8_t)GT2R;
-        }
-        else if(track == RPT_3)
-        {
-            result[PRT_LEFT].elevation.spot = SPOT_2;
-            result[PRT_RIGHT].elevation.spot = SPOT_1;
-            result[PRT_LEFT].elevation.gt = (uint8_t)GT3L;
-            result[PRT_RIGHT].elevation.gt = (uint8_t)GT3R;
-        }
-    }
+    RqstParms::sc_orient_t sc_orient = (RqstParms::sc_orient_t)extent->spacecraft_orientation;
+    RqstParms::track_t track = (RqstParms::track_t)extent->reference_pair_track;
+    result[RqstParms::RPT_L].elevation.spot = RqstParms::getSpotNumber(sc_orient, track, RqstParms::RPT_L);
+    result[RqstParms::RPT_R].elevation.spot = RqstParms::getSpotNumber(sc_orient, track, RqstParms::RPT_R);
+    result[RqstParms::RPT_L].elevation.gt = RqstParms::getGroundTrack(sc_orient, track, RqstParms::RPT_L);
+    result[RqstParms::RPT_R].elevation.gt = RqstParms::getGroundTrack(sc_orient, track, RqstParms::RPT_R);
 }
 
 /*----------------------------------------------------------------------------
@@ -372,7 +329,7 @@ void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t
 void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* result)
 {
     /* Process Tracks */
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         /* Check Valid Extent */
         if(extent->valid[t] && result[t].elevation.photon_count > 0)
@@ -595,7 +552,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* 
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::postResult (result_t* result)
 {
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         /* Pull Out Elevation */
         elevation_t* elevation = NULL;

@@ -58,11 +58,12 @@ const RecordObject::fieldDef_t H5DatasetDevice::recDef[] = {
  *----------------------------------------------------------------------------*/
 int H5DatasetDevice::luaCreate (lua_State* L)
 {
+    Asset* _asset = NULL;
     try
     {
         /* Get Parameters */
         int             _role           = (int)getLuaInteger(L, 1);
-        Asset*          _asset          = (Asset*)getLuaObject(L, 2, Asset::OBJECT_TYPE);
+                        _asset          = (Asset*)getLuaObject(L, 2, Asset::OBJECT_TYPE);
         const char*     _resource       = getLuaString(L, 3);
         const char*     dataset_name    = getLuaString(L, 4);
         long            id              = getLuaInteger(L, 5, true, 0);
@@ -83,6 +84,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(_asset) _asset->releaseLuaObject();
         mlog(e.level(), "Error creating H5DatasetDevice: %s", e.what());
         return returnLuaStatus(L, false);
     }

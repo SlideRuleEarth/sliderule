@@ -69,17 +69,20 @@ const RecordObject::fieldDef_t H5File::recDef[] = {
  *----------------------------------------------------------------------------*/
 int H5File::luaCreate(lua_State* L)
 {
+    Asset* _asset = NULL;
+
     try
     {
         /* Get Parameters */
-        Asset* _asset           = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
-        const char* _resource   = getLuaString(L, 2);
+        _asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        const char* _resource = getLuaString(L, 2);
 
         /* Return File Device Object */
         return createLuaObject(L, new H5File(L, _asset, _resource));
     }
     catch(const RunTimeException& e)
     {
+        if(_asset) _asset->releaseLuaObject();
         mlog(e.level(), "Error creating HDF5 File: %s", e.what());
         return returnLuaStatus(L, false);
     }

@@ -134,13 +134,16 @@ const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
  *----------------------------------------------------------------------------*/
 int Atl03Reader::luaCreate (lua_State* L)
 {
+    Asset* asset = NULL;
+    RqstParms* parms = NULL;
+
     try
     {
         /* Get Parameters */
-        Asset* asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        icesat2_parms_t* parms = getLuaIcesat2Parms(L, 4);
+        parms = (RqstParms*)getLuaObject(L, 4, RqstParms::OBJECT_TYPE);
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -148,6 +151,8 @@ int Atl03Reader::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(asset) asset->releaseLuaObject();
+        if(parms) parms->releaseLuaObject();
         mlog(e.level(), "Error creating Atl03Reader: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -200,7 +205,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, icesat2_parms_t* _parms, bool _send_terminator):
+Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
@@ -250,7 +255,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         start_cycle     = new H5Array<int32_t>(asset, resource, "/ancillary_data/start_cycle", &context);
 
         /* Read ATL08 File (if necessary) */
-        if(parms->stages[STAGE_ATL08])
+        if(parms->stages[RqstParms::STAGE_ATL08])
         {
             atl08_rgt = new H5Array<int32_t>(asset, resource08, "/ancillary_data/start_rgt", &context08);
         }
@@ -264,18 +269,18 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         start_cycle->join(read_timeout_ms, true);
 
         /* Wait for ATL08 File (if necessary) */
-        if(parms->stages[STAGE_ATL08])
+        if(parms->stages[RqstParms::STAGE_ATL08])
         {
             atl08_rgt->join(read_timeout_ms, true);
         }
 
         /* Read ATL03 Track Data */
-        if(parms->track == ALL_TRACKS)
+        if(parms->track == RqstParms::ALL_TRACKS)
         {
-            threadCount = NUM_TRACKS;
+            threadCount = RqstParms::NUM_TRACKS;
 
             /* Create Readers */
-            for(int t = 0; t < NUM_TRACKS; t++)
+            for(int t = 0; t < RqstParms::NUM_TRACKS; t++)
             {
                 info_t* info = new info_t;
                 info->reader = this;
@@ -319,14 +324,14 @@ Atl03Reader::~Atl03Reader (void)
 {
     active = false;
 
-    for(int t = 0; t < NUM_TRACKS; t++)
+    for(int t = 0; t < RqstParms::NUM_TRACKS; t++)
     {
         if(readerPid[t]) delete readerPid[t];
     }
 
     delete outQ;
 
-    freeLuaIcesat2Parms(parms);
+    parms->releaseLuaObject();
 
     delete [] resource;
     delete [] resource08;
@@ -355,7 +360,7 @@ Atl03Reader::Region::Region (info_t* info):
     segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
     /* Initialize Region */
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         first_segment[t] = 0;
         num_segments[t] = -1;
@@ -378,7 +383,7 @@ Atl03Reader::Region::Region (info_t* info):
     }
 
     /* Check If Anything to Process */
-    if(num_photons[PRT_LEFT] <= 0 || num_photons[PRT_RIGHT] <= 0)
+    if(num_photons[RqstParms::RPT_L] <= 0 || num_photons[RqstParms::RPT_R] <= 0)
     {
         throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
     }
@@ -394,7 +399,7 @@ Atl03Reader::Region::Region (info_t* info):
  *----------------------------------------------------------------------------*/
 Atl03Reader::Region::~Region (void)
 {
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         if(inclusion_mask[t]) delete [] inclusion_mask[t];
     }
@@ -409,8 +414,8 @@ void Atl03Reader::Region::polyregion (info_t* info)
 
     /* Determine Best Projection To Use */
     MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(segment_lat[PRT_LEFT][0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(segment_lat[PRT_LEFT][0] < -70.0) projection = MathLib::SOUTH_POLAR;
+    if(segment_lat[RqstParms::RPT_L][0] > 70.0) projection = MathLib::NORTH_POLAR;
+    else if(segment_lat[RqstParms::RPT_L][0] < -70.0) projection = MathLib::SOUTH_POLAR;
 
     /* Project Polygon */
     List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
@@ -421,9 +426,9 @@ void Atl03Reader::Region::polyregion (info_t* info)
     }
 
     /* Find First Segment In Polygon */
-    bool first_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
-    bool last_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    bool first_segment_found[RqstParms::NUM_PAIR_TRACKS] = {false, false};
+    bool last_segment_found[RqstParms::NUM_PAIR_TRACKS] = {false, false};
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         int segment = 0;
         while(segment < segment_ph_cnt[t].size)
@@ -496,8 +501,8 @@ void Atl03Reader::Region::polyregion (info_t* info)
 void Atl03Reader::Region::rasterregion (info_t* info)
 {
     /* Find First Segment In Polygon */
-    bool first_segment_found[PAIR_TRACKS_PER_GROUND_TRACK] = {false, false};
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    bool first_segment_found[RqstParms::NUM_PAIR_TRACKS] = {false, false};
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         /* Check Size */
         if(segment_ph_cnt[t].size <= 0)
@@ -592,11 +597,11 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     delta_time          (info->reader->asset, info->reader->resource, info->track, "heights/delta_time",          &info->reader->context, 0, region.first_photon,  region.num_photons),
     bckgrd_delta_time   (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/delta_time",     &info->reader->context),
     bckgrd_rate         (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/bckgrd_rate",    &info->reader->context),
-    anc_geo_data        (EXPECTED_NUM_ANC_FIELDS),
-    anc_ph_data     (EXPECTED_NUM_ANC_FIELDS)
+    anc_geo_data        (RqstParms::EXPECTED_NUM_ANC_FIELDS),
+    anc_ph_data         (RqstParms::EXPECTED_NUM_ANC_FIELDS)
 {
-    ancillary_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
-    ancillary_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
+    RqstParms::ancillary_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
+    RqstParms::ancillary_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
 
     /* Read Ancillary Geolocation Fields */
     if(geo_fields)
@@ -681,7 +686,7 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::Atl08Class (info_t* info):
-    enabled             (info->reader->parms->stages[STAGE_ATL08]),
+    enabled             (info->reader->parms->stages[RqstParms::STAGE_ATL08]),
     gt                  {NULL, NULL},
     atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",   &info->reader->context08),
     atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx", &info->reader->context08),
@@ -694,7 +699,7 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::~Atl08Class (void)
 {
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         if(gt[t]) delete [] gt[t];
     }
@@ -706,7 +711,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
 void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[STAGE_ATL08])
+    if(!info->reader->parms->stages[RqstParms::STAGE_ATL08])
     {
         return;
     }
@@ -720,7 +725,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
     GTArray<int32_t>* atl03_segment_ph_cnt = &region.segment_ph_cnt;
 
     /* Classify Photons */
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         /* Allocate ATL08 Classification Array */
         int num_photons = atl03.dist_ph_along[t].size;
@@ -763,7 +768,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
                 else
                 {
                     /* Unclassified */
-                    gt[t][atl03_photon] = ATL08_UNCLASSIFIED;
+                    gt[t][atl03_photon] = RqstParms::ATL08_UNCLASSIFIED;
                 }
 
                 /* Go To Next ATL03 Photon */
@@ -788,7 +793,7 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
     gt {NULL, NULL}
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[STAGE_YAPC])
+    if(!info->reader->parms->stages[RqstParms::STAGE_YAPC])
     {
         return;
     }
@@ -813,7 +818,7 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::~YapcScore (void)
 {
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         if(gt[t]) delete [] gt[t];
     }
@@ -831,13 +836,13 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
     double nearest_neighbors[MAX_KNN];
 
     /* Shortcut to Settings */
-    yapc_t* settings = &info->reader->parms->yapc;
+    RqstParms::yapc_t* settings = &info->reader->parms->yapc;
 
     /* Score Photons
      *
      *   CANNOT THROW BELOW THIS POINT
      */
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         /* Allocate ATL08 Classification Array */
         int32_t num_photons = atl03.dist_ph_along[t].size;
@@ -998,7 +1003,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
 void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& atl03)
 {
     /* YAPC Parameters */
-    yapc_t* settings = &info->reader->parms->yapc;
+    RqstParms::yapc_t* settings = &info->reader->parms->yapc;
     const double hWX = settings->win_x / 2; // meters
     const double hWZ = settings->win_h / 2; // meters
 
@@ -1006,7 +1011,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
      *
      *   CANNOT THROW BELOW THIS POINT
      */
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         int32_t num_segments = atl03.segment_id[t].size;
         int32_t num_photons = atl03.dist_ph_along[t].size;
@@ -1138,31 +1143,31 @@ uint8_t* Atl03Reader::YapcScore::operator[] (int t)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
 {
-    gt[PRT_LEFT].ph_in              = 0;
-    gt[PRT_LEFT].seg_in             = 0;
-    gt[PRT_LEFT].seg_ph             = 0;
-    gt[PRT_LEFT].start_segment      = 0;
-    gt[PRT_LEFT].start_distance     = atl03.segment_dist_x[PRT_LEFT][0];
-    gt[PRT_LEFT].seg_distance       = 0.0;
-    gt[PRT_LEFT].start_seg_portion  = 0.0;
-    gt[PRT_LEFT].track_complete     = false;
-    gt[PRT_LEFT].bckgrd_in          = 0;
-    gt[PRT_LEFT].photon_indices     = NULL;
-    gt[PRT_LEFT].extent_segment     = 0;
-    gt[PRT_LEFT].extent_valid       = true;
+    gt[RqstParms::RPT_L].ph_in              = 0;
+    gt[RqstParms::RPT_L].seg_in             = 0;
+    gt[RqstParms::RPT_L].seg_ph             = 0;
+    gt[RqstParms::RPT_L].start_segment      = 0;
+    gt[RqstParms::RPT_L].start_distance     = atl03.segment_dist_x[RqstParms::RPT_L][0];
+    gt[RqstParms::RPT_L].seg_distance       = 0.0;
+    gt[RqstParms::RPT_L].start_seg_portion  = 0.0;
+    gt[RqstParms::RPT_L].track_complete     = false;
+    gt[RqstParms::RPT_L].bckgrd_in          = 0;
+    gt[RqstParms::RPT_L].photon_indices     = NULL;
+    gt[RqstParms::RPT_L].extent_segment     = 0;
+    gt[RqstParms::RPT_L].extent_valid       = true;
 
-    gt[PRT_RIGHT].ph_in             = 0;
-    gt[PRT_RIGHT].seg_in            = 0;
-    gt[PRT_RIGHT].seg_ph            = 0;
-    gt[PRT_RIGHT].start_segment     = 0;
-    gt[PRT_RIGHT].start_distance    = atl03.segment_dist_x[PRT_RIGHT][0];
-    gt[PRT_RIGHT].seg_distance      = 0.0;
-    gt[PRT_RIGHT].start_seg_portion = 0.0;
-    gt[PRT_RIGHT].track_complete    = false;
-    gt[PRT_RIGHT].bckgrd_in         = 0;
-    gt[PRT_RIGHT].photon_indices    = NULL;
-    gt[PRT_RIGHT].extent_segment    = 0;
-    gt[PRT_RIGHT].extent_valid      = true;
+    gt[RqstParms::RPT_R].ph_in             = 0;
+    gt[RqstParms::RPT_R].seg_in            = 0;
+    gt[RqstParms::RPT_R].seg_ph            = 0;
+    gt[RqstParms::RPT_R].start_segment     = 0;
+    gt[RqstParms::RPT_R].start_distance    = atl03.segment_dist_x[RqstParms::RPT_R][0];
+    gt[RqstParms::RPT_R].seg_distance      = 0.0;
+    gt[RqstParms::RPT_R].start_seg_portion = 0.0;
+    gt[RqstParms::RPT_R].track_complete    = false;
+    gt[RqstParms::RPT_R].bckgrd_in         = 0;
+    gt[RqstParms::RPT_R].photon_indices    = NULL;
+    gt[RqstParms::RPT_R].extent_segment    = 0;
+    gt[RqstParms::RPT_R].extent_valid      = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -1170,8 +1175,8 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::~TrackState (void)
 {
-    if(gt[PRT_LEFT].photon_indices) delete gt[PRT_LEFT].photon_indices;
-    if(gt[PRT_RIGHT].photon_indices) delete gt[PRT_RIGHT].photon_indices;
+    if(gt[RqstParms::RPT_L].photon_indices) delete gt[RqstParms::RPT_L].photon_indices;
+    if(gt[RqstParms::RPT_R].photon_indices) delete gt[RqstParms::RPT_R].photon_indices;
 }
 
 /*----------------------------------------------------------------------------
@@ -1190,6 +1195,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
     Atl03Reader* reader = info->reader;
+    RqstParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     uint32_t extent_counter = 0;
 
@@ -1218,17 +1224,17 @@ void* Atl03Reader::subsettingThread (void* parm)
         TrackState state(atl03);
 
         /* Increment Read Statistics */
-        local_stats.segments_read = (region.segment_ph_cnt[PRT_LEFT].size + region.segment_ph_cnt[PRT_RIGHT].size);
+        local_stats.segments_read = (region.segment_ph_cnt[RqstParms::RPT_L].size + region.segment_ph_cnt[RqstParms::RPT_R].size);
 
         /* Calculate Length of Extent in Meters (used for distance) */
-        state.extent_length = reader->parms->extent_length;
-        if(reader->parms->dist_in_seg) state.extent_length *= ATL03_SEGMENT_LENGTH;
+        state.extent_length = parms->extent_length;
+        if(parms->dist_in_seg) state.extent_length *= ATL03_SEGMENT_LENGTH;
 
         /* Traverse All Photons In Dataset */
-        while( reader->active && (!state[PRT_LEFT].track_complete || !state[PRT_RIGHT].track_complete) )
+        while( reader->active && (!state[RqstParms::RPT_L].track_complete || !state[RqstParms::RPT_R].track_complete) )
         {
             /* Select Photons for Extent from each Track */
-            for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+            for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
             {
                 /* Skip Completed Tracks */
                 if(state[t].track_complete)
@@ -1251,7 +1257,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 state[t].extent_photons.clear();
 
                 /* Ancillary Photon Fields */
-                if(reader->parms->atl03_ph_fields)
+                if(parms->atl03_ph_fields)
                 {
                     if(state[t].photon_indices) state[t].photon_indices->clear();
                     else                        state[t].photon_indices = new List<int32_t>;
@@ -1284,8 +1290,8 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                     /* Set Next Extent's First Photon */
                     if((!step_complete) &&
-                       ((!reader->parms->dist_in_seg && along_track_distance >= reader->parms->extent_step) ||
-                        (reader->parms->dist_in_seg && along_track_segments >= (int32_t)reader->parms->extent_step)))
+                       ((!parms->dist_in_seg && along_track_distance >= parms->extent_step) ||
+                        (parms->dist_in_seg && along_track_segments >= (int32_t)parms->extent_step)))
                     {
                         state[t].ph_in = current_photon;
                         state[t].seg_in = current_segment;
@@ -1294,43 +1300,43 @@ void* Atl03Reader::subsettingThread (void* parm)
                     }
 
                     /* Check if Photon within Extent's Length */
-                    if((!reader->parms->dist_in_seg && along_track_distance < reader->parms->extent_length) ||
-                       (reader->parms->dist_in_seg && along_track_segments < reader->parms->extent_length))
+                    if((!parms->dist_in_seg && along_track_distance < parms->extent_length) ||
+                       (parms->dist_in_seg && along_track_segments < parms->extent_length))
                     {
                         do
                         {
                             /* Check Signal Confidence Level */
                             int8_t atl03_cnf = atl03.signal_conf_ph[t][current_photon];
-                            if(atl03_cnf < CNF_POSSIBLE_TEP || atl03_cnf > CNF_SURFACE_HIGH)
+                            if(atl03_cnf < RqstParms::CNF_POSSIBLE_TEP || atl03_cnf > RqstParms::CNF_SURFACE_HIGH)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
                             }
-                            else if(!reader->parms->atl03_cnf[atl03_cnf + SIGNAL_CONF_OFFSET])
+                            else if(!parms->atl03_cnf[atl03_cnf + RqstParms::SIGNAL_CONF_OFFSET])
                             {
                                 break;
                             }
 
                             /* Check ATL03 Photon Quality Level */
                             int8_t quality_ph = atl03.quality_ph[t][current_photon];
-                            if(quality_ph < QUALITY_NOMINAL || quality_ph > QUALITY_POSSIBLE_TEP)
+                            if(quality_ph < RqstParms::QUALITY_NOMINAL || quality_ph > RqstParms::QUALITY_POSSIBLE_TEP)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
                             }
-                            else if(!reader->parms->quality_ph[quality_ph])
+                            else if(!parms->quality_ph[quality_ph])
                             {
                                 break;
                             }
 
                             /* Check ATL08 Classification */
-                            atl08_classification_t atl08_class = ATL08_UNCLASSIFIED;
+                            RqstParms::atl08_classification_t atl08_class = RqstParms::ATL08_UNCLASSIFIED;
                             if(atl08[t])
                             {
-                                atl08_class = (atl08_classification_t)atl08[t][current_photon];
-                                if(atl08_class < 0 || atl08_class >= NUM_ATL08_CLASSES)
+                                atl08_class = (RqstParms::atl08_classification_t)atl08[t][current_photon];
+                                if(atl08_class < 0 || atl08_class >= RqstParms::NUM_ATL08_CLASSES)
                                 {
                                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
                                 }
-                                else if(!reader->parms->atl08_class[atl08_class])
+                                else if(!parms->atl08_class[atl08_class])
                                 {
                                     break;
                                 }
@@ -1341,7 +1347,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             if(yapc[t])
                             {
                                 yapc_score = yapc[t][current_photon];
-                                if(yapc_score < reader->parms->yapc.score)
+                                if(yapc_score < parms->yapc.score)
                                 {
                                     break;
                                 }
@@ -1397,9 +1403,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                 state[t].seg_distance = state[t].start_distance + (state.extent_length / 2.0);
 
                 /* Add Step to Start Distance */
-                if(!reader->parms->dist_in_seg)
+                if(!parms->dist_in_seg)
                 {
-                    state[t].start_distance += reader->parms->extent_step; // step start distance
+                    state[t].start_distance += parms->extent_step; // step start distance
 
                     /* Apply Segment Distance Correction and Update Start Segment */
                     while( ((state[t].start_segment + 1) < atl03.segment_dist_x[t].size) &&
@@ -1412,7 +1418,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
                 else // distance in segments
                 {
-                    int32_t next_segment = state[t].extent_segment + (int32_t)reader->parms->extent_step;
+                    int32_t next_segment = state[t].extent_segment + (int32_t)parms->extent_step;
                     if(next_segment < atl03.segment_dist_x[t].size)
                     {
                         state[t].start_distance = atl03.segment_dist_x[t][next_segment]; // set start distance to next extent's segment distance
@@ -1420,7 +1426,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
 
                 /* Check Photon Count */
-                if(state[t].extent_photons.length() < reader->parms->minimum_photon_count)
+                if(state[t].extent_photons.length() < parms->minimum_photon_count)
                 {
                     state[t].extent_valid = false;
                 }
@@ -1430,7 +1436,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     int32_t last = state[t].extent_photons.length() - 1;
                     double along_track_spread = state[t].extent_photons[last].distance - state[t].extent_photons[0].distance;
-                    if(along_track_spread < reader->parms->along_track_spread)
+                    if(along_track_spread < parms->along_track_spread)
                     {
                         state[t].extent_valid = false;
                     }
@@ -1438,21 +1444,29 @@ void* Atl03Reader::subsettingThread (void* parm)
             }
 
             /* Create Extent Record */
-            if(state[PRT_LEFT].extent_valid || state[PRT_RIGHT].extent_valid || reader->parms->pass_invalid)
+            if(state[RqstParms::RPT_L].extent_valid || state[RqstParms::RPT_R].extent_valid || parms->pass_invalid)
             {
                 /* Generate Extent ID */
                 uint64_t extent_id = ((uint64_t)(*reader->start_rgt)[0] << 52) |
                                      ((uint64_t)(*reader->start_cycle)[0] << 36) |
                                      (((uint64_t)info->track & 0x2) << 34) |
                                      ((uint64_t)extent_counter << 2) |
-                                     EXTENT_ID_PHOTONS;
+                                     RqstParms::EXTENT_ID_PHOTONS;
 
                 /* Build and Send Extent Record */
-                reader->sendExtentRecord(extent_id, info->track, state, atl03, &local_stats);
+                if(parms->output.format == RqstParms::OUTPUT_FORMAT_NATIVE)
+                {
+                    reader->sendExtentRecord(extent_id, info->track, state, atl03, &local_stats);
+                }
+                else
+                {
+                    reader->sendFlatRecord (extent_id, info->track, state, atl03, &local_stats);
+                }
+
 
                 /* Send Ancillary Records */
-                reader->sendAncillaryGeoRecords(extent_id, info->reader->parms->atl03_geo_fields, &atl03.anc_geo_data, state, &local_stats);
-                reader->sendAncillaryPhRecords(extent_id, info->reader->parms->atl03_ph_fields, &atl03.anc_ph_data, state, &local_stats);
+                reader->sendAncillaryGeoRecords(extent_id, parms->atl03_geo_fields, &atl03.anc_geo_data, state, &local_stats);
+                reader->sendAncillaryPhRecords(extent_id, parms->atl03_ph_fields, &atl03.anc_ph_data, state, &local_stats);
             }
             else // neither pair in extent valid
             {
@@ -1570,7 +1584,7 @@ uint32_t Atl03Reader::calculateSegmentId (int t, TrackState& state, Atl03Data& a
 bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
 {
     /* Calculate Extent Record Size */
-    int num_photons = state[PRT_LEFT].extent_photons.length() + state[PRT_RIGHT].extent_photons.length();
+    int num_photons = state[RqstParms::RPT_L].extent_photons.length() + state[RqstParms::RPT_R].extent_photons.length();
     int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
     /* Allocate and Initialize Extent Record */
@@ -1584,7 +1598,7 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
 
     /* Populate Extent */
     uint32_t ph_out = 0;
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         /* Calculate Spacecraft Velocity */
         int32_t sc_v_offset = state[t].extent_segment * 3;
@@ -1625,8 +1639,8 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
     }
 
     /* Set Photon Pointer Fields */
-    extent->photon_offset[PRT_LEFT] = sizeof(extent_t); // pointers are set to offset from start of record data
-    extent->photon_offset[PRT_RIGHT] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[PRT_LEFT]);
+    extent->photon_offset[RqstParms::RPT_L] = sizeof(extent_t); // pointers are set to offset from start of record data
+    extent->photon_offset[RqstParms::RPT_R] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[RqstParms::RPT_L]);
 
     /* Post Segment Record */
     return postRecord(&record, local_stats);
@@ -1638,7 +1652,7 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
 bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
 {
     /* Calculate Extent Record Size */
-    int num_photons = state[PRT_LEFT].extent_photons.length() + state[PRT_RIGHT].extent_photons.length();
+    int num_photons = state[RqstParms::RPT_L].extent_photons.length() + state[RqstParms::RPT_R].extent_photons.length();
     int extent_bytes = sizeof(flat_photon_t) * num_photons;
 
     /* Allocate and Initialize Extent Record */
@@ -1649,9 +1663,9 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
 
     /* Populate Extent */
     uint32_t ph_out = 0;
-    for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
-        uint8_t spot = getSpotNumber((sc_orient_t)(*sc_orient)[0], (track_t)track, t);
+        uint8_t spot = RqstParms::getSpotNumber((RqstParms::sc_orient_t)(*sc_orient)[0], (RqstParms::track_t)track, t);
         uint32_t segment_id = calculateSegmentId(t, state, atl03);
 
         /* Populate Photons */
@@ -1679,7 +1693,7 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
 /*----------------------------------------------------------------------------
  * sendAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1689,18 +1703,18 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t*
             GTDArray* array = field_dict->get((*field_list)[i].getString());
 
             /* Create Ancillary Record */
-            int record_size = offsetof(anc_extent_t, data) + array->gt[PRT_LEFT].elementSize() + array->gt[PRT_RIGHT].elementSize();
+            int record_size = offsetof(anc_extent_t, data) + array->gt[RqstParms::RPT_L].elementSize() + array->gt[RqstParms::RPT_R].elementSize();
             RecordObject record(exAncRecType, record_size);
             anc_extent_t* data = (anc_extent_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
             data->field_index = i;
-            data->data_type = array->gt[PRT_LEFT].elementType();
+            data->data_type = array->gt[RqstParms::RPT_L].elementType();
 
             /* Populate Ancillary Data */
-            uint32_t num_elements[PAIR_TRACKS_PER_GROUND_TRACK] = {1, 1};
-            int32_t start_element[PAIR_TRACKS_PER_GROUND_TRACK] = {state[PRT_LEFT].extent_segment, state[PRT_RIGHT].extent_segment};
+            uint32_t num_elements[RqstParms::NUM_PAIR_TRACKS] = {1, 1};
+            int32_t start_element[RqstParms::NUM_PAIR_TRACKS] = {state[RqstParms::RPT_L].extent_segment, state[RqstParms::RPT_R].extent_segment};
             array->serialize(&data->data[0], start_element, num_elements);
 
             /* Post Ancillary Record */
@@ -1717,7 +1731,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, ancillary_list_t*
 /*----------------------------------------------------------------------------
  * sendAncillaryPhRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1728,21 +1742,21 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, ancillary_list_t* 
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_photon_t, data) +
-                                (array->gt[PRT_LEFT].elementSize() * state[PRT_LEFT].photon_indices->length()) +
-                                (array->gt[PRT_RIGHT].elementSize() * state[PRT_RIGHT].photon_indices->length());
+                                (array->gt[RqstParms::RPT_L].elementSize() * state[RqstParms::RPT_L].photon_indices->length()) +
+                                (array->gt[RqstParms::RPT_R].elementSize() * state[RqstParms::RPT_R].photon_indices->length());
             RecordObject record(phAncRecType, record_size);
             anc_photon_t* data = (anc_photon_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
             data->field_index = i;
-            data->data_type = array->gt[PRT_LEFT].elementType();
-            data->num_elements[PRT_LEFT] = state[PRT_LEFT].photon_indices->length();
-            data->num_elements[PRT_RIGHT] = state[PRT_RIGHT].photon_indices->length();
+            data->data_type = array->gt[RqstParms::RPT_L].elementType();
+            data->num_elements[RqstParms::RPT_L] = state[RqstParms::RPT_L].photon_indices->length();
+            data->num_elements[RqstParms::RPT_R] = state[RqstParms::RPT_R].photon_indices->length();
 
             /* Populate Ancillary Data */
             uint64_t bytes_written = 0;
-            for(int t = 0; t < PAIR_TRACKS_PER_GROUND_TRACK; t++)
+            for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
             {
                 for(int p = 0; p < state[t].photon_indices->length(); p++)
                 {
@@ -1811,16 +1825,16 @@ int Atl03Reader::luaParms (lua_State* L)
     {
         /* Create Parameter Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, LUA_PARM_SURFACE_TYPE,         lua_obj->parms->surface_type);
-        LuaEngine::setAttrNum(L, LUA_PARM_ALONG_TRACK_SPREAD,   lua_obj->parms->along_track_spread);
-        LuaEngine::setAttrInt(L, LUA_PARM_MIN_PHOTON_COUNT,     lua_obj->parms->minimum_photon_count);
-        LuaEngine::setAttrNum(L, LUA_PARM_EXTENT_LENGTH,        lua_obj->parms->extent_length);
-        LuaEngine::setAttrNum(L, LUA_PARM_EXTENT_STEP,          lua_obj->parms->extent_step);
-        lua_pushstring(L, LUA_PARM_ATL03_CNF);
+        LuaEngine::setAttrInt(L, RqstParms::SURFACE_TYPE,         lua_obj->parms->surface_type);
+        LuaEngine::setAttrNum(L, RqstParms::ALONG_TRACK_SPREAD,   lua_obj->parms->along_track_spread);
+        LuaEngine::setAttrInt(L, RqstParms::MIN_PHOTON_COUNT,     lua_obj->parms->minimum_photon_count);
+        LuaEngine::setAttrNum(L, RqstParms::EXTENT_LENGTH,        lua_obj->parms->extent_length);
+        LuaEngine::setAttrNum(L, RqstParms::EXTENT_STEP,          lua_obj->parms->extent_step);
+        lua_pushstring(L, RqstParms::ATL03_CNF);
         lua_newtable(L);
-        for(int i = CNF_POSSIBLE_TEP; i <= CNF_SURFACE_HIGH; i++)
+        for(int i = RqstParms::CNF_POSSIBLE_TEP; i <= RqstParms::CNF_SURFACE_HIGH; i++)
         {
-            lua_pushboolean(L, lua_obj->parms->atl03_cnf[i + SIGNAL_CONF_OFFSET]);
+            lua_pushboolean(L, lua_obj->parms->atl03_cnf[i + RqstParms::SIGNAL_CONF_OFFSET]);
             lua_rawseti(L, -2, i);
         }
         lua_settable(L, -3);

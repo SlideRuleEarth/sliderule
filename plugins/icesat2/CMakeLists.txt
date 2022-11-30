@@ -63,7 +63,6 @@ endif()
 target_sources(icesat2
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/lua_parms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.cpp
@@ -71,6 +70,7 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/EndpointProxy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/RqstParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp
 )
@@ -101,7 +101,6 @@ install (TARGETS icesat2 LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/lua_parms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArrowBuilder.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.h
@@ -111,6 +110,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/RqstParms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h
     DESTINATION

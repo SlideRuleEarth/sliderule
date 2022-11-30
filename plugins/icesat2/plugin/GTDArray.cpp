@@ -34,15 +34,15 @@
  ******************************************************************************/
 
 #include "GTDArray.h"
-#include "lua_parms.h"
+#include "RqstParms.h"
 #include "core.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const long GTDArray::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
-const long GTDArray::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
+const long GTDArray::DefaultStartRow[RqstParms::NUM_PAIR_TRACKS] = {0, 0};
+const long GTDArray::DefaultNumRows[RqstParms::NUM_PAIR_TRACKS] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
 
 /******************************************************************************
  * GT DYNAMIC ARRAY CLASS
@@ -52,8 +52,8 @@ const long GTDArray::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Coro::ALL
  * Constructor
  *----------------------------------------------------------------------------*/
 GTDArray::GTDArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5DArray(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
-        H5DArray(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
+    gt{ H5DArray(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[RqstParms::RPT_L], prt_numrows[RqstParms::RPT_L]),
+        H5DArray(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[RqstParms::RPT_R], prt_numrows[RqstParms::RPT_R]) }
 {
 }
 
@@ -69,7 +69,7 @@ GTDArray::~GTDArray(void)
  *----------------------------------------------------------------------------*/
 bool GTDArray::join(int timeout, bool throw_exception)
 {
-    return (gt[PRT_LEFT].join(timeout, throw_exception) && gt[PRT_RIGHT].join(timeout, throw_exception));
+    return (gt[RqstParms::RPT_L].join(timeout, throw_exception) && gt[RqstParms::RPT_R].join(timeout, throw_exception));
 }
 
 /*----------------------------------------------------------------------------
@@ -77,6 +77,6 @@ bool GTDArray::join(int timeout, bool throw_exception)
  *----------------------------------------------------------------------------*/
 uint64_t GTDArray::serialize (uint8_t* buffer, int32_t* start_element, uint32_t* num_elements)
 {
-    uint64_t bytes_written = gt[PRT_LEFT].serialize(&buffer[0], start_element[PRT_LEFT], num_elements[PRT_LEFT]);
-    return gt[PRT_LEFT].serialize(&buffer[bytes_written], start_element[PRT_RIGHT], num_elements[PRT_RIGHT]);
+    uint64_t bytes_written = gt[RqstParms::RPT_L].serialize(&buffer[0], start_element[RqstParms::RPT_L], num_elements[RqstParms::RPT_L]);
+    return gt[RqstParms::RPT_L].serialize(&buffer[bytes_written], start_element[RqstParms::RPT_R], num_elements[RqstParms::RPT_R]);
 }

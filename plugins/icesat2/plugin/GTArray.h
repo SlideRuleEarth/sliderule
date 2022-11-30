@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "lua_parms.h"
+#include "RqstParms.h"
 #include "H5Array.h"
 #include "StringLib.h"
 #include "Asset.h"
@@ -54,8 +54,8 @@ class GTArray
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const long DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK];
-        static const long DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK];
+        static const long DefaultStartRow[RqstParms::NUM_PAIR_TRACKS];
+        static const long DefaultNumRows[RqstParms::NUM_PAIR_TRACKS];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -72,17 +72,17 @@ class GTArray
          * Data
          *--------------------------------------------------------------------*/
 
-        H5Array<T> gt[PAIR_TRACKS_PER_GROUND_TRACK];
+        H5Array<T> gt[RqstParms::NUM_PAIR_TRACKS];
 };
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 template <class T>
-const long GTArray<T>::DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK] = {0, 0};
+const long GTArray<T>::DefaultStartRow[RqstParms::NUM_PAIR_TRACKS] = {0, 0};
 
 template <class T>
-const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
+const long GTArray<T>::DefaultNumRows[RqstParms::NUM_PAIR_TRACKS] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
 
 /******************************************************************************
  * GTArray METHODS
@@ -93,8 +93,8 @@ const long GTArray<T>::DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK] = {H5Coro::A
  *----------------------------------------------------------------------------*/
 template <class T>
 GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5Array<T>(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_LEFT], prt_numrows[PRT_LEFT]),
-        H5Array<T>(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[PRT_RIGHT], prt_numrows[PRT_RIGHT]) }
+    gt{ H5Array<T>(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[RqstParms::RPT_L], prt_numrows[RqstParms::RPT_L]),
+        H5Array<T>(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[RqstParms::RPT_R], prt_numrows[RqstParms::RPT_R]) }
 {
 }
 
@@ -122,7 +122,7 @@ template <class T>
 bool GTArray<T>::trim(long* prt_offset)
 {
     if(!prt_offset) return false;
-    else return (gt[PRT_LEFT].trim(prt_offset[PRT_LEFT]) && gt[PRT_RIGHT].trim(prt_offset[PRT_RIGHT]));
+    else return (gt[RqstParms::RPT_L].trim(prt_offset[RqstParms::RPT_L]) && gt[RqstParms::RPT_R].trim(prt_offset[RqstParms::RPT_R]));
 }
 
 /*----------------------------------------------------------------------------
@@ -131,7 +131,7 @@ bool GTArray<T>::trim(long* prt_offset)
 template <class T>
 bool GTArray<T>::join(int timeout, bool throw_exception)
 {
-    return (gt[PRT_LEFT].join(timeout, throw_exception) && gt[PRT_RIGHT].join(timeout, throw_exception));
+    return (gt[RqstParms::RPT_L].join(timeout, throw_exception) && gt[RqstParms::RPT_R].join(timeout, throw_exception));
 }
 
 #endif  /* __gtarray__ */

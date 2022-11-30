@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "lua_parms.h"
+#include "RqstParms.h"
 #include "PluginMetrics.h"
 
 /******************************************************************************
@@ -324,7 +324,7 @@ PluginMetrics::region_t* PluginMetrics::region2struct (regions_t region)
 /*----------------------------------------------------------------------------
  * setRegion
  *----------------------------------------------------------------------------*/
-bool PluginMetrics::setRegion (icesat2_parms_t* parms)
+bool PluginMetrics::setRegion (RqstParms* parms)
 {
     if(parms->polygon.length() > 0)
     {

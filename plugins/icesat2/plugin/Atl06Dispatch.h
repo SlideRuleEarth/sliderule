@@ -45,7 +45,7 @@
 
 #include "GTArray.h"
 #include "Atl03Reader.h"
-#include "lua_parms.h"
+#include "RqstParms.h"
 
 #include <atomic>
 
@@ -69,9 +69,9 @@ class Atl06Dispatch: public DispatchObject
 
         static const int BATCH_SIZE = 256;
 
-        static const uint16_t PFLAG_SPREAD_TOO_SHORT        = 0x0001;   // LUA_PARM_ALONG_TRACK_SPREAD
-        static const uint16_t PFLAG_TOO_FEW_PHOTONS         = 0x0002;   // LUA_PARM_MIN_PHOTON_COUNT
-        static const uint16_t PFLAG_MAX_ITERATIONS_REACHED  = 0x0004;   // LUA_PARM_MAX_ITERATIONS
+        static const uint16_t PFLAG_SPREAD_TOO_SHORT        = 0x0001;   // RqstParm::ALONG_TRACK_SPREAD
+        static const uint16_t PFLAG_TOO_FEW_PHOTONS         = 0x0002;   // RqstParm::MIN_PHOTON_COUNT
+        static const uint16_t PFLAG_MAX_ITERATIONS_REACHED  = 0x0004;   // RqstParm::MAX_ITERATIONS
         static const uint16_t PFLAG_OUT_OF_BOUNDS           = 0x0008;
 
         static const char* elCompactRecType;
@@ -177,22 +177,22 @@ class Atl06Dispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        RecordObject*           recObj;
-        atl06_compact_t*        recCompactData;
-        atl06_t*                recData;
-        Publisher*              outQ;
+        RecordObject*       recObj;
+        atl06_compact_t*    recCompactData;
+        atl06_t*            recData;
+        Publisher*          outQ;
 
-        Mutex                   elevationMutex;
-        int                     elevationIndex;
+        Mutex               elevationMutex;
+        int                 elevationIndex;
 
-        const icesat2_parms_t*  parms;
-        stats_t                 stats;
+        RqstParms*          parms;
+        stats_t             stats;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06Dispatch                   (lua_State* L, const char* outq_name, const icesat2_parms_t* _parms);
+                        Atl06Dispatch                   (lua_State* L, const char* outq_name, RqstParms* _parms);
                         ~Atl06Dispatch                  (void);
 
         bool            processRecord                   (RecordObject* record, okey_t key) override;

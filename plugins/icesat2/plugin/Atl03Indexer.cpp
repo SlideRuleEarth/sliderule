@@ -69,11 +69,11 @@ const struct luaL_Reg Atl03Indexer::LuaMetaTable[] = {
 int Atl03Indexer::luaCreate (lua_State* L)
 {
     List<const char*>* _resources = NULL;
-
+    Asset* _asset = NULL;
     try
     {
         /* Get URL */
-        Asset*      _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+                    _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
         int         tblindex    = 2;
         const char* outq_name   = getLuaString(L, 3);
         int         num_threads = getLuaInteger(L, 4, true, DEFAULT_NUM_THREADS);
@@ -106,6 +106,9 @@ int Atl03Indexer::luaCreate (lua_State* L)
 
     /* Clean Up Resources Not Used Since Failed to Create Indexer */
     if(_resources) freeResources(_resources);
+
+    /* Release Asset Since Failed to Create Indexer */
+    if(_asset) _asset->releaseLuaObject();
 
     /* Return Failure */
     return returnLuaStatus(L, false);

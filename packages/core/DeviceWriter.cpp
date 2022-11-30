@@ -47,17 +47,19 @@
  *----------------------------------------------------------------------------*/
 int DeviceWriter::luaCreate (lua_State* L)
 {
+    DeviceObject* _device = NULL;
     try
     {
         /* Get Parameters */
-        DeviceObject*   _device = (DeviceObject*)getLuaObject(L, 1, DeviceObject::OBJECT_TYPE);
-        const char*     q_name  = getLuaString(L, 2, true, NULL);
+        _device = (DeviceObject*)getLuaObject(L, 1, DeviceObject::OBJECT_TYPE);
+        const char* q_name  = getLuaString(L, 2, true, NULL);
 
         /* Return DeviceReader Object */
         return createLuaObject(L, new DeviceWriter(L, _device, q_name));
     }
     catch(const RunTimeException& e)
     {
+        if(_device) _device->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }

@@ -41,8 +41,11 @@ end
 -- Post Initial Status Progress --
 userlog:sendlog(core.INFO, string.format("request <%s> atl03 subsetting for %s ...", rspq, resource))
 
+-- Request Parameters */
+local rqst_parms = icesat2.parms(parms)
+
 -- ATL03 Reader --
-local atl03_reader = icesat2.atl03(asset, resource, rspq, parms, false)
+local atl03_reader = icesat2.atl03(asset, resource, rspq, rqst_parms, false)
 
 -- Wait Until Completion --
 local duration = 0

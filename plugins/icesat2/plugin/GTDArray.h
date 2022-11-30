@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "H5DArray.h"
-#include "lua_parms.h"
+#include "RqstParms.h"
 #include "StringLib.h"
 #include "Asset.h"
 
@@ -53,8 +53,8 @@ class GTDArray
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const long DefaultStartRow[PAIR_TRACKS_PER_GROUND_TRACK];
-        static const long DefaultNumRows[PAIR_TRACKS_PER_GROUND_TRACK];
+        static const long DefaultStartRow[RqstParms::NUM_PAIR_TRACKS];
+        static const long DefaultNumRows[RqstParms::NUM_PAIR_TRACKS];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -70,7 +70,7 @@ class GTDArray
          * Data
          *--------------------------------------------------------------------*/
 
-        H5DArray gt[PAIR_TRACKS_PER_GROUND_TRACK];
+        H5DArray gt[RqstParms::NUM_PAIR_TRACKS];
 };
 
 #endif  /* __gt_dynamic_array__ */

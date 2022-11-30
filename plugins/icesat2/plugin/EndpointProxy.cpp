@@ -99,7 +99,7 @@ int EndpointProxy::luaCreate (lua_State* L)
 
         /* Get Parameters Continued */
         const char* _parameters         = getLuaString(L, 4); // get request parameters
-        int         _timeout_secs       = getLuaInteger(L, 5, true, PARM_DEFAULT_RQST_TIMEOUT); // get timeout in seconds
+        int         _timeout_secs       = getLuaInteger(L, 5, true, RqstParms::DEFAULT_RQST_TIMEOUT); // get timeout in seconds
         const char* _outq_name          = getLuaString(L, 6); // get output queue
         long        _num_threads        = getLuaInteger(L, 7, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
         long        _rqst_queue_depth   = getLuaInteger(L, 8, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
@@ -108,7 +108,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         if(_num_threads <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
         else if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
 
-        /* Return Reader Object */
+        /* Return Endpoint Proxy Object */
         return createLuaObject(L, new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _num_threads, _rqst_queue_depth));
     }
     catch(const RunTimeException& e)
