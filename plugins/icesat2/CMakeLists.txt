@@ -92,7 +92,6 @@ install (TARGETS icesat2 LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArrowBuilder.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.h
