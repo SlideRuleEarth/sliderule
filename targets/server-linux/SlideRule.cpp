@@ -35,6 +35,10 @@
 
 #include "core.h"
 
+#ifdef __arrow__
+#include "arrow.h"
+#endif
+
 #ifdef __aws__
 #include "aws.h"
 #endif
@@ -287,6 +291,10 @@ int main (int argc, char* argv[])
     /* Initialize Built-In Packages */
     initcore();
 
+    #ifdef __arrow__
+        initarrow();
+    #endif
+
     #ifdef __aws__
         initaws();
     #endif
@@ -374,6 +382,10 @@ int main (int argc, char* argv[])
 
     #ifdef __aws__
         deinitaws();
+    #endif
+
+    #ifdef __arrow__
+        deinitarrow();
     #endif
 
     int errors = geterrors();

@@ -71,6 +71,7 @@ class ArrowBuilder: public DispatchObject
 
         static int  luaCreate   (lua_State* L);
         static void init        (void);
+        static void deinit      (void);
 
     private:
 

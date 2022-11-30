@@ -45,6 +45,7 @@ option (ENABLE_H5CORO_ATTRIBUTE_SUPPORT "H5Coro will read and process attribute 
 
 # Package Options #
 
+option (USE_ARROW_PACKAGE "Include the Apache Arrow package" OFF)
 option (USE_AWS_PACKAGE "Include the AWS package" OFF)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_RASTER_PACKAGE "Include the RASTER package" OFF)
@@ -192,6 +193,10 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h DESTINATION ${INCDIR}
 # Add Packages #
 
 add_subdirectory (packages/core)
+
+if(${USE_ARROW_PACKAGE})
+    add_subdirectory (packages/arrow)
+endif()
 
 if(${USE_AWS_PACKAGE})
     add_subdirectory (packages/aws)

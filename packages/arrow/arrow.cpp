@@ -29,33 +29,61 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "RqstParms.h"
-#include "Atl03Reader.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "CumulusIODriver.h"
-#include "EndpointProxy.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "PluginMetrics.h"
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
+#include "core.h"
+#include "arrow.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * DEFINES
+ ******************************************************************************/
+
+#define LUA_ARROW_LIBNAME   "arrow"
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * arrow_open
+ *----------------------------------------------------------------------------*/
+int arrow_open (lua_State* L)
+{
+    static const struct luaL_Reg arrow_functions[] = {
+        {"arrow",       ArrowBuilder::luaCreate},
+        {NULL,          NULL}
+    };
+
+    /* Set Library */
+    luaL_newlib(L, arrow_functions);
+
+    return 1;
+}
+
+/******************************************************************************
+ * EXPORTED FUNCTIONS
  ******************************************************************************/
 
 extern "C" {
-void initicesat2 (void);
+void initarrow (void)
+{
+    /* Initialize Modules */
+    ArrowBuilder::init();
+
+    /* Extend Lua */
+    LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open);
+
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_ARROW_LIBNAME, LIBID);
+
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_ARROW_LIBNAME, LIBID);
 }
 
-#endif  /* __icesat2_plugin__ */
-
-
+void deinitarrow (void)
+{
+    ArrowBuilder::deinit();
+}
+}
