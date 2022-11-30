@@ -58,7 +58,7 @@ class ArcticDEMRaster: public LuaObject
         static const int   RASTER_PHOTON_CRS = 4326;
         static const int   RASTER_ARCTIC_DEM_CRS = 3413;
 
-        static const int   MAX_READER_THREADS = 100;
+        static const int   MAX_READER_THREADS = 200;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -91,6 +91,14 @@ class ArcticDEMRaster: public LuaObject
             double          value;
             double          readTime;
         } raster_t;
+
+
+        typedef struct {
+            Thread*     thread;
+            raster_t*   raster;
+            Cond*       sync;
+            bool        run;
+        } reader_t;
 
 
         typedef enum {
@@ -142,9 +150,8 @@ class ArcticDEMRaster: public LuaObject
         GDALRasterBand*       vrtBand;
         List<std::string>     tifList;
         Dictionary<raster_t*> rasterDict;
-        Thread*               rasterRreader[MAX_READER_THREADS];
+        reader_t              rasterRreader[MAX_READER_THREADS];
         int                   threadCount;
-        Mutex                 threadMut;
         dem_type_t            demType;
         double                invgeot[6];
 

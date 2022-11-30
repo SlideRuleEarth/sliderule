@@ -263,11 +263,23 @@ void ArcticDEMRaster::samples(double lon, double lat)
  *----------------------------------------------------------------------------*/
 ArcticDEMRaster::~ArcticDEMRaster(void)
 {
-    /* All reader threads should be terminated by now (joined) */
+    /* Terminate all reader threads */
     for (int i = 0; i < threadCount; i++)
     {
-        Thread* thread = rasterRreader[i];
-        if (thread) delete thread;
+        reader_t *reader = &rasterRreader[i];
+        if (reader->thread != NULL)
+        {
+            reader->sync->lock();
+            {
+                reader->raster = NULL; /* No raster to read     */
+                reader->run = false;   /* Set run flag to false */
+                reader->sync->signal(0, Cond::NOTIFY_ONE);
+            }
+            reader->sync->unlock();
+
+            delete reader->thread;
+            delete reader->sync;
+        }
     }
 
     /* Close all rasters */
@@ -365,15 +377,17 @@ bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
 
         if (rasterDict.find(key, &raster))
         {
-            /* Update point to be read, mark as valid raster */
+            /* Update point to be sampled, mark raster inUse for next sampling */
             assert(raster);
-            raster->point = p;
             raster->inUse = true;
+            raster->point = p;
+            raster->value = ARCTIC_DEM_INVALID_ELELVATION;
+            raster->readTime = 0.0;
             recycledRasters++;
         }
         else
         {
-            /* Create new raster for this tif file since it is not in the rasterList */
+            /* Create new raster for this tif file since it is not in the dictionary */
             raster_t* raster = new raster_t;
             bzero(raster, sizeof(raster_t));
 
@@ -394,6 +408,7 @@ bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
         assert(raster);
         if (!raster->inUse)
         {
+            /* Main thread closing multiple rasters is OK */
             if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
             rasterDict.remove(key);
             delete raster;
@@ -413,23 +428,29 @@ bool ArcticDEMRaster::updateDictionary(OGRPoint* p)
  *----------------------------------------------------------------------------*/
 bool ArcticDEMRaster::readRasters(OGRPoint* p)
 {
-    bool pointInDset = false;
+    bool pointInDset   = false;
 
     try
     {
-        /* Create reader threads */
-        threadCount = 0;
-        raster_t *raster = NULL;
-        const char *key = rasterDict.first(&raster);
-        while (key != NULL)
+        /* Create additional reader threads if needed */
+        int threadsNeeded = rasterDict.length();
+        if (threadsNeeded > threadCount)
         {
-            assert(raster);
-            if (raster->inUse)
+            int newThreadsCnt = threadsNeeded - threadCount;
+            print2term("Creating %d new threads, threadCount: %d, neededThreads: %d\n", newThreadsCnt, threadCount, threadsNeeded);
+
+            for (int i = 0; i < newThreadsCnt; i++)
             {
                 if (threadCount < MAX_READER_THREADS)
                 {
-                    Thread *thread = new Thread(readingThread, raster);
-                    rasterRreader[threadCount] = thread;
+                    reader_t *reader = &rasterRreader[threadCount];
+                    reader->sync = new Cond();
+                    reader->sync->lock();
+                    {
+                        reader->thread = new Thread(readingThread, reader);
+                        reader->run = true;
+                    }
+                    reader->sync->unlock();
                     threadCount++;
                 }
                 else
@@ -438,16 +459,44 @@ bool ArcticDEMRaster::readRasters(OGRPoint* p)
                                            rasterDict.length(), MAX_READER_THREADS);
                 }
             }
+            assert(threadCount == threadsNeeded);
+        }
+
+
+        raster_t *raster = NULL;
+        const char *key = rasterDict.first(&raster);
+        int i = 0;
+        while (key != NULL)
+        {
+            assert(raster);
+            if (raster->inUse)
+            {
+                reader_t* reader = &rasterRreader[i++];
+                reader->sync->lock();
+                {
+                    reader->raster = raster;
+                    reader->sync->signal(0, Cond::NOTIFY_ONE);
+                }
+                reader->sync->unlock();
+            }
             key = rasterDict.next(&raster);
         }
 
         /* Wait for all reader threads to finish */
         for (int i = 0; i < threadCount; i++ )
         {
-            Thread *thread = rasterRreader[i];
-            if (thread) delete thread;
+            reader_t *reader = &rasterRreader[i];
+            raster_t* reaster;
+            do
+            {
+                reader->sync->lock();
+                {
+                    raster = reader->raster;
+                }
+                reader->sync->unlock();
+            }
+            while(raster != NULL);
         }
-        threadCount = 0;
 
 #if 0
         int i=0;
@@ -475,8 +524,28 @@ bool ArcticDEMRaster::readRasters(OGRPoint* p)
  *----------------------------------------------------------------------------*/
 void* ArcticDEMRaster::readingThread(void *param)
 {
-    raster_t *raster = (raster_t*)param;
-    raster->obj->readRaster(raster);
+    reader_t *reader = (reader_t*)param;
+
+    reader->sync->lock();
+    {
+        while (reader->run)
+        {
+            bool status = reader->sync->wait(0, SYS_TIMEOUT);
+            if (status)
+            {
+                if (reader->raster != NULL)
+                {
+                    /* Read sample from raster */
+                    reader->raster->obj->readRaster(reader->raster);
+
+                    /* Done with this raster */
+                    reader->raster = NULL;
+                }
+            }
+        }
+    }
+    reader->sync->unlock();
+
     return NULL;
 }
 
