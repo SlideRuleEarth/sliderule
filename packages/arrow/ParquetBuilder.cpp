@@ -203,7 +203,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((double)record->getValueReal(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -216,7 +216,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((float)record->getValueReal(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -229,7 +229,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((int8_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -242,7 +242,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((int16_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -255,7 +255,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((int32_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -268,7 +268,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((int64_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -281,7 +281,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((uint8_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -294,7 +294,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((uint16_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -307,7 +307,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((uint32_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -320,7 +320,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((uint64_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -333,7 +333,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 for(int row = 0; row < num_rows; row++)
                 {
                     builder.UnsafeAppend((int64_t)record->getValueInteger(field));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -347,7 +347,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
                 {
                     const char* str = record->getValueText(field);
                     builder.UnsafeAppend(str, StringLib::size(str));
-                    field.offset += record_size_bytes * 8;
+                    field.offset += rowSizeBytes * 8;
                 }
                 (void)builder.Finish(&column);
                 break;
