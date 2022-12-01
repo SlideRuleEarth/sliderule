@@ -70,19 +70,20 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :arrow(<outq name>, <rec_type>, <id>)
+ * luaCreate - :arrow(<filename>, <outq name>, <rec_type>, <id>)
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        const char* outq_name = getLuaString(L, 1);
-        const char* rec_type = getLuaString(L, 2);
-        const char* id = getLuaString(L, 3);
+        const char* filename = getLuaString(L, 1);
+        const char* outq_name = getLuaString(L, 2);
+        const char* rec_type = getLuaString(L, 3);
+        const char* id = getLuaString(L, 4);
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, outq_name, rec_type, id));
+        return createLuaObject(L, new ParquetBuilder(L, filename, outq_name, rec_type, id));
     }
     catch(const RunTimeException& e)
     {
@@ -125,10 +126,16 @@ void ParquetBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, const char* outq_name, const char* rec_type, const char* id):
+ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
+    assert(filename);
     assert(outq_name);
+    assert(rec_type);
+    assert(id);
+
+    /* Save Output Filename */
+    outFileName = StringLib::duplicate(filename);
 
     /* Define Table Schema */
     defineTableSchema(schema, fieldList, rec_type);
@@ -167,6 +174,7 @@ ParquetBuilder::~ParquetBuilder(void)
 {
     delete [] fileName;
     delete outQ;
+    delete [] outFileName;
 }
 
 /*----------------------------------------------------------------------------
@@ -388,7 +396,64 @@ bool ParquetBuilder::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool ParquetBuilder::processTermination (void)
 {
+    /* Close Parquet Writer */
     (void)parquetWriter->Close();
+
+    /* Reopen Parquet File to Stream Back as Response */
+    FILE* fp = fopen(fileName, "r");
+    if( fp == NULL )
+    {
+        mlog(CRITICAL, "Failed (%d) to read parquet file %s: %s", errno, fileName, strerror(errno));
+        return false;
+    }
+
+    /* Get Size of File */
+    fseek(fp, 0L, SEEK_END);
+    size_t file_size = ftell(fp);
+    fseek(fp, 0L, SEEK_SET);
+
+    /* Send Meta Record */
+    RecordObject meta_record(metaRecType);
+    arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
+    StringLib::copy(&meta->filename[0], outFileName, FILE_NAME_MAX_LEN);
+    meta->size = file_size;
+    if(!postRecord(meta_record)) return false; // early exit
+
+    /* Stream Parquet File Back */
+    long offset = 0;
+    while(offset < file_size)
+    {
+        long bytes_remaining = file_size - offset;
+        long bytes_to_read = MIN(bytes_remaining, FILE_BUFFER_RSPS_SIZE);
+        RecordObject data_record(dataRecType, bytes_to_read);
+        uint8_t* data = (uint8_t*)data_record->getRecordData();
+        size_t bytes_read = fread(data, 1, FILE_BUFFER_RSPS_SIZE, fp);
+
+        // need to check bytes_read matches bytes_to_read
+        // need efficient way to post record without a memory copy
+    }
+
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * postRecord
+ *
+ *  The while loop should not be an infinite loop because when the output queue
+ *  is cleaned up, the call to postCopy should fail with no subscribers
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::postRecord (RecordObject* record)
+{
+    uint8_t* rec_buf = NULL;
+    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+    int post_status = MsgQ::STATE_TIMEOUT;
+    while(post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
+    if(post_status <= 0)
+    {
+        return false;
+        mlog(ERROR, "Parquet builder failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
+    }
     return true;
 }
 

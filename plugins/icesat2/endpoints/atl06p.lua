@@ -27,15 +27,20 @@ local resources = rqst["resources"]
 local parms = rqst["parms"]
 local timeout = parms["rqst-timeout"] or parms["timeout"] or icesat2.RQST_TIMEOUT
 local node_timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
+local output_parms = parms["output"]
 
-
--- Parquet Writer --
-local parquet_builder = arrow.parquet(rspq, "atl06rec.elevation", rqstid)
-local parquet_dispatch = core.dispatcher(rspq)
-parquet_dispatch:attach(parquet_builder, "atl06rec")
-parquet_dispatch:run()
-
-
+-- Handle Output Options --
+if output_parms then
+    local output_filename = output_parms["path"]
+    local output_format = output_parms["format"]
+    if output_format == "parquet" then
+        -- Parquet Writer --
+        local parquet_builder = arrow.parquet(output_filename, rspq, "atl06rec.elevation", rqstid)
+        local parquet_dispatch = core.dispatcher(rspq)
+        parquet_dispatch:attach(parquet_builder, "atl06rec")
+        parquet_dispatch:run()
+    end
+end
 
 -- Proxy Request --
 local proxy = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), node_timeout, rspq)

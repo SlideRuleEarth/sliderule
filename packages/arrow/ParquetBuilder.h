@@ -61,6 +61,7 @@ class ParquetBuilder: public DispatchObject
 
         static const int LIST_BLOCK_SIZE = 32;
         static const int FILE_NAME_MAX_LEN = 128;
+        static const int FILE_BUFFER_RSPS_SIZE = 0x1000000; // 16MB
 
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
@@ -102,23 +103,26 @@ class ParquetBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
+        bool                                        alive;
         field_list_t                                fieldList;
         std::shared_ptr<arrow::Schema>              schema;
         Publisher*                                  outQ;
         int                                         rowSizeBytes;
-        const char*                                 fileName;
+        const char*                                 fileName; // used locally to build file
+        const char*                                 outFileName; // name to send back to client
         std::unique_ptr<parquet::arrow::FileWriter> parquetWriter;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, const char* outq_name, const char* rec_type, const char* id);
+                            ParquetBuilder          (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id);
                             ~ParquetBuilder         (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;
         bool                processTimeout          (void) override;
         bool                processTermination      (void) override;
+        bool                postRecord              (RecordObject* record);
 
         static bool         defineTableSchema       (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
         static bool         addFieldsToSchema       (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
