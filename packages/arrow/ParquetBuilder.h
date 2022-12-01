@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_buider__
-#define __arrow_buider__
+#ifndef __parquet_builder__
+#define __parquet_builder__
 
 /******************************************************************************
  * INCLUDES
@@ -51,7 +51,7 @@
  * ATL06 DISPATCH CLASS
  ******************************************************************************/
 
-class ArrowBuilder: public DispatchObject
+class ParquetBuilder: public DispatchObject
 {
     public:
 
@@ -113,8 +113,8 @@ class ArrowBuilder: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ArrowBuilder             (lua_State* L, const char* outq_name, const char* rec_type, const char* id);
-                            ~ArrowBuilder            (void);
+                            ParquetBuilder          (lua_State* L, const char* outq_name, const char* rec_type, const char* id);
+                            ~ParquetBuilder         (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;
         bool                processTimeout          (void) override;
@@ -124,4 +124,4 @@ class ArrowBuilder: public DispatchObject
         static bool         addFieldsToSchema       (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
 };
 
-#endif  /* __arrow_buider__ */
+#endif  /* __parquet_builder__ */

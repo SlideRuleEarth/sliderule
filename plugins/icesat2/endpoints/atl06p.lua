@@ -28,6 +28,15 @@ local parms = rqst["parms"]
 local timeout = parms["rqst-timeout"] or parms["timeout"] or icesat2.RQST_TIMEOUT
 local node_timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
 
+
+-- Parquet Writer --
+local parquet_builder = arrow.parquet(rspq, "atl06rec.elevation", rqstid)
+local parquet_dispatch = core.dispatcher(rspq)
+parquet_dispatch:attach(parquet_builder, "atl06rec")
+parquet_dispatch:run()
+
+
+
 -- Proxy Request --
 local proxy = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), node_timeout, rspq)
 

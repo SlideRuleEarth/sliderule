@@ -5,7 +5,7 @@ find_package (CURL)
 find_package (RapidJSON)
 
 # Build package
-if (CURL_FOUND)
+if (CURL_FOUND AND RapidJSON_FOUND)
 
     message (STATUS "Including netsvc package")
 

@@ -41,38 +41,38 @@
 #include <parquet/properties.h>
 
 #include "core.h"
-#include "ArrowBuilder.h"
+#include "ParquetBuilder.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* ArrowBuilder::LuaMetaName = "ArrowBuilder";
-const struct luaL_Reg ArrowBuilder::LuaMetaTable[] = {
+const char* ParquetBuilder::LuaMetaName = "ParquetBuilder";
+const struct luaL_Reg ParquetBuilder::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* ArrowBuilder::metaRecType = "arrowrec.meta";
-const RecordObject::fieldDef_t ArrowBuilder::metaRecDef[] = {
+const char* ParquetBuilder::metaRecType = "arrowrec.meta";
+const RecordObject::fieldDef_t ParquetBuilder::metaRecDef[] = {
     {"filename",   RecordObject::STRING,   offsetof(arrow_file_meta_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"size",       RecordObject::INT64,    offsetof(arrow_file_meta_t, size),                      1,  NULL, NATIVE_FLAGS}
 };
 
-const char* ArrowBuilder::dataRecType = "arrowrec.data";
-const RecordObject::fieldDef_t ArrowBuilder::dataRecDef[] = {
+const char* ParquetBuilder::dataRecType = "arrowrec.data";
+const RecordObject::fieldDef_t ParquetBuilder::dataRecDef[] = {
     {"data", RecordObject::UINT8, 0, 0, NULL, NATIVE_FLAGS} // variable length
 };
 
-const char* ArrowBuilder::TMP_FILE_PREFIX = "/tmp/";
+const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
 
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :arrow(<outq name>, <rec_type>)
+ * luaCreate - :arrow(<outq name>, <rec_type>, <id>)
  *----------------------------------------------------------------------------*/
-int ArrowBuilder::luaCreate (lua_State* L)
+int ParquetBuilder::luaCreate (lua_State* L)
 {
     try
     {
@@ -82,7 +82,7 @@ int ArrowBuilder::luaCreate (lua_State* L)
         const char* id = getLuaString(L, 3);
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, outq_name, rec_type, id));
+        return createLuaObject(L, new ParquetBuilder(L, outq_name, rec_type, id));
     }
     catch(const RunTimeException& e)
     {
@@ -94,7 +94,7 @@ int ArrowBuilder::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void ArrowBuilder::init (void)
+void ParquetBuilder::init (void)
 {
     RecordObject::recordDefErr_t rc;
 
@@ -114,7 +114,7 @@ void ArrowBuilder::init (void)
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void ArrowBuilder::deinit (void)
+void ParquetBuilder::deinit (void)
 {
 }
 
@@ -125,7 +125,7 @@ void ArrowBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec_type, const char* id):
+ParquetBuilder::ParquetBuilder (lua_State* L, const char* outq_name, const char* rec_type, const char* id):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
@@ -163,7 +163,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-ArrowBuilder::~ArrowBuilder(void)
+ParquetBuilder::~ParquetBuilder(void)
 {
     delete [] fileName;
     delete outQ;
@@ -172,7 +172,7 @@ ArrowBuilder::~ArrowBuilder(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::processRecord (RecordObject* record, okey_t key)
+bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
@@ -376,7 +376,7 @@ bool ArrowBuilder::processRecord (RecordObject* record, okey_t key)
 /*----------------------------------------------------------------------------
  * processTimeout
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::processTimeout (void)
+bool ParquetBuilder::processTimeout (void)
 {
     return true;
 }
@@ -386,7 +386,7 @@ bool ArrowBuilder::processTimeout (void)
  *
  *  Note that RecordDispatcher will only call this once
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::processTermination (void)
+bool ParquetBuilder::processTermination (void)
 {
     (void)parquetWriter->Close();
     return true;
@@ -395,7 +395,7 @@ bool ArrowBuilder::processTermination (void)
 /*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::defineTableSchema (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type)
+bool ParquetBuilder::defineTableSchema (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type)
 {
     std::vector<std::shared_ptr<arrow::Field>> schema_vector;
     addFieldsToSchema(schema_vector, field_list, rec_type);
@@ -406,7 +406,7 @@ bool ArrowBuilder::defineTableSchema (std::shared_ptr<arrow::Schema>& _schema, f
 /*----------------------------------------------------------------------------
  * addFieldsToSchema
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type)
+bool ParquetBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type)
 {
     /* Loop Through Fields in Record */
     char** field_names = NULL;
