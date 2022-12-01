@@ -34,9 +34,11 @@
  ******************************************************************************/
 
 #include <arrow/api.h>
+#include <arrow/io/file.h>
+#include <arrow/util/logging.h>
 
 #include "core.h"
-#include "icesat2.h"
+#include "ArrowBuilder.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -99,10 +101,13 @@ ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec
     assert(outq_name);
 
     /* Define Table Schema */
-    schema = defineTableSchema(rec_type);
+    defineTableSchema(schema, fieldList, rec_type);
 
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
+
+    /* Row Size */
+    rowSizeBytes = RecordObject::getRecordDataSize(rec_type);
 }
 
 /*----------------------------------------------------------------------------
@@ -120,9 +125,198 @@ bool ArrowBuilder::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
-    const char* rectype = record->getRecordType();
+    /* Determine Number of Rows in Record */
+    int record_size_bytes = record->getAllocatedDataSize();
+    int num_rows = record_size_bytes / rowSizeBytes;
+    int left_over = record_size_bytes % rowSizeBytes;
+    if(left_over > 0)
+    {
+        mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), record_size_bytes, rowSizeBytes);
+        return false;
+    }
 
-    return false;
+    /* Loop Through Fields in Schema */
+    std::vector<std::shared_ptr<arrow::Array>> columns;
+    for(int i = 0; i < fieldList.length(); i++)
+    {
+        RecordObject::field_t field = fieldList[i];
+        std::shared_ptr<arrow::Array> column;
+
+        /* Loop Through Each Row */
+        switch(field.type)
+        {
+            case RecordObject::DOUBLE:
+            {
+                arrow::DoubleBuilder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((double)record->getValueReal(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::FLOAT:
+            {
+                arrow::FloatBuilder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((float)record->getValueReal(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT8:
+            {
+                arrow::Int8Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((int8_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT16:
+            {
+                arrow::Int16Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((int16_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT32:
+            {
+                arrow::Int32Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((int32_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT64:
+            {
+                arrow::Int64Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((int64_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT8:
+            {
+                arrow::UInt8Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((uint8_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT16:
+            {
+                arrow::UInt16Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((uint16_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT32:
+            {
+                arrow::UInt32Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((uint32_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT64:
+            {
+                arrow::UInt64Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((uint64_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::TIME8:
+            {
+                arrow::Date64Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    builder.UnsafeAppend((int64_t)record->getValueInteger(field));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::STRING:
+            {
+                arrow::StringBuilder builder;
+                (void)builder.Reserve(num_rows);
+                for(int row = 0; row < num_rows; row++)
+                {
+                    const char* str = record->getValueText(field);
+                    builder.UnsafeAppend(str, StringLib::size(str));
+                    field.offset += record_size_bytes * 8;
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+
+        /* Add Column to Columns */
+        columns.push_back(column);
+    }
+
+    /* Build Table */
+    std::shared_ptr<arrow::Table> table = arrow::Table::Make(std::make_shared<arrow::Schema>(*schema), columns);
+
+    /* Return Success */
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -140,31 +334,53 @@ bool ArrowBuilder::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool ArrowBuilder::processTermination (void)
 {
+//    std::shared_ptr<arrow::io::FileOutputStream> file_output_stream;
+//    arrow::io::FileOutputStream::Open("test.parquet", &file_output_stream);
+//    parquet::WriterProperties::Builder props_builder;
+//    props_builder.compression(parquet::Compression::GZIP);
+//    props_builder.compression("dip", parquet::Compression::SNAPPY);
+//    auto props = props_builder.build();
+//    parquet::arrow::WriteTable(*arrow_table, ::arrow::default_memory_pool(), file_output_stream, sip_array->length(), props);
+//
+//    auto arrow_output_stream = std::make_shared<parquet::ArrowOutputStream>(file_output_stream);
+//    std::unique_ptr<parquet::arrow::FileWriter> writer;
+//    parquet::arrow::FileWriter::Open(*(arrow_table->schema()), ::arrow::default_memory_pool(),
+//        arrow_output_stream, props, parquet::arrow::default_arrow_writer_properties(),
+//        &writer);
+//    // write two row groups for the first table
+//    writer->WriteTable(*arrow_table, sip_array->length()/2);
+//    // ... code here would generate a new table ...
+//    // for now, we'll just write out the same table again, to
+//    // simulate writing more data to the same file, this
+//    // time as one row group
+//    writer->WriteTable(*arrow_table, sip_array->length());
+//    writer->Close();
     return true;
 }
 
 /*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-arrow::Schema* ArrowBuilder::defineTableSchema (const char* rectype)
+bool ArrowBuilder::defineTableSchema (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type)
 {
     std::vector<std::shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, rectype);
-    arrow::Schema* _schema = new arrow::Schema(schema_vector);
-    return _schema;
+    addFieldsToSchema(schema_vector, field_list, rec_type);
+    _schema = std::make_shared<arrow::Schema>(schema_vector);
+    return true;
 }
 
 /*----------------------------------------------------------------------------
  * addFieldsToSchema
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, const char* rectype)
+bool ArrowBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type)
 {
     /* Loop Through Fields in Record */
     char** field_names = NULL;
     RecordObject::field_t** fields = NULL;
-    int num_fields = RecordObject::getRecordFields(rectype, &field_names, &fields);
+    int num_fields = RecordObject::getRecordFields(rec_type, &field_names, &fields);
     for(int i = 0; i < num_fields; i++)
     {
+        /* Add to Schema */
         switch(fields[i]->type)
         {
             case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));       break;
@@ -179,9 +395,12 @@ bool ArrowBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>
             case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
             case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
             case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
-            case RecordObject::USER:    addFieldsToSchema(schema_vector, fields[i]->exttype); break;
+            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype); break;
             default:                    break;
         }
+
+        /* Add to Field List */
+        field_list.add(*fields[i]);
     }
 
     /* Clean Up */

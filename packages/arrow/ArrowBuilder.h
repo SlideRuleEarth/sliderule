@@ -58,6 +58,8 @@ class ArrowBuilder: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int LIST_BLOCK_SIZE = 32;
+
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
@@ -79,26 +81,30 @@ class ArrowBuilder: public DispatchObject
          * Types
          *--------------------------------------------------------------------*/
 
+        typedef List<RecordObject::field_t, LIST_BLOCK_SIZE> field_list_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        arrow::Schema*          schema;
-        Publisher*              outQ;
+        field_list_t                    fieldList;
+        std::shared_ptr<arrow::Schema>  schema;
+        Publisher*                      outQ;
+        int                             rowSizeBytes;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                                ArrowBuilder                    (lua_State* L, const char* outq_name, const char* rec_type);
-                                ~ArrowBuilder                   (void);
+                            ArrowBuilder             (lua_State* L, const char* outq_name, const char* rec_type);
+                            ~ArrowBuilder            (void);
 
-        bool                    processRecord                   (RecordObject* record, okey_t key) override;
-        bool                    processTimeout                  (void) override;
-        bool                    processTermination              (void) override;
+        bool                processRecord           (RecordObject* record, okey_t key) override;
+        bool                processTimeout          (void) override;
+        bool                processTermination      (void) override;
 
-        static arrow::Schema*   defineTableSchema               (const char* schema);
-        static bool             addFieldsToSchema               (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, const char* rectype);
+        static bool         defineTableSchema       (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
+        static bool         addFieldsToSchema       (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
 };
 
 #endif  /* __arrow_buider__ */

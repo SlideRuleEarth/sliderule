@@ -26,7 +26,8 @@ config-release: prep ## configure make for release version of sliderule binary
 config-debug: prep ## configure make for release version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
 
-DEVCFG  = -DUSE_AWS_PACKAGE=ON
+DEVCFG  = -DUSE_ARROW_PACKAGE=ON
+DEVCFG += -DUSE_AWS_PACKAGE=ON
 DEVCFG += -DUSE_CCSDS_PACKAGE=ON
 DEVCFG += -DUSE_RASTER_PACKAGE=ON
 DEVCFG += -DUSE_H5_PACKAGE=ON
