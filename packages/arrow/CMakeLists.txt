@@ -1,14 +1,16 @@
 # Find Arrow Library
 find_package(Arrow)
+find_package(Parquet REQUIRED)
 
 # Build package
-if (Arrow_FOUND)
+if (Arrow_FOUND AND Parquet_FOUND)
 
     message (STATUS "Including arrow package")
 
     target_compile_definitions (slideruleLib PUBLIC __arrow__)
 
     target_link_libraries(slideruleLib PUBLIC Arrow::arrow_shared)
+    target_link_libraries(slideruleLib PUBLIC Parquet::parquet_shared)
 
     target_sources(slideruleLib
         PRIVATE

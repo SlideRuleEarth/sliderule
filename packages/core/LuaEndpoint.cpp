@@ -60,6 +60,7 @@ const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 SafeString LuaEndpoint::serverHead("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::LUA_RESPONSE_QUEUE = "rspq";
+const char* LuaEndpoint::LUA_REQUEST_ID = "rqstid";
 const char* LuaEndpoint::UNREGISTERED_ENDPOINT = "untracked";
 const char* LuaEndpoint::HITS_METRIC = "hits";
 
@@ -370,6 +371,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
 
         /* Supply Global Variables to Script */
         engine->setString(LUA_RESPONSE_QUEUE, rspq->getName());
+        engine->setString(LUA_REQUEST_ID, request->id);
 
         /* Execute Engine
         *  The call to execute the script blocks on completion of the script. The lua state context

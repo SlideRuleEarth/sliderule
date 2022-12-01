@@ -159,7 +159,7 @@ void HttpServer::initConnection (connection_t* connection)
     connection->start_time = TimeLib::latchtime();
     connection->keep_alive = false;
     connection->id = new char [REQUEST_ID_LEN];
-    StringLib::format(connection->id, REQUEST_ID_LEN, "%s:%ld", getName(), cnt);
+    StringLib::format(connection->id, REQUEST_ID_LEN, "%s.%ld", getName(), cnt);
     connection->rsps_state.rspq = new Subscriber(connection->id);
     connection->request = new EndpointObject::Request(connection->id);
 }

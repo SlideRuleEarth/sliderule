@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include <arrow/api.h>
+#include <parquet/arrow/writer.h>
 
 #include "MsgQ.h"
 #include "LuaObject.h"
@@ -59,13 +60,27 @@ class ArrowBuilder: public DispatchObject
          *--------------------------------------------------------------------*/
 
         static const int LIST_BLOCK_SIZE = 32;
+        static const int FILE_NAME_MAX_LEN = 128;
 
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
+        static const char* metaRecType;
+        static const RecordObject::fieldDef_t metaRecDef[];
+
+        static const char* dataRecType;
+        static const RecordObject::fieldDef_t dataRecDef[];
+
+        static const char* TMP_FILE_PREFIX;
+
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+
+        typedef struct {
+            char    filename[FILE_NAME_MAX_LEN];
+            long    size;
+        } arrow_file_meta_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -87,16 +102,18 @@ class ArrowBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        field_list_t                    fieldList;
-        std::shared_ptr<arrow::Schema>  schema;
-        Publisher*                      outQ;
-        int                             rowSizeBytes;
+        field_list_t                                fieldList;
+        std::shared_ptr<arrow::Schema>              schema;
+        Publisher*                                  outQ;
+        int                                         rowSizeBytes;
+        const char*                                 fileName;
+        std::unique_ptr<parquet::arrow::FileWriter> parquetWriter;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ArrowBuilder             (lua_State* L, const char* outq_name, const char* rec_type);
+                            ArrowBuilder             (lua_State* L, const char* outq_name, const char* rec_type, const char* id);
                             ~ArrowBuilder            (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;

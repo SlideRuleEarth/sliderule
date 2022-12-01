@@ -70,6 +70,7 @@ class LuaEndpoint: public EndpointObject
         static const int INITIAL_NUM_ENDPOINTS = 32;
         static const int MAX_EXCEPTION_TEXT_SIZE = 256;
         static const char* LUA_RESPONSE_QUEUE;
+        static const char* LUA_REQUEST_ID;
         static const char* UNREGISTERED_ENDPOINT;
         static const char* HITS_METRIC;
 

@@ -33,9 +33,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <arrow/api.h>
-#include <arrow/io/file.h>
-#include <arrow/util/logging.h>
+#include <iostream>
+#include "arrow/builder.h"
+#include "arrow/table.h"
+#include "arrow/io/file.h"
+#include <parquet/arrow/writer.h>
+#include <parquet/properties.h>
 
 #include "core.h"
 #include "ArrowBuilder.h"
@@ -48,6 +51,19 @@ const char* ArrowBuilder::LuaMetaName = "ArrowBuilder";
 const struct luaL_Reg ArrowBuilder::LuaMetaTable[] = {
     {NULL,          NULL}
 };
+
+const char* ArrowBuilder::metaRecType = "arrowrec.meta";
+const RecordObject::fieldDef_t ArrowBuilder::metaRecDef[] = {
+    {"filename",   RecordObject::STRING,   offsetof(arrow_file_meta_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"size",       RecordObject::INT64,    offsetof(arrow_file_meta_t, size),                      1,  NULL, NATIVE_FLAGS}
+};
+
+const char* ArrowBuilder::dataRecType = "arrowrec.data";
+const RecordObject::fieldDef_t ArrowBuilder::dataRecDef[] = {
+    {"data", RecordObject::UINT8, 0, 0, NULL, NATIVE_FLAGS} // variable length
+};
+
+const char* ArrowBuilder::TMP_FILE_PREFIX = "/tmp/";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -63,9 +79,10 @@ int ArrowBuilder::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
         const char* rec_type = getLuaString(L, 2);
+        const char* id = getLuaString(L, 3);
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, outq_name, rec_type));
+        return createLuaObject(L, new ArrowBuilder(L, outq_name, rec_type, id));
     }
     catch(const RunTimeException& e)
     {
@@ -79,6 +96,19 @@ int ArrowBuilder::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void ArrowBuilder::init (void)
 {
+    RecordObject::recordDefErr_t rc;
+
+    rc = RecordObject::defineRecord(metaRecType, NULL, sizeof(arrow_file_meta_t), metaRecDef, sizeof(metaRecDef) / sizeof(RecordObject::fieldDef_t));
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", metaRecType, rc);
+    }
+
+    rc = RecordObject::defineRecord(dataRecType, NULL, 1, dataRecDef, 1);
+    if(rc != RecordObject::SUCCESS_DEF)
+    {
+        mlog(CRITICAL, "Failed to define %s: %d", dataRecType, rc);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -95,7 +125,7 @@ void ArrowBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec_type):
+ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec_type, const char* id):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
@@ -108,6 +138,26 @@ ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec
 
     /* Row Size */
     rowSizeBytes = RecordObject::getRecordDataSize(rec_type);
+
+    /* Create Unique Temporary Filename */
+    SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
+    fileName = tmp_file.getString(true);
+
+    /* Create Arrow Output Stream */
+    std::shared_ptr<arrow::io::FileOutputStream> file_output_stream;
+    PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(fileName));
+
+    /* Create Writer Properties */
+    parquet::WriterProperties::Builder writer_props_builder;
+    writer_props_builder.compression(parquet::Compression::GZIP);
+    std::shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
+
+    /* Create Arrow Writer Properties */
+    parquet::ArrowWriterProperties::Builder arrow_writer_props_builder;
+    std::shared_ptr<parquet::ArrowWriterProperties> arrow_writer_props = arrow_writer_props_builder.build();
+
+    /* Create Parquet Writer */
+    (void)parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &parquetWriter);
 }
 
 /*----------------------------------------------------------------------------
@@ -115,6 +165,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, const char* outq_name, const char* rec
  *----------------------------------------------------------------------------*/
 ArrowBuilder::~ArrowBuilder(void)
 {
+    delete [] fileName;
     delete outQ;
 }
 
@@ -315,6 +366,9 @@ bool ArrowBuilder::processRecord (RecordObject* record, okey_t key)
     /* Build Table */
     std::shared_ptr<arrow::Table> table = arrow::Table::Make(std::make_shared<arrow::Schema>(*schema), columns);
 
+    /* Write Table */
+    (void)parquetWriter->WriteTable(*table, num_rows);
+
     /* Return Success */
     return true;
 }
@@ -334,27 +388,7 @@ bool ArrowBuilder::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool ArrowBuilder::processTermination (void)
 {
-//    std::shared_ptr<arrow::io::FileOutputStream> file_output_stream;
-//    arrow::io::FileOutputStream::Open("test.parquet", &file_output_stream);
-//    parquet::WriterProperties::Builder props_builder;
-//    props_builder.compression(parquet::Compression::GZIP);
-//    props_builder.compression("dip", parquet::Compression::SNAPPY);
-//    auto props = props_builder.build();
-//    parquet::arrow::WriteTable(*arrow_table, ::arrow::default_memory_pool(), file_output_stream, sip_array->length(), props);
-//
-//    auto arrow_output_stream = std::make_shared<parquet::ArrowOutputStream>(file_output_stream);
-//    std::unique_ptr<parquet::arrow::FileWriter> writer;
-//    parquet::arrow::FileWriter::Open(*(arrow_table->schema()), ::arrow::default_memory_pool(),
-//        arrow_output_stream, props, parquet::arrow::default_arrow_writer_properties(),
-//        &writer);
-//    // write two row groups for the first table
-//    writer->WriteTable(*arrow_table, sip_array->length()/2);
-//    // ... code here would generate a new table ...
-//    // for now, we'll just write out the same table again, to
-//    // simulate writing more data to the same file, this
-//    // time as one row group
-//    writer->WriteTable(*arrow_table, sip_array->length());
-//    writer->Close();
+    (void)parquetWriter->Close();
     return true;
 }
 
