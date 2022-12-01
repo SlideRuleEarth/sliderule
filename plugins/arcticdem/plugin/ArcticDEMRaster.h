@@ -53,12 +53,12 @@ class ArcticDEMRaster: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const int   ARCTIC_DEM_INVALID_ELELVATION = -1000000;
-        static const int   RASTER_BLOCK_SIZE = 25000;
-        static const int   RASTER_PHOTON_CRS = 4326;
-        static const int   RASTER_ARCTIC_DEM_CRS = 3413;
+        static const int   INVALID_SAMPLE_VALUE = -1000000;
+        static const int   PHOTON_CRS = 4326;
+        static const int   ARCTIC_DEM_CRS = 3413;
 
         static const int   MAX_READER_THREADS = 200;
+        static const int   MAX_LOOK_AHEAD_RASTERS = 9;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -148,17 +148,18 @@ class ArcticDEMRaster: public LuaObject
         std::string           vrtFileName;
         VRTDataset*           vrtDset;
         GDALRasterBand*       vrtBand;
+        double                vrtInvGeot[6];
+        uint32_t              vrtRows;
+        uint32_t              vrtCols;
+        double                vrtCellSize;
+        bbox_t                vrtBbox;
+
         List<std::string>     tifList;
         Dictionary<raster_t*> rasterDict;
         reader_t              rasterRreader[MAX_READER_THREADS];
-        int                   threadCount;
+        int                   readerCount;
         dem_type_t            demType;
-        double                invgeot[6];
 
-        uint32_t vrtRows;
-        uint32_t vrtCols;
-        double   vrtCellSize;
-        bbox_t   vrtBbox;
 
         OGRCoordinateTransformation *transf;
         OGRSpatialReference srcSrs;

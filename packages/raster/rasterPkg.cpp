@@ -71,7 +71,7 @@ int raster_open (lua_State* L)
 void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
 {
     (void)eErrClass;  /* Silence compiler warning */
-    mlog(CRITICAL, "GDAL ERROR %d: %s\n", err_no, msg);
+    mlog(CRITICAL, "GDAL ERROR %d: %s", err_no, msg);
 }
 
 /******************************************************************************
