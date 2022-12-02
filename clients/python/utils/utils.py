@@ -56,28 +56,37 @@ def initialize_client(args):
 
     # Set Script Defaults
     cfg = {
-        "url":                  'localhost',
-        "organization":         None,
-        "asset":                'atlas-local',
-        "region":               'examples/grandmesa.geojson',
-        "resource":             'ATL03_20181017222812_02950102_005_01.h5',
-        "raster":               True,
-        "atl08_class":          [],
-        "srt":                  icesat2.SRT_LAND,
-        "cnf":                  icesat2.CNF_SURFACE_HIGH,
-        "ats":                  10.0,
-        "cnt":                  10,
-        "len":                  40.0,
-        "res":                  20.0,
-        "maxi":                 1,
-        "atl03_geo_fields":     [],
-        "atl03_ph_fields":      [],
-        "profile":              True,
-        "verbose":              True,
-        "timeout":              0,
-        "rqst-timeout":         0,
-        "node-timeout":         0,
-        "read-timeout":         0
+        "url":                      'localhost',
+        "organization":             None,
+        "asset":                    'atlas-local',
+        "region":                   'examples/grandmesa.geojson',
+        "resource":                 'ATL03_20181017222812_02950102_005_01.h5',
+        "raster":                   True,
+        "atl08_class":              [],
+        "yapc.score":               0,
+        "yapc.knn":                 0,
+        "yapc.min_knn":             5,
+        "yapc.win_h":               6.0,
+        "yapc.win_x":               15.0,
+        "yapc.version":             0,
+        "srt":                      icesat2.SRT_LAND,
+        "cnf":                      icesat2.CNF_SURFACE_HIGH,
+        "ats":                      10.0,
+        "cnt":                      10,
+        "len":                      40.0,
+        "res":                      20.0,
+        "maxi":                     1,
+        "atl03_geo_fields":         [],
+        "atl03_ph_fields":          [],
+        "profile":                  True,
+        "verbose":                  True,
+        "timeout":                  0,
+        "rqst-timeout":             0,
+        "node-timeout":             0,
+        "read-timeout":             0,
+        "output.path":              None,
+        "output.format":            "native",
+        "output.open_on_complete":  False
     }
 
     # Parse Configuration Parameters
@@ -114,6 +123,15 @@ def initialize_client(args):
     if len(cfg['atl08_class']) > 0:
         parms['atl08_class'] = cfg['atl08_class']
 
+    # Add YAPC Parameters
+    if cfg["yapc.version"] > 0:
+        parms["yapc"] = { "score": cfg["yapc.score"],
+                          "knn": cfg["yapc.knn"],
+                          "min_knn": cfg["yapc.min_knn"],
+                          "win_h": cfg["yapc.win_h"],
+                          "win_x": cfg["yapc.win_x"],
+                          "version": cfg["yapc.version"] }
+
     # Provide Timeouts
     if cfg["timeout"] > 0:
         parms["timeout"] = cfg["timeout"]
@@ -127,6 +145,11 @@ def initialize_client(args):
     if cfg["read-timeout"] > 0:
         parms["read-timeout"] = cfg["read-timeout"]
 
+    # Add Output Options
+    if cfg["output.path"]:
+        parms["output"] = { "path": cfg["output.path"],
+                            "format": cfg["output.format"],
+                            "open_on_complete": cfg["output.open_on_complete"] }
     # Latch Start Time
     tstart = time.perf_counter()
 

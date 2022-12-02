@@ -64,6 +64,8 @@ logger = logging.getLogger(__name__)
 
 recdef_table = {}
 
+arrow_file_table = {}
+
 gps_epoch = datetime(1980, 1, 6)
 tai_epoch = datetime(1970, 1, 1, 0, 0, 10)
 
@@ -362,9 +364,31 @@ def __exceptrec(rec):
             eventlogger[rec["level"]]("%s", rec["text"])
 
 #
+#  _arrowrec
+#
+def __arrowrec(rec):
+    global arrow_file_table
+    try :
+        filename = rec["filename"]
+        if rec["__rectype"] == 'arrowrec.meta':
+            if filename in arrow_file_table:
+                raise FatalError("file transfer already in progress")
+            arrow_file_table[filename] = { "fp": open(filename, "wb"), "size": rec["size"], "progress": 0 }
+        else: # rec["__rectype"] == 'arrowrec.data'
+            data = rec['data']
+            file = arrow_file_table[filename]
+            file["fp"].write(bytearray(data))
+            file["progress"] += len(data)
+            if file["progress"] >= file["size"]:
+                file["fp"].close()
+                del arrow_file_table[filename]
+    except Exception as e:
+        raise FatalError("Failed to process arrow file: {}".format(e))
+
+#
 #  Globals
 #
-__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec}
+__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.meta': __arrowrec, 'arrowrec.data': __arrowrec }
 
 ###############################################################################
 # APIs
