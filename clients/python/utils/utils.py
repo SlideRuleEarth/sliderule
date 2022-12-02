@@ -171,7 +171,6 @@ def display_statistics(gdf, name):
         print("Received {} {}".format(len(gdf), name))
     else:
         print("No {} were returned".format(name))
-        sys.exit(0)
 
     print("\nTiming Profiles")
     for key in icesat2.profiles:

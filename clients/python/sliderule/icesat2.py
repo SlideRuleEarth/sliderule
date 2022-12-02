@@ -768,6 +768,12 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         # Make API Processing Request
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
+        # Check for Output Options
+        if parm["output"] and parm["output"]["open_on_complete"]:
+            df = geopandas.pd.read_parquet(parm["output"]["path"])
+            profiles[atl06p.__name__] = time.perf_counter() - tstart
+            return df
+
         # Flatten Responses
         tstart_flatten = time.perf_counter()
         columns = {}
