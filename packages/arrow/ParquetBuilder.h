@@ -122,7 +122,7 @@ class ParquetBuilder: public DispatchObject
         bool                processRecord           (RecordObject* record, okey_t key) override;
         bool                processTimeout          (void) override;
         bool                processTermination      (void) override;
-        bool                postRecord              (RecordObject* record);
+        bool                postRecord              (RecordObject* record, int data_size=0);
 
         static bool         defineTableSchema       (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
         static bool         addFieldsToSchema       (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);

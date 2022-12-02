@@ -396,63 +396,92 @@ bool ParquetBuilder::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool ParquetBuilder::processTermination (void)
 {
+    bool status = true;
+
     /* Close Parquet Writer */
     (void)parquetWriter->Close();
 
     /* Reopen Parquet File to Stream Back as Response */
     FILE* fp = fopen(fileName, "r");
-    if( fp == NULL )
+    if(fp)
     {
+        /* Get Size of File */
+        fseek(fp, 0L, SEEK_END);
+        long file_size = ftell(fp);
+        fseek(fp, 0L, SEEK_SET);
+
+        do
+        {
+            /* Send Meta Record */
+            RecordObject meta_record(metaRecType);
+            arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
+            StringLib::copy(&meta->filename[0], outFileName, FILE_NAME_MAX_LEN);
+            meta->size = file_size;
+            if(!postRecord(&meta_record))
+            {
+                status = false;
+                break; // early exit on error
+            }
+
+            /* Send Data Records */
+            long offset = 0;
+            while(offset < file_size)
+            {
+                RecordObject data_record(dataRecType, FILE_BUFFER_RSPS_SIZE, false);
+                uint8_t* data = (uint8_t*)data_record.getRecordData();
+                size_t bytes_read = fread(data, 1, FILE_BUFFER_RSPS_SIZE, fp);
+                if(!postRecord(&meta_record))
+                {
+                    status = false;
+                    break; // early exit on error
+                }
+                offset += bytes_read;
+            }
+        } while(false);
+
+        /* Close File */
+        int rc = fclose(fp);
+        if(rc != 0)
+        {
+            status = false;
+            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc, fileName, strerror(errno));
+        }
+    }
+    else // unable to open file
+    {
+        status = false;
         mlog(CRITICAL, "Failed (%d) to read parquet file %s: %s", errno, fileName, strerror(errno));
-        return false;
     }
 
-    /* Get Size of File */
-    fseek(fp, 0L, SEEK_END);
-    size_t file_size = ftell(fp);
-    fseek(fp, 0L, SEEK_SET);
-
-    /* Send Meta Record */
-    RecordObject meta_record(metaRecType);
-    arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
-    StringLib::copy(&meta->filename[0], outFileName, FILE_NAME_MAX_LEN);
-    meta->size = file_size;
-    if(!postRecord(&meta_record)) return false; // early exit
-
-    /* Stream Parquet File Back */
-    long offset = 0;
-    while(offset < file_size)
+    /* Remove File */
+    int rc = remove(fileName);
+    if(rc != 0)
     {
-        long bytes_remaining = file_size - offset;
-        long bytes_to_read = MIN(bytes_remaining, FILE_BUFFER_RSPS_SIZE);
-        RecordObject data_record(dataRecType, bytes_to_read);
-        uint8_t* data = (uint8_t*)data_record.getRecordData();
-        size_t bytes_read = fread(data, 1, FILE_BUFFER_RSPS_SIZE, fp);
-
-        // need to check bytes_read matches bytes_to_read
-        // need efficient way to post record without a memory copy
+        status = false;
+        mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, fileName, strerror(errno));
     }
 
-
-    return true;
+    /* Return Status */
+    return status;
 }
 
 /*----------------------------------------------------------------------------
  * postRecord
  *
  *  The while loop should not be an infinite loop because when the output queue
- *  is cleaned up, the call to postCopy should fail with no subscribers
+ *  is cleaned up, the call to postRef should fail with no subscribers
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::postRecord (RecordObject* record)
+bool ParquetBuilder::postRecord (RecordObject* record, int data_size)
 {
     uint8_t* rec_buf = NULL;
-    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+    int rec_bytes = record->serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP, data_size);
     int post_status = MsgQ::STATE_TIMEOUT;
-    while(post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
+    while((post_status = outQ->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
     if(post_status <= 0)
     {
-        return false;
+        delete [] rec_buf; // we've taken ownership
         mlog(ERROR, "Parquet builder failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
+        return false;
     }
     return true;
 }

@@ -566,7 +566,7 @@ void EventLib::iterateMetric (const char* category, metric_func_t cb, void* parm
 int EventLib::sendEvent (event_t* event, int attr_size)
 {
     int event_record_size = offsetof(event_t, attr) + attr_size;
-    RecordObject record(rec_type, event_record_size);
+    RecordObject record(rec_type, event_record_size, false);
     event_t* data = (event_t*)record.getRecordData();
     LocalLib::copy(data, event, event_record_size);
 

@@ -92,7 +92,8 @@ class RecordObject
         typedef enum {
             COPY,
             ALLOCATE,
-            REFERENCE
+            REFERENCE,
+            TAKE_OWNERSHIP
         } serialMode_t;
 
         typedef enum {

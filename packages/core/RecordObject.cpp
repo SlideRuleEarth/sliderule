@@ -354,7 +354,12 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     }
     else if (mode == REFERENCE)
     {
-        *buffer = (unsigned char*)recordMemory;
+        *buffer = recordMemory;
+    }
+    else if (mode == TAKE_OWNERSHIP)
+    {
+        *buffer = recordMemory;
+        memoryOwner = false;
     }
     else // if (mode == COPY)
     {
