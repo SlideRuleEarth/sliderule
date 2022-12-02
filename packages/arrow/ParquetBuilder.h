@@ -85,7 +85,7 @@ class ParquetBuilder: public DispatchObject
 
         typedef struct {
             char    filename[FILE_NAME_MAX_LEN];
-            uint8_t data[]; // variable length
+            uint8_t data[FILE_BUFFER_RSPS_SIZE];
         } arrow_file_data_t;
 
         /*--------------------------------------------------------------------

@@ -417,10 +417,11 @@ bool ParquetBuilder::processTermination (void)
             long offset = 0;
             while(offset < file_size)
             {
-                RecordObject data_record(dataRecType, FILE_BUFFER_RSPS_SIZE, false);
-                uint8_t* data = (uint8_t*)data_record.getRecordData();
-                size_t bytes_read = fread(data, 1, FILE_BUFFER_RSPS_SIZE, fp);
-                if(!postRecord(&meta_record))
+                RecordObject data_record(dataRecType, 0, false);
+                arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData()
+                StringLib::copy(&data->filename[0], outFileName, FILE_NAME_MAX_LEN);
+                size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
+                if(!postRecord(&data_record, offsetof(arrow_file_data_t, data) + bytes_read))
                 {
                     status = false;
                     break; // early exit on error
