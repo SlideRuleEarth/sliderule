@@ -319,6 +319,7 @@ class Atl03Reader: public LuaObject
         const int           read_timeout_ms;
         Publisher*          outQ;
         RqstParms*          parms;
+        bool                flatten;
         stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file
@@ -333,7 +334,7 @@ class Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator=true);
+                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator=true, bool _flatten=false);
                             ~Atl03Reader            (void);
 
         static void*        subsettingThread        (void* parm);

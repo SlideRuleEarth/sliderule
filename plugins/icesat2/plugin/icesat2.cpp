@@ -111,6 +111,10 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08_CANOPY",                RqstParms::ATL08_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         RqstParms::ATL08_TOP_OF_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          RqstParms::ATL08_UNCLASSIFIED);
+    LuaEngine::setAttrInt(L, "NATIVE",                      RqstParms::OUTPUT_FORMAT_NATIVE);
+    LuaEngine::setAttrInt(L, "FEATHER",                     RqstParms::OUTPUT_FORMAT_FEATHER);
+    LuaEngine::setAttrInt(L, "PARQUET",                     RqstParms::OUTPUT_FORMAT_PARQUET);
+    LuaEngine::setAttrInt(L, "CVS",                         RqstParms::OUTPUT_FORMAT_CSV);
 
     return 1;
 }

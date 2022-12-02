@@ -418,7 +418,7 @@ bool ParquetBuilder::processTermination (void)
             while(offset < file_size)
             {
                 RecordObject data_record(dataRecType, 0, false);
-                arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData()
+                arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData();
                 StringLib::copy(&data->filename[0], outFileName, FILE_NAME_MAX_LEN);
                 size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
                 if(!postRecord(&data_record, offsetof(arrow_file_data_t, data) + bytes_read))

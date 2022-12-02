@@ -410,6 +410,7 @@ RqstParms::~RqstParms (void)
     if(raster) delete raster;
     if(atl03_geo_fields) delete atl03_geo_fields;
     if(atl03_ph_fields) delete atl03_ph_fields;
+    if(output.path) delete [] output.path;
 }
 
 /*----------------------------------------------------------------------------
@@ -962,7 +963,7 @@ void RqstParms::get_lua_output (lua_State* L, int index, bool* provided)
             output.format = (output_format_t)LuaObject::getLuaInteger(L, -1, true, output.format, &field_provided);
             if(output.format < 0 || output.format >= OUTPUT_FORMAT_UNSUPPORTED)
             {
-                    mlog(ERROR, "Output format is unsupported: %d", output.format);
+                mlog(ERROR, "Output format is unsupported: %d", output.format);
             }
         }
         else if(lua_isstring(L, index))

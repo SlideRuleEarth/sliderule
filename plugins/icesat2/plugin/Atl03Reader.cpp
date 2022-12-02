@@ -130,7 +130,7 @@ const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>)
+ * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>, <flatten>)
  *----------------------------------------------------------------------------*/
 int Atl03Reader::luaCreate (lua_State* L)
 {
@@ -145,9 +145,10 @@ int Atl03Reader::luaCreate (lua_State* L)
         const char* outq_name = getLuaString(L, 3);
         parms = (RqstParms*)getLuaObject(L, 4, RqstParms::OBJECT_TYPE);
         bool send_terminator = getLuaBoolean(L, 5, true, true);
+        bool flatten = getLuaBoolean(L, 6, true, false);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03Reader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Atl03Reader(L, asset, resource, outq_name, parms, send_terminator, flatten));
     }
     catch(const RunTimeException& e)
     {
@@ -174,7 +175,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator):
+Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator, bool _flatten):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
@@ -187,6 +188,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     asset = _asset;
     resource = StringLib::duplicate(_resource);
     parms = _parms;
+    flatten = _flatten;
 
     /* Generate ATL08 Resource Name */
     SafeString atl08_resource("%s", resource);
@@ -1423,7 +1425,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                                      RqstParms::EXTENT_ID_PHOTONS;
 
                 /* Build and Send Extent Record */
-                if(parms->output.format == RqstParms::OUTPUT_FORMAT_NATIVE)
+                if(!reader->flatten)
                 {
                     reader->sendExtentRecord(extent_id, info->track, state, atl03, &local_stats);
                 }
