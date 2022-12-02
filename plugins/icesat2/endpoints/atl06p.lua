@@ -20,6 +20,8 @@ local json = require("json")
 -- Create User Status --
 local userlog = msg.publish(rspq)
 
+-- Exception Forwarding --
+
 -- Request Parameters --
 local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"]
@@ -33,22 +35,30 @@ local output_parms = parms["output"]
 local duration = 0
 local interval = 10 -- seconds
 
+-- Initialize Queue Management --
+local rsps_from_nodes = rspq
+local terminate_proxy_stream = false
+
 -- Handle Output Options --
 local output_dispatch = nil
 if output_parms then
     local output_filename = output_parms["path"]
     local output_format = output_parms["format"]
+    -- Parquet Writer --
     if output_format == "parquet" then
-        -- Parquet Writer --
+        rsps_from_nodes = rspq .. "-parquet"
+        terminate_proxy_stream = true
+        local except_pub = core.publish(rspq)
         local parquet_builder = arrow.parquet(output_filename, rspq, "atl06rec.elevation", rqstid)
-        output_dispatch = core.dispatcher(rspq)
+        output_dispatch = core.dispatcher(rsps_from_nodes)
         output_dispatch:attach(parquet_builder, "atl06rec")
+        output_dispatch:attach(except_pub, "exceptrec") -- exception records
         output_dispatch:run()
     end
 end
 
 -- Proxy Request --
-local proxy = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), node_timeout, rspq)
+local proxy = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), node_timeout, rsps_from_nodes, terminate_proxy_stream)
 
 -- Wait Until Proxy Completes --
 while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do
@@ -59,17 +69,16 @@ while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do
     end
 end
 
-sys.wait(5)
 -- Wait Until Dispatch Completion --
---if output_dispatch then
---    while (userlog:numsubs() > 0) and not output_dispatch:waiton(interval * 1000) do
---        duration = duration + interval
---        if timeout >= 0 and duration >= timeout then
---            userlog:sendlog(core.ERROR, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))
---            return
---        end
---    end
---end
+if terminate_proxy_stream then
+    while (userlog:numsubs() > 0) and not output_dispatch:waiton(interval * 1000) do
+        duration = duration + interval
+        if timeout >= 0 and duration >= timeout then
+            userlog:sendlog(core.ERROR, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))
+            return
+        end
+    end
+end
 
 -- Done --
 return

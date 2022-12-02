@@ -59,7 +59,7 @@ const struct luaL_Reg EndpointProxy::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<endpoint>, <asset>, <resources>, <parameter string>, <timeout>, <outq_name>)
+ * luaCreate - create(<endpoint>, <asset>, <resources>, <parameter string>, <timeout>, <outq_name>, <terminator>)
  *----------------------------------------------------------------------------*/
 int EndpointProxy::luaCreate (lua_State* L)
 {
@@ -101,15 +101,16 @@ int EndpointProxy::luaCreate (lua_State* L)
         const char* _parameters         = getLuaString(L, 4); // get request parameters
         int         _timeout_secs       = getLuaInteger(L, 5, true, RqstParms::DEFAULT_RQST_TIMEOUT); // get timeout in seconds
         const char* _outq_name          = getLuaString(L, 6); // get output queue
-        long        _num_threads        = getLuaInteger(L, 7, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
-        long        _rqst_queue_depth   = getLuaInteger(L, 8, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
+        bool        _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
+        long        _num_threads        = getLuaInteger(L, 8, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
+        long        _rqst_queue_depth   = getLuaInteger(L, 9, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
 
         /* Check Parameters */
         if(_num_threads <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
         else if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
 
         /* Return Endpoint Proxy Object */
-        return createLuaObject(L, new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _num_threads, _rqst_queue_depth));
+        return createLuaObject(L, new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth));
     }
     catch(const RunTimeException& e)
     {
@@ -129,7 +130,7 @@ int EndpointProxy::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources,
-                              const char* _parameters, int _timeout_secs, const char* _outq_name,
+                              const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
                               int _num_threads, int _rqst_queue_depth):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
@@ -142,6 +143,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     timeout = _timeout_secs;
     numProxyThreads = _num_threads;
     rqstQDepth = _rqst_queue_depth;
+    sendTerminator = _send_terminator;
 
     /* Proxy Active */
     active = true;
@@ -281,8 +283,15 @@ void* EndpointProxy::collatorThread (void* parm)
         else LocalLib::performIOTimeout();
     }
 
+    /* Send Terminator */
+    if(proxy->sendTerminator)
+    {
+        proxy->outQ->postCopy("", 0);
+    }
+
     /* Signal Complete */
     proxy->signalComplete();
+
     return NULL;
 }
 

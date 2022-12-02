@@ -104,13 +104,14 @@ class EndpointProxy: public LuaObject
         Publisher*          outQ;
         int                 numProxyThreads;
         int                 rqstQDepth;
+        bool                sendTerminator;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                             EndpointProxy           (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources,
-                                                     const char* _parameters, int _timeout_secs, const char* _outq_name,
+                                                     const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
                                                      int _num_threads, int _rqst_queue_depth);
                             ~EndpointProxy          (void);
 
