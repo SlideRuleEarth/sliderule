@@ -161,10 +161,11 @@ void LuaEndpoint::generateExceptionStatus (int code, event_level_t level, Publis
 
     /* Post Exception Record */
     uint8_t* rec_buf = NULL;
-    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+    int rec_bytes = record.serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP);
     int post_status = MsgQ::STATE_TIMEOUT;
-    if(active) while((*active) && (post_status = outq->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-    else outq->postCopy(rec_buf, rec_bytes, IO_CHECK);
+    if(active) while((*active) && (post_status = outq->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
+    else post_status = outq->postRef(rec_buf, rec_bytes, IO_CHECK);
+    if(post_status <= 0) delete [] rec_buf;
 }
 
 /******************************************************************************

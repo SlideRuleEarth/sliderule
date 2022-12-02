@@ -567,6 +567,8 @@ int EventLib::sendEvent (event_t* event, int attr_size)
     LocalLib::copy(data, event, event_record_size);
 
     uint8_t* rec_buf = NULL;
-    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-    return outq->postCopy(rec_buf, rec_bytes, IO_CHECK);
+    int rec_bytes = record.serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP);
+    int status = outq->postRef(rec_buf, rec_bytes, IO_CHECK);
+    if(status <= 0) delete [] rec_buf;
+    return status;
 }
