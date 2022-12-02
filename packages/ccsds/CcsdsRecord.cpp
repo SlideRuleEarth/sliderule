@@ -66,8 +66,8 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
     if(recordDefinition != NULL)
     {
         memoryAllocated = recordDefinition->data_size;
-        recordMemory = new char[memoryAllocated];
-        recordData = (unsigned char*)recordMemory;
+        recordMemory = new unsigned char[memoryAllocated];
+        recordData = recordMemory;
         memoryOwner = true;
     }
     else
@@ -105,8 +105,8 @@ CcsdsRecord::CcsdsRecord(unsigned char* buffer, int size): RecordObject()
         pktDef = pkt_def;
         recordDefinition = pktDef->definition;
         memoryAllocated = MAX(recordDefinition->data_size, size);
-        recordMemory = new char[memoryAllocated];
-        recordData = (unsigned char*)recordMemory;
+        recordMemory = new unsigned char[memoryAllocated];
+        recordData = recordMemory;
         LocalLib::copy(recordData, buffer, MIN(recordDefinition->data_size, size));
         memoryOwner = true;
     }
@@ -363,7 +363,7 @@ CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size): Ccs
         pktDef = pkt_def;
         recordDefinition = pktDef->definition;
         recordData = buffer;
-        recordMemory = (char*)recordData;
+        recordMemory = recordData;
     }
     else
     {

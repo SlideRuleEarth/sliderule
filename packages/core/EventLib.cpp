@@ -75,8 +75,6 @@ static RecordObject::fieldDef_t rec_def[] =
 
 const char* EventLib::rec_type = "eventrec";
 
-int EventLib::rec_type_size;
-
 std::atomic<uint32_t> EventLib::trace_id{1};
 Thread::key_t EventLib::trace_key;
 
@@ -103,9 +101,6 @@ void EventLib::init (const char* eventq)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Fatal error: failed to register event record");
     }
-
-    /* Calculate Size of Record Type */
-    rec_type_size = StringLib::size(rec_type) + 1;
 
     /* Create Thread Global */
     trace_key = Thread::createGlobal();
@@ -570,5 +565,12 @@ void EventLib::iterateMetric (const char* category, metric_func_t cb, void* parm
  *----------------------------------------------------------------------------*/
 int EventLib::sendEvent (event_t* event, int attr_size)
 {
-    return RecordObject::postSerial(outq, IO_CHECK, rec_type, rec_type_size, (unsigned char*)event, offsetof(event_t, attr) + attr_size);
+    int event_record_size = offsetof(event_t, attr) + attr_size;
+    RecordObject record(rec_type, event_record_size);
+    event_t* data = (event_t*)record.getRecordData();
+    LocalLib::copy(data, event, event_record_size);
+
+    uint8_t* rec_buf = NULL;
+    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+    return outq->postCopy(rec_buf, rec_bytes, IO_CHECK);
 }

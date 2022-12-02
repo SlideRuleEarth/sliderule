@@ -177,7 +177,7 @@ class RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                RecordObject        (const char* rec_type, int allocated_memory=0); // must include the record type
+                                RecordObject        (const char* rec_type, int allocated_memory=0, bool clear=true); // must include the record type
                                 RecordObject        (unsigned char* buffer, int size);
         virtual                 ~RecordObject       (void);
 
@@ -225,7 +225,6 @@ class RecordObject
         static int              getRecordMaxFields  (const char* rec_type);
         static int              getRecordFields     (const char* rec_type, char*** field_names, field_t*** fields);
         static int              parseSerial         (unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data);
-        static int              postSerial          (Publisher* outq, int timeout, const char* rec_type, int rec_type_size, unsigned char* buffer, int size);
         static unsigned int     str2flags           (const char* str);
         static const char*      flags2str           (unsigned int flags);
         static fieldType_t      str2ft              (const char* str);
@@ -283,7 +282,7 @@ class RecordObject
         static Mutex                        defMut;
 
         definition_t*   recordDefinition;
-        char*           recordMemory;       // block of allocated memory <record type as null terminated string><record data as binary>
+        unsigned char*  recordMemory;       // block of allocated memory <record type as null terminated string><record data as binary>
         unsigned char*  recordData;         // pointer to binary data in recordMemory
         int             memoryAllocated;    // number of bytes allocated by object and pointed to by recordMemory
         bool            memoryOwner;        // true if object owns (and therefore must free) memory allocated
@@ -300,7 +299,6 @@ class RecordObject
         static field_t          getUserField        (definition_t* def, const char* field_name);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
         static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags);
-        static void*            populateHeader      (char* buf, const char* type_name, int type_size, int data_size);
 
         /* Overloaded Methods */
         static definition_t*    getDefinition       (const char* rec_type);

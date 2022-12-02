@@ -161,8 +161,6 @@ class EventLib
          * Data
          *--------------------------------------------------------------------*/
 
-        static int rec_type_size;
-
         static std::atomic<uint32_t> trace_id;
         static Thread::key_t trace_key;
 

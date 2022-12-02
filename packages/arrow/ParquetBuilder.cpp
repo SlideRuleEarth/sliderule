@@ -417,7 +417,7 @@ bool ParquetBuilder::processTermination (void)
     arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
     StringLib::copy(&meta->filename[0], outFileName, FILE_NAME_MAX_LEN);
     meta->size = file_size;
-    if(!postRecord(meta_record)) return false; // early exit
+    if(!postRecord(&meta_record)) return false; // early exit
 
     /* Stream Parquet File Back */
     long offset = 0;
@@ -426,7 +426,7 @@ bool ParquetBuilder::processTermination (void)
         long bytes_remaining = file_size - offset;
         long bytes_to_read = MIN(bytes_remaining, FILE_BUFFER_RSPS_SIZE);
         RecordObject data_record(dataRecType, bytes_to_read);
-        uint8_t* data = (uint8_t*)data_record->getRecordData();
+        uint8_t* data = (uint8_t*)data_record.getRecordData();
         size_t bytes_read = fread(data, 1, FILE_BUFFER_RSPS_SIZE, fp);
 
         // need to check bytes_read matches bytes_to_read

@@ -190,7 +190,7 @@ RecordObject::valType_t RecordObject::Field::getValueType(void)
  *
  *  Attempts to create record from a string specification
  *----------------------------------------------------------------------------*/
-RecordObject::RecordObject(const char* rec_type, int allocated_memory)
+RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clear)
 {
     assert(rec_type);
 
@@ -220,13 +220,30 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory)
 
         /* Allocate Record Memory */
         memoryOwner = true;
-        recordMemory = new char[memoryAllocated];
+        recordMemory = new unsigned char[memoryAllocated];
 
         /* Populate Header */
-        recordData = (unsigned char*)populateHeader(recordMemory, recordDefinition->type_name, recordDefinition->type_size, data_size);
+        #ifdef __be__
+            rec_hdr_t hdr = {
+                .version = RECORD_FORMAT_VERSION,
+                .type_size = recordDefinition->type_size,
+                .data_size = data_size
+            };
+        #else
+            rec_hdr_t hdr = {
+                .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
+                .type_size = LocalLib::swaps(recordDefinition->type_size),
+                .data_size = LocalLib::swapl(data_size)
+            };
+        #endif
+        LocalLib::copy(recordMemory, &hdr, sizeof(rec_hdr_t));
+        LocalLib::copy(&recordMemory[sizeof(rec_hdr_t)], recordDefinition->type_name, recordDefinition->type_size);
+
+        /* Set Record Data Pointer */
+        recordData = &recordMemory[sizeof(rec_hdr_t) + recordDefinition->type_size];
 
         /* Zero Out Record Data */
-        LocalLib::set(recordData, 0, recordDefinition->data_size);
+        if(clear) LocalLib::set(recordData, 0, recordDefinition->data_size);
     }
     else
     {
@@ -250,7 +267,7 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
             /* Set Record Memory */
             memoryOwner = true;
             memoryAllocated = size;
-            recordMemory = new char[memoryAllocated];
+            recordMemory = new unsigned char[memoryAllocated];
             LocalLib::copy(recordMemory, buffer, memoryAllocated);
 
             /* Set Record Data */
@@ -1088,22 +1105,6 @@ int RecordObject::parseSerial(unsigned char* buffer, int size, const char** rec_
 }
 
 /*----------------------------------------------------------------------------
- * postSerial
- *----------------------------------------------------------------------------*/
-int RecordObject::postSerial (Publisher* outq, int timeout, const char* rec_type, int rec_type_size, unsigned char* buffer, int size)
-{
-    const int MAX_HDR_SIZE = 128;
-    char data1[MAX_HDR_SIZE];
-
-    int data1_size = sizeof(rec_hdr_t) + rec_type_size;
-    if(data1_size > MAX_HDR_SIZE) return -1;
-
-    populateHeader(data1, rec_type, rec_type_size, size);
-
-    return outq->postCopy(data1, data1_size, buffer, size, timeout);
-}
-
-/*----------------------------------------------------------------------------
  * str2flags
  *----------------------------------------------------------------------------*/
 unsigned int RecordObject::str2flags (const char* str)
@@ -1660,30 +1661,6 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
 
     /* Return Field and Status */
     return status;
-}
-/*----------------------------------------------------------------------------
- * populateHeader
- *----------------------------------------------------------------------------*/
-void* RecordObject::populateHeader (char* buf, const char* type_name, int type_size, int data_size)
-{
-    #ifdef __be__
-        rec_hdr_t hdr = {
-            .version = RECORD_FORMAT_VERSION,
-            .type_size = def->type_size,
-            .data_size = data_size
-        };
-    #else
-        rec_hdr_t hdr = {
-            .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
-            .type_size = LocalLib::swaps(type_size),
-            .data_size = LocalLib::swapl(data_size)
-        };
-    #endif
-
-    LocalLib::copy(buf, &hdr, sizeof(rec_hdr_t));
-    LocalLib::copy(&buf[sizeof(rec_hdr_t)], type_name, type_size);
-
-    return &buf[sizeof(rec_hdr_t) + type_size];
 }
 
 /*----------------------------------------------------------------------------
