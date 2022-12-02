@@ -20,8 +20,6 @@ local json = require("json")
 -- Create User Status --
 local userlog = msg.publish(rspq)
 
--- Exception Forwarding --
-
 -- Request Parameters --
 local rqst = json.decode(arg[1])
 local atl03_asset = rqst["atl03-asset"]
@@ -53,6 +51,7 @@ if output_parms then
         output_dispatch = core.dispatcher(rsps_from_nodes)
         output_dispatch:attach(parquet_builder, "atl06rec")
         output_dispatch:attach(except_pub, "exceptrec") -- exception records
+        output_dispatch:attach(except_pub, "eventrec") -- event records
         output_dispatch:run()
     end
 end
