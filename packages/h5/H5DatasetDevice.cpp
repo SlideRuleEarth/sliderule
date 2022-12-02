@@ -95,12 +95,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void H5DatasetDevice::init (void)
 {
-    int def_elements = sizeof(recDef) / sizeof(RecordObject::fieldDef_t);
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, "id", sizeof(h5dataset_t), recDef, def_elements);
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", recType, rc);
-    }
+    RECDEF(recType, recDef, sizeof(h5dataset_t), "id");
 }
 
 /*----------------------------------------------------------------------------

@@ -60,7 +60,8 @@ const RecordObject::fieldDef_t ParquetBuilder::metaRecDef[] = {
 
 const char* ParquetBuilder::dataRecType = "arrowrec.data";
 const RecordObject::fieldDef_t ParquetBuilder::dataRecDef[] = {
-    {"data", RecordObject::UINT8, 0, 0, NULL, NATIVE_FLAGS} // variable length
+    {"filename",   RecordObject::STRING,   offsetof(arrow_file_data_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"data",       RecordObject::UINT8,    offsetof(arrow_file_data_t, data),                      0,  NULL, NATIVE_FLAGS} // variable length
 };
 
 const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
@@ -97,19 +98,8 @@ int ParquetBuilder::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void ParquetBuilder::init (void)
 {
-    RecordObject::recordDefErr_t rc;
-
-    rc = RecordObject::defineRecord(metaRecType, NULL, sizeof(arrow_file_meta_t), metaRecDef, sizeof(metaRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", metaRecType, rc);
-    }
-
-    rc = RecordObject::defineRecord(dataRecType, NULL, 1, dataRecDef, 1);
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", dataRecType, rc);
-    }
+    RECDEF(metaRecType, metaRecDef, sizeof(arrow_file_meta_t), NULL);
+    RECDEF(dataRecType, dataRecDef, sizeof(arrow_file_data_t), NULL);
 }
 
 /*----------------------------------------------------------------------------

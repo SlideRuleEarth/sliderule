@@ -119,11 +119,7 @@ int Atl03Indexer::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Atl03Indexer::init (void)
 {
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(recType, NULL, sizeof(index_t), recDef, sizeof(recDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", recType, rc);
-    }
+    RECDEF(recType, recDef, sizeof(index_t), NULL);
 }
 
 /*----------------------------------------------------------------------------

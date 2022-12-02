@@ -110,12 +110,8 @@ bool LuaEndpoint::init (void)
         status = false;
     }
 
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(EndpointExceptionRecType, "code", sizeof(response_exception_t), EndpointExceptionRecDef, sizeof(EndpointExceptionRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", EndpointExceptionRecType, rc);
-        status = false;
-    }
+    /* Register Record Definition */
+    RECDEF(EndpointExceptionRecType, EndpointExceptionRecDef, sizeof(response_exception_t), "code");
 
     return status;
 }

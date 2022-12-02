@@ -167,13 +167,8 @@ int Atl06Dispatch::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::init (void)
 {
-    RecordObject::recordDefErr_t rc;
-
-    rc = RecordObject::defineRecord(elRecType, NULL, sizeof(elevation_t), elRecDef, sizeof(elRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF) mlog(CRITICAL, "Failed to define %s: %d", elRecType, rc);
-
-    rc = RecordObject::defineRecord(elCompactRecType, NULL, sizeof(elevation_compact_t), elCompactRecDef, sizeof(elCompactRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF) mlog(CRITICAL, "Failed to define %s: %d", elCompactRecType, rc);
+    RECDEF(elRecType,           elRecDef,           sizeof(elevation_t),            NULL);
+    RECDEF(elCompactRecType,    elCompactRecDef,    sizeof(elevation_compact_t),    NULL);
 
     /*
      * Note: the size associated with these records includes only one elevation;
@@ -181,11 +176,8 @@ void Atl06Dispatch::init (void)
      * the size of the record manually.
      */
 
-    rc = RecordObject::defineRecord(atRecType, NULL, offsetof(atl06_t, elevation[1]), atRecDef, sizeof(atRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF) mlog(CRITICAL, "Failed to define %s: %d", atRecType, rc);
-
-    rc = RecordObject::defineRecord(atCompactRecType, NULL, offsetof(atl06_compact_t, elevation[1]), atCompactRecDef, sizeof(atCompactRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF) mlog(CRITICAL, "Failed to define %s: %d", atCompactRecType, rc);
+    RECDEF(atRecType,           atRecDef,           offsetof(atl06_t, elevation[1]),            NULL);
+    RECDEF(atCompactRecType,    atCompactRecDef,    offsetof(atl06_compact_t, elevation[1]),    NULL);
 }
 
 /******************************************************************************

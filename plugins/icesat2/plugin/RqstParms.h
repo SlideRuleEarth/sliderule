@@ -218,8 +218,8 @@ class RqstParms: public LuaObject
         typedef struct {
             uint8_t                 score;                      // minimum allowed weight of photon using yapc algorithm
             int                     version;                    // version of the yapc algorithm to run
-            int                     knn;                        // k-nearest neighbor
-            int                     min_knn;                    // minimum number of k-nearest neighors
+            int                     knn;                        // (version 2 only) k-nearest neighbors
+            int                     min_knn;                    // (version 3 only) minimum number of k-nearest neighors
             double                  win_h;                      // window height (overrides calculated value if non-zero)
             double                  win_x;                      // window width
         } yapc_t;

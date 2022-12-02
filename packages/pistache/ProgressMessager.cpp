@@ -82,11 +82,7 @@ int ProgressMessager::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void ProgressMessager::init (void)
 {
-    RecordObject::recordDefErr_t rc = RecordObject::defineRecord(rec_type, NULL, sizeof(progress_message_t), rec_def, sizeof(rec_def) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", rec_type, rc);
-    }
+    RECDEF(rec_type, rec_def, sizeof(progress_message_t), NULL);
 }
 
 /*----------------------------------------------------------------------------

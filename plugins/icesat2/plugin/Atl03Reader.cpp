@@ -163,43 +163,12 @@ int Atl03Reader::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::init (void)
 {
-    RecordObject::recordDefErr_t rc;
-
-    rc = RecordObject::defineRecord(phRecType, NULL, sizeof(photon_t), phRecDef, sizeof(phRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", phRecType, rc);
-    }
-
-    rc = RecordObject::defineRecord(exRecType, "extent_id", sizeof(extent_t), exRecDef, sizeof(exRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", exRecType, rc);
-    }
-
-    rc = RecordObject::defineRecord(phFlatRecType, NULL, sizeof(flat_photon_t), phFlatRecDef, sizeof(phFlatRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", phFlatRecType, rc);
-    }
-
-    rc = RecordObject::defineRecord(exFlatRecType, "extent_id", 1, exFlatRecDef, sizeof(exFlatRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", exFlatRecType, rc);
-    }
-
-    rc = RecordObject::defineRecord(phAncRecType, NULL, sizeof(anc_photon_t), phAncRecDef, sizeof(phAncRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", phAncRecType, rc);
-    }
-
-    rc = RecordObject::defineRecord(exAncRecType, NULL, sizeof(anc_extent_t), exAncRecDef, sizeof(exAncRecDef) / sizeof(RecordObject::fieldDef_t));
-    if(rc != RecordObject::SUCCESS_DEF)
-    {
-        mlog(CRITICAL, "Failed to define %s: %d", exAncRecType, rc);
-    }
+    RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
+    RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       "extent_id");
+    RECDEF(phFlatRecType,   phFlatRecDef,   sizeof(flat_photon_t),  "extent_id");
+    RECDEF(exFlatRecType,   exFlatRecDef,   1,                      "extent_id");
+    RECDEF(phAncRecType,    phAncRecDef,    sizeof(anc_photon_t),   "extent_id");
+    RECDEF(exAncRecType,    exAncRecDef,    sizeof(anc_extent_t),   "extent_id");
 }
 
 /*----------------------------------------------------------------------------

@@ -51,6 +51,17 @@
 #define TOBYTES(bits)   ((bits) >> 3)
 #define TOBITS(bytes)   ((bytes) << 3)
 
+
+#define RECDEF(type, def, size, key) \
+{ \
+    RecordObject::recordDefErr_t rc; \
+    rc = RecordObject::defineRecord(type, key, size, def, sizeof(def) / sizeof(RecordObject::fieldDef_t)); \
+    if(rc != RecordObject::SUCCESS_DEF) \
+    { \
+        mlog(CRITICAL, "Failed to define %s: %d", type, rc); \
+    } \
+}
+
 /******************************************************************************
  * RECORD OBJECT CLASS
  ******************************************************************************/

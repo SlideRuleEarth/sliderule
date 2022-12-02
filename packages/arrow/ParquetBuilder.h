@@ -83,6 +83,11 @@ class ParquetBuilder: public DispatchObject
             long    size;
         } arrow_file_meta_t;
 
+        typedef struct {
+            char    filename[FILE_NAME_MAX_LEN];
+            uint8_t data[]; // variable length
+        } arrow_file_data_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
