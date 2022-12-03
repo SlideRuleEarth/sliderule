@@ -58,7 +58,7 @@ class ArcticDEMRaster: public LuaObject
         static const int   ARCTIC_DEM_CRS = 3413;
 
         static const int   MAX_READER_THREADS = 200;
-        static const int   MAX_LOOK_AHEAD_RASTERS = 9;
+        static const int   MAX_LOOK_AHEAD_RASTERS = 0;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -73,7 +73,7 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
-            bool             inUse;
+            bool             samplingEnabled;
             ArcticDEMRaster* obj;
             GDALDataset*     dset;
             GDALRasterBand*  band;
@@ -138,8 +138,8 @@ class ArcticDEMRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         ArcticDEMRaster      (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
-        double sampleMosaic   (double lon, double lat);
-        void   sampleStrips   (double lon, double lat);
+        void   sampleMosaic  (double lon, double lat);
+        void   sampleStrips  (double lon, double lat);
 
     private:
         /*--------------------------------------------------------------------
@@ -176,14 +176,15 @@ class ArcticDEMRaster: public LuaObject
         static int luaCellSize(lua_State *L);
         static int luaSamples(lua_State *L);
 
-        static bool  containsPoint  (GDALDataset *dset, bbox_t *bbox, OGRPoint *p);
-        static void* readingThread  (void *param);
+        static void* readingThread (void *param);
 
-        bool  findRasters     (OGRPoint* p);
-        bool  readRasters     (OGRPoint* p);
-        bool  updateDictionary(OGRPoint* p);
-        bool  readRaster      (raster_t* raster);
-        bool  openVrtDset     (const char *fileName);
+        bool  findRasters         (OGRPoint* p);
+        bool  readRasters         (OGRPoint* p);
+        bool  updateDictionary    (OGRPoint* p);
+        bool  readRaster          (raster_t* raster);
+        bool  openVrtDset         (const char *fileName);
+        bool  vrtContainsPoint    (OGRPoint *p);
+        bool  rasterContainsPoint (raster_t *raster, OGRPoint *p);
 };
 
 #endif  /* __arcticdem_raster__ */

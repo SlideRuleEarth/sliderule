@@ -36,7 +36,6 @@ print('ExecTime:', dtime, '\n')
 
 local el, status
 local max_cnt = 1000
--- local max_cnt = 500
 
 --[[
 --]]
@@ -54,7 +53,7 @@ do
         print(i, status)
     end
 
-    modulovalue = 100
+    modulovalue = 1000
     if (i % modulovalue == 0) then
         midtime = time.latch();
         dtime = midtime-intervaltime
@@ -69,7 +68,10 @@ dtime = stoptime-starttime
 print('\n')
 print(max_cnt, 'points read time', dtime)
 
+-- os.exit()
 
+max_cnt = 1000
+-- max_cnt = 10
 print('\n------------------\nTest: Reading', max_cnt, '  different points (THE SAME RASTER)\n------------')
 lon = _lon
 lat = _lat
@@ -81,6 +83,12 @@ do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         print(i, status)
+    else
+        -- for i, v in ipairs(tbl) do
+        --     local el = v["value"]
+        --     local fname = v["file"]
+        --     print(string.format("(%02d) %20f     %s", i, el, fname))
+        -- end
     end
 
     if (i % 100 == 0) then
