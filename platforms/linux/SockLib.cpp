@@ -301,7 +301,7 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
         }
         else if(timeout != IO_CHECK && c < 0)
         {
-            dlog("Failed (%d) to send data to ready socket [%0X]: %s", c, revents, strerror(errno));
+            dlog("Failed (%d) to send data to ready socket [0x%0X]: %s", c, revents, strerror(errno));
             c = SOCK_ERR_RC;
         }
     }
@@ -345,7 +345,7 @@ int SockLib::sockrecv(int fd, void* buf, int size, int timeout)
         }
         else if(timeout != IO_CHECK && c < 0)
         {
-            dlog("Failed (%d) to receive data from ready socket [%0X]: %s", c, revents, strerror(errno));
+            dlog("Failed (%d) to receive data from ready socket [0x%0X]: %s", c, revents, strerror(errno));
             c = SOCK_ERR_RC;
         }
     }
@@ -484,12 +484,15 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     /* Handle Errors */
                     if(polllist[i].revents & POLLERR)
                     {
-                        dlog("Poll error [0x%X] detected on server socket [%d]: %s", polllist[i].revents, polllist[i].fd, strerror(errno));
+                        int error = 0;
+                        socklen_t errlen = sizeof(error);
+                        getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen);
+                        dlog("Poll error (%d) detected [0x%X] on server socket <%d>: %s", error, polllist[i].revents, polllist[i].fd, strerror(error));
                         cb_stat = -1; // treat like a callback error or disconnect
                     }
                     else if(polllist[i].revents & POLLNVAL)
                     {
-                        dlog("Socket [%d] not open, yet trying to poll: %s", polllist[i].fd, strerror(errno));
+                        dlog("Socket <%d> not open, yet trying to poll: %s", polllist[i].fd, strerror(errno));
                         valid_fd = false;
                     }
                     else
@@ -514,7 +517,6 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     if(!valid_fd)
                     {
                         /* Remove from Polling */
-                        //dlog("Disconnected [%d] from server socket %s:%d", polllist[i].fd, ip_addr ? ip_addr : "0.0.0.0", port);
                         int connections_left = num_sockets - 1;
                         if(i < connections_left)
                         {
@@ -544,7 +546,10 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                 /* Handle New Connections */
                 if(polllist[0].revents & (POLLNVAL | POLLERR))
                 {
-                    dlog("Error detected on listener socket: %s", strerror(errno));
+                    int error = 0;
+                    socklen_t errlen = sizeof(error);
+                    getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen);
+                    dlog("Poll error (%d) detected [0x%X] on listener socket: %s", error, polllist[0].revents, strerror(errno));
                 }
                 else if(polllist[0].revents & POLLIN)
                 {
@@ -563,8 +568,6 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                                 /* Call On Activity Call-Back */
                                 if(on_act(client_socket, IO_CONNECT_FLAG, parm) >= 0)
                                 {
-                                    //dlog("Established connection [%d] to server socket %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
-
                                     /* Populate New Connection */
                                     polllist[num_sockets].fd = client_socket;
                                     polllist[num_sockets].events = POLLHUP; // always listen for haning up
@@ -674,7 +677,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
                 }
 
                 /* Update Connection Variables */
-                dlog("Client socket [%d] connection made to %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
+                dlog("Client socket <%d> connection made to %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
                 polllist[0].fd = client_socket;
                 _connected = true;
                 if(connected) *connected = true;
@@ -710,12 +713,12 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             int cb_stat = 0;
             if(polllist[0].revents & POLLERR)
             {
-                dlog("Poll error detected on server socket [%d]: %s", polllist[0].fd, strerror(errno));
+                dlog("Poll error detected on client socket <%d>: %s", polllist[0].fd, strerror(errno));
                 cb_stat = -1; // treat like a callback error or disconnect
             }
             else if(polllist[0].revents & POLLNVAL)
             {
-                dlog("Socket [%d] not open, yet trying to poll: %s", polllist[0].fd, strerror(errno));
+                dlog("Socket <%d> not open, yet trying to poll: %s", polllist[0].fd, strerror(errno));
                 valid_fd = false;
             }
             else
@@ -730,7 +733,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             /* Handle Disconnects */
             if( (cb_stat < 0) || (polllist[0].revents & POLLHUP) )
             {
-                dlog("Disconnect [%d] from client socket %s:%d", polllist[0].fd, ip_addr ? ip_addr : "0.0.0.0", port);
+                dlog("Disconnect client socket <%d> from client socket %s:%d", polllist[0].fd, ip_addr ? ip_addr : "0.0.0.0", port);
                 on_act(polllist[0].fd, IO_DISCONNECT_FLAG, parm); // no sense checking error, nothing to do
                 SockLib::sockclose(polllist[0].fd);
                 valid_fd = false;
