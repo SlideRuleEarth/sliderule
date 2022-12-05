@@ -19,8 +19,8 @@ class TestLocal:
 
 @pytest.mark.network
 class TestRemote:
-    def test_check_version(self, server, organization):
-        sliderule.set_url(server)
+    def test_check_version(self, domain, organization):
+        sliderule.set_url(domain)
         sliderule.authenticate(organization)
         sliderule.check_version(plugins=['icesat2'])
 

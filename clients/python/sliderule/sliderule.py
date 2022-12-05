@@ -467,7 +467,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     except requests.exceptions.SSLError as e:
         raise FatalError("Unable to verify SSL certificate: {}".format(e))
     except requests.ConnectionError as e:
-        raise FatalError("Failed to connect to endpoint {}".format(url))
+        raise FatalError("Connection error to endpoint {}".format(url))
     except requests.Timeout as e:
         raise TransientError("Timed-out waiting for response from endpoint {}".format(url))
     except requests.exceptions.ChunkedEncodingError as e:

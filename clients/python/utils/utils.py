@@ -1,4 +1,3 @@
-import sys
 import time
 import json
 from sliderule import icesat2
@@ -56,7 +55,7 @@ def initialize_client(args):
 
     # Set Script Defaults
     cfg = {
-        "url":                      'localhost',
+        "domain":                   'localhost',
         "organization":             None,
         "asset":                    'atlas-local',
         "region":                   'examples/grandmesa.geojson',
@@ -93,7 +92,7 @@ def initialize_client(args):
     parse_command_line(args, cfg)
 
     # Configure SlideRule
-    icesat2.init(cfg["url"], cfg["verbose"], organization=cfg["organization"])
+    icesat2.init(cfg["domain"], cfg["verbose"], organization=cfg["organization"])
 
     # Build Initial Parameters
     parms = {

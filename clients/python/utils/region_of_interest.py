@@ -39,6 +39,10 @@ if __name__ == '__main__':
     # Display Statistics
     display_statistics(atl06, "elevations")
 
+    # Exit Early If No Photos
+    if len(atl06) <= 0:
+        sys.exit(0)
+
     # Calculate Extent
     lons = [p["lon"] for p in parms["poly"]]
     lats = [p["lat"] for p in parms["poly"]]
