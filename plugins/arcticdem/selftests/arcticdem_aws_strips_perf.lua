@@ -14,6 +14,8 @@ local assets = asset.loaddir() -- looks for asset_directory.csv in same director
 local asset_name = "arcticdem-local"
 local arcticdem_local = core.getbyname(asset_name)
 
+-- local verbose = true
+local verbose = false
 
 local  lon = -178.0
 local  lat =   51.7
@@ -27,11 +29,18 @@ local tbl, status = dem:samples(lon, lat)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    print(string.format("(%02d) %20f     %s", i, el, fname))
+if status ~= true then
+    print(string.format("Failed to read point lon: %f, lat: %f", lon, lat))
+else
+    if verbose then
+        for j, v in ipairs(tbl) do
+            local el = v["value"]
+            local fname = v["file"]
+            print(string.format("(%02d) %20f     %s", j, el, fname))
+        end
+    end
 end
+
 print('ExecTime:', dtime, '\n')
 
 local el, status
@@ -50,7 +59,7 @@ for i = 1, max_cnt
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(i, status)
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     end
 
     modulovalue = 1000
@@ -70,8 +79,8 @@ print(max_cnt, 'points read time', dtime)
 
 -- os.exit()
 
-max_cnt = 1000
--- max_cnt = 10
+-- max_cnt = 1000
+max_cnt = 100
 print('\n------------------\nTest: Reading', max_cnt, '  different points (THE SAME RASTER)\n------------')
 lon = _lon
 lat = _lat
@@ -82,16 +91,18 @@ for i = 1, max_cnt
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(i, status)
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     else
-        -- for i, v in ipairs(tbl) do
-        --     local el = v["value"]
-        --     local fname = v["file"]
-        --     print(string.format("(%02d) %20f     %s", i, el, fname))
-        -- end
+        if verbose then
+            for i, v in ipairs(tbl) do
+                local el = v["value"]
+                local fname = v["file"]
+                print(string.format("(%02d) %20f     %s", i, el, fname))
+            end
+        end
     end
 
-    if (i % 100 == 0) then
+    if (i % 40 == 0) then
         lon = _lon
         lat = _lat
     else

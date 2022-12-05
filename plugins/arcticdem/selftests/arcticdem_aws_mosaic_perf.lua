@@ -14,6 +14,9 @@ local assets = asset.loaddir() -- looks for asset_directory.csv in same director
 local asset_name = "arcticdem-local"
 local arcticdem_local = core.getbyname(asset_name)
 
+-- local verbose = true
+local verbose = false
+
 local  lon   = -180.00
 local  lat = 66.34  -- Arctic Circle lat
 local _lon = lon
@@ -26,16 +29,21 @@ local tbl, status = dem:samples(lon, lat)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    print(string.format("(%02d) %20f     %s", i, el, fname))
+if status ~= true then
+    print(string.format("Failed to read point lon: %f, lat: %f", lon, lat))
+else
+    if verbose then
+        for j, v in ipairs(tbl) do
+            local el = v["value"]
+            local fname = v["file"]
+            print(string.format("(%02d) %20f     %s", j, el, fname))
+        end
+    end
 end
+
 print('ExecTime:', dtime, '\n')
 
-local el, status
-local max_cnt = 1000000
--- local max_cnt = 10000
+local max_cnt = 100000
 
 --[[
 --]]
@@ -49,7 +57,7 @@ for i = 1, max_cnt
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(i, status)
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     end
 end
 
@@ -64,7 +72,7 @@ print(max_cnt, 'points read time', dtime)
 --]]
 
 -- About 500 points read from the same raster before opening a new one
-max_cnt = 10000
+max_cnt = 1000
 print('\n------------------\nTest: Reading', max_cnt, '  different points (Average case of DIFFERENT RASTER)\n------------')
 lon = _lon
 lat = _lat
@@ -75,7 +83,7 @@ for i = 1, max_cnt
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(i, status)
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     end
 
     lon = lon + 0.001
@@ -112,7 +120,15 @@ for i = 1, max_cnt
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(i, status)
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+    else
+        if verbose then
+            for j, v in ipairs(tbl) do
+                local el = v["value"]
+                local fname = v["file"]
+                print(string.format("(%02d) %20f     %s", j, el, fname))
+            end
+        end
     end
 
     -- NOTE: COGs are 1x1 degree but if I increment lon by 1.1 or 1.2

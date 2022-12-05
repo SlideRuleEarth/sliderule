@@ -178,13 +178,15 @@ class ArcticDEMRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        bool  findRasters         (OGRPoint* p);
-        bool  readRasters         (OGRPoint* p);
-        bool  updateDictionary    (OGRPoint* p);
-        bool  readRaster          (raster_t* raster);
-        bool  openVrtDset         (const char *fileName);
-        bool  vrtContainsPoint    (OGRPoint *p);
-        bool  rasterContainsPoint (raster_t *raster, OGRPoint *p);
+        void  findRasters            (OGRPoint *p, bool clearList=true);
+        void  readRasters            (void);
+        int   getSampledRastersCount (void);
+        void  invalidateCachedRasters(void);
+        void  updateDictionary       (OGRPoint* p=NULL);
+        void  readRaster             (raster_t* raster);
+        bool  openVrtDset            (const char *fileName);
+        bool  vrtContainsPoint       (OGRPoint *p);
+        bool  rasterContainsPoint    (raster_t *raster, OGRPoint *p);
 };
 
 #endif  /* __arcticdem_raster__ */
