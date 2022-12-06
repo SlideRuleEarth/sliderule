@@ -14,6 +14,7 @@ local assets = asset.loaddir() -- looks for asset_directory.csv in same director
 local asset_name = "arcticdem-local"
 local arcticdem_local = core.getbyname(asset_name)
 
+local failedSamples = 0
 -- local verbose = true
 local verbose = false
 
@@ -30,7 +31,8 @@ local stoptime = time.latch();
 local dtime = stoptime - starttime
 
 if status ~= true then
-    print(string.format("Failed to read point lon: %f, lat: %f", lon, lat))
+    failedSamples = failedSamples + 1
+    print(string.format("\nFailed to read point lon: %f, lat: %f", lon, lat))
 else
     if verbose then
         for j, v in ipairs(tbl) do
@@ -41,10 +43,11 @@ else
     end
 end
 
-print('ExecTime:', dtime, '\n')
+print(string.format("ExecTime: %f, failed reads: %d", dtime, failedSamples))
 
 local el, status
 local max_cnt = 1000
+failedSamples = 0
 
 --[[
 --]]
@@ -59,7 +62,8 @@ for i = 1, max_cnt
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        failedSamples = failedSamples + 1
+        print(string.format("\nFailed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     end
 
     modulovalue = 1000
@@ -74,11 +78,11 @@ end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
-print('\n')
-print(max_cnt, 'points read time', dtime)
+print(string.format("\n%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
 
 -- os.exit()
 
+failedSamples = 0
 -- max_cnt = 1000
 max_cnt = 100
 print('\n------------------\nTest: Reading', max_cnt, '  different points (THE SAME RASTER)\n------------')
@@ -91,7 +95,8 @@ for i = 1, max_cnt
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
-        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        failedSamples = failedSamples + 1
+        print(string.format("\nFailed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     else
         if verbose then
             for i, v in ipairs(tbl) do
@@ -122,8 +127,7 @@ end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
-print('\n')
-print(max_cnt, 'points read time', dtime)
+print(string.format("\n%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
 
 os.exit()
 

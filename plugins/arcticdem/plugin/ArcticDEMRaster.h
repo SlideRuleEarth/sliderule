@@ -58,7 +58,7 @@ class ArcticDEMRaster: public LuaObject
         static const int   ARCTIC_DEM_CRS = 3413;
 
         static const int   MAX_READER_THREADS = 200;
-        static const int   MAX_LOOK_AHEAD_RASTERS = 0;
+        static const int   MAX_EXTRAPOLATED_RASTERS = 10;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -72,9 +72,16 @@ class ArcticDEMRaster: public LuaObject
         } bbox_t;
 
 
+        typedef enum {
+            MOSAIC  = 0,
+            STRIPS  = 1,
+            INVALID = 3
+        } dem_type_t;
+
+
         typedef struct {
-            bool             samplingEnabled;
-            ArcticDEMRaster* obj;
+            bool             enabled;
+            bool             sampled;
             GDALDataset*     dset;
             GDALRasterBand*  band;
             std::string      fileName;
@@ -94,18 +101,13 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
-            Thread*     thread;
-            raster_t*   raster;
-            Cond*       sync;
-            bool        run;
+            ArcticDEMRaster* obj;
+            Thread*          thread;
+            raster_t*        raster;
+            Cond*            sync;
+            bool             run;
         } reader_t;
 
-
-        typedef enum {
-            MOSAIC  = 0,
-            STRIPS  = 1,
-            INVALID = 3
-        } dem_type_t;
 
 
         /*--------------------------------------------------------------------
@@ -160,6 +162,10 @@ class ArcticDEMRaster: public LuaObject
         int                   readerCount;
         dem_type_t            demType;
 
+        double                lastLon;
+        double                lastLat;
+        uint64_t              samplesCounter;
+
 
         OGRCoordinateTransformation *transf;
         OGRSpatialReference srcSrs;
@@ -178,15 +184,17 @@ class ArcticDEMRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        void  findRasters            (OGRPoint *p, bool clearList=true);
-        void  readRasters            (void);
-        int   getSampledRastersCount (void);
-        void  invalidateCachedRasters(void);
-        void  updateDictionary       (OGRPoint* p=NULL);
-        void  readRaster             (raster_t* raster);
-        bool  openVrtDset            (const char *fileName);
-        bool  vrtContainsPoint       (OGRPoint *p);
-        bool  rasterContainsPoint    (raster_t *raster, OGRPoint *p);
+        bool findTIFfilesWithPoint    (OGRPoint *p);
+        void sampleRasters            (void);
+        void processRaster            (raster_t* raster, ArcticDEMRaster* obj);
+        int  getSampledRastersCount   (void);
+        void invalidateRastersCache   (void);
+        void updateRastersCache       (OGRPoint *p);
+        bool openVrtDset              (const char *fileName);
+        bool vrtContainsPoint         (OGRPoint *p);
+        bool rasterContainsPoint      (raster_t *raster, OGRPoint *p);
+        bool findCachedRasterWithPoint(OGRPoint *p, raster_t **raster);
+        void extrapolate              (double lon, double lat);
 };
 
 #endif  /* __arcticdem_raster__ */

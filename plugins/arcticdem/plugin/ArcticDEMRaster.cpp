@@ -181,6 +181,82 @@ inline bool ArcticDEMRaster::rasterContainsPoint(raster_t *raster, OGRPoint *p)
 
 
 /*----------------------------------------------------------------------------
+ * findCachedRasterWithPoint
+ *----------------------------------------------------------------------------*/
+bool ArcticDEMRaster::findCachedRasterWithPoint(OGRPoint *p, ArcticDEMRaster::raster_t** raster)
+{
+    bool foundRaster = false;
+    const char *key = rasterDict.first(raster);
+    while (key != NULL)
+    {
+        assert(*raster);
+        if (rasterContainsPoint(*raster, p))
+        {
+            foundRaster = true;
+            break; /* Only one raster with this point in mosaic rasters */
+        }
+        key = rasterDict.next(raster);
+    }
+    return foundRaster;
+}
+
+
+/*----------------------------------------------------------------------------
+ * extrapolate
+ *----------------------------------------------------------------------------*/
+void ArcticDEMRaster::extrapolate(double lon, double lat)
+{
+    if( samplesCounter > 0)
+    {
+        double lonDelta = lon - lastLon;
+        double latDelta = lat - lastLat;
+#if 0
+        const double MIN_DEGREES = 0.5;
+
+        /*
+         * At 2m resolution tiles are 1x1 degree, make sure to open the next tile
+         * if points are within the same one.
+         */
+        if (abs(lonDelta) < MIN_DEGREES)
+        {
+            if (lon >= lastLon)  lonDelta = MIN_DEGREES;
+            else lonDelta = -MIN_DEGREES;
+        }
+
+        if (abs(latDelta) < MIN_DEGREES)
+        {
+            if (lat >= lastLat)  latDelta = MIN_DEGREES;
+            else latDelta = -MIN_DEGREES;
+        }
+#endif
+        //  print2term("\nEtrapolating for lon: %lf, lat: %lf\n", lon, lat);
+
+        /* Extrapolate several points */
+        for (int i = 1; i <= MAX_EXTRAPOLATED_RASTERS; i++)
+        {
+            double _lon = lon + (i * lonDelta);
+            double _lat = lat + (i * latDelta);
+
+            OGRPoint newPoint = {_lon, _lat};
+
+            /* Only use extrapolated points which can be transformed and are in VRT mosaic */
+            if (newPoint.transform(transf) == OGRERR_NONE)
+            {
+                if (vrtContainsPoint(&newPoint))
+                {
+                    if (findTIFfilesWithPoint(&newPoint))
+                    {
+                        /* Update cache with NULL for point - open rasters but don't sample */
+                        updateRastersCache(NULL);
+                    }
+                    // else print2term("(%d/%d) no tifile for extrapolated lon: %lf, lat: %lf\n", i, MAX_EXTRAPOLATED_RASTERS, _lon, _lat);
+                }
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * samplesMosaic
  *----------------------------------------------------------------------------*/
 void ArcticDEMRaster::sampleMosaic(double lon, double lat)
@@ -191,67 +267,28 @@ void ArcticDEMRaster::sampleMosaic(double lon, double lat)
         /* Is point in big mosaic VRT dataset? */
         if (vrtContainsPoint(&p))
         {
-            bool foundPoint = false;
-
-            /* Is point in one of the rasters in dictionary */
             raster_t *raster = NULL;
-            const char *key = rasterDict.first(&raster);
-            while (key != NULL)
+            if (findCachedRasterWithPoint(&p, &raster))
             {
-                assert(raster);
-                if (rasterContainsPoint(raster, &p))
-                {
-                    foundPoint =  true;
-                    break;  /* Only one raster with this point in mosaic rasters */
-                }
-                key = rasterDict.next(&raster);
-            }
-
-            if (foundPoint)
-            {
-                raster->samplingEnabled = true;
+                raster->enabled = true;
                 raster->point = &p;
-#if 1
-                /*
-                 * The main thread reading in this case is a bit faster
-                 * Reading the same point 10k times (raster cashed in GDAL)
-                 * Main   thread took 0.02 sec
-                 * Reader thread took 0.08 sec
-                 */
-                readRaster(raster);  /* Main thread reads raster */
-#else
-                readRasters();       /* Reader thread reads raster */
-#endif
             }
             else
             {
                 /* Find raster for point of interest, add to dictionary */
-                findRasters(&p);
-                updateDictionary(&p);
-#if 0
-                /* Calculate several points ahead this one, find their rasters, add to dictionary */
-                for(int i=0; i<MAX_LOOK_AHEAD_RASTERS; i++)
-                {
-                    double newLon = lon + i + 0.1;  //For now, use real algo here
-                    double newLat = lat + i + 0.1;  //For now, use real algo here
-                    OGRPoint newPoint = {newLon, newLat};
-                    if (newPoint.transform(transf) == OGRERR_NONE)
-                    {
-                        findRasters(&newPoint, false);
-                        updateDictionary(NULL);  /* NULL point pointer, raster is to be opened but not read */
-                    }
-                    else throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
-                }
+                if(findTIFfilesWithPoint(&p))
+                    updateRastersCache(&p);
+#if 1
+                extrapolate(lon, lat);
 #endif
-                readRasters();
+            }
+
+            sampleRasters();
         }
-    }
-    else
-        throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in mosaic VRT", lon, lat);
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in mosaic VRT", lon, lat);
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
 }
-
 
 /*----------------------------------------------------------------------------
  * samplesStrips
@@ -271,9 +308,11 @@ void ArcticDEMRaster::sampleStrips(double lon, double lat)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open VRT file for point lon: %lf, lat: %lf", lon, lat);
         }
 
-        findRasters(&p);
-        updateDictionary(&p);
-        readRasters();
+        if(findTIFfilesWithPoint(&p))
+        {
+            updateRastersCache(&p);
+            sampleRasters();
+        }
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
 }
@@ -284,10 +323,15 @@ void ArcticDEMRaster::sampleStrips(double lon, double lat)
  *----------------------------------------------------------------------------*/
 void ArcticDEMRaster::samples(double lon, double lat)
 {
-    invalidateCachedRasters();
+    invalidateRastersCache();
 
     if      (demType == MOSAIC) sampleMosaic(lon, lat);
     else if (demType == STRIPS) sampleStrips(lon, lat);
+
+    /* Needed for extrapolator */
+    samplesCounter++;
+    lastLon = lon;
+    lastLat = lat;
 }
 
 
@@ -338,16 +382,18 @@ ArcticDEMRaster::~ArcticDEMRaster(void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * findRasters
+ * findTIFfilesWithPoint
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::findRasters(OGRPoint *p, bool clearList)
+bool ArcticDEMRaster::findTIFfilesWithPoint(OGRPoint *p)
 {
+    bool foundOne = false;
+
     try
     {
         const int32_t col = static_cast<int32_t>(floor(vrtInvGeot[0] + vrtInvGeot[1] * p->getX() + vrtInvGeot[2] * p->getY()));
         const int32_t row = static_cast<int32_t>(floor(vrtInvGeot[3] + vrtInvGeot[4] * p->getX() + vrtInvGeot[5] * p->getY()));
 
-        if (clearList) tifList.clear();
+        tifList.clear();
 
         if (col >= 0 && row >= 0 && col < vrtDset->GetRasterXSize() && row < vrtDset->GetRasterYSize())
         {
@@ -367,6 +413,7 @@ void ArcticDEMRaster::findRasters(OGRPoint *p, bool clearList)
                             char *fname = CPLUnescapeString(psNode->psChild->pszValue, NULL, CPLES_XML);
                             CHECKPTR(fname);
                             tifList.add(fname);
+                            foundOne = true;  /* There may be more than one... */
                             CPLFree(fname);
                         }
                     }
@@ -379,20 +426,23 @@ void ArcticDEMRaster::findRasters(OGRPoint *p, bool clearList)
     {
         mlog(e.level(), "Error finding raster in VRT file: %s", e.what());
     }
+
+    return foundOne;
 }
 
 
 /*----------------------------------------------------------------------------
  * invaldiateAllRasters
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::invalidateCachedRasters(void)
+void ArcticDEMRaster::invalidateRastersCache(void)
 {
     raster_t *raster = NULL;
     const char* key = rasterDict.first(&raster);
     while (key != NULL)
     {
         assert(raster);
-        raster->samplingEnabled = false;
+        raster->enabled = false;
+        raster->sampled = false;
         raster->point = NULL;
         raster->value = INVALID_SAMPLE_VALUE;
         raster->readTime = 0.0;
@@ -401,17 +451,18 @@ void ArcticDEMRaster::invalidateCachedRasters(void)
 }
 
 /*----------------------------------------------------------------------------
- * updateDictionary
+ * updateRastersCache
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::updateDictionary(OGRPoint* p)
+void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
 {
     int newRasters, recycledRasters, deletedRasters;
     newRasters = recycledRasters = deletedRasters = 0;
 
+    if (tifList.length() == 0) return;
+
     // print2term("A- rasterDic.len: %d, tifList.len: %d\n", rasterDict.length(), tifList.length());
 
     /* Check new tif file list against rasters in dictionary */
-    raster_t *raster = NULL;
     const char* key = NULL;
     const char* key_marker = "arcticdem/";
 
@@ -421,40 +472,39 @@ void ArcticDEMRaster::updateDictionary(OGRPoint* p)
         key = strstr(fileName.c_str(), key_marker);  /* Let's hope ArcticDem file naming schema does not change... */
         key += strlen(key_marker);
         assert(key);
-        raster = NULL;
 
+        raster_t *raster = NULL;
         if (rasterDict.find(key, &raster))
         {
-            /* Update point to be sampled, mark raster samplingEnabled for next sampling */
+            /* Update point to be sampled, mark raster enabled for next sampling */
             assert(raster);
-            raster->samplingEnabled = true;
+            raster->enabled = true;
             raster->point = p;
             recycledRasters++;
         }
         else
         {
             /* Create new raster for this tif file since it is not in the dictionary */
-            raster_t* raster = new raster_t;
-            bzero(raster, sizeof(raster_t));
-
-            raster->samplingEnabled = true;
-            raster->obj = this;
-            raster->point = p;
-            raster->value = INVALID_SAMPLE_VALUE;
-            raster->fileName = fileName;
-            rasterDict.add(key, raster);
+            raster_t* rp = new raster_t;
+            bzero(rp, sizeof(raster_t));
+            rp->enabled = true;
+            rp->point = p;
+            rp->value = INVALID_SAMPLE_VALUE;
+            rp->fileName = fileName;
+            rasterDict.add(key, rp);
             newRasters++;
         }
     }
 
     /* Remove no longer needed rasters */
-    if(rasterDict.length() > MAX_LOOK_AHEAD_RASTERS)
+    if(rasterDict.length() > MAX_EXTRAPOLATED_RASTERS)
     {
+        raster_t *raster = NULL;
         key = rasterDict.first(&raster);
         while (key != NULL)
         {
             assert(raster);
-            if (!raster->samplingEnabled)
+            if (!raster->enabled)
             {
                 /* Main thread closing multiple rasters is OK */
                 if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
@@ -471,9 +521,9 @@ void ArcticDEMRaster::updateDictionary(OGRPoint* p)
 }
 
 /*----------------------------------------------------------------------------
- * readRasters
+ * sampleRasters
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::readRasters(void)
+void ArcticDEMRaster::sampleRasters(void)
 {
     try
     {
@@ -492,6 +542,7 @@ void ArcticDEMRaster::readRasters(void)
                     reader->raster = NULL;
                     reader->run = true;
                     reader->sync = new Cond();
+                    reader->obj = this;
                     reader->sync->lock();
                     {
                         reader->thread = new Thread(readingThread, reader);
@@ -516,7 +567,7 @@ void ArcticDEMRaster::readRasters(void)
         while (key != NULL)
         {
             assert(raster);
-            if (raster->samplingEnabled)
+            if (raster->enabled)
             {
                 reader_t* reader = &rasterRreader[i++];
                 reader->sync->lock();
@@ -554,7 +605,7 @@ void ArcticDEMRaster::readRasters(void)
         while (key != NULL)
         {
             assert(raster);
-            if(raster->samplingEnabled)
+            if(raster->enabled)
             {
                 print2term("%03d, sample: %10.3lf, readTime: %10.3lf\n", i++, raster->value, raster->readTime);
             }
@@ -588,8 +639,7 @@ void* ArcticDEMRaster::readingThread(void *param)
 
             if(reader->raster != NULL)
             {
-                /* Read sample from raster */
-                reader->raster->obj->readRaster(reader->raster);
+                reader->obj->processRaster(reader->raster, reader->obj);
 
                 /* Done with this raster */
                 reader->raster = NULL;
@@ -606,15 +656,14 @@ void* ArcticDEMRaster::readingThread(void *param)
 
 
 /*----------------------------------------------------------------------------
- * readRaster
+ * processRaster
+ * Thread-safe, can be called directly from main thread or reader thread
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::readRaster(raster_t* raster)
+void ArcticDEMRaster::processRaster(raster_t* raster, ArcticDEMRaster* obj)
 {
     try
     {
         double startTime = TimeLib::latchtime();
-
-        raster->value = INVALID_SAMPLE_VALUE;  /* If read fails, return invalid value */
 
         /* Open raster if first time reading from it */
         if(raster->dset == NULL)
@@ -650,7 +699,7 @@ void ArcticDEMRaster::readRaster(raster_t* raster)
         /*
          * Read raster if it contains point of interest.
          *
-         * NOTE: for look ahead logic, some rasters are to be opened only and not read
+         * NOTE: for extrapolate logic, some rasters are opened only and not read
          *       raster->point == NULL indicates that
          */
         if (rasterContainsPoint(raster, raster->point))
@@ -660,7 +709,7 @@ void ArcticDEMRaster::readRaster(raster_t* raster)
             const int32_t row = static_cast<int32_t>(floor((raster->bbox.lat_max  - raster->point->getY()) / raster->cellSize));
 
             /* Use fast 'lookup' method for nearest neighbour. */
-            if (raster->obj->sampleAlg == GRIORA_NearestNeighbour)
+            if (obj->sampleAlg == GRIORA_NearestNeighbour)
             {
                 /* Raster offsets to block of interest */
                 uint32_t xblk = col / raster->xBlockSize;
@@ -710,7 +759,7 @@ void ArcticDEMRaster::readRaster(raster_t* raster)
 
                 float rbuf[1] = {0};
                 int _cellsize = raster->cellSize;
-                int radius_in_meters = ((raster->obj->radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
+                int radius_in_meters = ((obj->radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
                 int radius_in_pixels = (radius_in_meters == 0) ? 1 : radius_in_meters / _cellsize;
                 int _col = col - radius_in_pixels;
                 int _row = row - radius_in_pixels;
@@ -722,12 +771,12 @@ void ArcticDEMRaster::readRaster(raster_t* raster)
                     _col = col;
                     _row = row;
                     size = 1;
-                    raster->obj->sampleAlg = GRIORA_NearestNeighbour;
+                    obj->sampleAlg = GRIORA_NearestNeighbour;
                 }
 
                 GDALRasterIOExtraArg args;
                 INIT_RASTERIO_EXTRA_ARG(args);
-                args.eResampleAlg = raster->obj->sampleAlg;
+                args.eResampleAlg = obj->sampleAlg;
                 CPLErr err = CE_None;
                 int cnt = 2;
                 do
@@ -737,9 +786,11 @@ void ArcticDEMRaster::readRaster(raster_t* raster)
                 } while (err != CE_None && cnt--);
                 CHECK_GDALERR(err);
                 raster->value = rbuf[0];
-                mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], raster->obj->radius, radius_in_pixels, size);
+                mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], obj->radius, radius_in_pixels, size);
                 // print2term("Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
             }
+
+            raster->sampled = true;
         }
 
         raster->readTime = TimeLib::latchtime() - startTime;
@@ -919,6 +970,9 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
     rasterDict.clear();
     bzero(rasterRreader, sizeof(rasterRreader));
     readerCount = 0;
+    lastLon = 0;
+    lastLat = 0;
+    samplesCounter = 0;
     transf = NULL;
     srcSrs.Clear();
     trgSrs.Clear();
@@ -1032,7 +1086,7 @@ int ArcticDEMRaster::getSampledRastersCount(void)
     while (key != NULL)
     {
         assert(raster);
-        if (raster->samplingEnabled) cnt++;
+        if (raster->enabled && raster->sampled) cnt++;
         key = rasterDict.next(&raster);
     }
 
@@ -1059,14 +1113,14 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
         /* Get Elevations */
         lua_obj->samples(lon, lat);
 
-        int sampledRastersCnt = lua_obj->getSampledRastersCount();
-        if (sampledRastersCnt > 0)
+        int sampledRasters = lua_obj->getSampledRastersCount();
+        if (sampledRasters > 0)
         {
             raster_t   *raster = NULL;
             const char *key    = NULL;
 
             /* Create return table */
-            lua_createtable(L, sampledRastersCnt, 0);
+            lua_createtable(L, sampledRasters, 0);
 
             /* Populate the return table */
             int i = 0;
@@ -1074,7 +1128,7 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
             while (key != NULL)
             {
                 assert(raster);
-                if (raster->samplingEnabled)
+                if (raster->enabled && raster->sampled)
                 {
                     lua_createtable(L, 0, 2);
                     LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
