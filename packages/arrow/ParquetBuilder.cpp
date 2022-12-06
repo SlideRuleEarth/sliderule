@@ -43,6 +43,10 @@
 #include "core.h"
 #include "ParquetBuilder.h"
 
+using std::shared_ptr;
+using std::make_shared;
+using std::vector;
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -129,6 +133,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
 
     /* Define Table Schema */
     defineTableSchema(schema, fieldList, rec_type);
+    fieldIterator = new field_iterator_t(fieldList);
 
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
@@ -141,17 +146,17 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
     fileName = tmp_file.getString(true);
 
     /* Create Arrow Output Stream */
-    std::shared_ptr<arrow::io::FileOutputStream> file_output_stream;
+    shared_ptr<arrow::io::FileOutputStream> file_output_stream;
     PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(fileName));
 
     /* Create Writer Properties */
     parquet::WriterProperties::Builder writer_props_builder;
     writer_props_builder.compression(parquet::Compression::GZIP);
-    std::shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
+    shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
 
     /* Create Arrow Writer Properties */
     parquet::ArrowWriterProperties::Builder arrow_writer_props_builder;
-    std::shared_ptr<parquet::ArrowWriterProperties> arrow_writer_props = arrow_writer_props_builder.build();
+    shared_ptr<parquet::ArrowWriterProperties> arrow_writer_props = arrow_writer_props_builder.build();
 
     /* Create Parquet Writer */
     (void)parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &parquetWriter);
@@ -165,6 +170,7 @@ ParquetBuilder::~ParquetBuilder(void)
     delete [] fileName;
     delete outQ;
     delete [] outFileName;
+    delete fieldIterator;
 }
 
 /*----------------------------------------------------------------------------
@@ -185,11 +191,11 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
     }
 
     /* Loop Through Fields in Schema */
-    std::vector<std::shared_ptr<arrow::Array>> columns;
-    for(int i = 0; i < fieldList.length(); i++)
+    vector<shared_ptr<arrow::Array>> columns;
+    for(int i = 0; i < fieldIterator->length; i++)
     {
-        RecordObject::field_t field = fieldList[i];
-        std::shared_ptr<arrow::Array> column;
+        RecordObject::field_t field = (*fieldIterator)[i];
+        shared_ptr<arrow::Array> column;
 
         /* Loop Through Each Row */
         switch(field.type)
@@ -361,11 +367,15 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
         columns.push_back(column);
     }
 
-    /* Build Table */
-    std::shared_ptr<arrow::Table> table = arrow::Table::Make(std::make_shared<arrow::Schema>(*schema), columns);
+    tableMut.lock();
+    {
+        /* Build Table */
+        shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
 
-    /* Write Table */
-    (void)parquetWriter->WriteTable(*table, num_rows);
+        /* Write Table */
+        (void)parquetWriter->WriteTable(*table, num_rows);
+    }
+    tableMut.unlock();
 
     /* Return Success */
     return true;
@@ -480,18 +490,18 @@ bool ParquetBuilder::postRecord (RecordObject* record, int data_size)
 /*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::defineTableSchema (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type)
+bool ParquetBuilder::defineTableSchema (shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type)
 {
-    std::vector<std::shared_ptr<arrow::Field>> schema_vector;
+    vector<shared_ptr<arrow::Field>> schema_vector;
     addFieldsToSchema(schema_vector, field_list, rec_type);
-    _schema = std::make_shared<arrow::Schema>(schema_vector);
+    _schema = make_shared<arrow::Schema>(schema_vector);
     return true;
 }
 
 /*----------------------------------------------------------------------------
  * addFieldsToSchema
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type)
+bool ParquetBuilder::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type)
 {
     /* Loop Through Fields in Record */
     char** field_names = NULL;
@@ -499,6 +509,8 @@ bool ParquetBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field
     int num_fields = RecordObject::getRecordFields(rec_type, &field_names, &fields);
     for(int i = 0; i < num_fields; i++)
     {
+        bool add_field_to_list = true;
+
         /* Add to Schema */
         switch(fields[i]->type)
         {
@@ -514,12 +526,20 @@ bool ParquetBuilder::addFieldsToSchema (std::vector<std::shared_ptr<arrow::Field
             case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
             case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
             case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
-            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype); break;
-            default:                    break;
+
+            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype);
+                                        add_field_to_list = false;
+                                        break;
+
+            default:                    add_field_to_list = false;
+                                        break;
         }
 
         /* Add to Field List */
-        field_list.add(*fields[i]);
+        if(add_field_to_list)
+        {
+            field_list.add(*fields[i]);
+        }
     }
 
     /* Clean Up */

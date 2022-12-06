@@ -30,12 +30,21 @@ local atl03_asset = rqst["atl03-asset"] or "nsidc-s3"
 local resource = rqst["resource"]
 local parms = rqst["parms"]
 local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
+local output_parms = parms["output"]
 
 -- Get Asset --
 local asset = core.getbyname(atl03_asset)
 if not asset then
     userlog:sendlog(core.ERROR, string.format("invalid asset specified: %s", atl03_asset))
     return
+end
+
+-- Get Flatten Option --
+local flatten = false
+if output_parms then
+    if output_parms["format"] == "parquet" then
+        flatten = true
+    end
 end
 
 -- Post Initial Status Progress --
@@ -45,7 +54,7 @@ userlog:sendlog(core.INFO, string.format("request <%s> atl03 subsetting for %s .
 local rqst_parms = icesat2.parms(parms)
 
 -- ATL03 Reader --
-local atl03_reader = icesat2.atl03(asset, resource, rspq, rqst_parms, false)
+local atl03_reader = icesat2.atl03(asset, resource, rspq, rqst_parms, false, flatten)
 
 -- Wait Until Completion --
 local duration = 0

@@ -46,6 +46,9 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 
+using std::shared_ptr;
+using std::unique_ptr;
+using std::vector;
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -103,19 +106,22 @@ class ParquetBuilder: public DispatchObject
          *--------------------------------------------------------------------*/
 
         typedef List<RecordObject::field_t, LIST_BLOCK_SIZE> field_list_t;
+        typedef field_list_t::Iterator field_iterator_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                                        alive;
-        field_list_t                                fieldList;
-        std::shared_ptr<arrow::Schema>              schema;
-        Publisher*                                  outQ;
-        int                                         rowSizeBytes;
-        const char*                                 fileName; // used locally to build file
-        const char*                                 outFileName; // name to send back to client
-        std::unique_ptr<parquet::arrow::FileWriter> parquetWriter;
+        bool                                    alive;
+        field_list_t                            fieldList;
+        field_iterator_t*                       fieldIterator;
+        Mutex                                   tableMut;
+        shared_ptr<arrow::Schema>               schema;
+        unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
+        Publisher*                              outQ;
+        int                                     rowSizeBytes;
+        const char*                             fileName; // used locally to build file
+        const char*                             outFileName; // name to send back to client
 
         /*--------------------------------------------------------------------
          * Methods
@@ -129,8 +135,8 @@ class ParquetBuilder: public DispatchObject
         bool                processTermination      (void) override;
         bool                postRecord              (RecordObject* record, int data_size=0);
 
-        static bool         defineTableSchema       (std::shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
-        static bool         addFieldsToSchema       (std::vector<std::shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
+        static bool         defineTableSchema       (shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
+        static bool         addFieldsToSchema       (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
 };
 
 #endif  /* __parquet_builder__ */
