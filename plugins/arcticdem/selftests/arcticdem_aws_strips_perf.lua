@@ -15,7 +15,6 @@ local asset_name = "arcticdem-local"
 local arcticdem_local = core.getbyname(asset_name)
 
 local failedSamples = 0
--- local verbose = true
 local verbose = false
 
 local  lon = -178.0
@@ -32,71 +31,67 @@ local dtime = stoptime - starttime
 
 if status ~= true then
     failedSamples = failedSamples + 1
-    print(string.format("Failed to read point lon: %f, lat: %f", lon, lat))
+    print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
 else
-    if verbose then
-        for j, v in ipairs(tbl) do
-            local el = v["value"]
-            local fname = v["file"]
-            print(string.format("(%02d) %20f     %s", j, el, fname))
-        end
-    end
+     for j, v in ipairs(tbl) do
+        local el = v["value"]
+        local fname = v["file"]
+        print(string.format("(%02d) %20f     %s", j, el, fname))
+     end
 end
 
 print(string.format("ExecTime: %f, failed reads: %d", dtime, failedSamples))
 
 local el, status
-local max_cnt = 1000
+local maxPoints = 10000
 failedSamples = 0
 
 --[[
 --]]
 
-print('\n------------------\nTest: Reading', max_cnt, '  points (THE SAME POINT)\n------------')
+print(string.format("\n------------------\nTest: Reading %d times the same points\n------------------\n", maxPoints))
 
 starttime = time.latch();
 intervaltime = starttime
 
 
-for i = 1, max_cnt
+for i = 1, maxPoints
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     end
 
     modulovalue = 1000
     if (i % modulovalue == 0) then
         midtime = time.latch();
         dtime = midtime-intervaltime
-        print('Points read:', i, dtime)
+        print(string.format("Point: %d, (%.3f, %.3f), time: %.3f", i, lon, lat, dtime))
         intervaltime = time.latch();
     end
-
 end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
-print(string.format("\n%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
+print(string.format("\n%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
 
 -- os.exit()
 
 failedSamples = 0
--- max_cnt = 1000
-max_cnt = 100
-print('\n------------------\nTest: Reading', max_cnt, '  different points (THE SAME RASTER)\n------------')
+maxPoints = 1000
+print(string.format("\n------------------\nTest: Reading %d different points in the same raster\n------------------\n", maxPoints))
 lon = _lon
 lat = _lat
 starttime = time.latch();
 intervaltime = starttime
 
-for i = 1, max_cnt
+for i = 1, maxPoints
 do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     else
         if verbose then
             for i, v in ipairs(tbl) do
@@ -119,7 +114,7 @@ do
     if (i % modulovalue == 0) then
         midtime = time.latch();
         dtime = midtime-intervaltime
-        print('Points read:', i, dtime)
+        print(string.format("Point: %d, (%.3f, %.3f), time: %.3f", i, lon, lat, dtime))
         intervaltime = time.latch();
     end
 
@@ -127,7 +122,7 @@ end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
-print(string.format("\n%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
+print(string.format("\n%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
 
 os.exit()
 

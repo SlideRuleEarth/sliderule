@@ -211,25 +211,27 @@ void ArcticDEMRaster::extrapolate(double lon, double lat)
 
     double lonDelta = lon - lastLon;
     double latDelta = lat - lastLat;
+
 #if 0
-        const double MIN_DEGREES = 0.5;
+    const double MIN_DEGREES = 0.5;
 
-        /*
-         * At 2m resolution tiles are 1x1 degree, make sure to open the next tile
-         * if points are within the same one.
-         */
-        if (abs(lonDelta) < MIN_DEGREES)
-        {
-            if (lon >= lastLon)  lonDelta = MIN_DEGREES;
-            else lonDelta = -MIN_DEGREES;
-        }
+    /*
+     * At 2m resolution tiles are 1x1 degree, make sure to open the next tile
+     * if points are within the same one.
+     */
+    if (abs(lonDelta) < MIN_DEGREES)
+    {
+        if (lon >= lastLon) lonDelta = MIN_DEGREES;
+        else lonDelta = -MIN_DEGREES;
+    }
 
-        if (abs(latDelta) < MIN_DEGREES)
-        {
-            if (lat >= lastLat)  latDelta = MIN_DEGREES;
-            else latDelta = -MIN_DEGREES;
-        }
+    if (abs(latDelta) < MIN_DEGREES)
+    {
+        if (lat >= lastLat) latDelta = MIN_DEGREES;
+        else latDelta = -MIN_DEGREES;
+    }
 #endif
+
     //  print2term("\nEtrapolating for lon: %lf, lat: %lf\n", lon, lat);
 
     /* Extrapolate several points */
@@ -277,15 +279,24 @@ void ArcticDEMRaster::sampleMosaic(double lon, double lat)
     }
     else
     {
-        /* Find raster for point of interest, add to dictionary */
+        // print2term("New raster for sample: %lu, lon: %.3lf, lat: %.3lf\n", samplesCounter, lon, lat);
+
+        /* Find raster for point of interest, add to cache */
         if (findTIFfilesWithPoint(&p))
             updateRastersCache(&p);
 #if 1
+        /* Add rasters for extrapolated points to cache */
         extrapolate(lon, lat);
 #endif
     }
 
     sampleRasters();
+
+    /* Needed for extrapolator */
+    samplesCounter++;
+    lastLon = lon;
+    lastLat = lat;
+
 }
 
 /*----------------------------------------------------------------------------
@@ -324,11 +335,6 @@ void ArcticDEMRaster::samples(double lon, double lat)
 
     if      (demType == MOSAIC) sampleMosaic(lon, lat);
     else if (demType == STRIPS) sampleStrips(lon, lat);
-
-    /* Needed for extrapolator */
-    samplesCounter++;
-    lastLon = lon;
-    lastLat = lat;
 }
 
 

@@ -32,7 +32,7 @@ local dtime = stoptime - starttime
 
 if status ~= true then
     failedSamples = failedSamples + 1
-    print(string.format("Failed to read point lon: %f, lat: %f", lon, lat))
+    print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
 else
     if verbose then
         for j, v in ipairs(tbl) do
@@ -60,7 +60,7 @@ do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     end
 end
 
@@ -87,19 +87,18 @@ do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     end
-
-    lon = lon + 0.001
 
     modulovalue = 1000
     if (i % modulovalue == 0) then
         midtime = time.latch();
         dtime = midtime-intervaltime
-        print('Points read:', i, dtime)
+        print(string.format("Point: %d, (%.3f, %.3f), time: %.3f", i, lon, lat, dtime))
         intervaltime = time.latch();
     end
 
+    lon = lon + 0.001
 end
 
 stoptime = time.latch();
@@ -127,7 +126,7 @@ do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     else
         if verbose then
             for j, v in ipairs(tbl) do
@@ -138,19 +137,19 @@ do
         end
     end
 
+    modulovalue = 10
+    if (i % modulovalue == 0) then
+        midtime = time.latch();
+        dtime = midtime-intervaltime
+        print(string.format("Point: %d, (%.3f, %.3f), time: %.3f", i, lon, lat, dtime))
+        intervaltime = time.latch();
+    end
+
     -- NOTE: COGs are 1x1 degree but if I increment lon by 1.1 or 1.2
     --       ocasionally I hit the same raster twice.
     --  Incrementing by 1.5 degree gives absolute worse case scenario.
     --  Every point read is from different raster then the last one.
     lon = lon + 1.5
-
-    modulovalue = 10
-    if (i % modulovalue == 0) then
-        midtime = time.latch();
-        dtime = midtime-intervaltime
-        print('Points read:', i, dtime)
-        intervaltime = time.latch();
-    end
 end
 
 stoptime = time.latch();

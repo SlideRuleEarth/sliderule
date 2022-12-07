@@ -58,7 +58,8 @@ class ArcticDEMRaster: public LuaObject
         static const int   ARCTIC_DEM_CRS = 3413;
 
         static const int   MAX_READER_THREADS = 200;
-        static const int   MAX_EXTRAPOLATED_RASTERS = 10;
+        static const int   MAX_CACHED_RATERS  = 100;
+        static const int   MAX_EXTRAPOLATED_RASTERS = 9;
 
         /*--------------------------------------------------------------------
          * Typedefs
