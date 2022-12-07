@@ -74,37 +74,25 @@ class EndpointProxy: public LuaObject
     private:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            const char*             resource;
-            OrchestratorLib::Node*  node;       // node to proxy request to
-            bool                    valid;      // set to false when error encountered
-            bool                    complete;   // set to true when request finished
-            bool                    terminated; // all processing for request has been done
-            Cond                    sync;       // signals when request is complete
-        } rqst_t;
-
-        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
-        Publisher*          rqstPub;
-        Subscriber*         rqstSub;
-        Thread**            proxyPids;
-        Thread*             collatorPid;
-        rqst_t*             requests; // array[numRequests]
-        int                 numRequests;
-        const char*         endpoint;
-        const char*         asset;
-        const char*         parameters;
-        int                 timeout;
-        Publisher*          outQ;
-        int                 numProxyThreads;
-        int                 rqstQDepth;
-        bool                sendTerminator;
+        bool                    active;
+        Publisher*              rqstPub;
+        Subscriber*             rqstSub;
+        Thread**                proxyPids;
+        Thread*                 collatorPid;
+        const char**            resources;
+        OrchestratorLib::Node** nodes;
+        int                     numResources;
+        const char*             endpoint;
+        const char*             asset;
+        const char*             parameters;
+        int                     timeout;
+        Publisher*              outQ;
+        int                     numProxyThreads;
+        int                     rqstQDepth;
+        bool                    sendTerminator;
 
         /*--------------------------------------------------------------------
          * Methods

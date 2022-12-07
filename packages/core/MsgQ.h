@@ -192,10 +192,11 @@ class Publisher: public MsgQ
         int     postCopy        (const void* data, int size, const void* secondary_data, int secondary_size, int timeout=IO_CHECK);
         int     postString      (const char* format_string, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
 
+        static void defaultFree (void* obj, void* parm);
+
     private:
 
-        int         post        (void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout);
-        static void defaultFree (void* obj, void* parm);
+        int     post            (void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout);
 
 };
 

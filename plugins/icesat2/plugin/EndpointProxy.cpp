@@ -139,7 +139,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     assert(_parameters);
     assert(_outq_name);
 
-    numRequests = _num_resources;
+    numResources = _num_resources;
     timeout = _timeout_secs;
     numProxyThreads = _num_threads;
     rqstQDepth = _rqst_queue_depth;
@@ -160,46 +160,22 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     /* Allocate Data Members */
     endpoint    = StringLib::duplicate(_endpoint);
     asset       = StringLib::duplicate(_asset);
-    requests    = new rqst_t[numRequests];
     parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
-    outQ        = new Publisher(_outq_name);
+    outQ        = new Publisher(_outq_name, Publisher::defaultFree, numProxyThreads);
 
-    /* Get First Round of Nodes */
-    int num_nodes_to_request = MIN(numRequests, numProxyThreads);
-    OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, timeout);
-
-    /* Populate Requests */
-    for(int i = 0; i < numRequests; i++)
+    /* Populate Resources Array */
+    resources = new const char* [numResources];
+    for(int i = 0; i < numResources; i++)
     {
-        /* Initialize Request */
-        requests[i].resource = StringLib::duplicate(_resources[i]);
-        requests[i].node = NULL;
-        requests[i].valid = false;
-        requests[i].complete = false;
-        requests[i].terminated = false;
-
-        /* Assign Node if Available */
-        if(nodes && i < nodes->length())
-        {
-            requests[i].node = nodes->get(i);
-        }
+        resources[i] = StringLib::duplicate(_resources[i]);
     }
 
-    /* Free Node List (individual nodes still remain) */
-    if(nodes) delete nodes;
+    /* Initialize Nodes Array */
+    nodes = new OrchestratorLib::Node* [numResources];
+    LocalLib::set(nodes, 0, sizeof(OrchestratorLib::Node*)); // set all to NULL
 
     /* Start Collator Thread */
     collatorPid = new Thread(collatorThread, this);
-
-    /* Post Requests to Proxy Threads */
-    for(int i = 0; i < numRequests; i++)
-    {
-        rqst_t* rqst = &requests[i];
-        if(rqstPub->postCopy(&rqst, sizeof(rqst), IO_CHECK) <= 0)
-        {
-            LuaEndpoint::generateExceptionStatus(RTE_ERROR, ERROR, outQ, NULL, "Failed to proxy request for %s", requests[i].resource);
-        }
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -221,8 +197,21 @@ EndpointProxy::~EndpointProxy (void)
     delete rqstSub;
     delete outQ;
 
+    /* Delete Resources */
+    for(int i = 0; i < numResources; i++)
+    {
+        delete [] resources[i];
+    }
+    delete [] resources;
+
+    /* Delete Nodes */
+    for(int i = 0; i < numResources; i++)
+    {
+        if(nodes[i]) delete nodes[i];
+    }
+    delete [] nodes;
+
     /* Delete Allocated Memory */
-    delete [] requests;
     delete [] endpoint;
     delete [] asset;
     delete [] parameters;
@@ -234,53 +223,51 @@ EndpointProxy::~EndpointProxy (void)
 void* EndpointProxy::collatorThread (void* parm)
 {
     EndpointProxy* proxy = (EndpointProxy*)parm;
-    int num_terminated = 0;
+    int current_resource = 0;
 
-    while(proxy->active)
+    while(proxy->active && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
     {
-        /* Check Completion of All Requests */
-        for(int i = 0; i < proxy->numRequests; i++)
+        /* Get Available Nodes */
+        int resources_to_process = proxy->numResources - current_resource;
+        int num_nodes_to_request = MIN(resources_to_process, proxy->numProxyThreads);
+        OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, proxy->timeout);
+        if(nodes)
         {
-            rqst_t* rqst = &proxy->requests[i];
-            if(!rqst->terminated)
+            for(int i = 0; i < nodes->length(); i++)
             {
-                rqst->sync.lock();
-                {
-                    /* Wait for Completion */
-                    if(!rqst->complete)
-                    {
-                        rqst->sync.wait(0, COLLATOR_POLL_RATE);
-                    }
+                /* Populate Request */
+                proxy->nodes[current_resource] = nodes->get(i);
 
-                    /* Mark as Terminated */
-                    if(rqst->complete)
+                /* Post Request to Proxy Threads */
+                int status = MsgQ::STATE_TIMEOUT;
+                while(proxy->active && (status == MsgQ::STATE_TIMEOUT))
+                {
+                    status = proxy->rqstPub->postCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
+                    if(status < 0)
                     {
-                        rqst->terminated = true;
-                        num_terminated++;
+                        LuaEndpoint::generateExceptionStatus(RTE_ERROR, ERROR, proxy->outQ, NULL, "Failed (%d) to post request for %s", status, proxy->resources[current_resource]);
+                        break;
                     }
                 }
-                rqst->sync.unlock();
 
-                /* Process Completion */
-                if(rqst->terminated)
-                {
-                    /* Post Status */
-                    int code = rqst->valid ? RTE_INFO : RTE_ERROR;
-                    event_level_t level = rqst->valid ? INFO : ERROR;
-                    LuaEndpoint::generateExceptionStatus(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
-                                                            rqst->valid ? "Successfully completed" : "Failed to complete",
-                                                            num_terminated, proxy->numRequests, rqst->resource);
-
-                    /* Clean Up Request */
-                    delete [] rqst->resource;
-                    delete rqst->node;
-                }
+                /* Bump Current Resource */
+                current_resource++;
             }
-        }
 
-        /* Check if Done */
-        if(num_terminated == proxy->numRequests) break;
-        else LocalLib::performIOTimeout();
+            /*  if No Nodes Available */
+            if(nodes->length() <= 0)
+            {
+                LocalLib::sleep(0.20); // 5Hz
+            }
+
+            /* Free Node List (individual nodes still remain) */
+            delete nodes;
+        }
+        else
+        {
+            mlog(CRITICAL, "Unable to reach orchestrator... abandoning proxy request!");
+            proxy->active = false;
+        }
     }
 
     /* Send Terminator */
@@ -304,69 +291,47 @@ void* EndpointProxy::proxyThread (void* parm)
 
     while(proxy->active)
     {
-        rqst_t* rqst;
-        int recv_status = proxy->rqstSub->receiveCopy(&rqst, sizeof(rqst), SYS_TIMEOUT);
+        /* Receive Request */
+        int current_resource;
+        int recv_status = proxy->rqstSub->receiveCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
         if(recv_status > 0)
         {
-            try
-            {
-                /* Get Lock from Orchestrator */
-                double expiration_time = TimeLib::latchtime() + proxy->timeout;
-                while(proxy->active && !rqst->node && (expiration_time > TimeLib::latchtime()))
-                {
-                    OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout);
-                    if(!nodes)                      throw RunTimeException(CRITICAL, RTE_ERROR, "unable to reach orchestrator");
-                    else if(nodes->length() > 0)    rqst->node = nodes->get(0); // freed in collator
-                    else                            LocalLib::sleep(1);
-                    delete nodes;
-                }
+            /* Get Resource and Node */
+            const char* resource = proxy->resources[current_resource];
+            OrchestratorLib::Node* node = proxy->nodes[current_resource];
+            bool valid = false; // set to true on success
 
-                /* Proxy Request */
-                if(rqst->node)
-                {
-                    /* Make Request */
-                    SafeString path("/source/%s", proxy->endpoint);
-                    SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}",
-                                    proxy->asset, rqst->resource, proxy->parameters, proxy->timeout);
-                    HttpClient client(NULL, rqst->node->member);
-                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout * 1000);
-                    if(rsps.code == EndpointObject::OK)
-                    {
-                        rqst->valid = true;
-                    }
-                    else
-                    {
-                        mlog(CRITICAL, "Failed to proxy request to %s: %d", rqst->node->member, (int)rsps.code);
-                    }
-                }
-                else
-                {
-                    /* Timeout Occurred */
-                    mlog(CRITICAL, "Timeout processing resource %s - unable to acquire node", rqst->resource);
-                }
-            }
-            catch(const RunTimeException& e)
+            /* Make Request */
+            if(proxy->outQ->getSubCnt() > 0)
             {
-                mlog(e.level(), "Failure processing request: %s", e.what());
+                try
+                {
+                    SafeString path("/source/%s", proxy->endpoint);
+                    SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}", proxy->asset, resource, proxy->parameters, proxy->timeout);
+                    HttpClient client(NULL, node->member);
+                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout * 1000);
+                    if(rsps.code == EndpointObject::OK) valid = true;
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)rsps.code);
+                }
+                catch(const RunTimeException& e)
+                {
+                    mlog(e.level(), "Failure processing request: %s", e.what());
+                }
             }
 
             /* Unlock Node */
-            if(rqst->node)
-            {
-                OrchestratorLib::unlock(&rqst->node->transaction, 1);
-            }
+            OrchestratorLib::unlock(&node->transaction, 1);
 
-            /* Mark Complete */
-            rqst->sync.lock();
-            {
-                rqst->complete = true;
-                rqst->sync.signal();
-            }
-            rqst->sync.unlock();
+            /* Post Status */
+            int code = valid ? RTE_INFO : RTE_ERROR;
+            event_level_t level = valid ? INFO : ERROR;
+            LuaEndpoint::generateExceptionStatus(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
+                                                    valid ? "Successfully completed" : "Failed to complete",
+                                                    current_resource + 1, proxy->numResources, resource);
         }
         else if(recv_status != MsgQ::STATE_TIMEOUT)
         {
-            mlog(CRITICAL, "Failed to receive request: %d", recv_status);
+            mlog(CRITICAL, "Failed (%d) to receive request... abandoning proxy request", recv_status);
             break;
         }
     }
