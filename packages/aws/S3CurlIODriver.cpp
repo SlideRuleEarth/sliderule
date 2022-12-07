@@ -400,10 +400,8 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     const char* key_ptr = key;
     if(key_ptr[0] == '/') key_ptr++;
 
-    /* Build Headers */
-    struct curl_slist* headers = buildHeaders(bucket, key_ptr, credentials);
-    SafeString rangeHeader("Range: bytes=%lu-%lu", (unsigned long)pos, (unsigned long)(pos + size - 1));
-    headers = curl_slist_append(headers, rangeHeader.getString());
+    /* Build URL */
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
     /* Setup Buffer for Callback */
     fixed_data_t info = {
@@ -412,62 +410,77 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         .index = 0
     };
 
-    /* Build URL */
-    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
-
-    /* Initialize cURL Request */
-    bool rqst_complete = false;
+    /* Issue Get Request */
     int attempts = ATTEMPTS_PER_REQUEST;
-    CURL* curl = initializeRequest(url, headers, curlWriteFixed, &info);
-    if(curl)
+    bool rqst_complete = false;
+    while(!rqst_complete && (attempts > 0))
     {
-        while(!rqst_complete && (attempts-- > 0))
+        /* Build Standard Headers */
+        struct curl_slist* headers = buildHeaders(bucket, key_ptr, credentials);
+
+        /* Build Range Header */
+        unsigned long start_byte = pos + info.index;
+        unsigned long end_byte = pos + size - info.index - 1;
+        SafeString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
+        headers = curl_slist_append(headers, rangeHeader.getString());
+
+        /* Initialize cURL Request */
+        CURL* curl = initializeRequest(url, headers, curlWriteFixed, &info);
+        if(curl)
         {
-            /* Perform Request */
-            CURLcode res = curl_easy_perform(curl);
-            if(res == CURLE_OK)
+            while(!rqst_complete && (attempts-- > 0))
             {
-                /* Get HTTP Code */
-                long http_code = 0;
-                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                if(http_code < 300)
+                /* Perform Request */
+                CURLcode res = curl_easy_perform(curl);
+                if(res == CURLE_OK)
                 {
-                    /* Request Succeeded */
-                    status = true;
+                    /* Get HTTP Code */
+                    long http_code = 0;
+                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                    if(http_code < 300)
+                    {
+                        /* Request Succeeded */
+                        status = true;
+                    }
+                    else
+                    {
+                        /* Request Failed */
+                        StringLib::printify((char*)info.buffer, info.index);
+                        mlog(INFO, "%s", info.buffer);
+                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                    }
+
+                    /* Get Request Completed */
+                    rqst_complete = true;
+                }
+                else if(info.index > 0)
+                {
+                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
+                    rqst_complete = true;
+                }
+                else if(res == CURLE_OPERATION_TIMEDOUT)
+                {
+                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
                 }
                 else
                 {
-                    /* Request Failed */
-                    StringLib::printify((char*)info.buffer, info.index);
-                    mlog(INFO, "%s", info.buffer);
-                    mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                    mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                    LocalLib::performIOTimeout();
                 }
+            }
 
-                /* Request Completed */
-                rqst_complete = true;
-            }
-            else if(info.index > 0)
-            {
-                mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
-                rqst_complete = true;
-            }
-            else if(res == CURLE_OPERATION_TIMEDOUT)
-            {
-                mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
-            }
-            else
-            {
-                mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
-                LocalLib::performIOTimeout();
-            }
+            /* Clean Up cURL */
+            curl_easy_cleanup(curl);
+        }
+        else
+        {
+            /* Decrement Attempts on Failed cURL Initialization */
+            attempts--;
         }
 
-        /* Clean Up cURL */
-        curl_easy_cleanup(curl);
+        /* Clean Up Headers */
+        curl_slist_free_all(headers);
     }
-
-    /* Clean Up Headers */
-    curl_slist_free_all(headers);
 
     /* Throw Exception on Failure */
     if(!status)
