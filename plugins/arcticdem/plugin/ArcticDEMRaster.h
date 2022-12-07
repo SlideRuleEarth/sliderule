@@ -96,7 +96,6 @@ class ArcticDEMRaster: public LuaObject
             /* Last sample information */
             OGRPoint*       point;
             double          value;
-            double          readTime;
         } raster_t;
 
 
@@ -185,6 +184,7 @@ class ArcticDEMRaster: public LuaObject
         static void* readingThread (void *param);
 
         bool findTIFfilesWithPoint    (OGRPoint *p);
+        void createReaderThreads      (void);
         void sampleRasters            (void);
         void processRaster            (raster_t* raster, ArcticDEMRaster* obj);
         int  getSampledRastersCount   (void);

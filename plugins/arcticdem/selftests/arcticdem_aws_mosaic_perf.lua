@@ -32,7 +32,7 @@ local dtime = stoptime - starttime
 
 if status ~= true then
     failedSamples = failedSamples + 1
-    print(string.format("\nFailed to read point lon: %f, lat: %f", lon, lat))
+    print(string.format("Failed to read point lon: %f, lat: %f", lon, lat))
 else
     if verbose then
         for j, v in ipairs(tbl) do
@@ -60,7 +60,7 @@ do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("\nFailed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     end
 end
 
@@ -87,7 +87,7 @@ do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("\nFailed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     end
 
     lon = lon + 0.001
@@ -127,7 +127,7 @@ do
     tbl, status = dem:samples(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("\nFailed to read point# %d, lon: %f, lat: %f",i, lon, lat))
+        print(string.format("Failed to read point# %d, lon: %f, lat: %f",i, lon, lat))
     else
         if verbose then
             for j, v in ipairs(tbl) do
