@@ -211,39 +211,21 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     numComplete = 0;
     LocalLib::set(readerPid, 0, sizeof(readerPid));
 
-    /* Initialize Global Information to Null */
-    sc_orient       = NULL;
-    start_rgt       = NULL;
-    start_cycle     = NULL;
-    atl08_rgt       = NULL;
-
     /* Read Global Resource Information */
     try
     {
         /* Read ATL03 Global Data */
-        sc_orient       = new H5Array<int8_t> (asset, resource, "/orbit_info/sc_orient", &context);
-        start_rgt       = new H5Array<int32_t>(asset, resource, "/ancillary_data/start_rgt", &context);
-        start_cycle     = new H5Array<int32_t>(asset, resource, "/ancillary_data/start_cycle", &context);
-
-        /* Read ATL08 File (if necessary) */
-        if(parms->stages[RqstParms::STAGE_ATL08])
-        {
-            atl08_rgt = new H5Array<int32_t>(asset, resource08, "/ancillary_data/start_rgt", &context08);
-        }
+        sc_orient = NULL;
+        sc_orient = new H5Array<int8_t> (asset, resource, "/orbit_info/sc_orient", &context);
 
         /* Set Metrics */
         PluginMetrics::setRegion(parms);
 
+        /* Parse Globals (throws) */
+        parseResource(resource, start_rgt, start_cycle, start_region);
+
         /* Join Global Data */
         sc_orient->join(read_timeout_ms, true);
-        start_rgt->join(read_timeout_ms, true);
-        start_cycle->join(read_timeout_ms, true);
-
-        /* Wait for ATL08 File (if necessary) */
-        if(parms->stages[RqstParms::STAGE_ATL08])
-        {
-            atl08_rgt->join(read_timeout_ms, true);
-        }
 
         /* Read ATL03 Track Data */
         if(parms->track == RqstParms::ALL_TRACKS)
@@ -307,10 +289,7 @@ Atl03Reader::~Atl03Reader (void)
     delete [] resource;
     delete [] resource08;
 
-    if(sc_orient)       delete sc_orient;
-    if(start_rgt)       delete start_rgt;
-    if(start_cycle)     delete start_cycle;
-    if(atl08_rgt)       delete atl08_rgt;
+    if(sc_orient) delete sc_orient;
 
     asset->releaseLuaObject();
 }
@@ -1418,10 +1397,11 @@ void* Atl03Reader::subsettingThread (void* parm)
             if(state[RqstParms::RPT_L].extent_valid || state[RqstParms::RPT_R].extent_valid || parms->pass_invalid)
             {
                 /* Generate Extent ID */
-                uint64_t extent_id = ((uint64_t)(*reader->start_rgt)[0] << 52) |
-                                     ((uint64_t)(*reader->start_cycle)[0] << 36) |
-                                     (((uint64_t)info->track & 0x2) << 34) |
-                                     ((uint64_t)extent_counter << 2) |
+                uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
+                                     ((uint64_t)reader->start_cycle << 36) |
+                                     ((uint64_t)reader->start_region << 32)
+                                     (((uint64_t)info->track & 0x2) << 30) |
+                                     ((uint64_t)((extent_counter & 0xFFFFFFF) << 2) |
                                      RqstParms::EXTENT_ID_PHOTONS;
 
                 /* Build and Send Extent Record */
@@ -1564,8 +1544,8 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
     extent->extent_id = extent_id;
     extent->reference_pair_track = track;
     extent->spacecraft_orientation = (*sc_orient)[0];
-    extent->reference_ground_track_start = (*start_rgt)[0];
-    extent->cycle_start = (*start_cycle)[0];
+    extent->reference_ground_track_start = start_rgt;
+    extent->cycle_start = start_cycle;
 
     /* Populate Extent */
     uint32_t ph_out = 0;
@@ -1629,8 +1609,8 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
     /* Allocate and Initialize Extent Record */
     RecordObject record(exFlatRecType, extent_bytes);
     flat_photon_t* extent = (flat_photon_t*)record.getRecordData();
-    uint8_t rgt = (*start_rgt)[0];
-    uint8_t cycle = (*start_cycle)[0];
+    uint8_t rgt = start_rgt;
+    uint8_t cycle = start_cycle;
 
     /* Populate Extent */
     uint32_t ph_out = 0;
@@ -1770,6 +1750,54 @@ bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
         mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
         local_stats->extents_dropped++;
         return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * parseResource
+ *
+ *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
+ *      YYYY    - year
+ *      MM      - month
+ *      DD      - day
+ *      HH      - hour
+ *      MM      - minute
+ *      SS      - second
+ *      tttt    - reference ground track
+ *      cc      - cycle
+ *      rr      - region
+ *      vvv     - version
+ *      ee      - revision
+ *----------------------------------------------------------------------------*/
+void Atl03Reader::parseResource (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region)
+{
+    char rgt_str[5];
+    rgt_str[0] = resource[21];
+    rgt_str[1] = resource[22];
+    rgt_str[2] = resource[23];
+    rgt_str[3] = resource[24];
+    rgt_str[4] = '\0';
+    if(!StringLib::str2long(rgt_str, &rgt, 10))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", resource, rgt_str);
+    }
+
+    char cycle_str[3];
+    cycle_str[0] = resource[25];
+    cycle_str[1] = resource[26];
+    cycle_str[2] = '\0';
+    if(!StringLib::str2long(cycle_str, &cycle, 10))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", resource, cycle_str);
+    }
+
+    char region_str[3];
+    region_str[0] = resource[27];
+    region_str[1] = resource[28];
+    region_str[2] = '\0';
+    if(!StringLib::str2long(region_str, &region, 10))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", resource, region_str);
     }
 }
 

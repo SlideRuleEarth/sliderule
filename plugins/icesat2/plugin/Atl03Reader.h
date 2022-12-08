@@ -110,7 +110,7 @@ class Atl03Reader: public LuaObject
             uint8_t         spacecraft_orientation; // sc_orient_t
             uint16_t        reference_ground_track_start;
             uint16_t        cycle_start;
-            uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][RPT: 35-34][ID: 33-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
+            uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
             uint32_t        segment_id[RqstParms::NUM_PAIR_TRACKS];
             double          segment_distance[RqstParms::NUM_PAIR_TRACKS];
             double          extent_length[RqstParms::NUM_PAIR_TRACKS]; // meters
@@ -326,9 +326,9 @@ class Atl03Reader: public LuaObject
         H5Coro::context_t   context08; // for ATL08 file
 
         H5Array<int8_t>*    sc_orient;
-        H5Array<int32_t>*   start_rgt;
-        H5Array<int32_t>*   start_cycle;
-        H5Array<int32_t>*   atl08_rgt; // pretest availability of atl08 file
+        int32_t             start_rgt;
+        int32_t             start_cycle;
+        int32_t             start_region;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -346,6 +346,7 @@ class Atl03Reader: public LuaObject
         bool                sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                sendAncillaryPhRecords  (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
+        void                parseResource           (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 
         static int          luaParms                (lua_State* L);
         static int          luaStats                (lua_State* L);
