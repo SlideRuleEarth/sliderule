@@ -842,7 +842,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             tstart_merge = time.perf_counter()
             for field in field_dictionary:
                 df = geopandas.pd.DataFrame(field_dictionary[field])
-                gdf = gdf.merge(df, on='extent_id', how='inner').set_axis(gdf.index)
+                gdf = gdf.merge(df, on='extent_id', how='inner')
+                gdf.set_axis(gdf.index)
             profiles["merge"] = time.perf_counter() - tstart_merge
 
             # Delete Extent ID Column

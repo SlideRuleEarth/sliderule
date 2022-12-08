@@ -66,6 +66,8 @@ recdef_table = {}
 
 arrow_file_table = {}
 
+profiles = {}
+
 gps_epoch = datetime(1980, 1, 6)
 tai_epoch = datetime(1970, 1, 1, 0, 0, 10)
 
@@ -263,8 +265,14 @@ def __parse_native(data, callbacks):
     rec_index = 0
     rec_rsps = []
 
+    duration = 0.0
+
     for line in data.iter_content(None):
 
+        # Capture Start Time (for duration)
+        tstart = time.perf_counter()
+
+        # Process Line Read
         i = 0
         while i < len(line):
 
@@ -314,6 +322,12 @@ def __parse_native(data, callbacks):
             else:
                 rec_size_index = 0
                 rec_index = 0
+
+        # Capture Duration
+        duration = duration + (time.perf_counter() - tstart)
+
+    # Update Timing Profile
+    profiles[__parse_native.__name__] = duration
 
     return recs
 

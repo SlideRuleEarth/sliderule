@@ -1,5 +1,6 @@
 import time
 import json
+import sliderule
 from sliderule import icesat2
 
 #
@@ -156,6 +157,20 @@ def initialize_client(args):
     return parms, cfg
 
 #
+# Display Timing
+#
+def display_timing():
+
+    print("\nSlideRule Timing Profiles")
+    for key in sliderule.profiles:
+        print("{:20} {:.6f} secs".format(key + ":", sliderule.profiles[key]))
+
+    print("\nICESat2 Timing Profiles")
+    for key in icesat2.profiles:
+        print("{:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
+
+
+#
 # Display Statistics
 #
 def display_statistics(gdf, name):
@@ -171,9 +186,7 @@ def display_statistics(gdf, name):
     else:
         print("No {} were returned".format(name))
 
-    print("\nTiming Profiles")
-    for key in icesat2.profiles:
-        print("{:16}: {:.6f} secs".format(key, icesat2.profiles[key]))
+    display_timing()
 
 #
 # Pretty Print JSON
