@@ -57,9 +57,10 @@ class ArcticDEMRaster: public LuaObject
         static const int   PHOTON_CRS = 4326;
         static const int   ARCTIC_DEM_CRS = 3413;
 
-        static const int   MAX_READER_THREADS = 200;
-        static const int   MAX_CACHED_RATERS  = 100;
+        static const int   MAX_READER_THREADS  = 200;
         static const int   MAX_EXTRAPOLATED_RASTERS = 9;
+        static const int   MAX_MOSAIC_CACHED_RASTERS  = (MAX_EXTRAPOLATED_RASTERS +1);
+        static const int   MAX_STRIPS_CACHED_RASTERS  = 100;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -159,12 +160,14 @@ class ArcticDEMRaster: public LuaObject
         List<std::string>     tifList;
         Dictionary<raster_t*> rasterDict;
         reader_t              rasterRreader[MAX_READER_THREADS];
-        int                   readerCount;
+        uint32_t              readerCount;
         dem_type_t            demType;
 
         double                lastLon;
         double                lastLat;
         uint64_t              samplesCounter;
+        uint32_t              maxCachedRasters;
+
 
 
         OGRCoordinateTransformation *transf;

@@ -242,18 +242,16 @@ void ArcticDEMRaster::extrapolate(double lon, double lat)
 
         OGRPoint newPoint = {_lon, _lat};
 
-        /* Only use extrapolated points which can be transformed and are in VRT mosaic */
-        if (newPoint.transform(transf) == OGRERR_NONE)
+        /*
+         * Only use extrapolated points which can be transformed,
+         * are contained in VRT file and have valid tif file
+         */
+        if ((newPoint.transform(transf) == OGRERR_NONE) &&
+            vrtContainsPoint(&newPoint) &&
+            findTIFfilesWithPoint(&newPoint))
         {
-            if (vrtContainsPoint(&newPoint))
-            {
-                if (findTIFfilesWithPoint(&newPoint))
-                {
-                    /* Update cache with NULL for point - open rasters but don't sample */
-                    updateRastersCache(NULL);
-                }
-                // else print2term("(%d/%d) no tifile for extrapolated lon: %lf, lat: %lf\n", i, MAX_EXTRAPOLATED_RASTERS, _lon, _lat);
-            }
+            /* Update cache with NULL for point - open raster but don't sample */
+            updateRastersCache(NULL);
         }
     }
 }
@@ -501,7 +499,7 @@ void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
     }
 
     /* Remove no longer needed rasters */
-    if(rasterDict.length() > MAX_EXTRAPOLATED_RASTERS)
+    if(rasterDict.length() > maxCachedRasters)
     {
         raster_t *raster = NULL;
         key = rasterDict.first(&raster);
@@ -957,6 +955,7 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
     lastLon = 0;
     lastLat = 0;
     samplesCounter = 0;
+    maxCachedRasters = (demType == STRIPS) ? MAX_STRIPS_CACHED_RASTERS : MAX_MOSAIC_CACHED_RASTERS;
     transf = NULL;
     srcSrs.Clear();
     trgSrs.Clear();
