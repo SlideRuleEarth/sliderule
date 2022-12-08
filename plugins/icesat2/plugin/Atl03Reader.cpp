@@ -1399,9 +1399,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                 /* Generate Extent ID */
                 uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
                                      ((uint64_t)reader->start_cycle << 36) |
-                                     ((uint64_t)reader->start_region << 32)
-                                     (((uint64_t)info->track & 0x2) << 30) |
-                                     ((uint64_t)((extent_counter & 0xFFFFFFF) << 2) |
+                                     ((uint64_t)reader->start_region << 32) |
+                                     ((uint64_t)info->track << 30) |
+                                     (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
                                      RqstParms::EXTENT_ID_PHOTONS;
 
                 /* Build and Send Extent Record */
@@ -1771,13 +1771,19 @@ bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::parseResource (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region)
 {
+    long val;
+
     char rgt_str[5];
     rgt_str[0] = resource[21];
     rgt_str[1] = resource[22];
     rgt_str[2] = resource[23];
     rgt_str[3] = resource[24];
     rgt_str[4] = '\0';
-    if(!StringLib::str2long(rgt_str, &rgt, 10))
+    if(StringLib::str2long(rgt_str, &val, 10))
+    {
+        rgt = val;
+    }
+    else
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", resource, rgt_str);
     }
@@ -1786,7 +1792,11 @@ void Atl03Reader::parseResource (const char* resource, int32_t& rgt, int32_t& cy
     cycle_str[0] = resource[25];
     cycle_str[1] = resource[26];
     cycle_str[2] = '\0';
-    if(!StringLib::str2long(cycle_str, &cycle, 10))
+    if(StringLib::str2long(cycle_str, &val, 10))
+    {
+        cycle = val;
+    }
+    else
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", resource, cycle_str);
     }
@@ -1795,7 +1805,11 @@ void Atl03Reader::parseResource (const char* resource, int32_t& rgt, int32_t& cy
     region_str[0] = resource[27];
     region_str[1] = resource[28];
     region_str[2] = '\0';
-    if(!StringLib::str2long(region_str, &region, 10))
+    if(StringLib::str2long(region_str, &val, 10))
+    {
+        region = val;
+    }
+    else
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", resource, region_str);
     }
