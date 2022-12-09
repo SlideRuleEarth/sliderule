@@ -112,7 +112,6 @@ class ParquetBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                                    alive;
         field_list_t                            fieldList;
         field_iterator_t*                       fieldIterator;
         Mutex                                   tableMut;

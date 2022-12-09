@@ -84,7 +84,7 @@ class Asset: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct {
+        typedef struct _resource_t {
             char                name[RESOURCE_NAME_LENGTH];
             Dictionary<double>  attributes{ASSET_STARTING_ATTRIBUTES_PER_RESOURCE};
         } resource_t;

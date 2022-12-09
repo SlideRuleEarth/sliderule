@@ -191,6 +191,7 @@ GeoJsonRaster::~GeoJsonRaster(void)
 {
     if (raster) delete[] raster;
     if (pimpl->latlon2xy) OGRCoordinateTransformation::DestroyCT(pimpl->latlon2xy);
+    delete pimpl;
 }
 
 /******************************************************************************
@@ -224,8 +225,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, double _cellsize):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    pimpl{ new impl{} }
+    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool rasterCreated = false;
@@ -233,6 +233,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
     GDALDataset *jsonDset   = NULL;
     std::string rasterfname = "/vsimem/" + std::string(getUuid(uuid_str));
     std::string jsonfname   = "/vsimem/" + std::string(getUuid(uuid_str));
+
+    /* Allocate Private Implementation */
+    pimpl = new GeoJsonRaster::impl;
 
     /* Initialize Class Data Members */
     raster = NULL;

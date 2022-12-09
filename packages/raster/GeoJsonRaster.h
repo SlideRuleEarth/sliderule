@@ -131,7 +131,7 @@ class GeoJsonRaster: public LuaObject
         double    cellsize;
 
         struct impl; // gdal implementation
-        std::unique_ptr<impl> pimpl; // private gdal data
+        impl* pimpl; // private gdal data
 
         /*--------------------------------------------------------------------
          * Methods

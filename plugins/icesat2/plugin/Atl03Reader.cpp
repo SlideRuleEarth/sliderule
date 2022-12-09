@@ -1771,8 +1771,15 @@ bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::parseResource (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region)
 {
-    long val;
+    if(StringLib::size(resource) < 29)
+    {
+        rgt = 0;
+        cycle = 0;
+        region = 0;
+        return; // early exit on error
+    }
 
+    long val;
     char rgt_str[5];
     rgt_str[0] = resource[21];
     rgt_str[1] = resource[22];
