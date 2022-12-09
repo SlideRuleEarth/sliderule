@@ -43,8 +43,8 @@
 #include "ccsds.h"
 #endif
 
-#ifdef __raster__
-#include "rasterPkg.h"
+#ifdef __geo__
+#include "geo.h"
 #endif
 
 #ifdef __h5__
@@ -295,8 +295,8 @@ int main (int argc, char* argv[])
         initccsds();
     #endif
 
-    #ifdef __raster__
-        initraster();
+    #ifdef __geo__
+        initgeo();
     #endif
 
     #ifdef __h5__
@@ -364,8 +364,8 @@ int main (int argc, char* argv[])
         deinith5();
     #endif
 
-    #ifdef __raster__
-        deinitraster();
+    #ifdef __geo__
+        deinitgeo();
     #endif
 
     #ifdef __ccsds__

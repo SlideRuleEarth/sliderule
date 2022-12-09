@@ -29,24 +29,76 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __raster_pkg__
-#define __raster_pkg__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-// #include "GeoJsonRaster.h"
+#include "core.h"
+#include "geo.h"
+#include "GeoJsonRaster.h"
+#include <gdal.h>
 
 /******************************************************************************
- * PROTOTYPES
+ * DEFINES
  ******************************************************************************/
 
-extern "C" {
-void initraster (void);
-void deinitraster (void);
+#define LUA_GEO_LIBNAME  "geo"
+
+/******************************************************************************
+ * GEO FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * geo_open
+ *----------------------------------------------------------------------------*/
+int geo_open (lua_State* L)
+{
+    static const struct luaL_Reg geo_functions[] = {
+        {"file",        GeoJsonRaster::luaCreate},
+        {NULL,          NULL}
+    };
+
+    /* Set Package Library */
+    luaL_newlib(L, geo_functions);
+
+    return 1;
 }
 
-#endif  /* __raster_pkg__ */
 
+/*----------------------------------------------------------------------------
+ * Error handler called by GDAL lib on errors
+ *----------------------------------------------------------------------------*/
+void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
+{
+    (void)eErrClass;  /* Silence compiler warning */
+    mlog(CRITICAL, "GDAL ERROR %d: %s", err_no, msg);
+}
 
+/******************************************************************************
+ * EXPORTED FUNCTIONS
+ ******************************************************************************/
+extern "C" {
+void initgeo (void)
+{
+    /* Register all gdal drivers */
+    GDALAllRegister();
+
+    /* Register GDAL custom error handler */
+    void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
+    CPLSetErrorHandler(fptrGdalErrorHandler);
+
+    /* Extend Lua */
+    LuaEngine::extend(LUA_GEO_LIBNAME, geo_open);
+
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_GEO_LIBNAME, LIBID);
+
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_GEO_LIBNAME, LIBID);
+}
+
+void deinitgeo (void)
+{
+    GDALDestroy();
+}
+}

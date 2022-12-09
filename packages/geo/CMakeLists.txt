@@ -7,9 +7,9 @@ pkg_check_modules(UUID uuid)
 # Build package
 if (GDAL_FOUND)
 
-    message (STATUS "Including raster package")
+    message (STATUS "Including geo package")
 
-    target_compile_definitions (slideruleLib PUBLIC __raster__)
+    target_compile_definitions (slideruleLib PUBLIC __geo__)
 
 
     target_link_libraries (slideruleLib PUBLIC ${GDAL_LIBRARIES} ${UUID_LIBRARIES})
@@ -17,7 +17,7 @@ if (GDAL_FOUND)
 
     target_sources(slideruleLib
         PRIVATE
-            ${CMAKE_CURRENT_LIST_DIR}/rasterPkg.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/geo.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.cpp
     )
 
@@ -29,7 +29,7 @@ if (GDAL_FOUND)
 
     install (
         FILES
-            ${CMAKE_CURRENT_LIST_DIR}/rasterPkg.h
+            ${CMAKE_CURRENT_LIST_DIR}/geo.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.h
         DESTINATION
             ${INCDIR}
@@ -37,6 +37,6 @@ if (GDAL_FOUND)
 
 else ()
 
-    message (FATAL_ERROR "Unable to include raster package... required libraries not found")
+    message (FATAL_ERROR "Unable to include geo package... required libraries not found")
 
 endif ()
