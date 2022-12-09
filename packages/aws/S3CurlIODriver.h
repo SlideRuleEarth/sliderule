@@ -100,6 +100,11 @@ class S3CurlIODriver: public Asset::IODriver
                                                  const char* bucket, const char* key, const char* region,
                                                  CredentialStore::Credential* credentials);
 
+        // file PUT - data read directly from file
+        static int64_t      put                 (const char* filename,
+                                                 const char* bucket, const char* key, const char* region,
+                                                 CredentialStore::Credential* credentials);
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
