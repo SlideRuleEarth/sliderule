@@ -59,8 +59,7 @@ class ArcticDEMRaster: public LuaObject
 
         static const int   MAX_READER_THREADS  = 200;
         static const int   MAX_EXTRAPOLATED_RASTERS = 9;
-        static const int   MAX_MOSAIC_CACHED_RASTERS  = (MAX_EXTRAPOLATED_RASTERS +1);
-        static const int   MAX_STRIPS_CACHED_RASTERS  = 100;
+        static const int   MAX_CACHED_RASTERS = (MAX_EXTRAPOLATED_RASTERS +1);
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -166,8 +165,6 @@ class ArcticDEMRaster: public LuaObject
         double                lastLon;
         double                lastLat;
         uint64_t              samplesCounter;
-        uint32_t              maxCachedRasters;
-
 
 
         OGRCoordinateTransformation *transf;

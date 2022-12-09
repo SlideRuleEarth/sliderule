@@ -282,7 +282,7 @@ void ArcticDEMRaster::sampleMosaic(double lon, double lat)
         /* Find raster for point of interest, add to cache */
         if (findTIFfilesWithPoint(&p))
             updateRastersCache(&p);
-#if 1
+#if 0
         /* Add rasters for extrapolated points to cache */
         extrapolate(lon, lat);
 #endif
@@ -291,7 +291,6 @@ void ArcticDEMRaster::sampleMosaic(double lon, double lat)
     sampleRasters();
 
     /* Needed for extrapolator */
-    samplesCounter++;
     lastLon = lon;
     lastLat = lat;
 
@@ -333,6 +332,8 @@ void ArcticDEMRaster::samples(double lon, double lat)
 
     if      (demType == MOSAIC) sampleMosaic(lon, lat);
     else if (demType == STRIPS) sampleStrips(lon, lat);
+
+    samplesCounter++;
 }
 
 
@@ -462,20 +463,17 @@ void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
     if (tifList.length() == 0)
         return;
 
+    const char *key  = NULL;
+    raster_t *raster = NULL;
+
     // print2term("A- rasterDic.len: %d, tifList.len: %d\n", rasterDict.length(), tifList.length());
 
     /* Check new tif file list against rasters in dictionary */
-    const char* key = NULL;
-    const char* key_marker = "arcticdem/";
-
     for (int i = 0; i < tifList.length(); i++)
     {
         std::string& fileName = tifList[i];
-        key = strstr(fileName.c_str(), key_marker);  /* Let's hope ArcticDem file naming schema does not change... */
-        key += strlen(key_marker);
-        assert(key);
+        key = fileName.c_str();
 
-        raster_t *raster = NULL;
         if (rasterDict.find(key, &raster))
         {
             /* Update point to be sampled, mark raster enabled for next sampling */
@@ -487,23 +485,23 @@ void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
         else
         {
             /* Create new raster for this tif file since it is not in the dictionary */
-            raster_t* rp = new raster_t;
-            bzero(rp, sizeof(raster_t));
-            rp->enabled = true;
-            rp->point = p;
-            rp->value = INVALID_SAMPLE_VALUE;
-            rp->fileName = fileName;
-            rasterDict.add(key, rp);
+            raster = new raster_t;
+            assert(raster);
+            bzero(raster, sizeof(raster_t));
+            raster->enabled = true;
+            raster->point = p;
+            raster->value = INVALID_SAMPLE_VALUE;
+            raster->fileName = fileName;
+            rasterDict.add(key, raster);
             newRasters++;
         }
     }
 
     /* Remove no longer needed rasters */
-    if(rasterDict.length() > maxCachedRasters)
+    key = rasterDict.first(&raster);
+    while (key != NULL)
     {
-        raster_t *raster = NULL;
-        key = rasterDict.first(&raster);
-        while (key != NULL)
+        if (rasterDict.length() > MAX_CACHED_RASTERS)
         {
             assert(raster);
             if (!raster->enabled)
@@ -516,6 +514,7 @@ void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
             }
             key = rasterDict.next(&raster);
         }
+        else break;
     }
 
     // print2term("B- rasterDic.len: %d, tifList.len: %d, newRasters: %d, recycledRasters: %d, deltedRasters: %d\n\n",
@@ -955,7 +954,6 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
     lastLon = 0;
     lastLat = 0;
     samplesCounter = 0;
-    maxCachedRasters = (demType == STRIPS) ? MAX_STRIPS_CACHED_RASTERS : MAX_MOSAIC_CACHED_RASTERS;
     transf = NULL;
     srcSrs.Clear();
     trgSrs.Clear();
