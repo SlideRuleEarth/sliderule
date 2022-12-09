@@ -1,11 +1,32 @@
 {
-   <main thread joins luaengine thread>
+   <arrow background thread>
    Memcheck:Leak
-   match-leak-kinds: possible,reachable
+   match-leak-kinds: possible
    fun:calloc
    fun:allocate_dtv
    fun:_dl_allocate_tls
    fun:allocate_stack
-   fun:pthread_create@@GLIBC_2.2.5
+   fun:pthread_create@@GLIBC_2.*
+   fun:je_arrow_private_je_pthread_create_wrapper
+   fun:background_thread_create_signals_masked
+   fun:background_thread_create_locked
+   fun:je_arrow_private_je_background_thread_create
+   fun:malloc_init_hard
+   fun:malloc_init_hard
+   fun:call_init.part.0
+   fun:call_init
+   fun:_dl_init
+   obj:/usr/lib/aarch64-linux-gnu/ld-2.*
+}
+
+{
+   <main thread joins luaengine thread>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:allocate_stack
+   fun:pthread_create@@GLIBC_2.*
    fun:main
 }

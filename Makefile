@@ -41,6 +41,18 @@ config-development: prep ## configure make for development version of sliderule 
 config-development-debug: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
 
+MEMCFG  = -DUSE_ARROW_PACKAGE=ON
+MEMCFG += -DUSE_AWS_PACKAGE=ON
+MEMCFG += -DUSE_CCSDS_PACKAGE=ON
+MEMCFG += -DUSE_RASTER_PACKAGE=ON
+MEMCFG += -DUSE_H5_PACKAGE=ON
+MEMCFG += -DUSE_LEGACY_PACKAGE=ON
+MEMCFG += -DUSE_NETSVC_PACKAGE=ON
+MEMCFG += -DUSE_PISTACHE_PACKAGE=OFF # currently deprecated due to memory bugs
+
+config-memtest: prep ## configure make for memory test version of sliderule binary
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
+
 install: ## install sliderule to system
 	make -C $(BUILD) install
 

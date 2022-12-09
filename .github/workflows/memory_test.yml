@@ -47,7 +47,7 @@ jobs:
 
     - name: Build sliderule
       run: |
-       make config-development
+       make config-memtest
        make
        sudo make install
        chmod +x scripts/systests/memtest.sh
