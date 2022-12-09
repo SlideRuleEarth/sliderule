@@ -34,6 +34,7 @@ DEVCFG += -DUSE_H5_PACKAGE=ON
 DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
 DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
+DEVCFG += -DENABLE_APACHE_ARROW_10_COMPAT=ON
 
 config-development: prep ## configure make for development version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
@@ -49,9 +50,10 @@ MEMCFG += -DUSE_H5_PACKAGE=ON
 MEMCFG += -DUSE_LEGACY_PACKAGE=ON
 MEMCFG += -DUSE_NETSVC_PACKAGE=ON
 MEMCFG += -DUSE_PISTACHE_PACKAGE=OFF # currently deprecated due to memory bugs
+MEMCFG += -DENABLE_APACHE_ARROW_10_COMPAT=ON
 
 config-memtest: prep ## configure make for memory test version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(MEMCFG) $(ROOT)
 
 install: ## install sliderule to system
 	make -C $(BUILD) install

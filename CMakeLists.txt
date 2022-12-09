@@ -42,6 +42,7 @@ option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memo
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
 option (ENABLE_H5CORO_ATTRIBUTE_SUPPORT "H5Coro will read and process attribute messages" OFF)
+option (ENABLE_APACHE_ARROW_10_COMPAT "Use Apache Arrow 11 interface" OFF)
 
 # Package Options #
 
@@ -158,6 +159,11 @@ endif ()
 if (${ENABLE_H5CORO_ATTRIBUTE_SUPPORT})
     message (STATUS "Enabling support in H5Coro for attribute messages")
     target_compile_definitions (slideruleLib PUBLIC H5CORO_ATTRIBUTE_SUPPORT)
+endif ()
+
+if (${ENABLE_APACHE_ARROW_10_COMPAT})
+    message (STATUS "Enabling Apache Arrow 10 compatibility")
+    target_compile_definitions (slideruleLib PUBLIC APACHE_ARROW_10_COMPAT)
 endif ()
 
 # Platform File #

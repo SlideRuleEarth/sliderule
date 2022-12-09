@@ -159,9 +159,13 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
     shared_ptr<parquet::ArrowWriterProperties> arrow_writer_props = arrow_writer_props_builder.build();
 
     /* Create Parquet Writer */
-    arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
-    if(result.ok()) parquetWriter = std::move(result).ValueOrDie();
-    else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
+    #ifdef APACHE_ARROW_10_COMPAT
+        (void)parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &parquetWriter);
+    #else
+        arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+        if(result.ok()) parquetWriter = std::move(result).ValueOrDie();
+        else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
+    #endif
 }
 
 /*----------------------------------------------------------------------------
