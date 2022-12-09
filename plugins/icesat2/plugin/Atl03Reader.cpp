@@ -102,8 +102,8 @@ const char* Atl03Reader::phAncRecType = "phrec"; // photon ancillary atl03 recor
 const RecordObject::fieldDef_t Atl03Reader::phAncRecDef[] = {
     {"extent_id",   RecordObject::UINT64,   offsetof(anc_photon_t, extent_id),      1,  NULL, NATIVE_FLAGS},
     {"field_index", RecordObject::UINT8,    offsetof(anc_photon_t, field_index),    1,  NULL, NATIVE_FLAGS},
-    {"data_type",   RecordObject::UINT8,    offsetof(anc_photon_t, data_type),      1,  NULL, NATIVE_FLAGS},
     {"num_elements",RecordObject::UINT32,   offsetof(anc_photon_t, num_elements),   2,  NULL, NATIVE_FLAGS},
+    {"datatype",    RecordObject::UINT8,    offsetof(anc_photon_t, data_type),      1,  NULL, NATIVE_FLAGS},
     {"data",        RecordObject::UINT8,    offsetof(anc_photon_t, data),           0,  NULL, NATIVE_FLAGS} // variable length
 };
 
@@ -111,7 +111,7 @@ const char* Atl03Reader::exAncRecType = "extrec"; // extent ancillary atl03 reco
 const RecordObject::fieldDef_t Atl03Reader::exAncRecDef[] = {
     {"extent_id",   RecordObject::UINT64,   offsetof(anc_extent_t, extent_id),     1,  NULL, NATIVE_FLAGS},
     {"field_index", RecordObject::UINT8,    offsetof(anc_extent_t, field_index),   1,  NULL, NATIVE_FLAGS},
-    {"data_type",   RecordObject::UINT8,    offsetof(anc_extent_t, data_type),     1,  NULL, NATIVE_FLAGS},
+    {"datatype",    RecordObject::UINT8,    offsetof(anc_extent_t, data_type),     1,  NULL, NATIVE_FLAGS},
     {"data",        RecordObject::UINT8,    offsetof(anc_extent_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
 };
 
@@ -167,7 +167,7 @@ void Atl03Reader::init (void)
     RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
     RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       "extent_id");
     RECDEF(phFlatRecType,   phFlatRecDef,   sizeof(flat_photon_t),  "extent_id");
-    RECDEF(exFlatRecType,   exFlatRecDef,   1,                      "extent_id");
+    RECDEF(exFlatRecType,   exFlatRecDef,   1,                      NULL);
     RECDEF(phAncRecType,    phAncRecDef,    sizeof(anc_photon_t),   "extent_id");
     RECDEF(exAncRecType,    exAncRecDef,    sizeof(anc_extent_t),   "extent_id");
 }

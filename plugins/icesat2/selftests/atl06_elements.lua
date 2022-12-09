@@ -21,7 +21,7 @@ end
 
 print('\n------------------\nTest01: Atl03 Reader \n------------------')
 
-f1_0 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq", {srt=icesat2.SRT_SEA_ICE, cnf=icesat2.CNF_NOT_CONSIDERED, track=icesat2.RPT_1})
+f1_0 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq", icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf=icesat2.CNF_NOT_CONSIDERED, track=icesat2.RPT_1}))
 p1 = f1_0:parms()
 
 runner.check(p1.srt == icesat2.SRT_SEA_ICE, "Failed to set surface type")
@@ -33,7 +33,7 @@ runner.check(p1.cnf[icesat2.CNF_SURFACE_LOW], "Failed to set _low_")
 runner.check(p1.cnf[icesat2.CNF_SURFACE_MEDIUM], "Failed to set _medium_")
 runner.check(p1.cnf[icesat2.CNF_SURFACE_HIGH], "Failed to set _high_")
 
-f1_1 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq", {srt=icesat2.SRT_SEA_ICE, cnf={icesat2.CNF_NOT_CONSIDERED}, track=icesat2.RPT_1})
+f1_1 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq", icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf={icesat2.CNF_NOT_CONSIDERED}, track=icesat2.RPT_1}))
 p1 = f1_1:parms()
 
 runner.check(not p1.cnf[icesat2.CNF_POSSIBLE_TEP], "Failed to not set _tep_")
@@ -44,7 +44,7 @@ runner.check(not p1.cnf[icesat2.CNF_SURFACE_LOW], "Failed to not set _low_")
 runner.check(not p1.cnf[icesat2.CNF_SURFACE_MEDIUM], "Failed to not set _medium_")
 runner.check(not p1.cnf[icesat2.CNF_SURFACE_HIGH], "Failed to not set _high_")
 
-f1_2 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq", {srt=icesat2.SRT_SEA_ICE, cnf={"atl03_not_considered"}, track=icesat2.RPT_1})
+f1_2 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq", icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf={"atl03_not_considered"}, track=icesat2.RPT_1}))
 p1 = f1_2:parms()
 
 runner.check(not p1.cnf[icesat2.CNF_POSSIBLE_TEP], "Failed to not set _tep_")
@@ -55,7 +55,7 @@ runner.check(not p1.cnf[icesat2.CNF_SURFACE_LOW], "Failed to not set _low_")
 runner.check(not p1.cnf[icesat2.CNF_SURFACE_MEDIUM], "Failed to not set _medium_")
 runner.check(not p1.cnf[icesat2.CNF_SURFACE_HIGH], "Failed to not set _high_")
 
-f1_3 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq", {srt=icesat2.SRT_SEA_ICE, cnf={"atl03_low", "atl03_medium", "atl03_high"}, track=icesat2.RPT_1})
+f1_3 = icesat2.atl03(nsidc_s3, "missing_file", "tmpq",icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf={"atl03_low", "atl03_medium", "atl03_high"}, track=icesat2.RPT_1}))
 p1 = f1_3:parms()
 
 runner.check(not p1.cnf[icesat2.CNF_POSSIBLE_TEP], "Failed to not set _tep_")
@@ -70,7 +70,7 @@ print('\n------------------\nTest02: Atl03 Extent Record\n------------------')
 
 recq = msg.subscribe("recq")
 tstart = time.latch()
-f2 = icesat2.atl03(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "recq", {cnf=4, track=icesat2.RPT_1})
+f2 = icesat2.atl03(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "recq", icesat2.parms({cnf=4, track=icesat2.RPT_1}))
 extentrec = recq:recvrecord(3000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 recq:destroy()

@@ -79,8 +79,8 @@ const char* RqstParms::OUTPUT_PATH                  = "path";
 const char* RqstParms::OUTPUT_FORMAT                = "format";
 const char* RqstParms::OUTPUT_OPEN_ON_COMPLETE      = "open_on_complete";
 
-const char* RqstParms::OBJECT_TYPE = "EndpointProxy";
-const char* RqstParms::LuaMetaName = "EndpointProxy";
+const char* RqstParms::OBJECT_TYPE = "RqstParms";
+const char* RqstParms::LuaMetaName = "RqstParms";
 const struct luaL_Reg RqstParms::LuaMetaTable[] = {
     {NULL,          NULL}
 };
