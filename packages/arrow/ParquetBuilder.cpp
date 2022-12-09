@@ -159,7 +159,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
     shared_ptr<parquet::ArrowWriterProperties> arrow_writer_props = arrow_writer_props_builder.build();
 
     /* Create Parquet Writer */
-    (void)parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &parquetWriter);
+    arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+    if(result.ok()) parquetWriter = std::move(result).ValueOrDie();
+    else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
 }
 
 /*----------------------------------------------------------------------------
@@ -373,7 +375,10 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
         shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
 
         /* Write Table */
-        (void)parquetWriter->WriteTable(*table, num_rows);
+        if(parquetWriter)
+        {
+            (void)parquetWriter->WriteTable(*table, num_rows);
+        }
     }
     tableMut.unlock();
 
@@ -441,25 +446,25 @@ bool ParquetBuilder::processTermination (void)
         } while(false);
 
         /* Close File */
-        int rc = fclose(fp);
-        if(rc != 0)
+        int rc1 = fclose(fp);
+        if(rc1 != 0)
         {
             status = false;
-            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc, fileName, strerror(errno));
+            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc1, fileName, strerror(errno));
+        }
+
+        /* Remove File */
+        int rc2 = remove(fileName);
+        if(rc2 != 0)
+        {
+            status = false;
+            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc2, fileName, strerror(errno));
         }
     }
     else // unable to open file
     {
         status = false;
         mlog(CRITICAL, "Failed (%d) to read parquet file %s: %s", errno, fileName, strerror(errno));
-    }
-
-    /* Remove File */
-    int rc = remove(fileName);
-    if(rc != 0)
-    {
-        status = false;
-        mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, fileName, strerror(errno));
     }
 
     /* Return Status */
