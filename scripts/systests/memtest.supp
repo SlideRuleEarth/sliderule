@@ -1,7 +1,7 @@
 {
    <main thread joins luaengine thread>
    Memcheck:Leak
-   match-leak-kinds: possible, reachable
+   match-leak-kinds: possible,reachable
    fun:calloc
    fun:allocate_dtv
    fun:_dl_allocate_tls
