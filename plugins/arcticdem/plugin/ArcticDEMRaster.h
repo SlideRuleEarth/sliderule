@@ -81,6 +81,12 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
+            double value;
+            double time;
+        } sample_t;
+
+
+        typedef struct {
             bool             enabled;
             bool             sampled;
             GDALDataset*     dset;
@@ -96,7 +102,7 @@ class ArcticDEMRaster: public LuaObject
 
             /* Last sample information */
             OGRPoint*       point;
-            double          value;
+            sample_t        sample;
         } raster_t;
 
 
@@ -114,12 +120,13 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void             init           (void);
-        static void             deinit         (void);
-        static int              luaCreate      (lua_State* L);
-        static ArcticDEMRaster* create         (lua_State* L, int index);
+        static void             init      (void);
+        static void             deinit    (void);
+        static int              luaCreate (lua_State* L);
+        static ArcticDEMRaster* create    (lua_State* L, int index);
 
-        void                    samples        (double lon, double lat);
+        int                     sample    (double lon, double lat);
+        int                     sample    (double lon, double lat, List<sample_t> &slist, void* param=NULL);
         virtual ~ArcticDEMRaster(void);
 
         /*--------------------------------------------------------------------

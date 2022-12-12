@@ -25,7 +25,7 @@ local lat =   51.7
 print('\n------------------\nTest: Strips\n------------')
 dem = arcticdem.raster("strip", "NearestNeighbour", 0)
 local starttime = time.latch();
-local tbl, status = dem:samples(lon, lat)
+local tbl, status = dem:sample(lon, lat)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
@@ -40,7 +40,7 @@ print('ExecTime:', dtime * 1000, '\n')
 print('\n------------------\nTest: Mosaic\n------------')
 dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
 starttime = time.latch();
-tbl, status = dem:samples(lon, lat)
+tbl, status = dem:sample(lon, lat)
 stoptime = time.latch();
 dtime = stoptime - starttime
 
@@ -60,7 +60,7 @@ print('\n------------------\nTest: Sampling Elevations\n------------')
 for radius = 0, 8 do
     for i = 1, 8 do
         dem = arcticdem.raster("mosaic", samplingAlgs[i], radius)
-        tbl, status = dem:samples(lon, lat)
+        tbl, status = dem:sample(lon, lat)
 
         local el, file
         for i, v in ipairs(tbl) do
@@ -101,7 +101,7 @@ for dems = 1, 2 do
     local starttime = time.latch();
     for i = 1, max_cnt
     do
-        tbl, status = dem:samples(lon, lat)
+        tbl, status = dem:sample(lon, lat)
         if status ~= true then
             print(i, status)
         end

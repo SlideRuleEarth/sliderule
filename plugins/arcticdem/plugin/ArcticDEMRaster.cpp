@@ -87,7 +87,7 @@ const struct luaL_Reg ArcticDEMRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
     {"bbox",        luaBoundingBox},
     {"cell",        luaCellSize},
-    {"samples",     luaSamples},
+    {"sample",     luaSamples},
     {NULL,          NULL}
 };
 
@@ -324,9 +324,9 @@ void ArcticDEMRaster::sampleStrips(double lon, double lat)
 }
 
 /*----------------------------------------------------------------------------
- * samples
+ * sample
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::samples(double lon, double lat)
+int ArcticDEMRaster::sample(double lon, double lat)
 {
     invalidateRastersCache();
 
@@ -334,8 +334,42 @@ void ArcticDEMRaster::samples(double lon, double lat)
     else if (demType == STRIPS) sampleStrips(lon, lat);
 
     samplesCounter++;
+
+    return getSampledRastersCount();
 }
 
+/*----------------------------------------------------------------------------
+ * sample
+ *----------------------------------------------------------------------------*/
+int ArcticDEMRaster::sample (double lon, double lat, List<sample_t> &slist, void* param)
+{
+    slist.clear();
+
+    try
+    {
+        /* Get samples */
+        if (sample(lon, lat) > 0)
+        {
+            raster_t *raster = NULL;
+            const char *key = rasterDict.first(&raster);
+            while (key != NULL)
+            {
+                assert(raster);
+                if (raster->enabled && raster->sampled)
+                {
+                    slist.add(raster->sample);
+                }
+                key = rasterDict.next(&raster);
+            }
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting samples: %s", e.what());
+    }
+
+    return slist.length();
+}
 
 
 /*----------------------------------------------------------------------------
@@ -447,7 +481,8 @@ void ArcticDEMRaster::invalidateRastersCache(void)
         raster->enabled = false;
         raster->sampled = false;
         raster->point = NULL;
-        raster->value = INVALID_SAMPLE_VALUE;
+        raster->sample.value = INVALID_SAMPLE_VALUE;
+        raster->sample.time = 0.0;
         key = rasterDict.next(&raster);
     }
 }
@@ -490,7 +525,7 @@ void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
             bzero(raster, sizeof(raster_t));
             raster->enabled = true;
             raster->point = p;
-            raster->value = INVALID_SAMPLE_VALUE;
+            raster->sample.value = INVALID_SAMPLE_VALUE;
             raster->fileName = fileName;
             rasterDict.add(key, raster);
             newRasters++;
@@ -717,10 +752,10 @@ void ArcticDEMRaster::processRaster(raster_t* raster, ArcticDEMRaster* obj)
                 uint32_t _col = col % raster->xBlockSize;
                 uint32_t _row = row % raster->yBlockSize;
                 uint32_t offset = _row * raster->xBlockSize + _col;
-                raster->value = fp[offset];
+                raster->sample.value = fp[offset];
 
                 mlog(DEBUG, "Elevation: %f, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
-                     raster->value, col, row, xblk, yblk, _col, _row, offset);
+                     raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
             }
             else mlog(CRITICAL, "block->GetDataRef() returned NULL pointer\n");
             block->DropLock();
@@ -771,7 +806,7 @@ void ArcticDEMRaster::processRaster(raster_t* raster, ArcticDEMRaster* obj)
                 err = raster->band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float32, 0, 0, &args);
             } while (err != CE_None && cnt--);
             CHECK_GDALERR(err);
-            raster->value = rbuf[0];
+            raster->sample.value = rbuf[0];
             mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], obj->radius, radius_in_pixels, size);
             // print2term("Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
         }
@@ -1079,7 +1114,7 @@ int ArcticDEMRaster::getSampledRastersCount(void)
 }
 
 /*----------------------------------------------------------------------------
- * luaSamples - :samples(lon, lat) --> in|out
+ * luaSamples - :sample(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
 int ArcticDEMRaster::luaSamples(lua_State *L)
 {
@@ -1095,10 +1130,8 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
         double lon = getLuaFloat(L, 2);
         double lat = getLuaFloat(L, 3);
 
-        /* Get Elevations */
-        lua_obj->samples(lon, lat);
-
-        int sampledRasters = lua_obj->getSampledRastersCount();
+        /* Get samples */
+        int sampledRasters = lua_obj->sample(lon, lat);
         if (sampledRasters > 0)
         {
             raster_t   *raster = NULL;
@@ -1117,7 +1150,7 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
                 {
                     lua_createtable(L, 0, 2);
                     LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
-                    LuaEngine::setAttrNum(L, "value", raster->value);
+                    LuaEngine::setAttrNum(L, "value", raster->sample.value);
                     lua_rawseti(L, -2, ++i);
                 }
                 key = lua_obj->rasterDict.next(&raster);
@@ -1135,3 +1168,4 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);
 }
+

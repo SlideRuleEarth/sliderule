@@ -47,7 +47,7 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:samples(lon, lat)
+    tbl, status = dem:sample(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
         if verboseErrors then
@@ -94,7 +94,7 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:samples(lon, lat)
+    tbl, status = dem:sample(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
         if verboseErrors then

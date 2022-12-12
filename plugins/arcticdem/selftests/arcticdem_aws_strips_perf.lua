@@ -25,7 +25,7 @@ local _lat = lat
 print('\n------------------\nTest: AWS strips\n------------')
 local dem = arcticdem.raster("strip", "NearestNeighbour", 0)
 local starttime = time.latch();
-local tbl, status = dem:samples(lon, lat)
+local tbl, status = dem:sample(lon, lat)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
@@ -57,7 +57,7 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:samples(lon, lat)
+    tbl, status = dem:sample(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
@@ -88,7 +88,7 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:samples(lon, lat)
+    tbl, status = dem:sample(lon, lat)
     if status ~= true then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
