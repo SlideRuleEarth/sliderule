@@ -29,25 +29,39 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_plugin__
-#define __arcticdem_plugin__
+#ifndef __arcticdem_strips_raster__
+#define __arcticdem_r_stripsaster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
-#include "ArcticDemStripsRaster.h"
-#include "ArcticDEMReader.h"
+#include "VrtRaster.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * ARCTICDEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initarcticdem (void);
-}
+class ArcticDemStripsRaster: public VrtRaster
+{
+    public:
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-#endif  /* __arcticdem_plugin__ */
+        static int luaCreate (lua_State* L);
 
+    protected:
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static ArcticDemStripsRaster* create (lua_State* L, int index);
+               ArcticDemStripsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius);
+        void   getVrtFileName(double lon, double lat, std::string &vrtFile);
+
+    private:
+};
+
+#endif  /* __arcticdem_strips_rmaster__ */

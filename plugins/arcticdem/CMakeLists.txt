@@ -55,7 +55,9 @@ endif()
 target_sources(arcticdem
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMRaster.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/VrtRaster.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMReader.cpp
 )
 
@@ -82,7 +84,9 @@ install (TARGETS arcticdem LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/VrtRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMReader.h
     DESTINATION
         ${INSTALLDIR}/include/sliderule)

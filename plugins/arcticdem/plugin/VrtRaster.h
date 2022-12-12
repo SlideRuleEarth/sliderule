@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_raster__
-#define __arcticdem_raster__
+#ifndef __vrt_raster__
+#define __vrt_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -46,7 +46,7 @@
  * GEOJSON RASTER CLASS
  ******************************************************************************/
 
-class ArcticDEMRaster: public LuaObject
+class VrtRaster: public LuaObject
 {
     public:
 
@@ -71,13 +71,6 @@ class ArcticDEMRaster: public LuaObject
             double lon_max;
             double lat_max;
         } bbox_t;
-
-
-        typedef enum {
-            MOSAIC  = 0,
-            STRIPS  = 1,
-            INVALID = 3
-        } dem_type_t;
 
 
         typedef struct {
@@ -107,11 +100,11 @@ class ArcticDEMRaster: public LuaObject
 
 
         typedef struct {
-            ArcticDEMRaster* obj;
-            Thread*          thread;
-            raster_t*        raster;
-            Cond*            sync;
-            bool             run;
+            VrtRaster*     obj;
+            Thread*        thread;
+            raster_t*      raster;
+            Cond*          sync;
+            bool           run;
         } reader_t;
 
 
@@ -122,12 +115,8 @@ class ArcticDEMRaster: public LuaObject
 
         static void             init      (void);
         static void             deinit    (void);
-        static int              luaCreate (lua_State* L);
-        static ArcticDEMRaster* create    (lua_State* L, int index);
-
-        int                     sample    (double lon, double lat);
         int                     sample    (double lon, double lat, List<sample_t> &slist, void* param=NULL);
-        virtual ~ArcticDEMRaster(void);
+        virtual                ~VrtRaster (void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -146,16 +135,35 @@ class ArcticDEMRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDEMRaster      (lua_State* L, const char* dem_type, const char* dem_sampling, const int sampling_radius);
-        void   sampleMosaic  (double lon, double lat);
-        void   sampleStrips  (double lon, double lat);
+                     VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius);
+        bool         openVrtDset   (const char *fileName);
+        virtual int  sample        (double lon, double lat);
+        virtual void getVrtFileName(double lon, double lat, std::string& vrtFile) = 0;
+
+
+        VRTDataset*           vrtDset;
+        OGRCoordinateTransformation *transf;
+        double                lastLon;
+        double                lastLat;
+        uint64_t              samplesCounter;
+        bool                  checkCacheFirst;
+        bool                  extrapolateEnabled;
+
+        bool findTIFfilesWithPoint    (OGRPoint *p);
+        void updateRastersCache       (OGRPoint *p);
+        bool vrtContainsPoint         (OGRPoint *p);
+        bool rasterContainsPoint      (raster_t *raster, OGRPoint *p);
+        bool findCachedRasterWithPoint(OGRPoint *p, raster_t **raster);
+        void extrapolate              (double lon, double lat);
+        void sampleRasters            (void);
+        void invalidateRastersCache   (void);
+        int  getSampledRastersCount   (void);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
         std::string           vrtFileName;
-        VRTDataset*           vrtDset;
         GDALRasterBand*       vrtBand;
         double                vrtInvGeot[6];
         uint32_t              vrtRows;
@@ -167,14 +175,8 @@ class ArcticDEMRaster: public LuaObject
         Dictionary<raster_t*> rasterDict;
         reader_t              rasterRreader[MAX_READER_THREADS];
         uint32_t              readerCount;
-        dem_type_t            demType;
-
-        double                lastLon;
-        double                lastLat;
-        uint64_t              samplesCounter;
 
 
-        OGRCoordinateTransformation *transf;
         OGRSpatialReference srcSrs;
         OGRSpatialReference trgSrs;
         GDALRIOResampleAlg  sampleAlg;
@@ -191,18 +193,8 @@ class ArcticDEMRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        bool findTIFfilesWithPoint    (OGRPoint *p);
         void createReaderThreads      (void);
-        void sampleRasters            (void);
-        void processRaster            (raster_t* raster, ArcticDEMRaster* obj);
-        int  getSampledRastersCount   (void);
-        void invalidateRastersCache   (void);
-        void updateRastersCache       (OGRPoint *p);
-        bool openVrtDset              (const char *fileName);
-        bool vrtContainsPoint         (OGRPoint *p);
-        bool rasterContainsPoint      (raster_t *raster, OGRPoint *p);
-        bool findCachedRasterWithPoint(OGRPoint *p, raster_t **raster);
-        void extrapolate              (double lon, double lat);
+        void processRaster            (raster_t* raster, VrtRaster* obj);
 };
 
-#endif  /* __arcticdem_raster__ */
+#endif  /* __vrt_raster__ */

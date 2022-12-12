@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "ArcticDEMRaster.h"
+#include "VrtRaster.h"
 
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
@@ -82,12 +82,12 @@ do                                                                            \
  * STATIC DATA
  ******************************************************************************/
 
-const char* ArcticDEMRaster::LuaMetaName = "ArcticDEMRaster";
-const struct luaL_Reg ArcticDEMRaster::LuaMetaTable[] = {
+const char* VrtRaster::LuaMetaName = "VrtRaster";
+const struct luaL_Reg VrtRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
     {"bbox",        luaBoundingBox},
     {"cell",        luaCellSize},
-    {"sample",     luaSamples},
+    {"sample",      luaSamples},
     {NULL,          NULL}
 };
 
@@ -99,7 +99,7 @@ const struct luaL_Reg ArcticDEMRaster::LuaMetaTable[] = {
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::init( void )
+void VrtRaster::init( void )
 {
     /* Register all gdal drivers */
     GDALAllRegister();
@@ -108,60 +108,16 @@ void ArcticDEMRaster::init( void )
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::deinit( void )
+void VrtRaster::deinit( void )
 {
     GDALDestroy();
-}
-
-/*----------------------------------------------------------------------------
- * luaCreate
- *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaCreate( lua_State* L )
-{
-    try
-    {
-        return createLuaObject(L, create(L, 1));
-    }
-    catch( const RunTimeException& e )
-    {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * create
- *----------------------------------------------------------------------------*/
-ArcticDEMRaster* ArcticDEMRaster::create( lua_State* L, int index )
-{
-    const int radius = getLuaInteger(L, -1);
-    lua_pop(L, 1);
-    const char* dem_sampling = getLuaString(L, -1);
-    lua_pop(L, 1);
-    const char* dem_type = getLuaString(L, -1);
-    lua_pop(L, 1);
-    return new ArcticDEMRaster(L, dem_type, dem_sampling, radius);
-}
-
-
-
-static void getVrtName( double lon, double lat, std::string& vrtFile )
-{
-    int ilat = floor(lat);
-    int ilon = floor(lon);
-
-    vrtFile = "/data/ArcticDem/strips/n" +
-               std::to_string(ilat)      +
-               ((ilon < 0) ? "w" : "e")  +
-               std::to_string(abs(ilon)) +
-               ".vrt";
 }
 
 
 /*----------------------------------------------------------------------------
  * vrtContainsPoint
  *----------------------------------------------------------------------------*/
-inline bool ArcticDEMRaster::vrtContainsPoint(OGRPoint *p)
+inline bool VrtRaster::vrtContainsPoint(OGRPoint *p)
 {
     return (vrtDset && p &&
            (p->getX() >= vrtBbox.lon_min) && (p->getX() <= vrtBbox.lon_max) &&
@@ -172,7 +128,7 @@ inline bool ArcticDEMRaster::vrtContainsPoint(OGRPoint *p)
 /*----------------------------------------------------------------------------
  * rasterContainsPoint
  *----------------------------------------------------------------------------*/
-inline bool ArcticDEMRaster::rasterContainsPoint(raster_t *raster, OGRPoint *p)
+inline bool VrtRaster::rasterContainsPoint(raster_t *raster, OGRPoint *p)
 {
     return (p && raster && raster->dset &&
            (p->getX() >= raster->bbox.lon_min) && (p->getX() <= raster->bbox.lon_max) &&
@@ -183,7 +139,7 @@ inline bool ArcticDEMRaster::rasterContainsPoint(raster_t *raster, OGRPoint *p)
 /*----------------------------------------------------------------------------
  * findCachedRasterWithPoint
  *----------------------------------------------------------------------------*/
-bool ArcticDEMRaster::findCachedRasterWithPoint(OGRPoint *p, ArcticDEMRaster::raster_t** raster)
+bool VrtRaster::findCachedRasterWithPoint(OGRPoint *p, VrtRaster::raster_t** raster)
 {
     bool foundRaster = false;
     const char *key = rasterDict.first(raster);
@@ -204,8 +160,9 @@ bool ArcticDEMRaster::findCachedRasterWithPoint(OGRPoint *p, ArcticDEMRaster::ra
 /*----------------------------------------------------------------------------
  * extrapolate
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::extrapolate(double lon, double lat)
+void VrtRaster::extrapolate(double lon, double lat)
 {
+#if 0
     if (samplesCounter == 0)
         return;
 
@@ -254,55 +211,28 @@ void ArcticDEMRaster::extrapolate(double lon, double lat)
             updateRastersCache(NULL);
         }
     }
-}
-
-/*----------------------------------------------------------------------------
- * samplesMosaic
- *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::sampleMosaic(double lon, double lat)
-{
-    OGRPoint p = {lon, lat};
-
-    if (p.transform(transf) != OGRERR_NONE)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
-
-    if (!vrtContainsPoint(&p))
-        throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in mosaic VRT", lon, lat);
-
-    raster_t *raster = NULL;
-    if (findCachedRasterWithPoint(&p, &raster))
-    {
-        raster->enabled = true;
-        raster->point = &p;
-    }
-    else
-    {
-        // print2term("New raster for sample: %lu, lon: %.3lf, lat: %.3lf\n", samplesCounter, lon, lat);
-
-        /* Find raster for point of interest, add to cache */
-        if (findTIFfilesWithPoint(&p))
-            updateRastersCache(&p);
-#if 0
-        /* Add rasters for extrapolated points to cache */
-        extrapolate(lon, lat);
 #endif
-    }
-
-    sampleRasters();
-
-    /* Needed for extrapolator */
-    lastLon = lon;
-    lastLat = lat;
-
 }
 
 /*----------------------------------------------------------------------------
- * samplesStrips
+ * sample
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::sampleStrips(double lon, double lat)
+int VrtRaster::sample(double lon, double lat)
 {
-    OGRPoint p = {lon, lat};
+    invalidateRastersCache();
 
+    /* Initial call, open vrt file */
+    if (vrtDset == NULL)
+    {
+        std::string newVrtFile;
+        getVrtFileName(lon, lat, newVrtFile);
+
+        if (!openVrtDset(newVrtFile.c_str()))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open VRT file for point lon: %lf, lat: %lf", lon, lat);
+    }
+
+
+    OGRPoint p = {lon, lat};
     if (p.transform(transf) != OGRERR_NONE)
         throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
 
@@ -310,28 +240,51 @@ void ArcticDEMRaster::sampleStrips(double lon, double lat)
     if (!vrtContainsPoint(&p))
     {
         std::string newVrtFile;
-        getVrtName(lon, lat, newVrtFile);
+        getVrtFileName(lon, lat, newVrtFile);
+
+        /* If the new VRT file is the same as the currently opened one the point is not in it, bail...*/
+        if (newVrtFile == vrtFileName)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in VRT file", lon, lat);
 
         if (!openVrtDset(newVrtFile.c_str()))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open VRT file for point lon: %lf, lat: %lf", lon, lat);
     }
 
-    if (findTIFfilesWithPoint(&p))
+    bool findNewTifFile = true;
+
+    if( checkCacheFirst )
     {
-        updateRastersCache(&p);
-        sampleRasters();
+        raster_t *raster = NULL;
+        if (findCachedRasterWithPoint(&p, &raster))
+        {
+            raster->enabled = true;
+            raster->point = &p;
+
+            /* Found raster with point in cache, no need to look for new tif file */
+            findNewTifFile = false;
+        }
     }
-}
 
-/*----------------------------------------------------------------------------
- * sample
- *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::sample(double lon, double lat)
-{
-    invalidateRastersCache();
 
-    if      (demType == MOSAIC) sampleMosaic(lon, lat);
-    else if (demType == STRIPS) sampleStrips(lon, lat);
+    if (findNewTifFile)
+    {
+        if (findTIFfilesWithPoint(&p))
+        {
+            updateRastersCache(&p);
+
+            if (extrapolateEnabled)
+            {
+                /* Add rasters for extrapolated points to cache */
+                extrapolate(lon, lat);
+            }
+        }
+    }
+
+    sampleRasters();
+
+    /* Needed for extrapolator */
+    lastLon = lon;
+    lastLat = lat;
 
     samplesCounter++;
 
@@ -341,7 +294,7 @@ int ArcticDEMRaster::sample(double lon, double lat)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::sample (double lon, double lat, List<sample_t> &slist, void* param)
+int VrtRaster::sample (double lon, double lat, List<sample_t> &slist, void* param)
 {
     slist.clear();
 
@@ -375,7 +328,7 @@ int ArcticDEMRaster::sample (double lon, double lat, List<sample_t> &slist, void
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ArcticDEMRaster::~ArcticDEMRaster(void)
+VrtRaster::~VrtRaster(void)
 {
     /* Terminate all reader threads */
     for (int i = 0; i < readerCount; i++)
@@ -420,7 +373,7 @@ ArcticDEMRaster::~ArcticDEMRaster(void)
 /*----------------------------------------------------------------------------
  * findTIFfilesWithPoint
  *----------------------------------------------------------------------------*/
-bool ArcticDEMRaster::findTIFfilesWithPoint(OGRPoint *p)
+bool VrtRaster::findTIFfilesWithPoint(OGRPoint *p)
 {
     bool foundFile = false;
 
@@ -471,7 +424,7 @@ bool ArcticDEMRaster::findTIFfilesWithPoint(OGRPoint *p)
 /*----------------------------------------------------------------------------
  * invaldiateAllRasters
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::invalidateRastersCache(void)
+void VrtRaster::invalidateRastersCache(void)
 {
     raster_t *raster = NULL;
     const char* key = rasterDict.first(&raster);
@@ -490,7 +443,7 @@ void ArcticDEMRaster::invalidateRastersCache(void)
 /*----------------------------------------------------------------------------
  * updateRastersCache
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
+void VrtRaster::updateRastersCache(OGRPoint* p)
 {
     int newRasters, recycledRasters, deletedRasters;
     newRasters = recycledRasters = deletedRasters = 0;
@@ -560,7 +513,7 @@ void ArcticDEMRaster::updateRastersCache(OGRPoint* p)
 /*----------------------------------------------------------------------------
  * createReaderThreads
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::createReaderThreads(void)
+void VrtRaster::createReaderThreads(void)
 {
     int threadsNeeded = rasterDict.length();
     if (threadsNeeded <= readerCount)
@@ -599,7 +552,7 @@ void ArcticDEMRaster::createReaderThreads(void)
 /*----------------------------------------------------------------------------
  * sampleRasters
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::sampleRasters(void)
+void VrtRaster::sampleRasters(void)
 {
     /* Create additional reader threads if needed */
     createReaderThreads();
@@ -649,7 +602,7 @@ void ArcticDEMRaster::sampleRasters(void)
 /*----------------------------------------------------------------------------
  * readingThread
  *----------------------------------------------------------------------------*/
-void* ArcticDEMRaster::readingThread(void *param)
+void* VrtRaster::readingThread(void *param)
 {
     reader_t *reader = (reader_t*)param;
     bool run = true;
@@ -682,7 +635,7 @@ void* ArcticDEMRaster::readingThread(void *param)
  * processRaster
  * Thread-safe, can be called directly from main thread or reader thread
  *----------------------------------------------------------------------------*/
-void ArcticDEMRaster::processRaster(raster_t* raster, ArcticDEMRaster* obj)
+void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
 {
     try
     {
@@ -823,7 +776,7 @@ void ArcticDEMRaster::processRaster(raster_t* raster, ArcticDEMRaster* obj)
 /*----------------------------------------------------------------------------
  * openVrtDset
  *----------------------------------------------------------------------------*/
-bool ArcticDEMRaster::openVrtDset(const char *fileName)
+bool VrtRaster::openVrtDset(const char *fileName)
 {
     bool objCreated = false;
 
@@ -937,29 +890,13 @@ static const char *getUuid(char *uuid_str)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char *dem_sampling, const int sampling_radius):
+VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     char uuid_str[UUID_STR_LEN] = {0};
     std::string fname;
 
-    CHECKPTR(dem_type);
     CHECKPTR(dem_sampling);
-    demType = INVALID;
-
-    if (!strcasecmp(dem_type, "mosaic"))
-    {
-        // fname = "/data/ArcticDem/mosaic_short.vrt";
-        fname = "/data/ArcticDem/mosaic.vrt";
-        demType = MOSAIC;
-    }
-    else if (!strcasecmp(dem_type, "strip"))
-    {
-        // fname = "/data/ArcticDem/strips/n51w178.vrt";
-        fname = "/data/ArcticDem/strips/n51e156.vrt"; /* First strip file in catalog */
-        demType = STRIPS;
-    }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid dem_type: %s:", dem_type);
 
     if      (!strcasecmp(dem_sampling, "NearestNeighbour")) sampleAlg = GRIORA_NearestNeighbour;
     else if (!strcasecmp(dem_sampling, "Bilinear"))         sampleAlg = GRIORA_Bilinear;
@@ -989,12 +926,11 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
     lastLon = 0;
     lastLat = 0;
     samplesCounter = 0;
+    checkCacheFirst = false;
+    extrapolateEnabled = false;
     transf = NULL;
     srcSrs.Clear();
     trgSrs.Clear();
-
-    if(!openVrtDset(fname.c_str()))
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor failed");
 }
 
 /******************************************************************************
@@ -1004,7 +940,7 @@ ArcticDEMRaster::ArcticDEMRaster(lua_State *L, const char *dem_type, const char 
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaDimensions(lua_State *L)
+int VrtRaster::luaDimensions(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -1012,7 +948,7 @@ int ArcticDEMRaster::luaDimensions(lua_State *L)
     try
     {
         /* Get Self */
-        ArcticDEMRaster *lua_obj = (ArcticDEMRaster *)getLuaSelf(L, 1);
+        VrtRaster *lua_obj = (VrtRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->vrtRows);
@@ -1034,7 +970,7 @@ int ArcticDEMRaster::luaDimensions(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaBoundingBox - :bbox() --> (lon_min, lat_min, lon_max, lat_max)
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaBoundingBox(lua_State *L)
+int VrtRaster::luaBoundingBox(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -1042,7 +978,7 @@ int ArcticDEMRaster::luaBoundingBox(lua_State *L)
     try
     {
         /* Get Self */
-        ArcticDEMRaster *lua_obj = (ArcticDEMRaster *)getLuaSelf(L, 1);
+        VrtRaster *lua_obj = (VrtRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushnumber(L, lua_obj->vrtBbox.lon_min);
@@ -1066,7 +1002,7 @@ int ArcticDEMRaster::luaBoundingBox(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaCellSize - :cell() --> cell size
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaCellSize(lua_State *L)
+int VrtRaster::luaCellSize(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -1074,7 +1010,7 @@ int ArcticDEMRaster::luaCellSize(lua_State *L)
     try
     {
         /* Get Self */
-        ArcticDEMRaster *lua_obj = (ArcticDEMRaster *)getLuaSelf(L, 1);
+        VrtRaster *lua_obj = (VrtRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushnumber(L, lua_obj->vrtCellSize);
@@ -1096,7 +1032,7 @@ int ArcticDEMRaster::luaCellSize(lua_State *L)
 /*----------------------------------------------------------------------------
  * getSampledRastersCount
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::getSampledRastersCount(void)
+int VrtRaster::getSampledRastersCount(void)
 {
     raster_t *raster = NULL;
     int cnt = 0;
@@ -1116,7 +1052,7 @@ int ArcticDEMRaster::getSampledRastersCount(void)
 /*----------------------------------------------------------------------------
  * luaSamples - :sample(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
-int ArcticDEMRaster::luaSamples(lua_State *L)
+int VrtRaster::luaSamples(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -1124,7 +1060,7 @@ int ArcticDEMRaster::luaSamples(lua_State *L)
     try
     {
         /* Get Self */
-        ArcticDEMRaster *lua_obj = (ArcticDEMRaster *)getLuaSelf(L, 1);
+        VrtRaster *lua_obj = (VrtRaster *)getLuaSelf(L, 1);
 
         /* Get Coordinates */
         double lon = getLuaFloat(L, 2);

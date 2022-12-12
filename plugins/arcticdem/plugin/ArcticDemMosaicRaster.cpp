@@ -30,83 +30,82 @@
  */
 
 /******************************************************************************
- *INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "arcticdem.h"
+#include "ArcticDemMosaicRaster.h"
 
 /******************************************************************************
- * DEFINES
+ * PRIVATE IMPLEMENTATION
  ******************************************************************************/
 
-#define LUA_ARCTICDEM_LIBNAME    "arcticdem"
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
 
 /******************************************************************************
- * LOCAL FUNCTIONS
+ * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * arcticdem_version
+ * luaCreate
  *----------------------------------------------------------------------------*/
-int arcticdem_version (lua_State* L)
+int ArcticDemMosaicRaster::luaCreate( lua_State* L )
 {
-    /* Display Version Information on Terminal */
-    print2term("ArcticDEM Plugin Version: %s\n", BINID);
-    print2term("Build Information: %s\n", BUILDINFO);
+    try
+    {
+        return createLuaObject(L, create(L, 1));
+    }
+    catch( const RunTimeException& e )
+    {
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        return returnLuaStatus(L, false);
+    }
+}
 
-    /* Return Version Information to Lua */
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
+
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
+    VrtRaster(L, dem_sampling, sampling_radius)
+{
+    /*
+     * For mosaic, there is only one raster with point in it. Find it in cache first,
+     * before looking in vrt file for new tif.
+     */
+    checkCacheFirst    = true;
+    extrapolateEnabled = true;
 }
 
 /*----------------------------------------------------------------------------
- * arcticdem_open
+ * create
  *----------------------------------------------------------------------------*/
-int arcticdem_open (lua_State *L)
+ArcticDemMosaicRaster* ArcticDemMosaicRaster::create( lua_State* L, int index )
 {
-    static const struct luaL_Reg arcticdem_functions[] = {
-        {"mosaic_raster",   ArcticDemMosaicRaster::luaCreate},
-        {"strips_raster",   ArcticDemStripsRaster::luaCreate},
-        {"reader",          ArcticDEMReader::luaCreate},
-        {"version",         arcticdem_version},
-        {NULL,              NULL}
-    };
+    const int radius = getLuaInteger(L, -1);
+    lua_pop(L, 1);
+    const char* dem_sampling = getLuaString(L, -1);
+    lua_pop(L, 1);
+    return new ArcticDemMosaicRaster(L, dem_sampling, radius);
+}
 
-    /* Set Library */
-    luaL_newlib(L, arcticdem_functions);
 
-    return 1;
+/*----------------------------------------------------------------------------
+ * getVrtFileName
+ *----------------------------------------------------------------------------*/
+void ArcticDemMosaicRaster::getVrtFileName( double lon, double lat, std::string& vrtFile )
+{
+    vrtFile = "/data/ArcticDem/mosaic.vrt";
 }
 
 /******************************************************************************
- * EXPORTED FUNCTIONS
+ * PRIVATE METHODS
  ******************************************************************************/
 
-extern "C" {
-void initarcticdem (void)
-{
-    /* Initialize Modules */
-    ArcticDemMosaicRaster::init();
-    ArcticDemStripsRaster::init();
-    ArcticDEMReader::init();
 
-    /* Extend Lua */
-    LuaEngine::extend(LUA_ARCTICDEM_LIBNAME, arcticdem_open);
 
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_ARCTICDEM_LIBNAME, BINID);
-
-    /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_ARCTICDEM_LIBNAME, BINID);
-}
-
-void deinitarcticdem (void)
-{
-    /* Uninitialize Modules */
-    ArcticDemMosaicRaster::deinit();
-    ArcticDemStripsRaster::deinit();
-    ArcticDEMReader::deinit();
-}
-}

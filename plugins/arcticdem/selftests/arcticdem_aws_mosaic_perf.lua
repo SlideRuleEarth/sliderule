@@ -24,7 +24,7 @@ local _lon = lon
 local _lat = lat
 
 print('\n------------------\nTest: AWS mosaic\n------------')
-local dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
+local dem = arcticdem.mosaic_raster("NearestNeighbour", 0)
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat)
 local stoptime = time.latch();
