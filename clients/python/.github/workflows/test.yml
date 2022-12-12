@@ -46,6 +46,12 @@ jobs:
           python -m pip install .
           conda list
 
+      - name: Install netrc for authentication
+        shell: bash -l {0}
+        run: |
+          echo "${{ secrets.NETRC }}" > $HOME/.netrc
+          chmod 600 $HOME/.netrc
+
       - name: Run tests
         shell: bash -l {0}
         run: |

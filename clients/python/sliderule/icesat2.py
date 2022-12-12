@@ -43,7 +43,6 @@ from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
 from sklearn.cluster import KMeans
 import sliderule
-from sliderule import version
 
 ###############################################################################
 # GLOBALS
@@ -181,25 +180,50 @@ def __cmr_filter_urls(search_results):
 
     return urls
 
-def __cmr_granule_polygons(search_results):
-    """Get the polygons for CMR returned granules"""
+def __cmr_granule_metadata(search_results):
+    """Get the metadata for CMR returned granules"""
+    # GeoDataFrame with granule metadata
+    granule_metadata = __emptyframe()
+    # return empty dataframe if no CMR entries
     if 'feed' not in search_results or 'entry' not in search_results['feed']:
-        return []
-    granule_polygons = []
+        return granule_metadata
     # for each CMR entry
     for e in search_results['feed']['entry']:
-        # for each polygon
-        for polys in e['polygons']:
-            coords = [float(i) for i in polys[0].split()]
-            region = [{'lon':x,'lat':y} for y,x in zip(coords[::2],coords[1::2])]
-            granule_polygons.append(region)
-    # return granule polygons in sliderule region format
-    return granule_polygons
+        # columns for dataframe
+        columns = {}
+        # time start and time end of granule
+        columns['time_start'] = numpy.datetime64(e['time_start'])
+        columns['time_end'] = numpy.datetime64(e['time_end'])
+        columns['time_updated'] = numpy.datetime64(e['updated'])
+        # get the granule size and convert to bits
+        columns['granule_size'] = float(e['granule_size'])*(2.0**20)
+        # Create Pandas DataFrame object
+        # use granule id as index
+        df = geopandas.pd.DataFrame(columns, index=[e['id']])
+        # Generate Geometry Column
+        if 'polygons' in e:
+            coords = [float(i) for i in e['polygons'][0][0].split()]
+            geometry = Polygon(zip(coords[1::2], coords[::2]))
+        else:
+            geometry, = geopandas.points_from_xy([None], [None])
+        # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
+        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=EPSG_MERCATOR)
+        # append to combined GeoDataFrame and catch warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            granule_metadata = granule_metadata.append(gdf)
+    # return granule metadata
+    # - time start and time end
+    # - time granule was updated
+    # - granule size in bits
+    # - polygons as geodataframe geometry
+    return granule_metadata
 
 def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     """Perform a scrolling CMR query for files matching input criteria."""
     kwargs.setdefault('polygon',None)
-    kwargs.setdefault('return_polygons',False)
+    kwargs.setdefault('name_filter',None)
+    kwargs.setdefault('return_metadata',False)
     # build params
     params = '&short_name={0}'.format(short_name)
     params += __build_version_query_params(version)
@@ -218,7 +242,8 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     ctx.verify_mode = ssl.CERT_NONE
 
     urls = []
-    polys = []
+    # GeoDataFrame with granule metadata
+    metadata = __emptyframe()
     while True:
         req = urllib.request.Request(cmr_query_url)
         if cmr_scroll_id:
@@ -235,14 +260,17 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
         if not url_scroll_results:
             break
         urls += url_scroll_results
-        # append granule polygons
-        if kwargs['return_polygons']:
-            polygon_results = __cmr_granule_polygons(search_page)
+        # query for granule metadata and polygons
+        if kwargs['return_metadata']:
+            metadata_results = __cmr_granule_metadata(search_page)
         else:
-            polygon_results = [None for _ in url_scroll_results]
-        polys.extend(polygon_results)
+            metadata_results = [None for _ in url_scroll_results]
+        # append granule metadata and catch warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            metadata = metadata.append(metadata_results)
 
-    return (urls,polys)
+    return (urls,metadata)
 
 ###############################################################################
 # LOCAL FUNCTIONS
@@ -313,7 +341,7 @@ def __get_values(data, dtype, size):
 #
 #  Query Resources from CMR
 #
-def __query_resources(parm, version, return_polygons=False):
+def __query_resources(parm, version, **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -324,9 +352,8 @@ def __query_resources(parm, version, return_polygons=False):
         return []
 
     # Submission Arguments for CMR
-    kwargs = {}
     kwargs['version'] = version
-    kwargs['return_polygons'] = return_polygons
+    kwargs.setdefault('return_metadata', False)
 
     # Pull Out Polygon
     if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
@@ -358,8 +385,8 @@ def __query_resources(parm, version, return_polygons=False):
         kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
 
     # Make CMR Request
-    if return_polygons:
-        resources,polygons = cmr(**kwargs)
+    if kwargs['return_metadata']:
+        resources,metadata = cmr(**kwargs)
     else:
         resources = cmr(**kwargs)
 
@@ -373,8 +400,8 @@ def __query_resources(parm, version, return_polygons=False):
     profiles[__query_resources.__name__] = time.perf_counter() - tstart
 
     # Return Resources
-    if return_polygons:
-        return (resources,polygons)
+    if kwargs['return_metadata']:
+        return (resources,metadata)
     else:
         return resources
 
@@ -413,7 +440,10 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     del columns[lat_key]
 
     # Create Pandas DataFrame object
-    df = geopandas.pd.DataFrame(columns)
+    if type(columns) == dict:
+        df = geopandas.pd.DataFrame(columns)
+    else:
+        df = columns
 
     # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
     gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
@@ -460,6 +490,21 @@ def __gdf2poly(gdf):
     # return polygon
     return polygon
 
+#
+# Process Output File
+#
+def __procoutputfile(parm, lon_key, lat_key):
+    if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
+        # Read Parquet File as DataFrame
+        df = geopandas.pd.read_parquet(parm["output"]["path"])
+        # Build GeoDataFrame
+        gdf = __todataframe(df, lon_key=lon_key, lat_key=lat_key)
+        # Return Results
+        return gdf
+    else:
+        # Return Parquet Filename
+        return parm["output"]["path"]
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -469,8 +514,8 @@ def __gdf2poly(gdf):
 #
 def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org):
     '''
-    Initializes the underlying SlideRule module.  Must be called before other ICESat-2 API calls.
-    This function is the same as calling the sliderule module functions: `set_url`, `set_verbose`, `set_max_errors`, along with the local `set_max_resources` function.
+    Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
+    This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
 
     Parameters
     ----------
@@ -483,20 +528,21 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
         loglevel :      int
                         minimum severity of log message to output
         organization:   str
-                        SlideRule provisioning system organization user belongs to (see sliderule.authenticate for details)
+                        SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
 
     Examples
     --------
         >>> from sliderule import icesat2
         >>> icesat2.init("my-sliderule-service.my-company.com", True)
     '''
+    set_max_resources(max_resources)
     if verbose:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel)
     sliderule.set_url(url)
     sliderule.set_verbose(verbose)
     sliderule.authenticate(organization)
-    set_max_resources(max_resources)
+    sliderule.check_version(plugins=['icesat2'])
 
 #
 #  Set Maximum Resources
@@ -564,8 +610,8 @@ def cmr(**kwargs):
     # set default version and product short name
     kwargs.setdefault('version', DEFAULT_ICESAT2_SDP_VERSION)
     kwargs.setdefault('short_name','ATL03')
-    # return polygons for each requested granule
-    kwargs.setdefault('return_polygons', False)
+    # return metadata for each requested granule
+    kwargs.setdefault('return_metadata', False)
     # set default name filter
     kwargs.setdefault('name_filter', None)
 
@@ -583,7 +629,7 @@ def cmr(**kwargs):
     # iterate through each polygon (or none if none supplied)
     for polygon in polygons:
         urls = []
-        polys = []
+        metadata = __emptyframe()
 
         # issue CMR request
         for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
@@ -600,12 +646,12 @@ def cmr(**kwargs):
 
             # call into NSIDC routines to make CMR request
             try:
-                urls,polys = __cmr_search(kwargs['short_name'],
+                urls,metadata = __cmr_search(kwargs['short_name'],
                                             kwargs['version'],
                                             kwargs['time_start'],
                                             kwargs['time_end'],
                                             polygon=polystr,
-                                            return_polygons=kwargs['return_polygons'],
+                                            return_metadata=kwargs['return_metadata'],
                                             name_filter=kwargs['name_filter'])
                 break # exit loop because cmr search was successful
             except urllib.error.HTTPError as e:
@@ -630,15 +676,15 @@ def cmr(**kwargs):
                 break # exit here because nothing can be done
 
         # populate resources
-        for url, poly in zip(urls, polys):
-            resources[url] = poly
+        for i,url, in enumerate(urls):
+            resources[url] = metadata.iloc[i]
 
     # build return lists
     url_list = list(resources.keys())
-    poly_list = list(resources.values())
+    meta_list = list(resources.values())
 
-    if kwargs['return_polygons']:
-        return (url_list,poly_list)
+    if kwargs['return_metadata']:
+        return (url_list,meta_list)
     else:
         return url_list
 
@@ -740,63 +786,72 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         # Make API Processing Request
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
-        # Flatten Responses
-        tstart_flatten = time.perf_counter()
-        columns = {}
-        elevation_records = []
-        num_elevations = 0
-        field_dictionary = {} # ['field_name'] = {"extent_id": [], field_name: []}
-        if len(rsps) > 0:
-            # Sort Records
-            for rsp in rsps:
-                if 'atl06rec' in rsp['__rectype']:
-                    elevation_records += rsp,
-                    num_elevations += len(rsp['elevation'])
-                elif 'extrec' == rsp['__rectype']:
-                    field_name = parm['atl03_geo_fields'][rsp['field_index']]
-                    if field_name not in field_dictionary:
-                        field_dictionary[field_name] = {"extent_id": [], field_name: []}
-                    # Parse Ancillary Data
-                    data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
-                    # Add Left Pair Track Entry
-                    field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
-                    field_dictionary[field_name][field_name] += data[LEFT_PAIR],
-                    # Add Right Pair Track Entry
-                    field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
-                    field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
-            # Build Elevation Columns
-            if num_elevations > 0:
-                # Initialize Columns
-                sample_elevation_record = elevation_records[0]["elevation"][0]
-                for field in sample_elevation_record.keys():
-                    fielddef = sliderule.get_definition(sample_elevation_record['__rectype'], field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_elevations, fielddef["nptype"])
-                # Populate Columns
-                elev_cnt = 0
-                for record in elevation_records:
-                    for elevation in record["elevation"]:
-                        for field in columns:
-                            columns[field][elev_cnt] = elevation[field]
-                        elev_cnt += 1
-        else:
-            logger.debug("No response returned")
+        # Check for Output Options
+        if "output" in parm:
+            profiles[atl06p.__name__] = time.perf_counter() - tstart
+            return __procoutputfile(parm, "lon", "lat")
+        else: # Native Output
+            # Flatten Responses
+            tstart_flatten = time.perf_counter()
+            columns = {}
+            elevation_records = []
+            num_elevations = 0
+            field_dictionary = {} # ['field_name'] = {"extent_id": [], field_name: []}
+            if len(rsps) > 0:
+                # Sort Records
+                for rsp in rsps:
+                    if 'atl06rec' in rsp['__rectype']:
+                        elevation_records += rsp,
+                        num_elevations += len(rsp['elevation'])
+                    elif 'extrec' == rsp['__rectype']:
+                        field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                        if field_name not in field_dictionary:
+                            field_dictionary[field_name] = {"extent_id": [], field_name: []}
+                        # Parse Ancillary Data
+                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        # Add Left Pair Track Entry
+                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
+                        field_dictionary[field_name][field_name] += data[LEFT_PAIR],
+                        # Add Right Pair Track Entry
+                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
+                        field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+                # Build Elevation Columns
+                if num_elevations > 0:
+                    # Initialize Columns
+                    sample_elevation_record = elevation_records[0]["elevation"][0]
+                    for field in sample_elevation_record.keys():
+                        fielddef = sliderule.get_definition(sample_elevation_record['__rectype'], field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_elevations, fielddef["nptype"])
+                    # Populate Columns
+                    elev_cnt = 0
+                    for record in elevation_records:
+                        for elevation in record["elevation"]:
+                            for field in columns:
+                                columns[field][elev_cnt] = elevation[field]
+                            elev_cnt += 1
+            else:
+                logger.debug("No response returned")
 
-        profiles["flatten"] = time.perf_counter() - tstart_flatten
+            profiles["flatten"] = time.perf_counter() - tstart_flatten
 
-        # Build GeoDataFrame
-        gdf = __todataframe(columns, "delta_time", "lon", "lat")
+            # Build GeoDataFrame
+            gdf = __todataframe(columns)
 
-        # Merge Ancillary Fields
-        tstart_merge = time.perf_counter()
-        for field in field_dictionary:
-            df = geopandas.pd.DataFrame(field_dictionary[field])
-            gdf = gdf.merge(df, on='extent_id', how='inner').set_axis(gdf.index)
-        profiles["merge"] = time.perf_counter() - tstart_merge
+            # Merge Ancillary Fields
+            tstart_merge = time.perf_counter()
+            for field in field_dictionary:
+                df = geopandas.pd.DataFrame(field_dictionary[field])
+                gdf = geopandas.pd.merge(gdf, df, on='extent_id', how='left').set_axis(gdf.index)
+            profiles["merge"] = time.perf_counter() - tstart_merge
 
-        # Return Response
-        profiles[atl06p.__name__] = time.perf_counter() - tstart
-        return gdf
+            # Delete Extent ID Column
+            if len(gdf) > 0:
+                del gdf["extent_id"]
+
+            # Return Response
+            profiles[atl06p.__name__] = time.perf_counter() - tstart
+            return gdf
 
     # Handle Runtime Errors
     except RuntimeError as e:
@@ -876,121 +931,131 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         # Make API Processing Request
         rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
 
-        # Flatten Responses
-        tstart_flatten = time.perf_counter()
-        columns = {}
-        sample_photon_record = None
-        photon_records = []
-        num_photons = 0
-        extent_dictionary = {}
-        extent_field_types = {} # ['field_name'] = nptype
-        photon_dictionary = {}
-        photon_field_types = {} # ['field_name'] = nptype
-        if len(rsps) > 0:
-            # Sort Records
-            for rsp in rsps:
-                extent_id = rsp['extent_id']
-                if 'atl03rec' in rsp['__rectype']:
-                    photon_records += rsp,
-                    num_photons += len(rsp['data'])
-                    if sample_photon_record == None and len(rsp['data']) > 0:
-                        sample_photon_record = rsp
-                elif 'extrec' == rsp['__rectype']:
-                    # Get Field Type
-                    field_name = parm['atl03_geo_fields'][rsp['field_index']]
-                    if field_name not in extent_field_types:
-                        extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
-                    # Initialize Extent Dictionary Entry
-                    if extent_id not in extent_dictionary:
-                        extent_dictionary[extent_id] = {}
-                    # Save of Values per Extent ID per Field Name
-                    data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
-                    extent_dictionary[extent_id][field_name] = data
-                elif 'phrec' == rsp['__rectype']:
-                    # Get Field Type
-                    field_name = parm['atl03_ph_fields'][rsp['field_index']]
-                    if field_name not in photon_field_types:
-                        photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
-                    # Initialize Extent Dictionary Entry
-                    if extent_id not in photon_dictionary:
-                        photon_dictionary[extent_id] = {}
-                    # Save of Values per Extent ID per Field Name
-                    data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
-                    photon_dictionary[extent_id][field_name] = data
-            # Build Elevation Columns
-            if num_photons > 0:
-                # Initialize Columns
-                for field in sample_photon_record.keys():
-                    fielddef = sliderule.get_definition("atl03rec", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                for field in sample_photon_record["data"][0].keys():
-                    fielddef = sliderule.get_definition("atl03rec.photons", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                for field in extent_field_types.keys():
-                    columns[field] = numpy.empty(num_photons, extent_field_types[field])
-                for field in photon_field_types.keys():
-                    columns[field] = numpy.empty(num_photons, photon_field_types[field])
-                # Populate Columns
-                ph_cnt = 0
-                for record in photon_records:
-                    ph_index = 0
-                    pair = 0
-                    left_cnt = record["count"][0]
-                    extent_id = record['extent_id']
-                    # Get Extent Fields to Add to Extent
-                    extent_field_dictionary = {}
-                    if extent_id in extent_dictionary:
-                        extent_field_dictionary = extent_dictionary[extent_id]
-                    # Get Photon Fields to Add to Extent
-                    photon_field_dictionary = {}
-                    if extent_id in photon_dictionary:
-                        photon_field_dictionary = photon_dictionary[extent_id]
-                    # For Each Photon in Extent
-                    for photon in record["data"]:
-                        if ph_index >= left_cnt:
-                            pair = 1
-                        # Add per Extent Fields
-                        for field in record.keys():
-                            if field in columns:
-                                if field == "count":
-                                    columns[field][ph_cnt] = pair # count gets changed to pair id
-                                elif type(record[field]) is tuple:
-                                    columns[field][ph_cnt] = record[field][pair]
-                                else:
-                                    columns[field][ph_cnt] = record[field]
-                        # Add per Photon Fields
-                        for field in photon.keys():
-                            if field in columns:
-                                columns[field][ph_cnt] = photon[field]
-                        # Add Ancillary Extent Fields
-                        for field in extent_field_dictionary:
-                            columns[field][ph_cnt] = extent_field_dictionary[field][pair]
-                        # Add Ancillary Extent Fields
-                        for field in photon_field_dictionary:
-                            columns[field][ph_cnt] = photon_field_dictionary[field][ph_index]
-                        # Goto Next Photon
-                        ph_cnt += 1
-                        ph_index += 1
-                # Rename Count Column to Pair Column
-                columns["pair"] = columns.pop("count")
+        # Check for Output Options
+        if "output" in parm:
+            profiles[atl03sp.__name__] = time.perf_counter() - tstart
+            return __procoutputfile(parm, "longitude", "latitude")
+        else: # Native Output
+            # Flatten Responses
+            tstart_flatten = time.perf_counter()
+            columns = {}
+            sample_photon_record = None
+            photon_records = []
+            num_photons = 0
+            extent_dictionary = {}
+            extent_field_types = {} # ['field_name'] = nptype
+            photon_dictionary = {}
+            photon_field_types = {} # ['field_name'] = nptype
+            if len(rsps) > 0:
+                # Sort Records
+                for rsp in rsps:
+                    extent_id = rsp['extent_id']
+                    if 'atl03rec' in rsp['__rectype']:
+                        photon_records += rsp,
+                        num_photons += len(rsp['data'])
+                        if sample_photon_record == None and len(rsp['data']) > 0:
+                            sample_photon_record = rsp
+                    elif 'extrec' == rsp['__rectype']:
+                        # Get Field Type
+                        field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                        if field_name not in extent_field_types:
+                            extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                        # Initialize Extent Dictionary Entry
+                        if extent_id not in extent_dictionary:
+                            extent_dictionary[extent_id] = {}
+                        # Save of Values per Extent ID per Field Name
+                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        extent_dictionary[extent_id][field_name] = data
+                    elif 'phrec' == rsp['__rectype']:
+                        # Get Field Type
+                        field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                        if field_name not in photon_field_types:
+                            photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                        # Initialize Extent Dictionary Entry
+                        if extent_id not in photon_dictionary:
+                            photon_dictionary[extent_id] = {}
+                        # Save of Values per Extent ID per Field Name
+                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        photon_dictionary[extent_id][field_name] = data
+                # Build Elevation Columns
+                if num_photons > 0:
+                    # Initialize Columns
+                    for field in sample_photon_record.keys():
+                        fielddef = sliderule.get_definition("atl03rec", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                    for field in sample_photon_record["data"][0].keys():
+                        fielddef = sliderule.get_definition("atl03rec.photons", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                    for field in extent_field_types.keys():
+                        columns[field] = numpy.empty(num_photons, extent_field_types[field])
+                    for field in photon_field_types.keys():
+                        columns[field] = numpy.empty(num_photons, photon_field_types[field])
+                    # Populate Columns
+                    ph_cnt = 0
+                    for record in photon_records:
+                        ph_index = 0
+                        pair = 0
+                        left_cnt = record["count"][0]
+                        extent_id = record['extent_id']
+                        # Get Extent Fields to Add to Extent
+                        extent_field_dictionary = {}
+                        if extent_id in extent_dictionary:
+                            extent_field_dictionary = extent_dictionary[extent_id]
+                        # Get Photon Fields to Add to Extent
+                        photon_field_dictionary = {}
+                        if extent_id in photon_dictionary:
+                            photon_field_dictionary = photon_dictionary[extent_id]
+                        # For Each Photon in Extent
+                        for photon in record["data"]:
+                            if ph_index >= left_cnt:
+                                pair = 1
+                            # Add per Extent Fields
+                            for field in record.keys():
+                                if field in columns:
+                                    if field == "count":
+                                        columns[field][ph_cnt] = pair # count gets changed to pair id
+                                    elif type(record[field]) is tuple:
+                                        columns[field][ph_cnt] = record[field][pair]
+                                    else:
+                                        columns[field][ph_cnt] = record[field]
+                            # Add per Photon Fields
+                            for field in photon.keys():
+                                if field in columns:
+                                    columns[field][ph_cnt] = photon[field]
+                            # Add Ancillary Extent Fields
+                            for field in extent_field_dictionary:
+                                columns[field][ph_cnt] = extent_field_dictionary[field][pair]
+                            # Add Ancillary Extent Fields
+                            for field in photon_field_dictionary:
+                                columns[field][ph_cnt] = photon_field_dictionary[field][ph_index]
+                            # Goto Next Photon
+                            ph_cnt += 1
+                            ph_index += 1
+                    # Rename Count Column to Pair Column
+                    columns["pair"] = columns.pop("count")
 
-                profiles["flatten"] = time.perf_counter() - tstart_flatten
+                    # Delete Extent ID Column
+                    if "extent_id" in columns:
+                        del columns["extent_id"]
 
-                # Create DataFrame
-                gdf = __todataframe(columns, "delta_time", "longitude", "latitude")
+                    # Capture Time to Flatten
+                    profiles["flatten"] = time.perf_counter() - tstart_flatten
 
-                # Calculate Spot Column
-                gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+                    # Create DataFrame
+                    gdf = __todataframe(columns, lat_key="latitude", lon_key="longitude")
 
-                # Return Response
-                profiles[atl03sp.__name__] = time.perf_counter() - tstart
-                return gdf
+                    # Calculate Spot Column
+                    gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+
+                    # Return Response
+                    profiles[atl03sp.__name__] = time.perf_counter() - tstart
+                    return gdf
+                else:
+                    logger.debug("No photons returned")
             else:
-                logger.debug("No photons returned")
-        else:
-            logger.debug("No response returned")
+                logger.debug("No response returned")
 
     # Handle Runtime Errors
     except RuntimeError as e:
@@ -1302,6 +1367,4 @@ def get_version ():
     dict
         dictionary of version information
     '''
-    rsps = sliderule.source("version", {})
-    rsps["client"] = {"version": version.full_version}
-    return rsps
+    return sliderule.get_version()

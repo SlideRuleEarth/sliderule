@@ -35,8 +35,9 @@ import struct
 import ctypes
 import time
 import logging
-from datetime import datetime, timedelta
 import numpy
+from datetime import datetime, timedelta
+from sliderule import version
 
 ###############################################################################
 # GLOBALS
@@ -47,6 +48,9 @@ PUBLIC_ORG = "sliderule"
 
 service_url = PUBLIC_URL
 service_org = PUBLIC_ORG
+
+session = requests.Session()
+session.trust_env = False
 
 ps_refresh_token = None
 ps_access_token = None
@@ -59,6 +63,10 @@ request_timeout = (10, 60) # (connection, read) in seconds
 logger = logging.getLogger(__name__)
 
 recdef_table = {}
+
+arrow_file_table = {}
+
+profiles = {}
 
 gps_epoch = datetime(1980, 1, 6)
 tai_epoch = datetime(1970, 1, 1, 0, 0, 10)
@@ -257,8 +265,14 @@ def __parse_native(data, callbacks):
     rec_index = 0
     rec_rsps = []
 
+    duration = 0.0
+
     for line in data.iter_content(None):
 
+        # Capture Start Time (for duration)
+        tstart = time.perf_counter()
+
+        # Process Line Read
         i = 0
         while i < len(line):
 
@@ -309,6 +323,12 @@ def __parse_native(data, callbacks):
                 rec_size_index = 0
                 rec_index = 0
 
+        # Capture Duration
+        duration = duration + (time.perf_counter() - tstart)
+
+    # Update Timing Profile
+    profiles[__parse_native.__name__] = duration
+
     return recs
 
 #
@@ -327,7 +347,7 @@ def __build_auth_header():
             host = "https://ps." + service_url + "/api/org_token/refresh/"
             rqst = {"refresh": ps_refresh_token}
             hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
-            rsps = requests.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
+            rsps = session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
             ps_refresh_token = rsps["refresh"]
             ps_access_token = rsps["access"]
             ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
@@ -358,16 +378,38 @@ def __exceptrec(rec):
             eventlogger[rec["level"]]("%s", rec["text"])
 
 #
+#  _arrowrec
+#
+def __arrowrec(rec):
+    global arrow_file_table
+    try :
+        filename = rec["filename"]
+        if rec["__rectype"] == 'arrowrec.meta':
+            if filename in arrow_file_table:
+                raise FatalError("file transfer already in progress")
+            arrow_file_table[filename] = { "fp": open(filename, "wb"), "size": rec["size"], "progress": 0 }
+        else: # rec["__rectype"] == 'arrowrec.data'
+            data = rec['data']
+            file = arrow_file_table[filename]
+            file["fp"].write(bytearray(data))
+            file["progress"] += len(data)
+            if file["progress"] >= file["size"]:
+                file["fp"].close()
+                del arrow_file_table[filename]
+    except Exception as e:
+        raise FatalError("Failed to process arrow file: {}".format(e))
+
+#
 #  Globals
 #
-__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec}
+__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.meta': __arrowrec, 'arrowrec.data': __arrowrec }
 
 ###############################################################################
 # APIs
 ###############################################################################
 
 #
-#  SOURCE
+#  source
 #
 def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     '''
@@ -422,9 +464,9 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
             url = 'http://%s%s/%s' % (service_url, path, api)
         # Perform Request
         if not stream:
-            data = requests.get(url, data=rqst, headers=headers, timeout=request_timeout)
+            data = session.get(url, data=rqst, headers=headers, timeout=request_timeout)
         else:
-            data = requests.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
+            data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
         data.raise_for_status()
         # Parse Response
         format = data.headers['Content-Type']
@@ -439,7 +481,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     except requests.exceptions.SSLError as e:
         raise FatalError("Unable to verify SSL certificate: {}".format(e))
     except requests.ConnectionError as e:
-        raise FatalError("Failed to connect to endpoint {}".format(url))
+        raise FatalError("Connection error to endpoint {}".format(url))
     except requests.Timeout as e:
         raise TransientError("Timed-out waiting for response from endpoint {}".format(url))
     except requests.exceptions.ChunkedEncodingError as e:
@@ -455,7 +497,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
     return rsps
 
 #
-#  SET_URL
+#  set_url
 #
 def set_url (url):
     '''
@@ -477,7 +519,7 @@ def set_url (url):
     service_url = url
 
 #
-#  SET_VERBOSE
+#  set_verbose
 #
 def set_verbose (enable):
     '''
@@ -511,7 +553,7 @@ def set_verbose (enable):
     verbose = (enable == True)
 
 #
-# SET_REQUEST_TIMEOUT
+# set_rqst_timeout
 #
 def set_rqst_timeout (timeout):
     '''
@@ -536,7 +578,7 @@ def set_rqst_timeout (timeout):
         raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
 
 #
-# UPDATE_AVAIABLE_SERVERS
+# update_available_servers
 #
 def update_available_servers (desired_nodes=None, time_to_live=None):
     '''
@@ -569,11 +611,13 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
 
     # Update number of nodes
     if type(desired_nodes) == int:
-        host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
-        if type(time_to_live) == int:
-            host = host + str(time_to_live) + "/"
         headers = __build_auth_header()
-        rsps = requests.put(host, headers=headers, timeout=request_timeout)
+        if type(time_to_live) == int:
+            host = "https://ps." + service_url + "/api/desired_org_num_nodes_ttl/" + service_org + "/" + str(desired_nodes) + "/" + str(time_to_live) + "/"
+            rsps = session.post(host, headers=headers, timeout=request_timeout)
+        else:
+            host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
+            rsps = session.put(host, headers=headers, timeout=request_timeout)
         rsps.raise_for_status()
 
     # Get number of nodes currently registered
@@ -582,7 +626,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
     return available_servers, available_servers
 
 #
-# AUTHENTICATE
+# authenticate
 #
 def authenticate (ps_organization, ps_username=None, ps_password=None):
     '''
@@ -645,7 +689,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         headers = {'Content-Type': 'application/json'}
         try:
             api = "https://" + ps_url + "/api/org_token/"
-            rsps = requests.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
+            rsps = session.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
             rsps.raise_for_status()
             rsps = rsps.json()
             ps_refresh_token = rsps["refresh"]
@@ -659,7 +703,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
     return login_status
 
 #
-# GPS2UTC
+# gps2utc
 #
 def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
     '''
@@ -695,7 +739,7 @@ def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
         return utc_timestamp
 
 #
-# GET DEFINITION
+# get_definition
 #
 def get_definition (rectype, fieldname):
     '''
@@ -725,3 +769,62 @@ def get_definition (rectype, fieldname):
         return basictypes[recdef[fieldname]["type"]]
     else:
         return {}
+
+#
+# get_version
+#
+def get_version ():
+    '''
+    Get the version information for the running servers and Python client
+
+    Returns
+    -------
+    dict
+        dictionary of version information
+    '''
+    rsps = source("version", {})
+    rsps["client"] = {"version": version.full_version}
+    return rsps
+
+#
+# check_version
+#
+def check_version (plugins=[]):
+    '''
+    Check that the version of the client matches the version of the server and any additionally requested plugins
+
+    Parameters
+    ----------
+    plugins:    list
+                list of package names (as strings) to check the version on
+
+    Returns
+    -------
+    bool
+        True if at least minor version matches; False if major or minor version doesn't match
+    '''
+    status = True
+    info = get_version()
+    # populate version info
+    versions = {}
+    for entity in ['server', 'client'] + plugins:
+        s = info[entity]['version'][1:].split('.')
+        versions[entity] = (int(s[0]), int(s[1]), int(s[2]))
+    # check major version mismatches
+    if versions['server'][0] != versions['client'][0]:
+        raise RuntimeError("Client (version {}) is incompatible with the server (version {})".format(versions['server'], versions['client']))
+    else:
+        for pkg in plugins:
+            if versions[pkg][0] != versions['client'][0]:
+                raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['server'], pkg, versions['icesat2']))
+    # check minor version mismatches
+    if versions['server'][1] > versions['client'][1]:
+        logger.warning("Client (version {}) is out of date with the server (version {})".format(versions['server'], versions['client']))
+        status = False
+    else:
+        for pkg in plugins:
+            if versions[pkg][1] > versions['client'][1]:
+                logger.warning("Client (version {}) is out of date with the {} plugin (version {})".format(versions['server'], pkg, versions['client']))
+                status = False
+    # return if version check is successful
+    return status

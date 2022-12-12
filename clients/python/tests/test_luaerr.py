@@ -17,8 +17,8 @@ GLOBAL_callbacks = {'eventrec': catchlogs, 'exceptrec': catchexceptions}
 
 @pytest.mark.network
 class TestAtl03s:
-    def test_badasset(self, server, organization):
-        icesat2.init(server, organization=organization)
+    def test_badasset(self, domain, organization):
+        icesat2.init(domain, organization=organization)
         invalid_asset = "invalid-asset"
         rqst = {
             "atl03-asset" : "invalid-asset",
@@ -29,24 +29,10 @@ class TestAtl03s:
         assert(len(rsps) == 0)
         assert("invalid asset specified: {}".format(invalid_asset) == GLOBAL_message)
 
-#    def test_timeout(self, server, asset):
-#        icesat2.init(server)
-#        resource = "ATL03_20220208000041_07291401_005_01.h5"
-#        rqst = {
-#            "atl03-asset" : asset,
-#            "resource": resource,
-#            "parms": {"track": 0, "srt": 0, "pass_invalid":True, "yapc": {"score":0}},
-#            "timeout": 1 # second
-#        }
-#        rsps = sliderule.source("atl03s", rqst, stream=True, callbacks=GLOBAL_callbacks)
-#        assert(len(rsps) == 0)
-#        assert("request for {} timed-out after 10 seconds".format(resource) == GLOBAL_message)
-
-
 @pytest.mark.network
 class TestAtl06:
-    def test_badasset(self, server, organization):
-        icesat2.init(server, organization=organization)
+    def test_badasset(self, domain, organization):
+        icesat2.init(domain, organization=organization)
         invalid_asset = "invalid-asset"
         rqst = {
             "atl03-asset" : "invalid-asset",
@@ -57,15 +43,14 @@ class TestAtl06:
         assert(len(rsps) == 0)
         assert("invalid asset specified: {}".format(invalid_asset) == GLOBAL_message)
 
-    def test_timeout(self, server, asset, organization):
-        icesat2.init(server, organization=organization)
+    def test_timeout(self, domain, asset, organization):
+        icesat2.init(domain, organization=organization)
         resource = "ATL03_20220208000041_07291401_005_01.h5"
         rqst = {
             "atl03-asset" : asset,
             "resource": resource,
-            "parms": {"track": 0, "srt": 0, "pass_invalid":True, "yapc": {"score":0}},
-            "timeout": 1 # second
+            "parms": {"track": 0, "srt": 0, "pass_invalid":True, "yapc": {"score":0}, "timeout": 1},
         }
         rsps = sliderule.source("atl06", rqst, stream=True, callbacks=GLOBAL_callbacks)
         assert(len(rsps) == 0)
-        assert("{} timed-out after 10 seconds".format(resource) in GLOBAL_message)
+        # assert("{} timed-out after 10 seconds".format(resource) in GLOBAL_message) # non-deterministic
