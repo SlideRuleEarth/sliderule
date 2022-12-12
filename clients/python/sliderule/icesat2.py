@@ -808,7 +808,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         if field_name not in field_dictionary:
                             field_dictionary[field_name] = {"extent_id": [], field_name: []}
                         # Parse Ancillary Data
-                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         # Add Left Pair Track Entry
                         field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
                         field_dictionary[field_name][field_name] += data[LEFT_PAIR],
@@ -959,23 +959,23 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         # Get Field Type
                         field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in extent_field_types:
-                            extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                            extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry
                         if extent_id not in extent_dictionary:
                             extent_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         extent_dictionary[extent_id][field_name] = data
                     elif 'phrec' == rsp['__rectype']:
                         # Get Field Type
                         field_name = parm['atl03_ph_fields'][rsp['field_index']]
                         if field_name not in photon_field_types:
-                            photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                            photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry
                         if extent_id not in photon_dictionary:
                             photon_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         photon_dictionary[extent_id][field_name] = data
                 # Build Elevation Columns
                 if num_photons > 0:
