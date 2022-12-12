@@ -33,13 +33,13 @@ local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOU
 
 -- Initialize Timeouts --
 local duration = 0
-local interval = 10 -- seconds
+local interval = 10 < timeout and 10 or timeout -- seconds
 
 -- Get Asset --
 local asset = core.getbyname(atl03_asset)
 if not asset then
     userlog:sendlog(core.INFO, string.format("invalid asset specified: %s", atl03_asset))
-    return
+    do return end
 end
 
 -- Create Record Queue --
@@ -73,7 +73,7 @@ while (userlog:numsubs() > 0) and not atl03_reader:waiton(interval * 1000) do
     -- Check for Timeout --
     if timeout >= 0 and duration >= timeout then
         userlog:sendlog(core.ERROR, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
-        return
+        do return end
     end
     userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
 end
@@ -88,7 +88,7 @@ while (userlog:numsubs() > 0) and not atl06_disp:waiton(interval * 1000) do
     -- Check for Timeout --
     if timeout >= 0 and duration >= timeout then
         userlog:sendlog(core.ERROR, string.format("request <%s> timed-out after %d seconds", rspq, duration))
-        return
+        do return end
     end
     userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to process ATL03 records (after %d seconds)", rspq, duration))
 end
@@ -96,5 +96,3 @@ end
 -- Request Processing Complete
 local atl06_stats = atl06_algo:stats(false)
 userlog:sendlog(core.INFO, string.format("request <%s> processing complete (%d/%d/%d/%d)", rspq, atl06_stats.h5atl03, atl06_stats.filtered, atl06_stats.posted, atl06_stats.dropped))
-
-return

@@ -31,7 +31,7 @@ local output_parms = parms["output"]
 
 -- Initialize Timeouts --
 local duration = 0
-local interval = 10 -- seconds
+local interval = 10 < timeout and 10 or timeout -- seconds
 
 -- Initialize Queue Management --
 local rsps_from_nodes = rspq
@@ -64,7 +64,7 @@ while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do
     duration = duration + interval
     if timeout >= 0 and duration >= timeout then
         userlog:sendlog(core.ERROR, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration))
-        return
+        do return end
     end
 end
 
@@ -74,10 +74,7 @@ if terminate_proxy_stream then
         duration = duration + interval
         if timeout >= 0 and duration >= timeout then
             userlog:sendlog(core.ERROR, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))
-            return
+            do return end
         end
     end
 end
-
--- Done --
-return
