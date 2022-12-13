@@ -29,6 +29,7 @@
 
 import sys
 import json
+import logging
 import warnings
 import datetime
 import geopandas
@@ -49,8 +50,8 @@ def get_attributes(**kwargs):
     # set default keyword arguments
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
-    coordinates = '{lat_key} {lon_key}'.format(**kwargs)
     lon_key,lat_key = (kwargs['lon_key'],kwargs['lat_key'])
+    coordinates = f'{lat_key} {lon_key}'
     attrs = {}
     # file level attributes
     attrs['featureType'] = 'trajectory'
@@ -326,7 +327,6 @@ def to_json(filename, **kwargs):
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
     kwargs.setdefault('crs','EPSG:4326')
-    kwargs.setdefault('verbose',False)
     # add each parameter as an attribute
     SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
         'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
@@ -355,21 +355,17 @@ def to_json(filename, **kwargs):
     with open(filename, 'w') as fid:
         json.dump(output, fid)
     # print the filename and dictionary structure
-    if kwargs['verbose']:
-        print(filename)
-        print(list(output.keys()))
+    logging.info(filename)
+    logging.info(list(output.keys()))
 
 # read request parameters and regions from JSON
 def from_json(filename, **kwargs):
-    # set default keyword arguments
-    kwargs.setdefault('verbose',False)
     # load the JSON file
     with open(filename, 'r') as fid:
         attributes = json.load(fid)
     # print the filename and dictionary structure
-    if kwargs['verbose']:
-        print(filename)
-        print(list(attributes.keys()))
+    logging.info(filename)
+    logging.info(list(attributes.keys()))
     # try to get the sliderule adjustable parameters
     SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
         'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
@@ -397,7 +393,6 @@ def to_nc(gdf, filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('verbose',False)
     kwargs.setdefault('crs','EPSG:4326')
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
@@ -473,9 +468,8 @@ def to_nc(gdf, filename, **kwargs):
         setattr(fileID, 'poly{0:d}_x'.format(i), json.dumps(lon))
         setattr(fileID, 'poly{0:d}_y'.format(i), json.dumps(lat))
     # Output netCDF structure information
-    if kwargs['verbose']:
-        print(filename)
-        print(list(fileID.variables.keys()))
+    logging.info(filename)
+    logging.info(list(fileID.variables.keys()))
     # Closing the netCDF file
     fileID.close()
     warnings.filterwarnings("default")
@@ -576,7 +570,6 @@ def to_hdf(gdf, filename, **kwargs):
     kwargs.setdefault('driver','pytables')
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('verbose',False)
     kwargs.setdefault('crs','EPSG:4326')
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
@@ -606,7 +599,6 @@ def write_pytables(df, filename, attributes, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('verbose',False)
     kwargs.setdefault('crs','EPSG:4326')
     # write data to a pytables HDF5 file
     df.to_hdf(filename, 'sliderule_segments', format="table", mode="w")
@@ -655,9 +647,8 @@ def write_pytables(df, filename, attributes, **kwargs):
         setattr(fileID.root._v_attrs, 'poly{0:d}_x'.format(i), json.dumps(lon))
         setattr(fileID.root._v_attrs, 'poly{0:d}_y'.format(i), json.dumps(lat))
     # Output HDF5 structure information
-    if kwargs['verbose']:
-        print(filename)
-        print(fileID.get_storer('sliderule_segments').non_index_axes[0][1])
+    logging.info(filename)
+    logging.info(fileID.get_storer('sliderule_segments').non_index_axes[0][1])
     # Closing the HDF5 file
     fileID.close()
 
@@ -666,7 +657,6 @@ def write_h5py(df, filename, attributes, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('verbose',False)
     kwargs.setdefault('crs','EPSG:4326')
     # open HDF5 file object
     fileID = h5py.File(filename, mode='w')
@@ -736,9 +726,8 @@ def write_h5py(df, filename, attributes, **kwargs):
         fileID.attrs['poly{0:d}_x'.format(i)] = json.dumps(lon)
         fileID.attrs['poly{0:d}_y'.format(i)] = json.dumps(lat)
     # Output HDF5 structure information
-    if kwargs['verbose']:
-        print(filename)
-        print(list(fileID.keys()))
+    logging.info(filename)
+    logging.info(list(fileID.keys()))
     # Closing the HDF5 file
     fileID.close()
 
