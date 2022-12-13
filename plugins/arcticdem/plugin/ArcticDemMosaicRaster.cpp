@@ -74,12 +74,18 @@ int ArcticDemMosaicRaster::luaCreate( lua_State* L )
 ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
     VrtRaster(L, dem_sampling, sampling_radius)
 {
+    /* There is only one mosaic VRT file. Open it. */
+    std::string vrtFile;
+    getVrtFileName(vrtFile);
+
+    if (!openVrtDset(vrtFile.c_str()))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
+
     /*
-     * For mosaic, there is only one raster with point in it. Find it in cache first,
-     * before looking in vrt file for new tif.
+     * For mosaic, there is only one raster with point in it.
+     * Find it in cache first, before looking in vrt file for new tif.
      */
-    checkCacheFirst    = true;
-    extrapolateEnabled = true;
+    checkCacheFirst = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -98,7 +104,7 @@ ArcticDemMosaicRaster* ArcticDemMosaicRaster::create( lua_State* L, int index )
 /*----------------------------------------------------------------------------
  * getVrtFileName
  *----------------------------------------------------------------------------*/
-void ArcticDemMosaicRaster::getVrtFileName( double lon, double lat, std::string& vrtFile )
+void ArcticDemMosaicRaster::getVrtFileName(std::string& vrtFile, double lon, double lat)
 {
     vrtFile = "/data/ArcticDem/mosaic.vrt";
 }

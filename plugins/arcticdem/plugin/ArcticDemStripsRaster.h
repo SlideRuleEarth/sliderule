@@ -30,7 +30,7 @@
  */
 
 #ifndef __arcticdem_strips_raster__
-#define __arcticdem_r_stripsaster__
+#define __arcticdem_strips_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -59,9 +59,9 @@ class ArcticDemStripsRaster: public VrtRaster
 
         static ArcticDemStripsRaster* create (lua_State* L, int index);
                ArcticDemStripsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius);
-        void   getVrtFileName(double lon, double lat, std::string &vrtFile);
+        void   getVrtFileName(std::string& vrtFile, double lon=0, double lat=0);
 
     private:
 };
 
-#endif  /* __arcticdem_strips_rmaster__ */
+#endif  /* __arcticdem_strips_raster__ */

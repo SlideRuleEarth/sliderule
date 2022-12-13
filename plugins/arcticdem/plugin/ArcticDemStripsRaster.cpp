@@ -76,14 +76,11 @@ ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampl
     VrtRaster(L, dem_sampling, sampling_radius)
 {
     /*
-     * For strips, there can be many rasters with the same point.
-     * Some may be already cached but others not. First get a list of all rasters with point
-     * and than see if some are already in cache.
+     * For strips, there may be many rasters with the same point.
+     * Some rasters may be cached but others not.
+     * First get a list of all rasters with point and only then check if some are already cached.
      */
-    checkCacheFirst    = false;
-
-    /* Do not extrapolate for strips */
-    extrapolateEnabled = false;
+    checkCacheFirst = false;
 }
 
 /*----------------------------------------------------------------------------
@@ -102,7 +99,7 @@ ArcticDemStripsRaster* ArcticDemStripsRaster::create( lua_State* L, int index )
 /*----------------------------------------------------------------------------
  * getVrtFileName
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getVrtFileName( double lon, double lat, std::string& vrtFile )
+void ArcticDemStripsRaster::getVrtFileName(std::string& vrtFile, double lon, double lat )
 {
     int ilat = floor(lat);
     int ilon = floor(lon);

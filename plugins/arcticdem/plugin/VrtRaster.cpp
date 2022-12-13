@@ -113,184 +113,6 @@ void VrtRaster::deinit( void )
     GDALDestroy();
 }
 
-
-/*----------------------------------------------------------------------------
- * vrtContainsPoint
- *----------------------------------------------------------------------------*/
-inline bool VrtRaster::vrtContainsPoint(OGRPoint *p)
-{
-    return (vrtDset && p &&
-           (p->getX() >= vrtBbox.lon_min) && (p->getX() <= vrtBbox.lon_max) &&
-           (p->getY() >= vrtBbox.lat_min) && (p->getY() <= vrtBbox.lat_max));
-}
-
-
-/*----------------------------------------------------------------------------
- * rasterContainsPoint
- *----------------------------------------------------------------------------*/
-inline bool VrtRaster::rasterContainsPoint(raster_t *raster, OGRPoint *p)
-{
-    return (p && raster && raster->dset &&
-           (p->getX() >= raster->bbox.lon_min) && (p->getX() <= raster->bbox.lon_max) &&
-           (p->getY() >= raster->bbox.lat_min) && (p->getY() <= raster->bbox.lat_max));
-}
-
-
-/*----------------------------------------------------------------------------
- * findCachedRasterWithPoint
- *----------------------------------------------------------------------------*/
-bool VrtRaster::findCachedRasterWithPoint(OGRPoint *p, VrtRaster::raster_t** raster)
-{
-    bool foundRaster = false;
-    const char *key = rasterDict.first(raster);
-    while (key != NULL)
-    {
-        assert(*raster);
-        if (rasterContainsPoint(*raster, p))
-        {
-            foundRaster = true;
-            break; /* Only one raster with this point in mosaic rasters */
-        }
-        key = rasterDict.next(raster);
-    }
-    return foundRaster;
-}
-
-
-/*----------------------------------------------------------------------------
- * extrapolate
- *----------------------------------------------------------------------------*/
-void VrtRaster::extrapolate(double lon, double lat)
-{
-#if 0
-    if (samplesCounter == 0)
-        return;
-
-    double lonDelta = lon - lastLon;
-    double latDelta = lat - lastLat;
-
-#if 0
-    const double MIN_DEGREES = 0.5;
-
-    /*
-     * At 2m resolution tiles are 1x1 degree, make sure to open the next tile
-     * if points are within the same one.
-     */
-    if (abs(lonDelta) < MIN_DEGREES)
-    {
-        if (lon >= lastLon) lonDelta = MIN_DEGREES;
-        else lonDelta = -MIN_DEGREES;
-    }
-
-    if (abs(latDelta) < MIN_DEGREES)
-    {
-        if (lat >= lastLat) latDelta = MIN_DEGREES;
-        else latDelta = -MIN_DEGREES;
-    }
-#endif
-
-    //  print2term("\nEtrapolating for lon: %lf, lat: %lf\n", lon, lat);
-
-    /* Extrapolate several points */
-    for (int i = 1; i <= MAX_EXTRAPOLATED_RASTERS; i++)
-    {
-        double _lon = lon + (i * lonDelta);
-        double _lat = lat + (i * latDelta);
-
-        OGRPoint newPoint = {_lon, _lat};
-
-        /*
-         * Only use extrapolated points which can be transformed,
-         * are contained in VRT file and have valid tif file
-         */
-        if ((newPoint.transform(transf) == OGRERR_NONE) &&
-            vrtContainsPoint(&newPoint) &&
-            findTIFfilesWithPoint(&newPoint))
-        {
-            /* Update cache with NULL for point - open raster but don't sample */
-            updateRastersCache(NULL);
-        }
-    }
-#endif
-}
-
-/*----------------------------------------------------------------------------
- * sample
- *----------------------------------------------------------------------------*/
-int VrtRaster::sample(double lon, double lat)
-{
-    invalidateRastersCache();
-
-    /* Initial call, open vrt file */
-    if (vrtDset == NULL)
-    {
-        std::string newVrtFile;
-        getVrtFileName(lon, lat, newVrtFile);
-
-        if (!openVrtDset(newVrtFile.c_str()))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open VRT file for point lon: %lf, lat: %lf", lon, lat);
-    }
-
-
-    OGRPoint p = {lon, lat};
-    if (p.transform(transf) != OGRERR_NONE)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
-
-    /* If point is not in current scene VRT dataset, open new scene */
-    if (!vrtContainsPoint(&p))
-    {
-        std::string newVrtFile;
-        getVrtFileName(lon, lat, newVrtFile);
-
-        /* If the new VRT file is the same as the currently opened one the point is not in it, bail...*/
-        if (newVrtFile == vrtFileName)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in VRT file", lon, lat);
-
-        if (!openVrtDset(newVrtFile.c_str()))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open VRT file for point lon: %lf, lat: %lf", lon, lat);
-    }
-
-    bool findNewTifFile = true;
-
-    if( checkCacheFirst )
-    {
-        raster_t *raster = NULL;
-        if (findCachedRasterWithPoint(&p, &raster))
-        {
-            raster->enabled = true;
-            raster->point = &p;
-
-            /* Found raster with point in cache, no need to look for new tif file */
-            findNewTifFile = false;
-        }
-    }
-
-
-    if (findNewTifFile)
-    {
-        if (findTIFfilesWithPoint(&p))
-        {
-            updateRastersCache(&p);
-
-            if (extrapolateEnabled)
-            {
-                /* Add rasters for extrapolated points to cache */
-                extrapolate(lon, lat);
-            }
-        }
-    }
-
-    sampleRasters();
-
-    /* Needed for extrapolator */
-    lastLon = lon;
-    lastLat = lat;
-
-    samplesCounter++;
-
-    return getSampledRastersCount();
-}
-
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
@@ -366,8 +188,213 @@ VrtRaster::~VrtRaster(void)
     if (transf) OGRCoordinateTransformation::DestroyCT(transf);
 }
 
+/*----------------------------------------------------------------------------
+ * sample
+ *----------------------------------------------------------------------------*/
+int VrtRaster::sample(double lon, double lat)
+{
+    invalidateRastersCache();
+
+    /* Initial call, open vrt file if not already opened */
+    if (vrtDset == NULL)
+    {
+        std::string vrtFile;
+        getVrtFileName(vrtFile, lon, lat);
+
+        if (!openVrtDset(vrtFile.c_str()))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open VRT file for point lon: %lf, lat: %lf", lon, lat);
+    }
+
+
+    OGRPoint p = {lon, lat};
+    if (p.transform(transf) != OGRERR_NONE)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
+
+    /* If point is not in current scene VRT dataset, open new scene */
+    if (!vrtContainsPoint(&p))
+    {
+        std::string newVrtFile;
+        getVrtFileName(newVrtFile, lon, lat);
+
+        /* If the new VRT file is the same as the currently opened one the point is not in it, bail...*/
+        if (newVrtFile == vrtFileName)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in VRT file", lon, lat);
+
+        if (!openVrtDset(newVrtFile.c_str()))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open VRT file for point lon: %lf, lat: %lf", lon, lat);
+    }
+
+    bool findNewTifFiles = true;
+
+    if( checkCacheFirst )
+    {
+        raster_t *raster = NULL;
+        if (findCachedRasterWithPoint(&p, &raster))
+        {
+            raster->enabled = true;
+            raster->point = &p;
+
+            /* Found raster with point in cache, no need to look for new tif file */
+            findNewTifFiles = false;
+        }
+    }
+
+    if (findNewTifFiles && findTIFfilesWithPoint(&p))
+    {
+        updateRastersCache(&p);
+    }
+
+    sampleRasters();
+
+    return getSampledRastersCount();
+}
+
 /******************************************************************************
  * PROTECTED METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
+    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+{
+    char uuid_str[UUID_STR_LEN] = {0};
+    std::string fname;
+
+    CHECKPTR(dem_sampling);
+
+    if      (!strcasecmp(dem_sampling, "NearestNeighbour")) sampleAlg = GRIORA_NearestNeighbour;
+    else if (!strcasecmp(dem_sampling, "Bilinear"))         sampleAlg = GRIORA_Bilinear;
+    else if (!strcasecmp(dem_sampling, "Cubic"))            sampleAlg = GRIORA_Cubic;
+    else if (!strcasecmp(dem_sampling, "CubicSpline"))      sampleAlg = GRIORA_CubicSpline;
+    else if (!strcasecmp(dem_sampling, "Lanczos"))          sampleAlg = GRIORA_Lanczos;
+    else if (!strcasecmp(dem_sampling, "Average"))          sampleAlg = GRIORA_Average;
+    else if (!strcasecmp(dem_sampling, "Mode"))             sampleAlg = GRIORA_Mode;
+    else if (!strcasecmp(dem_sampling, "Gauss"))            sampleAlg = GRIORA_Gauss;
+    else
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
+
+    if (sampling_radius >= 0)
+        radius = sampling_radius;
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
+
+    /* Initialize Class Data Members */
+    vrtDset = NULL;
+    vrtBand = NULL;
+    bzero(vrtInvGeot, sizeof(vrtInvGeot));
+    vrtRows = vrtCols = vrtCellSize = 0;
+    bzero(&vrtBbox, sizeof(vrtBbox));
+    tifList.clear();
+    rasterDict.clear();
+    bzero(rasterRreader, sizeof(rasterRreader));
+    readerCount = 0;
+    checkCacheFirst = false;
+    transf = NULL;
+    srcSrs.Clear();
+    trgSrs.Clear();
+}
+
+/*----------------------------------------------------------------------------
+ * openVrtDset
+ *----------------------------------------------------------------------------*/
+bool VrtRaster::openVrtDset(const char *fileName)
+{
+    bool objCreated = false;
+
+    try
+    {
+        /* Cleanup previous vrtDset */
+        if (vrtDset != NULL)
+        {
+            GDALClose((GDALDatasetH)vrtDset);
+            vrtDset = NULL;
+        }
+
+        /* Open new vrtDset */
+        vrtDset = (VRTDataset *)GDALOpenEx(fileName, GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
+        if (vrtDset == NULL)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT file: %s:", fileName);
+
+
+        vrtFileName = fileName;
+        vrtBand = vrtDset->GetRasterBand(1);
+        CHECKPTR(vrtBand);
+
+        /* Get inverted geo transfer for vrt */
+        double geot[6] = {0};
+        CPLErr err = GDALGetGeoTransform(vrtDset, geot);
+        CHECK_GDALERR(err);
+        if (!GDALInvGeoTransform(geot, vrtInvGeot))
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Cannot invert geotransform");
+            CHECK_GDALERR(CE_Failure);
+        }
+
+        /* Store information about vrt raster */
+        vrtCols = vrtDset->GetRasterXSize();
+        vrtRows = vrtDset->GetRasterYSize();
+
+        /* Get raster boundry box */
+        bzero(geot, sizeof(geot));
+        err = vrtDset->GetGeoTransform(geot);
+        CHECK_GDALERR(err);
+        vrtBbox.lon_min = geot[0];
+        vrtBbox.lon_max = geot[0] + vrtCols * geot[1];
+        vrtBbox.lat_max = geot[3];
+        vrtBbox.lat_min = geot[3] + vrtRows * geot[5];
+
+        vrtCellSize = geot[1];
+
+        OGRErr ogrerr = srcSrs.importFromEPSG(PHOTON_CRS);
+        CHECK_GDALERR(ogrerr);
+        const char *projref = vrtDset->GetProjectionRef();
+        CHECKPTR(projref);
+        mlog(DEBUG, "%s", projref);
+        ogrerr = trgSrs.importFromProj4(projref);
+        CHECK_GDALERR(ogrerr);
+
+        /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+        trgSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+        srcSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+        /* Create coordinates transformation */
+
+        /* Get transform for this VRT file */
+        OGRCoordinateTransformation *newTransf = OGRCreateCoordinateTransformation(&srcSrs, &trgSrs);
+        if (newTransf)
+        {
+            /* Delete the transform from last vrt file */
+            if (transf) OGRCoordinateTransformation::DestroyCT(transf);
+
+            /* Use the new one (they should be the same but just in case they are not...) */
+            transf = newTransf;
+        }
+        else mlog(ERROR, "Failed to create new transform, reusing transform from previous VRT file.\n");
+
+        objCreated = true;
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error creating new VRT dataset: %s", e.what());
+    }
+
+    if (!objCreated && vrtDset)
+    {
+        GDALClose((GDALDatasetH)vrtDset);
+        vrtDset = NULL;
+        vrtBand = NULL;
+
+        bzero(vrtInvGeot, sizeof(vrtInvGeot));
+        vrtRows = vrtCols = vrtCellSize = 0;
+        bzero(&vrtBbox, sizeof(vrtBbox));
+    }
+
+    return objCreated;
+}
+
+/******************************************************************************
+ * PRIVATE METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -445,16 +472,11 @@ void VrtRaster::invalidateRastersCache(void)
  *----------------------------------------------------------------------------*/
 void VrtRaster::updateRastersCache(OGRPoint* p)
 {
-    int newRasters, recycledRasters, deletedRasters;
-    newRasters = recycledRasters = deletedRasters = 0;
-
     if (tifList.length() == 0)
         return;
 
     const char *key  = NULL;
     raster_t *raster = NULL;
-
-    // print2term("A- rasterDic.len: %d, tifList.len: %d\n", rasterDict.length(), tifList.length());
 
     /* Check new tif file list against rasters in dictionary */
     for (int i = 0; i < tifList.length(); i++)
@@ -468,7 +490,6 @@ void VrtRaster::updateRastersCache(OGRPoint* p)
             assert(raster);
             raster->enabled = true;
             raster->point = p;
-            recycledRasters++;
         }
         else
         {
@@ -481,32 +502,26 @@ void VrtRaster::updateRastersCache(OGRPoint* p)
             raster->sample.value = INVALID_SAMPLE_VALUE;
             raster->fileName = fileName;
             rasterDict.add(key, raster);
-            newRasters++;
         }
     }
 
-    /* Remove no longer needed rasters */
+    /* Maintain cache from getting too big */
     key = rasterDict.first(&raster);
     while (key != NULL)
     {
-        if (rasterDict.length() > MAX_CACHED_RASTERS)
-        {
-            assert(raster);
-            if (!raster->enabled)
-            {
-                /* Main thread closing multiple rasters is OK */
-                if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
-                rasterDict.remove(key);
-                delete raster;
-                deletedRasters++;
-            }
-            key = rasterDict.next(&raster);
-        }
-        else break;
-    }
+        if (rasterDict.length() <= MAX_CACHED_RASTERS)
+            break;
 
-    // print2term("B- rasterDic.len: %d, tifList.len: %d, newRasters: %d, recycledRasters: %d, deltedRasters: %d\n\n",
-    //             rasterDict.length(), tifList.length(), newRasters, recycledRasters, deletedRasters);
+        assert(raster);
+        if (!raster->enabled)
+        {
+            /* Main thread closing multiple rasters is OK */
+            if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
+            rasterDict.remove(key);
+            delete raster;
+        }
+        key = rasterDict.next(&raster);
+    }
 }
 
 
@@ -670,13 +685,9 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
 
         /*
          * Attempt to read the raster only if it contains a point of interest.
-         *
-         * NOTE: for extrapolate logic, some rasters are opened but not read
-         *       raster->point == NULL indicates that
          */
         if (!rasterContainsPoint(raster, raster->point))
             return;
-
 
         /* Read the raster */
         const int32_t col = static_cast<int32_t>(floor((raster->point->getX() - raster->bbox.lon_min) / raster->cellSize));
@@ -715,22 +726,6 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
         }
         else
         {
-#if 0
-     FROM gdal.h
-     What are these kernels? How do I use them to read one pixel with resampling?
-     Below is an attempt to do it but I am 99.999% sure it is wrong.
-
-    /*! Nearest neighbour */                            GRIORA_NearestNeighbour = 0,
-    /*! Bilinear (2x2 kernel) */                        GRIORA_Bilinear = 1,
-    /*! Cubic Convolution Approximation (4x4 kernel) */ GRIORA_Cubic = 2,
-    /*! Cubic B-Spline Approximation (4x4 kernel) */    GRIORA_CubicSpline = 3,
-    /*! Lanczos windowed sinc interpolation (6x6 kernel) */ GRIORA_Lanczos = 4,
-    /*! Average */                                      GRIORA_Average = 5,
-    /*! Mode (selects the value which appears most often of all the sampled points) */
-                                                        GRIORA_Mode = 6,
-    /*! Gauss blurring */                               GRIORA_Gauss = 7
-#endif
-
             float rbuf[1] = {0};
             int _cellsize = raster->cellSize;
             int radius_in_meters = ((obj->radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
@@ -774,168 +769,47 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
 
 
 /*----------------------------------------------------------------------------
- * openVrtDset
+ * vrtContainsPoint
  *----------------------------------------------------------------------------*/
-bool VrtRaster::openVrtDset(const char *fileName)
+inline bool VrtRaster::vrtContainsPoint(OGRPoint *p)
 {
-    bool objCreated = false;
-
-    try
-    {
-        /* Cleanup previous vrtDset */
-        if (vrtDset != NULL)
-        {
-            GDALClose((GDALDatasetH)vrtDset);
-            vrtDset = NULL;
-        }
-
-        /* Open new vrtDset */
-        vrtDset = (VRTDataset *)GDALOpenEx(fileName, GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
-        if (vrtDset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT file: %s:", fileName);
-
-
-        vrtFileName = fileName;
-        vrtBand = vrtDset->GetRasterBand(1);
-        CHECKPTR(vrtBand);
-
-        /* Get inverted geo transfer for vrt */
-        double geot[6] = {0};
-        CPLErr err = GDALGetGeoTransform(vrtDset, geot);
-        CHECK_GDALERR(err);
-        if (!GDALInvGeoTransform(geot, vrtInvGeot))
-        {
-            CPLError(CE_Failure, CPLE_AppDefined, "Cannot invert geotransform");
-            CHECK_GDALERR(CE_Failure);
-        }
-
-        /* Store information about vrt raster */
-        vrtCols = vrtDset->GetRasterXSize();
-        vrtRows = vrtDset->GetRasterYSize();
-
-        /* Get raster boundry box */
-        bzero(geot, sizeof(geot));
-        err = vrtDset->GetGeoTransform(geot);
-        CHECK_GDALERR(err);
-        vrtBbox.lon_min = geot[0];
-        vrtBbox.lon_max = geot[0] + vrtCols * geot[1];
-        vrtBbox.lat_max = geot[3];
-        vrtBbox.lat_min = geot[3] + vrtRows * geot[5];
-
-        vrtCellSize = geot[1];
-
-        OGRErr ogrerr = srcSrs.importFromEPSG(PHOTON_CRS);
-        CHECK_GDALERR(ogrerr);
-        const char *projref = vrtDset->GetProjectionRef();
-        if (projref)
-        {
-            mlog(DEBUG, "%s", projref);
-            ogrerr = trgSrs.importFromProj4(projref);
-        }
-        else
-        {
-            /* In case vrt file does not have projection info, use default */
-            ogrerr = trgSrs.importFromEPSG(ARCTIC_DEM_CRS);
-        }
-        CHECK_GDALERR(ogrerr);
-
-        /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-        trgSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        srcSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        /* Create coordinates transformation */
-
-        /* Get transform for this VRT file */
-        OGRCoordinateTransformation *newTransf = OGRCreateCoordinateTransformation(&srcSrs, &trgSrs);
-        if (newTransf)
-        {
-            /* Delete the transform from last vrt file */
-            if (transf) OGRCoordinateTransformation::DestroyCT(transf);
-
-            /* Use the new one (they should be the same but just in case they are not...) */
-            transf = newTransf;
-        }
-        else mlog(ERROR, "Failed to create new transform, reusing transform from previous VRT file.\n");
-
-        objCreated = true;
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error creating new VRT dataset: %s", e.what());
-    }
-
-    if (!objCreated && vrtDset)
-    {
-        GDALClose((GDALDatasetH)vrtDset);
-        vrtDset = NULL;
-        vrtBand = NULL;
-
-        bzero(vrtInvGeot, sizeof(vrtInvGeot));
-        vrtRows = vrtCols = vrtCellSize = 0;
-        bzero(&vrtBbox, sizeof(vrtBbox));
-    }
-
-    return objCreated;
+    return (vrtDset && p &&
+           (p->getX() >= vrtBbox.lon_min) && (p->getX() <= vrtBbox.lon_max) &&
+           (p->getY() >= vrtBbox.lat_min) && (p->getY() <= vrtBbox.lat_max));
 }
 
-/* Utilitiy function to get UUID string */
-static const char *getUuid(char *uuid_str)
-{
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse_lower(uuid, uuid_str);
-    return uuid_str;
-}
 
 /*----------------------------------------------------------------------------
- * Constructor
+ * rasterContainsPoint
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+inline bool VrtRaster::rasterContainsPoint(raster_t *raster, OGRPoint *p)
 {
-    char uuid_str[UUID_STR_LEN] = {0};
-    std::string fname;
-
-    CHECKPTR(dem_sampling);
-
-    if      (!strcasecmp(dem_sampling, "NearestNeighbour")) sampleAlg = GRIORA_NearestNeighbour;
-    else if (!strcasecmp(dem_sampling, "Bilinear"))         sampleAlg = GRIORA_Bilinear;
-    else if (!strcasecmp(dem_sampling, "Cubic"))            sampleAlg = GRIORA_Cubic;
-    else if (!strcasecmp(dem_sampling, "CubicSpline"))      sampleAlg = GRIORA_CubicSpline;
-    else if (!strcasecmp(dem_sampling, "Lanczos"))          sampleAlg = GRIORA_Lanczos;
-    else if (!strcasecmp(dem_sampling, "Average"))          sampleAlg = GRIORA_Average;
-    else if (!strcasecmp(dem_sampling, "Mode"))             sampleAlg = GRIORA_Mode;
-    else if (!strcasecmp(dem_sampling, "Gauss"))            sampleAlg = GRIORA_Gauss;
-    else
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
-
-    if (sampling_radius >= 0)
-        radius = sampling_radius;
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
-
-    /* Initialize Class Data Members */
-    vrtDset = NULL;
-    vrtBand = NULL;
-    bzero(vrtInvGeot, sizeof(vrtInvGeot));
-    vrtRows = vrtCols = vrtCellSize = 0;
-    bzero(&vrtBbox, sizeof(vrtBbox));
-    tifList.clear();
-    rasterDict.clear();
-    bzero(rasterRreader, sizeof(rasterRreader));
-    readerCount = 0;
-    lastLon = 0;
-    lastLat = 0;
-    samplesCounter = 0;
-    checkCacheFirst = false;
-    extrapolateEnabled = false;
-    transf = NULL;
-    srcSrs.Clear();
-    trgSrs.Clear();
+    return (raster && raster->dset && p &&
+           (p->getX() >= raster->bbox.lon_min) && (p->getX() <= raster->bbox.lon_max) &&
+           (p->getY() >= raster->bbox.lat_min) && (p->getY() <= raster->bbox.lat_max));
 }
 
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * findCachedRasterWithPoint
+ *----------------------------------------------------------------------------*/
+bool VrtRaster::findCachedRasterWithPoint(OGRPoint *p, VrtRaster::raster_t** raster)
+{
+    bool foundRaster = false;
+    const char *key = rasterDict.first(raster);
+    while (key != NULL)
+    {
+        assert(*raster);
+        if (rasterContainsPoint(*raster, p))
+        {
+            foundRaster = true;
+            break; /* Only one raster with this point in mosaic rasters */
+        }
+        key = rasterDict.next(raster);
+    }
+    return foundRaster;
+}
+
 
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols

@@ -43,7 +43,7 @@
 #include <vrtdataset.h>
 
 /******************************************************************************
- * GEOJSON RASTER CLASS
+ * VRT RASTER CLASS
  ******************************************************************************/
 
 class VrtRaster: public LuaObject
@@ -55,11 +55,9 @@ class VrtRaster: public LuaObject
          *--------------------------------------------------------------------*/
         static const int   INVALID_SAMPLE_VALUE = -1000000;
         static const int   PHOTON_CRS = 4326;
-        static const int   ARCTIC_DEM_CRS = 3413;
 
-        static const int   MAX_READER_THREADS  = 200;
-        static const int   MAX_EXTRAPOLATED_RASTERS = 9;
-        static const int   MAX_CACHED_RASTERS = (MAX_EXTRAPOLATED_RASTERS +1);
+        static const int   MAX_READER_THREADS = 200;
+        static const int   MAX_CACHED_RASTERS = 10;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -136,34 +134,21 @@ class VrtRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
                      VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius);
+        virtual void getVrtFileName(std::string& vrtFile, double lon=0, double lat=0 ) = 0;
         bool         openVrtDset   (const char *fileName);
-        virtual int  sample        (double lon, double lat);
-        virtual void getVrtFileName(double lon, double lat, std::string& vrtFile) = 0;
 
 
-        VRTDataset*           vrtDset;
-        OGRCoordinateTransformation *transf;
-        double                lastLon;
-        double                lastLat;
-        uint64_t              samplesCounter;
-        bool                  checkCacheFirst;
-        bool                  extrapolateEnabled;
-
-        bool findTIFfilesWithPoint    (OGRPoint *p);
-        void updateRastersCache       (OGRPoint *p);
-        bool vrtContainsPoint         (OGRPoint *p);
-        bool rasterContainsPoint      (raster_t *raster, OGRPoint *p);
-        bool findCachedRasterWithPoint(OGRPoint *p, raster_t **raster);
-        void extrapolate              (double lon, double lat);
-        void sampleRasters            (void);
-        void invalidateRastersCache   (void);
-        int  getSampledRastersCount   (void);
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        bool checkCacheFirst;
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
         std::string           vrtFileName;
+        VRTDataset*           vrtDset;
         GDALRasterBand*       vrtBand;
         double                vrtInvGeot[6];
         uint32_t              vrtRows;
@@ -176,7 +161,7 @@ class VrtRaster: public LuaObject
         reader_t              rasterRreader[MAX_READER_THREADS];
         uint32_t              readerCount;
 
-
+        OGRCoordinateTransformation *transf;
         OGRSpatialReference srcSrs;
         OGRSpatialReference trgSrs;
         GDALRIOResampleAlg  sampleAlg;
@@ -195,6 +180,16 @@ class VrtRaster: public LuaObject
 
         void createReaderThreads      (void);
         void processRaster            (raster_t* raster, VrtRaster* obj);
+        bool findTIFfilesWithPoint    (OGRPoint *p);
+        void updateRastersCache       (OGRPoint *p);
+        bool vrtContainsPoint         (OGRPoint *p);
+        bool rasterContainsPoint      (raster_t *raster, OGRPoint *p);
+        bool findCachedRasterWithPoint(OGRPoint *p, raster_t **raster);
+        int  sample                   (double lon, double lat);
+        void sampleRasters            (void);
+        void invalidateRastersCache   (void);
+        int  getSampledRastersCount   (void);
+
 };
 
 #endif  /* __vrt_raster__ */
