@@ -189,6 +189,7 @@ class VrtRaster: public LuaObject
         void sampleRasters            (void);
         void invalidateRastersCache   (void);
         int  getSampledRastersCount   (void);
+        void clearRaster              (raster_t *raster);
 
 };
 

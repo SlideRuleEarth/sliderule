@@ -118,6 +118,7 @@ void VrtRaster::deinit( void )
  *----------------------------------------------------------------------------*/
 int VrtRaster::sample (double lon, double lat, List<sample_t> &slist, void* param)
 {
+    (void)param;  /* Keep compiler happy, param not used for now */
     slist.clear();
 
     try
@@ -153,7 +154,7 @@ int VrtRaster::sample (double lon, double lat, List<sample_t> &slist, void* para
 VrtRaster::~VrtRaster(void)
 {
     /* Terminate all reader threads */
-    for (int i = 0; i < readerCount; i++)
+    for (uint32_t i=0; i < readerCount; i++)
     {
         reader_t *reader = &rasterRreader[i];
         if (reader->thread != NULL)
@@ -259,9 +260,6 @@ int VrtRaster::sample(double lon, double lat)
 VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
     LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    char uuid_str[UUID_STR_LEN] = {0};
-    std::string fname;
-
     CHECKPTR(dem_sampling);
 
     if      (!strcasecmp(dem_sampling, "NearestNeighbour")) sampleAlg = GRIORA_NearestNeighbour;
@@ -449,6 +447,28 @@ bool VrtRaster::findTIFfilesWithPoint(OGRPoint *p)
 
 
 /*----------------------------------------------------------------------------
+ * clearRaster
+ *----------------------------------------------------------------------------*/
+void VrtRaster::clearRaster(raster_t *raster)
+{
+    raster->enabled = false;
+    raster->sampled = false;
+    raster->dset = NULL;
+    raster->band = NULL;
+    raster->fileName.clear();
+
+    raster->rows = 0;
+    raster->cols = 0;
+    bzero(&raster->bbox, sizeof(bbox_t));
+    raster->cellSize = 0;
+    raster->xBlockSize = 0;
+    raster->yBlockSize = 0;
+
+    raster->point = NULL;
+    bzero(&raster->sample, sizeof(sample_t));
+}
+
+/*----------------------------------------------------------------------------
  * invaldiateAllRasters
  *----------------------------------------------------------------------------*/
 void VrtRaster::invalidateRastersCache(void)
@@ -496,7 +516,7 @@ void VrtRaster::updateRastersCache(OGRPoint* p)
             /* Create new raster for this tif file since it is not in the dictionary */
             raster = new raster_t;
             assert(raster);
-            bzero(raster, sizeof(raster_t));
+            clearRaster(raster);
             raster->enabled = true;
             raster->point = p;
             raster->sample.value = INVALID_SAMPLE_VALUE;
@@ -530,14 +550,14 @@ void VrtRaster::updateRastersCache(OGRPoint* p)
  *----------------------------------------------------------------------------*/
 void VrtRaster::createReaderThreads(void)
 {
-    int threadsNeeded = rasterDict.length();
+    uint32_t threadsNeeded = rasterDict.length();
     if (threadsNeeded <= readerCount)
         return;
 
-    int newThreadsCnt = threadsNeeded - readerCount;
+    uint32_t newThreadsCnt = threadsNeeded - readerCount;
     // print2term("Creating %d new threads, readerCount: %d, neededThreads: %d\n", newThreadsCnt, readerCount, threadsNeeded);
 
-    for (int i = 0; i < newThreadsCnt; i++)
+    for (uint32_t i=0; i < newThreadsCnt; i++)
     {
         if (readerCount < MAX_READER_THREADS)
         {
@@ -599,10 +619,10 @@ void VrtRaster::sampleRasters(void)
         return;
 
     /* Wait for all reader threads to finish sampling */
-    for (int i = 0; i < readerCount; i++)
+    for (uint32_t j=0; j<readerCount; j++)
     {
-        reader_t *reader = &rasterRreader[i];
-        raster_t *reaster;
+        reader_t *reader = &rasterRreader[j];
+        raster = NULL;
         do
         {
             reader->sync->lock();
@@ -978,4 +998,3 @@ int VrtRaster::luaSamples(lua_State *L)
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);
 }
-
