@@ -83,6 +83,9 @@ void initgeo (void)
     /* Register all gdal drivers */
     GDALAllRegister();
 
+    /* Initialize Modules */
+    VrtRaster::init();
+
     /* Register GDAL custom error handler */
     void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
     CPLSetErrorHandler(fptrGdalErrorHandler);
@@ -99,6 +102,7 @@ void initgeo (void)
 
 void deinitgeo (void)
 {
+    VrtRaster::deinit();
     GDALDestroy();
 }
 }
