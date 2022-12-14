@@ -69,11 +69,12 @@ class VrtRaster: public LuaObject
 
 
         typedef struct {
-            bool             enabled;
-            bool             sampled;
-            GDALDataset*     dset;
-            GDALRasterBand*  band;
-            std::string      fileName;
+            bool            enabled;
+            bool            sampled;
+            GDALDataset*    dset;
+            GDALRasterBand* band;
+            std::string     fileName;
+            GDALDataType    dataType;
 
             uint32_t        rows;
             uint32_t        cols;

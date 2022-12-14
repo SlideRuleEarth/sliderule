@@ -431,6 +431,7 @@ void VrtRaster::clearRaster(raster_t *raster)
     raster->dset = NULL;
     raster->band = NULL;
     raster->fileName.clear();
+    raster->dataType = GDT_Unknown;
 
     raster->rows = 0;
     raster->cols = 0;
@@ -676,6 +677,9 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             CHECKPTR(raster->band);
             raster->band->GetBlockSize(&raster->xBlockSize, &raster->yBlockSize);
             mlog(DEBUG, "Raster xBlockSize: %d, yBlockSize: %d", raster->xBlockSize, raster->yBlockSize);
+
+            /* Get raster data type */
+            raster->dataType = raster->band->GetRasterDataType();
         }
 
         /*
@@ -683,6 +687,15 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
          */
         if (!rasterContainsPoint(raster, raster->point))
             return;
+
+        /*
+         * VrtRaster class only supports GDT_Float32 for now.
+         * This could be enough for DEMs since elevation is usually stored as floats.
+         * Check if this is the case. If not add support for other types.
+         */
+        if (raster->dataType != GDT_Float32)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
+
 
         /* Read the raster */
         const int32_t col = static_cast<int32_t>(floor((raster->point->getX() - raster->bbox.lon_min) / raster->cellSize));
@@ -713,7 +726,7 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
                 uint32_t offset = _row * raster->xBlockSize + _col;
                 raster->sample.value = fp[offset];
 
-                mlog(DEBUG, "Elevation: %f, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
+                mlog(DEBUG, "Elevation: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
                      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
             }
             else mlog(CRITICAL, "block->GetDataRef() returned NULL pointer\n");
