@@ -54,6 +54,7 @@ class VrtRaster: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+
         static const int   INVALID_SAMPLE_VALUE = -1000000;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
@@ -98,19 +99,18 @@ class VrtRaster: public LuaObject
         } reader_t;
 
 
+        typedef VrtRaster* (*factory_t) (lua_State* L, const char* dem_sampling, const int sampling_radius);
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void             init      (void);
-        static void             deinit    (void);
-        int                     sample    (double lon, double lat, List<sample_t> &slist, void* param=NULL);
-        virtual                ~VrtRaster (void);
-
-        /*--------------------------------------------------------------------
-         * Inline Methods
-         *--------------------------------------------------------------------*/
+        static void             init            (void);
+        static void             deinit          (void);
+        static int              luaCreate       (lua_State* L);
+        static bool             registerRaster  (const char* _name, factory_t create);
+        int                     sample          (double lon, double lat, List<sample_t> &slist, void* param=NULL);
+        virtual                ~VrtRaster       (void);
 
     protected:
 
@@ -129,16 +129,21 @@ class VrtRaster: public LuaObject
         virtual void getVrtFileName(std::string& vrtFile, double lon=0, double lat=0 ) = 0;
         bool         openVrtDset   (const char *fileName);
 
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
         bool checkCacheFirst;
 
     private:
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
+        static Mutex factoryMut;
+        static Dictionary<factory_t> factories;
+
         std::string           vrtFileName;
         VRTDataset*           vrtDset;
         GDALRasterBand*       vrtBand;

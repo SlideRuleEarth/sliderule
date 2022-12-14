@@ -50,13 +50,6 @@
 #include "ogr_spatialref.h"
 
 /******************************************************************************
- * LOCAL DEFINES AND MACROS
- ******************************************************************************/
-
-/******************************************************************************
- * PRIVATE IMPLEMENTATION
- ******************************************************************************/
-/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -69,6 +62,8 @@ const struct luaL_Reg VrtRaster::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
+Mutex VrtRaster::factoryMut;
+Dictionary<VrtRaster::factory_t> VrtRaster::factories;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -86,6 +81,43 @@ void VrtRaster::init( void )
  *----------------------------------------------------------------------------*/
 void VrtRaster::deinit( void )
 {
+}
+
+/*----------------------------------------------------------------------------
+ * luaCreate
+ *----------------------------------------------------------------------------*/
+int VrtRaster::luaCreate( lua_State* L )
+{
+    try
+    {
+        /* Get Parameters */
+        const char* raster_name     = getLuaString(L, 1);
+        const char* dem_sampling    = getLuaString(L, 2, true, "NearestNeighbour");
+        const int   sampling_radius = getLuaInteger(L, 3, true, 1);
+
+        /* Get Factory */
+        factory_t _create = NULL;
+        factoryMut.lock();
+        {
+            factories.find(raster_name, &_create);
+        }
+        factoryMut.unlock();
+
+        /* Check Factory */
+        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", raster_name);
+
+        /* Create Raster */
+        VrtRaster* _raster = _create(L, dem_sampling, sampling_radius);
+        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", raster_name);
+
+        /* Return Object */
+        return createLuaObject(L, _raster);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------

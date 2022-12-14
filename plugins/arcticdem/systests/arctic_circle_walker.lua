@@ -1,4 +1,3 @@
-local runner = require("test_executive")
 console = require("console")
 asset = require("asset")
 csv = require("csv")
@@ -10,10 +9,6 @@ json = require("json")
 
 -- Setup --
 
-local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
-local asset_name = "arcticdem-local"
-local arcticdem_local = core.getbyname(asset_name)
-
 -- local verbose = true
 local verbose = false        --Set to see elevation value and tif file name returned
 local verboseErrors = true   --Set to see which sample reads failed
@@ -23,7 +18,7 @@ local  lat = 66.34  -- Arctic Circle lat
 local _lon = lon
 local _lat = lat
 
-local dem = arcticdem.mosaic_raster("NearestNeighbour", 0)
+local dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
 local tbl, status
 
 local lonIncrement  = 1.5
@@ -118,9 +113,3 @@ dtime = stoptime-starttime
 print(string.format("%d points sampled, ExecTime: %f, failed: %d", maxPoints, dtime, failedSamples))
 
 os.exit()
-
--- Clean Up --
--- Report Results --
-
-runner.report()
-

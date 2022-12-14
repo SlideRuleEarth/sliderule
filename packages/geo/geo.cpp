@@ -54,7 +54,8 @@
 int geo_open (lua_State* L)
 {
     static const struct luaL_Reg geo_functions[] = {
-        {"file",        GeoJsonRaster::luaCreate},
+        {"geojson",     GeoJsonRaster::luaCreate},
+        {"vrt",         VrtRaster::luaCreate},
         {NULL,          NULL}
     };
 

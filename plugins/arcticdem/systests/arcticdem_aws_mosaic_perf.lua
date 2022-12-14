@@ -1,4 +1,3 @@
-local runner = require("test_executive")
 console = require("console")
 asset = require("asset")
 csv = require("csv")
@@ -10,10 +9,6 @@ json = require("json")
 
 -- Setup --
 
-local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
-local asset_name = "arcticdem-local"
-local arcticdem_local = core.getbyname(asset_name)
-
 local failedSamples = 0
 -- local verbose = true
 local verbose = false
@@ -24,7 +19,7 @@ local _lon = lon
 local _lat = lat
 
 print('\n------------------\nTest: AWS mosaic\n------------')
-local dem = arcticdem.mosaic_raster("NearestNeighbour", 0)
+local dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat)
 local stoptime = time.latch();
@@ -158,9 +153,4 @@ print('\n')
 print(string.format("%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
 
 os.exit()
-
--- Clean Up --
--- Report Results --
-
-runner.report()
 

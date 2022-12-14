@@ -38,7 +38,6 @@
 
 #include "ArcticDemMosaicRaster.h"
 #include "ArcticDemStripsRaster.h"
-#include "ArcticDEMReader.h"
 
 /******************************************************************************
  * PROTOTYPES

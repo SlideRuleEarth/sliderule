@@ -40,7 +40,9 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_ARCTICDEM_LIBNAME    "arcticdem"
+#define LUA_ARCTICDEM_LIBNAME   "arcticdem"
+#define LUA_MOSAIC_RASTER_NAME  "arcticdem-mosaic"
+#define LUA_STRIPS_RASTER_NAME  "arcticdem-strips"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -67,9 +69,8 @@ int arcticdem_version (lua_State* L)
 int arcticdem_open (lua_State *L)
 {
     static const struct luaL_Reg arcticdem_functions[] = {
-        {"mosaic_raster",   ArcticDemMosaicRaster::luaCreate},
-        {"strips_raster",   ArcticDemStripsRaster::luaCreate},
-        {"reader",          ArcticDEMReader::luaCreate},
+        {"mosaic",          ArcticDemMosaicRaster::luaCreate},
+        {"strips",          ArcticDemStripsRaster::luaCreate},
         {"version",         arcticdem_version},
         {NULL,              NULL}
     };
@@ -90,7 +91,10 @@ void initarcticdem (void)
     /* Initialize Modules */
     ArcticDemMosaicRaster::init();
     ArcticDemStripsRaster::init();
-    ArcticDEMReader::init();
+
+    /* Register Rasters */
+    VrtRaster::registerRaster(LUA_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
+    VrtRaster::registerRaster(LUA_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_ARCTICDEM_LIBNAME, arcticdem_open);
@@ -107,6 +111,5 @@ void deinitarcticdem (void)
     /* Uninitialize Modules */
     ArcticDemMosaicRaster::deinit();
     ArcticDemStripsRaster::deinit();
-    ArcticDEMReader::deinit();
 }
 }

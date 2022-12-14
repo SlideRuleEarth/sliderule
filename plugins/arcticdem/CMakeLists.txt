@@ -57,7 +57,6 @@ target_sources(arcticdem
         ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMReader.cpp
 )
 
 # Include Directories #
@@ -69,14 +68,6 @@ target_include_directories (arcticdem
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/plugin
 )
 
-# Script Installation #
-install (
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/samples.lua
-    DESTINATION
-        ${CONFDIR}/api
-)
-
 # Plugin Installation #
 install (TARGETS arcticdem LIBRARY DESTINATION ${CONFDIR})
 
@@ -85,6 +76,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDEMReader.h
     DESTINATION
         ${INSTALLDIR}/include/sliderule)

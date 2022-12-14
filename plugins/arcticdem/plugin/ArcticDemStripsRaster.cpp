@@ -47,24 +47,6 @@
  * PUBLIC METHODS
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate
- *----------------------------------------------------------------------------*/
-int ArcticDemStripsRaster::luaCreate( lua_State* L )
-{
-    try
-    {
-        return createLuaObject(L, create(L, 1));
-    }
-    catch( const RunTimeException& e )
-    {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
-
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -86,13 +68,9 @@ ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampl
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-ArcticDemStripsRaster* ArcticDemStripsRaster::create( lua_State* L, int index )
+VrtRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius)
 {
-    const int radius = getLuaInteger(L, -1);
-    lua_pop(L, 1);
-    const char* dem_sampling = getLuaString(L, -1);
-    lua_pop(L, 1);
-    return new ArcticDemStripsRaster(L, dem_sampling, radius);
+    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius);
 }
 
 

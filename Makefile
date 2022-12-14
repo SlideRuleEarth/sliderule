@@ -1,5 +1,6 @@
 ROOT = $(shell pwd)
 BUILD = $(ROOT)/build/sliderule
+ARCTICDEM_BUILD = $(ROOT)/build/arcticdem
 ATLAS_BUILD = $(ROOT)/build/atlas
 ICESAT2_BUILD = $(ROOT)/build/icesat2
 
@@ -34,7 +35,7 @@ DEVCFG += -DUSE_H5_PACKAGE=ON
 DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
 DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
-DEVCFG += -DENABLE_APACHE_ARROW_10_COMPAT=ON
+DEVCFG += -DENABLE_APACHE_ARROW_10_COMPAT=OFF
 
 config-development: prep ## configure make for development version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
@@ -74,6 +75,25 @@ config-python: prep ## configure make for python bindings
 config-library: prep ## configure make for shared library libsliderule.so
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(ROOT)
 
+##########################
+# ArcticDEM Plugin Targets
+##########################
+
+config-arcticdem-debug: prep ## configure make for arcticdem plugin
+	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/arcticdem
+
+config-arcticdem: prep ## configure make for arcticdem plugin
+	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
+
+arcticdem: ## build icesat2 plugin
+	make -j4 -C $(ARCTICDEM_BUILD)
+
+install-arcticdem: ## install icesat2 plugin to system
+	make -C $(ARCTICDEM_BUILD) install
+
+uninstall-arcticdem: ## uninstall most recent install of icesat2 plugin from system
+	xargs rm < $(ARCTICDEM_BUILD)/install_manifest.txt
+
 ########################
 # Atlas Plugin Targets
 ########################
@@ -112,18 +132,6 @@ uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from syste
 ########################
 # Development Targets
 ########################
-
-arcticdem-config-debug: prep ## configure make for arcticdem plugin
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/arcticdem
-
-arcticdem-config: prep ## configure make for arcticdem plugin
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
-
-arcticdem-config-debug: prep ## configure make for arcticdem plugin
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/arcticdem
-
-arcticdem-config: prep ## configure make for arcticdem plugin
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
 
 scan: prep ## perform static analysis
 	cd $(BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
@@ -167,16 +175,19 @@ testpy: ## run python binding test
 
 prep: ## create necessary build directories
 	mkdir -p $(BUILD)
+	mkdir -p $(ARCTICDEM_BUILD)
 	mkdir -p $(ATLAS_BUILD)
 	mkdir -p $(ICESAT2_BUILD)
 
 clean: ## clean last build
 	- make -C $(BUILD) clean
+	- make -C $(ARCTICDEM_BUILD) clean
 	- make -C $(ATLAS_BUILD) clean
 	- make -C $(ICESAT2_BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
+	- rm -Rf $(ARCTICDEM_BUILD)
 	- rm -Rf $(ATLAS_BUILD)
 	- rm -Rf $(ICESAT2_BUILD)
 

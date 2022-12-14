@@ -26,20 +26,17 @@ local sampling_alg = rqst["sampling-algorithm"] or "NearestNeighbour"
 local sampling_radius = rqst["sampling-radius"] or 0
 local coord = rqst["coordinates"]
 
-local sample, status, lat, lon
-local samples = {}
-
-
 -- Get Samples --
-local dem = arcticdem.raster(dem_asset, sampling_alg, sampling_radius)
+local dem = geo.vrt(dem_asset, sampling_alg, sampling_radius)
 
+-- Build Table --
+local samples = {}
 for _, position in ipairs(coord) do
-    lon = position[1]
-    lat = position[2]
-    sample, status = dem:samples(lon, lat)
+    local lon = position[1]
+    local lat = position[2]
+    local sample, status = dem:samples(lon, lat)
     table.insert(samples, sample)
 end
-
 
 -- Return Response
 return json.encode({samples=samples})

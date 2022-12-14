@@ -8,22 +8,13 @@ json = require("json")
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 
--- Setup --
-
-local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
-local asset_name = "arcticdem-local"
-local arcticdem_local = core.getbyname(asset_name)
-
 -- Unit Test --
-
--------------
-local dem, tbl, status
 
 local lon = -178.0
 local lat =   51.7
 
 print('\n------------------\nTest: Strips\n------------')
-dem = arcticdem.raster("strip", "NearestNeighbour", 0)
+local dem = geo.vrt("arcticdem-strips", "NearestNeighbour", 0)
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat)
 local stoptime = time.latch();
@@ -38,7 +29,7 @@ print('ExecTime:', dtime * 1000, '\n')
 
 
 print('\n------------------\nTest: Mosaic\n------------')
-dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
+dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
 starttime = time.latch();
 tbl, status = dem:sample(lon, lat)
 stoptime = time.latch();
@@ -59,7 +50,7 @@ print('\n------------------\nTest: Sampling Elevations\n------------')
 
 for radius = 0, 8 do
     for i = 1, 8 do
-        dem = arcticdem.raster("mosaic", samplingAlgs[i], radius)
+        dem = geo.vrt("arcticdem-mosaic", samplingAlgs[i], radius)
         tbl, status = dem:sample(lon, lat)
 
         local el, file
@@ -73,9 +64,6 @@ for radius = 0, 8 do
     print('\n-------------------------------------------')
 end
 
--- os.exit()
-
-
 local max_cnt = 1000000
 
 for dems = 1, 2 do
@@ -84,16 +72,16 @@ for dems = 1, 2 do
     local lat =   51.7
     local _lon = lon
     local _lat = lat
-    local el, status
+    local status
     local dem
 
 
     if dems == 1 then
         print('\n------------------\nTest: Mosaic Reading', max_cnt, ' different points\n------------')
-        dem = arcticdem.raster("mosaic", "NearestNeighbour", 0)
+        dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
     else
         print('\n------------------\nTest: Strips Reading', max_cnt, ' the same point\n------------')
-        dem = arcticdem.raster("strip", "NearestNeighbour", 0)
+        dem = geo.vrt("arcticdem-strips", "NearestNeighbour", 0)
     end
 
     runner.check(dem ~= nil)
@@ -123,8 +111,6 @@ for dems = 1, 2 do
     local dtime = stoptime-starttime
     print('ExecTime:',dtime*1000, '\n')
 
-
-
     print('\n------------------\nTest: dim\n------------------')
     local rows, cols = dem:dim()
     print("rows: ", rows, "cols: ", cols)
@@ -145,9 +131,6 @@ for dems = 1, 2 do
     runner.check(cellsize == 2.0)
 end
 
-
-
--- Clean Up --
 -- Report Results --
 
 runner.report()

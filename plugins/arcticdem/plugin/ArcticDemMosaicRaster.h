@@ -45,11 +45,12 @@
 class ArcticDemMosaicRaster: public VrtRaster
 {
     public:
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
+        static VrtRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius);
 
     protected:
 
@@ -57,11 +58,8 @@ class ArcticDemMosaicRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static ArcticDemMosaicRaster* create (lua_State* L, int index);
                ArcticDemMosaicRaster (lua_State* L, const char* dem_sampling, const int sampling_radius);
         void   getVrtFileName(std::string& vrtFile, double lon=0, double lat=0 );
-
-    private:
 };
 
 #endif  /* __arcticdem_mosaic_raster__ */

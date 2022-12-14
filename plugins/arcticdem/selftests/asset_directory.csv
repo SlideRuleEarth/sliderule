@@ -1,3 +1,0 @@
-asset,              format,     path,                               index,          region,     endpoint
-arcticdem-s3,       s3,         icesat2-sliderule/data/ArcticDEM,   empty.index,    us-west-2,  https://s3.us-west-2.amazonaws.com
-arcticdem-local,    file,       /data/ArcticDEM,                    empty.index,    local,      local
