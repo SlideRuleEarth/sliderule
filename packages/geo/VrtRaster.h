@@ -38,6 +38,7 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
+#include "GeoRaster.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 #include <vrtdataset.h>
@@ -54,22 +55,12 @@ class VrtRaster: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
         static const int   INVALID_SAMPLE_VALUE = -1000000;
-        static const int   PHOTON_CRS = 4326;
-
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
-
-        typedef struct {
-            double lon_min;
-            double lat_min;
-            double lon_max;
-            double lat_max;
-        } bbox_t;
-
 
         typedef struct {
             double value;
