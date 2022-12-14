@@ -254,7 +254,7 @@ void* EndpointProxy::collatorThread (void* parm)
                 current_resource++;
             }
 
-            /*  if No Nodes Available */
+            /*  If No Nodes Available */
             if(nodes->length() <= 0)
             {
                 LocalLib::sleep(0.20); // 5Hz
