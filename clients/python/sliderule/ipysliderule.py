@@ -1642,10 +1642,10 @@ class leaflet:
                 zoom=5, max_zoom=24,
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
-                basemap=ipyleaflet.basemaps.Esri.ArcticOceanBase,
-                crs=ipyleaflet.projections.EPSG5936.ESRIBasemap)
+                basemap=basemaps.Esri.ArcticOceanBase,
+                crs=projections.EPSG5936.ESRIBasemap)
             # add arctic ocean reference basemap
-            reference = ipyleaflet.basemaps.Esri.ArcticOceanReference
+            reference = basemaps.Esri.ArcticOceanReference
             self.map.add(ipyleaflet.basemap_to_tiles(reference))
             self.crs = 'EPSG:5936'
         elif (projection == 'South'):
@@ -1653,8 +1653,8 @@ class leaflet:
                 zoom=2, max_zoom=9,
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
-                basemap=ipyleaflet.basemaps.Esri.AntarcticBasemap,
-                crs=ipyleaflet.projections.EPSG3031.ESRIBasemap)
+                basemap=basemaps.Esri.AntarcticBasemap,
+                crs=projections.EPSG3031.ESRIBasemap)
             self.crs = 'EPSG:3031'
         else:
             # use a predefined ipyleaflet map
