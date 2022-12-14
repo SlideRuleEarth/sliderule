@@ -191,6 +191,9 @@ def __cmr_granule_metadata(search_results):
     for e in search_results['feed']['entry']:
         # columns for dataframe
         columns = {}
+        # granule title and identifiers
+        columns['title'] = e['title']
+        columns['collection_concept_id'] = e['collection_concept_id']
         # time start and time end of granule
         columns['time_start'] = numpy.datetime64(e['time_start'])
         columns['time_end'] = numpy.datetime64(e['time_end'])
@@ -202,8 +205,13 @@ def __cmr_granule_metadata(search_results):
         df = geopandas.pd.DataFrame(columns, index=[e['id']])
         # Generate Geometry Column
         if 'polygons' in e:
-            coords = [float(i) for i in e['polygons'][0][0].split()]
-            geometry = Polygon(zip(coords[1::2], coords[::2]))
+            polygons = []
+            # for each polygon
+            for poly in e['polygons'][0]:
+                coords = [float(i) for i in poly.split()]
+                polygons.append(Polygon(zip(coords[1::2], coords[::2])))
+            # generate multipolygon from list of polygons
+            geometry = MultiPolygon(polygons)
         else:
             geometry, = geopandas.points_from_xy([None], [None])
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
