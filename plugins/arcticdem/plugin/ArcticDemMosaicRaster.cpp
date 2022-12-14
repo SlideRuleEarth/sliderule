@@ -30,75 +30,88 @@
  */
 
 /******************************************************************************
- *INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "rasterPkg.h"
-#include "GeoJsonRaster.h"
-#include <gdal.h>
+#include "ArcticDemMosaicRaster.h"
 
 /******************************************************************************
- * DEFINES
+ * PRIVATE IMPLEMENTATION
  ******************************************************************************/
 
-#define LUA_GEOJSONRASTER_LIBNAME  "raster"
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
 
 /******************************************************************************
- * GEOJSONRASTER FUNCTIONS
+ * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * raster_open
+ * luaCreate
  *----------------------------------------------------------------------------*/
-int raster_open (lua_State* L)
+int ArcticDemMosaicRaster::luaCreate( lua_State* L )
 {
-    static const struct luaL_Reg raster_functions[] = {
-        {"file",        GeoJsonRaster::luaCreate},
-        {NULL,          NULL}
-    };
+    try
+    {
+        return createLuaObject(L, create(L, 1));
+    }
+    catch( const RunTimeException& e )
+    {
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        return returnLuaStatus(L, false);
+    }
+}
 
-    /* Set Package Library */
-    luaL_newlib(L, raster_functions);
 
-    return 1;
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
+    VrtRaster(L, dem_sampling, sampling_radius)
+{
+    /* There is only one mosaic VRT file. Open it. */
+    std::string vrtFile;
+    getVrtFileName(vrtFile);
+
+    if (!openVrtDset(vrtFile.c_str()))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
+
+    /*
+     * For mosaic, there is only one raster with point in it.
+     * Find it in cache first, before looking in vrt file for new tif.
+     */
+    checkCacheFirst = true;
+}
+
+/*----------------------------------------------------------------------------
+ * create
+ *----------------------------------------------------------------------------*/
+ArcticDemMosaicRaster* ArcticDemMosaicRaster::create( lua_State* L, int index )
+{
+    const int radius = getLuaInteger(L, -1);
+    lua_pop(L, 1);
+    const char* dem_sampling = getLuaString(L, -1);
+    lua_pop(L, 1);
+    return new ArcticDemMosaicRaster(L, dem_sampling, radius);
 }
 
 
 /*----------------------------------------------------------------------------
- * Error handler called by GDAL lib on errors
+ * getVrtFileName
  *----------------------------------------------------------------------------*/
-void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
+void ArcticDemMosaicRaster::getVrtFileName(std::string& vrtFile, double lon, double lat)
 {
-    (void)eErrClass;  /* Silence compiler warning */
-    mlog(CRITICAL, "GDAL ERROR %d: %s\n", err_no, msg);
+    vrtFile = "/data/ArcticDem/mosaic.vrt";
 }
 
 /******************************************************************************
- * EXPORTED FUNCTIONS
+ * PRIVATE METHODS
  ******************************************************************************/
-extern "C" {
-void initraster (void)
-{
-    /* Register all gdal drivers */
-    GDALAllRegister();
 
-    /* Register GDAL custom error handler */
-    void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
-    CPLSetErrorHandler(fptrGdalErrorHandler);
 
-    /* Extend Lua */
-    LuaEngine::extend(LUA_GEOJSONRASTER_LIBNAME, raster_open);
 
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEOJSONRASTER_LIBNAME, LIBID);
-
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_GEOJSONRASTER_LIBNAME, LIBID);
-}
-
-void deinitraster (void)
-{
-    GDALDestroy();
-}
-}

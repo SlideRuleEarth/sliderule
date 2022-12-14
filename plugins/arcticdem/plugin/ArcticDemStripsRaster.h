@@ -29,24 +29,39 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __raster_pkg__
-#define __raster_pkg__
+#ifndef __arcticdem_strips_raster__
+#define __arcticdem_strips_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-// #include "GeoJsonRaster.h"
+#include "VrtRaster.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * ARCTICDEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initraster (void);
-void deinitraster (void);
-}
+class ArcticDemStripsRaster: public VrtRaster
+{
+    public:
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-#endif  /* __raster_pkg__ */
+        static int luaCreate (lua_State* L);
 
+    protected:
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static ArcticDemStripsRaster* create (lua_State* L, int index);
+               ArcticDemStripsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius);
+        void   getVrtFileName(std::string& vrtFile, double lon=0, double lat=0);
+
+    private:
+};
+
+#endif  /* __arcticdem_strips_raster__ */

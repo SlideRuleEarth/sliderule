@@ -29,7 +29,7 @@ config-debug: prep ## configure make for release version of sliderule binary
 DEVCFG  = -DUSE_ARROW_PACKAGE=ON
 DEVCFG += -DUSE_AWS_PACKAGE=ON
 DEVCFG += -DUSE_CCSDS_PACKAGE=ON
-DEVCFG += -DUSE_RASTER_PACKAGE=ON
+DEVCFG += -DUSE_GEO_PACKAGE=ON
 DEVCFG += -DUSE_H5_PACKAGE=ON
 DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
@@ -57,7 +57,7 @@ PYTHONCFG += -DUSE_H5_PACKAGE=ON
 PYTHONCFG += -DUSE_AWS_PACKAGE=ON
 PYTHONCFG += -DUSE_LEGACY_PACKAGE=ON
 PYTHONCFG += -DUSE_CCSDS_PACKAGE=ON
-PYTHONCFG += -DUSE_RASTER_PACKAGE=ON
+PYTHONCFG += -DUSE_GEO_PACKAGE=ON
 PYTHONCFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
 PYTHONCFG += -DH5CORO_THREAD_POOL_SIZE=0
 PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
@@ -112,6 +112,18 @@ uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from syste
 ########################
 # Development Targets
 ########################
+
+arcticdem-config-debug: prep ## configure make for arcticdem plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/arcticdem
+
+arcticdem-config: prep ## configure make for arcticdem plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
+
+arcticdem-config-debug: prep ## configure make for arcticdem plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/arcticdem
+
+arcticdem-config: prep ## configure make for arcticdem plugin
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
 
 scan: prep ## perform static analysis
 	cd $(BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)

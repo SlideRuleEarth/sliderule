@@ -1,17 +1,41 @@
 .vscode/
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Application Specific
 build/
-dist/
-.venv/
 stage/
-develop-eggs/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-__pycache__
-*.pyc
-.ipynb_checkpoints
 .cookies
-.cache/
 cscope.*
 *.log
