@@ -2,5 +2,5 @@ requests
 numpy
 fiona
 geopandas
-shapely<2
+shapely
 scikit-learn
