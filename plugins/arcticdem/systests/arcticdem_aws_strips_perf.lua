@@ -26,7 +26,7 @@ local dtime = stoptime - starttime
 
 if status ~= true then
     failedSamples = failedSamples + 1
-    print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
+    print(string.format("Point (%.3f, %.3f) ======> FAILED to read",lon, lat))
 else
      for j, v in ipairs(tbl) do
         local el = v["value"]

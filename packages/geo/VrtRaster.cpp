@@ -737,15 +737,8 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             return;
 
         /*
-         * VrtRaster class only supports GDT_Float32 for now.
-         * This could be enough for DEMs since elevation is usually stored as floats.
-         * Check if this is the case. If not add support for other types.
+         * Read the raster
          */
-        if (raster->dataType != GDT_Float32)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
-
-
-        /* Read the raster */
         const int32_t col = static_cast<int32_t>(floor((raster->point->getX() - raster->bbox.lon_min) / raster->cellSize));
         const int32_t row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point->getY()) / raster->cellSize));
 
@@ -765,24 +758,72 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             } while (block == NULL && cnt--);
             CHECKPTR(block);
 
-            float *fp = (float *)block->GetDataRef();
-            if (fp)
-            {
-                /* col, row inside of block */
-                uint32_t _col = col % raster->xBlockSize;
-                uint32_t _row = row % raster->yBlockSize;
-                uint32_t offset = _row * raster->xBlockSize + _col;
-                raster->sample.value = fp[offset];
+            /* Get data block pointer, no copy but block is locked */
+            void *data = block->GetDataRef();
+            if (data == NULL) block->DropLock();
+            CHECKPTR(data);
 
-                mlog(DEBUG, "Elevation: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
-                     raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
+            /* Calculate col, row inside of block */
+            uint32_t _col = col % raster->xBlockSize;
+            uint32_t _row = row % raster->yBlockSize;
+            uint32_t  offset = _row * raster->xBlockSize + _col;
+
+            /* Assume most data is stored as 32 bit floats (default case for elevation models) */
+            if (raster->dataType == GDT_Float32)
+            {
+                float *p = (float*) data;
+                raster->sample.value = (double) p[offset];
             }
-            else mlog(CRITICAL, "block->GetDataRef() returned NULL pointer\n");
+            /* All other data types */
+            else if (raster->dataType == GDT_Float64)
+            {
+                double *p = (double*) data;
+                raster->sample.value = (double) p[offset];
+            }
+            else if (raster->dataType == GDT_Byte)
+            {
+                uint8_t *p = (uint8_t*) data;
+                raster->sample.value = (double) p[offset];
+            }
+            else if (raster->dataType == GDT_UInt16)
+            {
+                uint16_t *p = (uint16_t*) data;
+                raster->sample.value = (double) p[offset];
+            }
+            else if (raster->dataType == GDT_Int16)
+            {
+                int16_t *p = (int16_t*) data;
+                raster->sample.value = (double) p[offset];
+            }
+            else if (raster->dataType == GDT_UInt32)
+            {
+                uint32_t *p = (uint32_t*) data;
+                raster->sample.value = (double) p[offset];
+            }
+            else if (raster->dataType == GDT_Int32)
+            {
+                int32_t *p = (int32_t*) data;
+                raster->sample.value = (double) p[offset];
+            }
+            else
+            {
+                /*
+                 * This version of GDAL does not support 64bit integers
+                 * Complex numbers are supported by GDAL but not suported by this code
+                 */
+                block->DropLock();
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
+            }
+
+            /* Done reading, release block lock */
             block->DropLock();
+
+            mlog(DEBUG, "Elevation: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
+                 raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
         }
         else
         {
-            float rbuf[1] = {0};
+            double rbuf[1] = {0};
             int _cellsize = raster->cellSize;
             int radius_in_meters = ((obj->radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
             int radius_in_pixels = (radius_in_meters == 0) ? 1 : radius_in_meters / _cellsize;
@@ -807,12 +848,12 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             do
             {
                 /* Retry read if error */
-                err = raster->band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float32, 0, 0, &args);
+                err = raster->band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float64, 0, 0, &args);
             } while (err != CE_None && cnt--);
             CHECK_GDALERR(err);
             raster->sample.value = rbuf[0];
-            mlog(DEBUG, "Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], obj->radius, radius_in_pixels, size);
-            // print2term("Resampled elevation:  %f, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
+            mlog(DEBUG, "Resampled elevation:  %lf, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], obj->radius, radius_in_pixels, size);
+            // print2term("Resampled elevation:  %lf, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
         }
 
         raster->sampled = true;

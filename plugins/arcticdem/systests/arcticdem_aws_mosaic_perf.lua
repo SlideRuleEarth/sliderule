@@ -13,7 +13,7 @@ local failedSamples = 0
 -- local verbose = true
 local verbose = false
 
-local  lon   = -180.00
+local  lon = -180.00
 local  lat = 66.34  -- Arctic Circle lat
 local _lon = lon
 local _lat = lat

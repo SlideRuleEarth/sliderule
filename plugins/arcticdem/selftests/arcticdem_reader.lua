@@ -13,121 +13,55 @@ json = require("json")
 local lon = -178.0
 local lat =   51.7
 
-print('\n------------------\nTest: Strips\n------------------')
-local dem = geo.vrt("arcticdem-strips", "NearestNeighbour", 0)
-local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat)
-local stoptime = time.latch();
-local dtime = stoptime - starttime
+local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    print(string.format("(%02d) %20f     %s", i, el, fname))
-end
-print('ExecTime:', dtime * 1000, '\n')
+for i = 1, 2 do
 
-
-print('\n------------------\nTest: Mosaic\n------------------')
-dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
-starttime = time.latch();
-tbl, status = dem:sample(lon, lat)
-stoptime = time.latch();
-dtime = stoptime - starttime
-
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    print(string.format("(%02d) %20f     %s", i, el, fname))
-end
-print('ExecTime:', dtime * 1000, '\n')
-
---os.exit()
-
-local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
-
-print('\n------------------\nTest: Sampling Elevations\n------------------')
-
-for radius = 0, 8 do
-    for i = 1, 8 do
-        dem = geo.vrt("arcticdem-mosaic", samplingAlgs[i], radius)
-        tbl, status = dem:sample(lon, lat)
-
-        local el, file
-        for i, v in ipairs(tbl) do
-            el = v["value"]
-            fname = v["file"]
-        end
-
-        print(string.format("%20s (%02d) %15f", samplingAlgs[i], radius, el))
-    end
-    print('\n-------------------------------------------------')
-end
-
-local max_cnt = 1000000
-
-for dems = 1, 2 do
-
-    local lon = -178.0
-    local lat =   51.7
-    local _lon = lon
-    local _lat = lat
-    local status
-    local dem
-
-
-    if dems == 1 then
-        print('\n------------------\nTest: Mosaic Reading', max_cnt, ' different points\n------------------')
-        dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
-    else
-        print('\n------------------\nTest: Strips Reading', max_cnt, ' the same point\n------------------')
-        dem = geo.vrt("arcticdem-strips", "NearestNeighbour", 0)
-    end
+    -- local demType = "arcticdem-mosaic"
+    local demType = demTypes[i];
+    local dem = geo.vrt(demType, "NearestNeighbour", 0)
 
     runner.check(dem ~= nil)
 
-    local starttime = time.latch();
-    for i = 1, max_cnt
-    do
-        tbl, status = dem:sample(lon, lat)
-        if status ~= true then
-            print(i, status)
-        end
+    print(string.format("\n--------------------------------\nTest: %s sample\n--------------------------------", demType))
+    local tbl, status = dem:sample(lon, lat)
+    runner.check(status == true)
+    runner.check(tbl ~= nil)
 
-        -- Do it only for mosaic, strips are too slow
-        if dems == 1 then
-            if (i % 2000 == 0) then
-                lon = _lon
-                lat = _lat
-            else
-                lon = lon + 0.0001
-                lat = lat + 0.0001
-            end
-        end
+    local sampleCnt = 0
 
+    for i, v in ipairs(tbl) do
+        local el = v["value"]
+        local fname = v["file"]
+        print(string.format("(%02d) %8.2f %s", i, el, fname))
+        runner.check(el ~= -1000000)  --INVALID_SAMPLE_VALUE from VrtRaster.h
+        runner.check(string.len(fname) > 0)
+        sampleCnt = sampleCnt + 1
     end
 
-    local stoptime = time.latch();
-    local dtime = stoptime-starttime
-    print('ExecTime:',dtime*1000, '\n')
+    if demType == "arcticdem-mosaic" then
+        runner.check(sampleCnt == 1)
+    else
+        runner.check(sampleCnt >= 28)
+    end
 
-    print('\n------------------\nTest: dim\n------------------------')
+    print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
     local rows, cols = dem:dim()
-    print("rows: ", rows, "cols: ", cols)
+    print(string.format("dimensions: rows: %d, cols: %d", rows, cols))
     runner.check(rows ~= 0)
     runner.check(cols ~= 0)
 
-    print('\n------------------\nTest: bbox\n------------------------')
+    print(string.format("\n--------------------------------\nTest: %s bbox\n--------------------------------", demType))
     local lon_min, lat_min, lon_max, lat_max = dem:bbox()
-    print("lon_min: ", lon_min, "lat_min: ", lat_min, "\nlon_max: ", lon_max, "lat_max: ", lat_max)
+    print(string.format("lon_min: %d, lat_min: %d, lon_max: %d, lan_max: %d", lon_min, lat_min, lon_max, lat_max))
     runner.check(lon_min ~= 0)
     runner.check(lat_min ~= 0)
     runner.check(lon_max ~= 0)
     runner.check(lon_max ~= 0)
 
-    print('\n------------------\nTest: cellsize\n------------------------')
+    print(string.format("\n--------------------------------\nTest: %s cellsize\n--------------------------------", demType))
     local cellsize = dem:cell()
-    print("cellsize: ", cellsize)
+    print(string.format("cellsize: %d", cellsize))
     runner.check(cellsize == 2.0)
 end
 
