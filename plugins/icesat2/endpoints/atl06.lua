@@ -66,10 +66,11 @@ if samples then
     local sampler_disp = core.dispatcher(rspq)
     for _,raster in ipairs(samples) do
         local vrt = geo.vrt(raster)
-        local sampler = icesat2.sampler(vrt, rspq)
+        local sampler = icesat2.sampler(vrt, rspq, "elevation.lon", "elevation.lat")
         sampler_disp:attach(sampler, "atl06rec")
         sampler_disp:attach(sampler, "atl06rec-compact")
     end
+    sampler_disp:run()
 end
 
 -- Run ATL06 Dispatcher --

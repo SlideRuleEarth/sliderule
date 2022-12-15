@@ -311,7 +311,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     HttpClient client(NULL, node->member);
                     HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout * 1000);
                     if(rsps.code == EndpointObject::OK) valid = true;
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)rsps.code);
+                    else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)rsps.code);
                 }
                 catch(const RunTimeException& e)
                 {
