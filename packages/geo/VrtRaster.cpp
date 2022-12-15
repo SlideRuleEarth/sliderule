@@ -121,6 +121,22 @@ int VrtRaster::luaCreate( lua_State* L )
 }
 
 /*----------------------------------------------------------------------------
+ * registerDriver
+ *----------------------------------------------------------------------------*/
+bool VrtRaster::registerRaster (const char* _name, factory_t create)
+{
+    bool status;
+
+    factoryMut.lock();
+    {
+        status = factories.add(_name, create);
+    }
+    factoryMut.unlock();
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
 int VrtRaster::sample (double lon, double lat, List<sample_t> &slist, void* param)
