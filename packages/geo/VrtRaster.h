@@ -59,6 +59,10 @@ class VrtRaster: public LuaObject
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
 
+        static const char* OBJECT_TYPE;
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
+
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
@@ -113,13 +117,6 @@ class VrtRaster: public LuaObject
         virtual                ~VrtRaster       (void);
 
     protected:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Methods

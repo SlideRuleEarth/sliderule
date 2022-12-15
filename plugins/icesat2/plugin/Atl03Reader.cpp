@@ -550,8 +550,8 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     anc_geo_data        (RqstParms::EXPECTED_NUM_ANC_FIELDS),
     anc_ph_data         (RqstParms::EXPECTED_NUM_ANC_FIELDS)
 {
-    RqstParms::ancillary_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
-    RqstParms::ancillary_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
+    RqstParms::string_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
+    RqstParms::string_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
 
     /* Read Ancillary Geolocation Fields */
     if(geo_fields)
@@ -1644,7 +1644,7 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
 /*----------------------------------------------------------------------------
  * sendAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1682,7 +1682,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancill
 /*----------------------------------------------------------------------------
  * sendAncillaryPhRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {

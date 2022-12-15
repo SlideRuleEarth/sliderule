@@ -45,6 +45,8 @@
 #include "GTArray.h"
 #include "GTDArray.h"
 #include "PluginMetrics.h"
+#include "RasterSampler.h"
+#include "RqstParms.h"
 #include "UT_Atl03Reader.h"
 #include "UT_Atl06Dispatch.h"
 

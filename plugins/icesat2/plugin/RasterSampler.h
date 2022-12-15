@@ -29,15 +29,12 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __parquet_builder__
-#define __parquet_builder__
+#ifndef __raster_sampler__
+#define __raster_sampler__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
-
-#include <arrow/api.h>
-#include <parquet/arrow/writer.h>
 
 #include "MsgQ.h"
 #include "LuaObject.h"
@@ -45,16 +42,13 @@
 #include "DispatchObject.h"
 #include "OsApi.h"
 #include "MsgQ.h"
-
-using std::shared_ptr;
-using std::unique_ptr;
-using std::vector;
+#include "VrtRaster.h"
 
 /******************************************************************************
- * PARQUET BUILDER DISPATCH CLASS
+ * RASTER SAMPLER DISPATCH CLASS
  ******************************************************************************/
 
-class ParquetBuilder: public DispatchObject
+class RasterSampler: public DispatchObject
 {
     public:
 
@@ -62,34 +56,21 @@ class ParquetBuilder: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int LIST_BLOCK_SIZE = 32;
-        static const int FILE_NAME_MAX_LEN = 128;
-        static const int FILE_BUFFER_RSPS_SIZE = 0x1000000; // 16MB
-
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
-        static const char* metaRecType;
-        static const RecordObject::fieldDef_t metaRecDef[];
-
-        static const char* dataRecType;
-        static const RecordObject::fieldDef_t dataRecDef[];
-
-        static const char* TMP_FILE_PREFIX;
+        static const char* sampleRecType;
+        static const RecordObject::fieldDef_t sampleRecDef[];
 
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
+        /* Extent Sample Record */
         typedef struct {
-            char    filename[FILE_NAME_MAX_LEN];
-            long    size;
-        } arrow_file_meta_t;
-
-        typedef struct {
-            char    filename[FILE_NAME_MAX_LEN];
-            uint8_t data[FILE_BUFFER_RSPS_SIZE];
-        } arrow_file_data_t;
+            uint64_t            extent_id;
+            VrtRaster::sample_t sample;
+        } sample_extent_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -102,40 +83,24 @@ class ParquetBuilder: public DispatchObject
     private:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef List<RecordObject::field_t, LIST_BLOCK_SIZE> field_list_t;
-        typedef field_list_t::Iterator field_iterator_t;
-
-        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        field_list_t                            fieldList;
-        field_iterator_t*                       fieldIterator;
-        Mutex                                   tableMut;
-        shared_ptr<arrow::Schema>               schema;
-        unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
-        Publisher*                              outQ;
-        int                                     rowSizeBytes;
-        const char*                             fileName; // used locally to build file
-        const char*                             outFileName; // name to send back to client
+        VrtRaster*  raster;
+        Publisher*  outQ;
+        const char* lonKey;
+        const char* latKey;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id);
-                            ~ParquetBuilder         (void);
+                            RasterSampler           (lua_State* L, VrtRaster* _raster, const char* outq_name, const char* lon_key, const char* lat_key);
+                            ~RasterSampler          (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;
         bool                processTimeout          (void) override;
         bool                processTermination      (void) override;
-        bool                postRecord              (RecordObject* record, int data_size=0);
-
-        static bool         defineTableSchema       (shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
-        static bool         addFieldsToSchema       (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
 };
 
-#endif  /* __parquet_builder__ */
+#endif  /* __raster_sampler__ */

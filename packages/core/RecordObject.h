@@ -215,15 +215,15 @@ class RecordObject
         int                     getFieldNames       (char*** names);
         field_t                 getField            (const char* field_name);
         Field                   field               (const char* field_name);
-        void                    setValueText        (field_t field, const char* val, int element=0);
-        void                    setValueReal        (field_t field, const double val, int element=0);
-        void                    setValueInteger     (field_t field, const long val, int element=0);
-        const char*             getValueText        (field_t field, char* valbuf=NULL, int element=0);
-        double                  getValueReal        (field_t field, int element=0);
-        long                    getValueInteger     (field_t field, int element=0);
+        void                    setValueText        (const field_t& field, const char* val, int element=0);
+        void                    setValueReal        (const field_t& field, const double val, int element=0);
+        void                    setValueInteger     (const field_t& field, const long val, int element=0);
+        const char*             getValueText        (const field_t& field, char* valbuf=NULL, int element=0);
+        double                  getValueReal        (const field_t& field, int element=0);
+        long                    getValueInteger     (const field_t& field, int element=0);
 
         /* Definition Static Methods */
-        static valType_t        getValueType        (field_t field);
+        static valType_t        getValueType        (const field_t& field);
         static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
         static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, const char* exttype, unsigned int flags=NATIVE_FLAGS);
 

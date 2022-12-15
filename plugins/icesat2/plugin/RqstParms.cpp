@@ -70,6 +70,7 @@ const char* RqstParms::PASS_INVALID                 = "pass_invalid";
 const char* RqstParms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
 const char* RqstParms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* RqstParms::ATL03_PH_FIELDS              = "atl03_ph_fields";
+const char* RqstParms::RASTERS_TO_SAMPLE            = "samples";
 const char* RqstParms::RQST_TIMEOUT                 = "rqst-timeout";
 const char* RqstParms::NODE_TIMEOUT                 = "node-timeout";
 const char* RqstParms::READ_TIMEOUT                 = "read-timeout";
@@ -236,6 +237,7 @@ RqstParms::RqstParms(lua_State* L, int index):
     extent_step                 (20.0),
     atl03_geo_fields            (NULL),
     atl03_ph_fields             (NULL),
+    rasters_to_sample           (NULL),
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
     read_timeout                (DEFAULT_READ_TIMEOUT),
@@ -353,14 +355,20 @@ RqstParms::RqstParms(lua_State* L, int index):
 
     /* ATL03 Geolocaiont and Physical Correction Fields */
     lua_getfield(L, index, RqstParms::ATL03_GEO_FIELDS);
-    get_lua_field_list (L, -1, &atl03_geo_fields, &provided);
-    if(provided) mlog(DEBUG, "ATL03 geo field array detected");
+    get_lua_string_list (L, -1, &atl03_geo_fields, &provided);
+    if(provided) mlog(DEBUG, "ATL03 geo field array supplied");
     lua_pop(L, 1);
 
     /* ATL03 Photon Fields */
     lua_getfield(L, index, RqstParms::ATL03_PH_FIELDS);
-    get_lua_field_list (L, -1, &atl03_ph_fields, &provided);
-    if(provided) mlog(DEBUG, "ATL03 photon field array detected");
+    get_lua_string_list (L, -1, &atl03_ph_fields, &provided);
+    if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
+    lua_pop(L, 1);
+
+    /* ATL03 Photon Fields */
+    lua_getfield(L, index, RqstParms::RASTERS_TO_SAMPLE);
+    get_lua_string_list (L, -1, &rasters_to_sample, &provided);
+    if(provided) mlog(DEBUG, "Rasters to sample array supplied");
     lua_pop(L, 1);
 
     /* Global Timeout */
@@ -410,6 +418,7 @@ RqstParms::~RqstParms (void)
     if(raster) delete raster;
     if(atl03_geo_fields) delete atl03_geo_fields;
     if(atl03_ph_fields) delete atl03_ph_fields;
+    if(rasters_to_sample) delete rasters_to_sample;
     if(output.path) delete [] output.path;
 }
 
@@ -889,40 +898,40 @@ void RqstParms::get_lua_yapc (lua_State* L, int index, bool* provided)
 }
 
 /*----------------------------------------------------------------------------
- * get_lua_field_list
+ * get_lua_string_list
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_field_list (lua_State* L, int index, ancillary_list_t** field_list, bool* provided)
+void RqstParms::get_lua_string_list (lua_State* L, int index, string_list_t** string_list, bool* provided)
 {
-    /* Reset Provided */
+    /* Reset provided */
     *provided = false;
 
-    /* Must be table of fields specified as strings */
+    /* Must be table of strings */
     if(lua_istable(L, index))
     {
-        /* Allocate Field List */
-        *field_list = new ancillary_list_t;
+        /* Allocate string list */
+        *string_list = new string_list_t;
         *provided = true;
 
-        /* Get number of fields in table */
-        int num_fields = lua_rawlen(L, index);
-        if(num_fields > 0 && provided) *provided = true;
+        /* Get number of item in table */
+        int num_strings = lua_rawlen(L, index);
+        if(num_strings > 0 && provided) *provided = true;
 
-        /* Iterate through each fields in table */
-        for(int i = 0; i < num_fields; i++)
+        /* Iterate through each item in table */
+        for(int i = 0; i < num_strings; i++)
         {
-            /* Get classification */
+            /* Get item */
             lua_rawgeti(L, index, i+1);
 
             if(lua_isstring(L, -1))
             {
-                const char* field_str = LuaObject::getLuaString(L, -1);
-                SafeString field("%s", field_str);
-                (*field_list)->add(field);
-                mlog(DEBUG, "Adding %s to list of ancillary fields", field_str);
+                const char* item_str = LuaObject::getLuaString(L, -1);
+                SafeString item("%s", item_str);
+                (*string_list)->add(item);
+                mlog(DEBUG, "Adding %s to list of strings", item_str);
             }
             else
             {
-                mlog(ERROR, "Invalid field specified - must be a string");
+                mlog(ERROR, "Invalid item specified - must be a string");
             }
 
             /* Clean up stack */
@@ -931,7 +940,7 @@ void RqstParms::get_lua_field_list (lua_State* L, int index, ancillary_list_t** 
     }
     else if(!lua_isnil(L, index))
     {
-        mlog(ERROR, "Field lists must be provided as a table");
+        mlog(ERROR, "Lists must be provided as a table");
     }
 }
 

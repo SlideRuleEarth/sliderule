@@ -83,6 +83,7 @@ class RqstParms: public LuaObject
         static const char* DISTANCE_IN_SEGMENTS;
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
+        static const char* RASTERS_TO_SAMPLE;
         static const char* RQST_TIMEOUT;
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
@@ -100,6 +101,7 @@ class RqstParms: public LuaObject
         static const int EXTENT_ID_ELEVATION        = 0x2;
 
         static const int EXPECTED_NUM_ANC_FIELDS    = 8; // a typical number of ancillary fields requested
+        static const int EXPECTED_NUM_RASTERS       = 8; // a typical number of rasters to sample
 
         static const int DEFAULT_RQST_TIMEOUT       = 600; // seconds
         static const int DEFAULT_NODE_TIMEOUT       = 600; // seconds
@@ -211,8 +213,8 @@ class RqstParms: public LuaObject
             OUTPUT_FORMAT_UNSUPPORTED = 4
         } output_format_t;
 
-        /* Ancillary List */
-        typedef List<SafeString, EXPECTED_NUM_ANC_FIELDS> ancillary_list_t;
+        /* List of Strings */
+        typedef List<SafeString, EXPECTED_NUM_ANC_FIELDS> string_list_t;
 
         /* YAPC Settings */
         typedef struct {
@@ -262,8 +264,9 @@ class RqstParms: public LuaObject
         double                  maximum_robust_dispersion;      // sigma_r
         double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
         double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-        ancillary_list_t*       atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
-        ancillary_list_t*       atl03_ph_fields;                // list of per-photon fields to associate with an extent
+        string_list_t*          atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
+        string_list_t*          atl03_ph_fields;                // list of per-photon fields to associate with an extent
+        string_list_t*          rasters_to_sample;              // list of rasters to sample
         int                     rqst_timeout;                   // total time in seconds for request to be processed
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
@@ -288,7 +291,7 @@ class RqstParms: public LuaObject
         void                    get_lua_polygon         (lua_State* L, int index, bool* provided);
         void                    get_lua_raster          (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
-        void                    get_lua_field_list      (lua_State* L, int index, ancillary_list_t** field_list, bool* provided);
+        void                    get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
         void                    get_lua_output          (lua_State* L, int index, bool* provided);
 };
 
