@@ -152,5 +152,5 @@ dtime = stoptime-starttime
 print('\n')
 print(string.format("%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
 
-os.exit()
+sys.quit()
 
