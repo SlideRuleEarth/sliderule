@@ -28,6 +28,7 @@ set_target_properties (icesat2 PROPERTIES PREFIX "")
 
 # Prerequisites #
 find_package (Lua "5.3")
+find_package (GDAL)
 
 # Version Information #
 file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
@@ -61,6 +62,7 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/EndpointProxy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/RasterSampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RqstParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp
@@ -71,6 +73,7 @@ target_include_directories (icesat2
     PUBLIC
         ${INSTALLDIR}/include/sliderule
         ${LUA_INCLUDE_DIR}
+        ${GDAL_INCLUDE_DIR}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/plugin
 )
 
@@ -100,6 +103,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/RasterSampler.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RqstParms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h

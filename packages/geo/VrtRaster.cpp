@@ -53,6 +53,7 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* VrtRaster::OBJECT_TYPE = "VrtRaster";
 const char* VrtRaster::LuaMetaName = "VrtRaster";
 const struct luaL_Reg VrtRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
@@ -281,7 +282,7 @@ int VrtRaster::sample(double lon, double lat)
  * Constructor
  *----------------------------------------------------------------------------*/
 VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     CHECKPTR(dem_sampling);
 

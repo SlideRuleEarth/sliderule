@@ -30,6 +30,7 @@ local atl03_asset = rqst["atl03-asset"] or "nsidc-s3"
 local resource = rqst["resource"]
 local parms = rqst["parms"]
 local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
+local samples = parms["samples"]
 
 -- Initialize Timeouts --
 local duration = 0
@@ -45,20 +46,34 @@ end
 -- Create Record Queue --
 local recq = rspq .. "-atl03"
 
--- Exception Forwarding --
-local except_pub = core.publish(rspq)
+-- ATL06 Dispatcher --
+local atl06_disp = core.dispatcher(recq)
 
 -- Request Parameters */
 local rqst_parms = icesat2.parms(parms)
 
--- ATL06 Dispatch Algorithm --
-local atl06_algo = icesat2.atl06(rspq, rqst_parms)
-
--- ATL06 Dispatcher --
-local atl06_disp = core.dispatcher(recq)
-atl06_disp:attach(atl06_algo, "atl03rec")
+-- Exception Forwarding --
+local except_pub = core.publish(rspq)
 atl06_disp:attach(except_pub, "exceptrec") -- exception records
 atl06_disp:attach(except_pub, "extrec") -- ancillary records
+
+-- ATL06 Dispatch Algorithm --
+local atl06_algo = icesat2.atl06(rspq, rqst_parms)
+atl06_disp:attach(atl06_algo, "atl03rec")
+
+-- Raster Sampler --
+if samples then
+    local sampler_disp = core.dispatcher(rspq)
+    for _,raster in ipairs(samples) do
+        local vrt = geo.vrt(raster)
+        local sampler = icesat2.sampler(vrt, rspq, "elevation.lon", "elevation.lat")
+        sampler_disp:attach(sampler, "atl06rec")
+        sampler_disp:attach(sampler, "atl06rec-compact")
+    end
+    sampler_disp:run()
+end
+
+-- Run ATL06 Dispatcher --
 atl06_disp:run()
 
 -- Post Initial Status Progress --

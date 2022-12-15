@@ -87,7 +87,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* rec_type = getLuaString(L, 3);
         const char* id = getLuaString(L, 4);
 
-        /* Create ATL06 Dispatch */
+        /* Create Dispatch */
         return createLuaObject(L, new ParquetBuilder(L, filename, outq_name, rec_type, id));
     }
     catch(const RunTimeException& e)
