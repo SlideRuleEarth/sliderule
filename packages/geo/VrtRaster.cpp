@@ -774,7 +774,7 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
                 uint32_t offset = _row * raster->xBlockSize + _col;
                 raster->sample.value = fp[offset];
 
-                mlog(DEBUG, "Elevation: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u\n",
+                mlog(DEBUG, "Elevation: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
                      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
             }
             else mlog(CRITICAL, "block->GetDataRef() returned NULL pointer\n");

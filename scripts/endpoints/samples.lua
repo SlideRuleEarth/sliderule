@@ -21,7 +21,7 @@ local json = require("json")
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local dem_asset = rqst["dem-asset"] or "mosaic"
+local dem_asset = rqst["dem-asset"] or "arcticdem-mosaic"
 local sampling_alg = rqst["sampling-algorithm"] or "NearestNeighbour"
 local sampling_radius = rqst["sampling-radius"] or 0
 local coord = rqst["coordinates"]
@@ -34,8 +34,10 @@ local samples = {}
 for _, position in ipairs(coord) do
     local lon = position[1]
     local lat = position[2]
-    local sample, status = dem:samples(lon, lat)
-    table.insert(samples, sample)
+    local sample, status = dem:sample(lon, lat)
+    if status then
+        table.insert(samples, sample)
+    end
 end
 
 -- Return Response
