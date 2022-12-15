@@ -13,7 +13,7 @@ json = require("json")
 local lon = -178.0
 local lat =   51.7
 
-print('\n------------------\nTest: Strips\n------------')
+print('\n------------------\nTest: Strips\n------------------')
 local dem = geo.vrt("arcticdem-strips", "NearestNeighbour", 0)
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat)
@@ -28,7 +28,7 @@ end
 print('ExecTime:', dtime * 1000, '\n')
 
 
-print('\n------------------\nTest: Mosaic\n------------')
+print('\n------------------\nTest: Mosaic\n------------------')
 dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
 starttime = time.latch();
 tbl, status = dem:sample(lon, lat)
@@ -46,7 +46,7 @@ print('ExecTime:', dtime * 1000, '\n')
 
 local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
 
-print('\n------------------\nTest: Sampling Elevations\n------------')
+print('\n------------------\nTest: Sampling Elevations\n------------------')
 
 for radius = 0, 8 do
     for i = 1, 8 do
@@ -61,7 +61,7 @@ for radius = 0, 8 do
 
         print(string.format("%20s (%02d) %15f", samplingAlgs[i], radius, el))
     end
-    print('\n-------------------------------------------')
+    print('\n-------------------------------------------------')
 end
 
 local max_cnt = 1000000
@@ -77,10 +77,10 @@ for dems = 1, 2 do
 
 
     if dems == 1 then
-        print('\n------------------\nTest: Mosaic Reading', max_cnt, ' different points\n------------')
+        print('\n------------------\nTest: Mosaic Reading', max_cnt, ' different points\n------------------')
         dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
     else
-        print('\n------------------\nTest: Strips Reading', max_cnt, ' the same point\n------------')
+        print('\n------------------\nTest: Strips Reading', max_cnt, ' the same point\n------------------')
         dem = geo.vrt("arcticdem-strips", "NearestNeighbour", 0)
     end
 
@@ -111,13 +111,13 @@ for dems = 1, 2 do
     local dtime = stoptime-starttime
     print('ExecTime:',dtime*1000, '\n')
 
-    print('\n------------------\nTest: dim\n------------------')
+    print('\n------------------\nTest: dim\n------------------------')
     local rows, cols = dem:dim()
     print("rows: ", rows, "cols: ", cols)
     runner.check(rows ~= 0)
     runner.check(cols ~= 0)
 
-    print('\n------------------\nTest: bbox\n------------------')
+    print('\n------------------\nTest: bbox\n------------------------')
     local lon_min, lat_min, lon_max, lat_max = dem:bbox()
     print("lon_min: ", lon_min, "lat_min: ", lat_min, "\nlon_max: ", lon_max, "lat_max: ", lat_max)
     runner.check(lon_min ~= 0)
@@ -125,7 +125,7 @@ for dems = 1, 2 do
     runner.check(lon_max ~= 0)
     runner.check(lon_max ~= 0)
 
-    print('\n------------------\nTest: cellsize\n------------------')
+    print('\n------------------\nTest: cellsize\n------------------------')
     local cellsize = dem:cell()
     print("cellsize: ", cellsize)
     runner.check(cellsize == 2.0)
