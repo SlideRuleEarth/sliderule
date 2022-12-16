@@ -525,6 +525,7 @@ void Atl03Reader::Region::rasterregion (info_t* info)
             num_segments[t] = last_segment - first_segment[t] + 1;
 
             /* Trim Inclusion Mask */
+            if (inclusion_ptr[t]) delete inclusion_ptr[t];
             inclusion_ptr[t] = &inclusion_mask[t][first_segment[t]];
         }
     }
