@@ -120,6 +120,7 @@ RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* outq
  *----------------------------------------------------------------------------*/
 RasterSampler::~RasterSampler(void)
 {
+    raster->releaseLuaObject();
     delete outQ;
     delete [] lonKey;
     delete [] latKey;

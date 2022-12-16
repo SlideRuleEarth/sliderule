@@ -42,7 +42,7 @@ end
 
 -- Run Raster Self Tests --
 
-if __raster__ then
+if __geo__ then
     runner.script(td .. "geojson_raster.lua")
 end
 
@@ -62,12 +62,18 @@ end
 
 -- Run ICESat-2 Plugin Self Tests
 if __icesat2__ then
-    icesat2_td = td .. "../../plugins/icesat2/selftests/"
+    local icesat2_td = td .. "../../plugins/icesat2/selftests/"
     runner.script(icesat2_td .. "plugin_unittest.lua")
     runner.script(icesat2_td .. "atl06_elements.lua")
     runner.script(icesat2_td .. "atl03_indexer.lua")
     runner.script(icesat2_td .. "h5_file.lua")
     runner.script(icesat2_td .. "s3_driver.lua")
+end
+
+-- Run ICESat-2 Plugin Self Tests
+if __arcticdem__ then
+    local arcticdem_td = td .. "../../plugins/arcticdem/selftests/"
+    runner.script(arcticdem_td .. "arcticdem_reader.lua")
 end
 
 -- Report Results --
