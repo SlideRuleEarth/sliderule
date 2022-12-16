@@ -185,7 +185,7 @@ class Atl03Reader: public LuaObject
                 Region              (info_t* info);
                 ~Region             (void);
 
-                void cleanup        (void);s
+                void cleanup        (void);
                 void polyregion     (info_t* info);
                 void rasterregion   (info_t* info);
 
