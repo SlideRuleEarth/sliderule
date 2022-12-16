@@ -4,7 +4,7 @@ logfile=memtest.log
 progname=sliderule
 testscript="scripts/selftests/test_runner.lua"
 valgrind_suppressions="scripts/systests/memtest.supp"
-valgrind_options="--leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes --log-file=${logfile} --suppressions=${valgrind_suppressions}"
+valgrind_options="--leak-check=full --show-leak-kinds=all --show-reachable=yes --track-origins=yes --track-fds=yes --log-file=${logfile} --suppressions=${valgrind_suppressions}"
 
 printf "\nStarting memory test, valgrind output redirected to %s\n\n" $logfile
 
