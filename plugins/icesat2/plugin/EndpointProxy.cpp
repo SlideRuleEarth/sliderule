@@ -140,6 +140,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     assert(_outq_name);
 
     numResources = _num_resources;
+    resources = _resources; // transfer of ownership of allocated memory
     timeout = _timeout_secs;
     numProxyThreads = _num_threads;
     rqstQDepth = _rqst_queue_depth;
@@ -162,13 +163,6 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     asset       = StringLib::duplicate(_asset);
     parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
     outQ        = new Publisher(_outq_name, Publisher::defaultFree, numProxyThreads);
-
-    /* Populate Resources Array */
-    resources = new const char* [numResources];
-    for(int i = 0; i < numResources; i++)
-    {
-        resources[i] = StringLib::duplicate(_resources[i]);
-    }
 
     /* Initialize Nodes Array */
     nodes = new OrchestratorLib::Node* [numResources];

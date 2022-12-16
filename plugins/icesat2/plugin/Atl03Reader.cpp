@@ -335,6 +335,7 @@ Atl03Reader::Region::Region (info_t* info):
     /* Check If Anything to Process */
     if(num_photons[RqstParms::RPT_L] <= 0 || num_photons[RqstParms::RPT_R] <= 0)
     {
+        cleanup();
         throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
     }
 
@@ -348,6 +349,14 @@ Atl03Reader::Region::Region (info_t* info):
  * Region::Destructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Region::~Region (void)
+{
+    cleanup();
+}
+
+/*----------------------------------------------------------------------------
+ * Region::cleanup
+ *----------------------------------------------------------------------------*/
+void Atl03Reader::Region::cleanup (void)
 {
     for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
