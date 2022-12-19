@@ -44,8 +44,86 @@
 #include "ParquetBuilder.h"
 
 using std::shared_ptr;
+using std::unique_ptr;
 using std::make_shared;
 using std::vector;
+
+/******************************************************************************
+ * PRIVATE IMPLEMENTATION
+ ******************************************************************************/
+
+struct ParquetBuilder::impl
+{
+    shared_ptr<arrow::Schema>               schema;
+    unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
+
+    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type);
+    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset);
+};
+
+/*----------------------------------------------------------------------------
+ * defineTableSchema
+ *----------------------------------------------------------------------------*/
+shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type)
+{
+    vector<shared_ptr<arrow::Field>> schema_vector;
+    addFieldsToSchema(schema_vector, field_list, rec_type, 0);
+    return make_shared<arrow::Schema>(schema_vector);
+}
+
+/*----------------------------------------------------------------------------
+ * addFieldsToSchema
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset)
+{
+    /* Loop Through Fields in Record */
+    char** field_names = NULL;
+    RecordObject::field_t** fields = NULL;
+    int num_fields = RecordObject::getRecordFields(rec_type, &field_names, &fields);
+    for(int i = 0; i < num_fields; i++)
+    {
+        bool add_field_to_list = true;
+
+        /* Add to Schema */
+        switch(fields[i]->type)
+        {
+            case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));       break;
+            case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));      break;
+            case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));      break;
+            case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));      break;
+            case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));      break;
+            case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));     break;
+            case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));     break;
+            case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));     break;
+            case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));    break;
+            case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
+            case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
+            case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
+
+            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype, fields[i]->offset);
+                                        add_field_to_list = false;
+                                        break;
+
+            default:                    add_field_to_list = false;
+                                        break;
+        }
+
+        /* Add to Field List */
+        if(add_field_to_list)
+        {
+            RecordObject::field_t column_field = *fields[i];
+            column_field.offset += offset;
+            field_list.add(column_field);
+        }
+    }
+
+    /* Clean Up */
+    if(fields) delete [] fields;
+    if(field_names) delete [] field_names;
+
+    /* Return Success */
+    return true;
+}
 
 /******************************************************************************
  * STATIC DATA
@@ -114,7 +192,7 @@ void ParquetBuilder::deinit (void)
 }
 
 /******************************************************************************
- * PRIVATE METOHDS
+ * PRIVATE METHODS
  *******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -128,11 +206,14 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
     assert(rec_type);
     assert(id);
 
+    /* Allocate Private Implementation */
+    pimpl = new ParquetBuilder::impl;
+
     /* Save Output Filename */
     outFileName = StringLib::duplicate(filename);
 
     /* Define Table Schema */
-    defineTableSchema(schema, fieldList, rec_type);
+    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type);
     fieldIterator = new field_iterator_t(fieldList);
 
     /* Initialize Publisher */
@@ -160,10 +241,10 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
 
     /* Create Parquet Writer */
     #ifdef APACHE_ARROW_10_COMPAT
-        (void)parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &parquetWriter);
+        (void)parquet::arrow::FileWriter::Open(*pimpl->schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &pimpl->parquetWriter);
     #else
-        arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
-        if(result.ok()) parquetWriter = std::move(result).ValueOrDie();
+        arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*pimpl->schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+        if(result.ok()) pimpl->parquetWriter = std::move(result).ValueOrDie();
         else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
     #endif
 }
@@ -177,6 +258,7 @@ ParquetBuilder::~ParquetBuilder(void)
     delete outQ;
     delete [] outFileName;
     delete fieldIterator;
+    delete pimpl;
 }
 
 /*----------------------------------------------------------------------------
@@ -374,13 +456,13 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
     }
 
     /* Write Table */
-    if(parquetWriter)
+    if(pimpl->parquetWriter)
     {
         tableMut.lock();
         {
             /* Build and Write Table */
-            shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-            (void)parquetWriter->WriteTable(*table, num_rows);
+            shared_ptr<arrow::Table> table = arrow::Table::Make(pimpl->schema, columns);
+            (void)pimpl->parquetWriter->WriteTable(*table, num_rows);
         }
         tableMut.unlock();
     }
@@ -407,10 +489,10 @@ bool ParquetBuilder::processTermination (void)
     bool status = true;
 
     /* Early Exit on No Writer */
-    if(!parquetWriter) return false;
+    if(!pimpl->parquetWriter) return false;
 
     /* Close Parquet Writer */
-    (void)parquetWriter->Close();
+    (void)pimpl->parquetWriter->Close();
 
     /* Reopen Parquet File to Stream Back as Response */
     FILE* fp = fopen(fileName, "r");
@@ -495,70 +577,5 @@ bool ParquetBuilder::postRecord (RecordObject* record, int data_size)
         mlog(ERROR, "Parquet builder failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
         return false;
     }
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * defineTableSchema
- *----------------------------------------------------------------------------*/
-bool ParquetBuilder::defineTableSchema (shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type)
-{
-    vector<shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, field_list, rec_type, 0);
-    _schema = make_shared<arrow::Schema>(schema_vector);
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * addFieldsToSchema
- *----------------------------------------------------------------------------*/
-bool ParquetBuilder::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset)
-{
-    /* Loop Through Fields in Record */
-    char** field_names = NULL;
-    RecordObject::field_t** fields = NULL;
-    int num_fields = RecordObject::getRecordFields(rec_type, &field_names, &fields);
-    for(int i = 0; i < num_fields; i++)
-    {
-        bool add_field_to_list = true;
-
-        /* Add to Schema */
-        switch(fields[i]->type)
-        {
-            case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));       break;
-            case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));      break;
-            case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));      break;
-            case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));      break;
-            case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));      break;
-            case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));     break;
-            case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));     break;
-            case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));     break;
-            case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));    break;
-            case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
-            case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
-            case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
-
-            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype, fields[i]->offset);
-                                        add_field_to_list = false;
-                                        break;
-
-            default:                    add_field_to_list = false;
-                                        break;
-        }
-
-        /* Add to Field List */
-        if(add_field_to_list)
-        {
-            RecordObject::field_t column_field = *fields[i];
-            column_field.offset += offset;
-            field_list.add(column_field);
-        }
-    }
-
-    /* Clean Up */
-    if(fields) delete [] fields;
-    if(field_names) delete [] field_names;
-
-    /* Return Success */
     return true;
 }

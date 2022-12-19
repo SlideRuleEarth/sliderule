@@ -62,6 +62,9 @@ class RasterSampler: public DispatchObject
         static const char* sampleRecType;
         static const RecordObject::fieldDef_t sampleRecDef[];
 
+        static const char* extentRecType;
+        static const RecordObject::fieldDef_t extentRecDef[];
+
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
@@ -69,16 +72,18 @@ class RasterSampler: public DispatchObject
         /* Extent Sample Record */
         typedef struct {
             uint64_t            extent_id;
-            VrtRaster::sample_t sample;
-        } sample_extent_t;
+            uint16_t            raster_index;
+            uint32_t            num_samples;
+            VrtRaster::sample_t samples[];
+        } extent_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        static void init        (void);
-        static void deinit      (void);
+        static int      luaCreate   (lua_State* L);
+        static void     init        (void);
+        static void     deinit      (void);
 
     private:
 
@@ -86,21 +91,24 @@ class RasterSampler: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        VrtRaster*  raster;
-        Publisher*  outQ;
-        const char* lonKey;
-        const char* latKey;
+        VrtRaster*              raster;
+        int                     rasterIndex;
+        Publisher*              outQ;
+        int                     extentSizeBytes;
+        RecordObject::field_t   extentField;
+        RecordObject::field_t   lonField;
+        RecordObject::field_t   latField;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            RasterSampler           (lua_State* L, VrtRaster* _raster, const char* outq_name, const char* lon_key, const char* lat_key);
-                            ~RasterSampler          (void);
+                        RasterSampler           (lua_State* L, VrtRaster* _raster, int raster_index, const char* outq_name, const char* rec_type, const char* extent_key, const char* lon_key, const char* lat_key);
+                        ~RasterSampler          (void);
 
-        bool                processRecord           (RecordObject* record, okey_t key) override;
-        bool                processTimeout          (void) override;
-        bool                processTermination      (void) override;
+        bool            processRecord           (RecordObject* record, okey_t key) override;
+        bool            processTimeout          (void) override;
+        bool            processTermination      (void) override;
 };
 
 #endif  /* __raster_sampler__ */

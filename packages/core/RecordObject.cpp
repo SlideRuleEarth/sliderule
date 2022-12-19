@@ -941,6 +941,15 @@ long RecordObject::getValueInteger(const field_t& f, int element)
 /*----------------------------------------------------------------------------
  * getValueType
  *----------------------------------------------------------------------------*/
+RecordObject::field_t RecordObject::getDefinedField (const char* rec_type, const char* field_name)
+{
+    definition_t* def = getDefinition(rec_type);
+    return getUserField(def, field_name);
+}
+
+/*----------------------------------------------------------------------------
+ * getValueType
+ *----------------------------------------------------------------------------*/
 RecordObject::valType_t RecordObject::getValueType(const field_t& f)
 {
     switch(f.type)
@@ -1481,6 +1490,9 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
 
     field_t field = { INVALID_FIELD, 0, 0, NULL, NATIVE_FLAGS };
     long element = -1;
+
+    /* Sanity Check Def */
+    if(def == NULL) return field;
 
     /* Attempt Direct Access */
     try
