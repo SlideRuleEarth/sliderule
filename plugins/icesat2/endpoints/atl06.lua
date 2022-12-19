@@ -68,7 +68,7 @@ if samples then
     local sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
     for index,raster in ipairs(samples) do
         local vrt = geo.vrt(raster)
-        local sampler = icesat2.sampler(vrt, index, rspq, elevation_rec_type, "extent_id", "lon", "lat")
+        local sampler = icesat2.sampler(vrt, index - 1, rspq, elevation_rec_type, "extent_id", "lon", "lat")
         sampler_disp:attach(sampler, atl06_rec_type)
     end
     sampler_disp:run()

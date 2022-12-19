@@ -819,7 +819,7 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             /* Done reading, release block lock */
             block->DropLock();
 
-            mlog(DEBUG, "Elevation: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
+            mlog(DEBUG, "Value: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
                  raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
         }
         else
