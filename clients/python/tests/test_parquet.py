@@ -1,4 +1,4 @@
-"""Tests for sliderule-python arcticdem raster support."""
+"""Tests for sliderule-python parquet support."""
 
 import pytest
 from pathlib import Path

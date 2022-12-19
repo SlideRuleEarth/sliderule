@@ -31,3 +31,10 @@ class TestVrt:
                   "maxi": 1,
                   "samples": ["arcticdem-mosaic"] }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
+        assert len(gdf) == 964
+        assert len(gdf.keys()) == 17
+        assert gdf["rgt"][0] == 1160
+        assert gdf["cycle"][0] == 2
+        assert gdf['segment_id'].describe()["min"] == 405240
+        assert gdf['segment_id'].describe()["max"] == 405915
+        assert abs(gdf["arcticdem-mosaic-1980-01-06"].describe()["min"] - 655.14990234375) < 0.0001

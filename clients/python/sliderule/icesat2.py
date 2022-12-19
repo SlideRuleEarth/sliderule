@@ -796,7 +796,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             columns = {}
             elevation_records = []
             num_elevations = 0
-            field_dictionary = {} # ['field_name'] = {"extent_id": [], field_name: []}
+            field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
             if len(rsps) > 0:
                 # Sort Records
                 for rsp in rsps:
@@ -806,7 +806,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                     elif 'extrec' == rsp['__rectype']:
                         field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in field_dictionary:
-                            field_dictionary[field_name] = {"extent_id": [], field_name: []}
+                            field_dictionary[field_name] = {'extent_id': [], field_name: []}
                         # Parse Ancillary Data
                         data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         # Add Left Pair Track Entry
@@ -815,6 +815,14 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         # Add Right Pair Track Entry
                         field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
                         field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+                    elif 'rsrec' == rsp['__rectype']:
+                        for sample in rsp["samples"]:
+                            time_str = sliderule.gps2utc(sample["time"])
+                            field_name = parm['samples'][rsp['raster_index']] + "-" + time_str.split(" ")[0].strip()
+                            if field_name not in field_dictionary:
+                                field_dictionary[field_name] = {'extent_id': [], field_name: []}
+                            field_dictionary[field_name]['extent_id'] += rsp['extent_id'],
+                            field_dictionary[field_name][field_name] += sample['value'],
                 # Build Elevation Columns
                 if num_elevations > 0:
                     # Initialize Columns
