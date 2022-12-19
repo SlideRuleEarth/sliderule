@@ -373,18 +373,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
         columns.push_back(column);
     }
 
-    tableMut.lock();
+    /* Write Table */
+    if(parquetWriter)
     {
-        /* Build Table */
-        shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-
-        /* Write Table */
-        if(parquetWriter)
+        tableMut.lock();
         {
+            /* Build and Write Table */
+            shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
             (void)parquetWriter->WriteTable(*table, num_rows);
         }
+        tableMut.unlock();
     }
-    tableMut.unlock();
 
     /* Return Success */
     return true;
@@ -406,6 +405,9 @@ bool ParquetBuilder::processTimeout (void)
 bool ParquetBuilder::processTermination (void)
 {
     bool status = true;
+
+    /* Early Exit on No Writer */
+    if(!parquetWriter) return false;
 
     /* Close Parquet Writer */
     (void)parquetWriter->Close();
@@ -502,7 +504,7 @@ bool ParquetBuilder::postRecord (RecordObject* record, int data_size)
 bool ParquetBuilder::defineTableSchema (shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type)
 {
     vector<shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, field_list, rec_type);
+    addFieldsToSchema(schema_vector, field_list, rec_type, 0);
     _schema = make_shared<arrow::Schema>(schema_vector);
     return true;
 }
@@ -510,7 +512,7 @@ bool ParquetBuilder::defineTableSchema (shared_ptr<arrow::Schema>& _schema, fiel
 /*----------------------------------------------------------------------------
  * addFieldsToSchema
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type)
+bool ParquetBuilder::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset)
 {
     /* Loop Through Fields in Record */
     char** field_names = NULL;
@@ -536,7 +538,7 @@ bool ParquetBuilder::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema
             case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
             case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
 
-            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype);
+            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype, fields[i]->offset);
                                         add_field_to_list = false;
                                         break;
 
@@ -547,7 +549,9 @@ bool ParquetBuilder::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema
         /* Add to Field List */
         if(add_field_to_list)
         {
-            field_list.add(*fields[i]);
+            RecordObject::field_t column_field = *fields[i];
+            column_field.offset += offset;
+            field_list.add(column_field);
         }
     }
 

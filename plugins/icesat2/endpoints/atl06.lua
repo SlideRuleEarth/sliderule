@@ -63,7 +63,7 @@ atl06_disp:attach(atl06_algo, "atl03rec")
 
 -- Raster Sampler --
 if samples then
-    local sampler_disp = core.dispatcher(rspq)
+    local sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
     for _,raster in ipairs(samples) do
         local vrt = geo.vrt(raster)
         local sampler = icesat2.sampler(vrt, rspq, "elevation.lon", "elevation.lat")

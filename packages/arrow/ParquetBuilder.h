@@ -135,7 +135,7 @@ class ParquetBuilder: public DispatchObject
         bool                postRecord              (RecordObject* record, int data_size=0);
 
         static bool         defineTableSchema       (shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
-        static bool         addFieldsToSchema       (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
+        static bool         addFieldsToSchema       (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype, int offset);
 };
 
 #endif  /* __parquet_builder__ */

@@ -148,6 +148,9 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     rqstQDepth = _rqst_queue_depth;
     sendTerminator = _send_terminator;
 
+    /* Completion Condition */
+    numResourcesComplete = 0;
+
     /* Proxy Active */
     active = true;
 
@@ -273,6 +276,16 @@ void* EndpointProxy::collatorThread (void* parm)
         }
     }
 
+    /* Check if All Resources Completed */
+    proxy->completion.lock();
+    {
+        while(proxy->active && (proxy->numResourcesComplete < proxy->numResources))
+        {
+            proxy->completion.wait(0, SYS_TIMEOUT);
+        }
+    }
+    proxy->completion.unlock();
+
     /* Send Terminator */
     if(proxy->sendTerminator)
     {
@@ -324,6 +337,17 @@ void* EndpointProxy::proxyThread (void* parm)
 
             /* Unlock Node */
             OrchestratorLib::unlock(&node->transaction, 1);
+
+            /* Resource Completed */
+            proxy->completion.lock();
+            {
+                proxy->numResourcesComplete++;
+                if(proxy->numResourcesComplete >= proxy->numResources)
+                {
+                    proxy->completion.signal();
+                }
+            }
+            proxy->completion.unlock();
 
             /* Post Status */
             int code = valid ? RTE_INFO : RTE_ERROR;

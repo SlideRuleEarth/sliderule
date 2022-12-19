@@ -44,7 +44,7 @@ if output_parms then
         terminate_proxy_stream = true
         local except_pub = core.publish(rspq)
         local parquet_builder = arrow.parquet(output_filename, rspq, "flat03rec.photons", rqstid)
-        output_dispatch = core.dispatcher(rsps_from_nodes, 1)
+        output_dispatch = core.dispatcher(rsps_from_nodes)
         output_dispatch:attach(parquet_builder, "flat03rec")
         output_dispatch:attach(except_pub, "exceptrec") -- exception records
         output_dispatch:attach(except_pub, "eventrec") -- event records

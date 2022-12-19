@@ -85,6 +85,8 @@ class EndpointProxy: public LuaObject
         const char**            resources;
         OrchestratorLib::Node** nodes;
         int                     numResources;
+        int                     numResourcesComplete;
+        Cond                    completion;
         const char*             endpoint;
         const char*             asset;
         const char*             parameters;

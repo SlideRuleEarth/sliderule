@@ -84,13 +84,14 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
 
 const char* Atl03Reader::phFlatRecType = "flat03rec.photons";
 const RecordObject::fieldDef_t Atl03Reader::phFlatRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(flat_photon_t, extent_id), 1,  NULL, NATIVE_FLAGS},
-    {"track",       RecordObject::UINT8,    offsetof(flat_photon_t, track),     1,  NULL, NATIVE_FLAGS},
-    {"spot",        RecordObject::UINT8,    offsetof(flat_photon_t, spot),      1,  NULL, NATIVE_FLAGS},
-    {"pair",        RecordObject::UINT8,    offsetof(flat_photon_t, pair),      1,  NULL, NATIVE_FLAGS},
-    {"rgt",         RecordObject::UINT16,   offsetof(flat_photon_t, rgt),       1,  NULL, NATIVE_FLAGS},
-    {"cycle",       RecordObject::UINT16,   offsetof(flat_photon_t, cycle),     1,  NULL, NATIVE_FLAGS},
-    {"photon",      RecordObject::USER,     offsetof(flat_photon_t, photon),    1,  phRecType, NATIVE_FLAGS}
+    {"extent_id",   RecordObject::UINT64,   offsetof(flat_photon_t, extent_id),         1,  NULL, NATIVE_FLAGS},
+    {"track",       RecordObject::UINT8,    offsetof(flat_photon_t, track),             1,  NULL, NATIVE_FLAGS},
+    {"spot",        RecordObject::UINT8,    offsetof(flat_photon_t, spot),              1,  NULL, NATIVE_FLAGS},
+    {"pair",        RecordObject::UINT8,    offsetof(flat_photon_t, pair),              1,  NULL, NATIVE_FLAGS},
+    {"rgt",         RecordObject::UINT16,   offsetof(flat_photon_t, rgt),               1,  NULL, NATIVE_FLAGS},
+    {"cycle",       RecordObject::UINT16,   offsetof(flat_photon_t, cycle),             1,  NULL, NATIVE_FLAGS},
+    {"segment_id",  RecordObject::UINT32,   offsetof(flat_photon_t, segment_id),        1,  NULL, NATIVE_FLAGS},
+    {"photon",      RecordObject::USER,     offsetof(flat_photon_t, photon),            1,  phRecType, NATIVE_FLAGS}
 };
 
 const char* Atl03Reader::exFlatRecType = "flat03rec";
@@ -1618,8 +1619,6 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
     /* Allocate and Initialize Extent Record */
     RecordObject record(exFlatRecType, extent_bytes);
     flat_photon_t* extent = (flat_photon_t*)record.getRecordData();
-    uint8_t rgt = start_rgt;
-    uint8_t cycle = start_cycle;
 
     /* Populate Extent */
     uint32_t ph_out = 0;
@@ -1638,8 +1637,8 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
                 photon->track = track;
                 photon->spot = spot;
                 photon->pair = t;
-                photon->rgt = rgt;
-                photon->cycle = cycle;
+                photon->rgt = start_rgt;
+                photon->cycle = start_cycle;
                 photon->segment_id = segment_id;
                 photon->photon = state[t].extent_photons[p];
             }
