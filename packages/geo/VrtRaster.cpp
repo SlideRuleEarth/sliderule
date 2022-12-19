@@ -824,22 +824,43 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
         }
         else
         {
-            double rbuf[1] = {0};
-            int _cellsize = raster->cellSize;
-            int radius_in_meters = ((obj->radius + _cellsize - 1) / _cellsize) * _cellsize; // Round to multiple of cellSize
-            int radius_in_pixels = (radius_in_meters == 0) ? 1 : radius_in_meters / _cellsize;
-            int _col = col - radius_in_pixels;
-            int _row = row - radius_in_pixels;
-            int size = radius_in_pixels + 1 + radius_in_pixels;
+            double rbuf[1] = {INVALID_SAMPLE_VALUE};
+            int _col, _row, size;
 
-            /* If 8 pixels around pixel of interest are not in the raster boundries return pixel value. */
-            if (_col < 0 || _row < 0)
+            /* If zero radius provided, use defaul kernels for each sampling algorithm */
+            if (obj->radius == 0)
             {
-                _col = col;
-                _row = row;
-                size = 1;
-                obj->sampleAlg = GRIORA_NearestNeighbour;
+                int kernel = 0;
+
+                if      (sampleAlg == GRIORA_Bilinear)    kernel = 2; /* 2x2 kernel */
+                else if (sampleAlg == GRIORA_Cubic)       kernel = 4; /* 4x4 kernel */
+                else if (sampleAlg == GRIORA_CubicSpline) kernel = 4; /* 4x4 kernel */
+                else if (sampleAlg == GRIORA_Lanczos)     kernel = 6; /* 6x6 kernel */
+                else if (sampleAlg == GRIORA_Average)     kernel = 6; /* No default kernel, pick something */
+                else if (sampleAlg == GRIORA_Mode)        kernel = 6; /* No default kernel, pick something */
+                else if (sampleAlg == GRIORA_Gauss)       kernel = 6; /* No default kernel, pick something */
+
+                _col = col - (kernel/2);
+                _row = row - (kernel/2);
+                size = kernel; /* Always use kernel size, even for edge case... */
             }
+            else
+            {
+                /* For now, use box/window where the window side length is radius*2 */
+                int csize = raster->cellSize;
+                int radius_in_meters = ((obj->radius + csize - 1) / csize) * csize; // Round to multiple of cells size
+                int radius_in_pixels = radius_in_meters / csize;
+
+                _col = col - radius_in_pixels;
+                _row = row - radius_in_pixels;
+                size = radius_in_pixels*2;
+
+                /* It is user error if they specify radius smaller than algorithm default kernel */
+            }
+
+            /* Handle edge and/or corner pixels, this is one way to do it... */
+            if (_col < 0) _col = 0;
+            if (_row < 0) _row = 0;
 
             GDALRasterIOExtraArg args;
             INIT_RASTERIO_EXTRA_ARG(args);
@@ -853,8 +874,6 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             } while (err != CE_None && cnt--);
             CHECK_GDALERR(err);
             raster->sample.value = rbuf[0];
-            mlog(DEBUG, "Resampled elevation:  %lf, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], obj->radius, radius_in_pixels, size);
-            // print2term("Resampled elevation:  %lf, radiusMeters: %d, radiusPixels: %d, size: %d\n", rbuf[0], radius, radius_in_pixels, size);
         }
 
         raster->sampled = true;
