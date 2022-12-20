@@ -44,7 +44,9 @@ jobs:
 
     # Build SlideRule
     - run: |
+       sudo apt update
        sudo apt install build-essential libreadline-dev liblua5.3-dev
+       sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev
        make config
        make
 
@@ -72,7 +74,9 @@ jobs:
         languages: ${{ matrix.language }}
 
     - run: |
+       sudo apt update
        sudo apt install build-essential libreadline-dev liblua5.3-dev
+       sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev
        sudo mkdir -p /usr/local/include/sliderule
        sudo find . -name "*.h" -exec cp {} /usr/local/include/sliderule/ \;
        sudo cp platforms/linux/*.h /usr/local/include/sliderule/

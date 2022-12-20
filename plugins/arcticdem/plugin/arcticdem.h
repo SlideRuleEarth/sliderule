@@ -29,35 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
+#ifndef __arcticdem_plugin__
+#define __arcticdem_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "RqstParms.h"
-#include "Atl03Reader.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "CumulusIODriver.h"
-#include "EndpointProxy.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "PluginMetrics.h"
-#include "RasterSampler.h"
-#include "RqstParms.h"
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
+#include "ArcticDemMosaicRaster.h"
+#include "ArcticDemStripsRaster.h"
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initicesat2 (void);
+void initarcticdem (void);
 }
 
-#endif  /* __icesat2_plugin__ */
+#endif  /* __arcticdem_plugin__ */
 
 

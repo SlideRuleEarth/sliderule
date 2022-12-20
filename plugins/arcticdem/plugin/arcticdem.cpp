@@ -34,71 +34,82 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "rasterPkg.h"
-#include "GeoJsonRaster.h"
-#include <gdal.h>
+#include "arcticdem.h"
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
-#define LUA_GEOJSONRASTER_LIBNAME  "raster"
+#define LUA_ARCTICDEM_LIBNAME   "arcticdem"
+#define LUA_MOSAIC_RASTER_NAME  "arcticdem-mosaic"
+#define LUA_STRIPS_RASTER_NAME  "arcticdem-strips"
 
 /******************************************************************************
- * GEOJSONRASTER FUNCTIONS
+ * LOCAL FUNCTIONS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * raster_open
+ * arcticdem_version
  *----------------------------------------------------------------------------*/
-int raster_open (lua_State* L)
+int arcticdem_version (lua_State* L)
 {
-    static const struct luaL_Reg raster_functions[] = {
-        {"file",        GeoJsonRaster::luaCreate},
-        {NULL,          NULL}
-    };
+    /* Display Version Information on Terminal */
+    print2term("ArcticDEM Plugin Version: %s\n", BINID);
+    print2term("Build Information: %s\n", BUILDINFO);
 
-    /* Set Package Library */
-    luaL_newlib(L, raster_functions);
-
-    return 1;
+    /* Return Version Information to Lua */
+    lua_pushstring(L, BINID);
+    lua_pushstring(L, BUILDINFO);
+    return 2;
 }
 
-
 /*----------------------------------------------------------------------------
- * Error handler called by GDAL lib on errors
+ * arcticdem_open
  *----------------------------------------------------------------------------*/
-void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
+int arcticdem_open (lua_State *L)
 {
-    (void)eErrClass;  /* Silence compiler warning */
-    mlog(CRITICAL, "GDAL ERROR %d: %s\n", err_no, msg);
+    static const struct luaL_Reg arcticdem_functions[] = {
+        {"mosaic",          ArcticDemMosaicRaster::luaCreate},
+        {"strips",          ArcticDemStripsRaster::luaCreate},
+        {"version",         arcticdem_version},
+        {NULL,              NULL}
+    };
+
+    /* Set Library */
+    luaL_newlib(L, arcticdem_functions);
+
+    return 1;
 }
 
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
-extern "C" {
-void initraster (void)
-{
-    /* Register all gdal drivers */
-    GDALAllRegister();
 
-    /* Register GDAL custom error handler */
-    void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
-    CPLSetErrorHandler(fptrGdalErrorHandler);
+extern "C" {
+void initarcticdem (void)
+{
+    /* Initialize Modules */
+    ArcticDemMosaicRaster::init();
+    ArcticDemStripsRaster::init();
+
+    /* Register Rasters */
+    VrtRaster::registerRaster(LUA_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
+    VrtRaster::registerRaster(LUA_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_GEOJSONRASTER_LIBNAME, raster_open);
+    LuaEngine::extend(LUA_ARCTICDEM_LIBNAME, arcticdem_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEOJSONRASTER_LIBNAME, LIBID);
+    LuaEngine::indicate(LUA_ARCTICDEM_LIBNAME, BINID);
 
     /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_GEOJSONRASTER_LIBNAME, LIBID);
+    print2term("%s plugin initialized (%s)\n", LUA_ARCTICDEM_LIBNAME, BINID);
 }
 
-void deinitraster (void)
+void deinitarcticdem (void)
 {
-    GDALDestroy();
+    /* Uninitialize Modules */
+    ArcticDemMosaicRaster::deinit();
+    ArcticDemStripsRaster::deinit();
 }
 }

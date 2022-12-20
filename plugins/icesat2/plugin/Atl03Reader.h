@@ -185,6 +185,7 @@ class Atl03Reader: public LuaObject
                 Region              (info_t* info);
                 ~Region             (void);
 
+                void cleanup        (void);
                 void polyregion     (info_t* info);
                 void rasterregion   (info_t* info);
 
@@ -343,8 +344,8 @@ class Atl03Reader: public LuaObject
         uint32_t            calculateSegmentId      (int t, TrackState& state, Atl03Data& atl03);
         bool                sendExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
         bool                sendFlatRecord          (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
-        bool                sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
-        bool                sendAncillaryPhRecords  (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryPhRecords  (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
         void                parseResource           (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

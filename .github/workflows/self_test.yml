@@ -48,7 +48,7 @@ jobs:
 
     - name: Build sliderule
       run: |
-       make config-development
+       make config-development-cicd
        make
        sudo make install
 

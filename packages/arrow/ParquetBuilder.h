@@ -32,12 +32,17 @@
 #ifndef __parquet_builder__
 #define __parquet_builder__
 
+/*
+ * ParquetBuilder works on batches of records.  It expects the `rec_type` passed
+ * into the constructor to be the type that defines each of the column headings,
+ * then it expects to receive records that are arrays (or batches) of that record
+ * type.  The field defined as an array is transparent to this class - it just
+ * expects the record to be a single array.
+ */
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
-
-#include <arrow/api.h>
-#include <parquet/arrow/writer.h>
 
 #include "MsgQ.h"
 #include "LuaObject.h"
@@ -46,12 +51,8 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 
-using std::shared_ptr;
-using std::unique_ptr;
-using std::vector;
-
 /******************************************************************************
- * ATL06 DISPATCH CLASS
+ * PARQUET BUILDER DISPATCH CLASS
  ******************************************************************************/
 
 class ParquetBuilder: public DispatchObject
@@ -112,15 +113,16 @@ class ParquetBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        field_list_t                            fieldList;
-        field_iterator_t*                       fieldIterator;
-        Mutex                                   tableMut;
-        shared_ptr<arrow::Schema>               schema;
-        unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
-        Publisher*                              outQ;
-        int                                     rowSizeBytes;
-        const char*                             fileName; // used locally to build file
-        const char*                             outFileName; // name to send back to client
+        field_list_t        fieldList;
+        field_iterator_t*   fieldIterator;
+        Mutex               tableMut;
+        Publisher*          outQ;
+        int                 rowSizeBytes;
+        const char*         fileName; // used locally to build file
+        const char*         outFileName; // name to send back to client
+
+        struct impl; // arrow implementation
+        impl* pimpl; // private arrow data
 
         /*--------------------------------------------------------------------
          * Methods
@@ -133,9 +135,6 @@ class ParquetBuilder: public DispatchObject
         bool                processTimeout          (void) override;
         bool                processTermination      (void) override;
         bool                postRecord              (RecordObject* record, int data_size=0);
-
-        static bool         defineTableSchema       (shared_ptr<arrow::Schema>& _schema, field_list_t& field_list, const char* rec_type);
-        static bool         addFieldsToSchema       (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rectype);
 };
 
 #endif  /* __parquet_builder__ */

@@ -29,23 +29,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __endpoint_proxy__
-#define __endpoint_proxy__
+#ifndef __geojson_raster__
+#define __geojson_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "LuaObject.h"
-#include "MsgQ.h"
 #include "OsApi.h"
-#include "OrchestratorLib.h"
+#include "GeoRaster.h"
 
 /******************************************************************************
- * ATL03 READER
+ * GEOJSON RASTER CLASS
  ******************************************************************************/
 
-class EndpointProxy: public LuaObject
+class GeoJsonRaster: public LuaObject
 {
     public:
 
@@ -53,15 +52,54 @@ class EndpointProxy: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_REQUEST_PARAMETER_SIZE = 0x2000000; // 32MB
-        static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
-        static const int COLLATOR_POLL_RATE = 1000; // milliseconds
-        static const int DEFAULT_PROXY_QUEUE_DEPTH = 1000;
-        static const int MAX_PROXY_THREADS = 1000;
+        static const int   RASTER_NODATA_VALUE = 200;
+        static const int   RASTER_PIXEL_ON = 1;
+        static const int   RASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
 
-        static const char* SERVICE;
+        static const char* FILEDATA_KEY;
+        static const char* FILELENGTH_KEY;
+        static const char* BBOX_KEY;
+        static const char* CELLSIZE_KEY;
 
-        static const char* OBJECT_TYPE;
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int            luaCreate      (lua_State* L);
+        static GeoJsonRaster* create         (lua_State* L, int index);
+
+        bool                  subset         (double lon, double lat);
+        virtual              ~GeoJsonRaster  (void);
+
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
+
+        bool rawPixel (const uint32_t row, const uint32_t col)
+        {
+            return raster[(row * cols) + col] == RASTER_PIXEL_ON;
+        }
+
+        uint32_t numRows (void)
+        {
+            return rows;
+        }
+
+        uint32_t numCols(void)
+        {
+            return cols;
+        }
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
@@ -69,44 +107,31 @@ class EndpointProxy: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
+        GeoJsonRaster (lua_State* L, const char* image, long imagelength, double _cellsize);
 
     private:
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    active;
-        Publisher*              rqstPub;
-        Subscriber*             rqstSub;
-        Thread**                proxyPids;
-        Thread*                 collatorPid;
-        const char**            resources;
-        OrchestratorLib::Node** nodes;
-        int                     numResources;
-        int                     numResourcesComplete;
-        Cond                    completion;
-        const char*             endpoint;
-        const char*             asset;
-        const char*             parameters;
-        int                     timeout;
-        Publisher*              outQ;
-        int                     numProxyThreads;
-        int                     rqstQDepth;
-        bool                    sendTerminator;
+        uint8_t  *raster;
+        uint32_t  rows;
+        uint32_t  cols;
+        bbox_t    bbox;
+        double    cellsize;
+
+        struct impl; // gdal implementation
+        impl* pimpl; // private gdal data
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            EndpointProxy           (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources,
-                                                     const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
-                                                     int _num_threads, int _rqst_queue_depth);
-                            ~EndpointProxy          (void);
-
-        static void*        collatorThread          (void* parm);
-        static void*        proxyThread             (void* parm);
+        static int luaDimensions    (lua_State* L);
+        static int luaBoundingBox   (lua_State* L);
+        static int luaCellSize      (lua_State* L);
+        static int luaPixel         (lua_State* L);
+        static int luaSubset        (lua_State* L);
 };
 
-#endif  /* __endpoint_proxy__ */
+#endif  /* __geojson_raster__ */

@@ -30,76 +30,80 @@
  */
 
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "PublisherDispatch.h"
 #include "core.h"
+#include "geo.h"
+#include "GeoJsonRaster.h"
+#include <gdal.h>
 
 /******************************************************************************
- * STATIC DATA
+ * DEFINES
  ******************************************************************************/
 
-const char* PublisherDispatch::LuaMetaName = "PublisherDispatch";
-const struct luaL_Reg PublisherDispatch::LuaMetaTable[] = {
-    {NULL,          NULL}
-};
+#define LUA_GEO_LIBNAME  "geo"
 
 /******************************************************************************
- * PUBLIC METHODS
+ * GEO FUNCTIONS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate: publish(<outq_name>)
+ * geo_open
  *----------------------------------------------------------------------------*/
-int PublisherDispatch::luaCreate (lua_State* L)
+int geo_open (lua_State* L)
 {
-    try
-    {
-        /* Get Parameters */
-        const char* recq_name = getLuaString(L, 1);
+    static const struct luaL_Reg geo_functions[] = {
+        {"geojson",     GeoJsonRaster::luaCreate},
+        {"vrt",         VrtRaster::luaCreate},
+        {NULL,          NULL}
+    };
 
-        /* Create Record Monitor */
-        return createLuaObject(L, new PublisherDispatch(L, recq_name));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
-        return returnLuaStatus(L, false);
-    }
+    /* Set Package Library */
+    luaL_newlib(L, geo_functions);
+
+    return 1;
+}
+
+
+/*----------------------------------------------------------------------------
+ * Error handler called by GDAL lib on errors
+ *----------------------------------------------------------------------------*/
+void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
+{
+    (void)eErrClass;  /* Silence compiler warning */
+    mlog(CRITICAL, "GDAL ERROR %d: %s", err_no, msg);
 }
 
 /******************************************************************************
- * PRIVATE METHODS
- *******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-PublisherDispatch::PublisherDispatch(lua_State* L, const char* recq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+ * EXPORTED FUNCTIONS
+ ******************************************************************************/
+extern "C" {
+void initgeo (void)
 {
-    assert(recq_name);
+    /* Register all gdal drivers */
+    GDALAllRegister();
 
-    pubQ = new Publisher(recq_name);
+    /* Initialize Modules */
+    VrtRaster::init();
+
+    /* Register GDAL custom error handler */
+    void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
+    CPLSetErrorHandler(fptrGdalErrorHandler);
+
+    /* Extend Lua */
+    LuaEngine::extend(LUA_GEO_LIBNAME, geo_open);
+
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_GEO_LIBNAME, LIBID);
+
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_GEO_LIBNAME, LIBID);
 }
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-PublisherDispatch::~PublisherDispatch(void)
+void deinitgeo (void)
 {
-    delete pubQ;
+    VrtRaster::deinit();
+    GDALDestroy();
 }
-
-/*----------------------------------------------------------------------------
- * processRecord
- *----------------------------------------------------------------------------*/
-bool PublisherDispatch::processRecord(RecordObject* record, okey_t key)
-{
-    (void)key;
-    unsigned char* buffer; // reference to serial buffer
-    int size = record->serialize(&buffer, RecordObject::REFERENCE);
-    if(size > 0)    return (pubQ->postCopy(buffer, size) > 0);
-    else            return false;
 }

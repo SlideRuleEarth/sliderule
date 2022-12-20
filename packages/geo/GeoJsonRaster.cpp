@@ -48,27 +48,6 @@
 /******************************************************************************
  * LOCAL DEFINES AND MACROS
  ******************************************************************************/
-
-#define CHECKPTR(p)                                                           \
-do                                                                            \
-{                                                                             \
-    if ((p) == NULL)                                                          \
-    {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR, "NULL pointer detected"); \
-    }                                                                         \
-} while (0)
-
-
-#define CHECK_GDALERR(e)                                                          \
-do                                                                                \
-{                                                                                 \
-    if ((e))   /* CPLErr and OGRErr types have 0 for no error  */                 \
-    {                                                                             \
-        throw RunTimeException(CRITICAL, RTE_ERROR, "GDAL ERROR detected: %d", e);\
-    }                                                                             \
-} while (0)
-
-
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
  ******************************************************************************/
@@ -324,6 +303,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         bbox.lat_min = geot[3] + rows * geot[5];
 
         long size = cols * rows;
+
         raster = new uint8_t[size];
         CHECKPTR(raster);
 
@@ -333,7 +313,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
 
         const char *_wkt = rasterDset->GetProjectionRef();
         CHECKPTR(_wkt);
-        ogrerr = pimpl->source.importFromEPSG(RASTER_PHOTON_CRS);
+        ogrerr = pimpl->source.importFromEPSG(PHOTON_CRS);
         CHECK_GDALERR(ogrerr);
         ogrerr = pimpl->target.importFromWkt(_wkt);
         CHECK_GDALERR(ogrerr);

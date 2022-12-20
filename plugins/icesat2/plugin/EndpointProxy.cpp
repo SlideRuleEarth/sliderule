@@ -110,7 +110,10 @@ int EndpointProxy::luaCreate (lua_State* L)
         else if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
 
         /* Return Endpoint Proxy Object */
-        return createLuaObject(L, new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth));
+        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth);
+        int retcnt = createLuaObject(L, ep);
+        if(_resources) delete [] _resources;
+        return retcnt;
     }
     catch(const RunTimeException& e)
     {
@@ -120,7 +123,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         {
             delete [] _resources[i];
         }
-        delete [] _resources;
+        if (_resources) delete [] _resources;
 
         return returnLuaStatus(L, false);
     }
@@ -144,6 +147,9 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
     numProxyThreads = _num_threads;
     rqstQDepth = _rqst_queue_depth;
     sendTerminator = _send_terminator;
+
+    /* Completion Condition */
+    numResourcesComplete = 0;
 
     /* Proxy Active */
     active = true;
@@ -270,6 +276,16 @@ void* EndpointProxy::collatorThread (void* parm)
         }
     }
 
+    /* Check if All Resources Completed */
+    proxy->completion.lock();
+    {
+        while(proxy->active && (proxy->numResourcesComplete < proxy->numResources))
+        {
+            proxy->completion.wait(0, SYS_TIMEOUT);
+        }
+    }
+    proxy->completion.unlock();
+
     /* Send Terminator */
     if(proxy->sendTerminator)
     {
@@ -311,7 +327,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     HttpClient client(NULL, node->member);
                     HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout * 1000);
                     if(rsps.code == EndpointObject::OK) valid = true;
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)rsps.code);
+                    else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)rsps.code);
                 }
                 catch(const RunTimeException& e)
                 {
@@ -321,6 +337,17 @@ void* EndpointProxy::proxyThread (void* parm)
 
             /* Unlock Node */
             OrchestratorLib::unlock(&node->transaction, 1);
+
+            /* Resource Completed */
+            proxy->completion.lock();
+            {
+                proxy->numResourcesComplete++;
+                if(proxy->numResourcesComplete >= proxy->numResources)
+                {
+                    proxy->completion.signal();
+                }
+            }
+            proxy->completion.unlock();
 
             /* Post Status */
             int code = valid ? RTE_INFO : RTE_ERROR;

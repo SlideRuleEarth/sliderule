@@ -29,35 +29,37 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
+#ifndef __arcticdem_mosaic_raster__
+#define __arcticdem_mosaic_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "RqstParms.h"
-#include "Atl03Reader.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "CumulusIODriver.h"
-#include "EndpointProxy.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "PluginMetrics.h"
-#include "RasterSampler.h"
-#include "RqstParms.h"
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
+#include "VrtRaster.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * ARCTICDEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-}
+class ArcticDemMosaicRaster: public VrtRaster
+{
+    public:
 
-#endif  /* __icesat2_plugin__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
+        static VrtRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius);
 
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+               ArcticDemMosaicRaster (lua_State* L, const char* dem_sampling, const int sampling_radius);
+        void   getVrtFileName(std::string& vrtFile, double lon=0, double lat=0 );
+};
+
+#endif  /* __arcticdem_mosaic_raster__ */

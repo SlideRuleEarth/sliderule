@@ -114,10 +114,11 @@ bool CredentialStore::put (const char* host, Credential& credential)
         status = credentialStore.add(host, credential);
 
         /* Find/Register Metric Id */
-        int32_t metric_id;
+        int32_t metric_id = EventLib::INVALID_METRIC;
         if(!metricIds.find(host, &metric_id))
         {
-            metric_id = EventLib::registerMetric(LIBRARY_NAME, EventLib::GAUGE, "%s:%s", host, EXPIRATION_GPS_METRIC);
+            metric_id = EventLib::registerMetric(LIBRARY_NAME, EventLib::GAUGE, "%s:%s", host ? host : "<unknown>", EXPIRATION_GPS_METRIC);
+            metricIds.add(host, metric_id);
         }
 
         /* Update Metric */

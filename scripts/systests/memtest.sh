@@ -4,7 +4,7 @@ logfile=memtest.log
 progname=sliderule
 testscript="scripts/selftests/test_runner.lua"
 valgrind_suppressions="scripts/systests/memtest.supp"
-valgrind_options="--leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes --log-file=${logfile} --suppressions=${valgrind_suppressions}"
+valgrind_options="--leak-check=full --show-leak-kinds=all --show-reachable=yes --track-origins=yes --track-fds=yes --log-file=${logfile} --suppressions=${valgrind_suppressions}"
 
 printf "\nStarting memory test, valgrind output redirected to %s\n\n" $logfile
 
@@ -23,7 +23,7 @@ ret2=$?
 printf "\n\n********* valgrind output from %s *********\n\n" $logfile
 cat $logfile
 
-if [ $ret1 == 0 ] && [ $ret1 == 0 ];
+if [ $ret1 == 0 ] && [ $ret2 == 0 ];
 then
     printf "\nMemory test PASSED\n"
 else

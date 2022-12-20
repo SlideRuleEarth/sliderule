@@ -84,13 +84,14 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
 
 const char* Atl03Reader::phFlatRecType = "flat03rec.photons";
 const RecordObject::fieldDef_t Atl03Reader::phFlatRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(flat_photon_t, extent_id), 1,  NULL, NATIVE_FLAGS},
-    {"track",       RecordObject::UINT8,    offsetof(flat_photon_t, track),     1,  NULL, NATIVE_FLAGS},
-    {"spot",        RecordObject::UINT8,    offsetof(flat_photon_t, spot),      1,  NULL, NATIVE_FLAGS},
-    {"pair",        RecordObject::UINT8,    offsetof(flat_photon_t, pair),      1,  NULL, NATIVE_FLAGS},
-    {"rgt",         RecordObject::UINT16,   offsetof(flat_photon_t, rgt),       1,  NULL, NATIVE_FLAGS},
-    {"cycle",       RecordObject::UINT16,   offsetof(flat_photon_t, cycle),     1,  NULL, NATIVE_FLAGS},
-    {"photon",      RecordObject::USER,     offsetof(flat_photon_t, photon),    1,  phRecType, NATIVE_FLAGS}
+    {"extent_id",   RecordObject::UINT64,   offsetof(flat_photon_t, extent_id),         1,  NULL, NATIVE_FLAGS},
+    {"track",       RecordObject::UINT8,    offsetof(flat_photon_t, track),             1,  NULL, NATIVE_FLAGS},
+    {"spot",        RecordObject::UINT8,    offsetof(flat_photon_t, spot),              1,  NULL, NATIVE_FLAGS},
+    {"pair",        RecordObject::UINT8,    offsetof(flat_photon_t, pair),              1,  NULL, NATIVE_FLAGS},
+    {"rgt",         RecordObject::UINT16,   offsetof(flat_photon_t, rgt),               1,  NULL, NATIVE_FLAGS},
+    {"cycle",       RecordObject::UINT16,   offsetof(flat_photon_t, cycle),             1,  NULL, NATIVE_FLAGS},
+    {"segment_id",  RecordObject::UINT32,   offsetof(flat_photon_t, segment_id),        1,  NULL, NATIVE_FLAGS},
+    {"photon",      RecordObject::USER,     offsetof(flat_photon_t, photon),            1,  phRecType, NATIVE_FLAGS}
 };
 
 const char* Atl03Reader::exFlatRecType = "flat03rec";
@@ -335,6 +336,7 @@ Atl03Reader::Region::Region (info_t* info):
     /* Check If Anything to Process */
     if(num_photons[RqstParms::RPT_L] <= 0 || num_photons[RqstParms::RPT_R] <= 0)
     {
+        cleanup();
         throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
     }
 
@@ -348,6 +350,14 @@ Atl03Reader::Region::Region (info_t* info):
  * Region::Destructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Region::~Region (void)
+{
+    cleanup();
+}
+
+/*----------------------------------------------------------------------------
+ * Region::cleanup
+ *----------------------------------------------------------------------------*/
+void Atl03Reader::Region::cleanup (void)
 {
     for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
@@ -550,8 +560,8 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     anc_geo_data        (RqstParms::EXPECTED_NUM_ANC_FIELDS),
     anc_ph_data         (RqstParms::EXPECTED_NUM_ANC_FIELDS)
 {
-    RqstParms::ancillary_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
-    RqstParms::ancillary_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
+    RqstParms::string_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
+    RqstParms::string_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
 
     /* Read Ancillary Geolocation Fields */
     if(geo_fields)
@@ -1609,8 +1619,6 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
     /* Allocate and Initialize Extent Record */
     RecordObject record(exFlatRecType, extent_bytes);
     flat_photon_t* extent = (flat_photon_t*)record.getRecordData();
-    uint8_t rgt = start_rgt;
-    uint8_t cycle = start_cycle;
 
     /* Populate Extent */
     uint32_t ph_out = 0;
@@ -1629,8 +1637,8 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
                 photon->track = track;
                 photon->spot = spot;
                 photon->pair = t;
-                photon->rgt = rgt;
-                photon->cycle = cycle;
+                photon->rgt = start_rgt;
+                photon->cycle = start_cycle;
                 photon->segment_id = segment_id;
                 photon->photon = state[t].extent_photons[p];
             }
@@ -1644,7 +1652,7 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
 /*----------------------------------------------------------------------------
  * sendAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1682,7 +1690,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::ancill
 /*----------------------------------------------------------------------------
  * sendAncillaryPhRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, RqstParms::ancillary_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {

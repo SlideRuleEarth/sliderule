@@ -33,73 +33,64 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "PublisherDispatch.h"
-#include "core.h"
+#include "ArcticDemMosaicRaster.h"
+
+/******************************************************************************
+ * PRIVATE IMPLEMENTATION
+ ******************************************************************************/
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* PublisherDispatch::LuaMetaName = "PublisherDispatch";
-const struct luaL_Reg PublisherDispatch::LuaMetaTable[] = {
-    {NULL,          NULL}
-};
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate: publish(<outq_name>)
- *----------------------------------------------------------------------------*/
-int PublisherDispatch::luaCreate (lua_State* L)
-{
-    try
-    {
-        /* Get Parameters */
-        const char* recq_name = getLuaString(L, 1);
-
-        /* Create Record Monitor */
-        return createLuaObject(L, new PublisherDispatch(L, recq_name));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
 /******************************************************************************
- * PRIVATE METHODS
- *******************************************************************************/
+ * PROTECTED METHODS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PublisherDispatch::PublisherDispatch(lua_State* L, const char* recq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
+    VrtRaster(L, dem_sampling, sampling_radius)
 {
-    assert(recq_name);
+    /* There is only one mosaic VRT file. Open it. */
+    std::string vrtFile;
+    getVrtFileName(vrtFile);
 
-    pubQ = new Publisher(recq_name);
+    if (!openVrtDset(vrtFile.c_str()))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
+
+    /*
+     * For mosaic, there is only one raster with point in it.
+     * Find it in cache first, before looking in vrt file for new tif.
+     */
+    checkCacheFirst = true;
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * create
  *----------------------------------------------------------------------------*/
-PublisherDispatch::~PublisherDispatch(void)
+VrtRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius)
 {
-    delete pubQ;
+    return new ArcticDemMosaicRaster(L, dem_sampling, sampling_radius);
 }
 
+
 /*----------------------------------------------------------------------------
- * processRecord
+ * getVrtFileName
  *----------------------------------------------------------------------------*/
-bool PublisherDispatch::processRecord(RecordObject* record, okey_t key)
+void ArcticDemMosaicRaster::getVrtFileName(std::string& vrtFile, double lon, double lat)
 {
-    (void)key;
-    unsigned char* buffer; // reference to serial buffer
-    int size = record->serialize(&buffer, RecordObject::REFERENCE);
-    if(size > 0)    return (pubQ->postCopy(buffer, size) > 0);
-    else            return false;
+    vrtFile = "/data/ArcticDem/mosaic.vrt";
 }
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
+
+

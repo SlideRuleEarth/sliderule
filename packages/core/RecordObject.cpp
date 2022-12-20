@@ -567,7 +567,7 @@ RecordObject::Field RecordObject::field(const char* field_name)
  *
  *  The element parameter is only used when the field is a pointer
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueText(field_t f, const char* val, int element)
+void RecordObject::setValueText(const field_t& f, const char* val, int element)
 {
     valType_t val_type = getValueType(f);
 
@@ -620,7 +620,7 @@ void RecordObject::setValueText(field_t f, const char* val, int element)
 /*----------------------------------------------------------------------------
  * setValueReal
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueReal(field_t f, const double val, int element)
+void RecordObject::setValueReal(const field_t& f, const double val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
@@ -691,7 +691,7 @@ void RecordObject::setValueReal(field_t f, const double val, int element)
 /*----------------------------------------------------------------------------
  * setValueInteger
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueInteger(field_t f, const long val, int element)
+void RecordObject::setValueInteger(const field_t& f, const long val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
@@ -769,7 +769,7 @@ void RecordObject::setValueInteger(field_t f, const long val, int element)
  *   3. valbuf, if supplied, is assumed to be of length MAX_VAL_STR_SIZE
  *   4. The element parameter is only used if the field is a pointer
  *----------------------------------------------------------------------------*/
-const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
+const char* RecordObject::getValueText(const field_t& f, char* valbuf, int element)
 {
     valType_t val_type = getValueType(f);
 
@@ -819,7 +819,7 @@ const char* RecordObject::getValueText(field_t f, char* valbuf, int element)
 /*----------------------------------------------------------------------------
  * getValueReal
  *----------------------------------------------------------------------------*/
-double RecordObject::getValueReal(field_t f, int element)
+double RecordObject::getValueReal(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
@@ -880,7 +880,7 @@ double RecordObject::getValueReal(field_t f, int element)
 /*----------------------------------------------------------------------------
  * getValueInteger
  *----------------------------------------------------------------------------*/
-long RecordObject::getValueInteger(field_t f, int element)
+long RecordObject::getValueInteger(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
@@ -941,7 +941,16 @@ long RecordObject::getValueInteger(field_t f, int element)
 /*----------------------------------------------------------------------------
  * getValueType
  *----------------------------------------------------------------------------*/
-RecordObject::valType_t RecordObject::getValueType(field_t f)
+RecordObject::field_t RecordObject::getDefinedField (const char* rec_type, const char* field_name)
+{
+    definition_t* def = getDefinition(rec_type);
+    return getUserField(def, field_name);
+}
+
+/*----------------------------------------------------------------------------
+ * getValueType
+ *----------------------------------------------------------------------------*/
+RecordObject::valType_t RecordObject::getValueType(const field_t& f)
 {
     switch(f.type)
     {
@@ -1481,6 +1490,9 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
 
     field_t field = { INVALID_FIELD, 0, 0, NULL, NATIVE_FLAGS };
     long element = -1;
+
+    /* Sanity Check Def */
+    if(def == NULL) return field;
 
     /* Attempt Direct Access */
     try

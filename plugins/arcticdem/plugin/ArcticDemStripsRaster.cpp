@@ -33,73 +33,62 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "PublisherDispatch.h"
-#include "core.h"
+#include "ArcticDemStripsRaster.h"
+
+/******************************************************************************
+ * PRIVATE IMPLEMENTATION
+ ******************************************************************************/
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* PublisherDispatch::LuaMetaName = "PublisherDispatch";
-const struct luaL_Reg PublisherDispatch::LuaMetaTable[] = {
-    {NULL,          NULL}
-};
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate: publish(<outq_name>)
- *----------------------------------------------------------------------------*/
-int PublisherDispatch::luaCreate (lua_State* L)
-{
-    try
-    {
-        /* Get Parameters */
-        const char* recq_name = getLuaString(L, 1);
-
-        /* Create Record Monitor */
-        return createLuaObject(L, new PublisherDispatch(L, recq_name));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
 /******************************************************************************
- * PRIVATE METHODS
- *******************************************************************************/
+ * PROTECTED METHODS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PublisherDispatch::PublisherDispatch(lua_State* L, const char* recq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
+    VrtRaster(L, dem_sampling, sampling_radius)
 {
-    assert(recq_name);
-
-    pubQ = new Publisher(recq_name);
+    /*
+     * For strips, there may be many rasters with the same point.
+     * Some rasters may be cached but others not.
+     * First get a list of all rasters with point and only then check if some are already cached.
+     */
+    checkCacheFirst = false;
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * create
  *----------------------------------------------------------------------------*/
-PublisherDispatch::~PublisherDispatch(void)
+VrtRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius)
 {
-    delete pubQ;
+    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius);
 }
 
+
 /*----------------------------------------------------------------------------
- * processRecord
+ * getVrtFileName
  *----------------------------------------------------------------------------*/
-bool PublisherDispatch::processRecord(RecordObject* record, okey_t key)
+void ArcticDemStripsRaster::getVrtFileName(std::string& vrtFile, double lon, double lat )
 {
-    (void)key;
-    unsigned char* buffer; // reference to serial buffer
-    int size = record->serialize(&buffer, RecordObject::REFERENCE);
-    if(size > 0)    return (pubQ->postCopy(buffer, size) > 0);
-    else            return false;
+    int ilat = floor(lat);
+    int ilon = floor(lon);
+
+    vrtFile = "/data/ArcticDem/strips/n" +
+              std::to_string(ilat) +
+              ((ilon < 0) ? "w" : "e") +
+              std::to_string(abs(ilon)) +
+              ".vrt";
 }
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/

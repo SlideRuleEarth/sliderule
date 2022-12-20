@@ -29,24 +29,26 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __raster_pkg__
-#define __raster_pkg__
+#ifndef __geopkg__
+#define __geopkg__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-// #include "GeoJsonRaster.h"
+#include "GeoRaster.h"
+#include "GeoJsonRaster.h"
+#include "VrtRaster.h"
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initraster (void);
-void deinitraster (void);
+void initgeo(void);
+void deinitgeo(void);
 }
 
-#endif  /* __raster_pkg__ */
+#endif  /* __geopkg__*/
 
 
