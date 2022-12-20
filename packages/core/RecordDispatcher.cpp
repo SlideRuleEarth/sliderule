@@ -48,6 +48,7 @@ const struct luaL_Reg RecordDispatcher::LuaMetaTable[] = {
     {"attach",      luaAttachDispatch},
     {"clear",       luaClearError},
     {"drain",       luaDrain},
+    {"aot",         luaAbortOnTimeout},
     {NULL,          NULL}
 };
 
@@ -166,6 +167,7 @@ RecordDispatcher::RecordDispatcher( lua_State* L, const char* inputq_name,
 
     /* Create Thread Pool */
     dispatcherActive = false;
+    abortOnTimeout = false;
     threadPool = new Thread* [numThreads];
     for(int i = 0; i < numThreads; i++) threadPool[i] = NULL;
 }
@@ -385,6 +387,33 @@ int RecordDispatcher::luaDrain (lua_State* L)
     return returnLuaStatus(L, status);
 }
 
+/*----------------------------------------------------------------------------
+ * luaAbortOnTimeout - :aot()
+ *----------------------------------------------------------------------------*/
+int RecordDispatcher::luaAbortOnTimeout (lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
+
+        /* Abort On Timeout */
+        lua_obj->abortOnTimeout = true;
+
+        /* Set Success */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error setting abort on timeout: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -457,6 +486,13 @@ void* RecordDispatcher::dispatcherThread(void* parm)
             {
                 DispatchObject* dis = dispatcher->dispatchList[d];
                 dis->processTimeout();
+            }
+
+            /* Check if Aborting on Timeout */
+            if(dispatcher->abortOnTimeout)
+            {
+                dispatcher->dispatcherActive = false;
+                break;
             }
         }
         else

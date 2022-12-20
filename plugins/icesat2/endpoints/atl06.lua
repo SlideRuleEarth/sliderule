@@ -62,10 +62,11 @@ local atl06_algo = icesat2.atl06(rspq, rqst_parms)
 atl06_disp:attach(atl06_algo, "atl03rec")
 
 -- Raster Sampler --
+local sampler_disp = nil
 if samples then
     local atl06_rec_type = parms["compact"] and "atl06rec-compact" or "atl06rec"
     local elevation_rec_type = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation"
-    local sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
+    sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
     for index,raster in ipairs(samples) do
         local vrt = geo.vrt(raster)
         local sampler = icesat2.sampler(vrt, index - 1, rspq, elevation_rec_type, "extent_id", "lon", "lat")
@@ -98,7 +99,7 @@ end
 local atl03_stats = atl03_reader:stats(false)
 userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, atl03_stats.read, atl03_stats.filtered, atl03_stats.dropped))
 
--- Wait Until Dispatch Completion --
+-- Wait Until ATL06 Dispatch Completion --
 while (userlog:numsubs() > 0) and not atl06_disp:waiton(interval * 1000) do
     duration = duration + interval
     -- Check for Timeout --
@@ -107,6 +108,20 @@ while (userlog:numsubs() > 0) and not atl06_disp:waiton(interval * 1000) do
         do return end
     end
     userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to process ATL03 records (after %d seconds)", rspq, duration))
+end
+
+-- Wait Until Sampler Dispatch Completion --
+if sampler_disp then
+    sampler_disp:aot() -- aborts on next timeout
+    while (userlog:numsubs() > 0) and not sampler_disp:waiton(interval * 1000) do
+        duration = duration + interval
+        -- Check for Timeout --
+        if timeout >= 0 and duration >= timeout then
+            userlog:sendlog(core.ERROR, string.format("request <%s> timed-out after %d seconds", rspq, duration))
+            do return end
+        end
+        userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to sample ATL06 records (after %d seconds)", rspq, duration))
+    end
 end
 
 -- Request Processing Complete
