@@ -23,7 +23,7 @@ ret2=$?
 printf "\n\n********* valgrind output from %s *********\n\n" $logfile
 cat $logfile
 
-if [ $ret1 == 0 ] && [ $ret1 == 0 ];
+if [ $ret1 == 0 ] && [ $ret2 == 0 ];
 then
     printf "\nMemory test PASSED\n"
 else
