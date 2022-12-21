@@ -156,20 +156,21 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :arrow(<filename>, <outq name>, <rec_type>, <id>)
+ * luaCreate - :arrow(<filename>, <outq name>, <rec_type>, <id>, <as_geo>)
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        const char* filename = getLuaString(L, 1);
-        const char* outq_name = getLuaString(L, 2);
-        const char* rec_type = getLuaString(L, 3);
-        const char* id = getLuaString(L, 4);
+        const char* filename    = getLuaString(L, 1);
+        const char* outq_name   = getLuaString(L, 2);
+        const char* rec_type    = getLuaString(L, 3);
+        const char* id          = getLuaString(L, 4);
+        bool        as_geo      = getLuaBoolean(L, 5, true, false);
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, filename, outq_name, rec_type, id));
+        return createLuaObject(L, new ParquetBuilder(L, filename, outq_name, rec_type, id, as_geo));
     }
     catch(const RunTimeException& e)
     {
@@ -201,7 +202,7 @@ void ParquetBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id):
+ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id, bool as_geo):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(filename);
@@ -217,9 +218,6 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
 
     /* Define Table Schema */
     pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type);
-    shared_ptr<arrow::KeyValueMetadata> metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : make_shared<arrow::KeyValueMetadata>();
-    metadata->Append("geo", "{\"version\":\"1.0.0-beta.1\"}");
-    pimpl->schema = pimpl->schema->WithMetadata(metadata);
 
     /* Create Field Iterator */
     fieldIterator = new field_iterator_t(fieldList);
@@ -244,12 +242,29 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
     shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
 
     /* Create Arrow Writer Properties */
-    parquet::ArrowWriterProperties::Builder arrow_writer_props_builder;
-    shared_ptr<parquet::ArrowWriterProperties> arrow_writer_props = arrow_writer_props_builder.build();
+    auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
+
+    /* Build GeoParquet MetaData */
+    geoMetaData = NULL;
+    if(as_geo)
+    {
+        auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+        geoMetaData = buildGeoMetaData();
+        metadata->Append("geo", geoMetaData);
+        pimpl->schema = pimpl->schema->WithMetadata(metadata);
+    }
 
     /* Create Parquet Writer */
     #ifdef APACHE_ARROW_10_COMPAT
         (void)parquet::arrow::FileWriter::Open(*pimpl->schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &pimpl->parquetWriter);
+    #elif 0 // alternative method of creating file writer
+        std::shared_ptr<parquet::SchemaDescriptor> parquet_schema;
+        (void)parquet::arrow::ToParquetSchema(pimpl->schema.get(), *writer_props, *arrow_writer_props, &parquet_schema);
+        auto schema_node = std::static_pointer_cast<parquet::schema::GroupNode>(parquet_schema->schema_root());
+        std::unique_ptr<parquet::ParquetFileWriter> base_writer;
+        base_writer = parquet::ParquetFileWriter::Open(std::move(file_output_stream), schema_node, std::move(writer_props), metadata);
+        auto schema_ptr = std::make_shared<::arrow::Schema>(*pimpl->schema);
+        (void)parquet::arrow::FileWriter::Make(::arrow::default_memory_pool(), std::move(base_writer), std::move(schema_ptr), std::move(arrow_writer_props), &pimpl->parquetWriter);
     #else
         arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*pimpl->schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
         if(result.ok()) pimpl->parquetWriter = std::move(result).ValueOrDie();
@@ -266,6 +281,7 @@ ParquetBuilder::~ParquetBuilder(void)
     delete outQ;
     delete [] outFileName;
     delete fieldIterator;
+    if(geoMetaData) delete [] geoMetaData;
     delete pimpl;
 }
 
@@ -586,4 +602,12 @@ bool ParquetBuilder::postRecord (RecordObject* record, int data_size)
         return false;
     }
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * buildGeoMetaData
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::buildGeoMetaData (void)
+{
+    return StringLib::duplicate("soldier");
 }
