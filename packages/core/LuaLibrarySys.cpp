@@ -53,6 +53,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"log",         LuaLibrarySys::lsys_log},
     {"metric",      LuaLibrarySys::lsys_metric},
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
+    {"setenvver",   LuaLibrarySys::lsys_setenvver},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"setiosz",     LuaLibrarySys::lsys_setiosize},
@@ -69,6 +70,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
 };
 
 int64_t LuaLibrarySys::launch_time = 0;
+const char* LuaLibrarySys::environment_version;
 
 /******************************************************************************
  * SYSTEM LIBRARY EXTENSION METHODS
@@ -80,6 +82,7 @@ int64_t LuaLibrarySys::launch_time = 0;
 void LuaLibrarySys::lsys_init (void)
 {
     launch_time = TimeLib::gettimems();
+    environment_version = StringLib::duplicate("unknown");
 }
 
 /*----------------------------------------------------------------------------
@@ -97,8 +100,9 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
     /* Display Version Information on Terminal */
-    print2term("SlideRule Version: %s\n", LIBID);
-    print2term("Build Information: %s\n", BUILDINFO);
+    print2term("SlideRule Version:   %s\n", LIBID);
+    print2term("Build Information:   %s\n", BUILDINFO);
+    print2term("Environment Version: %s\n", environment_version);
 
     /* Display Timing Information on Terminal */
     int64_t duration = TimeLib::gettimems() - launch_time;
@@ -126,6 +130,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     /* Return Information to Lua (and clean up package list) */
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
+    lua_pushstring(L, environment_version);
     lua_pushstring(L, timestr.getString());
     lua_pushinteger(L, duration);
     lua_newtable(L);
@@ -142,7 +147,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
         delete [] pkg_list;
     }
 
-    return 5;
+    return 6;
 }
 
 /*----------------------------------------------------------------------------
@@ -262,7 +267,7 @@ int LuaLibrarySys::lsys_metric (lua_State* L)
     }
     else if(!lua_isnil(L, 1) && lua_gettop(L) > 0)
     {
-        mlog(CRITICAL, "Invalid parameter supplied to metric, must be nil or string (i.e. metric(\"mycategory\"))\n");
+        mlog(CRITICAL, "Invalid parameter supplied to metric, must be nil or string (i.e. metric(\"mycategory\"))");
         return 0;
     }
 
@@ -296,6 +301,29 @@ int LuaLibrarySys::lsys_lsmsgq (lua_State* L)
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_setenvver
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setenvver (lua_State* L)
+{
+    bool status = true;
+    const char* version_str = NULL;
+    if(lua_isstring(L, 1))
+    {
+        version_str = lua_tostring(L, 1);
+        if(environment_version != NULL) delete [] environment_version;
+        environment_version = StringLib::duplicate(version_str);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid parameter supplied to set environment version, must be a string");
+        status = false;
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

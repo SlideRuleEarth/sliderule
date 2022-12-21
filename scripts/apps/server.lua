@@ -49,6 +49,7 @@ local asset_directory           = cfgtbl["asset_directory"] or __confdir.."/asse
 local normal_mem_thresh         = cfgtbl["normal_mem_thresh"] or 1.0
 local stream_mem_thresh         = cfgtbl["stream_mem_thresh"] or 0.75
 local msgq_depth                = cfgtbl["msgq_depth"] or 10000
+local environment_version       = cfgtbl["environment_version"] or os.getenv("ENVIRONMENT_VERSION") or "unknown"
 local orchestrator_url          = cfgtbl["orchestrator"] or os.getenv("ORCHESTRATOR")
 local org_name                  = cfgtbl["cluster"] or os.getenv("CLUSTER")
 local ps_url                    = cfgtbl["provisioning_system"] or os.getenv("PROVISIONING_SYSTEM")
@@ -57,6 +58,9 @@ local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
 --------------------------------------------------
 -- System Configuration
 --------------------------------------------------
+
+-- Set Environment Version --
+sys.setenvver(environment_version)
 
 -- Configure System Message Queue Depth --
 sys.setstddepth(msgq_depth)

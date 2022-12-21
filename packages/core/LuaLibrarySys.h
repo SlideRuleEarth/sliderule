@@ -78,6 +78,7 @@ class LuaLibrarySys
         static int      lsys_log            (lua_State* L);
         static int      lsys_metric         (lua_State* L);
         static int      lsys_lsmsgq         (lua_State* L);
+        static int      lsys_setenvver      (lua_State* L);
         static int      lsys_type           (lua_State* L);
         static int      lsys_setstddepth    (lua_State* L);
         static int      lsys_setiosize      (lua_State* L);
@@ -95,6 +96,7 @@ class LuaLibrarySys
          *--------------------------------------------------------------------*/
 
         static int64_t launch_time;
+        static const char* environment_version;
 };
 
 #endif  /* __lua_library_sys__ */
