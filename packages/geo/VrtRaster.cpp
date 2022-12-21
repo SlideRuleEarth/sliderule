@@ -197,7 +197,7 @@ VrtRaster::~VrtRaster(void)
     }
 
     /* Close all rasters */
-    if (vrtDset) GDALClose((GDALDatasetH)vrtDset);
+    if (vrt.dset) GDALClose((GDALDatasetH)vrt.dset);
 
     raster_t* raster = NULL;
     const char* key  = rasterDict.first(&raster);
@@ -210,7 +210,7 @@ VrtRaster::~VrtRaster(void)
         key = rasterDict.next(&raster);
     }
 
-    if (transf) OGRCoordinateTransformation::DestroyCT(transf);
+    if (vrt.transf) OGRCoordinateTransformation::DestroyCT(vrt.transf);
 }
 
 /*----------------------------------------------------------------------------
@@ -221,7 +221,7 @@ int VrtRaster::sample(double lon, double lat)
     invalidateRastersCache();
 
     /* Initial call, open vrt file if not already opened */
-    if (vrtDset == NULL)
+    if (vrt.dset == NULL)
     {
         std::string vrtFile;
         getVrtFileName(vrtFile, lon, lat);
@@ -232,7 +232,7 @@ int VrtRaster::sample(double lon, double lat)
 
 
     OGRPoint p = {lon, lat};
-    if (p.transform(transf) != OGRERR_NONE)
+    if (p.transform(vrt.transf) != OGRERR_NONE)
         throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
 
     /* If point is not in current scene VRT dataset, open new scene */
@@ -242,7 +242,7 @@ int VrtRaster::sample(double lon, double lat)
         getVrtFileName(newVrtFile, lon, lat);
 
         /* If the new VRT file is the same as the currently opened one the point is not in it, bail...*/
-        if (newVrtFile == vrtFileName)
+        if (newVrtFile == vrt.fileName)
             throw RunTimeException(CRITICAL, RTE_ERROR, "point: lon: %lf, lat: %lf not in VRT file", lon, lat);
 
         if (!openVrtDset(newVrtFile.c_str()))
@@ -302,19 +302,16 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
 
     /* Initialize Class Data Members */
-    vrtDset = NULL;
-    vrtBand = NULL;
-    bzero(vrtInvGeot, sizeof(vrtInvGeot));
-    vrtRows = vrtCols = vrtCellSize = 0;
-    bzero(&vrtBbox, sizeof(vrtBbox));
+    clearVrt( &vrt);
+
     tifList.clear();
     rasterDict.clear();
     bzero(rasterRreader, sizeof(rasterRreader));
     readerCount = 0;
     checkCacheFirst = false;
-    transf = NULL;
-    srcSrs.Clear();
-    trgSrs.Clear();
+    // vrt.transf = NULL;
+    // vrt.srcSrs.Clear();
+    // vrt.trgSrs.Clear();
 }
 
 /*----------------------------------------------------------------------------
@@ -327,70 +324,70 @@ bool VrtRaster::openVrtDset(const char *fileName)
     try
     {
         /* Cleanup previous vrtDset */
-        if (vrtDset != NULL)
+        if (vrt.dset != NULL)
         {
-            GDALClose((GDALDatasetH)vrtDset);
-            vrtDset = NULL;
+            GDALClose((GDALDatasetH)vrt.dset);
+            vrt.dset = NULL;
         }
 
         /* Open new vrtDset */
-        vrtDset = (VRTDataset *)GDALOpenEx(fileName, GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
-        if (vrtDset == NULL)
+        vrt.dset = (VRTDataset *)GDALOpenEx(fileName, GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
+        if (vrt.dset == NULL)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT file: %s:", fileName);
 
 
-        vrtFileName = fileName;
-        vrtBand = vrtDset->GetRasterBand(1);
-        CHECKPTR(vrtBand);
+        vrt.fileName = fileName;
+        vrt.band = vrt.dset->GetRasterBand(1);
+        CHECKPTR(vrt.band);
 
         /* Get inverted geo transfer for vrt */
         double geot[6] = {0};
-        CPLErr err = GDALGetGeoTransform(vrtDset, geot);
+        CPLErr err = GDALGetGeoTransform(vrt.dset, geot);
         CHECK_GDALERR(err);
-        if (!GDALInvGeoTransform(geot, vrtInvGeot))
+        if (!GDALInvGeoTransform(geot, vrt.invGeot))
         {
             CPLError(CE_Failure, CPLE_AppDefined, "Cannot invert geotransform");
             CHECK_GDALERR(CE_Failure);
         }
 
         /* Store information about vrt raster */
-        vrtCols = vrtDset->GetRasterXSize();
-        vrtRows = vrtDset->GetRasterYSize();
+        vrt.cols = vrt.dset->GetRasterXSize();
+        vrt.rows = vrt.dset->GetRasterYSize();
 
         /* Get raster boundry box */
         bzero(geot, sizeof(geot));
-        err = vrtDset->GetGeoTransform(geot);
+        err = vrt.dset->GetGeoTransform(geot);
         CHECK_GDALERR(err);
-        vrtBbox.lon_min = geot[0];
-        vrtBbox.lon_max = geot[0] + vrtCols * geot[1];
-        vrtBbox.lat_max = geot[3];
-        vrtBbox.lat_min = geot[3] + vrtRows * geot[5];
+        vrt.bbox.lon_min = geot[0];
+        vrt.bbox.lon_max = geot[0] + vrt.cols * geot[1];
+        vrt.bbox.lat_max = geot[3];
+        vrt.bbox.lat_min = geot[3] + vrt.rows * geot[5];
 
-        vrtCellSize = geot[1];
+        vrt.cellSize = geot[1];
 
-        OGRErr ogrerr = srcSrs.importFromEPSG(PHOTON_CRS);
+        OGRErr ogrerr = vrt.srcSrs.importFromEPSG(PHOTON_CRS);
         CHECK_GDALERR(ogrerr);
-        const char *projref = vrtDset->GetProjectionRef();
+        const char *projref = vrt.dset->GetProjectionRef();
         CHECKPTR(projref);
         mlog(DEBUG, "%s", projref);
-        ogrerr = trgSrs.importFromProj4(projref);
+        ogrerr = vrt.trgSrs.importFromProj4(projref);
         CHECK_GDALERR(ogrerr);
 
         /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-        trgSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        srcSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+        vrt.trgSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+        vrt.srcSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
         /* Create coordinates transformation */
 
         /* Get transform for this VRT file */
-        OGRCoordinateTransformation *newTransf = OGRCreateCoordinateTransformation(&srcSrs, &trgSrs);
+        OGRCoordinateTransformation *newTransf = OGRCreateCoordinateTransformation(&vrt.srcSrs, &vrt.trgSrs);
         if (newTransf)
         {
             /* Delete the transform from last vrt file */
-            if (transf) OGRCoordinateTransformation::DestroyCT(transf);
+            if (vrt.transf) OGRCoordinateTransformation::DestroyCT(vrt.transf);
 
             /* Use the new one (they should be the same but just in case they are not...) */
-            transf = newTransf;
+            vrt.transf = newTransf;
         }
         else mlog(ERROR, "Failed to create new transform, reusing transform from previous VRT file.\n");
 
@@ -401,15 +398,15 @@ bool VrtRaster::openVrtDset(const char *fileName)
         mlog(e.level(), "Error creating new VRT dataset: %s", e.what());
     }
 
-    if (!objCreated && vrtDset)
+    if (!objCreated && vrt.dset)
     {
-        GDALClose((GDALDatasetH)vrtDset);
-        vrtDset = NULL;
-        vrtBand = NULL;
+        GDALClose((GDALDatasetH)vrt.dset);
+        vrt.dset = NULL;
+        vrt.band = NULL;
 
-        bzero(vrtInvGeot, sizeof(vrtInvGeot));
-        vrtRows = vrtCols = vrtCellSize = 0;
-        bzero(&vrtBbox, sizeof(vrtBbox));
+        bzero(vrt.invGeot, sizeof(vrt.invGeot));
+        vrt.rows = vrt.cols = vrt.cellSize = 0;
+        bzero(&vrt.bbox, sizeof(vrt.bbox));
     }
 
     return objCreated;
@@ -428,18 +425,18 @@ bool VrtRaster::findTIFfilesWithPoint(OGRPoint *p)
 
     try
     {
-        const int32_t col = static_cast<int32_t>(floor(vrtInvGeot[0] + vrtInvGeot[1] * p->getX() + vrtInvGeot[2] * p->getY()));
-        const int32_t row = static_cast<int32_t>(floor(vrtInvGeot[3] + vrtInvGeot[4] * p->getX() + vrtInvGeot[5] * p->getY()));
+        const int32_t col = static_cast<int32_t>(floor(vrt.invGeot[0] + vrt.invGeot[1] * p->getX() + vrt.invGeot[2] * p->getY()));
+        const int32_t row = static_cast<int32_t>(floor(vrt.invGeot[3] + vrt.invGeot[4] * p->getX() + vrt.invGeot[5] * p->getY()));
 
         tifList.clear();
 
-        bool validPixel = (col >= 0) && (row >= 0) && (col < vrtDset->GetRasterXSize()) && (row < vrtDset->GetRasterYSize());
+        bool validPixel = (col >= 0) && (row >= 0) && (col < vrt.dset->GetRasterXSize()) && (row < vrt.dset->GetRasterYSize());
         if (!validPixel) return false;
 
         CPLString str;
         str.Printf("Pixel_%d_%d", col, row);
 
-        const char *mdata = vrtBand->GetMetadataItem(str, "LocationInfo");
+        const char *mdata = vrt.band->GetMetadataItem(str, "LocationInfo");
         if (mdata == NULL) return false; /* Pixel not in VRT file */
 
         CPLXMLNode *root = CPLParseXMLString(mdata);
@@ -469,6 +466,24 @@ bool VrtRaster::findTIFfilesWithPoint(OGRPoint *p)
     return foundFile;
 }
 
+
+/*----------------------------------------------------------------------------
+ * clearRaster
+ *----------------------------------------------------------------------------*/
+void VrtRaster::clearVrt(vrt_t *_vrt)
+{
+    _vrt->fileName.clear();
+    _vrt->dset = NULL;
+    _vrt->band = NULL;
+    bzero(_vrt->invGeot, sizeof(_vrt->invGeot));
+    _vrt->rows = 0;
+    _vrt->cols = 0;
+    _vrt->cellSize = 0;
+    bzero(&_vrt->bbox, sizeof(bbox_t));
+    _vrt->transf = NULL;
+    _vrt->srcSrs.Clear();
+    _vrt->trgSrs.Clear();
+}
 
 /*----------------------------------------------------------------------------
  * clearRaster
@@ -825,7 +840,7 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
         else
         {
             double rbuf[1] = {INVALID_SAMPLE_VALUE};
-            int _col, _row, size;
+            int _col, _row, _colSize, _rowSize;
 
             /* If zero radius provided, use defaul kernels for each sampling algorithm */
             if (obj->radius == 0)
@@ -842,7 +857,7 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
 
                 _col = col - (kernel/2);
                 _row = row - (kernel/2);
-                size = kernel; /* Always use kernel size, even for edge case... */
+                _colSize = _rowSize = kernel; /* Always use kernel size, even for edge case... */
             }
             else
             {
@@ -853,14 +868,26 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
 
                 _col = col - radius_in_pixels;
                 _row = row - radius_in_pixels;
-                size = radius_in_pixels*2;
+                _colSize = _rowSize = radius_in_pixels*2;
 
                 /* It is user error if they specify radius smaller than algorithm default kernel */
             }
 
-            /* Handle edge and/or corner pixels, this is one way to do it... */
+            /* Handle left and top edge */
             if (_col < 0) _col = 0;
             if (_row < 0) _row = 0;
+
+            /* Handle right and bottom edge */
+            if (_col + _colSize >= (int)raster->cols)
+                _colSize = raster->cols - _col;
+
+            if (_row + _rowSize >= (int)raster->rows)
+                _rowSize = raster->rows - _row;
+
+            /*
+             * If window is too big GDAL RasterIO will return an error.
+             * This code will throw and no sample for this lon/lat will be returned to caller.
+             */
 
             GDALRasterIOExtraArg args;
             INIT_RASTERIO_EXTRA_ARG(args);
@@ -870,7 +897,7 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             do
             {
                 /* Retry read if error */
-                err = raster->band->RasterIO(GF_Read, _col, _row, size, size, rbuf, 1, 1, GDT_Float64, 0, 0, &args);
+                err = raster->band->RasterIO(GF_Read, _col, _row, _colSize, _rowSize, rbuf, 1, 1, GDT_Float64, 0, 0, &args);
             } while (err != CE_None && cnt--);
             CHECK_GDALERR(err);
             raster->sample.value = rbuf[0];
@@ -890,9 +917,9 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
  *----------------------------------------------------------------------------*/
 inline bool VrtRaster::vrtContainsPoint(OGRPoint *p)
 {
-    return (vrtDset && p &&
-           (p->getX() >= vrtBbox.lon_min) && (p->getX() <= vrtBbox.lon_max) &&
-           (p->getY() >= vrtBbox.lat_min) && (p->getY() <= vrtBbox.lat_max));
+    return (vrt.dset && p &&
+           (p->getX() >= vrt.bbox.lon_min) && (p->getX() <= vrt.bbox.lon_max) &&
+           (p->getY() >= vrt.bbox.lat_min) && (p->getY() <= vrt.bbox.lat_max));
 }
 
 
@@ -942,8 +969,8 @@ int VrtRaster::luaDimensions(lua_State *L)
         VrtRaster *lua_obj = (VrtRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushinteger(L, lua_obj->vrtRows);
-        lua_pushinteger(L, lua_obj->vrtCols);
+        lua_pushinteger(L, lua_obj->vrt.rows);
+        lua_pushinteger(L, lua_obj->vrt.cols);
         num_ret += 2;
 
         /* Set Return Status */
@@ -972,10 +999,10 @@ int VrtRaster::luaBoundingBox(lua_State *L)
         VrtRaster *lua_obj = (VrtRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->vrtBbox.lon_min);
-        lua_pushnumber(L, lua_obj->vrtBbox.lat_min);
-        lua_pushnumber(L, lua_obj->vrtBbox.lon_max);
-        lua_pushnumber(L, lua_obj->vrtBbox.lat_max);
+        lua_pushnumber(L, lua_obj->vrt.bbox.lon_min);
+        lua_pushnumber(L, lua_obj->vrt.bbox.lat_min);
+        lua_pushnumber(L, lua_obj->vrt.bbox.lon_max);
+        lua_pushnumber(L, lua_obj->vrt.bbox.lat_max);
         num_ret += 4;
 
         /* Set Return Status */
@@ -1004,7 +1031,7 @@ int VrtRaster::luaCellSize(lua_State *L)
         VrtRaster *lua_obj = (VrtRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->vrtCellSize);
+        lua_pushnumber(L, lua_obj->vrt.cellSize);
         num_ret += 1;
 
         /* Set Return Status */

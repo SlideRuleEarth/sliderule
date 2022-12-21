@@ -74,6 +74,22 @@ class VrtRaster: public LuaObject
 
 
         typedef struct {
+            std::string     fileName;
+            VRTDataset*     dset;
+            GDALRasterBand* band;
+            double          invGeot[6];
+            uint32_t        rows;
+            uint32_t        cols;
+            double          cellSize;
+            bbox_t          bbox;
+
+            OGRCoordinateTransformation *transf;
+            OGRSpatialReference          srcSrs;
+            OGRSpatialReference          trgSrs;
+        } vrt_t;
+
+
+        typedef struct {
             bool            enabled;
             bool            sampled;
             GDALDataset*    dset;
@@ -95,11 +111,11 @@ class VrtRaster: public LuaObject
 
 
         typedef struct {
-            VrtRaster*     obj;
-            Thread*        thread;
-            raster_t*      raster;
-            Cond*          sync;
-            bool           run;
+            VrtRaster*      obj;
+            Thread*         thread;
+            raster_t*       raster;
+            Cond*           sync;
+            bool            run;
         } reader_t;
 
 
@@ -141,24 +157,14 @@ class VrtRaster: public LuaObject
         static Mutex factoryMut;
         static Dictionary<factory_t> factories;
 
-        std::string           vrtFileName;
-        VRTDataset*           vrtDset;
-        GDALRasterBand*       vrtBand;
-        double                vrtInvGeot[6];
-        uint32_t              vrtRows;
-        uint32_t              vrtCols;
-        double                vrtCellSize;
-        bbox_t                vrtBbox;
+        vrt_t vrt;
 
         List<std::string>     tifList;
         Dictionary<raster_t*> rasterDict;
         reader_t              rasterRreader[MAX_READER_THREADS];
         uint32_t              readerCount;
 
-        OGRCoordinateTransformation *transf;
-        OGRSpatialReference srcSrs;
-        OGRSpatialReference trgSrs;
-        GDALRIOResampleAlg  sampleAlg;
+        GDALRIOResampleAlg    sampleAlg;
         int32_t radius;
 
         /*--------------------------------------------------------------------
@@ -184,6 +190,7 @@ class VrtRaster: public LuaObject
         void invalidateRastersCache   (void);
         int  getSampledRastersCount   (void);
         void clearRaster              (raster_t *raster);
+        void clearVrt                 (vrt_t *_vrt);
 
 };
 
