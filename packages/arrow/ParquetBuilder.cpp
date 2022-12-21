@@ -34,11 +34,14 @@
  ******************************************************************************/
 
 #include <iostream>
-#include "arrow/builder.h"
-#include "arrow/table.h"
-#include "arrow/io/file.h"
+#include <arrow/builder.h>
+#include <arrow/table.h>
+#include <arrow/io/file.h>
+#include <arrow/util/key_value_metadata.h>
 #include <parquet/arrow/writer.h>
+#include <parquet/arrow/schema.h>
 #include <parquet/properties.h>
+#include <parquet/file_writer.h>
 
 #include "core.h"
 #include "ParquetBuilder.h"
@@ -214,6 +217,11 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
 
     /* Define Table Schema */
     pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type);
+    shared_ptr<arrow::KeyValueMetadata> metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : make_shared<arrow::KeyValueMetadata>();
+    metadata->Append("geo", "{\"version\":\"1.0.0-beta.1\"}");
+    pimpl->schema = pimpl->schema->WithMetadata(metadata);
+
+    /* Create Field Iterator */
     fieldIterator = new field_iterator_t(fieldList);
 
     /* Initialize Publisher */
