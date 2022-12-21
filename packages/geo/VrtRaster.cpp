@@ -196,6 +196,8 @@ VrtRaster::~VrtRaster(void)
         }
     }
 
+    delete [] rasterRreader;
+
     /* Close all rasters */
     if (vrt.dset) GDALClose((GDALDatasetH)vrt.dset);
 
@@ -306,12 +308,10 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
 
     tifList.clear();
     rasterDict.clear();
-    bzero(rasterRreader, sizeof(rasterRreader));
+    rasterRreader = new reader_t[MAX_READER_THREADS];
+    bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
     checkCacheFirst = false;
-    // vrt.transf = NULL;
-    // vrt.srcSrs.Clear();
-    // vrt.trgSrs.Clear();
 }
 
 /*----------------------------------------------------------------------------
@@ -320,6 +320,8 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
 bool VrtRaster::openVrtDset(const char *fileName)
 {
     bool objCreated = false;
+
+    vrt.mutex.lock();
 
     try
     {
@@ -408,6 +410,8 @@ bool VrtRaster::openVrtDset(const char *fileName)
         vrt.rows = vrt.cols = vrt.cellSize = 0;
         bzero(&vrt.bbox, sizeof(vrt.bbox));
     }
+
+    vrt.mutex.unlock();
 
     return objCreated;
 }

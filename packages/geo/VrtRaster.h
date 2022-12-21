@@ -74,6 +74,7 @@ class VrtRaster: public LuaObject
 
 
         typedef struct {
+            Mutex           mutex;
             std::string     fileName;
             VRTDataset*     dset;
             GDALRasterBand* band;
@@ -161,7 +162,7 @@ class VrtRaster: public LuaObject
 
         List<std::string>     tifList;
         Dictionary<raster_t*> rasterDict;
-        reader_t              rasterRreader[MAX_READER_THREADS];
+        reader_t*             rasterRreader;
         uint32_t              readerCount;
 
         GDALRIOResampleAlg    sampleAlg;
