@@ -88,6 +88,8 @@
 #define NATIVE_FLAGS 0
 #endif
 
+#define ALIGN_PACKED  __attribute__((packed))
+
 #define PATH_DELIMETER '/'
 #define PATH_DELIMETER_STR "/"
 

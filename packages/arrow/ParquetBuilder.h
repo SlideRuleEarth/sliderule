@@ -109,6 +109,19 @@ class ParquetBuilder: public DispatchObject
         typedef List<RecordObject::field_t, LIST_BLOCK_SIZE> field_list_t;
         typedef field_list_t::Iterator field_iterator_t;
 
+        typedef struct {
+            bool                    as_geo;
+            RecordObject::field_t   lon_field;
+            RecordObject::field_t   lat_field;
+        } geo_data_t;
+
+        typedef struct WKBPoint {
+            uint8_t byteOrder;
+            uint32_t wkbType;
+            double  x;
+            double  y;
+        } ALIGN_PACKED wkbpoint_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -120,7 +133,7 @@ class ParquetBuilder: public DispatchObject
         int                 rowSizeBytes;
         const char*         fileName; // used locally to build file
         const char*         outFileName; // name to send back to client
-        const char*         geoMetaData;
+        geo_data_t          geoData;
 
         struct impl; // arrow implementation
         impl* pimpl; // private arrow data
@@ -129,7 +142,7 @@ class ParquetBuilder: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id, bool as_geo);
+                            ParquetBuilder          (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo);
                             ~ParquetBuilder         (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;

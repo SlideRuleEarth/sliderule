@@ -60,17 +60,18 @@ struct ParquetBuilder::impl
     shared_ptr<arrow::Schema>               schema;
     unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
 
-    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type);
+    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type, bool as_geo);
     static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset);
 };
 
 /*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type)
+shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type, bool as_geo)
 {
     vector<shared_ptr<arrow::Field>> schema_vector;
     addFieldsToSchema(schema_vector, field_list, rec_type, 0);
+    if(as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
     return make_shared<arrow::Schema>(schema_vector);
 }
 
@@ -156,21 +157,42 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :arrow(<filename>, <outq name>, <rec_type>, <id>, <as_geo>)
+ * luaCreate - :arrow(<filename>, <outq name>, <rec_type>, <id>, <lon_key>, <lat_key>)
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Parameters */
-        const char* filename    = getLuaString(L, 1);
-        const char* outq_name   = getLuaString(L, 2);
-        const char* rec_type    = getLuaString(L, 3);
-        const char* id          = getLuaString(L, 4);
-        bool        as_geo      = getLuaBoolean(L, 5, true, false);
+        const char* filename        = getLuaString(L, 1);
+        const char* outq_name       = getLuaString(L, 2);
+        const char* rec_type        = getLuaString(L, 3);
+        const char* id              = getLuaString(L, 4);
+        const char* lat_key         = getLuaString(L, 5, true, NULL);
+        const char* lon_key         = getLuaString(L, 6, true, NULL);
+
+        /* Build Geometry Fields */
+        geo_data_t geo;
+        geo.as_geo = false;
+        if((lat_key != NULL) && (lon_key != NULL))
+        {
+            geo.as_geo = true;
+
+            geo.lon_field = RecordObject::getDefinedField(rec_type, lon_key);
+            if(geo.lon_field.type == RecordObject::INVALID_FIELD)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract longitude field [%s] from record type <%s>", lon_key, rec_type);
+            }
+
+            geo.lat_field = RecordObject::getDefinedField(rec_type, lat_key);
+            if(geo.lat_field.type == RecordObject::INVALID_FIELD)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract latitude field [%s] from record type <%s>", lat_key, rec_type);
+            }
+        }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, filename, outq_name, rec_type, id, as_geo));
+        return createLuaObject(L, new ParquetBuilder(L, filename, outq_name, rec_type, id, geo));
     }
     catch(const RunTimeException& e)
     {
@@ -202,7 +224,7 @@ void ParquetBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id, bool as_geo):
+ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(filename);
@@ -216,17 +238,18 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
     /* Save Output Filename */
     outFileName = StringLib::duplicate(filename);
 
-    /* Define Table Schema */
-    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type);
-
-    /* Create Field Iterator */
-    fieldIterator = new field_iterator_t(fieldList);
-
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
 
     /* Row Size */
     rowSizeBytes = RecordObject::getRecordDataSize(rec_type);
+
+    /* Initialize GeoParquet Option */
+    geoData = geo;
+
+    /* Define Table Schema */
+    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type, geoData.as_geo);
+    fieldIterator = new field_iterator_t(fieldList);
 
     /* Create Unique Temporary Filename */
     SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
@@ -245,13 +268,13 @@ ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* 
     auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
 
     /* Build GeoParquet MetaData */
-    geoMetaData = NULL;
-    if(as_geo)
+    if(geoData.as_geo)
     {
         auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-        geoMetaData = buildGeoMetaData();
-        metadata->Append("geo", geoMetaData);
+        const char* metadata_str = buildGeoMetaData();
+        metadata->Append("geo", metadata_str);
         pimpl->schema = pimpl->schema->WithMetadata(metadata);
+        delete [] metadata_str;
     }
 
     /* Create Parquet Writer */
@@ -281,7 +304,6 @@ ParquetBuilder::~ParquetBuilder(void)
     delete outQ;
     delete [] outFileName;
     delete fieldIterator;
-    if(geoMetaData) delete [] geoMetaData;
     delete pimpl;
 }
 
@@ -476,6 +498,33 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
         }
 
         /* Add Column to Columns */
+        columns.push_back(column);
+    }
+
+    /* Add Geometry Column (if GeoParquet) */
+    if(geoData.as_geo)
+    {
+        RecordObject::field_t lon_field = geoData.lon_field;
+        RecordObject::field_t lat_field = geoData.lat_field;
+        shared_ptr<arrow::Array> column;
+        arrow::BinaryBuilder builder;
+        for(int row = 0; row < num_rows; row++)
+        {
+            wkbpoint_t point = {
+                #ifdef __be__
+                .byteOrder = 0,
+                #else
+                .byteOrder = 1,
+                #endif
+                .wkbType = 1,
+                .x = record->getValueReal(lon_field),
+                .y = record->getValueReal(lat_field)
+            };
+            (void)builder.Append((uint8_t*)&point, sizeof(wkbpoint_t));
+            lon_field.offset += rowSizeBytes * 8;
+            lat_field.offset += rowSizeBytes * 8;
+        }
+        (void)builder.Finish(&column);
         columns.push_back(column);
     }
 
