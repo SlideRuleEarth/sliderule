@@ -699,7 +699,7 @@ const char* ParquetBuilder::buildGeoMetaData (void)
                         "authority": "OGC",
                         "code": "CRS84"
                     }
-                }
+                },
                 "edges": "planar",
                 "bbox": [-180.0, -90.0, 180.0, 90.0],
                 "epoch": 2018.0
@@ -711,9 +711,4 @@ const char* ParquetBuilder::buildGeoMetaData (void)
     geostr.replace("\n", " ");
 
     return geostr.getString(true);
-
-    // need to add a geometry column to the schema and then in the construction of the parquet file, use the lat and lon to create
-    // the wkb of the geometry column
-    // ... will need to carry an asGeo flag through
-    // ... will also need to pass in the lat and lon fields to use to construct the geometry column
 }
