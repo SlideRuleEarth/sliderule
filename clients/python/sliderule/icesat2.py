@@ -495,12 +495,8 @@ def __gdf2poly(gdf):
 #
 def __procoutputfile(parm, lon_key, lat_key):
     if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
-        # Read Parquet File as DataFrame
-        df = geopandas.pd.read_parquet(parm["output"]["path"])
-        # Build GeoDataFrame
-        gdf = __todataframe(df, lon_key=lon_key, lat_key=lat_key)
-        # Return Results
-        return gdf
+        # Return GeoParquet File as GeoDataFrame
+        return geopandas.read_parquet(parm["output"]["path"])
     else:
         # Return Parquet Filename
         return parm["output"]["path"]
