@@ -27,3 +27,7 @@ cmake .. -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON
 make -j8
 make install
 ```
+
+## Notes
+
+* The ParquetBuilder class currently supports the GeoParquet specification version v1.0.0-beta.1.  For a detailed description of the specification, see: https://geoparquet.org/releases/v1.0.0-beta.1/.
