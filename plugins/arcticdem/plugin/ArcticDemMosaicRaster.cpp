@@ -58,10 +58,7 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
     VrtRaster(L, dem_sampling, sampling_radius)
 {
     /* There is only one mosaic VRT file. Open it. */
-    std::string vrtFile;
-    getVrtFileName(vrtFile);
-
-    if (!openVrtDset(vrtFile.c_str()))
+    if (!openVrtDset())
         throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
     /*
