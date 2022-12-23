@@ -41,7 +41,6 @@ import numpy
 import geopandas
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
-from sklearn.cluster import KMeans
 import sliderule
 
 ###############################################################################
@@ -50,6 +49,14 @@ import sliderule
 
 # create logger
 logger = logging.getLogger(__name__)
+
+# import cluster support
+clustering_enabled = False
+try:
+    from sklearn.cluster import KMeans
+    clustering_enabled = True
+except:
+    logger.warning("Unable to import sklearn... clustering support disabled")
 
 # profiling times for each major function
 profiles = {}
@@ -1327,22 +1334,25 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         # generate clusters
         clusters = []
         if n_clusters > 1:
-            # pull out centroids of each geometry object
-            if "CenLon" in gdf and "CenLat" in gdf:
-                X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+            if clustering_enabled:
+                # pull out centroids of each geometry object
+                if "CenLon" in gdf and "CenLat" in gdf:
+                    X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+                else:
+                    s = gdf.centroid
+                    X = numpy.column_stack((s.x, s.y))
+                # run k means clustering algorithm against polygons in gdf
+                kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+                y_kmeans = kmeans.fit_predict(X)
+                k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+                gdf = gdf.join(k)
+                # build polygon for each cluster
+                for n in range(n_clusters):
+                    c_gdf = gdf[gdf["cluster"] == n]
+                    c_poly = __gdf2poly(c_gdf)
+                    clusters.append(c_poly)
             else:
-                s = gdf.centroid
-                X = numpy.column_stack((s.x, s.y))
-            # run k means clustering algorithm against polygons in gdf
-            kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
-            y_kmeans = kmeans.fit_predict(X)
-            k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
-            gdf = gdf.join(k)
-            # build polygon for each cluster
-            for n in range(n_clusters):
-                c_gdf = gdf[gdf["cluster"] == n]
-                c_poly = __gdf2poly(c_gdf)
-                clusters.append(c_poly)
+                raise sliderule.FatalError("Clustering support not enabled; unable to import sklearn package")
 
     # update timing profiles
     profiles[toregion.__name__] = time.perf_counter() - tstart
