@@ -104,9 +104,11 @@ class VrtRaster: public LuaObject
             int32_t         xBlockSize;
             int32_t         yBlockSize;
 
+            int64_t         gpsTime;
+
             /* Last sample information */
-            OGRPoint        point;
-            sample_t        sample;
+            OGRPoint point;
+            sample_t sample;
         } raster_t;
 
 
@@ -139,7 +141,8 @@ class VrtRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
                      VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius);
-        virtual void getVrtFileName(std::string& vrtFile, double lon=0, double lat=0 ) = 0;
+        virtual void getVrtFileName(std::string& vrtFile, double lon=0, double lat=0) = 0;
+        virtual void getDateTokens (std::string& key, std::string& fieldName, std::string& fileType) = 0;
         bool         openVrtDset   (double lon=0, double lat=0);
 
         /*--------------------------------------------------------------------
@@ -192,6 +195,7 @@ class VrtRaster: public LuaObject
         int  getSampledRastersCount   (void);
         void clearRaster              (raster_t *raster);
         void clearVrt                 (vrt_t *_vrt);
+        int64_t getRasterDate         (std::string& tifFile);
 
 };
 

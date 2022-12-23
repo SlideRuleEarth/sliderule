@@ -85,6 +85,17 @@ void ArcticDemMosaicRaster::getVrtFileName(std::string& vrtFile, double lon, dou
     vrtFile = "/data/ArcticDem/mosaic.vrt";
 }
 
+
+/*----------------------------------------------------------------------------
+ * getDateTokens
+ *----------------------------------------------------------------------------*/
+void ArcticDemMosaicRaster::getDateTokens(std::string &key, std::string &fieldName, std::string& fileType)
+{
+    key       = "_reg_dem.tif";
+    fieldName = "end_datetime";
+    fileType  = ".json";
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/

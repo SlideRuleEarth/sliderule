@@ -35,6 +35,7 @@
 
 #include "core.h"
 #include "VrtRaster.h"
+#include "TimeLib.h"
 
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
@@ -506,7 +507,7 @@ void VrtRaster::clearRaster(raster_t *raster)
     raster->cellSize = 0;
     raster->xBlockSize = 0;
     raster->yBlockSize = 0;
-
+    raster->gpsTime = 0;
     raster->point.empty();
     bzero(&raster->sample, sizeof(sample_t));
 }
@@ -747,6 +748,9 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
 
             /* Get raster data type */
             raster->dataType = raster->band->GetRasterDataType();
+
+            /* Get raster date as gps time */
+            raster->gpsTime = obj->getRasterDate(raster->fileName);
         }
 
         /*
@@ -906,6 +910,8 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             raster->sample.value = rbuf[0];
         }
 
+        /* Sample time comes from raster collection time */
+        raster->sample.time = static_cast<double> (raster->gpsTime);
         raster->sampled = true;
     }
     catch (const RunTimeException &e)
@@ -957,6 +963,79 @@ bool VrtRaster::findCachedRasterWithPoint(OGRPoint& p, VrtRaster::raster_t** ras
     return foundRaster;
 }
 
+
+/*----------------------------------------------------------------------------
+ * getRasterDate
+ *----------------------------------------------------------------------------*/
+int64_t VrtRaster::getRasterDate(std::string &tifFile)
+{
+    /* This code supports all OGR vector files */
+    std::string featureFile = tifFile;
+    int64_t gpsTime = 0;
+
+    GDALDataset *dset = NULL;
+
+    std::string key, fieldName, fileType;
+    getDateTokens (key, fieldName, fileType);
+
+    try
+    {
+        std::size_t pos = featureFile.rfind(key);
+        if (pos == std::string::npos)
+            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", key.c_str());
+
+        featureFile.replace(pos, key.length(), fileType.c_str());
+
+        dset = (GDALDataset *)GDALOpenEx(featureFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        if (dset == NULL)
+            throw RunTimeException(ERROR, RTE_ERROR, "Could not open %s file", featureFile.c_str());
+
+        /* For now assume the first layer has the feature we need */
+        OGRLayer *layer = dset->GetLayer(0);
+        if (layer == NULL)
+            throw RunTimeException(ERROR, RTE_ERROR, "No layers found in feature file: %s", featureFile.c_str());
+
+        OGRFeature *feature;
+        layer->ResetReading();
+        while ((feature = layer->GetNextFeature()) != NULL)
+        {
+            int i = feature->GetFieldIndex(fieldName.c_str());
+            if (i != -1)
+            {
+                int year, month, day, hour, minute, second, timeZone;
+                if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
+                {
+                    /*
+                     * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
+                     */
+                    if (timeZone == 100)
+                    {
+                        TimeLib::gmt_time_t gmt;
+                        gmt.year = year;
+                        gmt.doy = TimeLib::dayofyear(year, month, day);
+                        gmt.hour = hour;
+                        gmt.minute = minute;
+                        gmt.second = second;
+                        gmt.millisecond = 0;
+                        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (gpsTime == 0) throw RunTimeException(ERROR, RTE_ERROR, "Failed to find time");
+
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
+    }
+
+    if (dset) GDALClose((GDALDatasetH)dset);
+
+    return gpsTime;
+}
 
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
@@ -1131,3 +1210,5 @@ int VrtRaster::luaSamples(lua_State *L)
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);
 }
+
+

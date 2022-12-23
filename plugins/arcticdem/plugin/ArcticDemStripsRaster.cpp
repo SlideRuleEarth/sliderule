@@ -89,6 +89,17 @@ void ArcticDemStripsRaster::getVrtFileName(std::string& vrtFile, double lon, dou
               ".vrt";
 }
 
+/*----------------------------------------------------------------------------
+ * getDateTokens
+ *----------------------------------------------------------------------------*/
+void ArcticDemStripsRaster::getDateTokens(std::string &key, std::string &fieldName, std::string& fileType)
+{
+    key       = "_dem.tif";
+    fieldName = "end_datetime";
+    fileType  = ".json";
+}
+
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
