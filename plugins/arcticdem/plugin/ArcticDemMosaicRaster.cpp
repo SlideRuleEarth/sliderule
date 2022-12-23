@@ -58,10 +58,7 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
     VrtRaster(L, dem_sampling, sampling_radius)
 {
     /* There is only one mosaic VRT file. Open it. */
-    std::string vrtFile;
-    getVrtFileName(vrtFile);
-
-    if (!openVrtDset(vrtFile.c_str()))
+    if (!openVrtDset())
         throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
     /*
@@ -86,6 +83,17 @@ VrtRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling,
 void ArcticDemMosaicRaster::getVrtFileName(std::string& vrtFile, double lon, double lat)
 {
     vrtFile = "/data/ArcticDem/mosaic.vrt";
+}
+
+
+/*----------------------------------------------------------------------------
+ * getDateTokens
+ *----------------------------------------------------------------------------*/
+void ArcticDemMosaicRaster::getDateTokens(std::string &key, std::string &fieldName, std::string& fileType)
+{
+    key       = "_reg_dem.tif";
+    fieldName = "end_datetime";
+    fileType  = ".json";
 }
 
 /******************************************************************************

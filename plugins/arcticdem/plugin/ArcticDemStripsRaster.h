@@ -60,6 +60,7 @@ class ArcticDemStripsRaster: public VrtRaster
 
                ArcticDemStripsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius);
         void   getVrtFileName(std::string& vrtFile, double lon=0, double lat=0);
+        void   getDateTokens(std::string &key, std::string &fieldName, std::string& fileType);
 };
 
 #endif  /* __arcticdem_strips_raster__ */

@@ -74,7 +74,6 @@ class VrtRaster: public LuaObject
 
 
         typedef struct {
-            Mutex           mutex;
             std::string     fileName;
             VRTDataset*     dset;
             GDALRasterBand* band;
@@ -105,9 +104,11 @@ class VrtRaster: public LuaObject
             int32_t         xBlockSize;
             int32_t         yBlockSize;
 
+            double          gpsTime;
+
             /* Last sample information */
-            OGRPoint*       point;
-            sample_t        sample;
+            OGRPoint point;
+            sample_t sample;
         } raster_t;
 
 
@@ -140,8 +141,9 @@ class VrtRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
                      VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius);
-        virtual void getVrtFileName(std::string& vrtFile, double lon=0, double lat=0 ) = 0;
-        bool         openVrtDset   (const char *fileName);
+        virtual void getVrtFileName(std::string& vrtFile, double lon=0, double lat=0) = 0;
+        virtual void getDateTokens (std::string& key, std::string& fieldName, std::string& fileType) = 0;
+        bool         openVrtDset   (double lon=0, double lat=0);
 
         /*--------------------------------------------------------------------
          * Data
@@ -158,9 +160,10 @@ class VrtRaster: public LuaObject
         static Mutex factoryMut;
         static Dictionary<factory_t> factories;
 
+        Mutex samplingMutex;
         vrt_t vrt;
 
-        List<std::string>     tifList;
+        List<std::string>*    tifList;
         Dictionary<raster_t*> rasterDict;
         reader_t*             rasterRreader;
         uint32_t              readerCount;
@@ -181,17 +184,18 @@ class VrtRaster: public LuaObject
 
         void createReaderThreads      (void);
         void processRaster            (raster_t* raster, VrtRaster* obj);
-        bool findTIFfilesWithPoint    (OGRPoint *p);
-        void updateRastersCache       (OGRPoint *p);
-        bool vrtContainsPoint         (OGRPoint *p);
-        bool rasterContainsPoint      (raster_t *raster, OGRPoint *p);
-        bool findCachedRasterWithPoint(OGRPoint *p, raster_t **raster);
+        bool findTIFfilesWithPoint    (OGRPoint &p);
+        void updateRastersCache       (OGRPoint &p);
+        bool vrtContainsPoint         (OGRPoint &p);
+        bool rasterContainsPoint      (raster_t *raster, OGRPoint &p);
+        bool findCachedRasterWithPoint(OGRPoint &p, raster_t **raster);
         int  sample                   (double lon, double lat);
         void sampleRasters            (void);
         void invalidateRastersCache   (void);
         int  getSampledRastersCount   (void);
         void clearRaster              (raster_t *raster);
         void clearVrt                 (vrt_t *_vrt);
+        int64_t getRasterDate         (std::string& tifFile);
 
 };
 
