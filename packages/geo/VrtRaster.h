@@ -104,7 +104,7 @@ class VrtRaster: public LuaObject
             int32_t         xBlockSize;
             int32_t         yBlockSize;
 
-            int64_t         gpsTime;
+            double          gpsTime;
 
             /* Last sample information */
             OGRPoint point;

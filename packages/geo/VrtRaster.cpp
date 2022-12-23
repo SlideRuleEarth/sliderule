@@ -749,8 +749,8 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             /* Get raster data type */
             raster->dataType = raster->band->GetRasterDataType();
 
-            /* Get raster date as gps time */
-            raster->gpsTime = obj->getRasterDate(raster->fileName);
+            /* Get raster date as gps time in seconds */
+            raster->gpsTime = static_cast<double>(obj->getRasterDate(raster->fileName) / 1000);
         }
 
         /*
@@ -910,8 +910,8 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             raster->sample.value = rbuf[0];
         }
 
-        /* Sample time comes from raster collection time */
-        raster->sample.time = static_cast<double> (raster->gpsTime);
+        /* Sample time comes from raster collection GPS time */
+        raster->sample.time = raster->gpsTime;
         raster->sampled = true;
     }
     catch (const RunTimeException &e)
