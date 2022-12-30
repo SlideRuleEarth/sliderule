@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "ArcticDemMosaicRaster.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
@@ -62,10 +63,16 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
         throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
     /*
-     * For mosaic, there is only one raster with point in it.
-     * Find it in cache first, before looking in vrt file for new tif.
+     * For mosaic, there is only one raster with point of interest in it.
+     * Look for it in cache first, it may already be opened.
      */
     checkCacheFirst = true;
+
+    /*
+     * Only one thread is used to read mosaic tiles.
+     * Allow this thread to read directly from VRT data set if needed.
+     */
+    allowVrtDataSetSampling = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -87,14 +94,83 @@ void ArcticDemMosaicRaster::getVrtFileName(std::string& vrtFile, double lon, dou
 
 
 /*----------------------------------------------------------------------------
- * getDateTokens
+ * getRasterDate
  *----------------------------------------------------------------------------*/
-void ArcticDemMosaicRaster::getDateTokens(std::string &key, std::string &fieldName, std::string& fileType)
+int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
 {
-    key       = "_reg_dem.tif";
-    fieldName = "end_datetime";
-    fileType  = ".json";
+    /*
+     * For mosaics the GMT sample collection date is not in the tifFile name.
+     * There is a .json file in s3 bucket where tif file is located which contais date information.
+     */
+
+    std::string featureFile = tifFile;
+    int64_t gpsTime = 0;
+
+    GDALDataset *dset = NULL;
+
+    const std::string key       = "_reg_dem.tif";
+    const std::string fieldName = "end_datetime";
+    const std::string fileType  = ".json";
+
+    try
+    {
+        std::size_t pos = featureFile.rfind(key);
+        if (pos == std::string::npos)
+            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", key.c_str());
+
+        featureFile.replace(pos, key.length(), fileType.c_str());
+
+        dset = (GDALDataset *)GDALOpenEx(featureFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        if (dset == NULL)
+            throw RunTimeException(ERROR, RTE_ERROR, "Could not open %s file", featureFile.c_str());
+
+        /* For now assume the first layer has the feature we need */
+        OGRLayer *layer = dset->GetLayer(0);
+        if (layer == NULL)
+            throw RunTimeException(ERROR, RTE_ERROR, "No layers found in feature file: %s", featureFile.c_str());
+
+        OGRFeature *feature;
+        layer->ResetReading();
+        while ((feature = layer->GetNextFeature()) != NULL)
+        {
+            int i = feature->GetFieldIndex(fieldName.c_str());
+            if (i != -1)
+            {
+                int year, month, day, hour, minute, second, timeZone;
+                if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
+                {
+                    /*
+                     * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
+                     */
+                    if (timeZone == 100)
+                    {
+                        TimeLib::gmt_time_t gmt;
+                        gmt.year = year;
+                        gmt.doy = TimeLib::dayofyear(year, month, day);
+                        gmt.hour = hour;
+                        gmt.minute = minute;
+                        gmt.second = second;
+                        gmt.millisecond = 0;
+                        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
+                    }
+                }
+                break;
+            }
+        }
+
+        if (gpsTime == 0) throw RunTimeException(ERROR, RTE_ERROR, "Failed to find time");
+
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
+    }
+
+    if (dset) GDALClose((GDALDatasetH)dset);
+
+    return gpsTime;
 }
+
 
 /******************************************************************************
  * PRIVATE METHODS

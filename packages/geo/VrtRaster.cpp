@@ -284,6 +284,10 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
 {
     CHECKPTR(dem_sampling);
 
+    allowVrtDataSetSampling = false;
+    zonalStats = false;
+    sampleAlg  = (GDALRIOResampleAlg) -1;
+
     if      (!strcasecmp(dem_sampling, "NearestNeighbour")) sampleAlg = GRIORA_NearestNeighbour;
     else if (!strcasecmp(dem_sampling, "Bilinear"))         sampleAlg = GRIORA_Bilinear;
     else if (!strcasecmp(dem_sampling, "Cubic"))            sampleAlg = GRIORA_Cubic;
@@ -292,12 +296,22 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else if (!strcasecmp(dem_sampling, "Average"))          sampleAlg = GRIORA_Average;
     else if (!strcasecmp(dem_sampling, "Mode"))             sampleAlg = GRIORA_Mode;
     else if (!strcasecmp(dem_sampling, "Gauss"))            sampleAlg = GRIORA_Gauss;
+    else if (!strcasecmp(dem_sampling, "ZonalStats"))       zonalStats= true;
     else
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
 
     if (sampling_radius >= 0)
-        radius = sampling_radius;
+        samplingRadius = sampling_radius;
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
+
+    /* Put some limit on how big the sampling radius can be */
+    const int MAX_RADIUS = 5000;
+    if (samplingRadius > MAX_RADIUS)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR,
+                               "Sampling radius is too big: %d: max allowed %d meters",
+                               samplingRadius, MAX_RADIUS);
+    }
 
     /* Initialize Class Data Members */
     clearVrt( &vrt);
@@ -421,6 +435,355 @@ bool VrtRaster::openVrtDset(double lon, double lat)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * RasterIoWithRetry
+ *----------------------------------------------------------------------------*/
+void VrtRaster::RasterIoWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
+{
+    /*
+     * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
+     * There is no way to detect this condition based on the error code returned.
+     * Because of it, always retry failed read.
+     */
+    int cnt = 2;
+    CPLErr err = CE_None;
+    do
+    {
+        err = band->RasterIO(GF_Read, col, row, colSize, rowSize, data, dataColSize, dataRowSize, GDT_Float64, 0, 0, args);
+    } while (err != CE_None && cnt--);
+
+    if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+}
+
+/*----------------------------------------------------------------------------
+ * readPixel
+ *----------------------------------------------------------------------------*/
+void VrtRaster::readPixel(raster_t *raster)
+{
+    /* Use fast method recomended by GDAL docs to read individual pixel */
+    try
+    {
+        const int32_t col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
+        const int32_t row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
+
+        /* Raster offsets to block of interest */
+        uint32_t xblk = col / raster->xBlockSize;
+        uint32_t yblk = row / raster->yBlockSize;
+
+        GDALRasterBlock *block = NULL;
+        int cnt = 2;
+        do
+        {
+            /* Retry read if error */
+            block = raster->band->GetLockedBlockRef(xblk, yblk, false);
+        } while (block == NULL && cnt--);
+        CHECKPTR(block);
+
+        /* Get data block pointer, no copy but block is locked */
+        void *data = block->GetDataRef();
+        if (data == NULL) block->DropLock();
+        CHECKPTR(data);
+
+        /* Calculate col, row inside of block */
+        uint32_t _col = col % raster->xBlockSize;
+        uint32_t _row = row % raster->yBlockSize;
+        uint32_t offset = _row * raster->xBlockSize + _col;
+
+        /* Assume most data is stored as 32 bit floats (default case for elevation models) */
+        if (raster->dataType == GDT_Float32)
+        {
+            float *p = (float *)data;
+            raster->sample.value = (double)p[offset];
+        }
+        /* All other data types */
+        else if (raster->dataType == GDT_Float64)
+        {
+            double *p = (double *)data;
+            raster->sample.value = (double)p[offset];
+        }
+        else if (raster->dataType == GDT_Byte)
+        {
+            uint8_t *p = (uint8_t *)data;
+            raster->sample.value = (double)p[offset];
+        }
+        else if (raster->dataType == GDT_UInt16)
+        {
+            uint16_t *p = (uint16_t *)data;
+            raster->sample.value = (double)p[offset];
+        }
+        else if (raster->dataType == GDT_Int16)
+        {
+            int16_t *p = (int16_t *)data;
+            raster->sample.value = (double)p[offset];
+        }
+        else if (raster->dataType == GDT_UInt32)
+        {
+            uint32_t *p = (uint32_t *)data;
+            raster->sample.value = (double)p[offset];
+        }
+        else if (raster->dataType == GDT_Int32)
+        {
+            int32_t *p = (int32_t *)data;
+            raster->sample.value = (double)p[offset];
+        }
+        else
+        {
+            /*
+             * This version of GDAL does not support 64bit integers
+             * Complex numbers are supported but not needed at this point.
+             */
+            block->DropLock();
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
+        }
+
+        /* Done reading, release block lock */
+        block->DropLock();
+
+        mlog(DEBUG, "Value: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
+             raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error reading from raster: %s", e.what());
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * radius2pixels
+ *----------------------------------------------------------------------------*/
+int VrtRaster::radius2pixels(raster_t *raster, int _radius)
+{
+    int csize = raster->cellSize;
+    int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
+    int radiusInPixels = radiusInMeters / csize;
+    return radiusInPixels;
+}
+
+
+/*----------------------------------------------------------------------------
+ * rasterContainsWindow
+ *----------------------------------------------------------------------------*/
+bool rasterContainsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
+{
+    if (col < 0 || row < 0)
+        return false;
+
+    if ((col + windowSize >= maxCol) || (row + windowSize >= maxRow))
+        return false;
+
+    return true;
+}
+
+
+/*----------------------------------------------------------------------------
+ * resamplePixel
+ *----------------------------------------------------------------------------*/
+void VrtRaster::resamplePixel(raster_t *raster, VrtRaster* obj)
+{
+    try
+    {
+        int col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
+        int row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
+
+        int radiusInPixels = obj->radius2pixels(raster, obj->samplingRadius);
+        int _col, _row, windowSize;
+
+        /* If zero radius provided, use defaul kernels for each sampling algorithm */
+        if (obj->samplingRadius == 0)
+        {
+            int kernel = 0;
+
+            if (sampleAlg == GRIORA_Bilinear)
+                kernel = 2; /* 2x2 kernel */
+            else if (sampleAlg == GRIORA_Cubic)
+                kernel = 4; /* 4x4 kernel */
+            else if (sampleAlg == GRIORA_CubicSpline)
+                kernel = 4; /* 4x4 kernel */
+            else if (sampleAlg == GRIORA_Lanczos)
+                kernel = 6; /* 6x6 kernel */
+            else if (sampleAlg == GRIORA_Average)
+                kernel = 6; /* No default kernel, pick something */
+            else if (sampleAlg == GRIORA_Mode)
+                kernel = 6; /* No default kernel, pick something */
+            else if (sampleAlg == GRIORA_Gauss)
+                kernel = 6; /* No default kernel, pick something */
+
+            windowSize = kernel + 1;
+            _col = col - (kernel / 2);
+            _row = row - (kernel / 2);
+        }
+        else
+        {
+            windowSize = radiusInPixels * 2 + 1;  // Odd window size around pixel
+            _col = col - radiusInPixels;
+            _row = row - radiusInPixels;
+        }
+
+        bool windowIsValid = rasterContainsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+
+        GDALRasterIOExtraArg args;
+        INIT_RASTERIO_EXTRA_ARG(args);
+        args.eResampleAlg = obj->sampleAlg;
+        double rbuf[1] = {INVALID_SAMPLE_VALUE};
+
+        if (windowIsValid)
+        {
+            RasterIoWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
+            raster->sample.value = rbuf[0];
+            return;
+        }
+
+        if (allowVrtDataSetSampling)
+        {
+             /* Use VRT data set instead of current raster */
+            col = static_cast<int32_t>(floor((raster->point.getX() - vrt.bbox.lon_min) / vrt.cellSize));
+            row = static_cast<int32_t>(floor((vrt.bbox.lat_max - raster->point.getY()) / vrt.cellSize));
+
+            _col = col - radiusInPixels;
+            _row = row - radiusInPixels;
+
+            /* Make sure sampling window is valid for VRT data set */
+            windowIsValid = rasterContainsWindow(_col, _row, vrt.cols, vrt.rows, windowSize);
+
+            if (windowIsValid)
+            {
+                RasterIoWithRetry(vrt.band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
+                raster->sample.value = rbuf[0];
+            }
+            return;
+        }
+
+        /* At least return pixel value if unable to resample raster and/or VRT data set */
+        obj->readPixel(raster);
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error resampling pixel: %s", e.what());
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * zonalStats
+ *----------------------------------------------------------------------------*/
+void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
+{
+    double *samplesArray = NULL;
+
+    try
+    {
+        int col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
+        int row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
+
+        int radiusInPixels = obj->radius2pixels(raster, obj->samplingRadius);
+        int _col, _row, windowSize;
+
+        windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
+        _col = col - radiusInPixels;
+        _row = row - radiusInPixels;
+
+        bool windowIsValid = rasterContainsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+
+        GDALRasterIOExtraArg args;
+        INIT_RASTERIO_EXTRA_ARG(args);
+        args.eResampleAlg = obj->sampleAlg;
+        int samplesCnt = windowSize*windowSize;
+        samplesArray = new double[samplesCnt];
+        CHECKPTR(samplesArray);
+
+        double noDataValue = raster->band->GetNoDataValue();
+
+        /* In case unable to calculate stats, return nodata for all */
+        raster->zstats.min = noDataValue;
+        raster->zstats.max = noDataValue;
+        raster->zstats.mean = noDataValue;
+        raster->zstats.standardDeviaton = noDataValue;
+
+        if (windowIsValid)
+        {
+            RasterIoWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+        }
+        else if (allowVrtDataSetSampling)
+        {
+             /* Use VRT data set instead of current raster */
+            col = static_cast<int32_t>(floor((raster->point.getX() - vrt.bbox.lon_min) / vrt.cellSize));
+            row = static_cast<int32_t>(floor((vrt.bbox.lat_max - raster->point.getY()) / vrt.cellSize));
+
+            _col = col - radiusInPixels;
+            _row = row - radiusInPixels;
+
+            /* Make sure sampling window is valid for VRT data set */
+            windowIsValid = rasterContainsWindow(_col, _row, vrt.cols, vrt.rows, windowSize);
+
+            if (windowIsValid)
+            {
+                /* Get nodata value from vrt, it shoudl be the same as raster but just in case it is not...*/
+                noDataValue = vrt.band->GetNoDataValue();
+                RasterIoWithRetry(vrt.band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+            }
+        }
+
+        if(windowIsValid)
+        {
+            /* One of the windows (raster or VRT) was valid. Compute zonal stats */
+            double min = std::numeric_limits<double>::max();
+            double max = std::numeric_limits<double>::min();
+            double sum = 0;
+            int validSamplesCnt = 0;
+
+            for(int i=0; i<samplesCnt; i++)
+            {
+                double value = samplesArray[i];
+                if(value != noDataValue)
+                {
+                    if (value < min) min = value;
+                    if (value > max) max = value;
+                    sum += value;    /* double may lose precision on overflows, should be ok...*/
+                    validSamplesCnt++;
+                }
+            }
+
+            if (validSamplesCnt > 0)
+            {
+                double stddev = 0;
+                double mean   = sum / validSamplesCnt;
+
+                for (int i = 0; i < samplesCnt; i++)
+                {
+                    double value = samplesArray[i];
+                    if (value != noDataValue)
+                    {
+                        stddev += std::pow(value - mean, 2);
+                    }
+                }
+
+                stddev = std::sqrt(stddev / validSamplesCnt);
+
+                /* Store calculated zonal stats */
+                raster->zstats.min  = min;
+                raster->zstats.max  = max;
+                raster->zstats.mean = mean;
+                raster->zstats.standardDeviaton = stddev;
+            }
+            // print2term("zonal: min: %.3lf, max: %.3lf, mean: %.3lf, stdd: %.3lf, validSamples: %d\n",
+            //             raster->zstats.min, raster->zstats.max, raster->zstats.mean, raster->zstats.standardDeviaton,
+            //             validSamplesCnt);
+        }
+        else mlog(ERROR, "Error computing zonal stats, sampling window outside of raster bbox");
+
+        /* Always read the sample value */
+        obj->readPixel(raster);
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error computing zonal stats: %s", e.what());
+    }
+
+    if (samplesArray) delete[] samplesArray;
+}
+
+
+/*----------------------------------------------------------------------------
  * findTIFfilesWithPoint
  *----------------------------------------------------------------------------*/
 bool VrtRaster::findTIFfilesWithPoint(OGRPoint& p)
@@ -472,7 +835,7 @@ bool VrtRaster::findTIFfilesWithPoint(OGRPoint& p)
 
 
 /*----------------------------------------------------------------------------
- * clearRaster
+ * clearVrt
  *----------------------------------------------------------------------------*/
 void VrtRaster::clearVrt(vrt_t *_vrt)
 {
@@ -510,6 +873,7 @@ void VrtRaster::clearRaster(raster_t *raster)
     raster->gpsTime = 0;
     raster->point.empty();
     bzero(&raster->sample, sizeof(sample_t));
+    bzero(&raster->zstats, sizeof(zonal_stats_t));
 }
 
 /*----------------------------------------------------------------------------
@@ -754,163 +1118,25 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
         }
 
         /*
-         * Attempt to read the raster only if it contains a point of interest.
+         * Attempt to read raster only if it contains the point of interest.
          */
         if (!rasterContainsPoint(raster, raster->point))
             return;
 
-        /*
-         * Read the raster
-         */
-        const int32_t col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
-        const int32_t row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
-
-        /* Use fast 'lookup' method for nearest neighbour. */
         if (obj->sampleAlg == GRIORA_NearestNeighbour)
         {
-            /* Raster offsets to block of interest */
-            uint32_t xblk = col / raster->xBlockSize;
-            uint32_t yblk = row / raster->yBlockSize;
-
-            GDALRasterBlock *block = NULL;
-            int cnt = 2;
-            do
-            {
-                /* Retry read if error */
-                block = raster->band->GetLockedBlockRef(xblk, yblk, false);
-            } while (block == NULL && cnt--);
-            CHECKPTR(block);
-
-            /* Get data block pointer, no copy but block is locked */
-            void *data = block->GetDataRef();
-            if (data == NULL) block->DropLock();
-            CHECKPTR(data);
-
-            /* Calculate col, row inside of block */
-            uint32_t _col = col % raster->xBlockSize;
-            uint32_t _row = row % raster->yBlockSize;
-            uint32_t  offset = _row * raster->xBlockSize + _col;
-
-            /* Assume most data is stored as 32 bit floats (default case for elevation models) */
-            if (raster->dataType == GDT_Float32)
-            {
-                float *p = (float*) data;
-                raster->sample.value = (double) p[offset];
-            }
-            /* All other data types */
-            else if (raster->dataType == GDT_Float64)
-            {
-                double *p = (double*) data;
-                raster->sample.value = (double) p[offset];
-            }
-            else if (raster->dataType == GDT_Byte)
-            {
-                uint8_t *p = (uint8_t*) data;
-                raster->sample.value = (double) p[offset];
-            }
-            else if (raster->dataType == GDT_UInt16)
-            {
-                uint16_t *p = (uint16_t*) data;
-                raster->sample.value = (double) p[offset];
-            }
-            else if (raster->dataType == GDT_Int16)
-            {
-                int16_t *p = (int16_t*) data;
-                raster->sample.value = (double) p[offset];
-            }
-            else if (raster->dataType == GDT_UInt32)
-            {
-                uint32_t *p = (uint32_t*) data;
-                raster->sample.value = (double) p[offset];
-            }
-            else if (raster->dataType == GDT_Int32)
-            {
-                int32_t *p = (int32_t*) data;
-                raster->sample.value = (double) p[offset];
-            }
-            else
-            {
-                /*
-                 * This version of GDAL does not support 64bit integers
-                 * Complex numbers are supported by GDAL but not suported by this code
-                 */
-                block->DropLock();
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
-            }
-
-            /* Done reading, release block lock */
-            block->DropLock();
-
-            mlog(DEBUG, "Value: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
-                 raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
+            /* Default case, just read/sample raster */
+            obj->readPixel(raster);
+        }
+        else if (zonalStats)
+        {
+            computeZonalStats(raster, obj);
         }
         else
         {
-            double rbuf[1] = {INVALID_SAMPLE_VALUE};
-            int _col, _row, _colSize, _rowSize;
-
-            /* If zero radius provided, use defaul kernels for each sampling algorithm */
-            if (obj->radius == 0)
-            {
-                int kernel = 0;
-
-                if      (sampleAlg == GRIORA_Bilinear)    kernel = 2; /* 2x2 kernel */
-                else if (sampleAlg == GRIORA_Cubic)       kernel = 4; /* 4x4 kernel */
-                else if (sampleAlg == GRIORA_CubicSpline) kernel = 4; /* 4x4 kernel */
-                else if (sampleAlg == GRIORA_Lanczos)     kernel = 6; /* 6x6 kernel */
-                else if (sampleAlg == GRIORA_Average)     kernel = 6; /* No default kernel, pick something */
-                else if (sampleAlg == GRIORA_Mode)        kernel = 6; /* No default kernel, pick something */
-                else if (sampleAlg == GRIORA_Gauss)       kernel = 6; /* No default kernel, pick something */
-
-                _col = col - (kernel/2);
-                _row = row - (kernel/2);
-                _colSize = _rowSize = kernel; /* Always use kernel size, even for edge case... */
-            }
-            else
-            {
-                /* For now, use box/window where the window side length is radius*2 */
-                int csize = raster->cellSize;
-                int radius_in_meters = ((obj->radius + csize - 1) / csize) * csize; // Round to multiple of cells size
-                int radius_in_pixels = radius_in_meters / csize;
-
-                _col = col - radius_in_pixels;
-                _row = row - radius_in_pixels;
-                _colSize = _rowSize = radius_in_pixels*2;
-
-                /* It is user error if they specify radius smaller than algorithm default kernel */
-            }
-
-            /* Handle left and top edge */
-            if (_col < 0) _col = 0;
-            if (_row < 0) _row = 0;
-
-            /* Handle right and bottom edge */
-            if (_col + _colSize >= (int)raster->cols)
-                _colSize = raster->cols - _col;
-
-            if (_row + _rowSize >= (int)raster->rows)
-                _rowSize = raster->rows - _row;
-
-            /*
-             * If window is too big GDAL RasterIO will return an error.
-             * This code will throw and no sample for this lon/lat will be returned to caller.
-             */
-
-            GDALRasterIOExtraArg args;
-            INIT_RASTERIO_EXTRA_ARG(args);
-            args.eResampleAlg = obj->sampleAlg;
-            CPLErr err = CE_None;
-            int cnt = 2;
-            do
-            {
-                /* Retry read if error */
-                err = raster->band->RasterIO(GF_Read, _col, _row, _colSize, _rowSize, rbuf, 1, 1, GDT_Float64, 0, 0, &args);
-            } while (err != CE_None && cnt--);
-            CHECK_GDALERR(err);
-            raster->sample.value = rbuf[0];
+            resamplePixel(raster, obj);
         }
 
-        /* Sample time comes from raster collection GPS time */
         raster->sample.time = raster->gpsTime;
         raster->sampled = true;
     }
@@ -963,79 +1189,6 @@ bool VrtRaster::findCachedRasterWithPoint(OGRPoint& p, VrtRaster::raster_t** ras
     return foundRaster;
 }
 
-
-/*----------------------------------------------------------------------------
- * getRasterDate
- *----------------------------------------------------------------------------*/
-int64_t VrtRaster::getRasterDate(std::string &tifFile)
-{
-    /* This code supports all OGR vector files */
-    std::string featureFile = tifFile;
-    int64_t gpsTime = 0;
-
-    GDALDataset *dset = NULL;
-
-    std::string key, fieldName, fileType;
-    getDateTokens (key, fieldName, fileType);
-
-    try
-    {
-        std::size_t pos = featureFile.rfind(key);
-        if (pos == std::string::npos)
-            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", key.c_str());
-
-        featureFile.replace(pos, key.length(), fileType.c_str());
-
-        dset = (GDALDataset *)GDALOpenEx(featureFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
-        if (dset == NULL)
-            throw RunTimeException(ERROR, RTE_ERROR, "Could not open %s file", featureFile.c_str());
-
-        /* For now assume the first layer has the feature we need */
-        OGRLayer *layer = dset->GetLayer(0);
-        if (layer == NULL)
-            throw RunTimeException(ERROR, RTE_ERROR, "No layers found in feature file: %s", featureFile.c_str());
-
-        OGRFeature *feature;
-        layer->ResetReading();
-        while ((feature = layer->GetNextFeature()) != NULL)
-        {
-            int i = feature->GetFieldIndex(fieldName.c_str());
-            if (i != -1)
-            {
-                int year, month, day, hour, minute, second, timeZone;
-                if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
-                {
-                    /*
-                     * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
-                     */
-                    if (timeZone == 100)
-                    {
-                        TimeLib::gmt_time_t gmt;
-                        gmt.year = year;
-                        gmt.doy = TimeLib::dayofyear(year, month, day);
-                        gmt.hour = hour;
-                        gmt.minute = minute;
-                        gmt.second = second;
-                        gmt.millisecond = 0;
-                        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
-                    }
-                    break;
-                }
-            }
-        }
-
-        if (gpsTime == 0) throw RunTimeException(ERROR, RTE_ERROR, "Failed to find time");
-
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
-    }
-
-    if (dset) GDALClose((GDALDatasetH)dset);
-
-    return gpsTime;
-}
 
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
@@ -1190,6 +1343,15 @@ int VrtRaster::luaSamples(lua_State *L)
                 {
                     lua_createtable(L, 0, 2);
                     LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
+
+                    if (lua_obj->zonalStats) /* Include all zonal stats */
+                    {
+                        LuaEngine::setAttrNum(L, "stdd", raster->zstats.standardDeviaton);
+                        LuaEngine::setAttrNum(L, "mean", raster->zstats.mean);
+                        LuaEngine::setAttrNum(L, "max",  raster->zstats.max);
+                        LuaEngine::setAttrNum(L, "min",  raster->zstats.min);
+                    }
+
                     LuaEngine::setAttrNum(L, "value", raster->sample.value);
                     lua_rawseti(L, -2, ++i);
                 }

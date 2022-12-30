@@ -74,6 +74,14 @@ class VrtRaster: public LuaObject
 
 
         typedef struct {
+            double min;
+            double max;
+            double mean;
+            double standardDeviaton;
+        } zonal_stats_t;
+
+
+        typedef struct {
             std::string     fileName;
             VRTDataset*     dset;
             GDALRasterBand* band;
@@ -107,8 +115,9 @@ class VrtRaster: public LuaObject
             double          gpsTime;
 
             /* Last sample information */
-            OGRPoint point;
-            sample_t sample;
+            OGRPoint        point;
+            sample_t        sample;
+            zonal_stats_t   zstats;
         } raster_t;
 
 
@@ -140,16 +149,18 @@ class VrtRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                     VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius);
-        virtual void getVrtFileName(std::string& vrtFile, double lon=0, double lat=0) = 0;
-        virtual void getDateTokens (std::string& key, std::string& fieldName, std::string& fileType) = 0;
-        bool         openVrtDset   (double lon=0, double lat=0);
+                        VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius);
+        bool            openVrtDset   (double lon=0, double lat=0);
+        virtual void    getVrtFileName(std::string& vrtFile, double lon=0, double lat=0) = 0;
+        virtual int64_t getRasterDate (std::string& tifFile) = 0;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         bool checkCacheFirst;
+        bool allowVrtDataSetSampling;
+        int  samplingRadius;
 
     private:
 
@@ -169,7 +180,7 @@ class VrtRaster: public LuaObject
         uint32_t              readerCount;
 
         GDALRIOResampleAlg    sampleAlg;
-        int32_t radius;
+        bool                  zonalStats;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -182,21 +193,25 @@ class VrtRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        void createReaderThreads      (void);
-        void processRaster            (raster_t* raster, VrtRaster* obj);
-        bool findTIFfilesWithPoint    (OGRPoint &p);
-        void updateRastersCache       (OGRPoint &p);
-        bool vrtContainsPoint         (OGRPoint &p);
-        bool rasterContainsPoint      (raster_t *raster, OGRPoint &p);
-        bool findCachedRasterWithPoint(OGRPoint &p, raster_t **raster);
-        int  sample                   (double lon, double lat);
-        void sampleRasters            (void);
-        void invalidateRastersCache   (void);
-        int  getSampledRastersCount   (void);
-        void clearRaster              (raster_t *raster);
-        void clearVrt                 (vrt_t *_vrt);
-        int64_t getRasterDate         (std::string& tifFile);
-
+        void    createReaderThreads      (void);
+        void    processRaster            (raster_t* raster, VrtRaster* obj);
+        bool    findTIFfilesWithPoint    (OGRPoint &p);
+        void    updateRastersCache       (OGRPoint &p);
+        bool    vrtContainsPoint         (OGRPoint &p);
+        bool    rasterContainsPoint      (raster_t *raster, OGRPoint &p);
+        bool    findCachedRasterWithPoint(OGRPoint &p, raster_t **raster);
+        int     sample                   (double lon, double lat);
+        void    sampleRasters            (void);
+        void    invalidateRastersCache   (void);
+        int     getSampledRastersCount   (void);
+        void    clearRaster              (raster_t *raster);
+        void    clearVrt                 (vrt_t *_vrt);
+        void    readPixel                (raster_t *raster);
+        int     radius2pixels            (raster_t *raster, int _radius);
+        void    resamplePixel            (raster_t *raster, VrtRaster *obj);
+        void    computeZonalStats        (raster_t *raster, VrtRaster* obj);
+        void    RasterIoWithRetry        (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
+                                          void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 };
 
 #endif  /* __vrt_raster__ */

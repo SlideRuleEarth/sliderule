@@ -16,7 +16,7 @@ local  lat = 66.34  -- Arctic Circle lat
 local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
 
 demType = "arcticdem-mosaic"
-for radius = 0, 200, 50
+for radius = 0, 100, 50
 do
     print(string.format("\n-------------------------------------------------\nTest %s: Resampling with radius %d\n-------------------------------------------------", demType, radius))
     for i = 1, 8 do
@@ -26,7 +26,7 @@ do
             print(string.format("======> FAILED to read",lon, lat))
         else
             local el, file
-            for i, v in ipairs(tbl) do
+            for j, v in ipairs(tbl) do
                 el = v["value"]
                 fname = v["file"]
             end
@@ -40,7 +40,7 @@ demType = "arcticdem-strips"
 lon = -178.0
 lat =   51.8
 
-for radius = 0, 200, 50
+for radius = 0, 100, 50
 do
     print(string.format("\n-------------------------------------------------\nTest %s: Resampling with radius %d\n-------------------------------------------------", demType, radius))
     for i = 1, 8 do
@@ -50,11 +50,12 @@ do
             print(string.format("======> FAILED to read",lon, lat))
         else
             local el, file
-            for i, v in ipairs(tbl) do
+            for j, v in ipairs(tbl) do
                 el = v["value"]
                 fname = v["file"]
+                print(string.format("%02d %17s (%02d) %15f", j, samplingAlgs[i], radius, el))
+                break
             end
-            print(string.format("%20s (%02d) %15f", samplingAlgs[i], radius, el))
         end
     end
     print('\n-------------------------------------------------')

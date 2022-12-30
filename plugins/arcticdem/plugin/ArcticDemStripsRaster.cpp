@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "ArcticDemStripsRaster.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
@@ -58,11 +59,29 @@ ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampl
     VrtRaster(L, dem_sampling, sampling_radius)
 {
     /*
-     * For strips, there may be many rasters with the same point.
-     * Some rasters may be cached but others not.
-     * First get a list of all rasters with point and only then check if some are already cached.
+     * First get a list of all rasters with point of interest
+     * and only then check if some rasters are already cached.
      */
     checkCacheFirst = false;
+
+    /*
+     * Multiple threads are used to read strip rasters.
+     * Do not allow them to read directly from VRT data set.
+     */
+    allowVrtDataSetSampling = false;
+
+    /*
+     * Gdal has a memory limit.
+     * To prevent memory related issues, limit the size of sampling radius for strips.
+     */
+    const int MAX_RADIUS = 200;
+    if (samplingRadius > MAX_RADIUS)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR,
+                               "Sampling radius is too big: %d: max allowed for strip rasters %d meters",
+                               samplingRadius, MAX_RADIUS);
+    }
+
 }
 
 /*----------------------------------------------------------------------------
@@ -89,14 +108,63 @@ void ArcticDemStripsRaster::getVrtFileName(std::string& vrtFile, double lon, dou
               ".vrt";
 }
 
+
 /*----------------------------------------------------------------------------
- * getDateTokens
+ * getRasterDate
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getDateTokens(std::string &key, std::string &fieldName, std::string& fileType)
+int64_t ArcticDemStripsRaster::getRasterDate(std::string &tifFile)
 {
-    key       = "_dem.tif";
-    fieldName = "end_datetime";
-    fileType  = ".json";
+    /*
+     * For strips the GMT sample collection date is in the tifFile name.
+     */
+
+    int64_t gpsTime = 0;
+
+    try
+    {
+        /* s2s041 is version number for Strips release. This code must be updated when version changes */
+        std::string key = "SETSM_s2s041_";
+
+        std::size_t pos = tifFile.rfind(key);
+        if (pos == std::string::npos)
+            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in filename", key.c_str());
+
+        std::string id = tifFile.substr(pos + key.length());
+
+        key = "_";
+        pos = id.find(key);
+        if (pos == std::string::npos)
+            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in filename", key.c_str());
+
+        std::string yearStr  = id.substr(pos + key.length(), 4);
+        std::string monthStr = id.substr(pos + key.length() + 4, 2);
+        std::string dayStr   = id.substr(pos + key.length() + 4 + 2, 2);
+
+        int year  = strtol(yearStr.c_str(), NULL, 10);
+        int month = strtol(monthStr.c_str(), NULL, 10);
+        int day   = strtol(dayStr.c_str(), NULL, 10);
+
+        /*
+         * Date included in tifFile name for strip rasters is in GMT
+         */
+        TimeLib::gmt_time_t gmt;
+        gmt.year = year;
+        gmt.doy = TimeLib::dayofyear(year, month, day);
+        gmt.hour = 0;
+        gmt.minute = 0;
+        gmt.second = 0;
+        gmt.millisecond = 0;
+        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
+
+        if (gpsTime == 0) throw RunTimeException(ERROR, RTE_ERROR, "Failed to find time");
+
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting time from strips tifFile name: %s", e.what());
+    }
+
+    return gpsTime;
 }
 
 
