@@ -17,7 +17,6 @@ local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 
 for i = 1, 2 do
 
-    -- local demType = "arcticdem-mosaic"
     local demType = demTypes[i];
     local dem = geo.vrt(demType, "NearestNeighbour", 0)
 
@@ -63,6 +62,40 @@ for i = 1, 2 do
     local cellsize = dem:cell()
     print(string.format("cellsize: %d", cellsize))
     runner.check(cellsize == 2.0)
+end
+
+
+for i = 1, 2 do
+
+    local demType = demTypes[i];
+    local samplingRadius = 30
+    local dem = geo.vrt(demType, "ZonalStats", samplingRadius)
+
+    runner.check(dem ~= nil)
+
+    print(string.format("\n--------------------------------\nTest: %s Zonal Stats\n--------------------------------", demType))
+    local tbl, status = dem:sample(lon, lat)
+    runner.check(status == true)
+    runner.check(tbl ~= nil)
+
+    local el, min, max, mean, stdd, file
+    for j, v in ipairs(tbl) do
+        el = v["value"]
+        min = v["min"]
+        max = v["max"]
+        mean = v["mean"]
+        stdd = v["stdd"]
+        fname = v["file"]
+
+        if el ~= -9999.0 then
+            print(string.format("(%02d) value: %6.2f   min: %6.2f   max: %6.2f   mean: %6.2f   stdd: %6.2f", j, el, min, max, mean, stdd))
+            runner.check(el ~= 0.0)
+            runner.check(min <= el)
+            runner.check(max >= el)
+            runner.check(mean ~= 0.0)
+            runner.check(stdd ~= 0.0)
+        end
+    end
 end
 
 -- Report Results --

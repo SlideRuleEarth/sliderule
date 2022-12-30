@@ -769,7 +769,7 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
             //             raster->zstats.min, raster->zstats.max, raster->zstats.mean, raster->zstats.standardDeviaton,
             //             validSamplesCnt);
         }
-        else mlog(ERROR, "Error computing zonal stats, sampling window outside of raster bbox");
+        else mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
 
         /* Always read the sample value */
         obj->readPixel(raster);
