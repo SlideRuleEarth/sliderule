@@ -6,9 +6,9 @@ dependencies:
   - geopandas
   - h5py
   - ipykernel
-  - ipywidgets>=7.6,<8.0
-  - ipyleaflet>=0.15
-  - jupyterlab=3
+  - ipywidgets
+  - ipyleaflet
+  - jupyterlab
   - jupyterlab_widgets
   - matplotlib
   - ipympl
@@ -25,5 +25,6 @@ dependencies:
   - shapely
   - tk
   - xyzservices
+  - pyarrow
   - pip:
       - -e ./

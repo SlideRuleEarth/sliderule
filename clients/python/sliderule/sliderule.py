@@ -455,44 +455,53 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
         if c not in callbacks:
             callbacks[c] = __callbacks[c]
     # Attempt Request
-    try:
-        # Construct Request URL and Authorization
-        if service_org:
-            url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
-            headers = __build_auth_header()
-        else:
-            url = 'http://%s%s/%s' % (service_url, path, api)
-        # Perform Request
-        if not stream:
-            data = session.get(url, data=rqst, headers=headers, timeout=request_timeout)
-        else:
-            data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
-        data.raise_for_status()
-        # Parse Response
-        format = data.headers['Content-Type']
-        if format == 'text/plain':
-            rsps = __parse_json(data)
-        elif format == 'application/json':
-            rsps = __parse_json(data)
-        elif format == 'application/octet-stream':
-            rsps = __parse_native(data, callbacks)
-        else:
-            raise FatalError('unsupported content type: %s' % (format))
-    except requests.exceptions.SSLError as e:
-        raise FatalError("Unable to verify SSL certificate: {}".format(e))
-    except requests.ConnectionError as e:
-        raise FatalError("Connection error to endpoint {}".format(url))
-    except requests.Timeout as e:
-        raise TransientError("Timed-out waiting for response from endpoint {}".format(url))
-    except requests.exceptions.ChunkedEncodingError as e:
-        raise RuntimeError("Unexpected termination of response from endpoint {}".format(url))
-    except requests.HTTPError as e:
-        if e.response.status_code == 503:
-            raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
-        else:
-            raise FatalError("HTTP error {} from endpoint {}".format(e.response.status_code, url))
-    except:
-        raise
+    complete = False
+    attempts = 3
+    while not complete and attempts > 0:
+        attempts -= 1
+        try:
+            # Construct Request URL and Authorization
+            if service_org:
+                url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
+                headers = __build_auth_header()
+            else:
+                url = 'http://%s%s/%s' % (service_url, path, api)
+            # Perform Request
+            if not stream:
+                data = session.get(url, data=rqst, headers=headers, timeout=request_timeout)
+            else:
+                data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
+            data.raise_for_status()
+            # Parse Response
+            format = data.headers['Content-Type']
+            if format == 'text/plain':
+                rsps = __parse_json(data)
+            elif format == 'application/json':
+                rsps = __parse_json(data)
+            elif format == 'application/octet-stream':
+                rsps = __parse_native(data, callbacks)
+            else:
+                raise FatalError('unsupported content type: %s' % (format))
+            # Success
+            complete = True
+        except requests.exceptions.SSLError as e:
+            logger.error("Unable to verify SSL certificate: {} ...retrying request".format(e))
+        except requests.ConnectionError as e:
+            logger.error("Connection error to endpoint {} ...retrying request".format(url))
+        except requests.Timeout as e:
+            logger.error("Timed-out waiting for response from endpoint {} ...retrying request".format(url))
+        except requests.exceptions.ChunkedEncodingError as e:
+            logger.error("Unexpected termination of response from endpoint {} ...retrying request".format(url))
+        except requests.HTTPError as e:
+            if e.response.status_code == 503:
+                raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
+            else:
+                raise FatalError("HTTP error {} from endpoint {}".format(e.response.status_code, url))
+        except:
+            raise
+    # Check Success
+    if not complete:
+        raise FatalError("Unable to complete request due to errors")
     # Return Response
     return rsps
 

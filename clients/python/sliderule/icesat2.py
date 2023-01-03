@@ -41,7 +41,6 @@ import numpy
 import geopandas
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
-from sklearn.cluster import KMeans
 import sliderule
 
 ###############################################################################
@@ -50,6 +49,14 @@ import sliderule
 
 # create logger
 logger = logging.getLogger(__name__)
+
+# import cluster support
+clustering_enabled = False
+try:
+    from sklearn.cluster import KMeans
+    clustering_enabled = True
+except:
+    logger.warning("Unable to import sklearn... clustering support disabled")
 
 # profiling times for each major function
 profiles = {}
@@ -503,12 +510,8 @@ def __gdf2poly(gdf):
 #
 def __procoutputfile(parm, lon_key, lat_key):
     if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
-        # Read Parquet File as DataFrame
-        df = geopandas.pd.read_parquet(parm["output"]["path"])
-        # Build GeoDataFrame
-        gdf = __todataframe(df, lon_key=lon_key, lat_key=lat_key)
-        # Return Results
-        return gdf
+        # Return GeoParquet File as GeoDataFrame
+        return geopandas.read_parquet(parm["output"]["path"])
     else:
         # Return Parquet Filename
         return parm["output"]["path"]
@@ -804,7 +807,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             columns = {}
             elevation_records = []
             num_elevations = 0
-            field_dictionary = {} # ['field_name'] = {"extent_id": [], field_name: []}
+            field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
             if len(rsps) > 0:
                 # Sort Records
                 for rsp in rsps:
@@ -814,15 +817,23 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                     elif 'extrec' == rsp['__rectype']:
                         field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in field_dictionary:
-                            field_dictionary[field_name] = {"extent_id": [], field_name: []}
+                            field_dictionary[field_name] = {'extent_id': [], field_name: []}
                         # Parse Ancillary Data
-                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         # Add Left Pair Track Entry
                         field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
                         field_dictionary[field_name][field_name] += data[LEFT_PAIR],
                         # Add Right Pair Track Entry
                         field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
                         field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+                    elif 'rsrec' == rsp['__rectype']:
+                        for sample in rsp["samples"]:
+                            time_str = sliderule.gps2utc(sample["time"])
+                            field_name = parm['samples'][rsp['raster_index']] + "-" + time_str.split(" ")[0].strip()
+                            if field_name not in field_dictionary:
+                                field_dictionary[field_name] = {'extent_id': [], field_name: []}
+                            field_dictionary[field_name]['extent_id'] += rsp['extent_id'],
+                            field_dictionary[field_name][field_name] += sample['value'],
                 # Build Elevation Columns
                 if num_elevations > 0:
                     # Initialize Columns
@@ -967,23 +978,23 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         # Get Field Type
                         field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in extent_field_types:
-                            extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                            extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry
                         if extent_id not in extent_dictionary:
                             extent_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         extent_dictionary[extent_id][field_name] = data
                     elif 'phrec' == rsp['__rectype']:
                         # Get Field Type
                         field_name = parm['atl03_ph_fields'][rsp['field_index']]
                         if field_name not in photon_field_types:
-                            photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['data_type']]]["nptype"]
+                            photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry
                         if extent_id not in photon_dictionary:
                             photon_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = __get_values(rsp['data'], rsp['data_type'], len(rsp['data']))
+                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         photon_dictionary[extent_id][field_name] = data
                 # Build Elevation Columns
                 if num_photons > 0:
@@ -1331,22 +1342,25 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         # generate clusters
         clusters = []
         if n_clusters > 1:
-            # pull out centroids of each geometry object
-            if "CenLon" in gdf and "CenLat" in gdf:
-                X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+            if clustering_enabled:
+                # pull out centroids of each geometry object
+                if "CenLon" in gdf and "CenLat" in gdf:
+                    X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+                else:
+                    s = gdf.centroid
+                    X = numpy.column_stack((s.x, s.y))
+                # run k means clustering algorithm against polygons in gdf
+                kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+                y_kmeans = kmeans.fit_predict(X)
+                k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+                gdf = gdf.join(k)
+                # build polygon for each cluster
+                for n in range(n_clusters):
+                    c_gdf = gdf[gdf["cluster"] == n]
+                    c_poly = __gdf2poly(c_gdf)
+                    clusters.append(c_poly)
             else:
-                s = gdf.centroid
-                X = numpy.column_stack((s.x, s.y))
-            # run k means clustering algorithm against polygons in gdf
-            kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
-            y_kmeans = kmeans.fit_predict(X)
-            k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
-            gdf = gdf.join(k)
-            # build polygon for each cluster
-            for n in range(n_clusters):
-                c_gdf = gdf[gdf["cluster"] == n]
-                c_poly = __gdf2poly(c_gdf)
-                clusters.append(c_poly)
+                raise sliderule.FatalError("Clustering support not enabled; unable to import sklearn package")
 
     # update timing profiles
     profiles[toregion.__name__] = time.perf_counter() - tstart
