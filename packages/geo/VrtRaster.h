@@ -70,15 +70,15 @@ class VrtRaster: public LuaObject
         typedef struct {
             double value;
             double time;
+
+            struct {
+                uint32_t count;
+                double   min;
+                double   max;
+                double   mean;
+                double   stdev;
+            } stats;
         } sample_t;
-
-
-        typedef struct {
-            double min;
-            double max;
-            double mean;
-            double standardDeviaton;
-        } zonal_stats_t;
 
 
         typedef struct {
@@ -117,7 +117,6 @@ class VrtRaster: public LuaObject
             /* Last sample information */
             OGRPoint        point;
             sample_t        sample;
-            zonal_stats_t   zstats;
         } raster_t;
 
 

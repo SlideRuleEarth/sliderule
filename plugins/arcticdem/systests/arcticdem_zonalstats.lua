@@ -17,22 +17,23 @@ local samplingAlg = "ZonalStats"
 local demType = "arcticdem-mosaic"
 
 print(string.format("\n-------------------------------------------------\nTest %s: Zonal Stats\n-------------------------------------------------", demType))
-for radius = 50, 200, 50
+for radius = 50, 150, 50
 do
     local dem = geo.vrt(demType, samplingAlg, radius)
     local tbl, status = dem:sample(lon, lat)
     if status ~= true then
         print(string.format("======> FAILED to read",lon, lat))
     else
-        local el, min, max, mean, stdd, file
+        local el, cnt, min, max, mean, stdev, file
         for j, v in ipairs(tbl) do
             el = v["value"]
+            cnt = v["count"]
             min = v["min"]
             max = v["max"]
             mean = v["mean"]
-            stdd = v["stdd"]
+            stdev = v["stdev"]
             fname = v["file"]
-            print(string.format("(%02d) radius: (%03d) val: %.2f min: %.2f max: %.2f mean: %.2f stdd: %.2f", j, radius, el, min, max, mean, stdd))
+            print(string.format("(%02d) radius: (%03d) val: %.2f cnt: %d, min: %.2f max: %.2f mean: %.2f stdev: %.2f", j, radius, el, cnt, min, max, mean, stdev))
         end
     end
 end
@@ -51,15 +52,16 @@ do
     if status ~= true then
         print(string.format("======> FAILED to read",lon, lat))
     else
-        local el, min, max, mean, stdd, file
+        local el, cnt, min, max, mean, stdev, file
         for j, v in ipairs(tbl) do
             el = v["value"]
+            cnt = v["count"]
             min = v["min"]
             max = v["max"]
             mean = v["mean"]
-            stdd = v["stdd"]
+            stdev = v["stdev"]
             fname = v["file"]
-            print(string.format("(%02d) radius: (%03d) val: %.2f min: %.2f max: %.2f mean: %.2f stdd: %.2f", j, radius, el, min, max, mean, stdd))
+            print(string.format("(%02d) radius: (%03d) val: %.2f cnt: %d, min: %.2f max: %.2f mean: %.2f stdev: %.2f", j, radius, el, cnt, min, max, mean, stdev))
         end
     end
     print('\n-------------------------------------------------')

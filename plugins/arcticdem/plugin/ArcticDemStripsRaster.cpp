@@ -69,19 +69,6 @@ ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampl
      * Do not allow them to read directly from VRT data set.
      */
     allowVrtDataSetSampling = false;
-
-    /*
-     * Gdal has a memory limit.
-     * To prevent memory related issues, limit the size of sampling radius for strips.
-     */
-    const int MAX_RADIUS = 200;
-    if (samplingRadius > MAX_RADIUS)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR,
-                               "Sampling radius is too big: %d: max allowed for strip rasters %d meters",
-                               samplingRadius, MAX_RADIUS);
-    }
-
 }
 
 /*----------------------------------------------------------------------------

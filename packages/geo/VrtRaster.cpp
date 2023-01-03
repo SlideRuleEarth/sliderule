@@ -305,7 +305,7 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
 
     /* Put some limit on how big the sampling radius can be */
-    const int MAX_RADIUS = 5000;
+    const int MAX_RADIUS = 150;
     if (samplingRadius > MAX_RADIUS)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR,
@@ -693,12 +693,6 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
 
         double noDataValue = raster->band->GetNoDataValue();
 
-        /* In case unable to calculate stats, return nodata for all */
-        raster->zstats.min = noDataValue;
-        raster->zstats.max = noDataValue;
-        raster->zstats.mean = noDataValue;
-        raster->zstats.standardDeviaton = noDataValue;
-
         if (windowIsValid)
         {
             RasterIoWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
@@ -745,29 +739,27 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
 
             if (validSamplesCnt > 0)
             {
-                double stddev = 0;
-                double mean   = sum / validSamplesCnt;
+                double stdev = 0;
+                double mean  = sum / validSamplesCnt;
 
                 for (int i = 0; i < samplesCnt; i++)
                 {
                     double value = samplesArray[i];
                     if (value != noDataValue)
                     {
-                        stddev += std::pow(value - mean, 2);
+                        stdev += std::pow(value - mean, 2);
                     }
                 }
 
-                stddev = std::sqrt(stddev / validSamplesCnt);
+                stdev = std::sqrt(stdev / validSamplesCnt);
 
                 /* Store calculated zonal stats */
-                raster->zstats.min  = min;
-                raster->zstats.max  = max;
-                raster->zstats.mean = mean;
-                raster->zstats.standardDeviaton = stddev;
+                raster->sample.stats.count= validSamplesCnt;
+                raster->sample.stats.min  = min;
+                raster->sample.stats.max  = max;
+                raster->sample.stats.mean = mean;
+                raster->sample.stats.stdev= stdev;
             }
-            // print2term("zonal: min: %.3lf, max: %.3lf, mean: %.3lf, stdd: %.3lf, validSamples: %d\n",
-            //             raster->zstats.min, raster->zstats.max, raster->zstats.mean, raster->zstats.standardDeviaton,
-            //             validSamplesCnt);
         }
         else mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
 
@@ -873,7 +865,6 @@ void VrtRaster::clearRaster(raster_t *raster)
     raster->gpsTime = 0;
     raster->point.empty();
     bzero(&raster->sample, sizeof(sample_t));
-    bzero(&raster->zstats, sizeof(zonal_stats_t));
 }
 
 /*----------------------------------------------------------------------------
@@ -889,8 +880,8 @@ void VrtRaster::invalidateRastersCache(void)
         raster->enabled = false;
         raster->sampled = false;
         raster->point.empty();
+        bzero(&raster->sample, sizeof(sample_t));
         raster->sample.value = INVALID_SAMPLE_VALUE;
-        raster->sample.time = 0.0;
         key = rasterDict.next(&raster);
     }
 }
@@ -1346,10 +1337,11 @@ int VrtRaster::luaSamples(lua_State *L)
 
                     if (lua_obj->zonalStats) /* Include all zonal stats */
                     {
-                        LuaEngine::setAttrNum(L, "stdd", raster->zstats.standardDeviaton);
-                        LuaEngine::setAttrNum(L, "mean", raster->zstats.mean);
-                        LuaEngine::setAttrNum(L, "max",  raster->zstats.max);
-                        LuaEngine::setAttrNum(L, "min",  raster->zstats.min);
+                        LuaEngine::setAttrNum(L, "stdev", raster->sample.stats.stdev);
+                        LuaEngine::setAttrNum(L, "mean",  raster->sample.stats.mean);
+                        LuaEngine::setAttrNum(L, "max",   raster->sample.stats.max);
+                        LuaEngine::setAttrNum(L, "min",   raster->sample.stats.min);
+                        LuaEngine::setAttrNum(L, "count", raster->sample.stats.count);
                     }
 
                     LuaEngine::setAttrNum(L, "value", raster->sample.value);
