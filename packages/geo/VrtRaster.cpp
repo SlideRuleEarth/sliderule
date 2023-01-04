@@ -696,8 +696,7 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = obj->sampleAlg;
-        int samplesCnt = windowSize*windowSize;
-        samplesArray = new double[samplesCnt];
+        samplesArray = new double[windowSize*windowSize];
         CHECKPTR(samplesArray);
 
         double noDataValue = raster->band->GetNoDataValue();
@@ -732,23 +731,43 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
             double min = std::numeric_limits<double>::max();
             double max = std::numeric_limits<double>::min();
             double sum = 0;
-
             std::vector<double> validSamples;
 
-            for(int i=0; i<samplesCnt; i++)
+            /* Get the value of sample from array. windowSize is always odd, its pow of two will always be odd */
+            uint32_t indx = (windowSize*windowSize - 1) / 2;
+            raster->sample.value = samplesArray[indx];
+
+            /*
+             * Only use pixels within radius from pixel containing point of interest.
+             * Ignore nodata values.
+             */
+            const double x1 = col; /* Pixel of interest */
+            const double y1 = row;
+
+            for (int y = 0; y < windowSize; y++)
             {
-                double value = samplesArray[i];
-                if(value != noDataValue)
+                for (int x = 0; x < windowSize; x++)
                 {
-                    if (value < min) min = value;
-                    if (value > max) max = value;
-                    sum += value;    /* double may lose precision on overflows, should be ok...*/
-                    validSamples.push_back(value);
+                    double value = samplesArray[y*windowSize + x];
+                    if (value == noDataValue) continue;
+
+                    double x2 = x + _col;  /* Current pixel in buffer */
+                    double y2 = y + _row;
+                    double xd = std::pow(x2 - x1, 2);
+                    double yd = std::pow(y2 - y1, 2);
+                    double d  = sqrtf64(xd + yd);
+
+                    if(std::islessequal(d, radiusInPixels))
+                    {
+                        if (value < min) min = value;
+                        if (value > max) max = value;
+                        sum += value; /* double may lose precision on overflows, should be ok...*/
+                        validSamples.push_back(value);
+                    }
                 }
             }
 
             int validSamplesCnt = validSamples.size();
-
             if (validSamplesCnt > 0)
             {
                 double stdev = 0;
@@ -779,7 +798,7 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
                 double median = validSamples[n];
                 if (!(validSamplesCnt & 0x1))
                 {
-                    /* Even number of samples, calculate average of two middle elements */
+                    /* Even number of samples, calculate average of two middle samples */
                     std::nth_element(validSamples.begin(), validSamples.begin() + n-1, validSamples.end());
                     median = (median + validSamples[n-1]) / 2;
                 }
@@ -794,10 +813,12 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
                 raster->sample.stats.mad    = mad;
             }
         }
-        else mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
-
-        /* Always read the sample value */
-        obj->readPixel(raster);
+        else
+        {
+            /* If window was invalid, at least read sample from raster */
+            obj->readPixel(raster);
+            mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
+        }
     }
     catch (const RunTimeException &e)
     {
