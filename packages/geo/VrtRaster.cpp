@@ -44,6 +44,7 @@
 #include <gdalwarper.h>
 #include <ogr_spatialref.h>
 #include <gdal_priv.h>
+#include <algorithm>
 
 #include "cpl_minixml.h"
 #include "cpl_string.h"
@@ -301,16 +302,24 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
 
     if (sampling_radius >= 0)
+    {
         samplingRadius = sampling_radius;
+    }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
 
-    /* Put some limit on how big the sampling radius can be */
-    const int MAX_RADIUS = 150;
-    if (samplingRadius > MAX_RADIUS)
+    /*
+     * Put a limit on maximum sampling radius to 50 pixels.
+     * At this point the size of pixel is unknow (no raster has been opened)
+     * For ArcticDem (2m pixel size) the default radius is 100 meters.
+     * Plugins can override maxSamplingRadius in their constructors.
+     */
+    maxSamplingRadius = 100;
+
+    if (samplingRadius > maxSamplingRadius)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR,
                                "Sampling radius is too big: %d: max allowed %d meters",
-                               samplingRadius, MAX_RADIUS);
+                               samplingRadius, maxSamplingRadius);
     }
 
     /* Initialize Class Data Members */
@@ -608,7 +617,7 @@ void VrtRaster::resamplePixel(raster_t *raster, VrtRaster* obj)
             else if (sampleAlg == GRIORA_Gauss)
                 kernel = 6; /* No default kernel, pick something */
 
-            windowSize = kernel + 1;
+            windowSize = kernel + 1;    // Odd window size around pixel
             _col = col - (kernel / 2);
             _row = row - (kernel / 2);
         }
@@ -723,7 +732,8 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
             double min = std::numeric_limits<double>::max();
             double max = std::numeric_limits<double>::min();
             double sum = 0;
-            int validSamplesCnt = 0;
+
+            std::vector<double> validSamples;
 
             for(int i=0; i<samplesCnt; i++)
             {
@@ -733,32 +743,55 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
                     if (value < min) min = value;
                     if (value > max) max = value;
                     sum += value;    /* double may lose precision on overflows, should be ok...*/
-                    validSamplesCnt++;
+                    validSamples.push_back(value);
                 }
             }
+
+            int validSamplesCnt = validSamples.size();
 
             if (validSamplesCnt > 0)
             {
                 double stdev = 0;
+                double mad   = 0;
                 double mean  = sum / validSamplesCnt;
 
-                for (int i = 0; i < samplesCnt; i++)
+                for (int i = 0; i < validSamplesCnt; i++)
                 {
-                    double value = samplesArray[i];
-                    if (value != noDataValue)
-                    {
-                        stdev += std::pow(value - mean, 2);
-                    }
+                    double value = validSamples[i];
+
+                    /* Standard deviation */
+                    stdev += std::pow(value - mean, 2);
+
+                    /* Median absolute deviation (MAD) */
+                    mad += fabsf64(value - mean);
                 }
 
                 stdev = std::sqrt(stdev / validSamplesCnt);
+                mad   = mad / validSamplesCnt;
+
+                /*
+                 * Median
+                 * For performance use nth_element algorithm since it sorts only part of the vector
+                 * NOTE: (vector will be reordered by nth_element)
+                 */
+                std::size_t n = validSamplesCnt / 2;
+                std::nth_element(validSamples.begin(), validSamples.begin() + n, validSamples.end());
+                double median = validSamples[n];
+                if (!(validSamplesCnt & 0x1))
+                {
+                    /* Even number of samples, calculate average of two middle elements */
+                    std::nth_element(validSamples.begin(), validSamples.begin() + n-1, validSamples.end());
+                    median = (median + validSamples[n-1]) / 2;
+                }
 
                 /* Store calculated zonal stats */
-                raster->sample.stats.count= validSamplesCnt;
-                raster->sample.stats.min  = min;
-                raster->sample.stats.max  = max;
-                raster->sample.stats.mean = mean;
-                raster->sample.stats.stdev= stdev;
+                raster->sample.stats.count  = validSamplesCnt;
+                raster->sample.stats.min    = min;
+                raster->sample.stats.max    = max;
+                raster->sample.stats.mean   = mean;
+                raster->sample.stats.median = median;
+                raster->sample.stats.stdev  = stdev;
+                raster->sample.stats.mad    = mad;
             }
         }
         else mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
@@ -1337,7 +1370,9 @@ int VrtRaster::luaSamples(lua_State *L)
 
                     if (lua_obj->zonalStats) /* Include all zonal stats */
                     {
+                        LuaEngine::setAttrNum(L, "mad",   raster->sample.stats.mad);
                         LuaEngine::setAttrNum(L, "stdev", raster->sample.stats.stdev);
+                        LuaEngine::setAttrNum(L, "median",raster->sample.stats.median);
                         LuaEngine::setAttrNum(L, "mean",  raster->sample.stats.mean);
                         LuaEngine::setAttrNum(L, "max",   raster->sample.stats.max);
                         LuaEngine::setAttrNum(L, "min",   raster->sample.stats.min);

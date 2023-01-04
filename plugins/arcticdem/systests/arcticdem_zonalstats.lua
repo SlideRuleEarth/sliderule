@@ -17,23 +17,25 @@ local samplingAlg = "ZonalStats"
 local demType = "arcticdem-mosaic"
 
 print(string.format("\n-------------------------------------------------\nTest %s: Zonal Stats\n-------------------------------------------------", demType))
-for radius = 50, 150, 50
+for radius = 50, 100, 50
 do
     local dem = geo.vrt(demType, samplingAlg, radius)
     local tbl, status = dem:sample(lon, lat)
     if status ~= true then
         print(string.format("======> FAILED to read",lon, lat))
     else
-        local el, cnt, min, max, mean, stdev, file
+        local el, cnt, min, max, mean, median, stdev, mad, file
         for j, v in ipairs(tbl) do
             el = v["value"]
             cnt = v["count"]
             min = v["min"]
             max = v["max"]
             mean = v["mean"]
+            median = v["median"]
             stdev = v["stdev"]
+            mad = v["mad"]
             fname = v["file"]
-            print(string.format("(%02d) radius: (%03d) val: %.2f cnt: %d, min: %.2f max: %.2f mean: %.2f stdev: %.2f", j, radius, el, cnt, min, max, mean, stdev))
+            print(string.format("(%02d) radius: (%03d) val: %.2f cnt: %d, min: %.2f max: %.2f mean: %.2f median: %.2f stdev: %.2f  mad: %.2f", j, radius, el, cnt, min, max, mean, median, stdev, mad))
         end
     end
 end
@@ -52,16 +54,18 @@ do
     if status ~= true then
         print(string.format("======> FAILED to read",lon, lat))
     else
-        local el, cnt, min, max, mean, stdev, file
+        local el, cnt, min, max, mean, median, stdev, mad, file
         for j, v in ipairs(tbl) do
             el = v["value"]
             cnt = v["count"]
             min = v["min"]
             max = v["max"]
             mean = v["mean"]
+            median = v["median"]
             stdev = v["stdev"]
+            mad = v["mad"]
             fname = v["file"]
-            print(string.format("(%02d) radius: (%03d) val: %.2f cnt: %d, min: %.2f max: %.2f mean: %.2f stdev: %.2f", j, radius, el, cnt, min, max, mean, stdev))
+            print(string.format("(%02d) radius: (%03d) val: %.2f cnt: %d, min: %.2f max: %.2f mean: %.2f median: %.2f stdev: %.2f  mad: %.2f", j, radius, el, cnt, min, max, mean, median, stdev, mad))
         end
     end
     print('\n-------------------------------------------------')

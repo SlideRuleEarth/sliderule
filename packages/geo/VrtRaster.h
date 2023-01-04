@@ -76,7 +76,9 @@ class VrtRaster: public LuaObject
                 double   min;
                 double   max;
                 double   mean;
+                double   median;
                 double   stdev;
+                double   mad;
             } stats;
         } sample_t;
 
@@ -157,9 +159,9 @@ class VrtRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool checkCacheFirst;
-        bool allowVrtDataSetSampling;
-        int  samplingRadius;
+        bool      checkCacheFirst;
+        bool      allowVrtDataSetSampling;
+        uint32_t  maxSamplingRadius;
 
     private:
 
@@ -180,6 +182,7 @@ class VrtRaster: public LuaObject
 
         GDALRIOResampleAlg    sampleAlg;
         bool                  zonalStats;
+        uint32_t              samplingRadius;
 
         /*--------------------------------------------------------------------
          * Methods

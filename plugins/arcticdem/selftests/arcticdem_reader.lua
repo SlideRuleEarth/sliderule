@@ -78,18 +78,20 @@ for i = 1, 2 do
     runner.check(status == true)
     runner.check(tbl ~= nil)
 
-    local el, cnt, min, max, mean, stdev, file
+    local el, cnt, min, max, mean, median, stdev, mad, file
     for j, v in ipairs(tbl) do
         el = v["value"]
         cnt = v["count"]
         min = v["min"]
         max = v["max"]
         mean = v["mean"]
+        median = v["median"]
         stdev = v["stdev"]
+        mad = v["mad"]
         fname = v["file"]
 
         if el ~= -9999.0 then
-            print(string.format("(%02d) value: %6.2f   cnt: %03d   min: %6.2f   max: %6.2f   mean: %6.2f   stdev: %6.2f", j, el, cnt, min, max, mean, stdev))
+            print(string.format("(%02d) value: %6.2f   cnt: %03d   min: %6.2f   max: %6.2f   mean: %6.2f   median: %6.2f   stdev: %6.2f   mad: %6.2f", j, el, cnt, min, max, mean, median, stdev, mad))
             runner.check(el ~= 0.0)
             runner.check(min <= el)
             runner.check(max >= el)
