@@ -29,28 +29,8 @@ If you are a science user interested in processing ICESat-2 data with SlideRule,
 
 2. CMake (3.13.0 or greater)
 
-3. For dependencies associated with a specific package, see the package readme at `packages/{package}/{package}.md` for additional installation instructions.
+3. For dependencies associated with a specific package, see the package readme at `packages/{package}/README.md` for additional installation instructions.
 
-4. Docker
-
-   ```bash
-   sudo apt install -y apt-transport-https ca-certificates curl gnupg software-properties-common lsb-release unzip
-   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-   sudo apt update
-
-   sudo apt install -y docker-ce docker-ce-cli containerd.io
-   sudo usermod -aG docker ubuntu
-   sudo systemctl enable docker
-   ```
-
-5. Docker Compose
-
-   ```bash
-   wget https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
-   sudo mv docker-compose-Linux-x86_64 /usr/local/bin/docker-compose
-   sudo chmod +x /usr/local/bin/docker-compose
-   ```
 
 ## II. Building with CMake
 
@@ -73,6 +53,8 @@ To take full control of the compile options exposed by cmake (e.g. disable plugi
 3. `make`
 4.  `sudo make install`
 
+For help and all available targets type `make help`.
+
 Options include:
 ```
    -DINSTALLDIR=[prefix]               location to install sliderule
@@ -81,38 +63,35 @@ Options include:
    -DRUNTIMEDIR=[directory]            location for run-time files like plugins, configuration files, and lua scripts
                                        default: /usr/local/etc/sliderule
 
-   -DENABLE_COMPAT=[ON|OFF]            configure build for older tool chains (needed to build on CentOS 7)
-                                       default: OFF
-
-   -DENABLE_TRACING=[ON|OFF]           compile in trace points
-                                       default: OFF
-
-   -DUSE_CCSDS_PACKAGE=[ON|OFF]        CCSDS command and telemetry packet support
-                                       default: ON
-
-   -DUSE_LEGACY_PACKAGE=[ON|OFF]       legacy code that supports older applications
-                                       default: ON
-
-   -DUSE_AWS_PACKAGE=[ON|OFF]          AWS S3 access
-                                       default: OFF
-
-   -DUSE_H5_PACKAGE=[ON|OFF]           hdf5 reading/writing
-                                       default: ON
-
-   -DUSE_GEOTIFF_PACKAGE=[ON|OFF]      geotiff reading/writing
-                                       default: OFF
-
-   -DUSE_PISTACHE_PACKAGE=[ON|OFF]     http server and client
-                                       default: OFF
-
-   -DUSE_NETSVC_PACKAGE=[ON|OFF]       network services (e.g. https)
-                                       default: OFF
-
    -DPYTHON_BINDINGS=[ON|OFF]          build python bindings instead of sliderule executable (overrides all other targets)
                                        default: OFF
 
    -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets except for PYTHON_BINDINGS)
                                        default: OFF
+
+   -DENABLE_COMPAT=[ON|OFF]            configure build for older tool chains (needed to build on CentOS 7)
+                                       default: OFF
+
+   -DENABLE_ADDRESS_SANITIZER=[ON|OFF] instrument code with for detecting memory errors
+                                       default: OFF
+
+   -DENABLE_TIME_HEARTBEAT=[ON|OFF]    replace system gettime calls with 1KHz timer (useful for reducing CPU load when timestamping lots of events)
+                                       default: OFF
+
+   -DENABLE_CUSTOM_ALLOCATOR=[ON|OFF]  override new and delete operators for debugging memory leaks
+                                       default: OFF
+
+   -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=[ON|OFF] enable reading attribute fields of H5 files (performance penalty)
+                                       default: OFF
+
+   -DENABLE_APACHE_ARROW_10_COMPAT=[ON|OFF] compile-time support for Apache Arrow v10 library
+                                       default: OFF
+
+   -DENABLE_TRACING=[ON|OFF]           compile in trace points
+                                       default: OFF
+
+   -DENABLE_TERMINAL=[ON|OFF]          compiles in print2term function calls
+                                       default: ON
 ```
 
 
@@ -130,9 +109,9 @@ SlideRule uses a relatively recent version of CMake in order to take advantage o
 
 ### 3. Install all dependencies
 
-If additional packages are needed, navigate to the package's readme (the {package}.md file found in each package directory) for instructions on how to build and configure that package.  Once the proper dependencies are installed, the corresponding option must be passed to cmake to ensure the package is built.
+If additional packages are needed, navigate to the package's readme (the README.md file found in each package directory) for instructions on how to build and configure that package.  Once the proper dependencies are installed, the corresponding option must be passed to cmake to ensure the package is built.
 
-For example, if the AWS package was needed, the installation instructions at `packages/aws/aws.md` need to be followed, and then the `-DUSE_AWS_PACKAGE=ON` needs to be passed to cmake when configuring the build.
+For example, if the AWS package was needed, the installation instructions at `packages/aws/README.md` need to be followed, and then the `-DUSE_AWS_PACKAGE=ON` needs to be passed to cmake when configuring the build.
 
 ### 4. Build and install SlideRule
 
@@ -164,7 +143,7 @@ Contains the C++ modules that implement an operating system abstraction layer wh
 
 ### packages
 
-Contains the C++ modules that implement the primary functions provided by the framework.  The [core](packages/core/core.md) package contains the fundamental framework classes and is not dependent on any other package.  Other packages should only be dependent on the core package or provide conditional compilation blocks that allow the package to be compiled in the absence of any package outside the core package.
+Contains the C++ modules that implement the primary functions provided by the framework.  See [package list](packages/README.md) for a list of available packages. The [core](packages/core/README.md) package contains the fundamental framework classes and is not dependent on any other package.  Other packages should only be dependent on the core package or provide conditional compilation blocks that allow the package to be compiled in the absence of any package outside the core package.
 
 By convention, each package contains two files that are named identical to the package directory name: _{package}.cpp_, _{package}.h_.  The _CMakeLists.txt_ provides the object modules and any package specific definitions needed to compile the package.  It also defines the package's globally defined name used in conditional compilation blocks.  The _{package}.cpp_ file provides an initialization function named with the prototype `void init{package}(void)` that is used to initialize the package on startup.  The _{package}.h_ file exports the initialization function and anything else necessary to use the package.
 
@@ -178,8 +157,9 @@ Contains Lua and other scripts that can be used for tests and higher level imple
 
 Contains the source files to make the various executable targets. By convention, targets are named as follows: {application}-{platform}.
 
-
 ### plugins
+
+Contains a project or mission specific extension to the SlideRule framework that is loaded at run-time.  See [plugin list](plugins/README.md) for a list of available plugins.  Additional plugins may be available from other sources.
 
 In order to build a plugin for SlideRule, the plugin code must compile down to a shared object that exposes a single function defined as `void init{plugin}(void)` where _{plugin}_ is the name of the plugin.  Note that if developing the plugin in C++ the initialization function must be externed as C in order to prevent the mangling of the exported symbol.
 

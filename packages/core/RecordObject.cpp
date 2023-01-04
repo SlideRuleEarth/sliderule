@@ -223,19 +223,11 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clea
         recordMemory = new unsigned char[memoryAllocated];
 
         /* Populate Header */
-        #ifdef __be__
-            rec_hdr_t hdr = {
-                .version = RECORD_FORMAT_VERSION,
-                .type_size = recordDefinition->type_size,
-                .data_size = data_size
-            };
-        #else
-            rec_hdr_t hdr = {
-                .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
-                .type_size = LocalLib::swaps(recordDefinition->type_size),
-                .data_size = LocalLib::swapl(data_size)
-            };
-        #endif
+        rec_hdr_t hdr = {
+            .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
+            .type_size = LocalLib::swaps(recordDefinition->type_size),
+            .data_size = LocalLib::swapl(data_size)
+        };
         LocalLib::copy(recordMemory, &hdr, sizeof(rec_hdr_t));
         LocalLib::copy(&recordMemory[sizeof(rec_hdr_t)], recordDefinition->type_name, recordDefinition->type_size);
 
@@ -336,11 +328,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
     if(size > 0)
     {
-        #ifdef __be__
-            int hdrsize = sizeof(rec_hdr_t) + rechdr->type_size;
-        #else
-            int hdrsize = sizeof(rec_hdr_t) + LocalLib::swaps(rechdr->type_size);
-        #endif
+        int hdrsize = sizeof(rec_hdr_t) + LocalLib::swaps(rechdr->type_size);
         bufsize = hdrsize + size;
         datasize = bufsize - hdrsize;
     }
@@ -372,11 +360,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     if(size > 0)
     {
         rec_hdr_t* bufhdr = (rec_hdr_t*)(*buffer);
-        #ifdef __be__
-            bufhdr->data_size = datasize;
-        #else
-            bufhdr->data_size = LocalLib::swapl(datasize);
-        #endif
+        bufhdr->data_size = LocalLib::swapl(datasize);
     }
 
     /* Return Buffer Size */
