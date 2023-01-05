@@ -33,7 +33,7 @@ Example usage:
 from sliderule import icesat2
 
 # initialize
-icesat2.init("slideruleearth.io", verbose=True)
+icesat2.init("slideruleearth.io", verbose=False)
 
 # region of interest
 region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},
