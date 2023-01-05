@@ -59,7 +59,6 @@ option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
 
 option (ENABLE_TRACING "Instantiate trace points" OFF)
 option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
-option (ENABLE_BIG_ENDIAN "Compile code for big endian machine" OFF)
 
 #####################
 # Target: SlideRule #
@@ -181,7 +180,9 @@ if(${ENABLE_TERMINAL})
     set_property(GLOBAL APPEND PROPERTY platform "#define __terminal__\n")
 endif()
 
-if(${ENABLE_BIG_ENDIAN})
+include (TestBigEndian)
+TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
+if(IS_BIG_ENDIAN)
     message (STATUS "Enabling code compilation for big endian machine")
     set_property(GLOBAL APPEND PROPERTY platform "#define __be__\n")
 else()
