@@ -45,18 +45,39 @@ const struct luaL_Reg RasterSampler::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* RasterSampler::sampleRecType = "rsrec.sample";
-const RecordObject::fieldDef_t RasterSampler::sampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, value),   1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, time),    1,  NULL, NATIVE_FLAGS}
+const char* RasterSampler::rsSampleRecType = "rsrec.sample";
+const RecordObject::fieldDef_t RasterSampler::rsSampleRecDef[] = {
+    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),  1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),   1,  NULL, NATIVE_FLAGS}
 };
 
-const char* RasterSampler::extentRecType = "rsrec";
-const RecordObject::fieldDef_t RasterSampler::extentRecDef[] = {
-    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),          1,  NULL, NATIVE_FLAGS},
-    {"raster_index",    RecordObject::UINT16,   offsetof(extent_t, raster_index),       1,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(extent_t, num_samples),        1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(extent_t, samples),            0,  sampleRecType, NATIVE_FLAGS} // variable length
+const char* RasterSampler::rsExtentRecType = "rsrec";
+const RecordObject::fieldDef_t RasterSampler::rsExtentRecDef[] = {
+    {"extent_id",       RecordObject::UINT64,   offsetof(rs_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
+    {"raster_index",    RecordObject::UINT16,   offsetof(rs_extent_t, raster_index),    1,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(rs_extent_t, num_samples),     1,  NULL, NATIVE_FLAGS},
+    {"samples",         RecordObject::USER,     offsetof(rs_extent_t, samples),         0,  rsSampleRecType, NATIVE_FLAGS} // variable length
+};
+
+const char* RasterSampler::szSampleRecType = "szrec.sample";
+const RecordObject::fieldDef_t RasterSampler::szSampleRecDef[] = {
+    {"value",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, value),   1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, time),    1,  NULL, NATIVE_FLAGS},
+    {"count",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, count),   1,  NULL, NATIVE_FLAGS},
+    {"min",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, min),     1,  NULL, NATIVE_FLAGS},
+    {"max",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, max),     1,  NULL, NATIVE_FLAGS},
+    {"mean",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, mean),    1,  NULL, NATIVE_FLAGS},
+    {"median",          RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, median),  1,  NULL, NATIVE_FLAGS},
+    {"stdev",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stdev),   1,  NULL, NATIVE_FLAGS},
+    {"mad",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, mad),     1,  NULL, NATIVE_FLAGS}
+};
+
+const char* RasterSampler::szExtentRecType = "szrec";
+const RecordObject::fieldDef_t RasterSampler::szExtentRecDef[] = {
+    {"extent_id",       RecordObject::UINT64,   offsetof(sz_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
+    {"raster_index",    RecordObject::UINT16,   offsetof(sz_extent_t, raster_index),    1,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(sz_extent_t, num_samples),     1,  NULL, NATIVE_FLAGS},
+    {"stats",           RecordObject::USER,     offsetof(sz_extent_t, stats),           0,  szSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 /******************************************************************************
@@ -94,8 +115,8 @@ int RasterSampler::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void RasterSampler::init (void)
 {
-    RECDEF(sampleRecType, sampleRecDef, sizeof(VrtRaster::sample_t), NULL);
-    RECDEF(extentRecType, extentRecDef, sizeof(extent_t), NULL);
+    RECDEF(rsSampleRecType, rsSampleRecDef, sizeof(VrtRaster::sample_t), NULL);
+    RECDEF(rsExtentRecType, rsExtentRecDef, sizeof(rs_extent_t), NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -162,7 +183,7 @@ RasterSampler::~RasterSampler(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *
- *  OUTPUT: one extent_t record per extent_id
+ *  OUTPUT: one rs_extent_t record per extent_id
  *  INPUT:  batch of atl06 extents
  *          each extent (up to 256 per record) will produce a single output record with one point
  *          that one point may have multiple samples associated with it
@@ -208,15 +229,16 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         int num_samples = raster->sample(lon_val, lat_val, slist);
 
         /* Create Sample Record */
-        int size_of_record = offsetof(extent_t, samples) + (sizeof(VrtRaster::sample_t) * num_samples);
-        RecordObject sample_rec(extentRecType, size_of_record);
-        extent_t* data = (extent_t*)sample_rec.getRecordData();
+        int size_of_record = offsetof(rs_extent_t, samples) + (sizeof(VrtRaster::sample_t) * num_samples);
+        RecordObject sample_rec(rsExtentRecType, size_of_record);
+        rs_extent_t* data = (rs_extent_t*)sample_rec.getRecordData();
         data->extent_id = extent_id;
         data->raster_index = rasterIndex;
         data->num_samples = num_samples;
         for(int i = 0; i < num_samples; i++)
         {
-            data->samples[i] = slist[i];
+            data->samples[i].value = slist[i].value;
+            data->samples[i].time = slist[i].time;
         }
 
         /* Post Sample Record */

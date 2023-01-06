@@ -84,6 +84,9 @@ class RqstParms: public LuaObject
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
         static const char* RASTERS_TO_SAMPLE;
+        static const char* RASTERS_SOURCE;
+        static const char* RASTERS_RADIUS;
+        static const char* RASTERS_ALGORITHM;
         static const char* RQST_TIMEOUT;
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
@@ -216,21 +219,31 @@ class RqstParms: public LuaObject
         /* List of Strings */
         typedef List<SafeString, EXPECTED_NUM_ANC_FIELDS> string_list_t;
 
+        /* Raster Sampling Settings */
+        typedef struct {
+            SafeString          source;
+            double              radius;
+            SafeString          sampling_algorithm;
+        } rss_t;
+
+        /* Rasters to Sample */
+        typedef List<rss_t, EXPECTED_NUM_ANC_FIELDS> rasters_t;
+
         /* YAPC Settings */
         typedef struct {
-            uint8_t                 score;                      // minimum allowed weight of photon using yapc algorithm
-            int                     version;                    // version of the yapc algorithm to run
-            int                     knn;                        // (version 2 only) k-nearest neighbors
-            int                     min_knn;                    // (version 3 only) minimum number of k-nearest neighors
-            double                  win_h;                      // window height (overrides calculated value if non-zero)
-            double                  win_x;                      // window width
+            uint8_t             score;                          // minimum allowed weight of photon using yapc algorithm
+            int                 version;                        // version of the yapc algorithm to run
+            int                 knn;                            // (version 2 only) k-nearest neighbors
+            int                 min_knn;                        // (version 3 only) minimum number of k-nearest neighors
+            double              win_h;                          // window height (overrides calculated value if non-zero)
+            double              win_x;                          // window width
         } yapc_t;
 
         /* Output Settings */
         typedef struct {
-            const char*             path;                       // file system path to the file (includes filename)
-            output_format_t         format;                     // format of the file
-            bool                    open_on_complete;           // flag to client to open file on completion
+            const char*         path;                           // file system path to the file (includes filename)
+            output_format_t     format;                         // format of the file
+            bool                open_on_complete;               // flag to client to open file on completion
         } output_file_t;
 
         /*--------------------------------------------------------------------
@@ -266,7 +279,7 @@ class RqstParms: public LuaObject
         double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
         string_list_t*          atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
         string_list_t*          atl03_ph_fields;                // list of per-photon fields to associate with an extent
-        string_list_t*          rasters_to_sample;              // list of rasters to sample
+        rasters_t*              rasters_to_sample;              // list of rasters to sample
         int                     rqst_timeout;                   // total time in seconds for request to be processed
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
@@ -292,6 +305,7 @@ class RqstParms: public LuaObject
         void                    get_lua_raster          (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
         void                    get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
+        void                    get_lua_rasters         (lua_State* L, int index, rasters_t** rasters_list, bool* provided);
         void                    get_lua_output          (lua_State* L, int index, bool* provided);
 };
 

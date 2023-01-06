@@ -71,6 +71,9 @@ const char* RqstParms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
 const char* RqstParms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* RqstParms::ATL03_PH_FIELDS              = "atl03_ph_fields";
 const char* RqstParms::RASTERS_TO_SAMPLE            = "samples";
+const char* RqstParms::RASTERS_SOURCE               = "source";
+const char* RqstParms::RASTERS_RADIUS               = "radius";
+const char* RqstParms::RASTERS_ALGORITHM            = "algorithm";
 const char* RqstParms::RQST_TIMEOUT                 = "rqst-timeout";
 const char* RqstParms::NODE_TIMEOUT                 = "node-timeout";
 const char* RqstParms::READ_TIMEOUT                 = "read-timeout";
@@ -365,9 +368,9 @@ RqstParms::RqstParms(lua_State* L, int index):
     if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
     lua_pop(L, 1);
 
-    /* ATL03 Photon Fields */
+    /* Rasters to Sample */
     lua_getfield(L, index, RqstParms::RASTERS_TO_SAMPLE);
-    get_lua_string_list (L, -1, &rasters_to_sample, &provided);
+    get_lua_rasters (L, -1, &rasters_to_sample, &provided);
     if(provided) mlog(DEBUG, "Rasters to sample array supplied");
     lua_pop(L, 1);
 
@@ -908,13 +911,14 @@ void RqstParms::get_lua_string_list (lua_State* L, int index, string_list_t** st
     /* Must be table of strings */
     if(lua_istable(L, index))
     {
-        /* Allocate string list */
-        *string_list = new string_list_t;
-        *provided = true;
-
         /* Get number of item in table */
         int num_strings = lua_rawlen(L, index);
-        if(num_strings > 0 && provided) *provided = true;
+        if(num_strings > 0 && provided)
+        {
+            /* Allocate string list */
+            *string_list = new string_list_t;
+            *provided = true;
+        }
 
         /* Iterate through each item in table */
         for(int i = 0; i < num_strings; i++)
@@ -941,6 +945,66 @@ void RqstParms::get_lua_string_list (lua_State* L, int index, string_list_t** st
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "Lists must be provided as a table");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_lua_rasters
+ *----------------------------------------------------------------------------*/
+void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_list, bool* provided)
+{
+    /* Reset provided */
+    *provided = false;
+
+    /* Must be table of tables */
+    if(lua_istable(L, index))
+    {
+        /* Allocate raster list */
+        *rasters_list = new rasters_t;
+        *provided = true;
+
+        /* Iterate over rasters in list */
+        lua_pushvalue(L, index); // -1 => table
+        lua_pushnil(L); // -1 => nil; -2 => table
+        while (lua_next(L, -2)) // -1 => value; -2 => key; -3 => table
+        {
+            /* Get raster entry */
+            lua_pushvalue(L, -2); // -1 => key; -2 => value; -3 => key; -4 => table
+            const char* key = getLuaString(L, -1);
+            if(lua_istable(L, -2))
+            {
+                rss_t rss;
+                bool field_provided;
+
+                lua_getfield(L, index, RqstParms::RASTERS_SOURCE);
+                rss.source = LuaObject::getLuaString(L, -1);
+                mlog(DEBUG, "Sampling %s for %s", rss.source, key);
+                lua_pop(L, 1);
+
+                lua_getfield(L, index, RqstParms::RASTERS_RADIUS);
+                rss.radius = LuaObject::getLuaFloat(L, -1, true, 0.0, &field_provided);
+                if(field_provided) mlog(DEBUG, "Setting %s to %lf for %s", RqstParms::RASTERS_RADIUS, rss.radius, key);
+                lua_pop(L, 1);
+
+                lua_getfield(L, index, RqstParms::RASTERS_ALGORITHM);
+                rss.sampling_algorithm = LuaObject::getLuaString(L, -1, true, "NearestNeighbour", &field_provided);
+                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ALGORITHM, rss.sampling_algorithm, key);
+                lua_pop(L, 1);
+
+                /* Add raster entry to list */
+                (*rasters_list)->add(rss);
+            }
+            else
+            {
+                mlog(ERROR, "Invalid raster entry specified - must be a table");
+            }
+            lua_pop(L, 2); // -1 => key; -2 => table
+        } // -1 => table
+        lua_pop(L, 1); // stack restored to how it was
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "List of rasters must be provided as a table");
     }
 }
 

@@ -59,23 +59,48 @@ class RasterSampler: public DispatchObject
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
-        static const char* sampleRecType;
-        static const RecordObject::fieldDef_t sampleRecDef[];
+        static const char* rsSampleRecType;
+        static const RecordObject::fieldDef_t rsSampleRecDef[];
 
-        static const char* extentRecType;
-        static const RecordObject::fieldDef_t extentRecDef[];
+        static const char* rsExtentRecType;
+        static const RecordObject::fieldDef_t rsExtentRecDef[];
+
+        static const char* szSampleRecType;
+        static const RecordObject::fieldDef_t szSampleRecDef[];
+
+        static const char* szExtentRecType;
+        static const RecordObject::fieldDef_t szExtentRecDef[];
 
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+
+        /* Sample */
+        typedef struct {
+            double              value;
+            double              time;
+        } sample_t;
+
+        /* Zonal Statistics */
+        typedef struct {
+            VrtRaster::sample_t stats;
+        } zonal_stats_t;
 
         /* Extent Sample Record */
         typedef struct {
             uint64_t            extent_id;
             uint16_t            raster_index;
             uint32_t            num_samples;
-            VrtRaster::sample_t samples[];
-        } extent_t;
+            sample_t            samples[];
+        } s_extent_t;
+
+        /* Zonal Statistics Record */
+        typedef struct {
+            uint64_t            extent_id;
+            uint16_t            raster_index;
+            uint32_t            num_samples;
+            zonal_stats_t       stats[];
+        } sz_extent_t;
 
         /*--------------------------------------------------------------------
          * Methods
