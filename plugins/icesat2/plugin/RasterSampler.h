@@ -65,11 +65,13 @@ class RasterSampler: public DispatchObject
         static const char* rsExtentRecType;
         static const RecordObject::fieldDef_t rsExtentRecDef[];
 
-        static const char* szSampleRecType;
-        static const RecordObject::fieldDef_t szSampleRecDef[];
+        static const char* zsSampleRecType;
+        static const RecordObject::fieldDef_t zsSampleRecDef[];
 
-        static const char* szExtentRecType;
-        static const RecordObject::fieldDef_t szExtentRecDef[];
+        static const char* zsExtentRecType;
+        static const RecordObject::fieldDef_t zsExtentRecDef[];
+
+        static const int RASTER_KEY_MAX_LEN = 16; // maximum number of characters to represent raster
 
         /*--------------------------------------------------------------------
          * Types
@@ -81,26 +83,21 @@ class RasterSampler: public DispatchObject
             double              time;
         } sample_t;
 
-        /* Zonal Statistics */
-        typedef struct {
-            VrtRaster::sample_t stats;
-        } zonal_stats_t;
-
         /* Extent Sample Record */
         typedef struct {
             uint64_t            extent_id;
-            uint16_t            raster_index;
+            char                raster_key[RASTER_KEY_MAX_LEN];
             uint32_t            num_samples;
             sample_t            samples[];
-        } s_extent_t;
+        } rs_extent_t;
 
         /* Zonal Statistics Record */
         typedef struct {
             uint64_t            extent_id;
-            uint16_t            raster_index;
+            char                raster_key[RASTER_KEY_MAX_LEN];
             uint32_t            num_samples;
-            zonal_stats_t       stats[];
-        } sz_extent_t;
+            VrtRaster::sample_t samples[];
+        } zs_extent_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -117,18 +114,19 @@ class RasterSampler: public DispatchObject
          *--------------------------------------------------------------------*/
 
         VrtRaster*              raster;
-        int                     rasterIndex;
+        const char*             rasterKey;
         Publisher*              outQ;
         int                     extentSizeBytes;
         RecordObject::field_t   extentField;
         RecordObject::field_t   lonField;
         RecordObject::field_t   latField;
+        bool                    useZonalStats;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        RasterSampler           (lua_State* L, VrtRaster* _raster, int raster_index, const char* outq_name, const char* rec_type, const char* extent_key, const char* lon_key, const char* lat_key);
+                        RasterSampler           (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* extent_key, const char* lon_key, const char* lat_key);
                         ~RasterSampler          (void);
 
         bool            processRecord           (RecordObject* record, okey_t key) override;

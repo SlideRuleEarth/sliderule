@@ -368,6 +368,33 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 }
 
 /*----------------------------------------------------------------------------
+ * post
+ *----------------------------------------------------------------------------*/
+bool RecordObject::post(Publisher* outq, int size, bool* active, bool verbose)
+{
+    bool status = true;
+
+    /* Serialize Record */
+    uint8_t* rec_buf = NULL;
+    int rec_bytes = serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP, size);
+
+    /* Post Record */
+    int post_status = MsgQ::STATE_TIMEOUT;
+    while(  (!active || (*active)) &&
+            ((post_status = outq->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
+
+    /* Handle Status */
+    if(post_status <= 0)
+    {
+        delete [] rec_buf; // we've taken ownership
+        if(verbose) mlog(ERROR, "Failed to post %s to stream %s: %d", getRecordType(), outq->getName(), post_status);
+        status = false;
+    }
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
  * isRecordType
  *----------------------------------------------------------------------------*/
 bool RecordObject::isRecordType(const char* rec_type)

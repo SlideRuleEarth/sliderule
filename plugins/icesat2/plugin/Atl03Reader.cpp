@@ -557,8 +557,8 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     delta_time          (info->reader->asset, info->reader->resource, info->track, "heights/delta_time",          &info->reader->context, 0, region.first_photon,  region.num_photons),
     bckgrd_delta_time   (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/delta_time",     &info->reader->context),
     bckgrd_rate         (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/bckgrd_rate",    &info->reader->context),
-    anc_geo_data        (RqstParms::EXPECTED_NUM_ANC_FIELDS),
-    anc_ph_data         (RqstParms::EXPECTED_NUM_ANC_FIELDS)
+    anc_geo_data        (RqstParms::EXPECTED_NUM_FIELDS),
+    anc_ph_data         (RqstParms::EXPECTED_NUM_FIELDS)
 {
     RqstParms::string_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
     RqstParms::string_list_t* photon_fields = info->reader->parms->atl03_ph_fields;

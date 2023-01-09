@@ -59,6 +59,16 @@ class VrtRaster: public LuaObject
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
 
+        static const char* NEARESTNEIGHBOUR_ALGO;
+        static const char* BILINEAR_ALGO;
+        static const char* CUBIC_ALGO;
+        static const char* CUBICSPLINE_ALGO;
+        static const char* LANCZOS_ALGO;
+        static const char* AVERAGE_ALGO;
+        static const char* MODE_ALGO;
+        static const char* GAUSS_ALGO;
+        static const char* ZONALSTATS_ALGO;
+
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
@@ -142,6 +152,7 @@ class VrtRaster: public LuaObject
         static int              luaCreate       (lua_State* L);
         static bool             registerRaster  (const char* _name, factory_t create);
         int                     sample          (double lon, double lat, List<sample_t> &slist, void* param=NULL);
+        bool                    hasZonalStats   (void);
         virtual                ~VrtRaster       (void);
 
     protected:

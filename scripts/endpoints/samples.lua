@@ -22,7 +22,7 @@ local json = require("json")
 -- Request Parameters --
 local rqst = json.decode(arg[1])
 local dem_asset = rqst["dem-asset"] or "arcticdem-mosaic"
-local sampling_alg = rqst["sampling-algorithm"] or "NearestNeighbour"
+local sampling_alg = rqst["sampling-algorithm"] or geo.NearestNeighbour
 local sampling_radius = rqst["sampling-radius"] or 0
 local coord = rqst["coordinates"]
 

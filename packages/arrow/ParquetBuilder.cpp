@@ -583,7 +583,7 @@ bool ParquetBuilder::processTermination (void)
             arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
             StringLib::copy(&meta->filename[0], outFileName, FILE_NAME_MAX_LEN);
             meta->size = file_size;
-            if(!postRecord(&meta_record))
+            if(!meta_record.post(outQ))
             {
                 status = false;
                 break; // early exit on error
@@ -597,7 +597,7 @@ bool ParquetBuilder::processTermination (void)
                 arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData();
                 StringLib::copy(&data->filename[0], outFileName, FILE_NAME_MAX_LEN);
                 size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
-                if(!postRecord(&data_record, offsetof(arrow_file_data_t, data) + bytes_read))
+                if(!data_record.post(outQ, offsetof(arrow_file_data_t, data) + bytes_read))
                 {
                     status = false;
                     break; // early exit on error
@@ -630,27 +630,6 @@ bool ParquetBuilder::processTermination (void)
 
     /* Return Status */
     return status;
-}
-
-/*----------------------------------------------------------------------------
- * postRecord
- *
- *  The while loop should not be an infinite loop because when the output queue
- *  is cleaned up, the call to postRef should fail with no subscribers
- *----------------------------------------------------------------------------*/
-bool ParquetBuilder::postRecord (RecordObject* record, int data_size)
-{
-    uint8_t* rec_buf = NULL;
-    int rec_bytes = record->serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP, data_size);
-    int post_status = MsgQ::STATE_TIMEOUT;
-    while((post_status = outQ->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-    if(post_status <= 0)
-    {
-        delete [] rec_buf; // we've taken ownership
-        mlog(ERROR, "Parquet builder failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
-        return false;
-    }
-    return true;
 }
 
 /*----------------------------------------------------------------------------

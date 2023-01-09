@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "core.h"
+#include "geo.h"
 #include "RqstParms.h"
 
 
@@ -960,7 +961,7 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
     if(lua_istable(L, index))
     {
         /* Allocate raster list */
-        *rasters_list = new rasters_t;
+        *rasters_list = new rasters_t(EXPECTED_NUM_FIELDS);
         *provided = true;
 
         /* Iterate over rasters in list */
@@ -978,7 +979,7 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
 
                 lua_getfield(L, index, RqstParms::RASTERS_SOURCE);
                 rss.source = LuaObject::getLuaString(L, -1);
-                mlog(DEBUG, "Sampling %s for %s", rss.source, key);
+                mlog(DEBUG, "Sampling %s for %s", rss.source.getString(), key);
                 lua_pop(L, 1);
 
                 lua_getfield(L, index, RqstParms::RASTERS_RADIUS);
@@ -987,12 +988,12 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
                 lua_pop(L, 1);
 
                 lua_getfield(L, index, RqstParms::RASTERS_ALGORITHM);
-                rss.sampling_algorithm = LuaObject::getLuaString(L, -1, true, "NearestNeighbour", &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ALGORITHM, rss.sampling_algorithm, key);
+                rss.sampling_algorithm = LuaObject::getLuaString(L, -1, true, VrtRaster::NEARESTNEIGHBOUR_ALGO, &field_provided);
+                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ALGORITHM, rss.sampling_algorithm.getString(), key);
                 lua_pop(L, 1);
 
                 /* Add raster entry to list */
-                (*rasters_list)->add(rss);
+                (*rasters_list)->add(key, rss);
             }
             else
             {

@@ -62,6 +62,17 @@ int geo_open (lua_State* L)
     /* Set Package Library */
     luaL_newlib(L, geo_functions);
 
+    /* Set Globals */
+    LuaEngine::setAttrStr   (L, VrtRaster::NEARESTNEIGHBOUR_ALGO,   VrtRaster::NEARESTNEIGHBOUR_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::BILINEAR_ALGO,           VrtRaster::BILINEAR_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::CUBIC_ALGO,              VrtRaster::CUBIC_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::CUBICSPLINE_ALGO,        VrtRaster::CUBICSPLINE_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::LANCZOS_ALGO,            VrtRaster::LANCZOS_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::AVERAGE_ALGO,            VrtRaster::AVERAGE_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::MODE_ALGO,               VrtRaster::MODE_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::GAUSS_ALGO,              VrtRaster::GAUSS_ALGO);
+    LuaEngine::setAttrStr   (L, VrtRaster::ZONALSTATS_ALGO,         VrtRaster::ZONALSTATS_ALGO);
+
     return 1;
 }
 

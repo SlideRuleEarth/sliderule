@@ -54,30 +54,30 @@ const RecordObject::fieldDef_t RasterSampler::rsSampleRecDef[] = {
 const char* RasterSampler::rsExtentRecType = "rsrec";
 const RecordObject::fieldDef_t RasterSampler::rsExtentRecDef[] = {
     {"extent_id",       RecordObject::UINT64,   offsetof(rs_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
-    {"raster_index",    RecordObject::UINT16,   offsetof(rs_extent_t, raster_index),    1,  NULL, NATIVE_FLAGS},
+    {"key",             RecordObject::STRING,   offsetof(rs_extent_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"num_samples",     RecordObject::UINT32,   offsetof(rs_extent_t, num_samples),     1,  NULL, NATIVE_FLAGS},
     {"samples",         RecordObject::USER,     offsetof(rs_extent_t, samples),         0,  rsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
-const char* RasterSampler::szSampleRecType = "szrec.sample";
-const RecordObject::fieldDef_t RasterSampler::szSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, value),   1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, time),    1,  NULL, NATIVE_FLAGS},
-    {"count",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, count),   1,  NULL, NATIVE_FLAGS},
-    {"min",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, min),     1,  NULL, NATIVE_FLAGS},
-    {"max",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, max),     1,  NULL, NATIVE_FLAGS},
-    {"mean",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, mean),    1,  NULL, NATIVE_FLAGS},
-    {"median",          RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, median),  1,  NULL, NATIVE_FLAGS},
-    {"stdev",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stdev),   1,  NULL, NATIVE_FLAGS},
-    {"mad",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, mad),     1,  NULL, NATIVE_FLAGS}
+const char* RasterSampler::zsSampleRecType = "zsrec.sample";
+const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
+    {"value",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, value),           1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, time),            1,  NULL, NATIVE_FLAGS},
+    {"count",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, stats.count),     1,  NULL, NATIVE_FLAGS},
+    {"min",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.min),       1,  NULL, NATIVE_FLAGS},
+    {"max",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.max),       1,  NULL, NATIVE_FLAGS},
+    {"mean",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.mean),      1,  NULL, NATIVE_FLAGS},
+    {"median",          RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.median),    1,  NULL, NATIVE_FLAGS},
+    {"stdev",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.stdev),     1,  NULL, NATIVE_FLAGS},
+    {"mad",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.mad),       1,  NULL, NATIVE_FLAGS}
 };
 
-const char* RasterSampler::szExtentRecType = "szrec";
-const RecordObject::fieldDef_t RasterSampler::szExtentRecDef[] = {
-    {"extent_id",       RecordObject::UINT64,   offsetof(sz_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
-    {"raster_index",    RecordObject::UINT16,   offsetof(sz_extent_t, raster_index),    1,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(sz_extent_t, num_samples),     1,  NULL, NATIVE_FLAGS},
-    {"stats",           RecordObject::USER,     offsetof(sz_extent_t, stats),           0,  szSampleRecType, NATIVE_FLAGS} // variable length
+const char* RasterSampler::zsExtentRecType = "zssrec";
+const RecordObject::fieldDef_t RasterSampler::zsExtentRecDef[] = {
+    {"extent_id",       RecordObject::UINT64,   offsetof(zs_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
+    {"key",             RecordObject::STRING,   offsetof(zs_extent_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(zs_extent_t, num_samples),     1,  NULL, NATIVE_FLAGS},
+    {"samples",         RecordObject::USER,     offsetof(zs_extent_t, samples),         0,  zsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 /******************************************************************************
@@ -93,7 +93,7 @@ int RasterSampler::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         VrtRaster*  _raster         = (VrtRaster*)getLuaObject(L, 1, VrtRaster::OBJECT_TYPE);
-        int         raster_index    = getLuaInteger(L, 2);
+        const char* raster_key      = getLuaString(L, 2);
         const char* outq_name       = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
         const char* extent_key      = getLuaString(L, 5);
@@ -101,7 +101,7 @@ int RasterSampler::luaCreate (lua_State* L)
         const char* lat_key         = getLuaString(L, 7);
 
         /* Create Dispatch */
-        return createLuaObject(L, new RasterSampler(L, _raster, raster_index, outq_name, rec_type, extent_key, lon_key, lat_key));
+        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, extent_key, lon_key, lat_key));
     }
     catch(const RunTimeException& e)
     {
@@ -115,8 +115,10 @@ int RasterSampler::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void RasterSampler::init (void)
 {
-    RECDEF(rsSampleRecType, rsSampleRecDef, sizeof(VrtRaster::sample_t), NULL);
+    RECDEF(rsSampleRecType, rsSampleRecDef, sizeof(sample_t), NULL);
     RECDEF(rsExtentRecType, rsExtentRecDef, sizeof(rs_extent_t), NULL);
+    RECDEF(zsSampleRecType, zsSampleRecDef, sizeof(VrtRaster::sample_t), NULL);
+    RECDEF(zsExtentRecType, zsExtentRecDef, sizeof(zs_extent_t), NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -133,7 +135,7 @@ void RasterSampler::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, int raster_index, const char* outq_name, const char* rec_type, const char* extent_key, const char* lon_key, const char* lat_key):
+RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* extent_key, const char* lon_key, const char* lat_key):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(_raster);
@@ -142,7 +144,7 @@ RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, int raster_index
     assert(lat_key);
 
     raster = _raster;
-    rasterIndex = raster_index;
+    rasterKey = StringLib::duplicate(raster_key);
 
     outQ = new Publisher(outq_name);
 
@@ -178,6 +180,7 @@ RasterSampler::~RasterSampler(void)
 {
     raster->releaseLuaObject();
     delete outQ;
+    if(rasterKey) delete [] rasterKey;
 }
 
 /*----------------------------------------------------------------------------
@@ -228,29 +231,42 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         List<VrtRaster::sample_t> slist;
         int num_samples = raster->sample(lon_val, lat_val, slist);
 
-        /* Create Sample Record */
-        int size_of_record = offsetof(rs_extent_t, samples) + (sizeof(VrtRaster::sample_t) * num_samples);
-        RecordObject sample_rec(rsExtentRecType, size_of_record);
-        rs_extent_t* data = (rs_extent_t*)sample_rec.getRecordData();
-        data->extent_id = extent_id;
-        data->raster_index = rasterIndex;
-        data->num_samples = num_samples;
-        for(int i = 0; i < num_samples; i++)
+        if(raster->hasZonalStats())
         {
-            data->samples[i].value = slist[i].value;
-            data->samples[i].time = slist[i].time;
+            /* Create and Post Sample Record */
+            int size_of_record = offsetof(zs_extent_t, samples) + (sizeof(VrtRaster::sample_t) * num_samples);
+            RecordObject stats_rec(zsExtentRecType, size_of_record);
+            zs_extent_t* data = (zs_extent_t*)stats_rec.getRecordData();
+            data->extent_id = extent_id;
+            StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
+            data->num_samples = num_samples;
+            for(int i = 0; i < num_samples; i++)
+            {
+                data->samples[i] = slist[i];
+            }
+            if(!stats_rec.post(outQ))
+            {
+                status = false;
+            }
         }
-
-        /* Post Sample Record */
-        uint8_t* rec_buf = NULL;
-        int rec_bytes = sample_rec.serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP);
-        int post_status = MsgQ::STATE_TIMEOUT;
-        while((post_status = outQ->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-        if(post_status <= 0)
+        else
         {
-            delete [] rec_buf; // we've taken ownership
-            mlog(ERROR, "Raster sampler failed to post %s to stream %s: %d", sample_rec.getRecordType(), outQ->getName(), post_status);
-            status = false;
+            /* Create and Post Sample Record */
+            int size_of_record = offsetof(rs_extent_t, samples) + (sizeof(sample_t) * num_samples);
+            RecordObject sample_rec(rsExtentRecType, size_of_record);
+            rs_extent_t* data = (rs_extent_t*)sample_rec.getRecordData();
+            data->extent_id = extent_id;
+            StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
+            data->num_samples = num_samples;
+            for(int i = 0; i < num_samples; i++)
+            {
+                data->samples[i].value = slist[i].value;
+                data->samples[i].time = slist[i].time;
+            }
+            if(!sample_rec.post(outQ))
+            {
+                status = false;
+            }
         }
     }
 

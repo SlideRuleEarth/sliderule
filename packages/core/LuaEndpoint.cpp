@@ -152,20 +152,13 @@ void LuaEndpoint::generateExceptionStatus (int code, event_level_t level, Publis
     error_buf[attr_size - 1] = '\0';
     va_end(args);
 
-    /* Initialize Endpoint Exception Record */
+    /* Post Endpoint Exception Record */
     RecordObject record(EndpointExceptionRecType);
     response_exception_t* exception = (response_exception_t*)record.getRecordData();
     exception->code = code;
     exception->level = (int32_t)level;
     StringLib::format(exception->text, MAX_EXCEPTION_TEXT_SIZE, "%s", error_buf);
-
-    /* Post Exception Record */
-    uint8_t* rec_buf = NULL;
-    int rec_bytes = record.serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP);
-    int post_status = MsgQ::STATE_TIMEOUT;
-    if(active) while((*active) && (post_status = outq->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-    else post_status = outq->postRef(rec_buf, rec_bytes, IO_CHECK);
-    if(post_status <= 0) delete [] rec_buf;
+    record.post(outq, 0, active);
 }
 
 /******************************************************************************

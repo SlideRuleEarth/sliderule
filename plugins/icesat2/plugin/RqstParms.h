@@ -103,8 +103,7 @@ class RqstParms: public LuaObject
         static const int EXTENT_ID_PHOTONS          = 0x0;
         static const int EXTENT_ID_ELEVATION        = 0x2;
 
-        static const int EXPECTED_NUM_ANC_FIELDS    = 8; // a typical number of ancillary fields requested
-        static const int EXPECTED_NUM_RASTERS       = 8; // a typical number of rasters to sample
+        static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
 
         static const int DEFAULT_RQST_TIMEOUT       = 600; // seconds
         static const int DEFAULT_NODE_TIMEOUT       = 600; // seconds
@@ -217,7 +216,7 @@ class RqstParms: public LuaObject
         } output_format_t;
 
         /* List of Strings */
-        typedef List<SafeString, EXPECTED_NUM_ANC_FIELDS> string_list_t;
+        typedef List<SafeString, EXPECTED_NUM_FIELDS> string_list_t;
 
         /* Raster Sampling Settings */
         typedef struct {
@@ -227,7 +226,7 @@ class RqstParms: public LuaObject
         } rss_t;
 
         /* Rasters to Sample */
-        typedef List<rss_t, EXPECTED_NUM_ANC_FIELDS> rasters_t;
+        typedef Dictionary<rss_t> rasters_t;
 
         /* YAPC Settings */
         typedef struct {

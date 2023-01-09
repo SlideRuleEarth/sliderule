@@ -55,6 +55,16 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* VrtRaster::NEARESTNEIGHBOUR_ALGO = "NearestNeighbour";
+const char* VrtRaster::BILINEAR_ALGO = "Bilinear";
+const char* VrtRaster::CUBIC_ALGO = "Cubic";
+const char* VrtRaster::CUBICSPLINE_ALGO = "CubicSpline";
+const char* VrtRaster::LANCZOS_ALGO = "Lanczos";
+const char* VrtRaster::AVERAGE_ALGO = "Average";
+const char* VrtRaster::MODE_ALGO = "Mode";
+const char* VrtRaster::GAUSS_ALGO = "Gauss";
+const char* VrtRaster::ZONALSTATS_ALGO = "ZonalStats";
+
 const char* VrtRaster::OBJECT_TYPE = "VrtRaster";
 const char* VrtRaster::LuaMetaName = "VrtRaster";
 const struct luaL_Reg VrtRaster::LuaMetaTable[] = {
@@ -95,7 +105,7 @@ int VrtRaster::luaCreate( lua_State* L )
     {
         /* Get Parameters */
         const char* raster_name     = getLuaString(L, 1);
-        const char* dem_sampling    = getLuaString(L, 2, true, "NearestNeighbour");
+        const char* dem_sampling    = getLuaString(L, 2, true, NEARESTNEIGHBOUR_ALGO);
         const int   sampling_radius = getLuaInteger(L, 3, true, 1);
 
         /* Get Factory */
@@ -177,6 +187,13 @@ int VrtRaster::sample (double lon, double lat, List<sample_t> &slist, void* para
     return slist.length();
 }
 
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+bool VrtRaster::hasZonalStats(void)
+{
+    return zonalStats;
+}
 
 /*----------------------------------------------------------------------------
  * Destructor
@@ -289,15 +306,15 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
     zonalStats = false;
     sampleAlg  = (GDALRIOResampleAlg) -1;
 
-    if      (!strcasecmp(dem_sampling, "NearestNeighbour")) sampleAlg = GRIORA_NearestNeighbour;
-    else if (!strcasecmp(dem_sampling, "Bilinear"))         sampleAlg = GRIORA_Bilinear;
-    else if (!strcasecmp(dem_sampling, "Cubic"))            sampleAlg = GRIORA_Cubic;
-    else if (!strcasecmp(dem_sampling, "CubicSpline"))      sampleAlg = GRIORA_CubicSpline;
-    else if (!strcasecmp(dem_sampling, "Lanczos"))          sampleAlg = GRIORA_Lanczos;
-    else if (!strcasecmp(dem_sampling, "Average"))          sampleAlg = GRIORA_Average;
-    else if (!strcasecmp(dem_sampling, "Mode"))             sampleAlg = GRIORA_Mode;
-    else if (!strcasecmp(dem_sampling, "Gauss"))            sampleAlg = GRIORA_Gauss;
-    else if (!strcasecmp(dem_sampling, "ZonalStats"))       zonalStats= true;
+    if      (!strcasecmp(dem_sampling, NEARESTNEIGHBOUR_ALGO)) sampleAlg = GRIORA_NearestNeighbour;
+    else if (!strcasecmp(dem_sampling, BILINEAR_ALGO))         sampleAlg = GRIORA_Bilinear;
+    else if (!strcasecmp(dem_sampling, CUBIC_ALGO))            sampleAlg = GRIORA_Cubic;
+    else if (!strcasecmp(dem_sampling, CUBICSPLINE_ALGO))      sampleAlg = GRIORA_CubicSpline;
+    else if (!strcasecmp(dem_sampling, LANCZOS_ALGO))          sampleAlg = GRIORA_Lanczos;
+    else if (!strcasecmp(dem_sampling, AVERAGE_ALGO))          sampleAlg = GRIORA_Average;
+    else if (!strcasecmp(dem_sampling, MODE_ALGO))             sampleAlg = GRIORA_Mode;
+    else if (!strcasecmp(dem_sampling, GAUSS_ALGO))            sampleAlg = GRIORA_Gauss;
+    else if (!strcasecmp(dem_sampling, ZONALSTATS_ALGO))       zonalStats= true;
     else
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
 
