@@ -164,7 +164,7 @@ class VrtRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius, bool zonal_stats=false);
+                        VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
         bool            openVrtDset   (double lon=0, double lat=0);
         virtual void    getVrtFileName(std::string& vrtFile, double lon=0, double lat=0) = 0;
         virtual int64_t getRasterDate (std::string& tifFile) = 0;
