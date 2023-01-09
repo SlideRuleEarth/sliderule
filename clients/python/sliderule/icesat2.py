@@ -531,9 +531,9 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
     Parameters
     ----------
         url :           str
-                        the IP address or hostname of the SlideRule service (note, there is a special case where the url is provided as a list of strings instead of just a string; when a list is provided, the client hardcodes the set of servers that are used to process requests to the exact set provided; this is used for testing and for local installations and can be ignored by most users)
+                        the IP address or hostname of the SlideRule service (slidereearth.io by default)
         verbose :       bool
-                        whether or not user level log messages received from SlideRule generate a Python log message (see `sliderule.set_verbose <../user_guide/SlideRule.html#set_verbose>`_)
+                        whether or not user level log messages received from SlideRule generate a Python log message
         max_resources : int
                         the maximum number of resources that are allowed to be processed in a single request
         loglevel :      int
@@ -585,7 +585,7 @@ def cmr(**kwargs):
     Parameters
     ----------
         polygon:    list
-                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons <../user_guide/ICESat-2.html#polygons>`_), or a list of such lists when the region includes more than one polygon
+                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/ICESat-2.html#id1>`_), or a list of such lists when the region includes more than one polygon
         time_start: str
                     starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
         time_end:   str
@@ -709,16 +709,16 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtds/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
     asset:      str
-                data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+        gridded elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
     '''
     return atl06p(parm, asset=asset, resources=[resource])
 
@@ -741,9 +741,9 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
         asset:          str
-                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to use for processing
         callbacks:      dictionary
@@ -754,7 +754,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+        gridded elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
 
     Examples
     --------
@@ -887,16 +887,16 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     Parameters
     ----------
         parms:      dict
-                    parameters used to configure ATL03 subsetting (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                    parameters used to configure ATL03 subsetting (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
         resource:   str
                     ATL03 HDF5 filename
         asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
     GeoDataFrame
-        ATL03 extents (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
+        ATL03 extents (see `Photon Segments </rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
     '''
     return atl03sp(parm, asset=asset, resources=[resource])
 
@@ -918,9 +918,9 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL03 subsetting (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
         asset:          str
-                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to return
         callbacks:      dictionary
@@ -931,7 +931,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     Returns
     -------
     GeoDataFrame
-        ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
+        ATL03 segments (see `Photon Segments </rtd/user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
         tstart = time.perf_counter()
@@ -1112,7 +1112,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
@@ -1155,7 +1155,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     parallel on the server side, but also shares a file context between the reads so that portions of the file that
     need to be read multiple times do not result in multiple requests to S3.
 
-    For a full discussion of the data type conversion options, see `h5 <../user_guide/ICESat-2.html#h5>`_.
+    For a full discussion of the data type conversion options, see `h5 </rtd/api_reference/icesat2.html#h5>`_.
 
     Parameters
     ----------
@@ -1164,7 +1164,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
