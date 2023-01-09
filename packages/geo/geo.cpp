@@ -71,7 +71,6 @@ int geo_open (lua_State* L)
     LuaEngine::setAttrStr   (L, VrtRaster::AVERAGE_ALGO,            VrtRaster::AVERAGE_ALGO);
     LuaEngine::setAttrStr   (L, VrtRaster::MODE_ALGO,               VrtRaster::MODE_ALGO);
     LuaEngine::setAttrStr   (L, VrtRaster::GAUSS_ALGO,              VrtRaster::GAUSS_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::ZONALSTATS_ALGO,         VrtRaster::ZONALSTATS_ALGO);
 
     return 1;
 }

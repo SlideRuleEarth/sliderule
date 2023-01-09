@@ -55,8 +55,8 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
-    VrtRaster(L, dem_sampling, sampling_radius)
+ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
+    VrtRaster(L, dem_sampling, sampling_radius, zonal_stats)
 {
     /*
      * First get a list of all rasters with point of interest
@@ -74,9 +74,9 @@ ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampl
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-VrtRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius)
+VrtRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
 {
-    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius);
+    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats);
 }
 
 

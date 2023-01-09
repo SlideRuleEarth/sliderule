@@ -55,8 +55,8 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
-    VrtRaster(L, dem_sampling, sampling_radius)
+ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
+    VrtRaster(L, dem_sampling, sampling_radius, zonal_stats)
 {
     /* There is only one mosaic VRT file. Open it. */
     if (!openVrtDset())
@@ -78,9 +78,9 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-VrtRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius)
+VrtRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
 {
-    return new ArcticDemMosaicRaster(L, dem_sampling, sampling_radius);
+    return new ArcticDemMosaicRaster(L, dem_sampling, sampling_radius, zonal_stats);
 }
 
 

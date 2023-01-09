@@ -63,7 +63,6 @@ const char* VrtRaster::LANCZOS_ALGO = "Lanczos";
 const char* VrtRaster::AVERAGE_ALGO = "Average";
 const char* VrtRaster::MODE_ALGO = "Mode";
 const char* VrtRaster::GAUSS_ALGO = "Gauss";
-const char* VrtRaster::ZONALSTATS_ALGO = "ZonalStats";
 
 const char* VrtRaster::OBJECT_TYPE = "VrtRaster";
 const char* VrtRaster::LuaMetaName = "VrtRaster";
@@ -107,6 +106,7 @@ int VrtRaster::luaCreate( lua_State* L )
         const char* raster_name     = getLuaString(L, 1);
         const char* dem_sampling    = getLuaString(L, 2, true, NEARESTNEIGHBOUR_ALGO);
         const int   sampling_radius = getLuaInteger(L, 3, true, 1);
+        const int   zonal_stats     = getLuaBoolean(L, 4, true, 1);
 
         /* Get Factory */
         factory_t _create = NULL;
@@ -120,7 +120,7 @@ int VrtRaster::luaCreate( lua_State* L )
         if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", raster_name);
 
         /* Create Raster */
-        VrtRaster* _raster = _create(L, dem_sampling, sampling_radius);
+        VrtRaster* _raster = _create(L, dem_sampling, sampling_radius, zonal_stats);
         if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", raster_name);
 
         /* Return Object */
@@ -297,7 +297,7 @@ int VrtRaster::sample(double lon, double lat)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius):
+VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, bool zonal_stats):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     CHECKPTR(dem_sampling);
@@ -314,30 +314,16 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else if (!strcasecmp(dem_sampling, AVERAGE_ALGO))          sampleAlg = GRIORA_Average;
     else if (!strcasecmp(dem_sampling, MODE_ALGO))             sampleAlg = GRIORA_Mode;
     else if (!strcasecmp(dem_sampling, GAUSS_ALGO))            sampleAlg = GRIORA_Gauss;
-    else if (!strcasecmp(dem_sampling, ZONALSTATS_ALGO))       zonalStats= true;
     else
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
+
+    zonalStats = zonal_stats;
 
     if (sampling_radius >= 0)
     {
         samplingRadius = sampling_radius;
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
-
-    /*
-     * Put a limit on maximum sampling radius to 50 pixels.
-     * At this point the size of pixel is unknow (no raster has been opened)
-     * For ArcticDem (2m pixel size) the default radius is 100 meters.
-     * Plugins can override maxSamplingRadius in their constructors.
-     */
-    maxSamplingRadius = 100;
-
-    if (samplingRadius > maxSamplingRadius)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR,
-                               "Sampling radius is too big: %d: max allowed %d meters",
-                               samplingRadius, maxSamplingRadius);
-    }
 
     /* Initialize Class Data Members */
     clearVrt( &vrt);
@@ -406,8 +392,18 @@ bool VrtRaster::openVrtDset(double lon, double lat)
         vrt.bbox.lon_max = geot[0] + vrt.cols * geot[1];
         vrt.bbox.lat_max = geot[3];
         vrt.bbox.lat_min = geot[3] + vrt.rows * geot[5];
+        vrt.cellSize     = geot[1];
 
-        vrt.cellSize = geot[1];
+        vrt.radiusInPixels = radius2pixels(vrt.cellSize, samplingRadius);
+
+        /* Limit maximum sampling radius */
+        if (vrt.radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR,
+                                   "Sampling radius is too big: %d: max allowed %d meters",
+                                   samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(vrt.cellSize));
+        }
+
 
         OGRErr ogrerr = vrt.srcSrs.importFromEPSG(PHOTON_CRS);
         CHECK_GDALERR(ogrerr);
@@ -449,7 +445,7 @@ bool VrtRaster::openVrtDset(double lon, double lat)
         vrt.band = NULL;
 
         bzero(vrt.invGeot, sizeof(vrt.invGeot));
-        vrt.rows = vrt.cols = vrt.cellSize = 0;
+        vrt.rows = vrt.cols = vrt.cellSize = vrt.radiusInPixels = 0;
         bzero(&vrt.bbox, sizeof(vrt.bbox));
     }
 
@@ -577,9 +573,9 @@ void VrtRaster::readPixel(raster_t *raster)
 /*----------------------------------------------------------------------------
  * radius2pixels
  *----------------------------------------------------------------------------*/
-int VrtRaster::radius2pixels(raster_t *raster, int _radius)
+int VrtRaster::radius2pixels(double cellSize, int _radius)
 {
-    int csize = raster->cellSize;
+    int csize = static_cast<int>(cellSize);
     int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
     int radiusInPixels = radiusInMeters / csize;
     return radiusInPixels;
@@ -611,7 +607,6 @@ void VrtRaster::resamplePixel(raster_t *raster, VrtRaster* obj)
         int col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
         int row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
 
-        int radiusInPixels = obj->radius2pixels(raster, obj->samplingRadius);
         int _col, _row, windowSize;
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
@@ -640,9 +635,9 @@ void VrtRaster::resamplePixel(raster_t *raster, VrtRaster* obj)
         }
         else
         {
-            windowSize = radiusInPixels * 2 + 1;  // Odd window size around pixel
-            _col = col - radiusInPixels;
-            _row = row - radiusInPixels;
+            windowSize = raster->radiusInPixels * 2 + 1;  // Odd window size around pixel
+            _col = col - raster->radiusInPixels;
+            _row = row - raster->radiusInPixels;
         }
 
         bool windowIsValid = rasterContainsWindow(_col, _row, raster->cols, raster->rows, windowSize);
@@ -665,8 +660,9 @@ void VrtRaster::resamplePixel(raster_t *raster, VrtRaster* obj)
             col = static_cast<int32_t>(floor((raster->point.getX() - vrt.bbox.lon_min) / vrt.cellSize));
             row = static_cast<int32_t>(floor((vrt.bbox.lat_max - raster->point.getY()) / vrt.cellSize));
 
-            _col = col - radiusInPixels;
-            _row = row - radiusInPixels;
+            windowSize = vrt.radiusInPixels * 2 + 1;  // Odd window size around pixel
+            _col = col - vrt.radiusInPixels;
+            _row = row - vrt.radiusInPixels;
 
             /* Make sure sampling window is valid for VRT data set */
             windowIsValid = rasterContainsWindow(_col, _row, vrt.cols, vrt.rows, windowSize);
@@ -701,7 +697,7 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
         int col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
         int row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
 
-        int radiusInPixels = obj->radius2pixels(raster, obj->samplingRadius);
+        int radiusInPixels = raster->radiusInPixels;
         int _col, _row, windowSize;
 
         windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
@@ -728,6 +724,7 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
             col = static_cast<int32_t>(floor((raster->point.getX() - vrt.bbox.lon_min) / vrt.cellSize));
             row = static_cast<int32_t>(floor((vrt.bbox.lat_max - raster->point.getY()) / vrt.cellSize));
 
+            radiusInPixels = vrt.radiusInPixels;
             _col = col - radiusInPixels;
             _row = row - radiusInPixels;
 
@@ -749,10 +746,6 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
             double max = std::numeric_limits<double>::min();
             double sum = 0;
             std::vector<double> validSamples;
-
-            /* Get the value of sample from array. windowSize is always odd, its pow of two will always be odd */
-            uint32_t indx = (windowSize*windowSize - 1) / 2;
-            raster->sample.value = samplesArray[indx];
 
             /*
              * Only use pixels within radius from pixel containing point of interest.
@@ -830,12 +823,7 @@ void VrtRaster::computeZonalStats(raster_t *raster, VrtRaster *obj)
                 raster->sample.stats.mad    = mad;
             }
         }
-        else
-        {
-            /* If window was invalid, at least read sample from raster */
-            obj->readPixel(raster);
-            mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
-        }
+        else mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
     }
     catch (const RunTimeException &e)
     {
@@ -910,6 +898,7 @@ void VrtRaster::clearVrt(vrt_t *_vrt)
     _vrt->cols = 0;
     _vrt->cellSize = 0;
     bzero(&_vrt->bbox, sizeof(bbox_t));
+    _vrt->radiusInPixels = 0;
     _vrt->transf = NULL;
     _vrt->srcSrs.Clear();
     _vrt->trgSrs.Clear();
@@ -933,6 +922,7 @@ void VrtRaster::clearRaster(raster_t *raster)
     raster->cellSize = 0;
     raster->xBlockSize = 0;
     raster->yBlockSize = 0;
+    raster->radiusInPixels = 0;
     raster->gpsTime = 0;
     raster->point.empty();
     bzero(&raster->sample, sizeof(sample_t));
@@ -1165,6 +1155,7 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             raster->bbox.lat_min = geot[3] + raster->rows * geot[5];
 
             raster->cellSize = geot[1];
+            raster->radiusInPixels = radius2pixels(raster->cellSize, samplingRadius);
 
             /* Get raster block size */
             raster->band = raster->dset->GetRasterBand(1);
@@ -1186,21 +1177,16 @@ void VrtRaster::processRaster(raster_t* raster, VrtRaster* obj)
             return;
 
         if (obj->sampleAlg == GRIORA_NearestNeighbour)
-        {
-            /* Default case, just read/sample raster */
             obj->readPixel(raster);
-        }
-        else if (zonalStats)
-        {
-            computeZonalStats(raster, obj);
-        }
         else
-        {
             resamplePixel(raster, obj);
-        }
 
         raster->sample.time = raster->gpsTime;
         raster->sampled = true;
+
+        if (zonalStats)
+            computeZonalStats(raster, obj);
+
     }
     catch (const RunTimeException &e)
     {

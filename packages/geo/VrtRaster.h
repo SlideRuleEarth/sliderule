@@ -56,6 +56,7 @@ class VrtRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int   INVALID_SAMPLE_VALUE = -1000000;
+        static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
 
@@ -102,6 +103,7 @@ class VrtRaster: public LuaObject
             uint32_t        cols;
             double          cellSize;
             bbox_t          bbox;
+            uint32_t        radiusInPixels;
 
             OGRCoordinateTransformation *transf;
             OGRSpatialReference          srcSrs;
@@ -123,6 +125,7 @@ class VrtRaster: public LuaObject
             double          cellSize;
             int32_t         xBlockSize;
             int32_t         yBlockSize;
+            uint32_t        radiusInPixels;
 
             double          gpsTime;
 
@@ -141,7 +144,7 @@ class VrtRaster: public LuaObject
         } reader_t;
 
 
-        typedef VrtRaster* (*factory_t) (lua_State* L, const char* dem_sampling, const int sampling_radius);
+        typedef VrtRaster* (*factory_t) (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
 
         /*--------------------------------------------------------------------
          * Methods
@@ -161,7 +164,7 @@ class VrtRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius);
+                        VrtRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius, bool zonal_stats=false);
         bool            openVrtDset   (double lon=0, double lat=0);
         virtual void    getVrtFileName(std::string& vrtFile, double lon=0, double lat=0) = 0;
         virtual int64_t getRasterDate (std::string& tifFile) = 0;
@@ -172,7 +175,6 @@ class VrtRaster: public LuaObject
 
         bool      checkCacheFirst;
         bool      allowVrtDataSetSampling;
-        uint32_t  maxSamplingRadius;
 
     private:
 
@@ -220,7 +222,7 @@ class VrtRaster: public LuaObject
         void    clearRaster              (raster_t *raster);
         void    clearVrt                 (vrt_t *_vrt);
         void    readPixel                (raster_t *raster);
-        int     radius2pixels            (raster_t *raster, int _radius);
+        int     radius2pixels            (double cellSize, int _radius);
         void    resamplePixel            (raster_t *raster, VrtRaster *obj);
         void    computeZonalStats        (raster_t *raster, VrtRaster* obj);
         void    RasterIoWithRetry        (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
