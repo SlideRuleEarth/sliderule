@@ -297,7 +297,7 @@ int VrtRaster::sample(double lon, double lat)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, bool zonal_stats):
+VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     CHECKPTR(dem_sampling);
