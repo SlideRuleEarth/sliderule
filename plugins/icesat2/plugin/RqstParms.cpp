@@ -72,9 +72,10 @@ const char* RqstParms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
 const char* RqstParms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* RqstParms::ATL03_PH_FIELDS              = "atl03_ph_fields";
 const char* RqstParms::RASTERS_TO_SAMPLE            = "samples";
-const char* RqstParms::RASTERS_SOURCE               = "source";
+const char* RqstParms::RASTERS_ASSET                = "asset";
 const char* RqstParms::RASTERS_RADIUS               = "radius";
 const char* RqstParms::RASTERS_ALGORITHM            = "algorithm";
+const char* RqstParms::RASTERS_ZONAL_STATS          = "zonal_stats";
 const char* RqstParms::RQST_TIMEOUT                 = "rqst-timeout";
 const char* RqstParms::NODE_TIMEOUT                 = "node-timeout";
 const char* RqstParms::READ_TIMEOUT                 = "read-timeout";
@@ -965,7 +966,6 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
         *provided = true;
 
         /* Iterate over rasters in list */
-        lua_pushvalue(L, index); // -1 => table
         lua_pushnil(L); // -1 => nil; -2 => table
         while (lua_next(L, -2)) // -1 => value; -2 => key; -3 => table
         {
@@ -977,19 +977,24 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
                 rss_t rss;
                 bool field_provided;
 
-                lua_getfield(L, index, RqstParms::RASTERS_SOURCE);
-                rss.source = LuaObject::getLuaString(L, -1);
-                mlog(DEBUG, "Sampling %s for %s", rss.source.getString(), key);
+                lua_getfield(L, -2, RqstParms::RASTERS_ASSET);
+                rss.asset = LuaObject::getLuaString(L, -1);
+                mlog(DEBUG, "Sampling %s for %s", rss.asset.getString(), key);
                 lua_pop(L, 1);
 
-                lua_getfield(L, index, RqstParms::RASTERS_RADIUS);
+                lua_getfield(L, -2, RqstParms::RASTERS_RADIUS);
                 rss.radius = LuaObject::getLuaFloat(L, -1, true, 0.0, &field_provided);
                 if(field_provided) mlog(DEBUG, "Setting %s to %lf for %s", RqstParms::RASTERS_RADIUS, rss.radius, key);
                 lua_pop(L, 1);
 
-                lua_getfield(L, index, RqstParms::RASTERS_ALGORITHM);
+                lua_getfield(L, -2, RqstParms::RASTERS_ALGORITHM);
                 rss.sampling_algorithm = LuaObject::getLuaString(L, -1, true, VrtRaster::NEARESTNEIGHBOUR_ALGO, &field_provided);
                 if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ALGORITHM, rss.sampling_algorithm.getString(), key);
+                lua_pop(L, 1);
+
+                lua_getfield(L, -2, RqstParms::RASTERS_ZONAL_STATS);
+                rss.zonal_stats = LuaObject::getLuaBoolean(L, -1, true, false, &field_provided);
+                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ZONAL_STATS, rss.zonal_stats ? "true" : "false", key);
                 lua_pop(L, 1);
 
                 /* Add raster entry to list */
@@ -1001,7 +1006,6 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
             }
             lua_pop(L, 2); // -1 => key; -2 => table
         } // -1 => table
-        lua_pop(L, 1); // stack restored to how it was
     }
     else if(!lua_isnil(L, index))
     {

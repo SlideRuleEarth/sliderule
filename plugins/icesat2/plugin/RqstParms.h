@@ -84,9 +84,10 @@ class RqstParms: public LuaObject
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
         static const char* RASTERS_TO_SAMPLE;
-        static const char* RASTERS_SOURCE;
+        static const char* RASTERS_ASSET;
         static const char* RASTERS_RADIUS;
         static const char* RASTERS_ALGORITHM;
+        static const char* RASTERS_ZONAL_STATS;
         static const char* RQST_TIMEOUT;
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
@@ -220,9 +221,10 @@ class RqstParms: public LuaObject
 
         /* Raster Sampling Settings */
         typedef struct {
-            SafeString          source;
+            SafeString          asset;
             double              radius;
             SafeString          sampling_algorithm;
+            bool                zonal_stats;
         } rss_t;
 
         /* Rasters to Sample */

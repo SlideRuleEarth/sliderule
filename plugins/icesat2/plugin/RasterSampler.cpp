@@ -72,7 +72,7 @@ const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
     {"mad",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.mad),       1,  NULL, NATIVE_FLAGS}
 };
 
-const char* RasterSampler::zsExtentRecType = "zssrec";
+const char* RasterSampler::zsExtentRecType = "zsrec";
 const RecordObject::fieldDef_t RasterSampler::zsExtentRecDef[] = {
     {"extent_id",       RecordObject::UINT64,   offsetof(zs_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
     {"key",             RecordObject::STRING,   offsetof(zs_extent_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},

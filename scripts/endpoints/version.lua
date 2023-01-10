@@ -29,11 +29,6 @@ local json = require("json")
 local version, commit, environment, launch, duration, packages = sys.version()
 
 local rsps = {server={version=version, commit=commit, environment=environment, launch=launch, duration=duration, packages=packages}}
-print(version)
-print(commit)
-print(environment)
-print(launch)
-print(duration)
 
 for _,package in ipairs(packages) do
     local package_exists = global.check(package)

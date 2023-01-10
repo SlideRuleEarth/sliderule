@@ -105,8 +105,8 @@ int VrtRaster::luaCreate( lua_State* L )
         /* Get Parameters */
         const char* raster_name     = getLuaString(L, 1);
         const char* dem_sampling    = getLuaString(L, 2, true, NEARESTNEIGHBOUR_ALGO);
-        const int   sampling_radius = getLuaInteger(L, 3, true, 1);
-        const int   zonal_stats     = getLuaBoolean(L, 4, true, 1);
+        const int   sampling_radius = getLuaInteger(L, 3, true, 0);
+        const int   zonal_stats     = getLuaBoolean(L, 4, true, false);
 
         /* Get Factory */
         factory_t _create = NULL;
