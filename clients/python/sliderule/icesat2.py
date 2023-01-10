@@ -826,14 +826,33 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         # Add Right Pair Track Entry
                         field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
                         field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
-                    elif 'rsrec' == rsp['__rectype']:
-                        for sample in rsp["samples"]:
-                            time_str = sliderule.gps2utc(sample["time"])
-                            field_name = parm['samples'][rsp['raster_index']] + "-" + time_str.split(" ")[0].strip()
-                            if field_name not in field_dictionary:
-                                field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                            field_dictionary[field_name]['extent_id'] += rsp['extent_id'],
-                            field_dictionary[field_name][field_name] += sample['value'],
+                    elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
+                        if rsp["num_samples"] <= 0:
+                            continue
+                        # Get field names and set
+                        sample = rsp["samples"][0]
+                        field_names = list(sample.keys())
+                        field_names.remove("__rectype")
+                        field_set = rsp['key']
+                        as_numpy_array = False
+                        if rsp["num_samples"] > 1:
+                            as_numpy_array = True
+                        # On first time, build empty dictionary for field set associated with raster
+                        if field_set not in field_dictionary:
+                            field_dictionary[field_set] = {'extent_id': []}
+                            for field in field_names:
+                                field_dictionary[field_set][field_set + "." + field] = []
+                        # Populate dictionary for field set
+                        field_dictionary[field_set]['extent_id'] += rsp['extent_id'],
+                        for field in field_names:
+                            if as_numpy_array:
+                                data = []
+                                for s in rsp["samples"]:
+                                    data += s[field],
+                                field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
+                            else:
+                                field_dictionary[field_set][field_set + "." + field] += sample[field],
+
                 # Build Elevation Columns
                 if num_elevations > 0:
                     # Initialize Columns
