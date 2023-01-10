@@ -3,9 +3,8 @@
 #
 
 import sys
-import logging
 from sliderule import icesat2
-from utils import parse_command_line
+from utils import parse_command_line, initialize_client
 
 ###############################################################################
 # MAIN
@@ -14,33 +13,26 @@ from utils import parse_command_line
 if __name__ == '__main__':
 
     # set script defaults
-    cfg = {
-        "url":          'localhost',
-        "organization": None,
-        "asset":        'atlas-local',
+    local = {
         "dataset":      '/gt2l/heights/h_ph',
-        "resource":     'ATL03_20181017222812_02950102_005_01.h5',
         "col":          0,
         "startrow":     0,
         "numrows":      -1
     }
 
+    # Initialize Client
+    parms, cfg = initialize_client(sys.argv)
+
     # parse configuration parameters
-    parse_command_line(sys.argv, cfg)
-
-    # Configure Logging #
-    logging.basicConfig(level=logging.INFO)
-
-    # Configure SlideRule #
-    icesat2.init(cfg["url"], True, organization=cfg["organization"])
+    parse_command_line(sys.argv, local)
 
     # Read Dataset #
-    datasets = [ {"dataset": cfg["dataset"], "col": cfg["col"], "startrow": cfg["startrow"], "numrows": cfg["numrows"]} ]
+    datasets = [ {"dataset": local["dataset"], "col": local["col"], "startrow": local["startrow"], "numrows": local["numrows"]} ]
     rawdata = icesat2.h5p(datasets, cfg["resource"], cfg["asset"])
     print(rawdata)
 
     # Write Dataset to File #
-    filename = cfg["dataset"][cfg["dataset"].rfind("/")+1:]
+    filename = local["dataset"][local["dataset"].rfind("/")+1:]
     f = open(filename + ".bin", 'w+b')
-    f.write(bytearray(rawdata[cfg["dataset"]]))
+    f.write(bytearray(rawdata[local["dataset"]]))
     f.close()

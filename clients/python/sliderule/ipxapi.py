@@ -97,7 +97,7 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     Returns
     -------
     list
-        ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
+        ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#segmented-photon-data>`_)
     """
     try:
         version = ipx_region.product_version

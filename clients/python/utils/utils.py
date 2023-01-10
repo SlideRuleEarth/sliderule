@@ -78,7 +78,6 @@ def initialize_client(args):
         "maxi":                     1,
         "atl03_geo_fields":         [],
         "atl03_ph_fields":          [],
-        "samples":                  [],
         "profile":                  True,
         "verbose":                  True,
         "timeout":                  0,
@@ -119,10 +118,6 @@ def initialize_client(args):
         parms['atl03_geo_fields'] = cfg['atl03_geo_fields']
     if len(cfg['atl03_ph_fields']) > 0:
         parms['atl03_ph_fields'] = cfg['atl03_ph_fields']
-
-    # Add Rasters to Sample
-    if len(cfg['samples']) > 0:
-        parms['samples'] = cfg['samples']
 
     # Add ATL08 Classification
     if len(cfg['atl08_class']) > 0:

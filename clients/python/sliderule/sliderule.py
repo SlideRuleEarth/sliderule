@@ -422,7 +422,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
         parm:       dict
                     dictionary of request parameters
         stream:     bool
-                    whether the request is a **normal** service or a **stream** service (see `De-serialization <./SlideRule.html#de-serialization>`_ for more details)
+                    whether the request is a **normal** service or a **stream** service (see `De-serialization </rtd/user_guide/SlideRule.html#de-serialization>`_ for more details)
         callbacks:  dict
                     record type callbacks (advanced use)
         path:       str
@@ -690,7 +690,8 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
             ps_username = login_credentials[0]
             ps_password = login_credentials[2]
         except Exception as e:
-            logger.warning("Failed to retrieve username and password from netrc file: {}".format(e))
+            if ps_organization != PUBLIC_ORG:
+                logger.warning("Unable to retrieve username and password from netrc file for machine: {}".format(e))
 
     # authenticate to provisioning system
     if ps_username and ps_password:
