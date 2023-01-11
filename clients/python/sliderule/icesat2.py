@@ -1262,7 +1262,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
                     tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
         cellsize:   float
                     size of pixel in degrees used to create the raster image of the polygon
-        clusters:   int
+        n_clusters: int
                     number of clusters of polygons to create when breaking up the request to CMR
 
     Returns
