@@ -422,7 +422,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
         parm:       dict
                     dictionary of request parameters
         stream:     bool
-                    whether the request is a **normal** service or a **stream** service (see `De-serialization <./SlideRule.html#de-serialization>`_ for more details)
+                    whether the request is a **normal** service or a **stream** service (see `De-serialization </rtd/user_guide/SlideRule.html#de-serialization>`_ for more details)
         callbacks:  dict
                     record type callbacks (advanced use)
         path:       str
@@ -455,44 +455,53 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
         if c not in callbacks:
             callbacks[c] = __callbacks[c]
     # Attempt Request
-    try:
-        # Construct Request URL and Authorization
-        if service_org:
-            url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
-            headers = __build_auth_header()
-        else:
-            url = 'http://%s%s/%s' % (service_url, path, api)
-        # Perform Request
-        if not stream:
-            data = session.get(url, data=rqst, headers=headers, timeout=request_timeout)
-        else:
-            data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
-        data.raise_for_status()
-        # Parse Response
-        format = data.headers['Content-Type']
-        if format == 'text/plain':
-            rsps = __parse_json(data)
-        elif format == 'application/json':
-            rsps = __parse_json(data)
-        elif format == 'application/octet-stream':
-            rsps = __parse_native(data, callbacks)
-        else:
-            raise FatalError('unsupported content type: %s' % (format))
-    except requests.exceptions.SSLError as e:
-        raise FatalError("Unable to verify SSL certificate: {}".format(e))
-    except requests.ConnectionError as e:
-        raise FatalError("Connection error to endpoint {}".format(url))
-    except requests.Timeout as e:
-        raise TransientError("Timed-out waiting for response from endpoint {}".format(url))
-    except requests.exceptions.ChunkedEncodingError as e:
-        raise RuntimeError("Unexpected termination of response from endpoint {}".format(url))
-    except requests.HTTPError as e:
-        if e.response.status_code == 503:
-            raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
-        else:
-            raise FatalError("HTTP error {} from endpoint {}".format(e.response.status_code, url))
-    except:
-        raise
+    complete = False
+    attempts = 3
+    while not complete and attempts > 0:
+        attempts -= 1
+        try:
+            # Construct Request URL and Authorization
+            if service_org:
+                url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
+                headers = __build_auth_header()
+            else:
+                url = 'http://%s%s/%s' % (service_url, path, api)
+            # Perform Request
+            if not stream:
+                data = session.get(url, data=rqst, headers=headers, timeout=request_timeout)
+            else:
+                data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
+            data.raise_for_status()
+            # Parse Response
+            format = data.headers['Content-Type']
+            if format == 'text/plain':
+                rsps = __parse_json(data)
+            elif format == 'application/json':
+                rsps = __parse_json(data)
+            elif format == 'application/octet-stream':
+                rsps = __parse_native(data, callbacks)
+            else:
+                raise FatalError('unsupported content type: %s' % (format))
+            # Success
+            complete = True
+        except requests.exceptions.SSLError as e:
+            logger.error("Unable to verify SSL certificate: {} ...retrying request".format(e))
+        except requests.ConnectionError as e:
+            logger.error("Connection error to endpoint {} ...retrying request".format(url))
+        except requests.Timeout as e:
+            logger.error("Timed-out waiting for response from endpoint {} ...retrying request".format(url))
+        except requests.exceptions.ChunkedEncodingError as e:
+            logger.error("Unexpected termination of response from endpoint {} ...retrying request".format(url))
+        except requests.HTTPError as e:
+            if e.response.status_code == 503:
+                raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
+            else:
+                raise FatalError("HTTP error {} from endpoint {}".format(e.response.status_code, url))
+        except:
+            raise
+    # Check Success
+    if not complete:
+        raise FatalError("Unable to complete request due to errors")
     # Return Response
     return rsps
 
@@ -681,7 +690,8 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
             ps_username = login_credentials[0]
             ps_password = login_credentials[2]
         except Exception as e:
-            logger.warning("Failed to retrieve username and password from netrc file: {}".format(e))
+            if ps_organization != PUBLIC_ORG:
+                logger.warning("Unable to retrieve username and password from netrc file for machine: {}".format(e))
 
     # authenticate to provisioning system
     if ps_username and ps_password:

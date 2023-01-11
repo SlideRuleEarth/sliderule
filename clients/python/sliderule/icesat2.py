@@ -41,7 +41,6 @@ import numpy
 import geopandas
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
-from sklearn.cluster import KMeans
 import sliderule
 
 ###############################################################################
@@ -50,6 +49,14 @@ import sliderule
 
 # create logger
 logger = logging.getLogger(__name__)
+
+# import cluster support
+clustering_enabled = False
+try:
+    from sklearn.cluster import KMeans
+    clustering_enabled = True
+except:
+    logger.warning("Unable to import sklearn... clustering support disabled")
 
 # profiling times for each major function
 profiles = {}
@@ -191,6 +198,9 @@ def __cmr_granule_metadata(search_results):
     for e in search_results['feed']['entry']:
         # columns for dataframe
         columns = {}
+        # granule title and identifiers
+        columns['title'] = e['title']
+        columns['collection_concept_id'] = e['collection_concept_id']
         # time start and time end of granule
         columns['time_start'] = numpy.datetime64(e['time_start'])
         columns['time_end'] = numpy.datetime64(e['time_end'])
@@ -202,8 +212,13 @@ def __cmr_granule_metadata(search_results):
         df = geopandas.pd.DataFrame(columns, index=[e['id']])
         # Generate Geometry Column
         if 'polygons' in e:
-            coords = [float(i) for i in e['polygons'][0][0].split()]
-            geometry = Polygon(zip(coords[1::2], coords[::2]))
+            polygons = []
+            # for each polygon
+            for poly in e['polygons'][0]:
+                coords = [float(i) for i in poly.split()]
+                polygons.append(Polygon(zip(coords[1::2], coords[::2])))
+            # generate multipolygon from list of polygons
+            geometry = MultiPolygon(polygons)
         else:
             geometry, = geopandas.points_from_xy([None], [None])
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
@@ -495,12 +510,8 @@ def __gdf2poly(gdf):
 #
 def __procoutputfile(parm, lon_key, lat_key):
     if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
-        # Read Parquet File as DataFrame
-        df = geopandas.pd.read_parquet(parm["output"]["path"])
-        # Build GeoDataFrame
-        gdf = __todataframe(df, lon_key=lon_key, lat_key=lat_key)
-        # Return Results
-        return gdf
+        # Return GeoParquet File as GeoDataFrame
+        return geopandas.read_parquet(parm["output"]["path"])
     else:
         # Return Parquet Filename
         return parm["output"]["path"]
@@ -520,9 +531,9 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
     Parameters
     ----------
         url :           str
-                        the IP address or hostname of the SlideRule service (note, there is a special case where the url is provided as a list of strings instead of just a string; when a list is provided, the client hardcodes the set of servers that are used to process requests to the exact set provided; this is used for testing and for local installations and can be ignored by most users)
+                        the IP address or hostname of the SlideRule service (slidereearth.io by default)
         verbose :       bool
-                        whether or not user level log messages received from SlideRule generate a Python log message (see `sliderule.set_verbose <../user_guide/SlideRule.html#set_verbose>`_)
+                        whether or not user level log messages received from SlideRule generate a Python log message
         max_resources : int
                         the maximum number of resources that are allowed to be processed in a single request
         loglevel :      int
@@ -574,7 +585,7 @@ def cmr(**kwargs):
     Parameters
     ----------
         polygon:    list
-                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons <../user_guide/ICESat-2.html#polygons>`_), or a list of such lists when the region includes more than one polygon
+                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/ICESat-2.html#id1>`_), or a list of such lists when the region includes more than one polygon
         time_start: str
                     starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
         time_end:   str
@@ -698,16 +709,16 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtds/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
     asset:      str
-                data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+        gridded elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
     '''
     return atl06p(parm, asset=asset, resources=[resource])
 
@@ -730,9 +741,9 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
         asset:          str
-                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to use for processing
         callbacks:      dictionary
@@ -743,7 +754,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+        gridded elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
 
     Examples
     --------
@@ -796,7 +807,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             columns = {}
             elevation_records = []
             num_elevations = 0
-            field_dictionary = {} # ['field_name'] = {"extent_id": [], field_name: []}
+            field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
             if len(rsps) > 0:
                 # Sort Records
                 for rsp in rsps:
@@ -806,7 +817,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                     elif 'extrec' == rsp['__rectype']:
                         field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in field_dictionary:
-                            field_dictionary[field_name] = {"extent_id": [], field_name: []}
+                            field_dictionary[field_name] = {'extent_id': [], field_name: []}
                         # Parse Ancillary Data
                         data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         # Add Left Pair Track Entry
@@ -815,6 +826,33 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         # Add Right Pair Track Entry
                         field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
                         field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+                    elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
+                        if rsp["num_samples"] <= 0:
+                            continue
+                        # Get field names and set
+                        sample = rsp["samples"][0]
+                        field_names = list(sample.keys())
+                        field_names.remove("__rectype")
+                        field_set = rsp['key']
+                        as_numpy_array = False
+                        if rsp["num_samples"] > 1:
+                            as_numpy_array = True
+                        # On first time, build empty dictionary for field set associated with raster
+                        if field_set not in field_dictionary:
+                            field_dictionary[field_set] = {'extent_id': []}
+                            for field in field_names:
+                                field_dictionary[field_set][field_set + "." + field] = []
+                        # Populate dictionary for field set
+                        field_dictionary[field_set]['extent_id'] += rsp['extent_id'],
+                        for field in field_names:
+                            if as_numpy_array:
+                                data = []
+                                for s in rsp["samples"]:
+                                    data += s[field],
+                                field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
+                            else:
+                                field_dictionary[field_set][field_set + "." + field] += sample[field],
+
                 # Build Elevation Columns
                 if num_elevations > 0:
                     # Initialize Columns
@@ -868,16 +906,16 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     Parameters
     ----------
         parms:      dict
-                    parameters used to configure ATL03 subsetting (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                    parameters used to configure ATL03 subsetting (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
         resource:   str
                     ATL03 HDF5 filename
         asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
     GeoDataFrame
-        ATL03 extents (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
+        ATL03 extents (see `Photon Segments </rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
     '''
     return atl03sp(parm, asset=asset, resources=[resource])
 
@@ -899,9 +937,9 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL03 subsetting (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
         asset:          str
-                        data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to return
         callbacks:      dictionary
@@ -912,7 +950,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     Returns
     -------
     GeoDataFrame
-        ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#photon-segments>`_)
+        ATL03 segments (see `Photon Segments </rtd/user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
         tstart = time.perf_counter()
@@ -1093,7 +1131,7 @@ def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DY
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
@@ -1136,7 +1174,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     parallel on the server side, but also shares a file context between the reads so that portions of the file that
     need to be read multiple times do not result in multiple requests to S3.
 
-    For a full discussion of the data type conversion options, see `h5 <../user_guide/ICESat-2.html#h5>`_.
+    For a full discussion of the data type conversion options, see `h5 </rtd/api_reference/icesat2.html#h5>`_.
 
     Parameters
     ----------
@@ -1145,7 +1183,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
@@ -1323,22 +1361,25 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         # generate clusters
         clusters = []
         if n_clusters > 1:
-            # pull out centroids of each geometry object
-            if "CenLon" in gdf and "CenLat" in gdf:
-                X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+            if clustering_enabled:
+                # pull out centroids of each geometry object
+                if "CenLon" in gdf and "CenLat" in gdf:
+                    X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+                else:
+                    s = gdf.centroid
+                    X = numpy.column_stack((s.x, s.y))
+                # run k means clustering algorithm against polygons in gdf
+                kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+                y_kmeans = kmeans.fit_predict(X)
+                k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+                gdf = gdf.join(k)
+                # build polygon for each cluster
+                for n in range(n_clusters):
+                    c_gdf = gdf[gdf["cluster"] == n]
+                    c_poly = __gdf2poly(c_gdf)
+                    clusters.append(c_poly)
             else:
-                s = gdf.centroid
-                X = numpy.column_stack((s.x, s.y))
-            # run k means clustering algorithm against polygons in gdf
-            kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
-            y_kmeans = kmeans.fit_predict(X)
-            k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
-            gdf = gdf.join(k)
-            # build polygon for each cluster
-            for n in range(n_clusters):
-                c_gdf = gdf[gdf["cluster"] == n]
-                c_poly = __gdf2poly(c_gdf)
-                clusters.append(c_poly)
+                raise sliderule.FatalError("Clustering support not enabled; unable to import sklearn package")
 
     # update timing profiles
     profiles[toregion.__name__] = time.perf_counter() - tstart

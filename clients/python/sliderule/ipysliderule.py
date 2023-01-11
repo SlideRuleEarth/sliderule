@@ -1621,6 +1621,7 @@ class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
         kwargs.setdefault('map',None)
+        kwargs.setdefault('prefer_canvas',False)
         kwargs.setdefault('attribution',False)
         kwargs.setdefault('zoom_control',False)
         kwargs.setdefault('scale_control',False)
@@ -1632,25 +1633,28 @@ class leaflet:
         if (projection == 'Global'):
             self.map = ipyleaflet.Map(center=kwargs['center'],
                 zoom=9, max_zoom=15, world_copy_jump=True,
+                prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
                 basemap=ipyleaflet.basemaps.Esri.WorldTopoMap)
             self.crs = 'EPSG:3857'
         elif (projection == 'North'):
             self.map = ipyleaflet.Map(center=(90,0),
                 zoom=5, max_zoom=24,
+                prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
-                basemap=ipyleaflet.basemaps.Esri.ArcticOceanBase,
-                crs=ipyleaflet.projections.EPSG5936.ESRIBasemap)
+                basemap=basemaps.Esri.ArcticOceanBase,
+                crs=projections.EPSG5936.ESRIBasemap)
             # add arctic ocean reference basemap
-            reference = ipyleaflet.basemaps.Esri.ArcticOceanReference
+            reference = basemaps.Esri.ArcticOceanReference
             self.map.add(ipyleaflet.basemap_to_tiles(reference))
             self.crs = 'EPSG:5936'
         elif (projection == 'South'):
             self.map = ipyleaflet.Map(center=(-90,0),
                 zoom=2, max_zoom=9,
+                prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
-                basemap=ipyleaflet.basemaps.Esri.AntarcticBasemap,
-                crs=ipyleaflet.projections.EPSG3031.ESRIBasemap)
+                basemap=basemaps.Esri.AntarcticBasemap,
+                crs=projections.EPSG3031.ESRIBasemap)
             self.crs = 'EPSG:3031'
         else:
             # use a predefined ipyleaflet map
