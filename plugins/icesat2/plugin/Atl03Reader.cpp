@@ -647,10 +647,13 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     enabled             (info->reader->parms->stages[RqstParms::STAGE_ATL08]),
+    phoreal             (info->reader->parms->stages[RqstParms::STAGE_PHOREAL]),
     gt                  {NULL, NULL},
+    relief              {NULL, NULL},
     atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",   &info->reader->context08),
     atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx", &info->reader->context08),
-    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08)
+    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08),
+    atl08_ph_h          (enabled && phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_h", &info->reader->context08)
 {
 }
 
@@ -662,6 +665,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
     for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         if(gt[t]) delete [] gt[t];
+        if(relief[t]) delete [] relief[t];
     }
 }
 
@@ -690,6 +694,9 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
         /* Allocate ATL08 Classification Array */
         int num_photons = atl03.dist_ph_along[t].size;
         gt[t] = new uint8_t [num_photons];
+
+        /* Allocate ATL08 Relief Array */
+        if(phoreal) relief[t] = new float [num_photons];
 
         /* Populate ATL08 Classifications */
         int32_t atl03_photon = 0;
@@ -721,6 +728,9 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
                 {
                     /* Assign Classification */
                     gt[t][atl03_photon] = (uint8_t)atl08_pc_flag[t][atl08_photon];
+
+                    /* Populate ATL08 Relief */
+                    if(phoreal) relief[t][atl03_photon] = atl08_ph_h[t][atl08_photon];
 
                     /* Go To Next ATL08 Photon */
                     atl08_photon++;
@@ -1302,6 +1312,13 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 }
                             }
 
+                            /* Check Relief */
+                            float relief = 0.0;
+                            if(atl08.phoreal)
+                            {
+                                relief = atl08.relief[t][current_photon];
+                            }
+
                             /* Check YAPC Score */
                             uint8_t yapc_score = 0;
                             if(yapc[t])
@@ -1329,6 +1346,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 .longitude = atl03.lon_ph[t][current_photon],
                                 .distance = along_track_distance - (state.extent_length / 2.0),
                                 .height = atl03.h_ph[t][current_photon],
+                                .relief = relief,
                                 .atl08_class = (uint8_t)atl08_class,
                                 .atl03_cnf = (int8_t)atl03_cnf,
                                 .quality_ph = (int8_t)quality_ph,
@@ -1600,8 +1618,8 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
     }
 
     /* Set Photon Pointer Fields */
-    extent->photon_offset[RqstParms::RPT_L] = sizeof(extent_t); // pointers are set to offset from start of record data
-    extent->photon_offset[RqstParms::RPT_R] = sizeof(extent_t) + (sizeof(photon_t) * extent->photon_count[RqstParms::RPT_L]);
+    extent->photon_offset[RqstParms::RPT_L] = offsetof(extent_t, photons); // pointers are set to offset from start of record data
+    extent->photon_offset[RqstParms::RPT_R] = offsetof(extent_t, photons) + (sizeof(photon_t) * extent->photon_count[RqstParms::RPT_L]);
 
     /* Post Segment Record */
     return postRecord(&record, local_stats);

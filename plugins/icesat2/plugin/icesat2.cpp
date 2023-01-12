@@ -71,6 +71,7 @@ int icesat2_open (lua_State *L)
         {"atl03",               Atl03Reader::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},
+        {"atl08",               Atl08Dispatch::luaCreate},
         {"proxy",               EndpointProxy::luaCreate},
         {"sampler",             RasterSampler::luaCreate},
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
@@ -132,6 +133,7 @@ void initicesat2 (void)
     Atl03Reader::init();
     Atl03Indexer::init();
     Atl06Dispatch::init();
+    Atl08Dispatch::init();
     RasterSampler::init();
 
     /* Register Cumulus IO Driver */

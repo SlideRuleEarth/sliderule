@@ -97,6 +97,7 @@ class Atl03Reader: public LuaObject
             double          longitude;
             double          distance;   // double[]: dist_ph_along
             float           height;     // float[]: h_ph
+            float           relief;     // float[]: ATL08 ph_h
             uint8_t         atl08_class;// ATL08 classification
             int8_t          atl03_cnf;  // ATL03 confidence level
             int8_t          quality_ph; // ATL03 photon quality
@@ -241,15 +242,18 @@ class Atl03Reader: public LuaObject
 
                 /* Class Data */
                 bool                enabled;
+                bool                phoreal;
                 SafeString          resource;
 
                 /* Generated Data */
                 uint8_t*            gt[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
+                float*              relief[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
 
                 /* Read Data */
                 GTArray<int32_t>    atl08_segment_id;
                 GTArray<int32_t>    atl08_pc_indx;
                 GTArray<int8_t>     atl08_pc_flag;
+                GTArray<float>      atl08_ph_h;
         };
 
         /* YAPC Score Subclass */

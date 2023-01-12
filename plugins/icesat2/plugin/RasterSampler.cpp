@@ -89,22 +89,24 @@ const RecordObject::fieldDef_t RasterSampler::zsExtentRecDef[] = {
  *----------------------------------------------------------------------------*/
 int RasterSampler::luaCreate (lua_State* L)
 {
+    VrtRaster* _raster = NULL;
     try
     {
         /* Get Parameters */
-        VrtRaster*  _raster         = (VrtRaster*)getLuaObject(L, 1, VrtRaster::OBJECT_TYPE);
-        const char* raster_key      = getLuaString(L, 2);
-        const char* outq_name       = getLuaString(L, 3);
-        const char* rec_type        = getLuaString(L, 4);
-        const char* extent_key      = getLuaString(L, 5);
-        const char* lon_key         = getLuaString(L, 6);
-        const char* lat_key         = getLuaString(L, 7);
+        _raster                 = (VrtRaster*)getLuaObject(L, 1, VrtRaster::OBJECT_TYPE);
+        const char* raster_key  = getLuaString(L, 2);
+        const char* outq_name   = getLuaString(L, 3);
+        const char* rec_type    = getLuaString(L, 4);
+        const char* extent_key  = getLuaString(L, 5);
+        const char* lon_key     = getLuaString(L, 6);
+        const char* lat_key     = getLuaString(L, 7);
 
         /* Create Dispatch */
         return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, extent_key, lon_key, lat_key));
     }
     catch(const RunTimeException& e)
     {
+        if(_raster) _raster->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }

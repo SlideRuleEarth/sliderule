@@ -96,6 +96,8 @@ class RqstParms: public LuaObject
         static const char* OUTPUT_PATH;
         static const char* OUTPUT_FORMAT;
         static const char* OUTPUT_OPEN_ON_COMPLETE;
+        static const char* PHOREAL;
+        static const char* PHOREAL_BINSIZE;
 
         static const int NUM_PAIR_TRACKS            = 2;
         static const int RPT_L                      = 0;
@@ -204,7 +206,8 @@ class RqstParms: public LuaObject
             STAGE_LSF = 0,      // least squares fit
             STAGE_ATL08 = 1,    // use ATL08 photon classifications
             STAGE_YAPC = 2,     // yet another photon classifier
-            NUM_STAGES = 3
+            STAGE_PHOREAL = 3,  // atl08 vegetation science
+            NUM_STAGES = 4
         } atl06_stages_t;
 
         /* Output Formats */
@@ -247,6 +250,11 @@ class RqstParms: public LuaObject
             bool                open_on_complete;               // flag to client to open file on completion
         } output_file_t;
 
+        /* PhoREAL Settings */
+        typedef struct {
+            double              binsize;
+        } phoreal_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -285,6 +293,7 @@ class RqstParms: public LuaObject
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
         output_file_t           output;                         // output file parameters
+        phoreal_t               phoreal;                        // phoreal algorithm settings
 
     private:
 
@@ -295,6 +304,7 @@ class RqstParms: public LuaObject
                                 RqstParms               (lua_State* L, int index);
                                 ~RqstParms              (void);
 
+        void                    cleanup                 (void);
         signal_conf_t           str2atl03cnf            (const char* confidence_str);
         quality_ph_t            str2atl03quality        (const char* quality_ph_str);
         atl08_classification_t  str2atl08class          (const char* classifiction_str);
@@ -308,6 +318,7 @@ class RqstParms: public LuaObject
         void                    get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
         void                    get_lua_rasters         (lua_State* L, int index, rasters_t** rasters_list, bool* provided);
         void                    get_lua_output          (lua_State* L, int index, bool* provided);
+        void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __rqst_parms__ */

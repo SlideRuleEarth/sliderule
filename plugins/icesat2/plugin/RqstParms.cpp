@@ -84,6 +84,8 @@ const char* RqstParms::OUTPUT                       = "output";
 const char* RqstParms::OUTPUT_PATH                  = "path";
 const char* RqstParms::OUTPUT_FORMAT                = "format";
 const char* RqstParms::OUTPUT_OPEN_ON_COMPLETE      = "open_on_complete";
+const char* RqstParms::PHOREAL                      = "phoreal";
+const char* RqstParms::PHOREAL_BINSIZE              = "binsize";
 
 const char* RqstParms::OBJECT_TYPE = "RqstParms";
 const char* RqstParms::LuaMetaName = "RqstParms";
@@ -224,7 +226,7 @@ RqstParms::RqstParms(lua_State* L, int index):
     atl03_cnf                   { false, false, true, true, true, true, true },
     quality_ph                  { true, false, false, false },
     atl08_class                 { false, false, false, false, false },
-    stages                      { true, false, false },
+    stages                      { true, false, false, false },
     yapc                        { .score      = 0,
                                   .version    = 3,
                                   .knn        = 0, // calculated by default
@@ -248,177 +250,200 @@ RqstParms::RqstParms(lua_State* L, int index):
     read_timeout                (DEFAULT_READ_TIMEOUT),
     output                      { .path             = NULL,
                                   .format           = OUTPUT_FORMAT_NATIVE,
-                                  .open_on_complete = false }
+                                  .open_on_complete = false },
+    phoreal                     { .binsize = 1.0 }
 {
     bool provided = false;
 
-    /* Surface Type */
-    lua_getfield(L, index, RqstParms::SURFACE_TYPE);
-    surface_type = (surface_type_t)LuaObject::getLuaInteger(L, -1, true, surface_type, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::SURFACE_TYPE, (int)surface_type);
-    lua_pop(L, 1);
-
-    /* Confidence Level */
-    lua_getfield(L, index, RqstParms::ATL03_CNF);
-    get_lua_atl03_cnf(L, -1, &provided);
-    lua_pop(L, 1);
-
-    /* Quality Flag */
-    lua_getfield(L, index, RqstParms::QUALITY);
-    get_lua_atl03_quality(L, -1, &provided);
-    lua_pop(L, 1);
-
-    /* YAPC */
-    lua_getfield(L, index, RqstParms::YAPC);
-    get_lua_yapc(L, -1, &provided);
-    if(provided) stages[STAGE_YAPC] = true;
-    lua_pop(L, 1);
-
-    /* Pass Invalid Flag */
-    lua_getfield(L, index, RqstParms::PASS_INVALID);
-    pass_invalid = LuaObject::getLuaBoolean(L, -1, true, pass_invalid, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::PASS_INVALID, pass_invalid ? "true" : "false");
-    lua_pop(L, 1);
-
-    /* Distance in Segments Flag */
-    lua_getfield(L, index, RqstParms::DISTANCE_IN_SEGMENTS);
-    dist_in_seg = LuaObject::getLuaBoolean(L, -1, true, dist_in_seg, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::DISTANCE_IN_SEGMENTS, dist_in_seg ? "true" : "false");
-    lua_pop(L, 1);
-
-    /* ATL08 Classification */
-    lua_getfield(L, index, RqstParms::ATL08_CLASS);
-    get_lua_atl08_class(L, -1, &provided);
-    if(provided) stages[STAGE_ATL08] = true;
-    lua_pop(L, 1);
-
-    /* Polygon */
-    lua_getfield(L, index, RqstParms::POLYGON);
-    get_lua_polygon(L, -1, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d points", RqstParms::POLYGON, (int)polygon.length());
-    lua_pop(L, 1);
-
-    /* Raster */
-    lua_getfield(L, index, RqstParms::RASTER);
-    get_lua_raster(L, -1, &provided);
-    if(provided) mlog(DEBUG, "Setting %s file for use", RqstParms::RASTER);
-    lua_pop(L, 1);
-
-    /* Track */
-    lua_getfield(L, index, RqstParms::TRACK);
-    track = LuaObject::getLuaInteger(L, -1, true, track, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::TRACK, track);
-    lua_pop(L, 1);
-
-    /* Compact Flag */
-    lua_getfield(L, index, RqstParms::COMPACT);
-    compact = LuaObject::getLuaBoolean(L, -1, true, compact, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::COMPACT, compact ? "true" : "false");
-    lua_pop(L, 1);
-
-    /* Maximum Iterations */
-    lua_getfield(L, index, RqstParms::MAX_ITERATIONS);
-    max_iterations = LuaObject::getLuaInteger(L, -1, true, max_iterations, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::MAX_ITERATIONS, (int)max_iterations);
-    lua_pop(L, 1);
-
-    /* Along Track Spread */
-    lua_getfield(L, index, RqstParms::ALONG_TRACK_SPREAD);
-    along_track_spread = LuaObject::getLuaFloat(L, -1, true, along_track_spread, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::ALONG_TRACK_SPREAD, along_track_spread);
-    lua_pop(L, 1);
-
-    /* Minimum Photon Count */
-    lua_getfield(L, index, RqstParms::MIN_PHOTON_COUNT);
-    minimum_photon_count = LuaObject::getLuaInteger(L, -1, true, minimum_photon_count, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::MIN_PHOTON_COUNT, minimum_photon_count);
-    lua_pop(L, 1);
-
-    /* Minimum Window */
-    lua_getfield(L, index, RqstParms::MIN_WINDOW);
-    minimum_window = LuaObject::getLuaFloat(L, -1, true, minimum_window, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::MIN_WINDOW, minimum_window);
-    lua_pop(L, 1);
-
-    /* Maximum Robust Dispersion */
-    lua_getfield(L, index, RqstParms::MAX_ROBUST_DISPERSION);
-    maximum_robust_dispersion = LuaObject::getLuaFloat(L, -1, true, maximum_robust_dispersion, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::MAX_ROBUST_DISPERSION, maximum_robust_dispersion);
-    lua_pop(L, 1);
-
-    /* Extent Length */
-    lua_getfield(L, index, RqstParms::EXTENT_LENGTH);
-    extent_length = LuaObject::getLuaFloat(L, -1, true, extent_length, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::EXTENT_LENGTH, extent_length);
-    lua_pop(L, 1);
-
-    /* Extent Step */
-    lua_getfield(L, index, RqstParms::EXTENT_STEP);
-    extent_step = LuaObject::getLuaFloat(L, -1, true, extent_step, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::EXTENT_STEP, extent_step);
-    lua_pop(L, 1);
-
-    /* ATL03 Geolocaiont and Physical Correction Fields */
-    lua_getfield(L, index, RqstParms::ATL03_GEO_FIELDS);
-    get_lua_string_list (L, -1, &atl03_geo_fields, &provided);
-    if(provided) mlog(DEBUG, "ATL03 geo field array supplied");
-    lua_pop(L, 1);
-
-    /* ATL03 Photon Fields */
-    lua_getfield(L, index, RqstParms::ATL03_PH_FIELDS);
-    get_lua_string_list (L, -1, &atl03_ph_fields, &provided);
-    if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
-    lua_pop(L, 1);
-
-    /* Rasters to Sample */
-    lua_getfield(L, index, RqstParms::RASTERS_TO_SAMPLE);
-    get_lua_rasters (L, -1, &rasters_to_sample, &provided);
-    if(provided) mlog(DEBUG, "Rasters to sample array supplied");
-    lua_pop(L, 1);
-
-    /* Global Timeout */
-    lua_getfield(L, index, RqstParms::GLOBAL_TIMEOUT);
-    int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
-    if(provided)
+    try
     {
-        rqst_timeout = global_timeout;
-        node_timeout = global_timeout;
-        read_timeout = global_timeout;
-        mlog(DEBUG, "Setting %s to %d", RqstParms::RQST_TIMEOUT, global_timeout);
-        mlog(DEBUG, "Setting %s to %d", RqstParms::NODE_TIMEOUT, global_timeout);
-        mlog(DEBUG, "Setting %s to %d", RqstParms::READ_TIMEOUT, global_timeout);
+        /* Surface Type */
+        lua_getfield(L, index, RqstParms::SURFACE_TYPE);
+        surface_type = (surface_type_t)LuaObject::getLuaInteger(L, -1, true, surface_type, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::SURFACE_TYPE, (int)surface_type);
+        lua_pop(L, 1);
+
+        /* Confidence Level */
+        lua_getfield(L, index, RqstParms::ATL03_CNF);
+        get_lua_atl03_cnf(L, -1, &provided);
+        lua_pop(L, 1);
+
+        /* Quality Flag */
+        lua_getfield(L, index, RqstParms::QUALITY);
+        get_lua_atl03_quality(L, -1, &provided);
+        lua_pop(L, 1);
+
+        /* YAPC */
+        lua_getfield(L, index, RqstParms::YAPC);
+        get_lua_yapc(L, -1, &provided);
+        if(provided) stages[STAGE_YAPC] = true;
+        lua_pop(L, 1);
+
+        /* Pass Invalid Flag */
+        lua_getfield(L, index, RqstParms::PASS_INVALID);
+        pass_invalid = LuaObject::getLuaBoolean(L, -1, true, pass_invalid, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::PASS_INVALID, pass_invalid ? "true" : "false");
+        lua_pop(L, 1);
+
+        /* Distance in Segments Flag */
+        lua_getfield(L, index, RqstParms::DISTANCE_IN_SEGMENTS);
+        dist_in_seg = LuaObject::getLuaBoolean(L, -1, true, dist_in_seg, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::DISTANCE_IN_SEGMENTS, dist_in_seg ? "true" : "false");
+        lua_pop(L, 1);
+
+        /* ATL08 Classification */
+        lua_getfield(L, index, RqstParms::ATL08_CLASS);
+        get_lua_atl08_class(L, -1, &provided);
+        if(provided) stages[STAGE_ATL08] = true;
+        lua_pop(L, 1);
+
+        /* Polygon */
+        lua_getfield(L, index, RqstParms::POLYGON);
+        get_lua_polygon(L, -1, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d points", RqstParms::POLYGON, (int)polygon.length());
+        lua_pop(L, 1);
+
+        /* Raster */
+        lua_getfield(L, index, RqstParms::RASTER);
+        get_lua_raster(L, -1, &provided);
+        if(provided) mlog(DEBUG, "Setting %s file for use", RqstParms::RASTER);
+        lua_pop(L, 1);
+
+        /* Track */
+        lua_getfield(L, index, RqstParms::TRACK);
+        track = LuaObject::getLuaInteger(L, -1, true, track, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::TRACK, track);
+        lua_pop(L, 1);
+
+        /* Compact Flag */
+        lua_getfield(L, index, RqstParms::COMPACT);
+        compact = LuaObject::getLuaBoolean(L, -1, true, compact, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::COMPACT, compact ? "true" : "false");
+        lua_pop(L, 1);
+
+        /* Maximum Iterations */
+        lua_getfield(L, index, RqstParms::MAX_ITERATIONS);
+        max_iterations = LuaObject::getLuaInteger(L, -1, true, max_iterations, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::MAX_ITERATIONS, (int)max_iterations);
+        lua_pop(L, 1);
+
+        /* Along Track Spread */
+        lua_getfield(L, index, RqstParms::ALONG_TRACK_SPREAD);
+        along_track_spread = LuaObject::getLuaFloat(L, -1, true, along_track_spread, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::ALONG_TRACK_SPREAD, along_track_spread);
+        lua_pop(L, 1);
+
+        /* Minimum Photon Count */
+        lua_getfield(L, index, RqstParms::MIN_PHOTON_COUNT);
+        minimum_photon_count = LuaObject::getLuaInteger(L, -1, true, minimum_photon_count, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::MIN_PHOTON_COUNT, minimum_photon_count);
+        lua_pop(L, 1);
+
+        /* Minimum Window */
+        lua_getfield(L, index, RqstParms::MIN_WINDOW);
+        minimum_window = LuaObject::getLuaFloat(L, -1, true, minimum_window, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::MIN_WINDOW, minimum_window);
+        lua_pop(L, 1);
+
+        /* Maximum Robust Dispersion */
+        lua_getfield(L, index, RqstParms::MAX_ROBUST_DISPERSION);
+        maximum_robust_dispersion = LuaObject::getLuaFloat(L, -1, true, maximum_robust_dispersion, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::MAX_ROBUST_DISPERSION, maximum_robust_dispersion);
+        lua_pop(L, 1);
+
+        /* Extent Length */
+        lua_getfield(L, index, RqstParms::EXTENT_LENGTH);
+        extent_length = LuaObject::getLuaFloat(L, -1, true, extent_length, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::EXTENT_LENGTH, extent_length);
+        lua_pop(L, 1);
+
+        /* Extent Step */
+        lua_getfield(L, index, RqstParms::EXTENT_STEP);
+        extent_step = LuaObject::getLuaFloat(L, -1, true, extent_step, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::EXTENT_STEP, extent_step);
+        lua_pop(L, 1);
+
+        /* ATL03 Geolocaiont and Physical Correction Fields */
+        lua_getfield(L, index, RqstParms::ATL03_GEO_FIELDS);
+        get_lua_string_list (L, -1, &atl03_geo_fields, &provided);
+        if(provided) mlog(DEBUG, "ATL03 geo field array supplied");
+        lua_pop(L, 1);
+
+        /* ATL03 Photon Fields */
+        lua_getfield(L, index, RqstParms::ATL03_PH_FIELDS);
+        get_lua_string_list (L, -1, &atl03_ph_fields, &provided);
+        if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
+        lua_pop(L, 1);
+
+        /* Rasters to Sample */
+        lua_getfield(L, index, RqstParms::RASTERS_TO_SAMPLE);
+        get_lua_rasters (L, -1, &rasters_to_sample, &provided);
+        if(provided) mlog(DEBUG, "Rasters to sample array supplied");
+        lua_pop(L, 1);
+
+        /* Global Timeout */
+        lua_getfield(L, index, RqstParms::GLOBAL_TIMEOUT);
+        int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
+        if(provided)
+        {
+            rqst_timeout = global_timeout;
+            node_timeout = global_timeout;
+            read_timeout = global_timeout;
+            mlog(DEBUG, "Setting %s to %d", RqstParms::RQST_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", RqstParms::NODE_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", RqstParms::READ_TIMEOUT, global_timeout);
+        }
+        lua_pop(L, 1);
+
+        /* Request Timeout */
+        lua_getfield(L, index, RqstParms::RQST_TIMEOUT);
+        rqst_timeout = LuaObject::getLuaInteger(L, -1, true, rqst_timeout, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::RQST_TIMEOUT, rqst_timeout);
+        lua_pop(L, 1);
+
+        /* Node Timeout */
+        lua_getfield(L, index, RqstParms::NODE_TIMEOUT);
+        node_timeout = LuaObject::getLuaInteger(L, -1, true, node_timeout, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::NODE_TIMEOUT, node_timeout);
+        lua_pop(L, 1);
+
+        /* Read Timeout */
+        lua_getfield(L, index, RqstParms::READ_TIMEOUT);
+        read_timeout = LuaObject::getLuaInteger(L, -1, true, read_timeout, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::READ_TIMEOUT, read_timeout);
+        lua_pop(L, 1);
+
+        /* Output */
+        lua_getfield(L, index, RqstParms::OUTPUT);
+        get_lua_output(L, -1, &provided);
+        if(provided) mlog(DEBUG, "Setting %s by user", RqstParms::OUTPUT);
+        lua_pop(L, 1);
+
+        /* PhoREAL */
+        lua_getfield(L, index, RqstParms::PHOREAL);
+        get_lua_phoreal(L, -1, &provided);
+        if(provided) stages[STAGE_PHOREAL] = true;
+        lua_pop(L, 1);
     }
-    lua_pop(L, 1);
-
-    /* Request Timeout */
-    lua_getfield(L, index, RqstParms::RQST_TIMEOUT);
-    rqst_timeout = LuaObject::getLuaInteger(L, -1, true, rqst_timeout, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::RQST_TIMEOUT, rqst_timeout);
-    lua_pop(L, 1);
-
-    /* Node Timeout */
-    lua_getfield(L, index, RqstParms::NODE_TIMEOUT);
-    node_timeout = LuaObject::getLuaInteger(L, -1, true, node_timeout, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::NODE_TIMEOUT, node_timeout);
-    lua_pop(L, 1);
-
-    /* Read Timeout */
-    lua_getfield(L, index, RqstParms::READ_TIMEOUT);
-    read_timeout = LuaObject::getLuaInteger(L, -1, true, read_timeout, &provided);
-    if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::READ_TIMEOUT, read_timeout);
-    lua_pop(L, 1);
-
-    /* Output */
-    lua_getfield(L, index, RqstParms::OUTPUT);
-    get_lua_output(L, -1, &provided);
-    if(provided) mlog(DEBUG, "Setting %s by user", RqstParms::OUTPUT);
-    lua_pop(L, 1);
+    catch(const RunTimeException& e)
+    {
+        cleanup();
+        throw; // rethrow exception
+    }
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 RqstParms::~RqstParms (void)
+{
+    cleanup();
+}
+
+/*----------------------------------------------------------------------------
+ * cleanup
+ *----------------------------------------------------------------------------*/
+void RqstParms::cleanup (void)
 {
     if(raster) delete raster;
     if(atl03_geo_fields) delete atl03_geo_fields;
@@ -1067,6 +1092,32 @@ void RqstParms::get_lua_output (lua_State* L, int index, bool* provided)
         lua_getfield(L, index, RqstParms::OUTPUT_OPEN_ON_COMPLETE);
         output.open_on_complete = LuaObject::getLuaBoolean(L, -1, true, output.open_on_complete, &field_provided);
         if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::OUTPUT_OPEN_ON_COMPLETE, (int)output.open_on_complete);
+        lua_pop(L, 1);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_lua_phoreal
+ *----------------------------------------------------------------------------*/
+void RqstParms::get_lua_phoreal (lua_State* L, int index, bool* provided)
+{
+    bool field_provided;
+
+    /* Reset Provided */
+    *provided = false;
+
+    /* Must be table of coordinates */
+    if(lua_istable(L, index))
+    {
+        *provided = true;
+
+        lua_getfield(L, index, RqstParms::PHOREAL_BINSIZE);
+        phoreal.binsize = LuaObject::getLuaFloat(L, -1, true, phoreal.binsize, &field_provided);
+        if(field_provided)
+        {
+            if(phoreal.binsize <= 0.0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid binsize provided to phoreal algorithm: %lf", phoreal.binsize);
+            mlog(DEBUG, "Setting %s to %lf", RqstParms::PHOREAL_BINSIZE, phoreal.binsize);
+        }
         lua_pop(L, 1);
     }
 }
