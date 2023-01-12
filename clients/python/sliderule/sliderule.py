@@ -822,19 +822,19 @@ def check_version (plugins=[]):
         versions[entity] = (int(s[0]), int(s[1]), int(s[2]))
     # check major version mismatches
     if versions['server'][0] != versions['client'][0]:
-        raise RuntimeError("Client (version {}) is incompatible with the server (version {})".format(versions['server'], versions['client']))
+        raise RuntimeError("Client (version {}) is incompatible with the server (version {})".format(versions['client'], versions['server']))
     else:
         for pkg in plugins:
             if versions[pkg][0] != versions['client'][0]:
-                raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['server'], pkg, versions['icesat2']))
+                raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['client'], pkg, versions['icesat2']))
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
-        logger.warning("Client (version {}) is out of date with the server (version {})".format(versions['server'], versions['client']))
+        logger.warning("Client (version {}) is out of date with the server (version {})".format(versions['client'], versions['server']))
         status = False
     else:
         for pkg in plugins:
             if versions[pkg][1] > versions['client'][1]:
-                logger.warning("Client (version {}) is out of date with the {} plugin (version {})".format(versions['server'], pkg, versions['client']))
+                logger.warning("Client (version {}) is out of date with the {} plugin (version {})".format(versions['client'], pkg, versions['server']))
                 status = False
     # return if version check is successful
     return status
