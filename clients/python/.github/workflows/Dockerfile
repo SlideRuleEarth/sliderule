@@ -7,7 +7,6 @@ RUN useradd --create-home --shell /bin/bash sliderule
 RUN apt-get update -y && \
     apt-get install -y \
         build-essential \
-        build-essential \
         ca-certificates \
         cmake \
         gcc \
