@@ -655,10 +655,6 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
     # Configure Domain
     sliderule.set_url(url)
     sliderule.authenticate(organization)
-    # Check Version
-    sliderule.check_version(plugins=['icesat2'])
-    # Configure Maximum Resources
-    set_max_resources(max_resources)
     # Configure Desired Nodes
     if(desired_nodes):
         if desired_nodes < 0:
@@ -670,6 +666,10 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
             logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
             time.sleep(10.0)
             available_nodes,_ = sliderule.update_available_servers()
+    # Check Version
+    sliderule.check_version(plugins=['icesat2'])
+    # Configure Maximum Resources
+    set_max_resources(max_resources)
 
 #
 #  Set Maximum Resources
