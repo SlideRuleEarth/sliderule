@@ -133,7 +133,7 @@ CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
 def __build_version_query_params(version):
     desired_pad_length = 3
     if len(version) > desired_pad_length:
-        raise RuntimeError('Version string too long: "{0}"'.format(version))
+        raise sliderule.FatalError('Version string too long: "{0}"'.format(version))
 
     version = str(int(version))  # Strip off any leading zeros
     query_params = ''
@@ -407,7 +407,7 @@ def __query_resources(parm, version, **kwargs):
 
     # Check Resources are Under Limit
     if(len(resources) > max_requested_resources):
-        raise RuntimeError('Exceeded maximum requested granules: {} (current max is {})\nConsider using icesat2.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
+        raise sliderule.FatalError('Exceeded maximum requested granules: {} (current max is {})\nConsider using icesat2.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(resources))
 
@@ -624,7 +624,7 @@ def __procoutputfile(parm, lon_key, lat_key):
 #
 #  Initialize
 #
-def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org):
+def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -647,14 +647,29 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
         >>> from sliderule import icesat2
         >>> icesat2.init("my-sliderule-service.my-company.com", True)
     '''
-    set_max_resources(max_resources)
+    # Configure Logging
     if verbose:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel)
-    sliderule.set_url(url)
     sliderule.set_verbose(verbose)
+    # Configure Domain
+    sliderule.set_url(url)
     sliderule.authenticate(organization)
+    # Check Version
     sliderule.check_version(plugins=['icesat2'])
+    # Configure Maximum Resources
+    set_max_resources(max_resources)
+    # Configure Desired Nodes
+    if(desired_nodes):
+        if desired_nodes < 0:
+            raise sliderule.FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
+        sliderule.update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
+        start = time.time()
+        available_nodes,_ = sliderule.update_available_servers()
+        while available_nodes < desired_nodes:
+            logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
+            time.sleep(10.0)
+            available_nodes,_ = sliderule.update_available_servers()
 
 #
 #  Set Maximum Resources
@@ -1442,7 +1457,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             datafile = file.read()
 
     else:
-        raise TypeError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
+        raise sliderule.FatalError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
 
 
     # If user provided raster we don't have gdf, geopandas cannot easily convert it
