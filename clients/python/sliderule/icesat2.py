@@ -506,6 +506,107 @@ def __gdf2poly(gdf):
     return polygon
 
 #
+# Flatten Batches
+#
+def __flattenbatches(rsps, rectype, batch_column, parm):
+    tstart_flatten = time.perf_counter()
+
+    # Check for Output Options
+    if "output" in parm:
+        gdf = __procoutputfile(parm, "lon", "lat")
+        profiles["flatten"] = time.perf_counter() - tstart_flatten
+        return gdf
+
+    # Flatten Records
+    columns = {}
+    records = []
+    num_records = 0
+    field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
+    if len(rsps) > 0:
+        # Sort Records
+        for rsp in rsps:
+            if rectype in rsp['__rectype']:
+                records += rsp,
+                num_records += len(rsp[batch_column])
+            elif 'extrec' == rsp['__rectype']:
+                field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                if field_name not in field_dictionary:
+                    field_dictionary[field_name] = {'extent_id': [], field_name: []}
+                # Parse Ancillary Data
+                data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
+                # Add Left Pair Track Entry
+                field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
+                field_dictionary[field_name][field_name] += data[LEFT_PAIR],
+                # Add Right Pair Track Entry
+                field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
+                field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+            elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
+                if rsp["num_samples"] <= 0:
+                    continue
+                # Get field names and set
+                sample = rsp["samples"][0]
+                field_names = list(sample.keys())
+                field_names.remove("__rectype")
+                field_set = rsp['key']
+                as_numpy_array = False
+                if rsp["num_samples"] > 1:
+                    as_numpy_array = True
+                # On first time, build empty dictionary for field set associated with raster
+                if field_set not in field_dictionary:
+                    field_dictionary[field_set] = {'extent_id': []}
+                    for field in field_names:
+                        field_dictionary[field_set][field_set + "." + field] = []
+                # Populate dictionary for field set
+                field_dictionary[field_set]['extent_id'] += rsp['extent_id'],
+                for field in field_names:
+                    if as_numpy_array:
+                        data = []
+                        for s in rsp["samples"]:
+                            data += s[field],
+                        field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
+                    else:
+                        field_dictionary[field_set][field_set + "." + field] += sample[field],
+
+        # Build Columns
+        if num_records > 0:
+            # Initialize Columns
+            sample_record = records[0][batch_column][0]
+            for field in sample_record.keys():
+                fielddef = sliderule.get_definition(sample_record['__rectype'], field)
+                if len(fielddef) > 0:
+                    if type(sample_record[field]) == tuple:
+                        columns[field] = numpy.empty(num_records, dtype=object)
+                    else:
+                        columns[field] = numpy.empty(num_records, fielddef["nptype"])
+            # Populate Columns
+            cnt = 0
+            for record in records:
+                for batch in record[batch_column]:
+                    for field in columns:
+                        columns[field][cnt] = batch[field]
+                    cnt += 1
+    else:
+        logger.debug("No response returned")
+
+    # Build Initial GeoDataFrame
+    gdf = __todataframe(columns)
+
+    # Merge Ancillary Fields
+    tstart_merge = time.perf_counter()
+    for field in field_dictionary:
+        df = geopandas.pd.DataFrame(field_dictionary[field])
+        gdf = geopandas.pd.merge(gdf, df, on='extent_id', how='left').set_axis(gdf.index)
+    profiles["merge"] = time.perf_counter() - tstart_merge
+
+    # Delete Extent ID Column
+    if len(gdf) > 0:
+        del gdf["extent_id"]
+
+    # Return GeoDataFrame
+    profiles["flatten"] = time.perf_counter() - tstart_flatten
+    return gdf
+
+#
 # Process Output File
 #
 def __procoutputfile(parm, lon_key, lat_key):
@@ -797,99 +898,12 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         # Make API Processing Request
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
-        # Check for Output Options
-        if "output" in parm:
-            profiles[atl06p.__name__] = time.perf_counter() - tstart
-            return __procoutputfile(parm, "lon", "lat")
-        else: # Native Output
-            # Flatten Responses
-            tstart_flatten = time.perf_counter()
-            columns = {}
-            elevation_records = []
-            num_elevations = 0
-            field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
-            if len(rsps) > 0:
-                # Sort Records
-                for rsp in rsps:
-                    if 'atl06rec' in rsp['__rectype']:
-                        elevation_records += rsp,
-                        num_elevations += len(rsp['elevation'])
-                    elif 'extrec' == rsp['__rectype']:
-                        field_name = parm['atl03_geo_fields'][rsp['field_index']]
-                        if field_name not in field_dictionary:
-                            field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                        # Parse Ancillary Data
-                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
-                        # Add Left Pair Track Entry
-                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
-                        field_dictionary[field_name][field_name] += data[LEFT_PAIR],
-                        # Add Right Pair Track Entry
-                        field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
-                        field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
-                    elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
-                        if rsp["num_samples"] <= 0:
-                            continue
-                        # Get field names and set
-                        sample = rsp["samples"][0]
-                        field_names = list(sample.keys())
-                        field_names.remove("__rectype")
-                        field_set = rsp['key']
-                        as_numpy_array = False
-                        if rsp["num_samples"] > 1:
-                            as_numpy_array = True
-                        # On first time, build empty dictionary for field set associated with raster
-                        if field_set not in field_dictionary:
-                            field_dictionary[field_set] = {'extent_id': []}
-                            for field in field_names:
-                                field_dictionary[field_set][field_set + "." + field] = []
-                        # Populate dictionary for field set
-                        field_dictionary[field_set]['extent_id'] += rsp['extent_id'],
-                        for field in field_names:
-                            if as_numpy_array:
-                                data = []
-                                for s in rsp["samples"]:
-                                    data += s[field],
-                                field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
-                            else:
-                                field_dictionary[field_set][field_set + "." + field] += sample[field],
+        # Flatten Responses
+        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm)
 
-                # Build Elevation Columns
-                if num_elevations > 0:
-                    # Initialize Columns
-                    sample_elevation_record = elevation_records[0]["elevation"][0]
-                    for field in sample_elevation_record.keys():
-                        fielddef = sliderule.get_definition(sample_elevation_record['__rectype'], field)
-                        if len(fielddef) > 0:
-                            columns[field] = numpy.empty(num_elevations, fielddef["nptype"])
-                    # Populate Columns
-                    elev_cnt = 0
-                    for record in elevation_records:
-                        for elevation in record["elevation"]:
-                            for field in columns:
-                                columns[field][elev_cnt] = elevation[field]
-                            elev_cnt += 1
-            else:
-                logger.debug("No response returned")
-
-            profiles["flatten"] = time.perf_counter() - tstart_flatten
-
-            # Build GeoDataFrame
-            gdf = __todataframe(columns)
-
-            # Merge Ancillary Fields
-            tstart_merge = time.perf_counter()
-            for field in field_dictionary:
-                df = geopandas.pd.DataFrame(field_dictionary[field])
-                gdf = geopandas.pd.merge(gdf, df, on='extent_id', how='left').set_axis(gdf.index)
-            profiles["merge"] = time.perf_counter() - tstart_merge
-
-            # Delete Extent ID Column
-            if len(gdf) > 0:
-                del gdf["extent_id"]
-
-            # Return Response
-            profiles[atl06p.__name__] = time.perf_counter() - tstart
-            return gdf
+        # Return Response
+        profiles[atl06p.__name__] = time.perf_counter() - tstart
+        return gdf
 
     # Handle Runtime Errors
     except RuntimeError as e:
@@ -1101,6 +1115,92 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
 
     # Error or No Data
     return __emptyframe()
+
+#
+#  ATL08
+#
+def atl08 (parm, resource, asset=DEFAULT_ASSET):
+    '''
+    Performs ATL08-PhoREAL processing on ATL03 and ATL08 data and returns gridded elevations
+
+    Parameters
+    ----------
+    parms:      dict
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtds/user_guide/ICESat-2.html#parameters>`_)
+    resource:   str
+                ATL03 HDF5 filename
+    asset:      str
+                data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+
+    Returns
+    -------
+    GeoDataFrame
+        gridded vegatation statistics
+    '''
+    return atl08p(parm, asset=asset, resources=[resource])
+
+#
+#  Parallel ATL08
+#
+def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None):
+    '''
+    Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns gridded vegatation statistics.  This function expects that the **parm** argument
+    includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
+    then any polygon or resource filtering options supplied in **parm** are ignored.
+
+    Warnings
+    --------
+        It is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
+        do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
+        for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement
+        to that effect; this can be ignored and indicates no issue with the data processing.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
+        asset:          str
+                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+        version:        str
+                        the version of the ATL03 data to use for processing
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+
+    Returns
+    -------
+    GeoDataFrame
+        gridded vegetation statistics
+    '''
+    try:
+        tstart = time.perf_counter()
+
+        # Get List of Resources from CMR (if not supplied)
+        if resources == None:
+            resources = __query_resources(parm, version)
+
+        # Build ATL06 Request
+        rqst = {
+            "atl03-asset" : asset,
+            "resources": resources,
+            "parms": parm
+        }
+
+        # Make API Processing Request
+        rsps = sliderule.source("atl08p", rqst, stream=True, callbacks=callbacks)
+
+        # Flatten Responses
+        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm)
+
+        # Return Response
+        profiles[atl08p.__name__] = time.perf_counter() - tstart
+        return gdf
+
+    # Handle Runtime Errors
+    except RuntimeError as e:
+        logger.critical(e)
+        return __emptyframe()
 
 #
 #  H5
