@@ -89,7 +89,11 @@ class Atl08Dispatch: public DispatchObject
             uint16_t            cycle;                  // cycle number
             uint8_t             spot;                   // 1 through 6, or 0 if unknown
             uint8_t             gt;                     // gt1l, gt1r, gt2l, gt2r, gt3l, gt3r
-            int                 percentiles[NUM_PERCENTILES];   // bin index at given percentile
+            double              delta_time;             // seconds from ATLAS SDP epoch
+            double              latitude;               // latitude of extent
+            double              longitude;              // longitude of extent
+            double              distance;               // distance from the equator
+            float               percentiles[NUM_PERCENTILES];   // relief at given percentile
         } vegetation_t;
 
         /* (Normal) ATL06 Record */
@@ -130,8 +134,9 @@ class Atl08Dispatch: public DispatchObject
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 
+        void            geolocateResult                 (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
         void            phorealAlgorithm                (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
-        void            postResult                      (vegetation_t* result);
+        void            postResult                      (int t, vegetation_t* result);
 };
 
 #endif  /* __atl08_dispatch__ */

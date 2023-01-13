@@ -53,6 +53,10 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),          1,  NULL, NATIVE_FLAGS},
     {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),           1,  NULL, NATIVE_FLAGS},
     {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),             1,  NULL, NATIVE_FLAGS},
+    {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),     1,  NULL, NATIVE_FLAGS},
+    {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),       1,  NULL, NATIVE_FLAGS},
+    {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),      1,  NULL, NATIVE_FLAGS},
+    {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),       1,  NULL, NATIVE_FLAGS},
     {"percentiles",             RecordObject::FLOAT,    offsetof(vegetation_t, percentiles),    NUM_PERCENTILES,  NULL, NATIVE_FLAGS}
 };
 
@@ -167,32 +171,21 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
     /* Clear Results */
     LocalLib::set(result, 0, sizeof(result));
 
-    /* Get Orbit Info */
-    RqstParms::sc_orient_t sc_orient = (RqstParms::sc_orient_t)extent->spacecraft_orientation;
-    RqstParms::track_t track = (RqstParms::track_t)extent->reference_pair_track;
-
-    /* Initialize Results */
+    /* Process Extent */
     for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
-        /* Extent Attributes */
-        result[t].extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;
-        result[t].segment_id = extent->segment_id[t];
-        result[t].rgt = extent->reference_ground_track_start;
-        result[t].cycle = extent->cycle_start;
-        result[t].spot = RqstParms::getSpotNumber(sc_orient, track, t);
-        result[t].gt = RqstParms::getGroundTrack(sc_orient, track, t);
-    }
+        /* Initialize Results */
+        geolocateResult(extent, t, result);
 
-    /* Execute Algorithm Stages */
-    if(parms->stages[RqstParms::STAGE_PHOREAL])
-    {
-        phorealAlgorithm(extent, RqstParms::RPT_L, &result[RqstParms::RPT_L]);
-        phorealAlgorithm(extent, RqstParms::RPT_R, &result[RqstParms::RPT_R]);
-    }
+        /* Execute Algorithm Stages */
+        if(parms->stages[RqstParms::STAGE_PHOREAL])
+        {
+            phorealAlgorithm(extent, t, result);
+        }
 
-    /* Post Results */
-    postResult(&result[RqstParms::RPT_L]);
-    postResult(&result[RqstParms::RPT_R]);
+        /* Post Results */
+        postResult(t, result);
+    }
 
     /* Return Status */
     return true;
@@ -213,8 +206,49 @@ bool Atl08Dispatch::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool Atl08Dispatch::processTermination (void)
 {
-    postResult(NULL);
+    postResult(-1, NULL);
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * geolocateResult
+ *----------------------------------------------------------------------------*/
+void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, vegetation_t* result)
+{
+    /* Get Orbit Info */
+    RqstParms::sc_orient_t sc_orient = (RqstParms::sc_orient_t)extent->spacecraft_orientation;
+    RqstParms::track_t track = (RqstParms::track_t)extent->reference_pair_track;
+
+    /* Extent Attributes */
+    result[t].extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;
+    result[t].segment_id = extent->segment_id[t];
+    result[t].rgt = extent->reference_ground_track_start;
+    result[t].cycle = extent->cycle_start;
+    result[t].spot = RqstParms::getSpotNumber(sc_orient, track, t);
+    result[t].gt = RqstParms::getGroundTrack(sc_orient, track, t);
+
+    /* Determine Starting Photon and Number of Photons */
+    Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
+    int num_ph = extent->photon_count[t];
+
+    /* Calculate Sums */
+    double sum_distance = 0.0;
+    double sum_delta_time = 0.0;
+    double sum_latitude = 0.0;
+    double sum_longitude = 0.0;
+    for(int i = 0; i < num_ph; i++)
+    {
+        sum_delta_time += ph[i].delta_time;
+        sum_latitude += ph[i].latitude;
+        sum_longitude += ph[i].longitude;
+        sum_distance += ph[i].distance;
+    }
+
+    /* Calculate Averages */
+    result[t].distance = sum_distance / num_ph;
+    result[t].delta_time = sum_delta_time / num_ph;
+    result[t].latitude = sum_latitude / num_ph;
+    result[t].longitude = sum_longitude / num_ph;
 }
 
 /*----------------------------------------------------------------------------
@@ -238,13 +272,13 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     if(num_bins > MAX_BINS)
     {
         mlog(WARNING, "Maximum number of bins truncated from %d to maximum allowed of %d", num_bins, MAX_BINS);
-        result->pflags |= BIN_OVERFLOW_FLAG;
+        result[t].pflags |= BIN_OVERFLOW_FLAG;
         num_bins = MAX_BINS;
     }
     else if(num_bins <= 0)
     {
         mlog(WARNING, "Number of bins calculated was less than 1, setting to 1");
-        result->pflags |= BIN_UNDERFLOW_FLAG;
+        result[t].pflags |= BIN_UNDERFLOW_FLAG;
         num_bins = 1;
     }
 
@@ -276,7 +310,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
                 double percentage = (double)cbins[b] / (double)num_ph;
                 if(percentage >= PercentileInterval[p])
                 {
-                    result->percentiles[p] = b;
+                    result[t].percentiles[p] = b * parms->phoreal.binsize;
                     break;
                 }
                 b++;
@@ -292,12 +326,12 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 /*----------------------------------------------------------------------------
  * postResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::postResult (vegetation_t* result)
+void Atl08Dispatch::postResult (int t, vegetation_t* result)
 {
     batchMutex.lock();
     {
         /* Populate Batch Record */
-        if(result) recData->vegetation[batchIndex++] = *result;
+        if(result) recData->vegetation[batchIndex++] = result[t];
 
         /* Check If Batch Record Should Be Posted*/
         if((!result && batchIndex > 0) || batchIndex == BATCH_SIZE)

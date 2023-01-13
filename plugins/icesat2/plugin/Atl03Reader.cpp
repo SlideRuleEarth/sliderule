@@ -653,7 +653,7 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",   &info->reader->context08),
     atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx", &info->reader->context08),
     atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08),
-    atl08_ph_h          (enabled && phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_h", &info->reader->context08)
+    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_h",            &info->reader->context08)
 {
 }
 
@@ -684,6 +684,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
     atl08_segment_id.join(info->reader->read_timeout_ms, true);
     atl08_pc_indx.join(info->reader->read_timeout_ms, true);
     atl08_pc_flag.join(info->reader->read_timeout_ms, true);
+    if(phoreal) atl08_ph_h.join(info->reader->read_timeout_ms, true);
 
     /* Rename Segment Photon Counts (to easily identify with ATL03) */
     GTArray<int32_t>* atl03_segment_ph_cnt = &region.segment_ph_cnt;

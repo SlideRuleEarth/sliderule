@@ -422,7 +422,19 @@ RqstParms::RqstParms(lua_State* L, int index):
         /* PhoREAL */
         lua_getfield(L, index, RqstParms::PHOREAL);
         get_lua_phoreal(L, -1, &provided);
-        if(provided) stages[STAGE_PHOREAL] = true;
+        if(provided)
+        {
+            stages[STAGE_PHOREAL] = true;
+            if(!stages[STAGE_ATL08])
+            {
+                stages[STAGE_ATL08] = true;
+                atl08_class[ATL08_NOISE] = false;
+                atl08_class[ATL08_GROUND] = true;
+                atl08_class[ATL08_CANOPY] = true;
+                atl08_class[ATL08_TOP_OF_CANOPY] = true;
+                atl08_class[ATL08_UNCLASSIFIED] = false;
+            }
+        }
         lua_pop(L, 1);
     }
     catch(const RunTimeException& e)

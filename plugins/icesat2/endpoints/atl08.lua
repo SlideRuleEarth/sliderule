@@ -82,7 +82,7 @@ end
 
 -- Resource Processing Complete
 local atl03_stats = atl03_reader:stats(false)
-userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, atl03_stats.read, atl03_stats.filtered, atl03_stats.dropped))
+userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d/%d)", rspq, resource, atl03_stats.read, atl03_stats.sent, atl03_stats.filtered, atl03_stats.dropped))
 
 -- Wait Until ATL08 Dispatch Completion --
 while (userlog:numsubs() > 0) and not atl08_disp:waiton(interval * 1000) do
