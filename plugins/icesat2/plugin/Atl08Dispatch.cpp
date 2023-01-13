@@ -174,6 +174,12 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
     /* Process Extent */
     for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
+        /* Check Extent */
+        if(extent->photon_count[t] <= 0)
+        {
+            continue;
+        }
+
         /* Initialize Results */
         geolocateResult(extent, t, result);
 
@@ -241,7 +247,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         sum_delta_time += ph[i].delta_time;
         sum_latitude += ph[i].latitude;
         sum_longitude += ph[i].longitude;
-        sum_distance += ph[i].distance;
+        sum_distance += ph[i].distance + extent->segment_distance[t];
     }
 
     /* Calculate Averages */
@@ -264,7 +270,10 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     double max_h = 0.0;
     for(int i = 0; i < num_ph; i++)
     {
-        if(ph[i].relief > max_h) max_h = ph[i].relief;
+        if(ph[i].relief > max_h)
+        {
+            max_h = ph[i].relief;
+        }
     }
 
     /* Calculate Number of Bins */
@@ -277,7 +286,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     }
     else if(num_bins <= 0)
     {
-        mlog(WARNING, "Number of bins calculated was less than 1, setting to 1");
+        mlog(WARNING, "Number of bins (%lf/%lf) calculated was less than 1, setting to 1", max_h, parms->phoreal.binsize);
         result[t].pflags |= BIN_UNDERFLOW_FLAG;
         num_bins = 1;
     }
@@ -286,7 +295,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     long* bins = new long[num_bins];
     for(int i = 0; i < num_ph; i++)
     {
-        int bin = (int)ceil(ph[i].relief / parms->phoreal.binsize);
+        int bin = (int)floor(ph[i].relief / parms->phoreal.binsize);
         if(bin < 0) bin = 0;
         else if(bin >= num_bins) bin = num_bins - 1;
         bins[bin]++;
@@ -307,10 +316,10 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         {
             while(b < num_bins)
             {
-                double percentage = (double)cbins[b] / (double)num_ph;
+                double percentage = ((double)cbins[b] / (double)num_ph) * 100.0;
                 if(percentage >= PercentileInterval[p])
                 {
-                    result[t].percentiles[p] = b * parms->phoreal.binsize;
+                    result[t].percentiles[p] = (b + 1) * parms->phoreal.binsize;
                     break;
                 }
                 b++;
