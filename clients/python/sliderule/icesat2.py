@@ -662,10 +662,16 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
         sliderule.update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
         start = time.time()
         available_nodes,_ = sliderule.update_available_servers()
+        scale_up_needed = False
         while available_nodes < desired_nodes:
+            scale_up_needed = True
             logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
             time.sleep(10.0)
             available_nodes,_ = sliderule.update_available_servers()
+            if available_nodes == 0:
+                time.sleep(20.0) # wait an extra 20 seconds for cluster to start if cluster is not running
+        if scale_up_needed:
+            logger.info("Cluster has reached desired capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
     # Check Version
     sliderule.check_version(plugins=['icesat2'])
     # Configure Maximum Resources

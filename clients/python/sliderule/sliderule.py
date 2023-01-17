@@ -411,7 +411,7 @@ __callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.me
 #
 #  source
 #
-def source (api, parm={}, stream=False, callbacks={}, path="/source"):
+def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=False):
     '''
     Perform API call to SlideRule service
 
@@ -427,6 +427,8 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
                     record type callbacks (advanced use)
         path:       str
                     path to api being requested
+        silence:    bool
+                    whether error log messages should be generated
 
     Returns
     -------
@@ -485,13 +487,17 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source"):
             # Success
             complete = True
         except requests.exceptions.SSLError as e:
-            logger.error("Unable to verify SSL certificate: {} ...retrying request".format(e))
+            if not silence:
+                logger.error("Unable to verify SSL certificate: {} ...retrying request".format(e))
         except requests.ConnectionError as e:
-            logger.error("Connection error to endpoint {} ...retrying request".format(url))
+            if not silence:
+                logger.error("Connection error to endpoint {} ...retrying request".format(url))
         except requests.Timeout as e:
-            logger.error("Timed-out waiting for response from endpoint {} ...retrying request".format(url))
+            if not silence:
+                logger.error("Timed-out waiting for response from endpoint {} ...retrying request".format(url))
         except requests.exceptions.ChunkedEncodingError as e:
-            logger.error("Unexpected termination of response from endpoint {} ...retrying request".format(url))
+            if not silence:
+                logger.error("Unexpected termination of response from endpoint {} ...retrying request".format(url))
         except requests.HTTPError as e:
             if e.response.status_code == 503:
                 raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
@@ -630,8 +636,11 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         rsps.raise_for_status()
 
     # Get number of nodes currently registered
-    rsps = source("status", parm={"service":"sliderule"}, path="/discovery")
-    available_servers = rsps["nodes"]
+    try:
+        rsps = source("status", parm={"service":"sliderule"}, path="/discovery", silence=True)
+        available_servers = rsps["nodes"]
+    except FatalError:
+        available_servers = 0
     return available_servers, available_servers
 
 #
