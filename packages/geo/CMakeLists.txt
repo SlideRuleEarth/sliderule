@@ -18,6 +18,7 @@ if (GDAL_FOUND)
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/geo.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/VrtRaster.cpp
     )

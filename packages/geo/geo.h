@@ -38,7 +38,6 @@
 
 #include "GeoRaster.h"
 #include "GeoJsonRaster.h"
-#include "VrtRaster.h"
 
 /******************************************************************************
  * PROTOTYPES

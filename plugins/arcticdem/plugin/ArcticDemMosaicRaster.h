@@ -50,7 +50,7 @@ class ArcticDemMosaicRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static VrtRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
+        static GeoRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
 
     protected:
 
@@ -59,7 +59,7 @@ class ArcticDemMosaicRaster: public VrtRaster
          *--------------------------------------------------------------------*/
 
                 ArcticDemMosaicRaster (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
-        void    getVrtFileName(std::string& vrtFile, double lon=0, double lat=0 );
+        void    getRasterIndexFileName(std::string& file, double lon=0, double lat=0 );
         int64_t getRasterDate(std::string &tifFile);
 };
 

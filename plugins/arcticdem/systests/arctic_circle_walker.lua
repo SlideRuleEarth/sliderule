@@ -18,7 +18,7 @@ local  lat = 66.34  -- Arctic Circle lat
 local _lon = lon
 local _lat = lat
 
-local dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
+local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 0)
 local tbl, status
 
 local lonIncrement  = 1.5

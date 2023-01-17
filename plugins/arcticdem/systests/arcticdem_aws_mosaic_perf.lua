@@ -19,7 +19,7 @@ local _lon = lon
 local _lat = lat
 
 print('\n------------------\nTest: AWS mosaic\n------------')
-local dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
+local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 0)
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat)
 local stoptime = time.latch();

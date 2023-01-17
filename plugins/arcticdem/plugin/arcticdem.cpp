@@ -93,8 +93,8 @@ void initarcticdem (void)
     ArcticDemStripsRaster::init();
 
     /* Register Rasters */
-    VrtRaster::registerRaster(LUA_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
-    VrtRaster::registerRaster(LUA_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
+    GeoRaster::registerRaster(LUA_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
+    GeoRaster::registerRaster(LUA_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_ARCTICDEM_LIBNAME, arcticdem_open);

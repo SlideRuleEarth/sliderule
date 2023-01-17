@@ -58,38 +58,41 @@
 ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
     VrtRaster(L, dem_sampling, sampling_radius, zonal_stats)
 {
-    /* There is only one mosaic VRT file. Open it. */
-    if (!openVrtDset())
+    /*
+     * ArcticDemMosaicRaster uses one large mosaic VRT file (raster index file)
+     * Open it.
+     */
+    if (!openRasterIndexSet())
         throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
     /*
      * For mosaic, there is only one raster with point of interest in it.
      * Look for it in cache first, it may already be opened.
      */
-    checkCacheFirst = true;
+    setCheckCacheFirst(true);
 
     /*
      * Only one thread is used to read mosaic tiles.
-     * Allow this thread to read directly from VRT data set if needed.
+     * Allow this thread to read directly from raster index data set (VRT) if needed.
      */
-    allowVrtDataSetSampling = true;
+    setAllowIndexDataSetSampling(true);
 }
 
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-VrtRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
+GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
 {
     return new ArcticDemMosaicRaster(L, dem_sampling, sampling_radius, zonal_stats);
 }
 
 
 /*----------------------------------------------------------------------------
- * getVrtFileName
+ * getRasterIndexFileName
  *----------------------------------------------------------------------------*/
-void ArcticDemMosaicRaster::getVrtFileName(std::string& vrtFile, double lon, double lat)
+void ArcticDemMosaicRaster::getRasterIndexFileName(std::string& file, double lon, double lat)
 {
-    vrtFile = "/data/ArcticDem/mosaic.vrt";
+    file = "/data/ArcticDem/mosaic.vrt";
 }
 
 
