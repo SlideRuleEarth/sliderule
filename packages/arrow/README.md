@@ -19,13 +19,13 @@ sudo apt install -y libparquet-dev
 
 To build from source on Ubuntu 22.04
 ```bash
-clone https://github.com/apache/arrow.git
+git clone https://github.com/apache/arrow.git
 cd arrow/cpp
 mkdir build
 cd build
 cmake .. -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON
 make -j8
-make install
+sudo make install
 ```
 
 ## Notes
