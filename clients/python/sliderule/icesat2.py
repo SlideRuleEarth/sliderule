@@ -71,9 +71,6 @@ DEFAULT_ICESAT2_SDP_VERSION='005'
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
-# default maximum number of workers used for one request
-DEFAULT_MAX_WORKERS_PER_NODE = 3
-
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
@@ -104,6 +101,9 @@ SC_FORWARD = 1
 
 # gps-based epoch for delta times
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
+
+# maximum time to wait for cluster scale out
+MAX_PS_CLUSTER_WAIT_SECS = 600
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -617,6 +617,29 @@ def __procoutputfile(parm, lon_key, lat_key):
         # Return Parquet Filename
         return parm["output"]["path"]
 
+#
+# Wait for Scale Out
+#
+def __scaleout(desired_nodes, time_to_live):
+    if desired_nodes < 0:
+        raise sliderule.FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
+    sliderule.update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
+    start = time.time()
+    available_nodes,_ = sliderule.update_available_servers()
+    scale_up_needed = False
+    while available_nodes < desired_nodes:
+        scale_up_needed = True
+        logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
+        time.sleep(10.0)
+        available_nodes,_ = sliderule.update_available_servers()
+        if available_nodes == 0:
+            time.sleep(20.0) # wait an extra 20 seconds for cluster to start if cluster is not running
+        if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
+            logger.error("Maximum time allowed waiting for cluster has been exceeded")
+            break
+    if scale_up_needed:
+        logger.info("Cluster has reached capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -647,35 +670,15 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
         >>> from sliderule import icesat2
         >>> icesat2.init("my-sliderule-service.my-company.com", True)
     '''
-    # Configure Logging
     if verbose:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel)
     sliderule.set_verbose(verbose)
-    # Configure Domain
-    sliderule.set_url(url)
-    sliderule.authenticate(organization)
-    # Configure Desired Nodes
-    if(desired_nodes):
-        if desired_nodes < 0:
-            raise sliderule.FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
-        sliderule.update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
-        start = time.time()
-        available_nodes,_ = sliderule.update_available_servers()
-        scale_up_needed = False
-        while available_nodes < desired_nodes:
-            scale_up_needed = True
-            logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
-            time.sleep(10.0)
-            available_nodes,_ = sliderule.update_available_servers()
-            if available_nodes == 0:
-                time.sleep(20.0) # wait an extra 20 seconds for cluster to start if cluster is not running
-        if scale_up_needed:
-            logger.info("Cluster has reached desired capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
-    # Check Version
-    sliderule.check_version(plugins=['icesat2'])
-    # Configure Maximum Resources
-    set_max_resources(max_resources)
+    sliderule.set_url(url) # configure domain
+    sliderule.authenticate(organization) # configure credentials (if any) for organization
+    __scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
+    sliderule.check_version(plugins=['icesat2']) # verify compatibility between client and server versions
+    set_max_resources(max_resources) # set maximum number of resources allowed per request
 
 #
 #  Set Maximum Resources
