@@ -69,8 +69,6 @@ int arcticdem_version (lua_State* L)
 int arcticdem_open (lua_State *L)
 {
     static const struct luaL_Reg arcticdem_functions[] = {
-        {"mosaic",          ArcticDemMosaicRaster::luaCreate},
-        {"strips",          ArcticDemStripsRaster::luaCreate},
         {"version",         arcticdem_version},
         {NULL,              NULL}
     };

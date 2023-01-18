@@ -4,8 +4,8 @@ asset = require("asset")
 csv = require("csv")
 json = require("json")
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
 
 
 -- Unit Test --

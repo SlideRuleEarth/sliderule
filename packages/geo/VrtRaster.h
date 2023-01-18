@@ -59,6 +59,9 @@ class VrtRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void init    (void);
+        static void deinit  (void);
+
     protected:
 
         /*--------------------------------------------------------------------
