@@ -38,7 +38,7 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
-#include "GeoRaster.h"
+#include "GeoUtils.h"
 
 /******************************************************************************
  * GEOJSON RASTER CLASS

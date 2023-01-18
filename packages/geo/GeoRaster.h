@@ -38,49 +38,13 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
+#include "GeoUtils.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
 /******************************************************************************
  * Typedef and macros used by geo package
  ******************************************************************************/
-
-#define CHECKPTR(p)                                                           \
-do                                                                            \
-{                                                                             \
-    if ((p) == NULL)                                                          \
-    {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
-              "NULL pointer detected (%s():%d)", __FUNCTION__, __LINE__);     \
-    }                                                                         \
-} while (0)
-
-
-#define CHECK_GDALERR(e)                                                      \
-do                                                                            \
-{                                                                             \
-    if ((e))   /* CPLErr and OGRErr types have 0 for no error  */             \
-    {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
-              "GDAL ERROR detected: %d (%s():%d)", e, __FUNCTION__, __LINE__);\
-    }                                                                         \
-} while (0)
-
-
-
-/* CRS used by ICESat2 pthotons */
-#define PHOTON_CRS 4326
-
-
-typedef struct
-{
-    double lon_min;
-    double lat_min;
-    double lon_max;
-    double lat_max;
-} bbox_t;
-
-
 
 /******************************************************************************
  * GEO RASTER CLASS

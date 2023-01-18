@@ -32,6 +32,7 @@ if (GDAL_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/geo.h
+            ${CMAKE_CURRENT_LIST_DIR}/GeoUtils.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/VrtRaster.h
