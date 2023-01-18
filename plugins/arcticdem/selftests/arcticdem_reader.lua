@@ -69,7 +69,7 @@ for i = 1, 2 do
 
     local demType = demTypes[i];
     local samplingRadius = 30
-    local dem = geo.raster(demType, "ZonalStats", samplingRadius, true)
+    local dem = geo.raster(demType, "NearestNeighbour", samplingRadius, true)
 
     runner.check(dem ~= nil)
 

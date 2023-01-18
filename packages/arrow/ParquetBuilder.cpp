@@ -119,6 +119,10 @@ bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& 
             column_field.offset += offset;
             field_list.add(column_field);
         }
+
+        /* Free Allocations */
+        delete [] field_names[i];
+        delete  fields[i];
     }
 
     /* Clean Up */
