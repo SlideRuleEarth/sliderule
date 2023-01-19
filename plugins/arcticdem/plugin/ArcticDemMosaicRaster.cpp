@@ -92,7 +92,7 @@ GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling,
  *----------------------------------------------------------------------------*/
 void ArcticDemMosaicRaster::getRasterIndexFileName(std::string& file, double lon, double lat)
 {
-    file = "/data/ArcticDem/mosaic.vrt";
+    file = "/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt";
 }
 
 
