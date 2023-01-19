@@ -53,11 +53,16 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),          1,  NULL, NATIVE_FLAGS},
     {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),           1,  NULL, NATIVE_FLAGS},
     {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),             1,  NULL, NATIVE_FLAGS},
+    {"count",                   RecordObject::UINT32,   offsetof(vegetation_t, photon_count),   1,  NULL, NATIVE_FLAGS},
     {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),     1,  NULL, NATIVE_FLAGS},
     {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),       1,  NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),      1,  NULL, NATIVE_FLAGS},
     {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),       1,  NULL, NATIVE_FLAGS},
-    {"percentiles",             RecordObject::FLOAT,    offsetof(vegetation_t, percentiles),    NUM_PERCENTILES,  NULL, NATIVE_FLAGS}
+    {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),   1,  NULL, NATIVE_FLAGS},
+    {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),   1,  NULL, NATIVE_FLAGS},
+    {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),  1,  NULL, NATIVE_FLAGS},
+    {"h_canopy",                RecordObject::FLOAT,    offsetof(vegetation_t, h_canopy),       1,  NULL, NATIVE_FLAGS},
+    {"canopy_h_metrics",        RecordObject::FLOAT,    offsetof(vegetation_t, percentiles),    NUM_PERCENTILES,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl08Dispatch::batchRecType = "atl08rec";
@@ -75,7 +80,7 @@ const struct luaL_Reg Atl08Dispatch::LuaMetaTable[] = {
 /* Local Class Data */
 
 const double Atl08Dispatch::PercentileInterval[NUM_PERCENTILES] = {
-    5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 85, 98
+    5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95
 };
 
 /******************************************************************************
@@ -232,6 +237,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     result[t].cycle = extent->cycle_start;
     result[t].spot = RqstParms::getSpotNumber(sc_orient, track, t);
     result[t].gt = RqstParms::getGroundTrack(sc_orient, track, t);
+    result[t].photon_count = extent->photon_count[t];
 
     /* Determine Starting Photon and Number of Photons */
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
@@ -266,15 +272,25 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
     int num_ph = extent->photon_count[t];
 
-    /* Determine Maximum Relief Height */
+    /* Determine Min,Max,Avg Relief Height */
+    double min_h = DBL_MAX;
     double max_h = 0.0;
+    double sum_h = 0.0;
     for(int i = 0; i < num_ph; i++)
     {
+        sum_h += ph[i].relief;
         if(ph[i].relief > max_h)
         {
             max_h = ph[i].relief;
         }
+        if(ph[i].relief < min_h)
+        {
+            min_h = ph[i].relief;
+        }
     }
+    result[t].h_max_canopy = max_h;
+    result[t].h_min_canopy = min_h;
+    result[t].h_mean_canopy = sum_h / (double)num_ph;
 
     /* Calculate Number of Bins */
     int num_bins = (int)ceil(max_h / parms->phoreal.binsize);
@@ -293,6 +309,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 
     /* Bin All Photons */
     long* bins = new long[num_bins];
+    LocalLib::set(bins, 0, num_bins * sizeof(long));
     for(int i = 0; i < num_ph; i++)
     {
         int bin = (int)floor(ph[i].relief / parms->phoreal.binsize);
@@ -317,13 +334,24 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             while(b < num_bins)
             {
                 double percentage = ((double)cbins[b] / (double)num_ph) * 100.0;
-                if(percentage >= PercentileInterval[p])
+                if(percentage >= PercentileInterval[p] && cbins[b] > 0)
                 {
-                    result[t].percentiles[p] = (b + 1) * parms->phoreal.binsize;
+                    result[t].percentiles[p] = ph[cbins[b] - 1].relief;
                     break;
                 }
                 b++;
             }
+        }
+        /* Find 98th Percentile */
+        while(b < num_bins)
+        {
+            double percentage = ((double)cbins[b] / (double)num_ph) * 100.0;
+            if(percentage >= 98.0 && cbins[b] > 0)
+            {
+                result[t].h_canopy = ph[cbins[b] - 1].relief;
+                break;
+            }
+            b++;
         }
     }
 

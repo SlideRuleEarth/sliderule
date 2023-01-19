@@ -89,11 +89,16 @@ class Atl08Dispatch: public DispatchObject
             uint16_t            cycle;                  // cycle number
             uint8_t             spot;                   // 1 through 6, or 0 if unknown
             uint8_t             gt;                     // gt1l, gt1r, gt2l, gt2r, gt3l, gt3r
+            uint32_t            photon_count;           // number of photons in segment
             double              delta_time;             // seconds from ATLAS SDP epoch
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent
             double              distance;               // distance from the equator
-            float               percentiles[NUM_PERCENTILES];   // relief at given percentile
+            float               h_max_canopy;           // maximum relief height
+            float               h_min_canopy;           // minimum relief height
+            float               h_mean_canopy;          // average relief height
+            float               h_canopy;               // 98th percentile relief height
+            float               percentiles[NUM_PERCENTILES];   // relief height at given percentile
         } vegetation_t;
 
         /* (Normal) ATL06 Record */
