@@ -487,18 +487,23 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
             # Success
             complete = True
         except requests.exceptions.SSLError as e:
+            logger.debug("Exception in request to {}: {}".format(url, e))
             if not silence:
-                logger.error("Unable to verify SSL certificate: {} ...retrying request".format(e))
+                logger.error("Unable to verify SSL certificate for {} ...retrying request".format(url))
         except requests.ConnectionError as e:
+            logger.debug("Exception in request to {}: {}".format(url, e))
             if not silence:
                 logger.error("Connection error to endpoint {} ...retrying request".format(url))
         except requests.Timeout as e:
+            logger.debug("Exception in request to {}: {}".format(url, e))
             if not silence:
                 logger.error("Timed-out waiting for response from endpoint {} ...retrying request".format(url))
         except requests.exceptions.ChunkedEncodingError as e:
+            logger.debug("Exception in request to {}: {}".format(url, e))
             if not silence:
                 logger.error("Unexpected termination of response from endpoint {} ...retrying request".format(url))
         except requests.HTTPError as e:
+            logger.debug("Exception in request to {}: {}".format(url, e))
             if e.response.status_code == 503:
                 raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
             else:

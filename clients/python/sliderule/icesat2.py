@@ -508,7 +508,7 @@ def __gdf2poly(gdf):
 #
 # Flatten Batches
 #
-def __flattenbatches(rsps, rectype, batch_column, parm):
+def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
     tstart_flatten = time.perf_counter()
 
     # Check for Output Options
@@ -599,7 +599,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm):
     profiles["merge"] = time.perf_counter() - tstart_merge
 
     # Delete Extent ID Column
-    if len(gdf) > 0:
+    if len(gdf) > 0 and not keep_id:
         del gdf["extent_id"]
 
     # Return GeoDataFrame
@@ -621,6 +621,8 @@ def __procoutputfile(parm, lon_key, lat_key):
 # Wait for Scale Out
 #
 def __scaleout(desired_nodes, time_to_live):
+    if desired_nodes is None:
+        return # nothing needs to be done
     if desired_nodes < 0:
         raise sliderule.FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
     sliderule.update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
@@ -850,7 +852,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -875,6 +877,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         a callback function that is called for each result record
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
 
     Returns
     -------
@@ -923,7 +927,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm)
+        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm, keep_id)
 
         # Return Response
         profiles[atl06p.__name__] = time.perf_counter() - tstart
@@ -960,7 +964,7 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel Subsetted ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -984,6 +988,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         a callback function that is called for each result record
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
 
     Returns
     -------
@@ -1113,7 +1119,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     columns["pair"] = columns.pop("count")
 
                     # Delete Extent ID Column
-                    if "extent_id" in columns:
+                    if "extent_id" in columns and not keep_id:
                         del columns["extent_id"]
 
                     # Capture Time to Flatten
@@ -1166,7 +1172,7 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL08
 #
-def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None):
+def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
     '''
     Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns gridded vegatation statistics.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -1191,6 +1197,8 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         a callback function that is called for each result record
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
 
     Returns
     -------
@@ -1215,7 +1223,7 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl08p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm)
+        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm, keep_id)
 
         # Return Response
         profiles[atl08p.__name__] = time.perf_counter() - tstart
