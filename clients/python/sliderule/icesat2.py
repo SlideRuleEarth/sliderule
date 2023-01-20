@@ -99,6 +99,10 @@ RIGHT_PAIR = 1
 SC_BACKWARD = 0
 SC_FORWARD = 1
 
+# phoreal percentiles
+P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
+      '55': 10, '60': 11, '65': 12, '70': 13, '75': 14, '80': 15, '85': 16, '90': 17, '95': 18 }
+
 # gps-based epoch for delta times
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 
