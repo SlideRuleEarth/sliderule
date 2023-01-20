@@ -88,6 +88,7 @@ const char* RqstParms::PHOREAL                      = "phoreal";
 const char* RqstParms::PHOREAL_BINSIZE              = "binsize";
 const char* RqstParms::PHOREAL_GEOLOC               = "geoloc";
 const char* RqstParms::PHOREAL_USE_ABS_H            = "use_abs_h";
+const char* RqstParms::PHOREAL_WAVEFORM             = "send_waveform";
 
 const char* RqstParms::OBJECT_TYPE = "RqstParms";
 const char* RqstParms::LuaMetaName = "RqstParms";
@@ -255,7 +256,8 @@ RqstParms::RqstParms(lua_State* L, int index):
                                   .open_on_complete = false },
     phoreal                     { .binsize          = 1.0,
                                   .geoloc           = PHOREAL_MEDIAN,
-                                  .use_abs_h        = false }
+                                  .use_abs_h        = false,
+                                  .send_waveform    = false }
 {
     bool provided = false;
 
@@ -1167,6 +1169,10 @@ void RqstParms::get_lua_phoreal (lua_State* L, int index, bool* provided)
         if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_USE_ABS_H, (int)phoreal.use_abs_h);
         lua_pop(L, 1);
 
-
+        /* Use Absolute Heights */
+        lua_getfield(L, index, RqstParms::PHOREAL_WAVEFORM);
+        phoreal.send_waveform = LuaObject::getLuaBoolean(L, -1, true, phoreal.send_waveform, &field_provided);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_WAVEFORM, (int)phoreal.send_waveform);
+        lua_pop(L, 1);
     }
 }

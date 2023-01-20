@@ -80,7 +80,7 @@ class Atl08Dispatch: public DispatchObject
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Vegitation Measurements */
+        /* Vegetation Record */
         typedef struct {
             uint64_t            extent_id;              // unique identifier
             uint32_t            segment_id;             // closest atl06 segment
