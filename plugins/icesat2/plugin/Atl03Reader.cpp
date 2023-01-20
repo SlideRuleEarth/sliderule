@@ -1276,7 +1276,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                     {
                         do
                         {
-                            /* Check Signal Confidence Level */
+                            /* Check and Set Signal Confidence Level */
                             int8_t atl03_cnf = atl03.signal_conf_ph[t][current_photon];
                             if(atl03_cnf < RqstParms::CNF_POSSIBLE_TEP || atl03_cnf > RqstParms::CNF_SURFACE_HIGH)
                             {
@@ -1287,7 +1287,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 break;
                             }
 
-                            /* Check ATL03 Photon Quality Level */
+                            /* Check and Set ATL03 Photon Quality Level */
                             int8_t quality_ph = atl03.quality_ph[t][current_photon];
                             if(quality_ph < RqstParms::QUALITY_NOMINAL || quality_ph > RqstParms::QUALITY_POSSIBLE_TEP)
                             {
@@ -1298,7 +1298,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 break;
                             }
 
-                            /* Check ATL08 Classification */
+                            /* Check and Set ATL08 Classification */
                             RqstParms::atl08_classification_t atl08_class = RqstParms::ATL08_UNCLASSIFIED;
                             if(atl08[t])
                             {
@@ -1313,14 +1313,21 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 }
                             }
 
-                            /* Check Relief */
+                            /* Check and Set Relief */
                             float relief = 0.0;
                             if(atl08.phoreal)
                             {
-                                relief = atl08.relief[t][current_photon];
+                                if(!parms->phoreal.use_abs_h)
+                                {
+                                    relief = atl08.relief[t][current_photon];
+                                }
+                                else
+                                {
+                                    relief = atl03.h_ph[t][current_photon];
+                                }
                             }
 
-                            /* Check YAPC Score */
+                            /* Check and Set YAPC Score */
                             uint8_t yapc_score = 0;
                             if(yapc[t])
                             {

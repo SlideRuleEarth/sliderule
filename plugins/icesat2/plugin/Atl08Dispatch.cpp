@@ -243,24 +243,53 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
     int num_ph = extent->photon_count[t];
 
-    /* Calculate Sums */
-    double sum_distance = 0.0;
-    double sum_delta_time = 0.0;
-    double sum_latitude = 0.0;
-    double sum_longitude = 0.0;
-    for(int i = 0; i < num_ph; i++)
+    /* Calculate Geolocation Fields */
+    if(parms->phoreal.geoloc == RqstParms::PHOREAL_MEAN)
     {
-        sum_delta_time += ph[i].delta_time;
-        sum_latitude += ph[i].latitude;
-        sum_longitude += ph[i].longitude;
-        sum_distance += ph[i].distance + extent->segment_distance[t];
-    }
+        /* Calculate Sums */
+        double sum_delta_time = 0.0;
+        double sum_latitude = 0.0;
+        double sum_longitude = 0.0;
+        double sum_distance = 0.0;
+        for(int i = 0; i < num_ph; i++)
+        {
+            sum_delta_time += ph[i].delta_time;
+            sum_latitude += ph[i].latitude;
+            sum_longitude += ph[i].longitude;
+            sum_distance += ph[i].distance + extent->segment_distance[t];
+        }
 
-    /* Calculate Averages */
-    result[t].distance = sum_distance / num_ph;
-    result[t].delta_time = sum_delta_time / num_ph;
-    result[t].latitude = sum_latitude / num_ph;
-    result[t].longitude = sum_longitude / num_ph;
+        /* Calculate Averages */
+        result[t].delta_time = sum_delta_time / num_ph;
+        result[t].latitude = sum_latitude / num_ph;
+        result[t].longitude = sum_longitude / num_ph;
+        result[t].distance = sum_distance / num_ph;
+    }
+    else if(parms->phoreal.geoloc == RqstParms::PHOREAL_MEDIAN)
+    {
+        int center_ph = num_ph / 2;
+        if(num_ph == 0) // No Photons
+        {
+            result[t].delta_time = ph[0].delta_time;
+            result[t].latitude = ph[0].latitude;
+            result[t].longitude = ph[0].longitude;
+            result[t].distance = ph[0].distance + extent->segment_distance[t];
+        }
+        else if(num_ph % 2 == 1) // Odd Number of Photons
+        {
+            result[t].delta_time = ph[center_ph].delta_time;
+            result[t].latitude = ph[center_ph].latitude;
+            result[t].longitude = ph[center_ph].longitude;
+            result[t].distance = ph[center_ph].distance + extent->segment_distance[t];
+        }
+        else // Even Number of Photons
+        {
+            result[t].delta_time = (ph[center_ph].delta_time + ph[center_ph - 1].delta_time) / 2;
+            result[t].latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
+            result[t].longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
+            result[t].distance = ((ph[center_ph].distance + ph[center_ph - 1].distance) / 2) + extent->segment_distance[t];
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------

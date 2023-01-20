@@ -86,6 +86,8 @@ const char* RqstParms::OUTPUT_FORMAT                = "format";
 const char* RqstParms::OUTPUT_OPEN_ON_COMPLETE      = "open_on_complete";
 const char* RqstParms::PHOREAL                      = "phoreal";
 const char* RqstParms::PHOREAL_BINSIZE              = "binsize";
+const char* RqstParms::PHOREAL_GEOLOC               = "geoloc";
+const char* RqstParms::PHOREAL_USE_ABS_H            = "use_abs_h";
 
 const char* RqstParms::OBJECT_TYPE = "RqstParms";
 const char* RqstParms::LuaMetaName = "RqstParms";
@@ -251,7 +253,9 @@ RqstParms::RqstParms(lua_State* L, int index):
     output                      { .path             = NULL,
                                   .format           = OUTPUT_FORMAT_NATIVE,
                                   .open_on_complete = false },
-    phoreal                     { .binsize = 1.0 }
+    phoreal                     { .binsize          = 1.0,
+                                  .geoloc           = PHOREAL_MEDIAN,
+                                  .use_abs_h        = false }
 {
     bool provided = false;
 
@@ -517,6 +521,16 @@ RqstParms::output_format_t RqstParms::str2outputformat (const char* fmt_str)
 }
 
 /*----------------------------------------------------------------------------
+ * str2geoloc
+ *----------------------------------------------------------------------------*/
+RqstParms::phoreal_geoloc_t RqstParms::str2geoloc (const char* fmt_str)
+{
+    if     (StringLib::match(fmt_str, "mean"))      return PHOREAL_MEAN;
+    else if(StringLib::match(fmt_str, "median"))    return PHOREAL_MEDIAN;
+    else                                            return PHOREAL_UNSUPPORTED;
+}
+/*----------------------------------------------------------------------------
+
  * get_lua_atl03_cnf
  *----------------------------------------------------------------------------*/
 void RqstParms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
@@ -1123,6 +1137,7 @@ void RqstParms::get_lua_phoreal (lua_State* L, int index, bool* provided)
     {
         *provided = true;
 
+        /* Binsize */
         lua_getfield(L, index, RqstParms::PHOREAL_BINSIZE);
         phoreal.binsize = LuaObject::getLuaFloat(L, -1, true, phoreal.binsize, &field_provided);
         if(field_provided)
@@ -1131,5 +1146,27 @@ void RqstParms::get_lua_phoreal (lua_State* L, int index, bool* provided)
             mlog(DEBUG, "Setting %s to %lf", RqstParms::PHOREAL_BINSIZE, phoreal.binsize);
         }
         lua_pop(L, 1);
+
+        /* Geolocation */
+        lua_getfield(L, index, RqstParms::PHOREAL_GEOLOC);
+        const char* geoloc_str = LuaObject::getLuaString(L, -1, true, NULL, &field_provided);
+        if(field_provided)
+        {
+            phoreal_geoloc_t geoloc = str2geoloc(geoloc_str);
+            if(geoloc != PHOREAL_UNSUPPORTED)
+            {
+                phoreal.geoloc = geoloc;
+                mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_GEOLOC, (int)phoreal.geoloc);
+            }
+        }
+        lua_pop(L, 1);
+
+        /* Use Absolute Heights */
+        lua_getfield(L, index, RqstParms::PHOREAL_USE_ABS_H);
+        phoreal.use_abs_h = LuaObject::getLuaBoolean(L, -1, true, phoreal.use_abs_h, &field_provided);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_USE_ABS_H, (int)phoreal.use_abs_h);
+        lua_pop(L, 1);
+
+
     }
 }

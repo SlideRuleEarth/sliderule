@@ -98,6 +98,8 @@ class RqstParms: public LuaObject
         static const char* OUTPUT_OPEN_ON_COMPLETE;
         static const char* PHOREAL;
         static const char* PHOREAL_BINSIZE;
+        static const char* PHOREAL_GEOLOC;
+        static const char* PHOREAL_USE_ABS_H;
 
         static const int NUM_PAIR_TRACKS            = 2;
         static const int RPT_L                      = 0;
@@ -219,6 +221,13 @@ class RqstParms: public LuaObject
             OUTPUT_FORMAT_UNSUPPORTED = 4
         } output_format_t;
 
+        /* PhoREAL Geolocation Modes */
+        typedef enum {
+            PHOREAL_MEAN = 0,
+            PHOREAL_MEDIAN = 1,
+            PHOREAL_UNSUPPORTED = 2
+        } phoreal_geoloc_t;
+
         /* List of Strings */
         typedef List<SafeString, EXPECTED_NUM_FIELDS> string_list_t;
 
@@ -252,7 +261,9 @@ class RqstParms: public LuaObject
 
         /* PhoREAL Settings */
         typedef struct {
-            double              binsize;
+            double              binsize;                        // size of photon height bin
+            phoreal_geoloc_t    geoloc;                         // how are geolocation stats calculated
+            bool                use_abs_h;                      // use absolute heights
         } phoreal_t;
 
         /*--------------------------------------------------------------------
@@ -309,6 +320,7 @@ class RqstParms: public LuaObject
         quality_ph_t            str2atl03quality        (const char* quality_ph_str);
         atl08_classification_t  str2atl08class          (const char* classifiction_str);
         output_format_t         str2outputformat        (const char* fmt_str);
+        phoreal_geoloc_t        str2geoloc              (const char* fmt_str);
         void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
         void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);
