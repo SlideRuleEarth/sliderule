@@ -33,23 +33,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
 #include "VrtRaster.h"
-#include "TimeLib.h"
 
-#include <uuid/uuid.h>
-#include <ogr_geometry.h>
-#include <ogrsf_frmts.h>
-#include <gdal.h>
-#include <gdalwarper.h>
-#include <ogr_spatialref.h>
-#include <gdal_priv.h>
-#include <algorithm>
-
-#include "cpl_minixml.h"
-#include "cpl_string.h"
-#include "gdal.h"
-#include "ogr_spatialref.h"
 
 /******************************************************************************
  * STATIC DATA

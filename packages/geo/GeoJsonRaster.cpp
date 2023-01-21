@@ -37,12 +37,7 @@
 #include "GeoJsonRaster.h"
 
 #include <uuid/uuid.h>
-#include <ogr_geometry.h>
-#include <ogrsf_frmts.h>
-#include <gdal.h>
 #include <gdalwarper.h>
-#include <ogr_spatialref.h>
-#include <gdal_priv.h>
 
 
 /******************************************************************************
@@ -51,27 +46,11 @@
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
  ******************************************************************************/
-
-struct GeoJsonRaster::impl
-{
-    public:
-        OGRCoordinateTransformation *latlon2xy;
-        OGRSpatialReference source;
-        OGRSpatialReference target;
-};
-
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
 const char* GeoJsonRaster::LuaMetaName = "GeoJsonRaster";
-const struct luaL_Reg GeoJsonRaster::LuaMetaTable[] = {
-    {"dim",         luaDimensions},
-    {"bbox",        luaBoundingBox},
-    {"cell",        luaCellSize},
-    {"pixel",       luaPixel},
-    {NULL,          NULL}
-};
 
 const char* GeoJsonRaster::FILEDATA_KEY   = "data";
 const char* GeoJsonRaster::FILELENGTH_KEY = "length";
@@ -126,41 +105,19 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
     return new GeoJsonRaster(L, file, filelength, _cellsize);
 }
 
+
 /*----------------------------------------------------------------------------
- * subset
+ * contains
  *----------------------------------------------------------------------------*/
-bool GeoJsonRaster::subset (double lon, double lat)
+bool GeoJsonRaster::includes(double lon, double lat)
 {
-    OGRPoint p  = {lon, lat};
+    List<sample_t> slist;
+    int sampleCnt = sample (lon, lat, slist);
 
-    if(p.transform(pimpl->latlon2xy) == OGRERR_NONE)
-    {
-        lon = p.getX();
-        lat = p.getY();
+    if( sampleCnt == 0 ) return false;
+    if( sampleCnt > 1  ) mlog(ERROR, "Multiple samples returned for lon: %.2lf, lat: %.2lf, using first sample", lon, lat);
 
-        if ((lon >= bbox.lon_min) &&
-            (lon <= bbox.lon_max) &&
-            (lat >= bbox.lat_min) &&
-            (lat <= bbox.lat_max))
-        {
-            uint32_t row = (bbox.lat_max - lat) / cellsize;
-            uint32_t col = (lon - bbox.lon_min) / cellsize;
-
-            if ((row < rows) && (col < cols))
-            {
-                return rawPixel(row, col);
-            }
-        }
-    }
-    else
-    {
-        /*
-         * Cannot log this error...
-         * Transform failed for probably thousands of pixels in raster.
-         */
-    }
-
-    return false;
+    return (static_cast<int>(slist[0].value) == RASTER_PIXEL_ON);
 }
 
 /*----------------------------------------------------------------------------
@@ -168,23 +125,13 @@ bool GeoJsonRaster::subset (double lon, double lat)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
-    if (raster) delete[] raster;
-    if (pimpl->latlon2xy) OGRCoordinateTransformation::DestroyCT(pimpl->latlon2xy);
-    delete pimpl;
+    VSIUnlink(rasterFile.c_str());
+    VSIUnlink(vrtFile.c_str());
 }
 
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
-
-/* Utilitiy function to get UUID string */
-static const char *getUuid(char *uuid_str)
-{
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse_lower(uuid, uuid_str);
-    return uuid_str;
-}
 
 /* Utilitiy function to check constructor's params */
 static void validatedParams(const char *file, long filelength, double _cellsize)
@@ -196,7 +143,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
 
     if (_cellsize <= 0.0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellsize: %lf:", _cellsize);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %lf:", _cellsize);
 }
 
 
@@ -204,38 +151,31 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, double _cellsize):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    VrtRaster(L, NEARESTNEIGHBOUR_ALGO, 0, false)
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool rasterCreated = false;
     GDALDataset *rasterDset = NULL;
     GDALDataset *jsonDset   = NULL;
-    std::string rasterfname = "/vsimem/" + std::string(getUuid(uuid_str));
-    std::string jsonfname   = "/vsimem/" + std::string(getUuid(uuid_str));
+    std::string  jsonFile;
 
-    /* Allocate Private Implementation */
-    pimpl = new GeoJsonRaster::impl;
+    jsonFile   = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
+    rasterFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".tif";
+    vrtFile    = "/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt";
 
     /* Initialize Class Data Members */
-    raster = NULL;
-    rows = 0;
-    cols = 0;
-    bbox = {0.0, 0.0, 0.0, 0.0};
-    cellsize = 0.0;
-    pimpl->latlon2xy = NULL;
-    pimpl->source.Clear();
-    pimpl->target.Clear();
+    gpsTime = 0;
 
     validatedParams(file, filelength, _cellsize);
 
     try
     {
         /* Create raster from json file */
-        VSILFILE *fp = VSIFileFromMemBuffer(jsonfname.c_str(), (GByte *)file, (vsi_l_offset)filelength, FALSE);
+        VSILFILE *fp = VSIFileFromMemBuffer(jsonFile.c_str(), (GByte *)file, (vsi_l_offset)filelength, FALSE);
         CHECKPTR(fp);
         VSIFCloseL(fp);
 
-        jsonDset = (GDALDataset *)GDALOpenEx(jsonfname.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        jsonDset = (GDALDataset *)GDALOpenEx(jsonFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         CHECKPTR(jsonDset);
         OGRLayer *srcLayer = jsonDset->GetLayer(0);
         CHECKPTR(srcLayer);
@@ -244,7 +184,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         OGRErr ogrerr = srcLayer->GetExtent(&e);
         CHECK_GDALERR(ogrerr);
 
-        cellsize = _cellsize;
+        double cellsize = _cellsize;
         int _cols = int((e.MaxX - e.MinX) / cellsize);
         int _rows = int((e.MaxY - e.MinY) / cellsize);
 
@@ -253,7 +193,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
 
         GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
         CHECKPTR(driver);
-        rasterDset = (GDALDataset *)driver->Create(rasterfname.c_str(), _cols, _rows, 1, GDT_Byte, options);
+        rasterDset = (GDALDataset *)driver->Create(rasterFile.c_str(), _cols, _rows, 1, GDT_Byte, options);
         CSLDestroy(options);
         CHECKPTR(rasterDset);
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};
@@ -291,40 +231,26 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
         CHECK_GDALERR(cplerr);
 
-        /* Store information about raster */
-        cols = rasterDset->GetRasterXSize();
-        rows = rasterDset->GetRasterYSize();
+        /* Store raster creation time */
+        TimeLib::gmt_time_t gmt = TimeLib::gettime();
+        gpsTime = TimeLib::gmt2gpstime(gmt);
 
-        /* Get raster boundry box */
-        rasterDset->GetGeoTransform(geot);
-        bbox.lon_min = geot[0];
-        bbox.lon_max = geot[0] + cols * geot[1];
-        bbox.lat_max = geot[3];
-        bbox.lat_min = geot[3] + rows * geot[5];
+        /* Must close raster to flush it into file */
+        GDALClose((GDALDatasetH)rasterDset);
+        rasterDset = NULL;
 
-        long size = cols * rows;
+        /* Create vrt file, used in base class as index data set */
+        List<std::string> rasterList;
+        rasterList.add(rasterFile);
+        buildVRT(vrtFile, rasterList);
 
-        raster = new uint8_t[size];
-        CHECKPTR(raster);
+        /* Open vrt. */
+        if (!openRasterIndexSet())
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
-        /* Store raster in byte array. */
-        cplerr = band->RasterIO(GF_Read, 0, 0, cols, rows, raster, cols, rows, GDT_Byte, 0, 0);
-        CHECK_GDALERR(cplerr);
-
-        const char *_wkt = rasterDset->GetProjectionRef();
-        CHECKPTR(_wkt);
-        ogrerr = pimpl->source.importFromEPSG(PHOTON_CRS);
-        CHECK_GDALERR(ogrerr);
-        ogrerr = pimpl->target.importFromWkt(_wkt);
-        CHECK_GDALERR(ogrerr);
-
-        /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-        pimpl->target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        pimpl->source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        /* Create coordinates transformation */
-        pimpl->latlon2xy = OGRCreateCoordinateTransformation(&pimpl->source, &pimpl->target);
-        CHECKPTR(pimpl->latlon2xy);
+        /* Set base class sampling order */
+        setCheckCacheFirst(true);
+        setAllowIndexDataSetSampling(true);
 
         rasterCreated = true;
     }
@@ -334,175 +260,34 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
     }
 
    /* Cleanup */
-   VSIUnlink(jsonfname.c_str());
-   VSIUnlink(rasterfname.c_str());
-
+   VSIUnlink(jsonFile.c_str());
    if (jsonDset) GDALClose((GDALDatasetH)jsonDset);
    if (rasterDset) GDALClose((GDALDatasetH)rasterDset);
 
-    if(!rasterCreated)
+   if (!rasterCreated)
         throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
+}
+
+
+/*----------------------------------------------------------------------------
+ * getRasterIndexFileName
+ *----------------------------------------------------------------------------*/
+void GeoJsonRaster::getRasterIndexFileName(std::string &file, double lon, double lat)
+{
+    std::ignore = lon;
+    std::ignore = lat;
+    file = vrtFile;
+}
+
+/*----------------------------------------------------------------------------
+ * getRasterDate
+ *----------------------------------------------------------------------------*/
+int64_t GeoJsonRaster::getRasterDate(std::string &tifFile)
+{
+    std::ignore = tifFile;
+    return gpsTime;
 }
 
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * luaDimensions - :dim() --> rows, cols
- *----------------------------------------------------------------------------*/
-int GeoJsonRaster::luaDimensions(lua_State *L)
-{
-    bool status = false;
-    int num_ret = 1;
-
-    try
-    {
-        /* Get Self */
-        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
-
-        /* Set Return Values */
-        lua_pushinteger(L, lua_obj->rows);
-        lua_pushinteger(L, lua_obj->cols);
-        num_ret += 2;
-
-        /* Set Return Status */
-        status = true;
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting dimensions: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_ret);
-}
-
-/*----------------------------------------------------------------------------
- * luaBoundingBox - :bbox() --> (lon_min, lat_min, lon_max, lat_max)
- *----------------------------------------------------------------------------*/
-int GeoJsonRaster::luaBoundingBox(lua_State *L)
-{
-    bool status = false;
-    int num_ret = 1;
-
-    try
-    {
-        /* Get Self */
-        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
-
-        /* Set Return Values */
-        lua_pushnumber(L, lua_obj->bbox.lon_min);
-        lua_pushnumber(L, lua_obj->bbox.lat_min);
-        lua_pushnumber(L, lua_obj->bbox.lon_max);
-        lua_pushnumber(L, lua_obj->bbox.lat_max);
-        num_ret += 4;
-
-        /* Set Return Status */
-        status = true;
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting bounding box: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_ret);
-}
-
-/*----------------------------------------------------------------------------
- * luaCellSize - :cell() --> cell size
- *----------------------------------------------------------------------------*/
-int GeoJsonRaster::luaCellSize(lua_State *L)
-{
-    bool status = false;
-    int num_ret = 1;
-
-    try
-    {
-        /* Get Self */
-        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
-
-        /* Set Return Values */
-        lua_pushnumber(L, lua_obj->cellsize);
-        num_ret += 1;
-
-        /* Set Return Status */
-        status = true;
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting cell size: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_ret);
-}
-
-/*----------------------------------------------------------------------------
- * luaPixel - :pixel(r, c) --> on|off
- *----------------------------------------------------------------------------*/
-int GeoJsonRaster::luaPixel(lua_State *L)
-{
-    bool status = false;
-    int num_ret = 1;
-
-    try
-    {
-        /* Get Self */
-        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
-
-        /* Get Pixel Index */
-        uint32_t r = getLuaInteger(L, 2);
-        uint32_t c = getLuaInteger(L, 3);
-
-        /* Get Pixel */
-        if ((r < lua_obj->rows) && (c < lua_obj->cols))
-        {
-            lua_pushboolean(L, lua_obj->rawPixel(r, c));
-            num_ret++;
-
-            /* Set Return Status */
-            status = true;
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid index provided <%d, %d>", r, c);
-        }
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting pixel: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_ret);
-}
-
-/*----------------------------------------------------------------------------
- * luaSubset - :subset(lon, lat) --> in|out
- *----------------------------------------------------------------------------*/
-int GeoJsonRaster::luaSubset(lua_State *L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        GeoJsonRaster *lua_obj = (GeoJsonRaster *)getLuaSelf(L, 1);
-
-        /* Get Coordinates */
-        double lon = getLuaFloat(L, 2);
-        double lat = getLuaFloat(L, 3);
-
-        /* Get Inclusion */
-        status = lua_obj->subset(lon, lat);
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error subsetting: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
-}

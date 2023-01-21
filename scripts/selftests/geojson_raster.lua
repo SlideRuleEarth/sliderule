@@ -48,14 +48,41 @@ local _cellsize = robj:cell()
 print(string.format("cellsize: %f", _cellsize))
 runner.check(_cellsize == cellsize)
 
-print('\n------------------\nTest05: pixel\n------------------')
-local pixelIn = robj:pixel(rows-1, cols-3)
-print("pixel in raster check:", pixelIn)
-runner.check(pixelIn == true)
+print('\n------------------\nTest05: sample\n------------------')
+local lon = -108
+local lat =   39
+local tbl, status = robj:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
 
-pixelIn = robj:pixel(rows-1, cols-1)
-print("pixel out of raster check:", pixelIn)
-runner.check(pixelIn == false)
+local el, file
+for j, v in ipairs(tbl) do
+    s = v["value"]
+    fname = v["file"]
+end
+print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
+runner.check(s == 1)
+
+-- Edge of bbox
+lon = -108.34
+lat =   38.90
+tbl, status = robj:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+for j, v in ipairs(tbl) do
+    s = v["value"]
+    fname = v["file"]
+end
+print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
+runner.check(s == 1)
+
+
+-- Outside of bbox
+lon = -100
+lat =   40
+tbl, status = robj:sample(lon, lat)
+runner.check(status == nil)
+runner.check(tbl == nil)
 
 
 -- Clean Up --

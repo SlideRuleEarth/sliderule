@@ -41,7 +41,9 @@
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 #include <gdal.h>
+#include <gdal_utils.h>
 #include <gdalwarper.h>
+#include <vrtdataset.h>
 #include <ogr_spatialref.h>
 #include <gdal_priv.h>
 #include <algorithm>
@@ -154,7 +156,7 @@ bool GeoRaster::registerRaster (const char* _name, factory_t create)
  *----------------------------------------------------------------------------*/
 int GeoRaster::sample (double lon, double lat, List<sample_t> &slist, void* param)
 {
-    (void)param;  /* Keep compiler happy, param not used for now */
+    std::ignore = param;  /* Keep compiler happy, param not used for now */
     slist.clear();
 
     samplingMutex.lock(); /* Serialize sampling on the same object */
@@ -282,6 +284,37 @@ int GeoRaster::sample(double lon, double lat)
     return getSampledRastersCount();
 }
 
+
+/*----------------------------------------------------------------------------
+ * getUUID
+ *----------------------------------------------------------------------------*/
+const char* GeoRaster::getUUID(char *uuid_str)
+{
+    uuid_t uuid;
+    uuid_generate(uuid);
+    uuid_unparse_lower(uuid, uuid_str);
+    return uuid_str;
+}
+
+
+/*----------------------------------------------------------------------------
+ * buildVRT
+ *----------------------------------------------------------------------------*/
+void GeoRaster::buildVRT(std::string& vrtFile, List<std::string>& rlist)
+{
+    GDALDataset* vrtDset = NULL;
+    std::vector<const char*> rasters;
+
+    for (int i = 0; i < rlist.length(); i++)
+    {
+        rasters.push_back(rlist[i].c_str());
+    }
+
+    vrtDset = (GDALDataset*) GDALBuildVRT(vrtFile.c_str(), rasters.size(), NULL, rasters.data(), NULL, NULL);
+    CHECKPTR(vrtDset);
+    GDALClose(vrtDset);
+}
+
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -328,6 +361,19 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     readerCount = 0;
     checkCacheFirst = false;
 }
+
+
+/*----------------------------------------------------------------------------
+ * radius2pixels
+ *----------------------------------------------------------------------------*/
+int GeoRaster::radius2pixels(double cellSize, int _radius)
+{
+    int csize = static_cast<int>(cellSize);
+    int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
+    int radiusInPixels = radiusInMeters / csize;
+    return radiusInPixels;
+}
+
 
 
 /******************************************************************************
@@ -388,51 +434,64 @@ void GeoRaster::readPixel(raster_t *raster)
         uint32_t _row = row % raster->yBlockSize;
         uint32_t offset = _row * raster->xBlockSize + _col;
 
-        /* Assume most data is stored as 32 bit floats (default case for elevation models) */
-        if (raster->dataType == GDT_Float32)
+        switch(raster->dataType)
         {
-            float *p = (float *)data;
-            raster->sample.value = (double)p[offset];
-        }
-        /* All other data types */
-        else if (raster->dataType == GDT_Float64)
-        {
-            double *p = (double *)data;
-            raster->sample.value = (double)p[offset];
-        }
-        else if (raster->dataType == GDT_Byte)
-        {
-            uint8_t *p = (uint8_t *)data;
-            raster->sample.value = (double)p[offset];
-        }
-        else if (raster->dataType == GDT_UInt16)
-        {
-            uint16_t *p = (uint16_t *)data;
-            raster->sample.value = (double)p[offset];
-        }
-        else if (raster->dataType == GDT_Int16)
-        {
-            int16_t *p = (int16_t *)data;
-            raster->sample.value = (double)p[offset];
-        }
-        else if (raster->dataType == GDT_UInt32)
-        {
-            uint32_t *p = (uint32_t *)data;
-            raster->sample.value = (double)p[offset];
-        }
-        else if (raster->dataType == GDT_Int32)
-        {
-            int32_t *p = (int32_t *)data;
-            raster->sample.value = (double)p[offset];
-        }
-        else
-        {
-            /*
-             * This version of GDAL does not support 64bit integers
-             * Complex numbers are supported but not needed at this point.
-             */
-            block->DropLock();
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
+            case GDT_Byte:
+            {
+                uint8_t *p = (uint8_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_UInt16:
+            {
+                uint16_t *p = (uint16_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_Int16:
+            {
+                int16_t *p = (int16_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_UInt32:
+            {
+                uint32_t *p = (uint32_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_Int32:
+            {
+                int32_t *p = (int32_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_Float32:
+            {
+                float *p = (float *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_Float64:
+            {
+                double *p = (double *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            default:
+                /*
+                 * This version of GDAL does not support 64bit integers
+                 * Complex numbers are supported but not needed at this point.
+                 */
+                block->DropLock();
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
         }
 
         /* Done reading, release block lock */
@@ -445,18 +504,6 @@ void GeoRaster::readPixel(raster_t *raster)
     {
         mlog(e.level(), "Error reading from raster: %s", e.what());
     }
-}
-
-
-/*----------------------------------------------------------------------------
- * radius2pixels
- *----------------------------------------------------------------------------*/
-int GeoRaster::radius2pixels(double cellSize, int _radius)
-{
-    int csize = static_cast<int>(cellSize);
-    int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
-    int radiusInPixels = radiusInMeters / csize;
-    return radiusInPixels;
 }
 
 

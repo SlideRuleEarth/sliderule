@@ -38,13 +38,48 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
-#include "GeoUtils.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
 /******************************************************************************
  * Typedef and macros used by geo package
  ******************************************************************************/
+
+#define CHECKPTR(p)                                                           \
+do                                                                            \
+{                                                                             \
+    if ((p) == NULL)                                                          \
+    {                                                                         \
+        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
+              "NULL pointer detected (%s():%d)", __FUNCTION__, __LINE__);     \
+    }                                                                         \
+} while (0)
+
+
+#define CHECK_GDALERR(e)                                                      \
+do                                                                            \
+{                                                                             \
+    if ((e))   /* CPLErr and OGRErr types have 0 for no error  */             \
+    {                                                                         \
+        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
+              "GDAL ERROR detected: %d (%s():%d)", e, __FUNCTION__, __LINE__);\
+    }                                                                         \
+} while (0)
+
+
+
+/* CRS used by ICESat2 pthotons */
+#define PHOTON_CRS 4326
+
+
+typedef struct
+{
+    double lon_min;
+    double lat_min;
+    double lon_max;
+    double lat_max;
+} bbox_t;
+
 
 /******************************************************************************
  * GEO RASTER CLASS
@@ -157,10 +192,12 @@ class GeoRaster: public LuaObject
         static void    deinit          (void);
         static int     luaCreate       (lua_State* L);
         static bool    registerRaster  (const char* _name, factory_t create);
-        int            sample          (double lon, double lat, List<sample_t> &slist, void* param=NULL);
+        int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         inline bool    hasZonalStats   (void) { return zonalStats; }
         inline void    setCheckCacheFirst(bool value) { checkCacheFirst = value; }
         inline void    setAllowIndexDataSetSampling(bool value) { allowIndexDataSetSampling = value; }
+        const char*    getUUID         (char* uuid_str);
+        void           buildVRT        (std::string& vrtFile, List<std::string>& rlist);
         virtual       ~GeoRaster       (void);
 
     protected:
@@ -172,7 +209,6 @@ class GeoRaster: public LuaObject
                         GeoRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
         virtual bool    openRasterIndexSet      (double lon=0, double lat=0) = 0;
         virtual bool    findRasterFilesWithPoint(OGRPoint &p) = 0;
-        virtual void    getRasterIndexFileName  (std::string& file, double lon=0, double lat=0) = 0;
         virtual int64_t getRasterDate           (std::string& tifFile) = 0;
         int             radius2pixels           (double cellSize, int _radius);
 

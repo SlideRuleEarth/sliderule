@@ -36,15 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
-#include "OsApi.h"
-#include "GeoUtils.h"
+#include "VrtRaster.h"
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
  ******************************************************************************/
 
-class GeoJsonRaster: public LuaObject
+class GeoJsonRaster: public VrtRaster
 {
     public:
 
@@ -54,7 +52,6 @@ class GeoJsonRaster: public LuaObject
 
         static const int   RASTER_NODATA_VALUE = 200;
         static const int   RASTER_PIXEL_ON = 1;
-        static const int   RASTER_MAX_IMAGE_SIZE = 4194304; // 4MB
 
         static const char* FILEDATA_KEY;
         static const char* FILELENGTH_KEY;
@@ -72,27 +69,12 @@ class GeoJsonRaster: public LuaObject
         static int            luaCreate      (lua_State* L);
         static GeoJsonRaster* create         (lua_State* L, int index);
 
-        bool                  subset         (double lon, double lat);
+        bool                  includes       (double lon, double lat);
         virtual              ~GeoJsonRaster  (void);
 
         /*--------------------------------------------------------------------
          * Inline Methods
          *--------------------------------------------------------------------*/
-
-        bool rawPixel (const uint32_t row, const uint32_t col)
-        {
-            return raster[(row * cols) + col] == RASTER_PIXEL_ON;
-        }
-
-        uint32_t numRows (void)
-        {
-            return rows;
-        }
-
-        uint32_t numCols(void)
-        {
-            return cols;
-        }
 
     protected:
 
@@ -101,37 +83,27 @@ class GeoJsonRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoJsonRaster (lua_State* L, const char* image, long imagelength, double _cellsize);
+                GeoJsonRaster           (lua_State *L, const char *image, long imagelength, double _cellsize);
+        void    getRasterIndexFileName  (std::string& file, double lon=0, double lat=0);
+        int64_t getRasterDate           (std::string& tifFile);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        uint8_t  *raster;
-        uint32_t  rows;
-        uint32_t  cols;
-        bbox_t    bbox;
-        double    cellsize;
-
-        struct impl; // gdal implementation
-        impl* pimpl; // private gdal data
+        std::string rasterFile;
+        std::string vrtFile;
+        int64_t     gpsTime;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-
-        static int luaDimensions    (lua_State* L);
-        static int luaBoundingBox   (lua_State* L);
-        static int luaCellSize      (lua_State* L);
-        static int luaPixel         (lua_State* L);
-        static int luaSubset        (lua_State* L);
 };
 
 #endif  /* __geojson_raster__ */
