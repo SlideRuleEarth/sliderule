@@ -927,6 +927,19 @@ void GeoRaster::createReaderThreads(void)
  *----------------------------------------------------------------------------*/
 void GeoRaster::sampleRasters(void)
 {
+    if (rasterDict.length() == 1)
+    {
+        /*
+         * Threaded raster reader code can read multiple rasters in parallel.
+         * For optimization, if there is only one raster in the dictionary use this thread to read it.
+         */
+        raster_t *raster = NULL;
+        rasterDict.first(&raster);
+        assert(raster);
+        if (raster->enabled) processRaster(raster, this);
+        return;
+    }
+
     /* Create additional reader threads if needed */
     createReaderThreads();
 
@@ -953,8 +966,7 @@ void GeoRaster::sampleRasters(void)
     }
 
     /* Did not signal any reader threads, don't wait */
-    if (signaledReaders == 0)
-        return;
+    if (signaledReaders == 0) return;
 
     /* Wait for all reader threads to finish sampling */
     for (uint32_t j=0; j<readerCount; j++)
