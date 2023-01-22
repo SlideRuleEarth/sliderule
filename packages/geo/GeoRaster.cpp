@@ -369,6 +369,10 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
 int GeoRaster::radius2pixels(double cellSize, int _radius)
 {
     int csize = static_cast<int>(cellSize);
+
+    if (_radius == 0) return 0;
+    if ( csize  == 0) csize = 1;
+
     int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
     int radiusInPixels = radiusInMeters / csize;
     return radiusInPixels;
