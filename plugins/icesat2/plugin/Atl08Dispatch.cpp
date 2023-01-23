@@ -311,13 +311,13 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 {
     /* Determine Starting Photon and Number of Photons */
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
-    int num_ph = extent->photon_count[t];
+    long num_ph = extent->photon_count[t];
 
     /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;
     double max_h = 0.0;
     double sum_h = 0.0;
-    for(int i = 0; i < num_ph; i++)
+    for(long i = 0; i < num_ph; i++)
     {
         sum_h += ph[i].relief;
         if(ph[i].relief > max_h)
@@ -335,7 +335,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 
     /* Calculate Stdev of Heights */
     double std_h = 0.0;
-    for(int i = 0; i < num_ph; i++)
+    for(long i = 0; i < num_ph; i++)
     {
         double delta = (ph[i].relief - result[t].h_mean_canopy);
         std_h += delta * delta;
@@ -360,7 +360,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     /* Bin All Photons */
     long* bins = new long[num_bins];
     LocalLib::set(bins, 0, num_bins * sizeof(long));
-    for(int i = 0; i < num_ph; i++)
+    for(long i = 0; i < num_ph; i++)
     {
         int bin = (int)floor(ph[i].relief / parms->phoreal.binsize);
         if(bin < 0) bin = 0;
