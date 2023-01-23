@@ -313,6 +313,7 @@ void GeoRaster::buildVRT(std::string& vrtFile, List<std::string>& rlist)
     vrtDset = (GDALDataset*) GDALBuildVRT(vrtFile.c_str(), rasters.size(), NULL, rasters.data(), NULL, NULL);
     CHECKPTR(vrtDset);
     GDALClose(vrtDset);
+    mlog(DEBUG, "Created %s", vrtFile.c_str());
 }
 
 /******************************************************************************
@@ -509,8 +510,8 @@ void GeoRaster::readPixel(raster_t *raster)
         /* Done reading, release block lock */
         block->DropLock();
 
-        mlog(DEBUG, "Value: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
-             raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
+        // mlog(DEBUG, "Value: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
+        //      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
     }
     catch (const RunTimeException &e)
     {
@@ -1039,6 +1040,8 @@ void GeoRaster::processRaster(raster_t* raster, GeoRaster* obj)
             if (raster->dset == NULL)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", raster->fileName.c_str());
 
+            mlog(DEBUG, "Opened dataSet for %s", raster->fileName.c_str());
+
             /* Store information about raster */
             raster->cols = raster->dset->GetRasterXSize();
             raster->rows = raster->dset->GetRasterYSize();
@@ -1059,7 +1062,7 @@ void GeoRaster::processRaster(raster_t* raster, GeoRaster* obj)
             raster->band = raster->dset->GetRasterBand(1);
             CHECKPTR(raster->band);
             raster->band->GetBlockSize(&raster->xBlockSize, &raster->yBlockSize);
-            mlog(DEBUG, "Raster xBlockSize: %d, yBlockSize: %d", raster->xBlockSize, raster->yBlockSize);
+            // mlog(DEBUG, "Raster xBlockSize: %d, yBlockSize: %d", raster->xBlockSize, raster->yBlockSize);
 
             /* Get raster data type */
             raster->dataType = raster->band->GetRasterDataType();

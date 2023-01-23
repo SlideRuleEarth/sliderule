@@ -230,6 +230,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
 
         CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
         CHECK_GDALERR(cplerr);
+        mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
 
         /* Store raster creation time */
         TimeLib::gmt_time_t gmt = TimeLib::gettime();

@@ -93,6 +93,8 @@ void ArcticDemStripsRaster::getRasterIndexFileName(std::string& file, double lon
            ((ilon < 0) ? "w" : "e") +
            std::to_string(abs(ilon)) +
            ".vrt";
+
+    mlog(DEBUG, "Using %s", file.c_str());
 }
 
 

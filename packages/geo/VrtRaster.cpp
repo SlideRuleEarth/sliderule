@@ -165,6 +165,7 @@ bool VrtRaster::openRasterIndexSet(double lon, double lat)
         else mlog(ERROR, "Failed to create new transform, reusing transform from previous VRT file.\n");
 
         objCreated = true;
+        mlog(DEBUG, "Opened vrdDataSet for %s", newVrtFile.c_str());
     }
     catch (const RunTimeException &e)
     {
