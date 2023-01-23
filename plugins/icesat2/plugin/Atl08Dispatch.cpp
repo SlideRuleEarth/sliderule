@@ -374,7 +374,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
         waveform_t* data = (waveform_t*)waverec.getRecordData();
-        data->extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;;
+        data->extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;
         for(int b = 0; b < num_bins; b++)
