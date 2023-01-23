@@ -71,6 +71,9 @@ class Atl08Dispatch: public DispatchObject
         static const char* batchRecType;
         static const RecordObject::fieldDef_t batchRecDef[];
 
+        static const char* waveRecType;
+        static const RecordObject::fieldDef_t waveRecDef[];
+
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
@@ -80,7 +83,7 @@ class Atl08Dispatch: public DispatchObject
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Vegetation Record */
+        /* Vegetation Structure */
         typedef struct {
             uint64_t            extent_id;              // unique identifier
             uint32_t            segment_id;             // closest atl06 segment
@@ -98,13 +101,22 @@ class Atl08Dispatch: public DispatchObject
             float               h_min_canopy;           // minimum relief height
             float               h_mean_canopy;          // average relief height
             float               h_canopy;               // 98th percentile relief height
-            float               percentiles[NUM_PERCENTILES];   // relief height at given percentile
+            float               canopy_openness;        // standard deviation of relief height
+            float               canopy_h_metrics[NUM_PERCENTILES];   // relief height at given percentile
         } vegetation_t;
 
-        /* (Normal) ATL06 Record */
+        /* ATL06 Record */
         typedef struct {
             vegetation_t        vegetation[BATCH_SIZE];
         } atl08_t;
+
+        /* Waveform Record */
+        typedef struct {
+            uint64_t            extent_id;              // unique identifier
+            uint16_t            num_bins;               // size of waveform
+            float               binsize;                // meters
+            float               waveform[MAX_BINS];     // normalized waveform (1.0 == photon_count)
+        } waveform_t;
 
         /*--------------------------------------------------------------------
          * Methods

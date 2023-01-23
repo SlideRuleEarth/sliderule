@@ -47,27 +47,36 @@
 
 const char* Atl08Dispatch::vegRecType = "atl08rec.vegetation";
 const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),      1,  NULL, NATIVE_FLAGS},
-    {"segment_id",              RecordObject::UINT32,   offsetof(vegetation_t, segment_id),     1,  NULL, NATIVE_FLAGS},
-    {"rgt",                     RecordObject::UINT16,   offsetof(vegetation_t, rgt),            1,  NULL, NATIVE_FLAGS},
-    {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),          1,  NULL, NATIVE_FLAGS},
-    {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),           1,  NULL, NATIVE_FLAGS},
-    {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),             1,  NULL, NATIVE_FLAGS},
-    {"count",                   RecordObject::UINT32,   offsetof(vegetation_t, photon_count),   1,  NULL, NATIVE_FLAGS},
-    {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),     1,  NULL, NATIVE_FLAGS},
-    {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),       1,  NULL, NATIVE_FLAGS},
-    {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),      1,  NULL, NATIVE_FLAGS},
-    {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),       1,  NULL, NATIVE_FLAGS},
-    {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),   1,  NULL, NATIVE_FLAGS},
-    {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),   1,  NULL, NATIVE_FLAGS},
-    {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),  1,  NULL, NATIVE_FLAGS},
-    {"h_canopy",                RecordObject::FLOAT,    offsetof(vegetation_t, h_canopy),       1,  NULL, NATIVE_FLAGS},
-    {"canopy_h_metrics",        RecordObject::FLOAT,    offsetof(vegetation_t, percentiles),    NUM_PERCENTILES,  NULL, NATIVE_FLAGS}
+    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),          1, NULL, NATIVE_FLAGS},
+    {"segment_id",              RecordObject::UINT32,   offsetof(vegetation_t, segment_id),         1, NULL, NATIVE_FLAGS},
+    {"rgt",                     RecordObject::UINT16,   offsetof(vegetation_t, rgt),                1, NULL, NATIVE_FLAGS},
+    {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),              1, NULL, NATIVE_FLAGS},
+    {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),               1, NULL, NATIVE_FLAGS},
+    {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),                 1, NULL, NATIVE_FLAGS},
+    {"count",                   RecordObject::UINT32,   offsetof(vegetation_t, photon_count),       1, NULL, NATIVE_FLAGS},
+    {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),         1, NULL, NATIVE_FLAGS},
+    {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),           1, NULL, NATIVE_FLAGS},
+    {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),          1, NULL, NATIVE_FLAGS},
+    {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),           1, NULL, NATIVE_FLAGS},
+    {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),       1, NULL, NATIVE_FLAGS},
+    {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),       1, NULL, NATIVE_FLAGS},
+    {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),      1, NULL, NATIVE_FLAGS},
+    {"h_canopy",                RecordObject::FLOAT,    offsetof(vegetation_t, h_canopy),           1, NULL, NATIVE_FLAGS},
+    {"canopy_openness",         RecordObject::FLOAT,    offsetof(vegetation_t, canopy_openness),    1, NULL, NATIVE_FLAGS},
+    {"canopy_h_metrics",        RecordObject::FLOAT,    offsetof(vegetation_t, canopy_h_metrics),   NUM_PERCENTILES, NULL, NATIVE_FLAGS}
 };
 
 const char* Atl08Dispatch::batchRecType = "atl08rec";
 const RecordObject::fieldDef_t Atl08Dispatch::batchRecDef[] = {
-    {"vegetation",              RecordObject::USER,     offsetof(atl08_t, vegetation),          0,  vegRecType, NATIVE_FLAGS}
+    {"vegetation",              RecordObject::USER,     offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS}
+};
+
+const char* Atl08Dispatch::waveRecType = "waverec";
+const RecordObject::fieldDef_t Atl08Dispatch::waveRecDef[] = {
+    {"extent_id",               RecordObject::UINT64,   offsetof(waveform_t, extent_id),            1, NULL, NATIVE_FLAGS},
+    {"num_bins",                RecordObject::UINT16,   offsetof(waveform_t, num_bins),             1, NULL, NATIVE_FLAGS},
+    {"binsize",                 RecordObject::FLOAT,    offsetof(waveform_t, binsize),              1, NULL, NATIVE_FLAGS},
+    {"waveform",                RecordObject::FLOAT,    offsetof(waveform_t, waveform),             0, NULL, NATIVE_FLAGS}
 };
 
 /* Lua Functions */
@@ -118,10 +127,12 @@ void Atl08Dispatch::init (void)
     /*
      * Note: the size associated with the batch record includes only one set of
      * vegetation stats; this forces any software accessing more than one set
-     * of stats to manage the size of the record manually.
+     * of stats to manage the size of the record manually.  Same for waveform
+     * record - except it allows for a waveform of no bins.
      */
     RECDEF(vegRecType, vegRecDef, sizeof(vegetation_t), NULL);
     RECDEF(batchRecType, batchRecDef, offsetof(atl08_t, vegetation[1]), NULL);
+    RECDEF(waveRecType, waveRecDef, offsetof(waveform_t, waveform), NULL);
 }
 
 /******************************************************************************
@@ -171,6 +182,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
     (void)key;
 
     vegetation_t result[RqstParms::NUM_PAIR_TRACKS];
+    waveform_t* waveform[RqstParms::NUM_PAIR_TRACKS];
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Clear Results */
@@ -301,7 +313,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
     int num_ph = extent->photon_count[t];
 
-    /* Determine Min,Max,Avg Relief Height */
+    /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;
     double max_h = 0.0;
     double sum_h = 0.0;
@@ -320,6 +332,15 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     result[t].h_max_canopy = max_h;
     result[t].h_min_canopy = min_h;
     result[t].h_mean_canopy = sum_h / (double)num_ph;
+
+    /* Calculate Stdev of Heights */
+    double std_h = 0.0;
+    for(int i = 0; i < num_ph; i++)
+    {
+        double delta = (ph[i].relief - result[t].h_mean_canopy);
+        std_h += delta * delta;
+    }
+    result[t].canopy_openness = sqrt(std_h);
 
     /* Calculate Number of Bins */
     int num_bins = (int)ceil(max_h / parms->phoreal.binsize);
@@ -347,6 +368,22 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         bins[bin]++;
     }
 
+    /* Send Waveforms */
+    if(parms->phoreal.send_waveform && num_bins > 0)
+    {
+        int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
+        RecordObject waverec(waveRecType, recsize, false);
+        waveform_t* data = (waveform_t*)waverec.getRecordData();
+        data->extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;;
+        data->num_bins = num_bins;
+        data->binsize = parms->phoreal.binsize;
+        for(int b = 0; b < num_bins; b++)
+        {
+            data->waveform[b] = (float)((double)bins[b] / (double)num_ph);
+        }
+        waverec.post(outQ);
+    }
+
     /* Generate Cumulative Bins */
     long* cbins = new long[num_bins];
     cbins[0] = bins[0];
@@ -365,7 +402,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
                 double percentage = ((double)cbins[b] / (double)num_ph) * 100.0;
                 if(percentage >= PercentileInterval[p] && cbins[b] > 0)
                 {
-                    result[t].percentiles[p] = ph[cbins[b] - 1].relief;
+                    result[t].canopy_h_metrics[p] = ph[cbins[b] - 1].relief;
                     break;
                 }
                 b++;
