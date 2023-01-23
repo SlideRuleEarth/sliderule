@@ -185,15 +185,15 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         CHECK_GDALERR(ogrerr);
 
         double cellsize = _cellsize;
-        int _cols = int((e.MaxX - e.MinX) / cellsize);
-        int _rows = int((e.MaxY - e.MinY) / cellsize);
+        int cols = int((e.MaxX - e.MinX) / cellsize);
+        int rows = int((e.MaxY - e.MinY) / cellsize);
 
         char **options = NULL;
         options = CSLSetNameValue(options, "COMPRESS", "DEFLATE");
 
         GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
         CHECKPTR(driver);
-        rasterDset = (GDALDataset *)driver->Create(rasterFile.c_str(), _cols, _rows, 1, GDT_Byte, options);
+        rasterDset = (GDALDataset *)driver->Create(rasterFile.c_str(), cols, rows, 1, GDT_Byte, options);
         CSLDestroy(options);
         CHECKPTR(rasterDset);
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};

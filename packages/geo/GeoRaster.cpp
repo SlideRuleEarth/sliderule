@@ -368,6 +368,14 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
  *----------------------------------------------------------------------------*/
 int GeoRaster::radius2pixels(double cellSize, int _radius)
 {
+    /*
+     * Code supports rasters with units in meters (cellSize and radius must be in meters).
+     *
+     * ArcticDEM - EPSG:3413 - WGS 84 / NSIDC Sea Ice Polar Stereographic North (units meters - supported)
+     *             EPSG:4326 - WGS 84 / Geographic (units degrees, coordinates in lat/lon - not supported)
+     *
+     * TODO: if needed, add support for rasters with units other than meters
+     */
     int csize = static_cast<int>(cellSize);
 
     if (_radius == 0) return 0;
