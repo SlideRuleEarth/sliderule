@@ -570,6 +570,19 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                         field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
                     else:
                         field_dictionary[field_set][field_set + "." + field] += sample[field],
+            elif 'waverec' == rsp['__rectype']:
+                field_set = rsp['__rectype']
+                field_names = list(rsp.keys())
+                field_names.remove("__rectype")
+                if field_set not in field_dictionary:
+                    field_dictionary[field_set] = {'extent_id': []}
+                    for field in field_names:
+                        field_dictionary[field_set][field] = []
+                for field in field_names:
+                    if type(rsp[field]) == tuple:
+                        field_dictionary[field_set][field] += numpy.array(rsp[field]),
+                    else:
+                        field_dictionary[field_set][field] += rsp[field],
 
         # Build Columns
         if num_records > 0:
@@ -597,8 +610,8 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
 
     # Merge Ancillary Fields
     tstart_merge = time.perf_counter()
-    for field in field_dictionary:
-        df = geopandas.pd.DataFrame(field_dictionary[field])
+    for field_set in field_dictionary:
+        df = geopandas.pd.DataFrame(field_dictionary[field_set])
         gdf = geopandas.pd.merge(gdf, df, on='extent_id', how='left').set_axis(gdf.index)
     profiles["merge"] = time.perf_counter() - tstart_merge
 

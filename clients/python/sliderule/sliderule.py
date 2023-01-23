@@ -806,8 +806,10 @@ def get_version ():
     dict
         dictionary of version information
     '''
+    global service_org
     rsps = source("version", {})
     rsps["client"] = {"version": version.full_version}
+    rsps["organization"] = service_org
     return rsps
 
 #
