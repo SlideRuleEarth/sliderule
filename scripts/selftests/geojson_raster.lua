@@ -20,7 +20,7 @@ else
 end
 
 local len = string.len(vectorfile)
-local cellsize = 0.1
+local cellsize = 0.01
 local params = {data = vectorfile, length = len, cellsize = cellsize}
 
 print('\n------------------\nTest01: Create\n------------------')
@@ -31,8 +31,8 @@ runner.check(robj ~= nil)
 print('\n------------------\nTest02: dim\n------------------')
 local rows, cols  = robj:dim()
 print(string.format("dimensions: rows: %d, cols: %d", rows, cols))
-runner.check(rows == 3)
-runner.check(cols == 6)
+runner.check(rows == 37)
+runner.check(cols == 61)
 
 
 print('\n------------------\nTest03: bbox\n------------------')
@@ -74,7 +74,7 @@ for j, v in ipairs(tbl) do
     fname = v["file"]
 end
 print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
-runner.check(s == 1)
+runner.check(s == 200)
 
 
 -- Outside of bbox
