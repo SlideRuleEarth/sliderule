@@ -20,7 +20,7 @@ print(string.format("\n-------------------------------------------------\nTest %
 for radius = 50, 100, 50
 do
     for i = 1, 8 do
-        local dem = geo.vrt(demType, samplingAlgs[i], radius, true)
+        local dem = geo.raster(demType, samplingAlgs[i], radius, true)
         local tbl, status = dem:sample(lon, lat)
         if status ~= true then
             print(string.format("======> FAILED to read",lon, lat))
@@ -53,7 +53,7 @@ lat =   51.8
 print(string.format("\n-------------------------------------------------\nTest %s: Zonal Stats\n-------------------------------------------------", demType))
 for radius = 50, 100, 50
 do
-    local dem = geo.vrt(demType, samplingAlg, radius)
+    local dem = geo.raster(demType, samplingAlg, radius, true)
     local tbl, status = dem:sample(lon, lat)
     if status ~= true then
         print(string.format("======> FAILED to read",lon, lat))

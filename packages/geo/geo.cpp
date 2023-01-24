@@ -55,7 +55,7 @@ int geo_open (lua_State* L)
 {
     static const struct luaL_Reg geo_functions[] = {
         {"geojson",     GeoJsonRaster::luaCreate},
-        {"vrt",         VrtRaster::luaCreate},
+        {"raster",      GeoRaster::luaCreate},
         {NULL,          NULL}
     };
 
@@ -63,14 +63,14 @@ int geo_open (lua_State* L)
     luaL_newlib(L, geo_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr   (L, VrtRaster::NEARESTNEIGHBOUR_ALGO,   VrtRaster::NEARESTNEIGHBOUR_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::BILINEAR_ALGO,           VrtRaster::BILINEAR_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::CUBIC_ALGO,              VrtRaster::CUBIC_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::CUBICSPLINE_ALGO,        VrtRaster::CUBICSPLINE_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::LANCZOS_ALGO,            VrtRaster::LANCZOS_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::AVERAGE_ALGO,            VrtRaster::AVERAGE_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::MODE_ALGO,               VrtRaster::MODE_ALGO);
-    LuaEngine::setAttrStr   (L, VrtRaster::GAUSS_ALGO,              VrtRaster::GAUSS_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::NEARESTNEIGHBOUR_ALGO,   GeoRaster::NEARESTNEIGHBOUR_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::BILINEAR_ALGO,           GeoRaster::BILINEAR_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::CUBIC_ALGO,              GeoRaster::CUBIC_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::CUBICSPLINE_ALGO,        GeoRaster::CUBICSPLINE_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::LANCZOS_ALGO,            GeoRaster::LANCZOS_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::AVERAGE_ALGO,            GeoRaster::AVERAGE_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::MODE_ALGO,               GeoRaster::MODE_ALGO);
+    LuaEngine::setAttrStr   (L, GeoRaster::GAUSS_ALGO,              GeoRaster::GAUSS_ALGO);
 
     return 1;
 }
@@ -95,6 +95,7 @@ void initgeo (void)
     GDALAllRegister();
 
     /* Initialize Modules */
+    GeoRaster::init();
     VrtRaster::init();
 
     /* Register GDAL custom error handler */
@@ -114,6 +115,7 @@ void initgeo (void)
 void deinitgeo (void)
 {
     VrtRaster::deinit();
+    GeoRaster::deinit();
     GDALDestroy();
 }
 }

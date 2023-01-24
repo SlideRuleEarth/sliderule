@@ -16,7 +16,7 @@ local lat =   51.7
 
 print('Memory test')
 
-local dem = geo.vrt("arcticdem-mosaic", "NearestNeighbour", 0)
+local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 0)
 local tbl, status = dem:sample(lon, lat)
 
 if status ~= true then
@@ -30,7 +30,7 @@ else
      end
 end
 
-local dem = geo.vrt("arcticdem-strips", "NearestNeighbour", 0)
+local dem = geo.raster("arcticdem-strips", "NearestNeighbour", 0)
 local tbl, status = dem:sample(lon, lat)
 
 if status ~= true then

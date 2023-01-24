@@ -27,7 +27,7 @@ local sampling_radius = rqst["sampling-radius"] or 0
 local coord = rqst["coordinates"]
 
 -- Get Samples --
-local dem = geo.vrt(dem_asset, sampling_alg, sampling_radius)
+local dem = geo.raster(dem_asset, sampling_alg, sampling_radius)
 
 -- Build Table --
 local samples = {}

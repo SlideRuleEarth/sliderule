@@ -68,9 +68,9 @@ if samples then
     local elevation_rec_type = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation"
     sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
     for key,raster in pairs(samples) do
-        local vrt = geo.vrt(raster["asset"], raster["algorithm"], raster["radius"], raster["zonal_stats"])
-        if vrt then
-            local sampler = icesat2.sampler(vrt, key, rspq, elevation_rec_type, "extent_id", "lon", "lat")
+        local robj = geo.raster(raster["asset"], raster["algorithm"], raster["radius"], raster["zonal_stats"])
+        if robj then
+            local sampler = icesat2.sampler(robj, key, rspq, elevation_rec_type, "extent_id", "lon", "lat")
             if sampler then
                 sampler_disp:attach(sampler, atl06_rec_type)
             else

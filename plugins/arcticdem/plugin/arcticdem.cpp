@@ -69,8 +69,6 @@ int arcticdem_version (lua_State* L)
 int arcticdem_open (lua_State *L)
 {
     static const struct luaL_Reg arcticdem_functions[] = {
-        {"mosaic",          ArcticDemMosaicRaster::luaCreate},
-        {"strips",          ArcticDemStripsRaster::luaCreate},
         {"version",         arcticdem_version},
         {NULL,              NULL}
     };
@@ -93,8 +91,8 @@ void initarcticdem (void)
     ArcticDemStripsRaster::init();
 
     /* Register Rasters */
-    VrtRaster::registerRaster(LUA_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
-    VrtRaster::registerRaster(LUA_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
+    GeoRaster::registerRaster(LUA_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
+    GeoRaster::registerRaster(LUA_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_ARCTICDEM_LIBNAME, arcticdem_open);

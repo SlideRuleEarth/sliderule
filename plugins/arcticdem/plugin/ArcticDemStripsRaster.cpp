@@ -62,37 +62,39 @@ ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampl
      * First get a list of all rasters with point of interest
      * and only then check if some rasters are already cached.
      */
-    checkCacheFirst = false;
+    setCheckCacheFirst(false);
 
     /*
      * Multiple threads are used to read strip rasters.
-     * Do not allow them to read directly from VRT data set.
+     * Do not allow them to read directly from raster index data set (VRT).
      */
-    allowVrtDataSetSampling = false;
+    setAllowIndexDataSetSampling(false);
 }
 
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-VrtRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
+GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
 {
     return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats);
 }
 
 
 /*----------------------------------------------------------------------------
- * getVrtFileName
+ * getRasterIndexFileName
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getVrtFileName(std::string& vrtFile, double lon, double lat )
+void ArcticDemStripsRaster::getRasterIndexFileName(std::string& file, double lon, double lat)
 {
     int ilat = floor(lat);
     int ilon = floor(lon);
 
-    vrtFile = "/data/ArcticDem/strips/n" +
-              std::to_string(ilat) +
-              ((ilon < 0) ? "w" : "e") +
-              std::to_string(abs(ilon)) +
-              ".vrt";
+    file = "/data/ArcticDem/strips/n" +
+           std::to_string(ilat) +
+           ((ilon < 0) ? "w" : "e") +
+           std::to_string(abs(ilon)) +
+           ".vrt";
+
+    mlog(DEBUG, "Using %s", file.c_str());
 }
 
 

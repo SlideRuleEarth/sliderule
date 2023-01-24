@@ -483,7 +483,7 @@ void Atl03Reader::Region::rasterregion (info_t* info)
             if(segment_ph_cnt[t][segment] != 0)
             {
                 /* Check Inclusion */
-                bool inclusion = info->reader->parms->raster->subset(segment_lon[t][segment], segment_lat[t][segment]);
+                bool inclusion = info->reader->parms->raster->includes(segment_lon[t][segment], segment_lat[t][segment]);
                 inclusion_mask[t][segment] = inclusion;
 
                 /* Check For First Segment */

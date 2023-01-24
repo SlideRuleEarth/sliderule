@@ -4,8 +4,8 @@ asset = require("asset")
 csv = require("csv")
 json = require("json")
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
 
 
 -- Unit Test --
@@ -18,7 +18,7 @@ local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 for i = 1, 2 do
 
     local demType = demTypes[i];
-    local dem = geo.vrt(demType, "NearestNeighbour", 0)
+    local dem = geo.raster(demType, "NearestNeighbour", 0)
 
     runner.check(dem ~= nil)
 
@@ -69,7 +69,7 @@ for i = 1, 2 do
 
     local demType = demTypes[i];
     local samplingRadius = 30
-    local dem = geo.vrt(demType, "NearestNeighbour", samplingRadius, true)
+    local dem = geo.raster(demType, "NearestNeighbour", samplingRadius, true)
 
     runner.check(dem ~= nil)
 
