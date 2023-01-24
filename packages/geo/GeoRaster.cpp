@@ -216,8 +216,6 @@ GeoRaster::~GeoRaster(void)
     delete [] rasterRreader;
 
     /* Close all rasters */
-    if (ris.dset) GDALClose((GDALDatasetH)ris.dset);
-
     raster_t* raster = NULL;
     const char* key  = rasterDict.first(&raster);
     while (key != NULL)
@@ -229,8 +227,9 @@ GeoRaster::~GeoRaster(void)
         key = rasterDict.next(&raster);
     }
 
+    /* Close raster index data set and transform */
+    if (ris.dset) GDALClose((GDALDatasetH)ris.dset);
     if (ris.transf) OGRCoordinateTransformation::DestroyCT(ris.transf);
-
     if (tifList) delete tifList;
 }
 

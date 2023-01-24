@@ -133,9 +133,8 @@ int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
         if (layer == NULL)
             throw RunTimeException(ERROR, RTE_ERROR, "No layers found in feature file: %s", featureFile.c_str());
 
-        OGRFeature *feature;
         layer->ResetReading();
-        while ((feature = layer->GetNextFeature()) != NULL)
+        while (OGRFeature* feature = layer->GetNextFeature())
         {
             int i = feature->GetFieldIndex(fieldName.c_str());
             if (i != -1)
@@ -158,8 +157,10 @@ int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
                         gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
                     }
                 }
+                OGRFeature::DestroyFeature(feature);
                 break;
             }
+            OGRFeature::DestroyFeature(feature);
         }
 
         if (gpsTime == 0) throw RunTimeException(ERROR, RTE_ERROR, "Failed to find time");
