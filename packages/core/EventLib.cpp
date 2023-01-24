@@ -395,7 +395,8 @@ int32_t EventLib::registerMetric (const char* category, subtype_t subtype, const
         metric.subtype  = subtype;
         metric.name     = StringLib::duplicate(name_buf);
         metric.category = StringLib::duplicate(category);
-        metric.id       = metric_vals.add(metric);
+        metric.id       = metric_vals.length();
+        metric_vals.add(metric);
 
         /* Register Metric */
         if(ids->add(metric.name, metric.id, true))
