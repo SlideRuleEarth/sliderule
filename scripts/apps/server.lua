@@ -43,7 +43,8 @@ local event_format              = global.eval(cfgtbl["event_format"]) or core.FM
 local event_level               = global.eval(cfgtbl["event_level"]) or core.INFO
 local app_port                  = cfgtbl["app_port"] or 9081
 local probe_port                = cfgtbl["probe_port"] or 10081
-local authenticate_to_earthdata = cfgtbl["authenticate_to_earthdata"] -- nil is false
+local authenticate_to_nsidc     = cfgtbl["authenticate_to_nsidc"] -- nil is false
+local authenticate_to_ornldaac  = cfgtbl["authenticate_to_ornldaac"] -- nil is false
 local register_as_service       = cfgtbl["register_as_service"] -- nil is false
 local asset_directory           = cfgtbl["asset_directory"] or __confdir.."/asset_directory.csv"
 local normal_mem_thresh         = cfgtbl["normal_mem_thresh"] or 1.0
@@ -80,9 +81,13 @@ local assets = asset.loaddir(asset_directory, true)
 -- Run IAM Role Authentication Script -
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
 
--- Run Earth Data Authentication Script --
-if authenticate_to_earthdata then
-    local earthdata_auth_script = core.script("earth_data_auth", ""):name("EarthdataAuthScript")
+-- Run Earth Data Authentication Scripts --
+if authenticate_to_nsidc then
+    local earthdata_auth_script = core.script("earth_data_auth"):name("NsidcAuthScript")
+end
+if authenticate_to_ornldaac then
+    local script_parms = {daac="ornldaac", asset="ornldaac-s3"}
+    local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("OrnldaacAuthScript")
 end
 
 -- Initialize Orchestrator --

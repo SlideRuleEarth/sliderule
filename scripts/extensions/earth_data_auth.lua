@@ -8,18 +8,22 @@
 --
 --          The equivalent curl command to get the credentials is:
 --
---              curl -L -n -c .cookies https://data.nsidc.earthdatacloud.nasa.gov/s3credentials
+--              curl -L -n -c .cookies https://data.{daac}.earthdatacloud.nasa.gov/s3credentials
 --
 --          It is assumed that the credentials for earthdata login are stored in a .netrc file
 --          that is either located in the local home directory, it is stored in an S3 bucket
 --
 
 local json = require("json")
+local parm = json.decode(arg[1] or "{}")
 
-local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
-local asset = "nsidc-s3"
-local bucket = "sliderule" or arg[1]
-local netrc_key = "/config/netrc" or arg[2]
+local daac = parm["daac"] or "nsidc"
+local asset = parm["asset"] or "nsidc-s3"
+local bucket = parm["bucket"] or "sliderule"
+local netrc_key = parm["netrc_key"] or "/config/netrc"
+
+-- build earthdata url
+local earthdata_url = "https://data."..daac..".earthdatacloud.nasa.gov/s3credentials"
 
 -- download netrc
 local netrc_present = false

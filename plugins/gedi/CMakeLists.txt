@@ -1,6 +1,6 @@
-# ArcticDEM SlideRule Plugin top-level CMake build script
+# ICESat-2 SlideRule Plugin top-level CMake build script
 
-project (ARCTICDEM LANGUAGES CXX)
+project (ICESAT2 LANGUAGES CXX)
 
 #################
 # CMake Options #
@@ -17,14 +17,14 @@ cmake_policy(SET CMP0053 NEW) # simplified variable escape processing (recommend
 
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 
-####################
-# ArcticDem Plugin #
-####################
+###################
+# ICESat-2 Plugin #
+###################
 
-add_library (arcticdem MODULE "")
+add_library (gedi MODULE "")
 
-set_target_properties (arcticdem PROPERTIES OUTPUT_NAME arcticdem)
-set_target_properties (arcticdem PROPERTIES PREFIX "")
+set_target_properties (gedi PROPERTIES OUTPUT_NAME gedi)
+set_target_properties (gedi PROPERTIES PREFIX "")
 
 # Prerequisites #
 find_package (Lua "5.3")
@@ -34,33 +34,33 @@ find_package (GDAL)
 file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
 execute_process (COMMAND git --work-tree ${PROJECT_SOURCE_DIR}/../.. --git-dir ${PROJECT_SOURCE_DIR}/../../.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
 string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
-target_compile_definitions (arcticdem PUBLIC BUILDINFO="${BUILDINFO}")
+target_compile_definitions (gedi PUBLIC BUILDINFO="${BUILDINFO}")
 
 # Set Environment Variables #
 set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
 set (CONFDIR ${INSTALLDIR}/etc/sliderule)
 
 # Compile Definitions #
-target_compile_definitions (arcticdem PUBLIC BINID="${TGTVER}")
+target_compile_definitions (gedi PUBLIC BINID="${TGTVER}")
 if(ENABLE_ADDRESS_SANITIZER)
-	target_compile_options (arcticdem PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+	target_compile_options (gedi PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif()
 
-# Link Options #
+# Address Sanitizer Option #
 if(ENABLE_ADDRESS_SANITIZER)
-	target_link_options (arcticdem PUBLIC -fsanitize=address)
+	target_link_options (gedi PUBLIC -fsanitize=address)
 endif()
 
 # Source Files #
-target_sources(arcticdem
+target_sources(gedi
     PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/plugin/gedi.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/plugin/GediParms.cpp
 )
 
 # Include Directories #
-target_include_directories (arcticdem
+target_include_directories (gedi
     PUBLIC
         ${INSTALLDIR}/include/sliderule
         ${LUA_INCLUDE_DIR}
@@ -68,14 +68,22 @@ target_include_directories (arcticdem
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/plugin
 )
 
+# Script Installation #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi04a.lua
+    DESTINATION
+        ${CONFDIR}/api
+)
+
 # Plugin Installation #
-install (TARGETS arcticdem LIBRARY DESTINATION ${CONFDIR})
+install (TARGETS gedi LIBRARY DESTINATION ${CONFDIR})
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/gedi.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/GediParms.h
     DESTINATION
-        ${INSTALLDIR}/include/sliderule/arcticdem
+        ${INSTALLDIR}/include/sliderule/gedi
 )

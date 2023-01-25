@@ -112,5 +112,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h
     DESTINATION
-        ${INSTALLDIR}/include/sliderule
+        ${INSTALLDIR}/include/sliderule/icesat2
 )
