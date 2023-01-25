@@ -124,6 +124,7 @@ class GediParms: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
+        static const char*  beam2group          (beam_t beam);
 
         /*--------------------------------------------------------------------
          * Data

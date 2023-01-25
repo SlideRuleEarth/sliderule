@@ -85,6 +85,24 @@ int GediParms::luaCreate (lua_State* L)
     }
 }
 
+/*----------------------------------------------------------------------------
+ * beam2group
+ *----------------------------------------------------------------------------*/
+const char* GediParms::beam2group (beam_t beam)
+{
+    switch(beam)
+    {
+        case BEAM0000:  return "BEAM0000";
+        case BEAM0001:  return "BEAM0001";
+        case BEAM0010:  return "BEAM0010";
+        case BEAM0011:  return "BEAM0011";
+        case BEAM0101:  return "BEAM0101";
+        case BEAM0110:  return "BEAM0110";
+        case BEAM1000:  return "BEAM1000";
+        case BEAM1011:  return "BEAM1011";
+        default:        return "UNKNOWN";
+    }
+}
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/

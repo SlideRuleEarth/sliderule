@@ -212,9 +212,9 @@ Gedi04aReader::~Gedi04aReader (void)
 {
     active = false;
 
-    for(int t = 0; t < GediParms::NUM_TRACKS; t++)
+    for(int b = 0; b < GediParms::NUM_BEAMS; b++)
     {
-        if(readerPid[t]) delete readerPid[t];
+        if(readerPid[b]) delete readerPid[b];
     }
 
     delete outQ;
@@ -230,25 +230,18 @@ Gedi04aReader::~Gedi04aReader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aReader::Region::Region (info_t* info):
-    segment_lat    (info->reader->asset, info->reader->resource, info->track, "geolocation/reference_photon_lat", &info->reader->context),
-    segment_lon    (info->reader->asset, info->reader->resource, info->track, "geolocation/reference_photon_lon", &info->reader->context),
-    segment_ph_cnt (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_ph_cnt",       &info->reader->context),
-    inclusion_mask (NULL),
-    inclusion_ptr  (NULL)
+    lat_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lat_lowestmode", GediParms::beam2group(info->beam)).getString(), &info->reader->context),
+    lon_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lon_lowestmode", GediParms::beam2group(info->beam)).getString(), &info->reader->context),
+    inclusion_mask  (NULL),
+    inclusion_ptr   (NULL)
 {
     /* Join Reads */
-    segment_lat.join(info->reader->read_timeout_ms, true);
-    segment_lon.join(info->reader->read_timeout_ms, true);
-    segment_ph_cnt.join(info->reader->read_timeout_ms, true);
+    lat_lowestmode.join(info->reader->read_timeout_ms, true);
+    lon_lowestmode.join(info->reader->read_timeout_ms, true);
 
     /* Initialize Region */
-    for(int t = 0; t < GediParms::NUM_PAIR_TRACKS; t++)
-    {
-        first_segment[t] = 0;
-        num_segments[t] = -1;
-        first_photon[t] = 0;
-        num_photons[t] = -1;
-    }
+    first_footprint = 0;
+    num_footprints = -1;
 
     /* Determine Spatial Extent */
     if(info->reader->parms->raster != NULL)
@@ -265,16 +258,15 @@ Gedi04aReader::Region::Region (info_t* info):
     }
 
     /* Check If Anything to Process */
-    if(num_photons[GediParms::RPT_L] <= 0 || num_photons[GediParms::RPT_R] <= 0)
+    if(num_footprints <= 0)
     {
         cleanup();
         throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
     }
 
-    /* Trim Geospatial Extent Datasets Read from HDF5 File */
-    segment_lat.trim(first_segment);
-    segment_lon.trim(first_segment);
-    segment_ph_cnt.trim(first_segment);
+    /* Trim Geospatial Datasets Read from HDF5 File */
+    lat_lowestmode.trim(first_footprint);
+    lon_lowestmode.trim(first_footprint);
 }
 
 /*----------------------------------------------------------------------------
@@ -290,10 +282,7 @@ Gedi04aReader::Region::~Region (void)
  *----------------------------------------------------------------------------*/
 void Gedi04aReader::Region::cleanup (void)
 {
-    for(int t = 0; t < GediParms::NUM_PAIR_TRACKS; t++)
-    {
-        if(inclusion_mask[t]) delete [] inclusion_mask[t];
-    }
+    if(inclusion_mask) delete [] inclusion_mask;
 }
 
 /*----------------------------------------------------------------------------
@@ -305,8 +294,8 @@ void Gedi04aReader::Region::polyregion (info_t* info)
 
     /* Determine Best Projection To Use */
     MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(segment_lat[GediParms::RPT_L][0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(segment_lat[GediParms::RPT_L][0] < -70.0) projection = MathLib::SOUTH_POLAR;
+    if(lat_lowestmode[0] > 70.0) projection = MathLib::NORTH_POLAR;
+    else if(lat_lowestmode[0] < -70.0) projection = MathLib::SOUTH_POLAR;
 
     /* Project Polygon */
     List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
@@ -316,70 +305,46 @@ void Gedi04aReader::Region::polyregion (info_t* info)
         projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
     }
 
-    /* Find First Segment In Polygon */
-    bool first_segment_found[GediParms::NUM_PAIR_TRACKS] = {false, false};
-    bool last_segment_found[GediParms::NUM_PAIR_TRACKS] = {false, false};
-    for(int t = 0; t < GediParms::NUM_PAIR_TRACKS; t++)
+    /* Find First and Last Footprints in Polygon */
+    bool first_footprint_found = false;
+    bool last_footprint_found = false;
+    int footprint = 0;
+    while(footprint < lat_lowestmode.size)
     {
-        int segment = 0;
-        while(segment < segment_ph_cnt[t].size)
+        bool inclusion = false;
+
+        /* Project Segment Coordinate */
+        MathLib::coord_t footprint_coord = {lon_lowestmode[footprint], lat_lowestmode[footprint]};
+        MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, projection);
+
+        /* Test Inclusion */
+        if(MathLib::inpoly(projected_poly, points_in_polygon, footprint_point))
         {
-            bool inclusion = false;
-
-            /* Project Segment Coordinate */
-            MathLib::coord_t segment_coord = {segment_lon[t][segment], segment_lat[t][segment]};
-            MathLib::point_t segment_point = MathLib::coord2point(segment_coord, projection);
-
-            /* Test Inclusion */
-            if(MathLib::inpoly(projected_poly, points_in_polygon, segment_point))
-            {
-                inclusion = true;
-            }
-
-            /* Check First Segment */
-            if(!first_segment_found[t])
-            {
-                /* If Coordinate Is In Polygon */
-                if(inclusion && segment_ph_cnt[t][segment] != 0)
-                {
-                    /* Set First Segment */
-                    first_segment_found[t] = true;
-                    first_segment[t] = segment;
-
-                    /* Include Photons From First Segment */
-                    num_photons[t] = segment_ph_cnt[t][segment];
-                }
-                else
-                {
-                    /* Update Photon Index */
-                    first_photon[t] += segment_ph_cnt[t][segment];
-                }
-            }
-            else if(!last_segment_found[t])
-            {
-                /* If Coordinate Is NOT In Polygon */
-                if(!inclusion && segment_ph_cnt[t][segment] != 0)
-                {
-                    /* Set Last Segment */
-                    last_segment_found[t] = true;
-                    break; // full extent found!
-                }
-                else
-                {
-                    /* Update Photon Index */
-                    num_photons[t] += segment_ph_cnt[t][segment];
-                }
-            }
-
-            /* Bump Segment */
-            segment++;
+            inclusion = true;
         }
 
-        /* Set Number of Segments */
-        if(first_segment_found[t])
+        /* Find First Footprint */
+        if(!first_footprint_found && inclusion)
         {
-            num_segments[t] = segment - first_segment[t];
+            /* Set First Segment */
+            first_footprint_found = true;
+            first_footprint = footprint;
         }
+        else if(!last_footprint_found && !inclusion)
+        {
+            /* Set Last Segment */
+            last_footprint_found = true;
+            break; // full extent found!
+        }
+
+        /* Bump Footprint */
+        footprint++;
+    }
+
+    /* Set Number of Segments */
+    if(first_footprint_found)
+    {
+        num_footprints = footprint - first_footprint;
     }
 
     /* Delete Projected Polygon */
@@ -391,83 +356,47 @@ void Gedi04aReader::Region::polyregion (info_t* info)
  *----------------------------------------------------------------------------*/
 void Gedi04aReader::Region::rasterregion (info_t* info)
 {
-    /* Find First Segment In Polygon */
-    bool first_segment_found[GediParms::NUM_PAIR_TRACKS] = {false, false};
-    for(int t = 0; t < GediParms::NUM_PAIR_TRACKS; t++)
+    /* Allocate Inclusion Mask */
+    if(lat_lowestmode.size <= 0) return;
+    inclusion_mask = new bool [lat_lowestmode.size];
+    inclusion_ptr = inclusion_mask;
+
+    /* Loop Throuh Segments */
+    bool first_footprint_found = false;
+    long last_footprint = 0;
+    int footprint = 0;
+    while(footprint < lat_lowestmode.size)
     {
-        /* Check Size */
-        if(segment_ph_cnt[t].size <= 0)
-        {
-            continue;
-        }
+        /* Check Inclusion */
+        bool inclusion = info->reader->parms->raster->includes(lon_lowestmode[footprint], lat_lowestmode[footprint]);
+        inclusion_mask[footprint] = inclusion;
 
-        /* Allocate Inclusion Mask */
-        inclusion_mask[t] = new bool [segment_ph_cnt[t].size];
-        inclusion_ptr[t] = inclusion_mask[t];
-
-        /* Loop Throuh Segments */
-        long curr_num_photons = 0;
-        long last_segment = 0;
-        int segment = 0;
-        while(segment < segment_ph_cnt[t].size)
+        /* If Coordinate Is In Raster */
+        if(inclusion)
         {
-            if(segment_ph_cnt[t][segment] != 0)
+            if(!first_footprint_found)
             {
-                /* Check Inclusion */
-                bool inclusion = info->reader->parms->raster->includes(segment_lon[t][segment], segment_lat[t][segment]);
-                inclusion_mask[t][segment] = inclusion;
-
-                /* Check For First Segment */
-                if(!first_segment_found[t])
-                {
-                    /* If Coordinate Is In Raster */
-                    if(inclusion)
-                    {
-                        first_segment_found[t] = true;
-
-                        /* Set First Segment */
-                        first_segment[t] = segment;
-                        last_segment = segment;
-
-                        /* Include Photons From First Segment */
-                        curr_num_photons = segment_ph_cnt[t][segment];
-                        num_photons[t] = curr_num_photons;
-                    }
-                    else
-                    {
-                        /* Update Photon Index */
-                        first_photon[t] += segment_ph_cnt[t][segment];
-                    }
-                }
-                else
-                {
-                    /* Update Photon Count and Segment */
-                    curr_num_photons += segment_ph_cnt[t][segment];
-
-                    /* If Coordinate Is In Raster */
-                    if(inclusion)
-                    {
-                        /* Update Number of Photons to Current Count */
-                        num_photons[t] = curr_num_photons;
-
-                        /* Update Number of Segments to Current Segment Count */
-                        last_segment = segment;
-                    }
-                }
+                first_footprint_found = true;
+                first_footprint = footprint;
+                last_footprint = footprint;
             }
-
-            /* Bump Segment */
-            segment++;
+            else
+            {
+                last_footprint = footprint;
+            }
         }
 
-        /* Set Number of Segments */
-        if(first_segment_found[t])
-        {
-            num_segments[t] = last_segment - first_segment[t] + 1;
+        /* Bump Footprint */
+        footprint++;
+    }
 
-            /* Trim Inclusion Mask */
-            inclusion_ptr[t] = &inclusion_mask[t][first_segment[t]];
-        }
+    /* Set Number of Footprints */
+    if(first_footprint_found)
+    {
+        num_footprints = last_footprint - first_footprint + 1;
+
+        /* Trim Inclusion Mask */
+        inclusion_ptr = &inclusion_mask[first_footprint];
     }
 }
 
@@ -475,10 +404,10 @@ void Gedi04aReader::Region::rasterregion (info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aReader::Atl03Data::Atl03Data (info_t* info, Region& region):
-    velocity_sc         (info->reader->asset, info->reader->resource, info->track, "geolocation/velocity_sc",     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (info->reader->asset, info->reader->resource, info->track, "geolocation/delta_time",      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id          (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_id",      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_dist_x",  &info->reader->context, 0, region.first_segment, region.num_segments),
+    velocity_sc         (info->reader->asset, info->reader->resource, info->track, "geolocation/velocity_sc",     &info->reader->context, H5Coro::ALL_COLS, region.first_footprint, region.num_segments),
+    segment_delta_time  (info->reader->asset, info->reader->resource, info->track, "geolocation/delta_time",      &info->reader->context, 0, region.first_footprint, region.num_segments),
+    segment_id          (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_id",      &info->reader->context, 0, region.first_footprint, region.num_segments),
+    segment_dist_x      (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_dist_x",  &info->reader->context, 0, region.first_footprint, region.num_segments),
     dist_ph_along       (info->reader->asset, info->reader->resource, info->track, "heights/dist_ph_along",       &info->reader->context, 0, region.first_photon,  region.num_photons),
     h_ph                (info->reader->asset, info->reader->resource, info->track, "heights/h_ph",                &info->reader->context, 0, region.first_photon,  region.num_photons),
     signal_conf_ph      (info->reader->asset, info->reader->resource, info->track, "heights/signal_conf_ph",      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
@@ -509,7 +438,7 @@ Gedi04aReader::Atl03Data::Atl03Data (info_t* info, Region& region):
                 group_name = "geophys_corr";
             }
             SafeString dataset_name("%s/%s", group_name, field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region.first_footprint, region.num_segments);
             anc_geo_data.add(field_name, array);
         }
     }
