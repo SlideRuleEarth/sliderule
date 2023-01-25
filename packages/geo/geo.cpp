@@ -35,7 +35,6 @@
 
 #include "core.h"
 #include "geo.h"
-#include "GeoJsonRaster.h"
 #include <gdal.h>
 
 /******************************************************************************
@@ -97,6 +96,7 @@ void initgeo (void)
     /* Initialize Modules */
     GeoRaster::init();
     VrtRaster::init();
+    VctRaster::init();
 
     /* Register GDAL custom error handler */
     void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
@@ -114,6 +114,7 @@ void initgeo (void)
 
 void deinitgeo (void)
 {
+    VctRaster::deinit();
     VrtRaster::deinit();
     GeoRaster::deinit();
     GDALDestroy();

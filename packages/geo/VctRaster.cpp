@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "VrtRaster.h"
+#include "VctRaster.h"
 
 
 /******************************************************************************
@@ -47,14 +47,14 @@
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void VrtRaster::init (void)
+void VctRaster::init (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void VrtRaster::deinit (void)
+void VctRaster::deinit (void)
 {
 }
 
@@ -65,45 +65,46 @@ void VrtRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
+VctRaster::VctRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats, const int target_crs):
     GeoRaster(L, dem_sampling, sampling_radius, zonal_stats)
 {
+    dstCrs = target_crs;
 }
 
 /*----------------------------------------------------------------------------
  * openRasterIndexSet
  *----------------------------------------------------------------------------*/
-bool VrtRaster::openRasterIndexSet(double lon, double lat)
+bool VctRaster::openRasterIndexSet(double lon, double lat)
 {
     bool objCreated = false;
-    std::string newVrtFile;
+    std::string newVctFile;
 
-    getRasterIndexFileName(newVrtFile, lon, lat);
+    getRasterIndexFileName(newVctFile, lon, lat);
 
-    /* Is it already open vrt? */
-    if (ris.dset != NULL && ris.fileName == newVrtFile)
+    /* Is it already open ? */
+    if (ris.dset != NULL && ris.fileName == newVctFile)
         return true;
 
     try
     {
-        /* Cleanup previous vrtDset */
+        /* Cleanup previous vctDset */
         if (ris.dset != NULL)
         {
             GDALClose((GDALDatasetH)ris.dset);
             ris.dset = NULL;
         }
 
-        /* Open new vrtDset */
-        ris.dset = (GDALDataset *)GDALOpenEx(newVrtFile.c_str(), GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
+        /* Open new vctDset */
+        ris.dset = (GDALDataset *)GDALOpenEx(newVctFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (ris.dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT file: %s:", newVrtFile.c_str());
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open vector file: %s:", newVctFile.c_str());
 
 
-        ris.fileName = newVrtFile;
+        ris.fileName = newVctFile;
         ris.band = ris.dset->GetRasterBand(1);
         CHECKPTR(ris.band);
 
-        /* Get inverted geo transfer for vrt */
+        /* Get inverted geo transfer for vector file */
         double geot[6] = {0};
         CPLErr err = GDALGetGeoTransform(ris.dset, geot);
         CHECK_GDALERR(err);
@@ -113,11 +114,11 @@ bool VrtRaster::openRasterIndexSet(double lon, double lat)
             CHECK_GDALERR(CE_Failure);
         }
 
-        /* Store information about vrt raster */
+        /* Store information about vector data set */
         ris.cols = ris.dset->GetRasterXSize();
         ris.rows = ris.dset->GetRasterYSize();
 
-        /* Get raster boundry box */
+        /* Get vector boundry box */
         bzero(geot, sizeof(geot));
         err = ris.dset->GetGeoTransform(geot);
         CHECK_GDALERR(err);
@@ -152,24 +153,24 @@ bool VrtRaster::openRasterIndexSet(double lon, double lat)
 
         /* Create coordinates transformation */
 
-        /* Get transform for this VRT file */
+        /* Get transform for this vector index file */
         OGRCoordinateTransformation *newTransf = OGRCreateCoordinateTransformation(&ris.srcSrs, &ris.trgSrs);
         if (newTransf)
         {
-            /* Delete the transform from last vrt file */
+            /* Delete the transform from last vector index file */
             if (ris.transf) OGRCoordinateTransformation::DestroyCT(ris.transf);
 
             /* Use the new one (they should be the same but just in case they are not...) */
             ris.transf = newTransf;
         }
-        else mlog(ERROR, "Failed to create new transform, reusing transform from previous VRT file.\n");
+        else mlog(ERROR, "Failed to create new transform, reusing transform from previous index file.\n");
 
         objCreated = true;
-        mlog(DEBUG, "Opened dataSet for %s", newVrtFile.c_str());
+        mlog(DEBUG, "Opened dataSet for %s", newVctFile.c_str());
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error creating new VRT dataset: %s", e.what());
+        mlog(e.level(), "Error creating new vector index dataset: %s", e.what());
     }
 
     if (!objCreated && ris.dset)
@@ -190,7 +191,7 @@ bool VrtRaster::openRasterIndexSet(double lon, double lat)
 /*----------------------------------------------------------------------------
  * findTIFfilesWithPoint
  *----------------------------------------------------------------------------*/
-bool VrtRaster::findRasterFilesWithPoint(OGRPoint& p)
+bool VctRaster::findRasterFilesWithPoint(OGRPoint& p)
 {
     bool foundFile = false;
 
@@ -200,38 +201,12 @@ bool VrtRaster::findRasterFilesWithPoint(OGRPoint& p)
         const int32_t row = static_cast<int32_t>(floor(ris.invGeot[3] + ris.invGeot[4] * p.getX() + ris.invGeot[5] * p.getY()));
 
         tifList->clear();
+#warning IMPLEMENT ME!!!
 
-        bool validPixel = (col >= 0) && (row >= 0) && (col < ris.dset->GetRasterXSize()) && (row < ris.dset->GetRasterYSize());
-        if (!validPixel) return false;
-
-        CPLString str;
-        str.Printf("Pixel_%d_%d", col, row);
-
-        const char *mdata = ris.band->GetMetadataItem(str, "LocationInfo");
-        if (mdata == NULL) return false; /* Pixel not in VRT file */
-
-        CPLXMLNode *root = CPLParseXMLString(mdata);
-        if (root == NULL) return false;  /* Pixel is in VRT file, but parser did not find its node  */
-
-        if (root->psChild && (root->eType == CXT_Element) && EQUAL(root->pszValue, "LocationInfo"))
-        {
-            for (CPLXMLNode *psNode = root->psChild; psNode != NULL; psNode = psNode->psNext)
-            {
-                if ((psNode->eType == CXT_Element) && EQUAL(psNode->pszValue, "File") && psNode->psChild)
-                {
-                    char *fname = CPLUnescapeString(psNode->psChild->pszValue, NULL, CPLES_XML);
-                    CHECKPTR(fname);
-                    tifList->add(fname);
-                    foundFile = true; /* There may be more than one file.. */
-                    CPLFree(fname);
-                }
-            }
-        }
-        CPLDestroyXMLNode(root);
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error finding raster in VRT file: %s", e.what());
+        mlog(e.level(), "Error finding raster in vector index file: %s", e.what());
     }
 
     return foundFile;

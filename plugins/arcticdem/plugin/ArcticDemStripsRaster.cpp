@@ -56,7 +56,7 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
-    VrtRaster(L, dem_sampling, sampling_radius, zonal_stats)
+    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, ARCTIC_DEM_EPSG)
 {
     /*
      * First get a list of all rasters with point of interest
@@ -66,7 +66,7 @@ ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampl
 
     /*
      * Multiple threads are used to read strip rasters.
-     * Do not allow them to read directly from raster index data set (VRT).
+     * Do not allow them to read directly from index data set.
      */
     setAllowIndexDataSetSampling(false);
 }
@@ -92,7 +92,7 @@ void ArcticDemStripsRaster::getRasterIndexFileName(std::string& file, double lon
            std::to_string(ilat) +
            ((ilon < 0) ? "w" : "e") +
            std::to_string(abs(ilon)) +
-           ".vrt";
+           ".geojson";
 
     mlog(DEBUG, "Using %s", file.c_str());
 }

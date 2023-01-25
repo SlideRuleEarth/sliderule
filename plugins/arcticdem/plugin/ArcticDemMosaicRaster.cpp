@@ -124,7 +124,7 @@ int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
 
         featureFile.replace(pos, key.length(), fileType.c_str());
 
-        dset = (GDALDataset *)GDALOpenEx(featureFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        dset = (GDALDataset *)GDALOpenEx(featureFile.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
         if (dset == NULL)
             throw RunTimeException(ERROR, RTE_ERROR, "Could not open %s file", featureFile.c_str());
 

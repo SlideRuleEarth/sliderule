@@ -21,6 +21,7 @@ if (GDAL_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/VrtRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/VctRaster.cpp
     )
 
     target_include_directories (slideruleLib
@@ -35,6 +36,7 @@ if (GDAL_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/VrtRaster.h
+            ${CMAKE_CURRENT_LIST_DIR}/VctRaster.h
         DESTINATION
             ${INCDIR}
     )

@@ -68,18 +68,6 @@ do                                                                            \
 
 
 
-/* CRS used by ICESat2 pthotons */
-#define PHOTON_CRS 4326
-
-
-typedef struct
-{
-    double lon_min;
-    double lat_min;
-    double lon_max;
-    double lat_max;
-} bbox_t;
-
 
 /******************************************************************************
  * GEO RASTER CLASS
@@ -97,6 +85,7 @@ class GeoRaster: public LuaObject
         static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
+        static const int   ICESAT2_PHOTON_EPSG = 4326;
 
         static const char* NEARESTNEIGHBOUR_ALGO;
         static const char* BILINEAR_ALGO;
@@ -115,6 +104,15 @@ class GeoRaster: public LuaObject
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
+
+        typedef struct
+        {
+            double lon_min;
+            double lat_min;
+            double lon_max;
+            double lat_max;
+        } bbox_t;
+
 
         typedef struct {
             double value;
