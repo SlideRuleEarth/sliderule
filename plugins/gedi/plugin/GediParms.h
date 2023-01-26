@@ -100,14 +100,19 @@ class GediParms: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        const char* POLYGON;
-        const char* RASTER;
-        const char* BEAM;
-        const char* DEGRADE_FLAG;
-        const char* L2_QUALITY_FLAG;
-        const char* L4_QUALITY_FLAG;
-        const char* SURFACE_FLAG;
-        const char* BEAM;
+        static const char* POLYGON;
+        static const char* RASTER;
+        static const char* LATITUDE;
+        static const char* LONGITUDE;
+        static const char* DEGRADE_FLAG;
+        static const char* L2_QUALITY_FLAG;
+        static const char* L4_QUALITY_FLAG;
+        static const char* SURFACE_FLAG;
+        static const char* BEAM;
+        static const char* RQST_TIMEOUT;
+        static const char* NODE_TIMEOUT;
+        static const char* READ_TIMEOUT;
+        static const char* GLOBAL_TIMEOUT; // sets all timeouts at once
 
         static const int DEFAULT_RQST_TIMEOUT       = 600; // seconds
         static const int DEFAULT_NODE_TIMEOUT       = 600; // seconds
@@ -124,7 +129,7 @@ class GediParms: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
-        static const char*  beam2group          (beam_t beam);
+        static const char*  beam2group          (int beam);
 
         /*--------------------------------------------------------------------
          * Data

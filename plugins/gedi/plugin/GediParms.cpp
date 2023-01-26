@@ -44,11 +44,17 @@
 
 const char* GediParms::POLYGON          = "poly";
 const char* GediParms::RASTER           = "raster";
+const char* GediParms::LATITUDE         = "lat";
+const char* GediParms::LONGITUDE        = "lon";
 const char* GediParms::BEAM             = "beam";
 const char* GediParms::DEGRADE_FLAG     = "degrade_flag";
 const char* GediParms::L2_QUALITY_FLAG  = "l2_quality_flag";
 const char* GediParms::L4_QUALITY_FLAG  = "l4_quality_flag";
 const char* GediParms::SURFACE_FLAG     = "surface_flag";
+const char* GediParms::RQST_TIMEOUT     = "rqst-timeout";
+const char* GediParms::NODE_TIMEOUT     = "node-timeout";
+const char* GediParms::READ_TIMEOUT     = "read-timeout";
+const char* GediParms::GLOBAL_TIMEOUT   = "timeout";
 
 const uint8_t GediParms::BEAM_NUMBER[NUM_BEAMS] = {0, 1, 2, 3, 5, 6, 8, 11};
 
@@ -88,9 +94,9 @@ int GediParms::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * beam2group
  *----------------------------------------------------------------------------*/
-const char* GediParms::beam2group (beam_t beam)
+const char* GediParms::beam2group (int beam)
 {
-    switch(beam)
+    switch((beam_t)beam)
     {
         case BEAM0000:  return "BEAM0000";
         case BEAM0001:  return "BEAM0001";
@@ -175,25 +181,25 @@ GediParms::GediParms(lua_State* L, int index):
 
         /* Degrade Flag */
         lua_getfield(L, index, GediParms::DEGRADE_FLAG);
-        degrade_filter = LuaObject::getLuaInteger(L, -1, true, degrade_filter, &provided);
+        degrade_filter = (degrade_t)LuaObject::getLuaInteger(L, -1, true, degrade_filter, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", GediParms::DEGRADE_FLAG, degrade_filter);
         lua_pop(L, 1);
 
         /* L2 Quality Flag */
         lua_getfield(L, index, GediParms::L2_QUALITY_FLAG);
-        l2_quality_filter = LuaObject::getLuaInteger(L, -1, true, l2_quality_filter, &provided);
+        l2_quality_filter = (l2_quality_t)LuaObject::getLuaInteger(L, -1, true, l2_quality_filter, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", GediParms::L2_QUALITY_FLAG, l2_quality_filter);
         lua_pop(L, 1);
 
         /* L4 Quality Flag */
         lua_getfield(L, index, GediParms::L4_QUALITY_FLAG);
-        l4_quality_filter = LuaObject::getLuaInteger(L, -1, true, l4_quality_filter, &provided);
+        l4_quality_filter = (l4_quality_t)LuaObject::getLuaInteger(L, -1, true, l4_quality_filter, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", GediParms::L4_QUALITY_FLAG, l4_quality_filter);
         lua_pop(L, 1);
 
         /* Surface Flag */
         lua_getfield(L, index, GediParms::SURFACE_FLAG);
-        surface_filter = LuaObject::getLuaInteger(L, -1, true, surface_filter, &provided);
+        surface_filter = (surface_t)LuaObject::getLuaInteger(L, -1, true, surface_filter, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", GediParms::SURFACE_FLAG, surface_filter);
         lua_pop(L, 1);
     }

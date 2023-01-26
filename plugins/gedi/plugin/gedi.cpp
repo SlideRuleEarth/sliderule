@@ -77,7 +77,8 @@ int gedi_open (lua_State *L)
     luaL_newlib(L, gedi_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrInt(L, "NUM_TRACKS",      GediParms::NUM_TRACKS);
+    LuaEngine::setAttrInt(L, "NUM_BEAMS",       GediParms::NUM_BEAMS);
+    LuaEngine::setAttrInt(L, "ALL_BEAMS",       GediParms::ALL_BEAMS);
     LuaEngine::setAttrInt(L, "RQST_TIMEOUT",    GediParms::DEFAULT_RQST_TIMEOUT);
     LuaEngine::setAttrInt(L, "NODE_TIMEOUT",    GediParms::DEFAULT_NODE_TIMEOUT);
     LuaEngine::setAttrInt(L, "READ_TIMEOUT",    GediParms::DEFAULT_READ_TIMEOUT);

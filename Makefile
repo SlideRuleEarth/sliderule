@@ -3,6 +3,7 @@ BUILD = $(ROOT)/build/sliderule
 ARCTICDEM_BUILD = $(ROOT)/build/arcticdem
 ATLAS_BUILD = $(ROOT)/build/atlas
 ICESAT2_BUILD = $(ROOT)/build/icesat2
+GEDI_BUILD = $(ROOT)/build/gedi
 
 # when using the llvm toolchain to build the source
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -132,6 +133,25 @@ uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from syste
 	xargs rm < $(ICESAT2_BUILD)/install_manifest.txt
 
 ########################
+# Gedi Plugin Targets
+########################
+
+config-gedi: prep ## configure make for gedi plugin
+	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/gedi
+
+config-gedi-debug: prep ## configure make for gedi plugin
+	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/gedi
+
+gedi: ## build gedi plugin
+	make -j4 -C $(GEDI_BUILD)
+
+install-gedi: ## install gedi plugin to system
+	make -C $(GEDI_BUILD) install
+
+uninstall-gedi: ## uninstall most recent install of gedi plugin from system
+	xargs rm < $(GEDI_BUILD)/install_manifest.txt
+
+########################
 # Development Targets
 ########################
 
@@ -180,18 +200,21 @@ prep: ## create necessary build directories
 	mkdir -p $(ARCTICDEM_BUILD)
 	mkdir -p $(ATLAS_BUILD)
 	mkdir -p $(ICESAT2_BUILD)
+	mkdir -p $(GEDI_BUILD)
 
 clean: ## clean last build
 	- make -C $(BUILD) clean
 	- make -C $(ARCTICDEM_BUILD) clean
 	- make -C $(ATLAS_BUILD) clean
 	- make -C $(ICESAT2_BUILD) clean
+	- make -C $(GEDI_BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
 	- rm -Rf $(ARCTICDEM_BUILD)
 	- rm -Rf $(ATLAS_BUILD)
 	- rm -Rf $(ICESAT2_BUILD)
+	- rm -Rf $(GEDI_BUILD)
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

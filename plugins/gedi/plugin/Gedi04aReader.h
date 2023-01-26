@@ -44,6 +44,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "StringLib.h"
+#include "H5Array.h"
 
 #include "GediParms.h"
 
@@ -105,10 +106,10 @@ class Gedi04aReader: public LuaObject
         /* Statistics */
         typedef struct {
             uint32_t        footprints_read;
-            uint32_t        fottprints_filtered;
-            uint32_t        fottprints_sent;
-            uint32_t        fottprints_dropped;
-            uint32_t        fottprints_retried;
+            uint32_t        footprints_filtered;
+            uint32_t        footprints_sent;
+            uint32_t        footprints_dropped;
+            uint32_t        footprints_retried;
         } stats_t;
 
         /*--------------------------------------------------------------------
@@ -126,7 +127,7 @@ class Gedi04aReader: public LuaObject
 
         typedef struct {
             Gedi04aReader*  reader;
-            int             bream;
+            int             beam;
         } info_t;
 
         /* Region Subclass */
@@ -141,8 +142,8 @@ class Gedi04aReader: public LuaObject
                 void polyregion     (info_t* info);
                 void rasterregion   (info_t* info);
 
-                HArray<double>      lat_lowestmode;
-                HArray<double>      lon_lowestmode;
+                H5Array<double>     lat_lowestmode;
+                H5Array<double>     lon_lowestmode;
 
                 bool*               inclusion_mask;
                 bool*               inclusion_ptr;
@@ -159,15 +160,15 @@ class Gedi04aReader: public LuaObject
                 Gedi04a             (info_t* info, Region& region);
                 ~Gedi04a            (void);
 
-                HArray<uint64_t>    shot_number;
-                HArray<double>      delta_time;
-                HArray<double>      agbd;
-                HArray<double>      elev_lowestmode;
-                HArray<double>      solar_elevation;
-                HArray<uint8_t>     degrade_flag;
-                HArray<uint8_t>     l2_quality_flag;
-                HArray<uint8_t>     l4_quality_flag;
-                HArray<uint8_t>     surface_flag;
+                H5Array<uint64_t>   shot_number;
+                H5Array<double>     delta_time;
+                H5Array<double>     agbd;
+                H5Array<double>     elev_lowestmode;
+                H5Array<double>     solar_elevation;
+                H5Array<uint8_t>    degrade_flag;
+                H5Array<uint8_t>    l2_quality_flag;
+                H5Array<uint8_t>    l4_quality_flag;
+                H5Array<uint8_t>    surface_flag;
         };
 
         /*--------------------------------------------------------------------
