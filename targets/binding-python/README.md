@@ -42,7 +42,7 @@ make install
 ----------------------------------------------------------------------------
 ## II. Building and Importing the Bindings
 
-The Python bindings must be built for each target they are used on, and the resulting .so file must either be accessible from the **PYTHONPATH** or be installed into the current Python environment or copied to the same directory as the Python script that is importing it is run from.
+The Python bindings must be built for each target they are used on, and the resulting .so file must either be accessible from the **PYTHONPATH** or be installed into the current Python environment or copied to the same directory as the Python script that is importing it is run from.  For example, type: `export PYTHONPATH=/usr/local/lib` to set the Python path to the default installation directory.
 
 To build the bindings:
 1. `make config-icesat2`
@@ -50,15 +50,15 @@ To build the bindings:
 3. `sudo make install-icesat2`
 4. `make config-python`
 5. `make`
+6. `sudo make install`
 
-The results are found in the `build` directory:
+The results are found in the `/usr/local/lib` directory:
 * `srpybin.cpython-*.so` - the Python package
 
 To use the package, from a Python script:
 ```Python
 import srpybin
 ```
-
 
 ----------------------------------------------------------------------------
 ## III. pyH5Coro
