@@ -68,10 +68,8 @@ class VrtRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
 
-                     VrtRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
-        bool         openRasterIndexSet      (double lon=0, double lat=0);
-        bool         findRasterFilesWithPoint(OGRPoint &p);
-        virtual void getRasterIndexFileName  (std::string& file, double lon=0, double lat=0) = 0;
+              VrtRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
+        bool  findRasterFilesWithPoint(OGRPoint &p);
 
 
         /*--------------------------------------------------------------------
