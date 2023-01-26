@@ -5,26 +5,38 @@ Python bindings for the sliderule library.
 ----------------------------------------------------------------------------
 ## I. Prerequisites
 
-#### 1. pybind11
+#### 1. Development Environment
 
+To setup a typical development environment on Ubuntu:
 ```bash
-$ sudo pip install "pybind11[global]"
+sudo apt install build-essential ca-certificates pkg-config cmake git
 ```
 
+#### 2. pybind11
+
+```bash
+sudo pip install "pybind11[global]"
+```
 Note: make sure you are aware of where you are running `pip` from and which python environment it is associated with.  The cmake files associated with this project assume that pybind11 is installed into the system folder `/usr/local`; on an Ubuntu system it may be necessary to replace `pip` with `usr/bin/pip3` in order to guarantee a system installation.
 
-#### 2. AWS S3 Library Dependencies
+#### 3. Library Dependencies
 
-When the library is compiled for use with S3, the Python environment in which the module is imported must have the `zlib` and `openssl` libraries installed. When using the default system Python, on Ubuntu run:
-
+The following libraries are dependencies of the sliderule library and must be installed to build code; on Ubuntu run:
 ```bash
-$ sudo apt install libcurl4-openssl libssl zlib1g
+sudo apt install libreadline-dev liblua5.3-dev libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev
 ```
 
-Conda support is currently broken due to openssl not having the necessary version of libcrypto.  As a best effort, run:
+#### 4. RapidJSON
 
+RapidJSON is used to parse json responses from web services.  To build and install:
 ```bash
-$ conda install zlib openssl
+git clone https://github.com/Tencent/rapidjson.git
+cd rapidjson
+mkdir -p build
+cd build
+cmake ..
+make -j8
+make install
 ```
 
 ----------------------------------------------------------------------------
@@ -33,8 +45,11 @@ $ conda install zlib openssl
 The Python bindings must be built for each target they are used on, and the resulting .so file must either be accessible from the **PYTHONPATH** or be installed into the current Python environment or copied to the same directory as the Python script that is importing it is run from.
 
 To build the bindings:
-1. `make config-python`
-2. `make`
+1. `make config-icesat2`
+2. `make icesat2`
+3. `sudo make install-icesat2`
+4. `make config-python`
+5. `make`
 
 The results are found in the `build` directory:
 * `srpybin.cpython-*.so` - the Python package
@@ -43,6 +58,8 @@ To use the package, from a Python script:
 ```Python
 import srpybin
 ```
+
+
 ----------------------------------------------------------------------------
 ## III. pyH5Coro
 

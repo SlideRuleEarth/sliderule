@@ -209,7 +209,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         if(info->datatype == RecordObject::DOUBLE)
         {
             double* data_ptr = (double*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -217,7 +217,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::FLOAT)
         {
             float* data_ptr = (float*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -225,7 +225,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::INT64)
         {
             int64_t* data_ptr = (int64_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -233,7 +233,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::UINT64)
         {
             uint64_t* data_ptr = (uint64_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -241,7 +241,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::INT32)
         {
             int32_t* data_ptr = (int32_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -249,7 +249,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::UINT32)
         {
             uint32_t* data_ptr = (uint32_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -257,7 +257,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::INT16)
         {
             int16_t* data_ptr = (int16_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -265,7 +265,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::UINT16)
         {
             uint16_t* data_ptr = (uint16_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -273,7 +273,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::INT8)
         {
             int8_t* data_ptr = (int8_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }
@@ -281,7 +281,7 @@ py::list pyH5Coro::tolist (H5Coro::info_t* info)
         else if(info->datatype == RecordObject::UINT8)
         {
             uint8_t* data_ptr = (uint8_t*)info->data;
-            for(int i = 0; i < info->elements; i++)
+            for(unsigned int i = 0; i < info->elements; i++)
             {
                 result.append(data_ptr[i]);
             }

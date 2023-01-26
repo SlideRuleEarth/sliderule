@@ -12,10 +12,10 @@ resource0   = "UW_OSD.h5"
 resource1   = "ATL06_20200714160647_02950802_003_01.h5"
 resource2   = "ATL06_20181019065445_03150111_003_01.h5"
 resource3   = "asdf.h5"
-format      = "file"        # "s3"
-path        = "/data/ATLAS" # "icesat2-sliderule/data/ATLAS"
-region      = ""            # "us-west-2"
-endpoint    = ""            # "https://s3.us-west-2.amazonaws.com"
+format      = "s3"
+path        = "sliderule/data/ATLAS"
+region      = "us-west-2"
+endpoint    = "https://s3.us-west-2.amazonaws.com"
 
 # expected small read
 small_exp = [471, -1444, 1131, -258, 247]
