@@ -106,9 +106,6 @@ P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40'
 # gps-based epoch for delta times
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 
-# maximum time to wait for cluster scale out
-MAX_PS_CLUSTER_WAIT_SECS = 600
-
 ###############################################################################
 # NSIDC UTILITIES
 ###############################################################################
@@ -634,31 +631,6 @@ def __procoutputfile(parm, lon_key, lat_key):
         # Return Parquet Filename
         return parm["output"]["path"]
 
-#
-# Wait for Scale Out
-#
-def __scaleout(desired_nodes, time_to_live):
-    if desired_nodes is None:
-        return # nothing needs to be done
-    if desired_nodes < 0:
-        raise sliderule.FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
-    sliderule.update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
-    start = time.time()
-    available_nodes,_ = sliderule.update_available_servers()
-    scale_up_needed = False
-    while available_nodes < desired_nodes:
-        scale_up_needed = True
-        logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
-        time.sleep(10.0)
-        available_nodes,_ = sliderule.update_available_servers()
-        if available_nodes == 0:
-            time.sleep(20.0) # wait an extra 20 seconds for cluster to start if cluster is not running
-        if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
-            logger.error("Maximum time allowed waiting for cluster has been exceeded")
-            break
-    if scale_up_needed:
-        logger.info("Cluster has reached capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
-
 ###############################################################################
 # APIs
 ###############################################################################
@@ -695,7 +667,7 @@ def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, log
     sliderule.set_verbose(verbose)
     sliderule.set_url(url) # configure domain
     sliderule.authenticate(organization) # configure credentials (if any) for organization
-    __scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
+    sliderule.scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
     sliderule.check_version(plugins=['icesat2']) # verify compatibility between client and server versions
     set_max_resources(max_resources) # set maximum number of resources allowed per request
 
@@ -934,8 +906,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             resources = __query_resources(parm, version)
 
         # Build ATL06 Request
+        parm["asset"] = asset
         rqst = {
-            "atl03-asset" : asset,
             "resources": resources,
             "parms": parm
         }
@@ -1021,8 +993,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
             resources = __query_resources(parm, version)
 
         # Build ATL03 Subsetting Request
+        parm["asset"] = asset
         rqst = {
-            "atl03-asset" : asset,
             "resources": resources,
             "parms": parm
         }
@@ -1230,8 +1202,8 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
             resources = __query_resources(parm, version)
 
         # Build ATL06 Request
+        parm["asset"] = asset
         rqst = {
-            "atl03-asset" : asset,
             "resources": resources,
             "parms": parm
         }

@@ -123,6 +123,8 @@ codedtype2str = {
     12: "STRING"
 }
 
+MAX_PS_CLUSTER_WAIT_SECS = 600
+
 ###############################################################################
 # CLIENT EXCEPTIONS
 ###############################################################################
@@ -647,6 +649,46 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
     except FatalError:
         available_servers = 0
     return available_servers, available_servers
+
+#
+# scaleout
+#
+def scaleout(desired_nodes, time_to_live):
+    '''
+    Scale the cluster and wait for cluster to reach desired state
+
+    Parameters
+    ----------
+        desired_nodes:  int
+                        the desired number of nodes in the cluster
+        time_to_live:   int
+                        number of minutes for the desired nodes to run
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.scaleout(4, 300)
+    '''
+    if desired_nodes is None:
+        return # nothing needs to be done
+    if desired_nodes < 0:
+        raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
+    update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
+    start = time.time()
+    available_nodes,_ = update_available_servers()
+    scale_up_needed = False
+    while available_nodes < desired_nodes:
+        scale_up_needed = True
+        logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
+        time.sleep(10.0)
+        available_nodes,_ = update_available_servers()
+        if available_nodes == 0:
+            time.sleep(20.0) # wait an extra 20 seconds for cluster to start if cluster is not running
+        if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
+            logger.error("Maximum time allowed waiting for cluster has been exceeded")
+            break
+    if scale_up_needed:
+        logger.info("Cluster has reached capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
 
 #
 # authenticate
