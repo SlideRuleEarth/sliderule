@@ -42,7 +42,6 @@
 #include "Atl06Dispatch.h"
 #include "Atl08Dispatch.h"
 #include "CumulusIODriver.h"
-#include "EndpointProxy.h"
 #include "GTArray.h"
 #include "GTDArray.h"
 #include "PluginMetrics.h"

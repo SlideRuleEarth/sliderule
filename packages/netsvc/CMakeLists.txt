@@ -19,6 +19,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CurlLib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.cpp
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.cpp
     )
@@ -33,6 +34,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.h
             ${CMAKE_CURRENT_LIST_DIR}/CurlLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.h
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.h
             ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.h
         DESTINATION

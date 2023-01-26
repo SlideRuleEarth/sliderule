@@ -70,10 +70,9 @@ int EndpointProxy::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* _endpoint   = getLuaString(L, 1); // get endpoint
-        const char* _asset      = getLuaString(L, 2); // get asset
 
         /* Check Resource Table Parameter */
-        int resources_parm_index = 3;
+        int resources_parm_index = 2;
         if(!lua_istable(L, resources_parm_index))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for resource list");
@@ -98,19 +97,19 @@ int EndpointProxy::luaCreate (lua_State* L)
         }
 
         /* Get Parameters Continued */
-        const char* _parameters         = getLuaString(L, 4); // get request parameters
-        int         _timeout_secs       = getLuaInteger(L, 5, true, RqstParms::DEFAULT_RQST_TIMEOUT); // get timeout in seconds
-        const char* _outq_name          = getLuaString(L, 6); // get output queue
-        bool        _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
-        long        _num_threads        = getLuaInteger(L, 8, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
-        long        _rqst_queue_depth   = getLuaInteger(L, 9, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
+        const char* _parameters         = getLuaString(L, 3); // get request parameters
+        int         _timeout_secs       = getLuaInteger(L, 4, true, RqstParms::DEFAULT_RQST_TIMEOUT); // get timeout in seconds
+        const char* _outq_name          = getLuaString(L, 5); // get output queue
+        bool        _send_terminator    = getLuaBoolean(L, 6, true, false); // get send terminator flag
+        long        _num_threads        = getLuaInteger(L, 7, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
+        long        _rqst_queue_depth   = getLuaInteger(L, 8, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
 
         /* Check Parameters */
         if(_num_threads <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
         else if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
 
         /* Return Endpoint Proxy Object */
-        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _asset, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth);
+        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth);
         int retcnt = createLuaObject(L, ep);
         if(_resources) delete [] _resources;
         return retcnt;
@@ -132,12 +131,11 @@ int EndpointProxy::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources,
+EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
                               const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
                               int _num_threads, int _rqst_queue_depth):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    assert(_asset);
     assert(_resources);
     assert(_parameters);
     assert(_outq_name);
@@ -165,7 +163,6 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char* _
 
     /* Allocate Data Members */
     endpoint    = StringLib::duplicate(_endpoint);
-    asset       = StringLib::duplicate(_asset);
     parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
     outQ        = new Publisher(_outq_name, Publisher::defaultFree, numProxyThreads);
 
@@ -219,7 +216,6 @@ EndpointProxy::~EndpointProxy (void)
 
     /* Delete Allocated Memory */
     delete [] endpoint;
-    delete [] asset;
     delete [] parameters;
 }
 
@@ -323,7 +319,7 @@ void* EndpointProxy::proxyThread (void* parm)
                 try
                 {
                     SafeString path("/source/%s", proxy->endpoint);
-                    SafeString data("{\"atl03-asset\": \"%s\", \"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}", proxy->asset, resource, proxy->parameters, proxy->timeout);
+                    SafeString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}", resource, proxy->parameters, proxy->timeout);
                     HttpClient client(NULL, node->member);
                     HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout * 1000);
                     if(rsps.code == EndpointObject::OK) valid = true;

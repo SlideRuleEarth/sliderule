@@ -5,7 +5,6 @@
 --
 -- INPUT:       rqst
 --              {
---                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>",
 --                  "resources":    ["<url of hdf5 file or object>", ...],
 --                  "parms":        {<table of parameters>},
 --              }
@@ -22,7 +21,6 @@ local userlog = msg.publish(rspq)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local atl03_asset = rqst["atl03-asset"]
 local resources = rqst["resources"]
 local parms = rqst["parms"]
 local timeout = parms["rqst-timeout"] or parms["timeout"] or icesat2.RQST_TIMEOUT
@@ -57,7 +55,7 @@ if output_parms then
 end
 
 -- Proxy Request --
-local proxy = icesat2.proxy("atl06", atl03_asset, resources, json.encode(parms), node_timeout, rsps_from_nodes, terminate_proxy_stream)
+local proxy = netsvc.proxy("atl06", resources, json.encode(parms), node_timeout, rsps_from_nodes, terminate_proxy_stream)
 
 -- Wait Until Proxy Completes --
 while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do

@@ -36,9 +36,10 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "CurlLib.h"
+#include "EndpointProxy.h"
 #include "OrchestratorLib.h"
 #include "ProvisioningSystemLib.h"
-#include "CurlLib.h"
 
 /******************************************************************************
  * PROTOTYPES

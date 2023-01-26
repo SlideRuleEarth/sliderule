@@ -54,6 +54,7 @@ int netsvc_open (lua_State* L)
     static const struct luaL_Reg netsvc_functions[] = {
         {"get",         CurlLib::luaGet},
         {"post",        CurlLib::luaPost},
+        {"proxy",       EndpointProxy::luaCreate},
         {"orchurl",     OrchestratorLib::luaUrl},
         {"orchreg",     OrchestratorLib::luaRegisterService},
         {"orchlock",    OrchestratorLib::luaLock},

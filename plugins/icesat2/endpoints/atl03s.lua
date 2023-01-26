@@ -5,7 +5,7 @@
 --
 -- INPUT:       rqst
 --              {
---                  "atl03-asset":  "<name of asset to use, defaults to atlas-local>"
+--                  "asset":        "<name of asset to use, defaults to atlas-local>"
 --                  "resources":    ["<url of hdf5 file or object>", ...]
 --                  "parms":        {<table of parameters>}
 --              }
@@ -26,9 +26,9 @@ local userlog = msg.publish(rspq)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local atl03_asset = rqst["atl03-asset"] or "nsidc-s3"
 local resource = rqst["resource"]
 local parms = rqst["parms"]
+local atl03_asset = parms["asset"] or "nsidc-s3"
 local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
 local output_parms = parms["output"]
 
