@@ -39,7 +39,6 @@
 
 #include "core.h"
 #include "h5.h"
-#include "icesat2.h"
 #include "netsvc.h"
 
 /******************************************************************************
@@ -98,7 +97,7 @@ int EndpointProxy::luaCreate (lua_State* L)
 
         /* Get Parameters Continued */
         const char* _parameters         = getLuaString(L, 3); // get request parameters
-        int         _timeout_secs       = getLuaInteger(L, 4, true, RqstParms::DEFAULT_RQST_TIMEOUT); // get timeout in seconds
+        int         _timeout_secs       = getLuaInteger(L, 4, true, EndpointProxy::DEFAULT_TIMEOUT); // get timeout in seconds
         const char* _outq_name          = getLuaString(L, 5); // get output queue
         bool        _send_terminator    = getLuaBoolean(L, 6, true, false); // get send terminator flag
         long        _num_threads        = getLuaInteger(L, 7, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads

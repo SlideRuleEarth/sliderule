@@ -38,6 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "EndpointProxy.h"
 #include "GeoJsonRaster.h"
 #include "List.h"
 #include "MathLib.h"
@@ -111,9 +112,9 @@ class RqstParms: public LuaObject
 
         static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
 
-        static const int DEFAULT_RQST_TIMEOUT       = 600; // seconds
-        static const int DEFAULT_NODE_TIMEOUT       = 600; // seconds
-        static const int DEFAULT_READ_TIMEOUT       = 600; // seconds
+        static const int DEFAULT_RQST_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
+        static const int DEFAULT_NODE_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
+        static const int DEFAULT_READ_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
 
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;

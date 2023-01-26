@@ -58,6 +58,7 @@ class EndpointProxy: public LuaObject
         static const int COLLATOR_POLL_RATE = 1000; // milliseconds
         static const int DEFAULT_PROXY_QUEUE_DEPTH = 1000;
         static const int MAX_PROXY_THREADS = 1000;
+        static const int DEFAULT_TIMEOUT = 600; // seconds
 
         static const char* SERVICE;
 
@@ -100,7 +101,7 @@ class EndpointProxy: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            EndpointProxy           (lua_State* L, const char* _endpoint, const char* _asset, const char** _resources, int _num_resources,
+                            EndpointProxy           (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
                                                      const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
                                                      int _num_threads, int _rqst_queue_depth);
                             ~EndpointProxy          (void);
