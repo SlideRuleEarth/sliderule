@@ -64,6 +64,18 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
      */
     if (!openRasterIndexSet())
         throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
+
+    /*
+     * For mosaic, there is only one raster with point of interest in it.
+     * Look for it in cache first, it may already be opened.
+     */
+    setCheckCacheFirst(true);
+
+    /*
+     * Only one thread is used to read mosaic tiles.
+     * Allow this thread to read directly from raster index data set (VRT) if needed.
+     */
+    setAllowIndexDataSetSampling(true);
 }
 
 /*----------------------------------------------------------------------------

@@ -130,23 +130,16 @@ class GeoRaster: public LuaObject
         } sample_t;
 
 
-        typedef enum {
-            VRT      = 0,
-            VECTOR   = 1,
-            UNKNOWN  = 3
-        } index_file_type_t;
-
-
         typedef struct {
-            std::string       fileName;
-            GDALDataset*      dset;
-            GDALRasterBand*   band;
-            double            invGeot[6];
-            uint32_t          rows;
-            uint32_t          cols;
-            double            cellSize;
-            bbox_t            bbox;
-            uint32_t          radiusInPixels;
+            std::string     fileName;
+            GDALDataset*    dset;
+            GDALRasterBand* band;
+            double          invGeot[6];
+            uint32_t        rows;
+            uint32_t        cols;
+            double          cellSize;
+            bbox_t          bbox;
+            uint32_t        radiusInPixels;
 
             OGRCoordinateTransformation *transf;
             OGRSpatialReference          srcSrs;
@@ -198,9 +191,9 @@ class GeoRaster: public LuaObject
         static int     luaCreate       (lua_State* L);
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
-        void           setIndexFileType(index_file_type_t fileType);
         inline bool    hasZonalStats   (void) { return zonalStats; }
-        inline void    setTargetCrs    (int crs) { targetCrs = crs; }
+        inline void    setCheckCacheFirst(bool value) { checkCacheFirst = value; }
+        inline void    setAllowIndexDataSetSampling(bool value) { allowIndexDataSetSampling = value; }
         const char*    getUUID         (char* uuid_str);
         void           buildVRT        (std::string& vrtFile, List<std::string>& rlist);
         virtual       ~GeoRaster       (void);
@@ -212,8 +205,7 @@ class GeoRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
                         GeoRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
-        virtual bool    openRasterIndexSet      (double lon=0, double lat=0);
-        virtual void    getRasterIndexFileName  (std::string& file, double lon=0, double lat=0) = 0;
+        virtual bool    openRasterIndexSet      (double lon=0, double lat=0) = 0;
         virtual bool    findRasterFilesWithPoint(OGRPoint &p) = 0;
         virtual int64_t getRasterDate           (std::string& tifFile) = 0;
         int             radius2pixels           (double cellSize, int _radius);
@@ -245,8 +237,6 @@ class GeoRaster: public LuaObject
 
         bool                  checkCacheFirst;
         bool                  allowIndexDataSetSampling;
-        index_file_type_t     risFileType;
-        int                   targetCrs;
 
         /*--------------------------------------------------------------------
          * Methods

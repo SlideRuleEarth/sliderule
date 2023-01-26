@@ -68,8 +68,10 @@ class VctRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
 
-              VctRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats, const int target_crs);
-        bool  findRasterFilesWithPoint(OGRPoint &p);
+                     VctRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats, const int target_crs);
+        bool         openRasterIndexSet      (double lon=0, double lat=0);
+        bool         findRasterFilesWithPoint(OGRPoint &p);
+        virtual void getRasterIndexFileName  (std::string& file, double lon=0, double lat=0) = 0;
 
 
         /*--------------------------------------------------------------------
@@ -81,6 +83,7 @@ class VctRaster: public GeoRaster
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+        int dstCrs;
 
         /*--------------------------------------------------------------------
          * Methods

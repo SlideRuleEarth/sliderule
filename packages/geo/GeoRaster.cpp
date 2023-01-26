@@ -151,26 +151,6 @@ bool GeoRaster::registerRaster (const char* _name, factory_t create)
     return status;
 }
 
-
-/*----------------------------------------------------------------------------
- * setIndexFileType
- *----------------------------------------------------------------------------*/
-void GeoRaster::setIndexFileType(index_file_type_t fileType)
-{
-    risFileType = fileType;
-
-    if( risFileType == VRT )
-    {
-        allowIndexDataSetSampling = true;
-        checkCacheFirst = true;
-    }
-    else if ( risFileType == VECTOR )
-    {
-        allowIndexDataSetSampling = false;
-        checkCacheFirst = false;
-    }
-}
-
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
@@ -372,8 +352,6 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
 
     /* Initialize Class Data Members */
     clearRasterIndexSet( &ris );
-    risFileType = UNKNOWN;
-    targetCrs = 0;
 
     tifList = new List<std::string>;
     tifList->clear();
@@ -382,128 +360,6 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
     checkCacheFirst = false;
-}
-//t
-
-/*----------------------------------------------------------------------------
- * openRasterIndexSet
- *----------------------------------------------------------------------------*/
-bool GeoRaster::openRasterIndexSet(double lon, double lat)
-{
-    bool objCreated = false;
-    std::string newFile;
-
-    getRasterIndexFileName(newFile, lon, lat);
-
-    /* Is the file already open? */
-    if (ris.dset != NULL && ris.fileName == newFile)
-        return true;
-
-    try
-    {
-        /* Cleanup previous index dataset */
-        if (ris.dset != NULL)
-        {
-            GDALClose((GDALDatasetH)ris.dset);
-            ris.dset = NULL;
-        }
-
-        /* Open new index dataset */
-        int flags = GDAL_OF_READONLY;
-
-        if( risFileType == VRT )
-            flags |= GDAL_OF_RASTER;
-        else if (risFileType == VECTOR )
-            flags |= GDAL_OF_VECTOR;
-
-        ris.dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), flags, NULL, NULL, NULL);
-
-        if (ris.dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open file: %s:", newFile.c_str());
-
-        ris.fileName = newFile;
-        ris.band = ris.dset->GetRasterBand(1);
-        CHECKPTR(ris.band);
-
-        /* Get inverted geo transfer for index dataset */
-        double geot[6] = {0};
-        CPLErr err = GDALGetGeoTransform(ris.dset, geot);
-        CHECK_GDALERR(err);
-        if (!GDALInvGeoTransform(geot, ris.invGeot))
-        {
-            CPLError(CE_Failure, CPLE_AppDefined, "Cannot invert geotransform");
-            CHECK_GDALERR(CE_Failure);
-        }
-
-        /* Store information about extent of index dataset */
-        ris.cols = ris.dset->GetRasterXSize();
-        ris.rows = ris.dset->GetRasterYSize();
-
-        bzero(geot, sizeof(geot));
-        err = ris.dset->GetGeoTransform(geot);
-        CHECK_GDALERR(err);
-        ris.bbox.lon_min = geot[0];
-        ris.bbox.lon_max = geot[0] + ris.cols * geot[1];
-        ris.bbox.lat_max = geot[3];
-        ris.bbox.lat_min = geot[3] + ris.rows * geot[5];
-        ris.cellSize     = geot[1];
-
-        ris.radiusInPixels = radius2pixels(ris.cellSize, samplingRadius);
-
-        /* Limit maximum sampling radius */
-        if (ris.radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR,
-                                   "Sampling radius is too big: %d: max allowed %d meters",
-                                   samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(ris.cellSize));
-        }
-
-        OGRErr ogrerr = ris.srcSrs.importFromEPSG(ICESAT2_PHOTON_EPSG);
-        CHECK_GDALERR(ogrerr);
-        const char *projref = ris.dset->GetProjectionRef();
-        CHECKPTR(projref);
-        mlog(DEBUG, "%s", projref);
-        ogrerr = ris.trgSrs.importFromProj4(projref);
-        CHECK_GDALERR(ogrerr);
-
-        /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-        ris.trgSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        ris.srcSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        /* Create coordinates transformation */
-
-        /* Get transform for this VRT file */
-        OGRCoordinateTransformation *newTransf = OGRCreateCoordinateTransformation(&ris.srcSrs, &ris.trgSrs);
-        if (newTransf)
-        {
-            /* Delete the transform from last index dataset */
-            if (ris.transf) OGRCoordinateTransformation::DestroyCT(ris.transf);
-
-            /* Use the new one (they should be the same but just in case they are not...) */
-            ris.transf = newTransf;
-        }
-        else mlog(ERROR, "Failed to create new transform, reusing transform from previous index file.\n");
-
-        objCreated = true;
-        mlog(DEBUG, "Opened dataSet for %s", newFile.c_str());
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error creating new index dataset: %s", e.what());
-    }
-
-    if (!objCreated && ris.dset)
-    {
-        GDALClose((GDALDatasetH)ris.dset);
-        ris.dset = NULL;
-        ris.band = NULL;
-
-        bzero(ris.invGeot, sizeof(ris.invGeot));
-        ris.rows = ris.cols = ris.cellSize = ris.radiusInPixels = 0;
-        bzero(&ris.bbox, sizeof(ris.bbox));
-    }
-
-    return objCreated;
 }
 
 

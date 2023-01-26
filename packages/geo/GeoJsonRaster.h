@@ -37,7 +37,6 @@
  ******************************************************************************/
 
 #include "VrtRaster.h"
-#include "VctRaster.h"
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
@@ -89,7 +88,7 @@ class GeoJsonRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                GeoJsonRaster           (lua_State *L, const char *image, const long imagelength, const double _cellsize);
+                GeoJsonRaster           (lua_State *L, const char *image, long imagelength, double _cellsize);
         void    getRasterIndexFileName  (std::string& file, double lon=0, double lat=0);
         int64_t getRasterDate           (std::string& tifFile);
 
