@@ -86,6 +86,7 @@ class Gedi04aReader: public LuaObject
 
         /* Footprint Record */
         typedef struct {
+            uint64_t        shot_number;
             double          delta_time;
             double          latitude;
             double          longitude;
@@ -158,6 +159,7 @@ class Gedi04aReader: public LuaObject
                 Gedi04a             (info_t* info, Region& region);
                 ~Gedi04a            (void);
 
+                HArray<uint64_t>    shot_number;
                 HArray<double>      delta_time;
                 HArray<double>      agbd;
                 HArray<double>      elev_lowestmode;
@@ -185,6 +187,9 @@ class Gedi04aReader: public LuaObject
         GediParms*          parms;
         stats_t             stats;
         H5Coro::context_t   context;
+        RecordObject        batchRecord;
+        int                 batchIndex;
+        gedil4a_t*          batchData;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -195,7 +200,6 @@ class Gedi04aReader: public LuaObject
 
         static void*        subsettingThread        (void* parm);
 
-        static int          luaParms                (lua_State* L);
         static int          luaStats                (lua_State* L);
 };
 
