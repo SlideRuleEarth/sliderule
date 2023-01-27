@@ -64,7 +64,7 @@ if __name__ == '__main__':
     ###################
 
     # Open Small ASDF H5 File #
-    asdf_small = srpybin.h5coro(resource0, format, "/data/ASDF", region, endpoint)
+    asdf_small = srpybin.h5coro("asset1", resource0, format, "/data/ASDF", region, endpoint)
 
     # Run Meta Test #
     meta = asdf_small.meta("/Waveforms/UW.OSD/UW.OSD..EHZ__2020-01-01T00:00:00__2020-01-01T05:13:04__raw_recording")
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     ###################
 
     # Open Large ASDF H5 File #
-    asdf_large = srpybin.h5coro(resource3, format, "/data/ASDF", region, endpoint)
+    asdf_large = srpybin.h5coro("asset2", resource3, format, "/data/ASDF", region, endpoint)
 
     # Read Large Dataset from Small File Multiple Times #
     v = asdf_large.read("/Waveforms/IM.I56H1/IM.I56H1..LWS__2020-12-29T00:00:00__2020-12-29T23:59:59__raw_recording", 0, 30000, 10)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     ###################
 
     # Open ICESat-2 H5 File #
-    h5file1 = srpybin.h5coro(resource1, format, path, region, endpoint)
+    h5file1 = srpybin.h5coro("asset3", resource1, format, path, region, endpoint)
 
     # Run Meta Test #
     h_li_meta = h5file1.meta("/gt1l/land_ice_segments/h_li")
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     ###################
 
     # Open ICESat-2 H5 File #
-    h5file2 = srpybin.h5coro(resource2, format, path, region, endpoint)
+    h5file2 = srpybin.h5coro("asset4", resource2, format, path, region, endpoint)
 
     # Run Negative Test #
     bsnow_conf = h5file2.read("/gt2r/land_ice_segments/geophysical/bsnow_conf", 0, 19, 5)
