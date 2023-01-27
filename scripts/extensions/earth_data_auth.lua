@@ -17,13 +17,10 @@
 local json = require("json")
 local parm = json.decode(arg[1] or "{}")
 
-local daac = parm["daac"] or "nsidc"
+local earthdata = parm["earthdata"] or "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
 local asset = parm["asset"] or "nsidc-s3"
 local bucket = parm["bucket"] or "sliderule"
 local netrc_key = parm["netrc_key"] or "/config/netrc"
-
--- build earthdata url
-local earthdata_url = "https://data."..daac..".earthdatacloud.nasa.gov/s3credentials"
 
 -- download netrc
 local netrc_present = false
@@ -59,7 +56,7 @@ while netrc_present and sys.alive() do
     sys.log(core.DEBUG, "Fetching Earthdata Credentials...")
 
     -- get new credentials
-    local response, status = netsvc.get(earthdata_url)
+    local response, status = netsvc.get(earthdata)
 
     -- convert reponse to credential table
     if status then
@@ -67,7 +64,7 @@ while netrc_present and sys.alive() do
 
         -- store credentials and wait for next time to update
         if rc and credential and credential.expiration then
-            sys.log(core.INFO, string.format("New earthdata credentials fetched, expiration: %s", credential.expiration))
+            sys.log(core.INFO, string.format("New earthdata credentials fetched for %s, expiration: %s", asset, credential.expiration))
 
             -- store credentials for use by server
             aws.csput(asset, credential)
@@ -79,10 +76,10 @@ while netrc_present and sys.alive() do
             -- calculate how long credentials are good for
             local credential_duration = credential_gps - now
             if credential_duration < 120000 then -- fetch no faster than once per minute (120 seconds / 2 = 1 minute)
-                sys.log(core.CRITICAL, string.format("Invalid earthdata credentials expiration of %f seconds detected, retrying in 60 seconds", credential_duration / 1000.0))
+                sys.log(core.CRITICAL, string.format("Invalid earthdata credentials expiration of %f seconds detected for %s, retrying in 60 seconds", credential_duration / 1000.0, asset))
                 credential_duration = 120000
             elseif credential_duration > 43200000 then -- fetch no slower than once per 6 hours (12 hours / 2 = 6 hours)
-                sys.log(core.CRITICAL, string.format("Invalid earthdata credentials expiration of %f hours detected, retrying in 6 hours", credential_duration / 1000.0 / 60.0 / 60.0))
+                sys.log(core.CRITICAL, string.format("Invalid earthdata credentials expiration of %f hours detected for %s, retrying in 6 hours", credential_duration / 1000.0 / 60.0 / 60.0, asset))
                 credential_duration = 43200000
             end
 
@@ -94,11 +91,11 @@ while netrc_present and sys.alive() do
                 sys.wait(5)
             end
         else
-            sys.log(core.CRITICAL, "Failed to decode earthdata credentials, retrying in 60 seconds")
+            sys.log(core.CRITICAL, string.format("Failed to decode earthdata credentials for %s, retrying in 60 seconds", asset))
             sys.wait(60)
         end
     else
-        sys.log(core.CRITICAL, "Failed to retrieve earthdata credentials, retrying in 60 seconds")
+        sys.log(core.CRITICAL, string.format("Failed to retrieve earthdata credentials for %s, retrying in 60 seconds", asset))
         sys.wait(60)
     end
 end

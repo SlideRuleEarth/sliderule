@@ -55,7 +55,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Gedi04aReader::fpRecType = "gedil4a.footprint";
+const char* Gedi04aReader::fpRecType = "gedi04a.footprint";
 const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),     1,  NULL, NATIVE_FLAGS},
     {"delta_time",      RecordObject::DOUBLE,   offsetof(footprint_t, delta_time),      1,  NULL, NATIVE_FLAGS},
@@ -68,7 +68,7 @@ const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"flags",           RecordObject::UINT8,    offsetof(footprint_t, flags),           1,  NULL, NATIVE_FLAGS}
 };
 
-const char* Gedi04aReader::batchRecType = "gedil4a";
+const char* Gedi04aReader::batchRecType = "gedi04a";
 const RecordObject::fieldDef_t Gedi04aReader::batchRecDef[] = {
     {"footprint",       RecordObject::USER,     offsetof(gedil4a_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
 };

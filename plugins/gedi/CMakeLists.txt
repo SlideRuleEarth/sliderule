@@ -72,6 +72,7 @@ target_include_directories (gedi
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi04a.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi04ap.lua
     DESTINATION
         ${CONFDIR}/api
 )
