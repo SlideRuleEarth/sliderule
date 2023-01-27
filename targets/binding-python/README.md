@@ -43,9 +43,15 @@ Note: make sure you are aware of where you are running `pip` from and which pyth
 
 1. Steps 1 and 2 from the System Build can still be followed as provided above.
 
-2. Install miniconda; please refer to the online [instructions](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) provided by the Conda organization for installing, configuring, and activating a conda environment.
+2. Install Lua 5.3
+Lua must be installed manually from your system because Conda does not support version 5.3; on Ubuntu run:
+```bash
+sudo apt install liblua5.3-dev
+```
 
-3. Install the necessary libraries (note that this list may be incomplete or conflict with dependencies in your current environment).
+3. Install miniconda; please refer to the online [instructions](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) provided by the Conda organization for installing, configuring, and activating a conda environment.
+
+4. Install the necessary libraries (note that this list may be incomplete or conflict with dependencies in your current environment).
 ```bash
 conda install -c conda-forge readline lua openssl r-uuid libcurl Zlib gdal pybind11
 ```
