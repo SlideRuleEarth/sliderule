@@ -32,7 +32,7 @@ def plot_agbd(data):
 if __name__ == '__main__':
 
     # setup logging
-    logger = srpybin.logger(srpybin.INFO);
+    logger = srpybin.logger(srpybin.INFO)
 
     # parameters
     asset = "ornldaac"
@@ -43,6 +43,7 @@ if __name__ == '__main__':
     endpoint = "https://s3.us-west-2.amazonaws.com"
     start_footprint = 93000
     num_footprints = 1000
+    #            dataset,                     col,       start_row,       num_rows
     datasets = [["/BEAM0000/lat_lowestmode",    0, start_footprint, num_footprints],
                 ["/BEAM0000/lon_lowestmode",    0, start_footprint, num_footprints],
                 ["/BEAM0000/agbd",              0, start_footprint, num_footprints]]
