@@ -34,8 +34,9 @@
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
+#include "OsApi.h"
 #include "core.h"
-#include "pyLua.h"
+#include "pyLogger.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -44,34 +45,87 @@
 namespace py = pybind11;
 
 /******************************************************************************
- * pyLua Class
+ * pyLogger Class
  ******************************************************************************/
 
 /*--------------------------------------------------------------------
  * Constructor
  *--------------------------------------------------------------------*/
-pyLua::pyLua (const std::string &scriptpath, const std::string &scriptarg)
+pyLogger::pyLogger (const long level)
 {
-    luaEngine = new LuaEngine(scriptpath.c_str(), scriptarg.c_str(), ORIGIN, NULL, true);
-    bool status = luaEngine->executeEngine(MAX_RUNTIME_MS);
-    if(status)  luaResult = StringLib::duplicate(luaEngine->getResult());
-    else        luaResult = NULL;
+    active = true;
+    inQ = new Subscriber("eventq");
+    pid = new Thread(loggerThread, this);
+    EventLib::setLvl(EventLib::LOG, (event_level_t)level);
 }
 
 /*--------------------------------------------------------------------
  * Destructor
  *--------------------------------------------------------------------*/
-pyLua::~pyLua (void)
+pyLogger::~pyLogger (void)
 {
-    delete luaEngine;
-    if(luaResult) delete [] luaResult;
+    active = false;
+    delete pid;
+    delete inQ;
 }
 
 /*--------------------------------------------------------------------
- * result
+ * log
  *--------------------------------------------------------------------*/
-const char* pyLua::result (void)
+const char* pyLogger::log (const std::string msg, const long level)
 {
-    if(luaResult)   return luaResult;
-    else            return "";
+    mlog((event_level_t)level, "%s", msg.c_str());
+    return msg.c_str();
+}
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * loggerThread
+ *----------------------------------------------------------------------------*/
+void* pyLogger::loggerThread(void* parm)
+{
+    pyLogger* logger = (pyLogger*)parm;
+
+    /* Loop Forever */
+    while(logger->active)
+    {
+        /* Receive Message */
+        Subscriber::msgRef_t ref;
+        int recv_status = logger->inQ->receiveRef(ref, SYS_TIMEOUT);
+        if(recv_status > 0)
+        {
+            /* Log Message */
+            if(ref.size > 0)
+            {
+                try
+                {
+                    RecordInterface record((unsigned char*)ref.data, ref.size);
+                    EventLib::event_t* event = (EventLib::event_t*)record.getRecordData();
+                    if(event->type == EventLib::LOG)
+                    {
+                        TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->systime);
+                        TimeLib::date_t date = TimeLib::gmt2date(gmt);
+                        print2term("[%d-%02d-%02dT%02d:%02d:%02dZ] %s\n", date.year, date.month, date.day, gmt.hour, gmt.minute, gmt.second, event->attr);
+                    }
+                }
+                catch (const RunTimeException& e)
+                {
+                }
+            }
+
+            /* Dereference Message */
+            logger->inQ->dereference(ref);
+        }
+        else if(recv_status != MsgQ::STATE_TIMEOUT)
+        {
+            /* Break Out on Failure */
+            print2term("Failed queue receive on %s with error %d", logger->inQ->getName(), recv_status);
+            logger->active = false; // breaks out of loop
+        }
+    }
+
+    return NULL;
 }

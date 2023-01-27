@@ -44,6 +44,10 @@
 #endif
 
 #ifdef __h5__
+#include "geo.h"
+#endif
+
+#ifdef __h5__
 #include "h5.h"
 #endif
 
@@ -62,6 +66,7 @@
 #include <pybind11/pybind11.h>
 #include "pyH5Coro.h"
 #include "pyLua.h"
+#include "pyLogger.h"
 #include "pyS3Cache.h"
 #include "pyCredentialStore.h"
 #include "pyPlugin.h"
@@ -86,6 +91,10 @@ PYBIND11_MODULE(srpybin, m)
 
     #ifdef __ccsds__
         initccsds();
+    #endif
+
+    #ifdef __geo__
+        initgeo();
     #endif
 
     #ifdef __h5__
@@ -153,5 +162,61 @@ PYBIND11_MODULE(srpybin, m)
 
         .def(py::init<const std::string &>());  // full path to plugin
 
-    m.attr("all") = (long)-1;
+    py::class_<pyLogger>(m, "logger")
+
+        .def(py::init<const int>())
+
+        .def("critical", &pyLogger::log, "generates critical log message", py::arg("msg"), py::arg("level") = (int)CRITICAL)
+        .def("error",    &pyLogger::log, "generates error log message",    py::arg("msg"), py::arg("level") = (int)ERROR)
+        .def("warning",  &pyLogger::log, "generates warning log message",  py::arg("msg"), py::arg("level") = (int)WARNING)
+        .def("info",     &pyLogger::log, "generates info log message",     py::arg("msg"), py::arg("level") = (int)INFO)
+        .def("debug",    &pyLogger::log, "generates debug log message",    py::arg("msg"), py::arg("level") = (int)DEBUG);
+
+    m.attr("all")       = (long)-1;
+    m.attr("CRITICAL")  = (int)CRITICAL;
+    m.attr("ERROR")     = (int)ERROR;
+    m.attr("WARNING")   = (int)WARNING;
+    m.attr("INFO")      = (int)INFO;
+    m.attr("DEBUG")     = (int)DEBUG;
+
+    // Register a callback function that is invoked when the BaseClass object is collected
+    py::cpp_function cleanup_callback(
+        [](py::handle weakref) {
+
+            #ifdef __icesat2__
+                deiniticesat2();
+            #endif
+
+            #ifdef __netsvc__
+                deinitnetsvc();
+            #endif
+
+            #ifdef __legacy__
+                deinitlegacy();
+            #endif
+
+            #ifdef __h5__
+                deinith5();
+            #endif
+
+            #ifdef __geo__
+                deinitgeo();
+            #endif
+
+            #ifdef __ccsds__
+                deinitccsds();
+            #endif
+
+            #ifdef __aws__
+                deinitaws();
+            #endif
+
+            deinitcore();
+
+            weakref.dec_ref(); // release weak reference
+        }
+    );
+
+    // Create a weak reference with a cleanup callback and initially leak it
+    (void) py::weakref(m.attr("logger"), cleanup_callback).release();
 }

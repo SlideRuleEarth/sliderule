@@ -9,6 +9,7 @@ if (pybind11_FOUND)
     pybind11_add_module(srpybin
         ${CMAKE_CURRENT_LIST_DIR}/pyH5Coro.cpp
         ${CMAKE_CURRENT_LIST_DIR}/pyLua.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/pyLogger.cpp
         ${CMAKE_CURRENT_LIST_DIR}/pyPlugin.cpp
         ${CMAKE_CURRENT_LIST_DIR}/pyCredentialStore.cpp
         ${CMAKE_CURRENT_LIST_DIR}/pyS3Cache.cpp

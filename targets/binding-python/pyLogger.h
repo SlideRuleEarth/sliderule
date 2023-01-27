@@ -29,15 +29,16 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __py_lua__
-#define __py_lua__
+#ifndef __py_logger__
+#define __py_logger__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include <pybind11/pybind11.h>
-#include "LuaEngine.h"
+#include "OsApi.h"
+#include "MsgQ.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -46,20 +47,24 @@
 namespace py = pybind11;
 
 /******************************************************************************
- * pyLua Class
+ * pyLogger Class
  ******************************************************************************/
 
-class pyLua
+class pyLogger
 {
     public:
-                    pyLua   (const std::string &scriptpath, const std::string &scriptarg);
-                    ~pyLua  (void);
-        const char* result  (void);
+                        pyLogger        (const long level);
+                        ~pyLogger       (void);
+
+        const char*     log             (const std::string msg, const long level);
 
     private:
-        static const int MAX_RUNTIME_MS = 10000; // 10 seconds
-        LuaEngine* luaEngine;
-        const char* luaResult;
+
+        static void*    loggerThread    (void* parm);
+
+        bool            active;
+        Thread*         pid;
+        Subscriber*     inQ;
 };
 
-#endif /* __py_lua__ */
+#endif /* __py_logger__ */

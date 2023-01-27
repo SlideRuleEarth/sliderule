@@ -56,6 +56,7 @@
 
 extern "C" {
 void initicesat2 (void);
+void deiniticesat2 (void);
 }
 
 #endif  /* __icesat2_plugin__ */
