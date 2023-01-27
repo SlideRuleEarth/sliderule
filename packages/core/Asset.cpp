@@ -99,16 +99,14 @@ int Asset::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * pythonCreate - create(<name>, <format>, <path>, <index>)
+ * pythonCreate
  *----------------------------------------------------------------------------*/
-Asset* Asset::pythonCreate (const char* format, const char* path, const char* index, const char* region, const char* endpoint)
+Asset* Asset::pythonCreate (const char* name, const char* format, const char* path, const char* index, const char* region, const char* endpoint)
 {
     attributes_t _attributes;
 
-    SafeString asset_name("%s://%s", format, path);
-
     /* Get Parameters */
-    _attributes.name       = asset_name.getString();
+    _attributes.name       = name;
     _attributes.format     = format;
     _attributes.path       = path;
     _attributes.index      = index;

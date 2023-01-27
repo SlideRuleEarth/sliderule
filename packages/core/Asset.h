@@ -96,7 +96,7 @@ class Asset: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int      luaCreate       (lua_State* L);
-        static Asset*   pythonCreate    (const char* format, const char* path, const char* index, const char* region, const char* endpoint);
+        static Asset*   pythonCreate    (const char* name, const char* format, const char* path, const char* index, const char* region, const char* endpoint);
         static bool     registerDriver  (const char* _format, new_driver_t driver);
 
         IODriver*       createDriver    (const char* resource) const;

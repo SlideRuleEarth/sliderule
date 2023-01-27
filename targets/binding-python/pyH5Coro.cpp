@@ -36,10 +36,11 @@
 #include <pybind11/pybind11.h>
 #include <exception>
 
+#include "StringLib.h"
 #include "RecordObject.h"
 #include "H5Coro.h"
-#include "pyH5Coro.h"
 #include "Asset.h"
+#include "pyH5Coro.h"
 
 /******************************************************************************
  * NAMESPACES
@@ -60,10 +61,10 @@ Mutex pyH5Coro::pyMut;
 /*--------------------------------------------------------------------
  * Constructor
  *--------------------------------------------------------------------*/
-pyH5Coro::pyH5Coro (const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint):
+pyH5Coro::pyH5Coro (const std::string &_asset, const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint):
     resource(_resource)
 {
-    asset = Asset::pythonCreate(format.c_str(), path.c_str(), NULL, region.c_str(), endpoint.c_str());
+    asset = Asset::pythonCreate(_asset.c_str(), format.c_str(), path.c_str(), NULL, region.c_str(), endpoint.c_str());
     if(asset == NULL) throw std::invalid_argument("failed to create asset, likely missing driver for provided format");
 }
 

@@ -56,7 +56,7 @@ namespace py = pybind11;
 class pyH5Coro
 {
     public:
-                            pyH5Coro    (const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint);
+                            pyH5Coro    (const std::string &_asset, const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint);
                             ~pyH5Coro   (void);
         py::dict            meta        (const std::string &datasetname, long col, long startrow, long numrows);
         py::list            read        (const std::string &datasetname, long col, long startrow, long numrows);

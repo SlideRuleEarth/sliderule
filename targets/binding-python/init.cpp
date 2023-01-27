@@ -117,7 +117,8 @@ PYBIND11_MODULE(srpybin, m)
 
     py::class_<pyH5Coro>(m, "h5coro")
 
-        .def(py::init<const std::string &,      // _resource
+        .def(py::init<const std::string &,      // _asset
+                      const std::string &,      // _resource
                       const std::string &,      // format
                       const std::string &,      // path
                       const std::string &,      // region
