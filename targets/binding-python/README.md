@@ -261,7 +261,7 @@ datasets = [["/BEAM0000/lat_lowestmode",    0, start_footprint, num_footprints],
             ["/BEAM0000/agbd",              0, start_footprint, num_footprints]]
 
 # credentials
-earthadata_s3 = f"https://data.ornldaac.earthdata.nasa.gov/s3credentials"
+earthadata_s3 = "https://data.ornldaac.earthdata.nasa.gov/s3credentials"
 rsps = requests.get(earthadata_s3)
 rsps.raise_for_status()
 s3credentials = rsps.json()

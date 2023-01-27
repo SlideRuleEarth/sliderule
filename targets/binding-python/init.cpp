@@ -215,6 +215,15 @@ PYBIND11_MODULE(srpybin, m)
             deinitcore();
 
             weakref.dec_ref(); // release weak reference
+
+            /*
+             * TODO: this is a hack to avoid a coredump from exiting
+             * python when this module is loaded; it is possible the
+             * core is occurring because SlideRule is linking to a
+             * different underlying library than the one available in
+             * the python environment.
+             * /
+            quick_exit(0);
         }
     );
 
