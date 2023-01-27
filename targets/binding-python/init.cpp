@@ -217,13 +217,15 @@ PYBIND11_MODULE(srpybin, m)
             weakref.dec_ref(); // release weak reference
 
             /*
-             * TODO: this is a hack to avoid a coredump from exiting
-             * python when this module is loaded; it is possible the
-             * core is occurring because SlideRule is linking to a
-             * different underlying library than the one available in
-             * the python environment.
-             * /
+             * This is a hack to avoid a coredump from exiting
+             * python when this module is loaded in a conda environment
+             * and the library was linked with a system environment. See
+             * makefile target `config-python-conda` for the preferred
+             * way to build bindings when using a conda environment.
+             */
+            #ifdef BEST_EFFORT_CONDA_ENV
             quick_exit(0);
+            #endif
         }
     );
 

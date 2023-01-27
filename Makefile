@@ -69,8 +69,11 @@ PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
 PYTHONCFG += -DICESAT2_PLUGIN_LIBPATH=/usr/local/etc/sliderule/icesat2.so
 PYTHONCFG += -DICESAT2_PLUGIN_INCPATH=/usr/local/include/sliderule/icesat2
 
-config-python: prep ## configure make for python bindings
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(PYTHONCFG) $(ROOT)
+config-python: prep ## configure make for python bindings (using system environent)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) $(ROOT)
+
+config-python-conda: prep ## configure make for python bindings (using conda environment)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) $(ROOT)
 
 ########################
 # Shared Library Targets

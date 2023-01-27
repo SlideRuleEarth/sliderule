@@ -43,6 +43,7 @@ option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer t
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
 option (ENABLE_H5CORO_ATTRIBUTE_SUPPORT "H5Coro will read and process attribute messages" OFF)
 option (ENABLE_APACHE_ARROW_10_COMPAT "Use Apache Arrow 11 interface" OFF)
+option (ENABLE_BEST_EFFORT_CONDA_ENV "Attempt to alleviate some issues with running in a conda environment")
 
 # Package Options #
 
@@ -163,6 +164,11 @@ endif ()
 if (${ENABLE_APACHE_ARROW_10_COMPAT})
     message (STATUS "Enabling Apache Arrow 10 compatibility")
     target_compile_definitions (slideruleLib PUBLIC APACHE_ARROW_10_COMPAT)
+endif ()
+
+if (${ENABLE_BEST_EFFORT_CONDA_ENV})
+    message (STATUS "Attempting best effort at running in a mixed system and conda environment")
+    target_compile_definitions (slideruleLib PUBLIC BEST_EFFORT_CONDA_ENV)
 endif ()
 
 # Platform File #

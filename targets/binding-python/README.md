@@ -3,31 +3,19 @@
 Python bindings for the sliderule library.
 
 ----------------------------------------------------------------------------
-## I. Prerequisites
+## I. Building the Bindings
 
-#### 1. Development Environment
+When building the PYthon bindings for SlideRule, great attention needs to be paid to the environment that the bindings will ultimately run in.  For instance, if you will be using these bindings from your system installation of Python, then you should use your system environment to configure and build the bindings.  On the other hand, if you will be using these bindings from a Conda environment, then it is necessary to configure and build the bindings using that same Conda environment.  When using a Conda environment, it is therefore necessary that all of the library dependencies required to build SlideRule are present in your environment.
 
+### Method 1 Prerequisites - System Build
+
+1. Development Environment
 To setup a typical development environment on Ubuntu:
 ```bash
 sudo apt install build-essential ca-certificates pkg-config cmake git
 ```
 
-#### 2. pybind11
-
-```bash
-sudo pip install "pybind11[global]"
-```
-Note: make sure you are aware of where you are running `pip` from and which python environment it is associated with.  The cmake files associated with this project assume that pybind11 is installed into the system folder `/usr/local`; on an Ubuntu system it may be necessary to replace `pip` with `usr/bin/pip3` in order to guarantee a system installation.
-
-#### 3. Library Dependencies
-
-The following packages are dependencies of the sliderule library and must be installed to build the code; on Ubuntu run:
-```bash
-sudo apt install libreadline-dev liblua5.3-dev libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev
-```
-
-#### 4. RapidJSON
-
+2. RapidJSON
 RapidJSON is used to parse json responses from web services.  To build and install:
 ```bash
 git clone https://github.com/Tencent/rapidjson.git
@@ -39,8 +27,30 @@ make -j8
 sudo make install
 ```
 
-----------------------------------------------------------------------------
-## II. Building and Importing the Bindings
+3. Library Dependencies
+The following packages are dependencies of the sliderule library and must be installed to build the code; on Ubuntu run:
+```bash
+sudo apt install libreadline-dev liblua5.3-dev libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev
+```
+
+4. pybind11
+```bash
+sudo pip install "pybind11[global]"
+```
+Note: make sure you are aware of where you are running `pip` from and which python environment it is associated with.  The cmake files associated with this project assume that pybind11 is installed into the system folder `/usr/local`; on an Ubuntu system it may be necessary to replace `pip` with `usr/bin/pip3` in order to guarantee a system installation.
+
+### Method 2 Prerequisites - Conda Build
+
+1. Steps 1 and 2 from the System Build can still be followed as provided above.
+
+2. Install miniconda; please refer to the online [instructions](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) provided by the Conda organization for installing, configuring, and activating a conda environment.
+
+3. Install the necessary libraries (note that this list may be incomplete or conflict with dependencies in your current environment).
+```bash
+conda install -c conda-forge readline lua openssl r-uuid libcurl Zlib gdal pybind11
+```
+
+### Build
 
 The Python bindings must be built for each target they are used on, and the resulting .so file must either be accessible from the **PYTHONPATH** or be installed into the current Python environment or copied to the same directory as the Python script being run.  For example, type: `export PYTHONPATH=/usr/local/lib` to set the Python path to the default installation directory.
 
@@ -48,7 +58,7 @@ To build the bindings:
 1. `make config-icesat2`
 2. `make icesat2`
 3. `sudo make install-icesat2`
-4. `make config-python`
+4. `make config-python` (for system build) or `make config-python-conda` (for conda build)
 5. `make`
 6. `sudo make install`
 
@@ -61,7 +71,7 @@ import srpybin
 ```
 
 ----------------------------------------------------------------------------
-## III. Reference
+## II. Reference
 
 | Module | Description | Source |
 |:------:|:-----------:|:------:|
@@ -233,7 +243,7 @@ The pyLogger module is used to enable and generate SlideRule log messages.  By d
   * __msg__: the message to be sent
 
 ----------------------------------------------------------------------------
-## IV. Example
+## III. Example
 
 The following example reads three datasets from a GEDI granule residing in the ORNL DAAC's protected S3 bucket in US-West-2.
 
