@@ -58,17 +58,6 @@
 ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
     VctRaster(L, dem_sampling, sampling_radius, zonal_stats, ARCTIC_DEM_EPSG)
 {
-    /*
-     * First get a list of all rasters with point of interest
-     * and only then check if some rasters are already cached.
-     */
-    setCheckCacheFirst(false);
-
-    /*
-     * Multiple threads are used to read strip rasters.
-     * Do not allow them to read directly from index data set.
-     */
-    setAllowIndexDataSetSampling(false);
 }
 
 /*----------------------------------------------------------------------------
@@ -81,9 +70,9 @@ GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling,
 
 
 /*----------------------------------------------------------------------------
- * getRasterIndexFileName
+ * getRisFile
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getRasterIndexFileName(std::string& file, double lon, double lat)
+void ArcticDemStripsRaster::getRisFile(std::string& file, double lon, double lat)
 {
     int ilat = floor(lat);
     int ilon = floor(lon);

@@ -66,20 +66,20 @@ void VctRaster::deinit (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 VctRaster::VctRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats, const int target_crs):
-    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats)
+    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats, target_crs)
 {
-    dstCrs = target_crs;
+    setCheckCacheFirst(false);
 }
 
 /*----------------------------------------------------------------------------
- * openRasterIndexSet
+ * openRis
  *----------------------------------------------------------------------------*/
-bool VctRaster::openRasterIndexSet(double lon, double lat)
+bool VctRaster::openRis(double lon, double lat)
 {
     bool objCreated = false;
     std::string newVctFile;
 
-    getRasterIndexFileName(newVctFile, lon, lat);
+    getRisFile(newVctFile, lon, lat);
 
     /* Is it already open ? */
     if (ris.dset != NULL && ris.fileName == newVctFile)
@@ -128,10 +128,10 @@ bool VctRaster::openRasterIndexSet(double lon, double lat)
         ris.bbox.lat_min = geot[3] + ris.rows * geot[5];
         ris.cellSize     = geot[1];
 
-        ris.radiusInPixels = radius2pixels(ris.cellSize, samplingRadius);
+        int radiusInPixels = radius2pixels(ris.cellSize, samplingRadius);
 
         /* Limit maximum sampling radius */
-        if (ris.radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+        if (radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR,
                                    "Sampling radius is too big: %d: max allowed %d meters",
@@ -180,7 +180,7 @@ bool VctRaster::openRasterIndexSet(double lon, double lat)
         ris.band = NULL;
 
         bzero(ris.invGeot, sizeof(ris.invGeot));
-        ris.rows = ris.cols = ris.cellSize = ris.radiusInPixels = 0;
+        ris.rows = ris.cols = ris.cellSize = 0;
         bzero(&ris.bbox, sizeof(ris.bbox));
     }
 
@@ -189,16 +189,16 @@ bool VctRaster::openRasterIndexSet(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * findTIFfilesWithPoint
+ * findRastersWithPoint
  *----------------------------------------------------------------------------*/
-bool VctRaster::findRasterFilesWithPoint(OGRPoint& p)
+bool VctRaster::findRastersWithPoint(OGRPoint& p)
 {
     bool foundFile = false;
 
     try
     {
-        const int32_t col = static_cast<int32_t>(floor(ris.invGeot[0] + ris.invGeot[1] * p.getX() + ris.invGeot[2] * p.getY()));
-        const int32_t row = static_cast<int32_t>(floor(ris.invGeot[3] + ris.invGeot[4] * p.getX() + ris.invGeot[5] * p.getY()));
+        const int col = static_cast<int>(floor(ris.invGeot[0] + ris.invGeot[1] * p.getX() + ris.invGeot[2] * p.getY()));
+        const int row = static_cast<int>(floor(ris.invGeot[3] + ris.invGeot[4] * p.getX() + ris.invGeot[5] * p.getY()));
 
         tifList->clear();
 #warning IMPLEMENT ME!!!

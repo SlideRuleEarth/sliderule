@@ -246,13 +246,11 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         buildVRT(vrtFile, rasterList);
 
         /* Open vrt. */
-        if (!openRasterIndexSet())
+        if (!openRis())
             throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
         /* Set base class sampling order */
         setCheckCacheFirst(true);
-        setAllowIndexDataSetSampling(true);
-
         rasterCreated = true;
     }
     catch(const RunTimeException& e)
@@ -271,9 +269,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
 
 
 /*----------------------------------------------------------------------------
- * getRasterIndexFileName
+ * getRisFile
  *----------------------------------------------------------------------------*/
-void GeoJsonRaster::getRasterIndexFileName(std::string &file, double lon, double lat)
+void GeoJsonRaster::getRisFile(std::string &file, double lon, double lat)
 {
     std::ignore = lon;
     std::ignore = lat;

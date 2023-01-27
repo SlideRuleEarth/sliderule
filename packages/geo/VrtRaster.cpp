@@ -34,6 +34,8 @@
  ******************************************************************************/
 
 #include "VrtRaster.h"
+#include <vrtdataset.h>
+#include <gdal_utils.h>
 
 
 /******************************************************************************
@@ -68,17 +70,18 @@ void VrtRaster::deinit (void)
 VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
     GeoRaster(L, dem_sampling, sampling_radius, zonal_stats)
 {
+    setCheckCacheFirst(true);
 }
 
 /*----------------------------------------------------------------------------
- * openRasterIndexSet
+ * openRis
  *----------------------------------------------------------------------------*/
-bool VrtRaster::openRasterIndexSet(double lon, double lat)
+bool VrtRaster::openRis(double lon, double lat)
 {
     bool objCreated = false;
     std::string newVrtFile;
 
-    getRasterIndexFileName(newVrtFile, lon, lat);
+    getRisFile(newVrtFile, lon, lat);
 
     /* Is it already open vrt? */
     if (ris.dset != NULL && ris.fileName == newVrtFile)
@@ -127,10 +130,10 @@ bool VrtRaster::openRasterIndexSet(double lon, double lat)
         ris.bbox.lat_min = geot[3] + ris.rows * geot[5];
         ris.cellSize     = geot[1];
 
-        ris.radiusInPixels = radius2pixels(ris.cellSize, samplingRadius);
+        int radiusInPixels = radius2pixels(ris.cellSize, samplingRadius);
 
         /* Limit maximum sampling radius */
-        if (ris.radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+        if (radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR,
                                    "Sampling radius is too big: %d: max allowed %d meters",
@@ -179,7 +182,7 @@ bool VrtRaster::openRasterIndexSet(double lon, double lat)
         ris.band = NULL;
 
         bzero(ris.invGeot, sizeof(ris.invGeot));
-        ris.rows = ris.cols = ris.cellSize = ris.radiusInPixels = 0;
+        ris.rows = ris.cols = ris.cellSize = 0;
         bzero(&ris.bbox, sizeof(ris.bbox));
     }
 
@@ -188,9 +191,9 @@ bool VrtRaster::openRasterIndexSet(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * findTIFfilesWithPoint
+ * findRastersWithPoint
  *----------------------------------------------------------------------------*/
-bool VrtRaster::findRasterFilesWithPoint(OGRPoint& p)
+bool VrtRaster::findRastersWithPoint(OGRPoint& p)
 {
     bool foundFile = false;
 
@@ -236,4 +239,48 @@ bool VrtRaster::findRasterFilesWithPoint(OGRPoint& p)
 
     return foundFile;
 }
+
+/*----------------------------------------------------------------------------
+ * readRisData
+ *----------------------------------------------------------------------------*/
+bool VrtRaster::readRisData(OGRPoint* point, int srcWindowSize, int srcOffset,
+                            void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
+{
+    int  col = static_cast<int>(floor((point->getX() - ris.bbox.lon_min) / ris.cellSize));
+    int  row = static_cast<int>(floor((ris.bbox.lat_max - point->getY()) / ris.cellSize));
+    int _col = col - srcOffset;
+    int _row = row - srcOffset;
+
+    bool validWindow = rasterContainsWindow(_col, _row, ris.cols, ris.rows, srcWindowSize);
+    if (validWindow)
+    {
+        RasterIoWithRetry(ris.band, _col, _row, srcWindowSize, srcWindowSize, data, dstWindowSize, dstWindowSize, args);
+    }
+
+    return validWindow;
+}
+
+/*----------------------------------------------------------------------------
+ * buildVRT
+ *----------------------------------------------------------------------------*/
+void VrtRaster::buildVRT(std::string& vrtFile, List<std::string>& rlist)
+{
+    GDALDataset* vrtDset = NULL;
+    std::vector<const char*> rasters;
+
+    for (int i = 0; i < rlist.length(); i++)
+    {
+        rasters.push_back(rlist[i].c_str());
+    }
+
+    vrtDset = (GDALDataset*) GDALBuildVRT(vrtFile.c_str(), rasters.size(), NULL, rasters.data(), NULL, NULL);
+    CHECKPTR(vrtDset);
+    GDALClose(vrtDset);
+    mlog(DEBUG, "Created %s", vrtFile.c_str());
+}
+
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
 

@@ -59,8 +59,8 @@ class ArcticDemMosaicRaster: public VrtRaster
          *--------------------------------------------------------------------*/
 
                 ArcticDemMosaicRaster (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
-        void    getRasterIndexFileName(std::string& file, double lon=0, double lat=0 );
-        int64_t getRasterDate(std::string &tifFile);
+        void    getRisFile            (std::string& file, double lon=0, double lat=0);
+        int64_t getRasterDate         (std::string &tifFile);
 };
 
 #endif  /* __arcticdem_mosaic_raster__ */
