@@ -250,7 +250,6 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
             throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
         /* Set base class sampling order */
-        setCheckCacheFirst(true);
         rasterCreated = true;
     }
     catch(const RunTimeException& e)

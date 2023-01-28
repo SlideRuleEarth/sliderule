@@ -70,7 +70,6 @@ void VrtRaster::deinit (void)
 VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
     GeoRaster(L, dem_sampling, sampling_radius, zonal_stats)
 {
-    setCheckCacheFirst(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -191,9 +190,9 @@ bool VrtRaster::openRis(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * findRastersWithPoint
+ * findRasters
  *----------------------------------------------------------------------------*/
-bool VrtRaster::findRastersWithPoint(OGRPoint& p)
+bool VrtRaster::findRasters(OGRPoint& p)
 {
     bool foundFile = false;
 
@@ -240,6 +239,54 @@ bool VrtRaster::findRastersWithPoint(OGRPoint& p)
     return foundFile;
 }
 
+/*----------------------------------------------------------------------------
+ * findCachedRaster
+ *----------------------------------------------------------------------------*/
+bool VrtRaster::findCachedRasters(OGRPoint& p)
+{
+    bool foundRaster = false;
+    raster_t *raster = NULL;
+
+    const char *key = rasterDict.first(&raster);
+    while (key != NULL)
+    {
+        assert(raster);
+        if (rasterContainsPoint(raster, p))
+        {
+            raster->enabled = true;
+            raster->point = p;
+            foundRaster = true;
+            break; /* Only one raster with this point in VRT */
+        }
+        key = rasterDict.next(&raster);
+    }
+    return foundRaster;
+}
+
+
+/*----------------------------------------------------------------------------
+ * sampleRasters
+ *----------------------------------------------------------------------------*/
+void VrtRaster::sampleRasters(void)
+{
+    /*
+     * For VRT based rasters (tiles/mosaics) there is only one raster for each POI.
+     */
+    raster_t *raster = NULL;
+    const char *key = rasterDict.first(&raster);
+    int i = 0;
+    while (key != NULL)
+    {
+        assert(raster);
+        if (raster->enabled)
+        {
+            /* Found the only raster with POI */
+            processRaster(raster, this);
+            break;
+        }
+        key = rasterDict.next(&raster);
+    }
+}
 /*----------------------------------------------------------------------------
  * readRisData
  *----------------------------------------------------------------------------*/

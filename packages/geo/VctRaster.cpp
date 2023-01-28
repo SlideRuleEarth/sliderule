@@ -68,7 +68,6 @@ void VctRaster::deinit (void)
 VctRaster::VctRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats, const int target_crs):
     GeoRaster(L, dem_sampling, sampling_radius, zonal_stats, target_crs)
 {
-    setCheckCacheFirst(false);
 }
 
 /*----------------------------------------------------------------------------
@@ -189,9 +188,9 @@ bool VctRaster::openRis(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * findRastersWithPoint
+ * findRasters
  *----------------------------------------------------------------------------*/
-bool VctRaster::findRastersWithPoint(OGRPoint& p)
+bool VctRaster::findRasters(OGRPoint& p)
 {
     bool foundFile = false;
 

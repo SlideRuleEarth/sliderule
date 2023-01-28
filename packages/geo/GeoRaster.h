@@ -192,7 +192,6 @@ class GeoRaster: public LuaObject
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         inline bool    hasZonalStats   (void) { return zonalStats; }
-        inline void    setCheckCacheFirst(bool value) { checkCacheFirst = value; }
         const char*    getUUID         (char* uuid_str);
         virtual       ~GeoRaster       (void);
 
@@ -202,18 +201,23 @@ class GeoRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false, const int target_crs=0);
-        virtual bool    openRis                 (double lon=0, double lat=0) = 0;
-        virtual bool    findRastersWithPoint    (OGRPoint &p) = 0;
-        virtual int64_t getRasterDate           (std::string& tifFile) = 0;
-        bool            rasterContainsWindow    (int col, int row, int maxCol, int maxRow, int windowSize);
+                        GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false, const int target_crs=0);
+        virtual bool    openRis               (double lon=0, double lat=0) = 0;
+        virtual bool    findRasters           (OGRPoint &p) = 0;
+        virtual int64_t getRasterDate         (std::string& tifFile) = 0;
+        bool            rasterContainsWindow  (int col, int row, int maxCol, int maxRow, int windowSize);
+        bool            rasterContainsPoint   (raster_t *raster, OGRPoint &p);
+        bool            risContainsPoint      (OGRPoint &p);
 
-        int             radius2pixels           (double cellSize, int _radius);
-        virtual bool    readRisData             (OGRPoint* point, int srcWindowSize, int srcOffset,
-                                                 void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
+        virtual bool    findCachedRasters     (OGRPoint &p);
+        int             radius2pixels         (double cellSize, int _radius);
+        virtual bool    readRisData           (OGRPoint* point, int srcWindowSize, int srcOffset,
+                                               void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
 
-        void            RasterIoWithRetry       (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
-                                                 void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+        virtual void    sampleRasters         (void);
+        void            processRaster         (raster_t* raster, GeoRaster* obj);
+        void            RasterIoWithRetry     (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
+                                               void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
         /*--------------------------------------------------------------------
          * Data
@@ -223,6 +227,7 @@ class GeoRaster: public LuaObject
         ris_t                 ris;
         uint32_t              samplingRadius;
         GDALRIOResampleAlg    sampleAlg;
+        Dictionary<raster_t*> rasterDict;
 
     private:
 
@@ -233,14 +238,12 @@ class GeoRaster: public LuaObject
         static Mutex factoryMut;
         static Dictionary<factory_t> factories;
 
-        Mutex                 samplingMutex;
-        Dictionary<raster_t*> rasterDict;
-        reader_t*             rasterRreader;
-        uint32_t              readerCount;
+        Mutex        samplingMutex;
+        reader_t*    rasterRreader;
+        uint32_t     readerCount;
 
-        bool                  zonalStats;
-        bool                  checkCacheFirst;
-        int                   targetCrs;
+        bool         zonalStats;
+        int          targetCrs;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -253,21 +256,16 @@ class GeoRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        void    createThreads            (void);
-        void    processRaster            (raster_t* raster, GeoRaster* obj);
-        void    updateCache              (OGRPoint &p);
-        bool    risContainsPoint         (OGRPoint &p);
-        bool    rasterContainsPoint      (raster_t *raster, OGRPoint &p);
-        bool    findCachedRaster         (OGRPoint &p, raster_t **raster);
-        int     sample                   (double lon, double lat);
-        void    sampleRasters            (void);
-        void    invalidateCache          (void);
-        int     getSampledRastersCount   (void);
-        void    clearRis                 (ris_t* iset);
-        void    clearRaster              (raster_t *raster);
-        void    readPixel                (raster_t *raster);
-        void    resamplePixel            (raster_t *raster, GeoRaster *obj);
-        void    computeZonalStats        (raster_t *raster, GeoRaster* obj);
+        void    createThreads           (void);
+        void    updateCache             (OGRPoint &p);
+        int     sample                  (double lon, double lat);
+        void    invalidateCache         (void);
+        int     getSampledRastersCount  (void);
+        void    clearRis                (ris_t* iset);
+        void    clearRaster             (raster_t *raster);
+        void    readPixel               (raster_t *raster);
+        void    resamplePixel           (raster_t *raster, GeoRaster *obj);
+        void    computeZonalStats       (raster_t *raster, GeoRaster* obj);
 };
 
 
