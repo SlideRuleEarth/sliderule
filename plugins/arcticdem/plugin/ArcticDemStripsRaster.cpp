@@ -127,24 +127,21 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
 
             if(!geo->Contains(&p)) continue;
 
-            int i = feature->GetFieldIndex("dem");
-            if (i != -1)
+            const char* demField = "dem";
+            const char *str = feature->GetFieldAsString(demField);
+            if (str)
             {
-                const char* str = feature->GetFieldAsString("dem");
-                if (str)
-                {
-                    std::string fname(str);
-                    std::size_t pos = fname.find(fileToken);
-                    if (pos == std::string::npos)
-                        throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
+                std::string fname(str);
+                std::size_t pos = fname.find(fileToken);
+                if (pos == std::string::npos)
+                    throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
 
-                    fname = vsisPath + fname.substr(pos);
-                    tifList->add(fname);
-                    foundFile = true; /* There may be more than one file.. */
-                    break;
-                }
+                fname = vsisPath + fname.substr(pos);
+                tifList->add(fname);
+                foundFile = true; /* There may be more than one file.. */
 #if 0
                 int year, month, day, hour, minute, second, timeZone;
+                int i = feature->GetFieldIndex(demField);
                 if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
                 {
                     /*
