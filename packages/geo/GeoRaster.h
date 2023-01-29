@@ -85,7 +85,7 @@ class GeoRaster: public LuaObject
         static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
-        static const int   ICESAT2_PHOTON_EPSG = 4326;
+        static const int   DEFAULT_EPSG = 4326;
 
         static const char* NEARESTNEIGHBOUR_ALGO;
         static const char* BILINEAR_ALGO;
@@ -134,17 +134,18 @@ class GeoRaster: public LuaObject
         typedef struct {
             std::string     fileName;
             GDALDataset*    dset;
-            GDALRasterBand* band;
-            double          invGeot[6];
             uint32_t        rows;
             uint32_t        cols;
             double          cellSize;
             bbox_t          bbox;
-
-            OGRCoordinateTransformation *transf;
-            OGRSpatialReference          srcSrs;
-            OGRSpatialReference          trgSrs;
         } ris_t;
+
+
+        typedef struct {
+            OGRCoordinateTransformation *transf;
+            OGRSpatialReference          source;
+            OGRSpatialReference          target;
+        } crs_converter_t;
 
 
         typedef struct {
@@ -152,6 +153,7 @@ class GeoRaster: public LuaObject
             bool            sampled;
             GDALDataset*    dset;
             GDALRasterBand* band;
+            OGRSpatialReference* sref;
             std::string     fileName;
             GDALDataType    dataType;
 
@@ -201,15 +203,18 @@ class GeoRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false, const int target_crs=0);
+                        GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
         virtual bool    openRis               (double lon=0, double lat=0) = 0;
         virtual bool    findRasters           (OGRPoint &p) = 0;
         virtual int64_t getRasterDate         (std::string& tifFile) = 0;
+        virtual bool    transformCRS          (OGRPoint& p) = 0;
         bool            rasterContainsWindow  (int col, int row, int maxCol, int maxRow, int windowSize);
         bool            rasterContainsPoint   (raster_t *raster, OGRPoint &p);
         bool            risContainsPoint      (OGRPoint &p);
+        void            clearRis              (bool close=true);
+        void            clearTransform        (bool close=true);
 
-        virtual bool    findCachedRasters     (OGRPoint &p);
+        virtual bool    findCachedRasters     (OGRPoint &p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
         virtual bool    readRisData           (OGRPoint* point, int srcWindowSize, int srcOffset,
                                                void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
@@ -225,6 +230,7 @@ class GeoRaster: public LuaObject
 
         List<std::string>*    tifList;
         ris_t                 ris;
+        crs_converter_t       crsConverter;
         uint32_t              samplingRadius;
         GDALRIOResampleAlg    sampleAlg;
         Dictionary<raster_t*> rasterDict;
@@ -241,9 +247,7 @@ class GeoRaster: public LuaObject
         Mutex        samplingMutex;
         reader_t*    rasterRreader;
         uint32_t     readerCount;
-
         bool         zonalStats;
-        int          targetCrs;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -261,7 +265,6 @@ class GeoRaster: public LuaObject
         int     sample                  (double lon, double lat);
         void    invalidateCache         (void);
         int     getSampledRastersCount  (void);
-        void    clearRis                (ris_t* iset);
         void    clearRaster             (raster_t *raster);
         void    readPixel               (raster_t *raster);
         void    resamplePixel           (raster_t *raster, GeoRaster *obj);

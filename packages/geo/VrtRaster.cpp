@@ -70,6 +70,8 @@ void VrtRaster::deinit (void)
 VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
     GeoRaster(L, dem_sampling, sampling_radius, zonal_stats)
 {
+    band = NULL;
+    bzero(invGeot, sizeof(invGeot));
 }
 
 /*----------------------------------------------------------------------------
@@ -102,14 +104,14 @@ bool VrtRaster::openRis(double lon, double lat)
 
 
         ris.fileName = newVrtFile;
-        ris.band = ris.dset->GetRasterBand(1);
-        CHECKPTR(ris.band);
+        band = ris.dset->GetRasterBand(1);
+        CHECKPTR(band);
 
         /* Get inverted geo transfer for vrt */
         double geot[6] = {0};
         CPLErr err = GDALGetGeoTransform(ris.dset, geot);
         CHECK_GDALERR(err);
-        if (!GDALInvGeoTransform(geot, ris.invGeot))
+        if (!GDALInvGeoTransform(geot, invGeot))
         {
             CPLError(CE_Failure, CPLE_AppDefined, "Cannot invert geotransform");
             CHECK_GDALERR(CE_Failure);
@@ -139,32 +141,25 @@ bool VrtRaster::openRis(double lon, double lat)
                                    samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(ris.cellSize));
         }
 
-
-        OGRErr ogrerr = ris.srcSrs.importFromEPSG(ICESAT2_PHOTON_EPSG);
-        CHECK_GDALERR(ogrerr);
-        const char *projref = ris.dset->GetProjectionRef();
-        CHECKPTR(projref);
-        mlog(DEBUG, "%s", projref);
-        ogrerr = ris.trgSrs.importFromProj4(projref);
-        CHECK_GDALERR(ogrerr);
-
-        /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-        ris.trgSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-        ris.srcSrs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
         /* Create coordinates transformation */
-
-        /* Get transform for this VRT file */
-        OGRCoordinateTransformation *newTransf = OGRCreateCoordinateTransformation(&ris.srcSrs, &ris.trgSrs);
-        if (newTransf)
+        if (crsConverter.transf == NULL )
         {
-            /* Delete the transform from last vrt file */
-            if (ris.transf) OGRCoordinateTransformation::DestroyCT(ris.transf);
+            OGRErr ogrerr = crsConverter.source.importFromEPSG(DEFAULT_EPSG);
+            CHECK_GDALERR(ogrerr);
+            const char *projref = ris.dset->GetProjectionRef();
+            CHECKPTR(projref);
+            mlog(DEBUG, "%s", projref);
+            ogrerr = crsConverter.target.importFromProj4(projref);
+            CHECK_GDALERR(ogrerr);
 
-            /* Use the new one (they should be the same but just in case they are not...) */
-            ris.transf = newTransf;
+            /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+            crsConverter.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            crsConverter.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+            crsConverter.transf = OGRCreateCoordinateTransformation(&crsConverter.source, &crsConverter.target);
+            if (crsConverter.transf == NULL)
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinate transform");
         }
-        else mlog(ERROR, "Failed to create new transform, reusing transform from previous VRT file.\n");
 
         objCreated = true;
         mlog(DEBUG, "Opened dataSet for %s", newVrtFile.c_str());
@@ -176,18 +171,29 @@ bool VrtRaster::openRis(double lon, double lat)
 
     if (!objCreated && ris.dset)
     {
-        GDALClose((GDALDatasetH)ris.dset);
-        ris.dset = NULL;
-        ris.band = NULL;
-
-        bzero(ris.invGeot, sizeof(ris.invGeot));
-        ris.rows = ris.cols = ris.cellSize = 0;
-        bzero(&ris.bbox, sizeof(ris.bbox));
+        clearRis();
+        clearTransform();
+        bzero(invGeot, sizeof(invGeot));
+        band = NULL;
     }
 
     return objCreated;
 }
 
+
+/*----------------------------------------------------------------------------
+ * transformCrs
+ *----------------------------------------------------------------------------*/
+bool VrtRaster::transformCRS(OGRPoint &p)
+{
+    if (crsConverter.transf &&
+        (p.transform(crsConverter.transf) == OGRERR_NONE))
+    {
+        return true;
+    }
+
+    return false;
+}
 
 /*----------------------------------------------------------------------------
  * findRasters
@@ -198,8 +204,8 @@ bool VrtRaster::findRasters(OGRPoint& p)
 
     try
     {
-        const int32_t col = static_cast<int32_t>(floor(ris.invGeot[0] + ris.invGeot[1] * p.getX() + ris.invGeot[2] * p.getY()));
-        const int32_t row = static_cast<int32_t>(floor(ris.invGeot[3] + ris.invGeot[4] * p.getX() + ris.invGeot[5] * p.getY()));
+        const int32_t col = static_cast<int32_t>(floor(invGeot[0] + invGeot[1] * p.getX() + invGeot[2] * p.getY()));
+        const int32_t row = static_cast<int32_t>(floor(invGeot[3] + invGeot[4] * p.getX() + invGeot[5] * p.getY()));
 
         tifList->clear();
 
@@ -209,7 +215,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
         CPLString str;
         str.Printf("Pixel_%d_%d", col, row);
 
-        const char *mdata = ris.band->GetMetadataItem(str, "LocationInfo");
+        const char *mdata = band->GetMetadataItem(str, "LocationInfo");
         if (mdata == NULL) return false; /* Pixel not in VRT file */
 
         CPLXMLNode *root = CPLParseXMLString(mdata);
@@ -224,8 +230,9 @@ bool VrtRaster::findRasters(OGRPoint& p)
                     char *fname = CPLUnescapeString(psNode->psChild->pszValue, NULL, CPLES_XML);
                     CHECKPTR(fname);
                     tifList->add(fname);
-                    foundFile = true; /* There may be more than one file.. */
                     CPLFree(fname);
+                    foundFile = true;
+                    break; /* There should be only one raster with point of interest in VRT */
                 }
             }
         }
@@ -301,7 +308,7 @@ bool VrtRaster::readRisData(OGRPoint* point, int srcWindowSize, int srcOffset,
     bool validWindow = rasterContainsWindow(_col, _row, ris.cols, ris.rows, srcWindowSize);
     if (validWindow)
     {
-        RasterIoWithRetry(ris.band, _col, _row, srcWindowSize, srcWindowSize, data, dstWindowSize, dstWindowSize, args);
+        RasterIoWithRetry(band, _col, _row, srcWindowSize, srcWindowSize, data, dstWindowSize, dstWindowSize, args);
     }
 
     return validWindow;

@@ -68,21 +68,27 @@ class VctRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
 
-                     VctRaster     (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats, const int target_crs);
-        bool         openRis       (double lon=0, double lat=0);
-        virtual void getRisFile    (std::string& file, double lon=0, double lat=0) = 0;
-        bool         findRasters   (OGRPoint &p);
+                     VctRaster         (lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                        const bool zonal_stats, const int target_crs);
+
+        bool         openRis           (double lon, double lat);
+        bool         transformCRS      (OGRPoint& p);
+        virtual void getRisFile        (std::string& file, double lon, double lat) = 0;
+        virtual void getRisBbox        (bbox_t& bbox, double lon, double lat) = 0;
+        bool         findCachedRasters (OGRPoint &p);
 
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+        OGRLayer *layer;
 
     private:
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+        int targetCrs;
 
         /*--------------------------------------------------------------------
          * Methods

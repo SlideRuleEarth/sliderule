@@ -70,6 +70,7 @@ class VrtRaster: public GeoRaster
 
                      VrtRaster          (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
         bool         openRis            (double lon=0, double lat=0);
+        bool         transformCRS       (OGRPoint& p);
         virtual void getRisFile         (std::string& file, double lon=0, double lat=0) = 0;
         bool         readRisData        (OGRPoint* point, int srcWindowSize, int srcOffset,
                                          void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
@@ -89,6 +90,8 @@ class VrtRaster: public GeoRaster
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+        GDALRasterBand *band;
+        double          invGeot[6];
 
         /*--------------------------------------------------------------------
          * Methods

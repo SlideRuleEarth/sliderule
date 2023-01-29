@@ -227,7 +227,7 @@ GeoRaster::~GeoRaster(void)
 
     /* Close raster index data set and transform */
     if (ris.dset) GDALClose((GDALDatasetH)ris.dset);
-    if (ris.transf) OGRCoordinateTransformation::DestroyCT(ris.transf);
+    if (crsConverter.transf) OGRCoordinateTransformation::DestroyCT(crsConverter.transf);
     if (tifList) delete tifList;
 }
 
@@ -242,18 +242,18 @@ int GeoRaster::sample(double lon, double lat)
     if (ris.dset == NULL)
     {
         if (!openRis(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %lf, lat: %lf", lon, lat);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
     }
 
-    OGRPoint p = {lon, lat};
-    if (p.transform(ris.transf) != OGRERR_NONE)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Transform failed for point: lon: %lf, lat: %lf", lon, lat);
+    OGRPoint p(lon, lat);
+    if (!transformCRS(p))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
 
     /* If point is not in current raster index data set, open new one */
     if (!risContainsPoint(p))
     {
         if (!openRis(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %lf, lat: %lf", lon, lat);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
     }
 
     if (!findCachedRasters(p))
@@ -287,7 +287,7 @@ const char* GeoRaster::getUUID(char *uuid_str)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats, const int target_crs):
+GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     CHECKPTR(dem_sampling);
@@ -315,7 +315,8 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
 
     /* Initialize Class Data Members */
-    clearRis( &ris );
+    clearRis(false);
+    clearTransform(false);
 
     tifList = new List<std::string>;
     tifList->clear();
@@ -323,17 +324,6 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
-    targetCrs = target_crs;
-}
-
-
-/*----------------------------------------------------------------------------
- * findCachedRaster
- *----------------------------------------------------------------------------*/
-bool GeoRaster::findCachedRasters(OGRPoint& p)
-{
-    std::ignore = p;
-    return false;
 }
 
 
@@ -394,17 +384,45 @@ void GeoRaster::processRaster(raster_t* raster, GeoRaster* obj)
             raster->cellSize = geot[1];
             raster->radiusInPixels = radius2pixels(raster->cellSize, samplingRadius);
 
+            /* Limit maximum sampling radius */
+            if (raster->radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR,
+                                       "Sampling radius is too big: %d: max allowed %d meters",
+                                       samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(ris.cellSize));
+            }
+
             /* Get raster block size */
             raster->band = raster->dset->GetRasterBand(1);
             CHECKPTR(raster->band);
             raster->band->GetBlockSize(&raster->xBlockSize, &raster->yBlockSize);
-            // mlog(DEBUG, "Raster xBlockSize: %d, yBlockSize: %d", raster->xBlockSize, raster->yBlockSize);
 
             /* Get raster data type */
             raster->dataType = raster->band->GetRasterDataType();
 
+            /* Get raster spatial reference */
+            raster->sref = const_cast<OGRSpatialReference*>(raster->dset->GetSpatialRef());
+            CHECKPTR(raster->sref);
+
             /* Get raster date as gps time in seconds */
             raster->gpsTime = static_cast<double>(obj->getRasterDate(raster->fileName) / 1000);
+        }
+
+
+        /* Make sure point of interest and raster are in the same CRS */
+        OGRSpatialReference *psref = raster->point.getSpatialReference();
+        CHECKPTR(psref);
+        if (!raster->sref->IsSame(psref))
+        {
+            if (crsConverter.source.IsSame(psref) && !psref->IsProjected())
+            {
+                /* Transform point to raster's CRS */
+                double lon = raster->point.getX();
+                double lat = raster->point.getY();
+                if (raster->point.transform(crsConverter.transf) != OGRERR_NONE)
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
+            }
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "POI and raster CRS are not the same");
         }
 
         /*
@@ -604,7 +622,7 @@ void GeoRaster::readPixel(raster_t *raster)
         /* Done reading, release block lock */
         block->DropLock();
 
-        // mlog(DEBUG, "Value: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
+        // mlog(DEBUG, "Value: %.2lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
         //      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
     }
     catch (const RunTimeException &e)
@@ -649,8 +667,8 @@ bool GeoRaster::rasterContainsWindow(int col, int row, int maxCol, int maxRow, i
 inline bool GeoRaster::rasterContainsPoint(raster_t *raster, OGRPoint& p)
 {
     return (raster && raster->dset &&
-           (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
-           (p.getY() >= raster->bbox.lat_min) && (p.getY() <= raster->bbox.lat_max));
+            (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
+            (p.getY() >= raster->bbox.lat_min) && (p.getY() <= raster->bbox.lat_max));
 }
 
 /*----------------------------------------------------------------------------
@@ -659,8 +677,33 @@ inline bool GeoRaster::rasterContainsPoint(raster_t *raster, OGRPoint& p)
 inline bool GeoRaster::risContainsPoint(OGRPoint& p)
 {
     return (ris.dset &&
-           (p.getX() >= ris.bbox.lon_min) && (p.getX() <= ris.bbox.lon_max) &&
-           (p.getY() >= ris.bbox.lat_min) && (p.getY() <= ris.bbox.lat_max));
+            (p.getX() >= ris.bbox.lon_min) && (p.getX() <= ris.bbox.lon_max) &&
+            (p.getY() >= ris.bbox.lat_min) && (p.getY() <= ris.bbox.lat_max));
+}
+
+/*----------------------------------------------------------------------------
+ * clearRis
+ *----------------------------------------------------------------------------*/
+void GeoRaster::clearRis(bool close)
+{
+    if (close && ris.dset) GDALClose((GDALDatasetH)ris.dset);
+    ris.dset = NULL;
+    ris.fileName.clear();
+    ris.rows = 0;
+    ris.cols = 0;
+    ris.cellSize = 0;
+    bzero(&ris.bbox, sizeof(bbox_t));
+}
+
+/*----------------------------------------------------------------------------
+ * clearTransform
+ *----------------------------------------------------------------------------*/
+void GeoRaster::clearTransform(bool close)
+{
+    if (close && crsConverter.transf) OGRCoordinateTransformation::DestroyCT(crsConverter.transf);
+    crsConverter.transf = NULL;
+    crsConverter.source.Clear();
+    crsConverter.target.Clear();
 }
 
 
@@ -873,24 +916,6 @@ void GeoRaster::computeZonalStats(raster_t *raster, GeoRaster *obj)
 
 
 /*----------------------------------------------------------------------------
- * clearRis
- *----------------------------------------------------------------------------*/
-void GeoRaster::clearRis(ris_t *iset)
-{
-    iset->fileName.clear();
-    iset->dset = NULL;
-    iset->band = NULL;
-    bzero(iset->invGeot, sizeof(iset->invGeot));
-    iset->rows = 0;
-    iset->cols = 0;
-    iset->cellSize = 0;
-    bzero(&iset->bbox, sizeof(bbox_t));
-    iset->transf = NULL;
-    iset->srcSrs.Clear();
-    iset->trgSrs.Clear();
-}
-
-/*----------------------------------------------------------------------------
  * clearRaster
  *----------------------------------------------------------------------------*/
 void GeoRaster::clearRaster(raster_t *raster)
@@ -899,6 +924,7 @@ void GeoRaster::clearRaster(raster_t *raster)
     raster->sampled = false;
     raster->dset = NULL;
     raster->band = NULL;
+    raster->sref = NULL;
     raster->fileName.clear();
     raster->dataType = GDT_Unknown;
 

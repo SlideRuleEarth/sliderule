@@ -143,7 +143,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
 
     if (_cellsize <= 0.0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %lf:", _cellsize);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", _cellsize);
 }
 
 
@@ -203,15 +203,15 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         CHECKPTR(srcSrs);
 
         char *wkt;
-        srcSrs->exportToWkt(&wkt);
-        mlog(DEBUG, "geojson WKT: %s", wkt);
+        ogrerr = srcSrs->exportToWkt(&wkt);
+        CHECK_GDALERR(ogrerr);
         rasterDset->SetProjection(wkt);
         CPLFree(wkt);
 
         int bandInx = 1; /* Band index starts at 1, not 0 */
-        GDALRasterBand *band = rasterDset->GetRasterBand(bandInx);
-        CHECKPTR(band);
-        band->SetNoDataValue(RASTER_NODATA_VALUE);
+        GDALRasterBand *rb = rasterDset->GetRasterBand(bandInx);
+        CHECKPTR(rb);
+        rb->SetNoDataValue(RASTER_NODATA_VALUE);
 
         /*
          * Build params for GDALRasterizeLayers

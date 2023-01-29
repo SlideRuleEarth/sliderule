@@ -74,17 +74,107 @@ GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling,
  *----------------------------------------------------------------------------*/
 void ArcticDemStripsRaster::getRisFile(std::string& file, double lon, double lat)
 {
-    int ilat = floor(lat);
-    int ilon = floor(lon);
-
-    file = "/data/ArcticDem/strips/n" +
-           std::to_string(ilat) +
-           ((ilon < 0) ? "w" : "e") +
-           std::to_string(abs(ilon)) +
+    int _lon = static_cast<int>(floor(lon));
+    int _lat = static_cast<int>(floor(lat));
+    file = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n" +
+           std::to_string(_lat) +
+           ((_lon < 0) ? "w" : "e") +
+           std::to_string(abs(_lon)) +
            ".geojson";
 
     mlog(DEBUG, "Using %s", file.c_str());
 }
+
+
+/*----------------------------------------------------------------------------
+ * getRasterDate
+ *----------------------------------------------------------------------------*/
+void ArcticDemStripsRaster::getRisBbox(bbox_t &bbox, double lon, double lat)
+{
+    /* ArcticDEM scenes are 1x1 degree */
+    const double sceneSize = 1.0;
+
+    lat = floor(lat);
+    lon = floor(lon);
+
+    bbox.lon_min = lon;
+    bbox.lat_min = lat;
+    bbox.lon_max = lon + sceneSize;
+    bbox.lat_max = lat + sceneSize;
+}
+
+
+/*----------------------------------------------------------------------------
+ * findRasters
+ *----------------------------------------------------------------------------*/
+bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
+{
+    bool foundFile = false;
+
+    const std::string fileToken = "arcticdem";
+    const std::string vsisPath  = "/vsis3/pgc-opendata-dems/";
+
+    try
+    {
+        tifList->clear();
+
+        /* For now assume the first layer has the feature we need */
+        layer->ResetReading();
+        while (OGRFeature* feature = layer->GetNextFeature())
+        {
+            OGRGeometry *geo = feature->GetGeometryRef();
+            CHECKPTR(geo);
+
+            if(!geo->Contains(&p)) continue;
+
+            int i = feature->GetFieldIndex("dem");
+            if (i != -1)
+            {
+                const char* str = feature->GetFieldAsString("dem");
+                if (str)
+                {
+                    std::string fname(str);
+                    std::size_t pos = fname.find(fileToken);
+                    if (pos == std::string::npos)
+                        throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
+
+                    fname = vsisPath + fname.substr(pos);
+                    tifList->add(fname);
+                    foundFile = true; /* There may be more than one file.. */
+                    break;
+                }
+#if 0
+                int year, month, day, hour, minute, second, timeZone;
+                if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
+                {
+                    /*
+                     * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
+                     */
+                    if (timeZone == 100)
+                    {
+                        TimeLib::gmt_time_t gmt;
+                        gmt.year = year;
+                        gmt.doy = TimeLib::dayofyear(year, month, day);
+                        gmt.hour = hour;
+                        gmt.minute = minute;
+                        gmt.second = second;
+                        gmt.millisecond = 0;
+                        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
+                    }
+                }
+#endif
+            }
+            OGRFeature::DestroyFeature(feature);
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error finding raster in vector index file: %s", e.what());
+    }
+
+    return foundFile;
+}
+
 
 
 /*----------------------------------------------------------------------------
