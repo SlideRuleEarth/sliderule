@@ -27,20 +27,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
 import time
-import itertools
-import copy
-import json
-import ssl
-import urllib.request
 import datetime
 import logging
 import warnings
 import numpy
 import geopandas
-from shapely.geometry.multipolygon import MultiPolygon
-from shapely.geometry import Polygon
+import cmr
 import sliderule
 
 ###############################################################################
@@ -50,14 +43,6 @@ import sliderule
 # create logger
 logger = logging.getLogger(__name__)
 
-# import cluster support
-clustering_enabled = False
-try:
-    from sklearn.cluster import KMeans
-    clustering_enabled = True
-except:
-    logger.warning("Unable to import sklearn... clustering support disabled")
-
 # profiling times for each major function
 profiles = {}
 
@@ -66,10 +51,6 @@ DEFAULT_ASSET="nsidc-s3"
 
 # default standard data product version
 DEFAULT_ICESAT2_SDP_VERSION='005'
-
-# default maximum number of resources to process in one request
-DEFAULT_MAX_REQUESTED_RESOURCES = 300
-max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
@@ -84,7 +65,6 @@ SRT_OCEAN = 1
 SRT_SEA_ICE = 2
 SRT_LAND_ICE = 3
 SRT_INLAND_WATER = 4
-ALL_ROWS = -1
 MAX_COORDS_IN_POLYGON = 16384
 GT1L = 10
 GT1R = 20
@@ -105,188 +85,6 @@ P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40'
 
 # gps-based epoch for delta times
 ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
-
-###############################################################################
-# NSIDC UTILITIES
-###############################################################################
-# The functions below have been adapted from the NSIDC download script and
-# carry the following notice:
-#
-# Copyright (c) 2020 Regents of the University of Colorado
-# Permission is hereby granted, free of charge, to any person obtaining
-# a copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-
-# WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
-EPSG_MERCATOR = "EPSG:4326"
-
-CMR_URL = 'https://cmr.earthdata.nasa.gov'
-CMR_PAGE_SIZE = 2000
-CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
-                '&sort_key[]=start_date&sort_key[]=producer_granule_id'
-                '&scroll=true&page_size={1}'.format(CMR_URL, CMR_PAGE_SIZE))
-
-def __build_version_query_params(version):
-    desired_pad_length = 3
-    if len(version) > desired_pad_length:
-        raise sliderule.FatalError('Version string too long: "{0}"'.format(version))
-
-    version = str(int(version))  # Strip off any leading zeros
-    query_params = ''
-
-    while len(version) <= desired_pad_length:
-        padded_version = version.zfill(desired_pad_length)
-        query_params += '&version={0}'.format(padded_version)
-        desired_pad_length -= 1
-    return query_params
-
-def __cmr_filter_urls(search_results):
-    """Select only the desired data files from CMR response."""
-    if 'feed' not in search_results or 'entry' not in search_results['feed']:
-        return []
-
-    entries = [e['links']
-               for e in search_results['feed']['entry']
-               if 'links' in e]
-    # Flatten "entries" to a simple list of links
-    links = list(itertools.chain(*entries))
-
-    urls = []
-    unique_filenames = set()
-    for link in links:
-        if 'href' not in link:
-            # Exclude links with nothing to download
-            continue
-        if 'inherited' in link and link['inherited'] is True:
-            # Why are we excluding these links?
-            continue
-        if 'rel' in link and 'data#' not in link['rel']:
-            # Exclude links which are not classified by CMR as "data" or "metadata"
-            continue
-
-        if 'title' in link and 'opendap' in link['title'].lower():
-            # Exclude OPeNDAP links--they are responsible for many duplicates
-            # This is a hack; when the metadata is updated to properly identify
-            # non-datapool links, we should be able to do this in a non-hack way
-            continue
-
-        filename = link['href'].split('/')[-1]
-        if filename in unique_filenames:
-            # Exclude links with duplicate filenames (they would overwrite)
-            continue
-
-        unique_filenames.add(filename)
-
-        if ".h5" in link['href'][-3:]:
-            resource = link['href'].split("/")[-1]
-            urls.append(resource)
-
-    return urls
-
-def __cmr_granule_metadata(search_results):
-    """Get the metadata for CMR returned granules"""
-    # GeoDataFrame with granule metadata
-    granule_metadata = __emptyframe()
-    # return empty dataframe if no CMR entries
-    if 'feed' not in search_results or 'entry' not in search_results['feed']:
-        return granule_metadata
-    # for each CMR entry
-    for e in search_results['feed']['entry']:
-        # columns for dataframe
-        columns = {}
-        # granule title and identifiers
-        columns['title'] = e['title']
-        columns['collection_concept_id'] = e['collection_concept_id']
-        # time start and time end of granule
-        columns['time_start'] = numpy.datetime64(e['time_start'])
-        columns['time_end'] = numpy.datetime64(e['time_end'])
-        columns['time_updated'] = numpy.datetime64(e['updated'])
-        # get the granule size and convert to bits
-        columns['granule_size'] = float(e['granule_size'])*(2.0**20)
-        # Create Pandas DataFrame object
-        # use granule id as index
-        df = geopandas.pd.DataFrame(columns, index=[e['id']])
-        # Generate Geometry Column
-        if 'polygons' in e:
-            polygons = []
-            # for each polygon
-            for poly in e['polygons'][0]:
-                coords = [float(i) for i in poly.split()]
-                polygons.append(Polygon(zip(coords[1::2], coords[::2])))
-            # generate multipolygon from list of polygons
-            geometry = MultiPolygon(polygons)
-        else:
-            geometry, = geopandas.points_from_xy([None], [None])
-        # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
-        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=EPSG_MERCATOR)
-        # append to combined GeoDataFrame and catch warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            granule_metadata = granule_metadata.append(gdf)
-    # return granule metadata
-    # - time start and time end
-    # - time granule was updated
-    # - granule size in bits
-    # - polygons as geodataframe geometry
-    return granule_metadata
-
-def __cmr_search(short_name, version, time_start, time_end, **kwargs):
-    """Perform a scrolling CMR query for files matching input criteria."""
-    kwargs.setdefault('polygon',None)
-    kwargs.setdefault('name_filter',None)
-    kwargs.setdefault('return_metadata',False)
-    # build params
-    params = '&short_name={0}'.format(short_name)
-    params += __build_version_query_params(version)
-    params += '&temporal[]={0},{1}'.format(time_start, time_end)
-    if kwargs['polygon']:
-        params += '&polygon={0}'.format(kwargs['polygon'])
-    if kwargs['name_filter']:
-        params += '&options[producer_granule_id][pattern]=true'
-        params += '&producer_granule_id[]=' + kwargs['name_filter']
-    cmr_query_url = CMR_FILE_URL + params
-    logger.debug('cmr request={0}\n'.format(cmr_query_url))
-
-    cmr_scroll_id = None
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-
-    urls = []
-    # GeoDataFrame with granule metadata
-    metadata = __emptyframe()
-    while True:
-        req = urllib.request.Request(cmr_query_url)
-        if cmr_scroll_id:
-            req.add_header('cmr-scroll-id', cmr_scroll_id)
-        response = urllib.request.urlopen(req, context=ctx)
-        if not cmr_scroll_id:
-            # Python 2 and 3 have different case for the http headers
-            headers = {k.lower(): v for k, v in dict(response.info()).items()}
-            cmr_scroll_id = headers['cmr-scroll-id']
-            hits = int(headers['cmr-hits'])
-        search_page = response.read()
-        search_page = json.loads(search_page.decode('utf-8'))
-        url_scroll_results = __cmr_filter_urls(search_page)
-        if not url_scroll_results:
-            break
-        urls += url_scroll_results
-        # query for granule metadata and polygons
-        if kwargs['return_metadata']:
-            metadata_results = __cmr_granule_metadata(search_page)
-        else:
-            metadata_results = [None for _ in url_scroll_results]
-        # append granule metadata and catch warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            metadata = metadata.append(metadata_results)
-
-    return (urls,metadata)
 
 ###############################################################################
 # LOCAL FUNCTIONS
@@ -337,99 +135,6 @@ def __calcspot(sc_orient, track, pair):
     return 0
 
 #
-#  Get Values from Raw Buffer
-#
-def __get_values(data, dtype, size):
-    """
-    data:   tuple of bytes
-    dtype:  element of codedtype
-    size:   bytes in data
-    """
-
-    raw = bytes(data)
-    datatype = sliderule.basictypes[sliderule.codedtype2str[dtype]]["nptype"]
-    num_elements = int(size / numpy.dtype(datatype).itemsize)
-    slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
-    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
-
-    return values
-
-#
-#  Query Resources from CMR
-#
-def __query_resources(parm, version, **kwargs):
-
-    # Latch Start Time
-    tstart = time.perf_counter()
-
-    # Check Parameters are Valid
-    if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
-        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
-        return []
-
-    # Submission Arguments for CMR
-    kwargs['version'] = version
-    kwargs.setdefault('return_metadata', False)
-
-    # Pull Out Polygon
-    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
-        kwargs['polygon'] = parm["clusters"]
-    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
-        kwargs['polygon'] = parm["poly"]
-
-    # Pull Out Time Period
-    if "t0" in parm:
-        kwargs['time_start'] = parm["t0"]
-    if "t1" in parm:
-        kwargs['time_end'] = parm["t1"]
-
-    # Build Filters
-    name_filter_enabled = False
-    rgt_filter = '????'
-    if "rgt" in parm:
-        rgt_filter = f'{parm["rgt"]}'.zfill(4)
-        name_filter_enabled = True
-    cycle_filter = '??'
-    if "cycle" in parm:
-        cycle_filter = f'{parm["cycle"]}'.zfill(2)
-        name_filter_enabled = True
-    region_filter = '??'
-    if "region" in parm:
-        region_filter = f'{parm["region"]}'.zfill(2)
-        name_filter_enabled = True
-    if name_filter_enabled:
-        kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
-
-    # Make CMR Request
-    if kwargs['return_metadata']:
-        resources,metadata = cmr(**kwargs)
-    else:
-        resources = cmr(**kwargs)
-
-    # Check Resources are Under Limit
-    if(len(resources) > max_requested_resources):
-        raise sliderule.FatalError('Exceeded maximum requested granules: {} (current max is {})\nConsider using icesat2.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
-    else:
-        logger.info("Identified %d resources to process", len(resources))
-
-    # Update Profile
-    profiles[__query_resources.__name__] = time.perf_counter() - tstart
-
-    # Return Resources
-    if kwargs['return_metadata']:
-        return (resources,metadata)
-    else:
-        return resources
-
-#
-#  Create Empty GeoDataFrame
-#
-def __emptyframe(**kwargs):
-    # set default keyword arguments
-    kwargs['crs'] = EPSG_MERCATOR
-    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
-
-#
 #  Dictionary to GeoDataFrame
 #
 def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", **kwargs):
@@ -439,11 +144,11 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
 
     # Set Default Keyword Arguments
     kwargs['index_key'] = "time"
-    kwargs['crs'] = EPSG_MERCATOR
+    kwargs['crs'] = sliderule.EPSG_MERCATOR
 
     # Check Empty Columns
     if len(columns) <= 0:
-        return __emptyframe(**kwargs)
+        return sliderule.__emptyframe(**kwargs)
 
     # Generate Time Column
     delta_time = (columns[delta_time_key]*1e9).astype('timedelta64[ns]')
@@ -478,43 +183,16 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
     return gdf
 
 #
-# GeoDataFrame to Polygon
-#
-def __gdf2poly(gdf):
-
-    # latch start time
-    tstart = time.perf_counter()
-
-    # pull out coordinates
-    hull = gdf.unary_union.convex_hull
-    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
-
-    # determine winding of polygon #
-    #              (x2               -    x1)             *    (y2               +    y1)
-    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
-    if wind > 0:
-        # reverse direction (make counter-clockwise) #
-        ccw_poly = []
-        for i in range(len(polygon), 0, -1):
-            ccw_poly.append(polygon[i - 1])
-        # replace region with counter-clockwise version #
-        polygon = ccw_poly
-
-    # Update Profile
-    profiles[__gdf2poly.__name__] = time.perf_counter() - tstart
-
-    # return polygon
-    return polygon
-
-#
 # Flatten Batches
 #
 def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
+
+    # Latch Start Time
     tstart_flatten = time.perf_counter()
 
     # Check for Output Options
     if "output" in parm:
-        gdf = __procoutputfile(parm, "lon", "lat")
+        gdf = sliderule.__procoutputfile(parm)
         profiles["flatten"] = time.perf_counter() - tstart_flatten
         return gdf
 
@@ -534,7 +212,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                 if field_name not in field_dictionary:
                     field_dictionary[field_name] = {'extent_id': [], field_name: []}
                 # Parse Ancillary Data
-                data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
+                data = sliderule.__get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                 # Add Left Pair Track Entry
                 field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
                 field_dictionary[field_name][field_name] += data[LEFT_PAIR],
@@ -621,15 +299,73 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
     return gdf
 
 #
-# Process Output File
+#  Query Resources from CMR
 #
-def __procoutputfile(parm, lon_key, lat_key):
-    if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
-        # Return GeoParquet File as GeoDataFrame
-        return geopandas.read_parquet(parm["output"]["path"])
+def __query_resources(parm, version, **kwargs):
+
+    # Latch Start Time
+    tstart = time.perf_counter()
+
+    # Check Parameters are Valid
+    if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
+        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
+        return []
+
+    # Submission Arguments for CMR
+    kwargs['short_name'] = 'ATL03'
+    kwargs['version'] = version
+    kwargs.setdefault('return_metadata', False)
+
+    # Pull Out Polygon
+    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
+        kwargs['polygon'] = parm["clusters"]
+    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
+        kwargs['polygon'] = parm["poly"]
+
+    # Pull Out Time Period
+    if "t0" in parm:
+        kwargs['time_start'] = parm["t0"]
+    if "t1" in parm:
+        kwargs['time_end'] = parm["t1"]
+
+    # Build Filters
+    name_filter_enabled = False
+    rgt_filter = '????'
+    if "rgt" in parm:
+        rgt_filter = f'{parm["rgt"]}'.zfill(4)
+        name_filter_enabled = True
+    cycle_filter = '??'
+    if "cycle" in parm:
+        cycle_filter = f'{parm["cycle"]}'.zfill(2)
+        name_filter_enabled = True
+    region_filter = '??'
+    if "region" in parm:
+        region_filter = f'{parm["region"]}'.zfill(2)
+        name_filter_enabled = True
+    if name_filter_enabled:
+        kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
+
+    # Make CMR Request
+    if kwargs['return_metadata']:
+        resources,metadata = cmr.cmr(**kwargs)
     else:
-        # Return Parquet Filename
-        return parm["output"]["path"]
+        resources = cmr.cmr(**kwargs)
+
+    # Check Resources are Under Limit
+    if(len(resources) > cmr.max_requested_resources):
+        raise sliderule.FatalError('Exceeded maximum requested granules: {} (current max is {})\nConsider using cmr.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
+    else:
+        logger.info("Identified %d resources to process", len(resources))
+
+    # Update Profile
+    profiles[__query_resources.__name__] = time.perf_counter() - tstart
+
+    # Return Resources
+    if kwargs['return_metadata']:
+        return (resources,metadata)
+    else:
+        return resources
+
 
 ###############################################################################
 # APIs
@@ -638,182 +374,33 @@ def __procoutputfile(parm, lon_key, lat_key):
 #
 #  Initialize
 #
-def init (url, verbose=False, max_resources=DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
+def init (url=sliderule.service_url, verbose=False, max_resources=cmr.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
     '''
-    Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
-    This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
+    Initializes the Python client for use with SlideRule and should be called before other ICESat-2 API calls.
+    This function is a wrapper for the `sliderule.init(...) function </rtds/api_reference/sliderule.html#init>`_.
 
     Parameters
     ----------
-        url :           str
-                        the IP address or hostname of the SlideRule service (slidereearth.io by default)
-        verbose :       bool
-                        whether or not user level log messages received from SlideRule generate a Python log message
-        max_resources : int
-                        the maximum number of resources that are allowed to be processed in a single request
-        loglevel :      int
-                        minimum severity of log message to output
-        organization:   str
-                        SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
+        max_resources:  int
+                        maximum number of H5 granules to process in the request
 
     Examples
     --------
         >>> from sliderule import icesat2
-        >>> icesat2.init("my-sliderule-service.my-company.com", True)
+        >>> icesat2.init()
     '''
-    if verbose:
-        loglevel = logging.INFO
-    logging.basicConfig(level=loglevel)
-    sliderule.set_verbose(verbose)
-    sliderule.set_url(url) # configure domain
-    sliderule.authenticate(organization) # configure credentials (if any) for organization
-    sliderule.scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
-    sliderule.check_version(plugins=['icesat2']) # verify compatibility between client and server versions
-    set_max_resources(max_resources) # set maximum number of resources allowed per request
-
-#
-#  Set Maximum Resources
-#
-def set_max_resources (max_resources):
-    '''
-    Sets the maximum allowed number of resources to be processed in one request.  This is mainly provided as a sanity check for the user.
-
-    Parameters
-    ----------
-        max_resources : int
-                        the maximum number of resources that are allowed to be processed in a single request
-
-    Examples
-    --------
-        >>> from sliderule import icesat2
-        >>> icesat2.set_max_resources(1000)
-    '''
-    global max_requested_resources
-    max_requested_resources = max_resources
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, plugins=['icesat2'])
+    cmr.set_max_resources(max_resources) # set maximum number of resources allowed per request
 
 #
 #  Common Metadata Repository
 #
-def cmr(**kwargs):
+def cmr(version=DEFAULT_ICESAT2_SDP_VERSION, short_name='ATL03', **kwargs):
     '''
-    Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters
-
-    Parameters
-    ----------
-        polygon:    list
-                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/ICESat-2.html#id1>`_), or a list of such lists when the region includes more than one polygon
-        time_start: str
-                    starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
-        time_end:   str
-                    ending time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
-        version:    str
-                    dataset version as found in the `NASA CMR Directory <https://cmr.earthdata.nasa.gov/search/site/collections/directory/eosdis>`_
-        short_name: str
-                    dataset short name as defined in the `NASA CMR Directory <https://cmr.earthdata.nasa.gov/search/site/collections/directory/eosdis>`_
-
-    Returns
-    -------
-    list
-        files (granules) for the dataset fitting the spatial and temporal parameters
-
-    Examples
-    --------
-        >>> from sliderule import icesat2
-        >>> region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
-        ...            {"lon": -107.7677425431139, "lat": 38.90611184543033},
-        ...            {"lon": -107.7818591266989, "lat": 39.26613714985466},
-        ...            {"lon": -108.3605610678553, "lat": 39.25086131372244},
-        ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
-        >>> granules = icesat2.cmr(polygon=region)
-        >>> granules
-        ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', ... 'ATL03_20201111102237_07370902_003_01.h5']
+    Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters.
+    Wrapper for the `cmr.cmr(...) function </rtd/api_reference/cmr.html#cmr>`_.
     '''
-    # set default polygon
-    kwargs.setdefault('polygon', None)
-    # set default start time to start of ICESat-2 mission
-    kwargs.setdefault('time_start', '2018-10-13T00:00:00Z')
-    # set default stop time to current time
-    kwargs.setdefault('time_end', datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
-    # set default version and product short name
-    kwargs.setdefault('version', DEFAULT_ICESAT2_SDP_VERSION)
-    kwargs.setdefault('short_name','ATL03')
-    # return metadata for each requested granule
-    kwargs.setdefault('return_metadata', False)
-    # set default name filter
-    kwargs.setdefault('name_filter', None)
-
-    # return value
-    resources = {} # [<url>] = <polygon>
-
-    # create list of polygons
-    polygons = [None]
-    if kwargs['polygon'] and len(kwargs['polygon']) > 0:
-        if type(kwargs['polygon'][0]) == dict:
-            polygons = [copy.deepcopy(kwargs['polygon'])]
-        elif type(kwargs['polygon'][0] == list):
-            polygons = copy.deepcopy(kwargs['polygon'])
-
-    # iterate through each polygon (or none if none supplied)
-    for polygon in polygons:
-        urls = []
-        metadata = __emptyframe()
-
-        # issue CMR request
-        for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
-
-            # convert polygon list into string
-            polystr = None
-            if polygon:
-                flatpoly = []
-                for p in polygon:
-                    flatpoly.append(p["lon"])
-                    flatpoly.append(p["lat"])
-                polystr = str(flatpoly)[1:-1]
-                polystr = polystr.replace(" ", "") # remove all spaces as this will be embedded in a url
-
-            # call into NSIDC routines to make CMR request
-            try:
-                urls,metadata = __cmr_search(kwargs['short_name'],
-                                            kwargs['version'],
-                                            kwargs['time_start'],
-                                            kwargs['time_end'],
-                                            polygon=polystr,
-                                            return_metadata=kwargs['return_metadata'],
-                                            name_filter=kwargs['name_filter'])
-                break # exit loop because cmr search was successful
-            except urllib.error.HTTPError as e:
-                logger.error('HTTP Request Error: {}'.format(e.reason))
-            except RuntimeError as e:
-                logger.error("Runtime Error:", e)
-
-            # simplify polygon
-            if polygon and tolerance:
-                raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
-                shape = MultiPolygon(*raw_multi_polygon)
-                buffered_shape = shape.buffer(tolerance)
-                simplified_shape = buffered_shape.simplify(tolerance)
-                simplified_coords = list(simplified_shape.exterior.coords)
-                logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
-                region = []
-                for coord in simplified_coords:
-                    point = {"lon": coord[0], "lat": coord[1]}
-                    region.insert(0,point)
-                polygon = region
-            else:
-                break # exit here because nothing can be done
-
-        # populate resources
-        for i,url, in enumerate(urls):
-            resources[url] = metadata.iloc[i]
-
-    # build return lists
-    url_list = list(resources.keys())
-    meta_list = list(resources.values())
-
-    if kwargs['return_metadata']:
-        return (url_list,meta_list)
-    else:
-        return url_list
+    return cmr.cmr(polygon=kwargs['polygon'], time_start=kwargs['time_start'], time_end=kwargs['time_end'], version=version, short_name=short_name)
 
 #
 #  ATL06
@@ -925,7 +512,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return __emptyframe()
+        return sliderule.__emptyframe()
 
 #
 #  Subsetted ATL03
@@ -1005,7 +592,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         # Check for Output Options
         if "output" in parm:
             profiles[atl03sp.__name__] = time.perf_counter() - tstart
-            return __procoutputfile(parm, "longitude", "latitude")
+            return sliderule.__procoutputfile(parm)
         else: # Native Output
             # Flatten Responses
             tstart_flatten = time.perf_counter()
@@ -1035,7 +622,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         if extent_id not in extent_dictionary:
                             extent_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
+                        data = sliderule.__get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         extent_dictionary[extent_id][field_name] = data
                     elif 'phrec' == rsp['__rectype']:
                         # Get Field Type
@@ -1046,7 +633,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         if extent_id not in photon_dictionary:
                             photon_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = __get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
+                        data = sliderule.__get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
                         photon_dictionary[extent_id][field_name] = data
                 # Build Elevation Columns
                 if num_photons > 0:
@@ -1133,7 +720,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         logger.critical(e)
 
     # Error or No Data
-    return __emptyframe()
+    return sliderule.__emptyframe()
 
 #
 #  ATL08
@@ -1221,312 +808,54 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return __emptyframe()
+        return sliderule.__emptyframe()
 
 #
 #  H5
 #
 def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
     '''
-    Reads a dataset from an HDF5 file and returns the values of the dataset in a list
-
-    This function provides an easy way for locally run scripts to get direct access to HDF5 data stored in a cloud environment.
-    But it should be noted that this method is not the most efficient way to access remote H5 data, as the data is accessed one dataset at a time.
-    The ``h5p`` api is the preferred solution for reading multiple datasets.
-
-    One of the difficulties in reading HDF5 data directly from a Python script is converting the format of the data as it is stored in HDF5 to a data
-    format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the
-    returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.
-
-    The data type is supplied as a ``sliderule.datatypes`` enumeration:
-
-    - ``sliderule.datatypes["TEXT"]``: return the data as a string of unconverted bytes
-    - ``sliderule.datatypes["INTEGER"]``: return the data as an array of integers
-    - ``sliderule.datatypes["REAL"]``: return the data as an array of double precision floating point numbers
-    - ``sliderule.datatypes["DYNAMIC"]``: return the data in the numpy data type that is the closest match to the data as it is stored in the HDF5 file
-
-    Parameters
-    ----------
-        dataset:    str
-                    full path to dataset variable (e.g. ``/gt1r/geolocation/segment_ph_cnt``)
-        resource:   str
-                    HDF5 filename
-        asset:      str
-                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
-        datatype:   int
-                    the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
-        col:        int
-                    the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned.
-        startrow:   int
-                    the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
-        numrows:    int
-                    the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
-
-    Returns
-    -------
-    numpy array
-        dataset values
-
-    Examples
-    --------
-        >>> segments    = icesat2.h5("/gt1r/land_ice_segments/segment_id",  resource, asset)
-        >>> heights     = icesat2.h5("/gt1r/land_ice_segments/h_li",        resource, asset)
-        >>> latitudes   = icesat2.h5("/gt1r/land_ice_segments/latitude",    resource, asset)
-        >>> longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
-        >>> df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
+    DEPRECATED - use h5.h5(...) instead
     '''
-    tstart = time.perf_counter()
-    datasets = [ { "dataset": dataset, "datatype": datatype, "col": col, "startrow": startrow, "numrows": numrows } ]
-    values = h5p(datasets, resource, asset=asset)
-    if len(values) > 0:
-        profiles[h5.__name__] = time.perf_counter() - tstart
-        return values[dataset]
-    else:
-        return numpy.empty(0)
+    warnings.warn('icesat2.{} is deprecated, please use h5.{} instead'.format(h5.__name__, h5.__name__), DeprecationWarning, stacklevel=2)
+    return h5.h5(dataset, resource, asset, datatype, col, startrow, numrows)
 
 #
 #  Parallel H5
 #
 def h5p (datasets, resource, asset=DEFAULT_ASSET):
     '''
-    Reads a list of datasets from an HDF5 file and returns the values of the dataset in a dictionary of lists.
-
-    This function is considerably faster than the ``icesat2.h5`` function in that it not only reads the datasets in
-    parallel on the server side, but also shares a file context between the reads so that portions of the file that
-    need to be read multiple times do not result in multiple requests to S3.
-
-    For a full discussion of the data type conversion options, see `h5 </rtd/api_reference/icesat2.html#h5>`_.
-
-    Parameters
-    ----------
-        datasets:   dict
-                    list of full paths to dataset variable (e.g. ``/gt1r/geolocation/segment_ph_cnt``); see below for additional parameters that can be added to each dataset
-        resource:   str
-                    HDF5 filename
-        asset:      str
-                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
-
-    Returns
-    -------
-    dict
-        numpy arrays of dataset values, where the keys are the dataset names
-
-        The `datasets` dictionary can optionally contain the following elements per entry:
-
-        * "valtype" (int): the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
-        * "col" (int): the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned.
-        * "startrow" (int): the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
-        * "numrows" (int): the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
-
-    Examples
-    --------
-        >>> from sliderule import icesat2
-        >>> icesat2.init(["127.0.0.1"], False)
-        >>> datasets = [
-        ...         {"dataset": "/gt1l/land_ice_segments/h_li", "numrows": 5},
-        ...         {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},
-        ...         {"dataset": "/gt2l/land_ice_segments/h_li", "numrows": 5},
-        ...         {"dataset": "/gt2r/land_ice_segments/h_li", "numrows": 5},
-        ...         {"dataset": "/gt3l/land_ice_segments/h_li", "numrows": 5},
-        ...         {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5}
-        ...     ]
-        >>> rsps = icesat2.h5p(datasets, "ATL06_20181019065445_03150111_003_01.h5", "atlas-local")
-        >>> print(rsps)
-        {'/gt2r/land_ice_segments/h_li': array([45.3146427 , 45.27640582, 45.23608027, 45.21131015, 45.15692304]),
-         '/gt2l/land_ice_segments/h_li': array([45.35118977, 45.33535027, 45.27195617, 45.21816889, 45.18534204]),
-         '/gt1l/land_ice_segments/h_li': array([45.68811156, 45.71368944, 45.74234326, 45.74614113, 45.79866465]),
-         '/gt3l/land_ice_segments/h_li': array([45.29602321, 45.34764226, 45.31430979, 45.31471701, 45.30034622]),
-         '/gt1r/land_ice_segments/h_li': array([45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948]),
-         '/gt3r/land_ice_segments/h_li': array([45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806])}
+    DEPRECATED - use h5.h5p(...) instead
     '''
-    # Latch Start Time
-    tstart = time.perf_counter()
-
-    # Baseline Request
-    rqst = {
-        "asset" : asset,
-        "resource": resource,
-        "datasets": datasets,
-    }
-
-    # Read H5 File
-    try:
-        rsps = sliderule.source("h5p", rqst, stream=True)
-    except RuntimeError as e:
-        logger.critical(e)
-        rsps = []
-
-    # Build Record Data
-    results = {}
-    for result in rsps:
-        results[result["dataset"]] = __get_values(result["data"], result["datatype"], result["size"])
-
-    # Update Profiles
-    profiles[h5p.__name__] = time.perf_counter() - tstart
-
-    # Return Results
-    return results
+    warnings.warn('icesat2.{} is deprecated, please use h5.{} instead'.format(h5p.__name__, h5p.__name__), DeprecationWarning, stacklevel=2)
+    return h5.h5p(datasets, resource, asset)
 
 #
 # Format Region Specification
 #
 def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     '''
-    Convert a GeoJSON representation of a set of geospatial regions into a list of lat,lon coordinates and raster image recognized by SlideRule
-
-    Parameters
-    ----------
-        filename:   str
-                    file name of GeoJSON formatted regions of interest, file **must** have name with the .geojson suffix
-                    file name of ESRI Shapefile formatted regions of interest, file **must** have name with the .shp suffix
-        tolerance:  float
-                    tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
-        cellsize:   float
-                    size of pixel in degrees used to create the raster image of the polygon
-        n_clusters: int
-                    number of clusters of polygons to create when breaking up the request to CMR
-
-    Returns
-    -------
-    dict
-        a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule.
-
-        region = {"poly": [{"lat": <lat1>, "lon": <lon1>, ... }], "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...], "raster": {"data": <geojson file as string>, "length": <length of geojson file>, "cellsize": <parameter cellsize>}}
-
-    Examples
-    --------
-        >>> from sliderule import icesat2
-        >>> # Region of Interest #
-        >>> region_filename = sys.argv[1]
-        >>> region = icesat2.toregion(region_filename)
-        >>> # Configure SlideRule #
-        >>> icesat2.init("slideruleearth.io", False)
-        >>> # Build ATL06 Request #
-        >>> parms = {
-        ...     "poly": region["poly"],
-        ...     "srt": icesat2.SRT_LAND,
-        ...     "cnf": icesat2.CNF_SURFACE_HIGH,
-        ...     "ats": 10.0,
-        ...     "cnt": 10,
-        ...     "len": 40.0,
-        ...     "res": 20.0,
-        ...     "maxi": 1
-        ... }
-        >>> # Get ATL06 Elevations
-        >>> atl06 = icesat2.atl06p(parms)
+    DEPRECATED - use sliderule.toregion(...) instead
     '''
-
-    tstart = time.perf_counter()
-    tempfile = "temp.geojson"
-
-    if isinstance(source, geopandas.GeoDataFrame):
-        # user provided GeoDataFrame instead of a file
-        gdf = source
-        # Convert to geojson file
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tempfile)
-
-    elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
-        # create lat/lon lists
-        if len(source) == 4: # bounding box
-            lons = [source[0], source[2], source[2], source[0], source[0]]
-            lats = [source[1], source[1], source[3], source[3], source[1]]
-        elif len(source) > 4: # polygon list
-            lons = [source[i] for i in range(1,len(source),2)]
-            lats = [source[i] for i in range(0,len(source),2)]
-
-        # create geodataframe
-        p = Polygon([point for point in zip(lons, lats)])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_MERCATOR)
-
-        # Convert to geojson file
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tempfile)
-
-    elif isinstance(source, str) and (source.find(".shp") > 1):
-        # create geodataframe
-        gdf = geopandas.read_file(source)
-        # Convert to geojson file
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tempfile)
-
-    elif isinstance(source, str) and (source.find(".geojson") > 1):
-        # create geodataframe
-        gdf = geopandas.read_file(source)
-        with open(source, mode='rt') as file:
-            datafile = file.read()
-
-    else:
-        raise sliderule.FatalError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
-
-
-    # If user provided raster we don't have gdf, geopandas cannot easily convert it
-    polygon = clusters = None
-    if gdf is not None:
-        # simplify polygon
-        if(tolerance > 0.0):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                gdf = gdf.buffer(tolerance)
-                gdf = gdf.simplify(tolerance)
-
-        # generate polygon
-        polygon = __gdf2poly(gdf)
-
-        # generate clusters
-        clusters = []
-        if n_clusters > 1:
-            if clustering_enabled:
-                # pull out centroids of each geometry object
-                if "CenLon" in gdf and "CenLat" in gdf:
-                    X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
-                else:
-                    s = gdf.centroid
-                    X = numpy.column_stack((s.x, s.y))
-                # run k means clustering algorithm against polygons in gdf
-                kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
-                y_kmeans = kmeans.fit_predict(X)
-                k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
-                gdf = gdf.join(k)
-                # build polygon for each cluster
-                for n in range(n_clusters):
-                    c_gdf = gdf[gdf["cluster"] == n]
-                    c_poly = __gdf2poly(c_gdf)
-                    clusters.append(c_poly)
-            else:
-                raise sliderule.FatalError("Clustering support not enabled; unable to import sklearn package")
-
-    # update timing profiles
-    profiles[toregion.__name__] = time.perf_counter() - tstart
-
-    # return region
-    return {
-        "gdf": gdf,
-        "poly": polygon, # convex hull of polygons
-        "clusters": clusters, # list of polygon clusters for cmr request
-        "raster": {
-            "data": datafile, # geojson file
-            "length": len(datafile), # geojson file length
-            "cellsize": cellsize  # untis are in crs/projection
-        }
-    }
+    warnings.warn('icesat2.{} is deprecated, please use sliderule.{} instead'.format(toregion.__name__, toregion.__name__), DeprecationWarning, stacklevel=2)
+    return sliderule.toregion(source, tolerance, cellsize, n_clusters)
 
 #
 # Get Version
 #
 def get_version ():
     '''
-    Get the version information for the running servers and Python client
-
-    Returns
-    -------
-    dict
-        dictionary of version information
+    DEPRECATED - use sliderule.get_version() instead
     '''
+    warnings.warn('icesat2.{} is deprecated, please use sliderule.{} instead'.format(get_version.__name__, get_version.__name__), DeprecationWarning, stacklevel=2)
     return sliderule.get_version()
+
+#
+#  Set Maximum Resources
+#
+def set_max_resources (max_resources):
+    '''
+    DEPRECATED - use cmr.set_max_resources(...) instead
+    '''
+    warnings.warn('icesat2.{} is deprecated, please use cmr.{} instead'.format(set_max_resources.__name__, set_max_resources.__name__), DeprecationWarning, stacklevel=2)
+    return cmr.set_max_resources(max_resources)

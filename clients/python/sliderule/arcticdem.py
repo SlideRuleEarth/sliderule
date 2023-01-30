@@ -63,7 +63,7 @@ def elevation (coordinate, asset=DEFAULT_ASSET):
         >>> from sliderule import arcticdem
         >>> arcticdem.elevation([23.14333, 70.3211])
     '''
-    return elevations([coordinate])
+    return elevations([coordinate], asset)
 
 #
 #  Get Elevations

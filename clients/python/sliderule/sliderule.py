@@ -35,13 +35,19 @@ import struct
 import ctypes
 import time
 import logging
+import warnings
 import numpy
+import geopandas
+from shapely.geometry import Polygon
 from datetime import datetime, timedelta
 from sliderule import version
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
+
+# WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
+EPSG_MERCATOR = "EPSG:4326"
 
 PUBLIC_URL = "slideruleearth.io"
 PUBLIC_ORG = "sliderule"
@@ -56,11 +62,20 @@ ps_refresh_token = None
 ps_access_token = None
 ps_token_exp = None
 
+MAX_PS_CLUSTER_WAIT_SECS = 600
+
 verbose = False
 
 request_timeout = (10, 60) # (connection, read) in seconds
 
 logger = logging.getLogger(__name__)
+
+clustering_enabled = False
+try:
+    from sklearn.cluster import KMeans
+    clustering_enabled = True
+except:
+    logger.warning("Unable to import sklearn... clustering support disabled")
 
 recdef_table = {}
 
@@ -122,8 +137,6 @@ codedtype2str = {
     11: "TIME8",
     12: "STRING"
 }
-
-MAX_PS_CLUSTER_WAIT_SECS = 600
 
 ###############################################################################
 # CLIENT EXCEPTIONS
@@ -357,6 +370,72 @@ def __build_auth_header():
         headers = {'Authorization': 'Bearer ' + ps_access_token}
     return headers
 
+#
+# GeoDataFrame to Polygon
+#
+def __gdf2poly(gdf):
+
+    # latch start time
+    tstart = time.perf_counter()
+
+    # pull out coordinates
+    hull = gdf.unary_union.convex_hull
+    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
+
+    # determine winding of polygon #
+    #              (x2               -    x1)             *    (y2               +    y1)
+    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
+    if wind > 0:
+        # reverse direction (make counter-clockwise) #
+        ccw_poly = []
+        for i in range(len(polygon), 0, -1):
+            ccw_poly.append(polygon[i - 1])
+        # replace region with counter-clockwise version #
+        polygon = ccw_poly
+
+    # Update Profile
+    profiles[__gdf2poly.__name__] = time.perf_counter() - tstart
+
+    # return polygon
+    return polygon
+
+#
+#  Create Empty GeoDataFrame
+#
+def __emptyframe(**kwargs):
+    # set default keyword arguments
+    kwargs['crs'] = EPSG_MERCATOR
+    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
+
+#
+# Process Output File
+#
+def __procoutputfile(parm):
+    if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
+        # Return GeoParquet File as GeoDataFrame
+        return geopandas.read_parquet(parm["output"]["path"])
+    else:
+        # Return Parquet Filename
+        return parm["output"]["path"]
+
+#
+#  Get Values from Raw Buffer
+#
+def __get_values(data, dtype, size):
+    """
+    data:   tuple of bytes
+    dtype:  element of codedtype
+    size:   bytes in data
+    """
+
+    raw = bytes(data)
+    datatype = basictypes[codedtype2str[dtype]]["nptype"]
+    num_elements = int(size / numpy.dtype(datatype).itemsize)
+    slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
+    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
+
+    return values
+
 
 ###############################################################################
 # Default Record Processing
@@ -406,9 +485,45 @@ def __arrowrec(rec):
 #
 __callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.meta': __arrowrec, 'arrowrec.data': __arrowrec }
 
+
 ###############################################################################
 # APIs
 ###############################################################################
+
+#
+#  Initialize
+#
+def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organization=service_org, desired_nodes=None, time_to_live=60, plugins=[]):
+    '''
+    Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
+    This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
+
+    Parameters
+    ----------
+        url :           str
+                        the IP address or hostname of the SlideRule service (slidereearth.io by default)
+        verbose :       bool
+                        whether or not user level log messages received from SlideRule generate a Python log message
+        loglevel :      int
+                        minimum severity of log message to output
+        organization:   str
+                        SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
+        plugins:        list
+                        names of the plugins that need to be available on the server
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.init()
+    '''
+    if verbose:
+        loglevel = logging.INFO
+    logging.basicConfig(level=loglevel)
+    set_verbose(verbose)
+    set_url(url) # configure domain
+    authenticate(organization) # configure credentials (if any) for organization
+    scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
+    check_version(plugins=plugins) # verify compatibility between client and server versions
 
 #
 #  source
@@ -896,3 +1011,156 @@ def check_version (plugins=[]):
                 status = False
     # return if version check is successful
     return status
+
+#
+# Format Region Specification
+#
+def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
+    '''
+    Convert a GeoJSON/Shapefile/GeoDataFrame/list representation of a set of geospatial regions into a list of lat,lon coordinates and raster image recognized by SlideRule
+
+    Parameters
+    ----------
+        source:     str
+                    file name of GeoJSON formatted regions of interest, file **must** have name with the .geojson suffix
+                    file name of ESRI Shapefile formatted regions of interest, file **must** have name with the .shp suffix
+                    GeoDataFrame of region of interest
+                    list of longitude,latitude pairs forming a polygon (e.g. [lat1, lon1, lat2, lon2, lat3, lon3, lat1, lon1])
+                    list of longitude,latitude pairs forming a bounding box (e.g. [lat1, lon1, lat2, lon2])
+        tolerance:  float
+                    tolerance used to simplify complex shapes so that the number of points is less than the limit (a tolerance of 0.001 typically works for most complex shapes)
+        cellsize:   float
+                    size of pixel in degrees used to create the raster image of the polygon
+        n_clusters: int
+                    number of clusters of polygons to create when breaking up the request to CMR
+
+    Returns
+    -------
+    dict
+        a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule.
+
+        region = {"poly": [{"lat": <lat1>, "lon": <lon1>, ... }], "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...], "raster": {"data": <geojson file as string>, "length": <length of geojson file>, "cellsize": <parameter cellsize>}}
+
+    Examples
+    --------
+        >>> from sliderule import icesat2
+        >>> # Region of Interest #
+        >>> region_filename = sys.argv[1]
+        >>> region = sliderule.toregion(region_filename)
+        >>> # Configure SlideRule #
+        >>> icesat2.init("slideruleearth.io", False)
+        >>> # Build ATL06 Request #
+        >>> parms = {
+        ...     "poly": region["poly"],
+        ...     "srt": icesat2.SRT_LAND,
+        ...     "cnf": icesat2.CNF_SURFACE_HIGH,
+        ...     "ats": 10.0,
+        ...     "cnt": 10,
+        ...     "len": 40.0,
+        ...     "res": 20.0,
+        ...     "maxi": 1
+        ... }
+        >>> # Get ATL06 Elevations
+        >>> atl06 = icesat2.atl06p(parms)
+    '''
+
+    tstart = time.perf_counter()
+    tempfile = "temp.geojson"
+
+    if isinstance(source, geopandas.GeoDataFrame):
+        # user provided GeoDataFrame instead of a file
+        gdf = source
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
+
+    elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
+        # create lat/lon lists
+        if len(source) == 4: # bounding box
+            lons = [source[0], source[2], source[2], source[0], source[0]]
+            lats = [source[1], source[1], source[3], source[3], source[1]]
+        elif len(source) > 4: # polygon list
+            lons = [source[i] for i in range(1,len(source),2)]
+            lats = [source[i] for i in range(0,len(source),2)]
+
+        # create geodataframe
+        p = Polygon([point for point in zip(lons, lats)])
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_MERCATOR)
+
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
+
+    elif isinstance(source, str) and (source.find(".shp") > 1):
+        # create geodataframe
+        gdf = geopandas.read_file(source)
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
+
+    elif isinstance(source, str) and (source.find(".geojson") > 1):
+        # create geodataframe
+        gdf = geopandas.read_file(source)
+        with open(source, mode='rt') as file:
+            datafile = file.read()
+
+    else:
+        raise FatalError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
+
+
+    # If user provided raster we don't have gdf, geopandas cannot easily convert it
+    polygon = clusters = None
+    if gdf is not None:
+        # simplify polygon
+        if(tolerance > 0.0):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                gdf = gdf.buffer(tolerance)
+                gdf = gdf.simplify(tolerance)
+
+        # generate polygon
+        polygon = __gdf2poly(gdf)
+
+        # generate clusters
+        clusters = []
+        if n_clusters > 1:
+            if clustering_enabled:
+                # pull out centroids of each geometry object
+                if "CenLon" in gdf and "CenLat" in gdf:
+                    X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
+                else:
+                    s = gdf.centroid
+                    X = numpy.column_stack((s.x, s.y))
+                # run k means clustering algorithm against polygons in gdf
+                kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+                y_kmeans = kmeans.fit_predict(X)
+                k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+                gdf = gdf.join(k)
+                # build polygon for each cluster
+                for n in range(n_clusters):
+                    c_gdf = gdf[gdf["cluster"] == n]
+                    c_poly = __gdf2poly(c_gdf)
+                    clusters.append(c_poly)
+            else:
+                raise FatalError("Clustering support not enabled; unable to import sklearn package")
+
+    # update timing profiles
+    profiles[toregion.__name__] = time.perf_counter() - tstart
+
+    # return region
+    return {
+        "gdf": gdf,
+        "poly": polygon, # convex hull of polygons
+        "clusters": clusters, # list of polygon clusters for cmr request
+        "raster": {
+            "data": datafile, # geojson file
+            "length": len(datafile), # geojson file length
+            "cellsize": cellsize  # untis are in crs/projection
+        }
+    }
