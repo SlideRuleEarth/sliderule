@@ -346,9 +346,9 @@ def __query_resources(parm, version, **kwargs):
 
     # Make CMR Request
     if kwargs['return_metadata']:
-        resources,metadata = earthdata.cmr(version, 'ATL03', **kwargs)
+        resources,metadata = earthdata.cmr(short_name='ATL03', version=version, **kwargs)
     else:
-        resources = earthdata.cmr(version, 'ATL03', **kwargs)
+        resources = earthdata.cmr(short_name='ATL03', version=version, **kwargs)
 
     # Check Resources are Under Limit
     if(len(resources) > earthdata.max_requested_resources):
@@ -807,7 +807,7 @@ def cmr(version=DEFAULT_ICESAT2_SDP_VERSION, short_name='ATL03', **kwargs):
     DEPRECATED - use earthdata.cmr(...) instead
     '''
     warnings.warn('icesat2.{} is deprecated, please use earthdata.{} instead'.format(cmr.__name__, cmr.__name__), DeprecationWarning, stacklevel=2)
-    return earthdata.cmr(version=version, short_name=short_name, **kwargs)
+    return earthdata.cmr(short_name=short_name, version=version, **kwargs)
 
 #
 #  H5

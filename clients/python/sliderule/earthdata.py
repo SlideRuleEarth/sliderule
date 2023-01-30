@@ -53,6 +53,16 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
+# best effort match of datasets to providers and versions for earthdata
+DATASETS = {
+    "ATL03":                                {"provider": "NSIDC_ECS",   "version": "005"},
+    "GEDI01_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},
+    "GEDI02_A":                             {"provider": "LPDAAC_ECS",  "version": "002"},
+    "GEDI02_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},
+    "GEDI_L3_LandSurface_Metrics_V2_1952":  {"provider": "ORNL_CLOUD",  "version": "2"},
+    "GEDI_L4A_AGB_Density_V2_1_2056":       {"provider": "ORNL_CLOUD",  "version": "2.1"},
+    "GEDI_L4B_Gridded_Biomass_2017":        {"provider": "ORNL_CLOUD",  "version": "2"}
+}
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -69,12 +79,6 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 # Software is furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
-
-CMR_URL = 'https://cmr.earthdata.nasa.gov'
-CMR_PAGE_SIZE = 2000
-CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
-                '&sort_key[]=start_date&sort_key[]=producer_granule_id'
-                '&scroll=true&page_size={1}'.format(CMR_URL, CMR_PAGE_SIZE))
 
 def __build_version_query_params(version):
     desired_pad_length = 3
@@ -173,7 +177,7 @@ def __cmr_granule_metadata(search_results):
     # - polygons as geodataframe geometry
     return granule_metadata
 
-def __cmr_search(short_name, version, time_start, time_end, **kwargs):
+def __cmr_search(provider, short_name, version, time_start, time_end, **kwargs):
     """Perform a scrolling CMR query for files matching input criteria."""
     kwargs.setdefault('polygon',None)
     kwargs.setdefault('name_filter',None)
@@ -187,7 +191,12 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
     if kwargs['name_filter']:
         params += '&options[producer_granule_id][pattern]=true'
         params += '&producer_granule_id[]=' + kwargs['name_filter']
-    cmr_query_url = CMR_FILE_URL + params
+    CMR_URL = 'https://cmr.earthdata.nasa.gov'
+    CMR_PAGE_SIZE = 2000
+    cmr_query_url = ('{0}/search/granules.json?provider={1}'
+                     '&sort_key[]=start_date&sort_key[]=producer_granule_id'
+                     '&scroll=true&page_size={2}'.format(CMR_URL, provider, CMR_PAGE_SIZE))
+    cmr_query_url += params
     logger.debug('cmr request={0}\n'.format(cmr_query_url))
 
     cmr_scroll_id = None
@@ -253,7 +262,7 @@ def set_max_resources (max_resources):
 #
 #  Common Metadata Repository
 #
-def cmr(version=None, short_name=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None):
+def cmr(provider=None, short_name=None, version=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None):
     '''
     Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters
 
@@ -288,10 +297,20 @@ def cmr(version=None, short_name=None, polygon=None, time_start='2018-01-01T00:0
         ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', ... 'ATL03_20201111102237_07370902_003_01.h5']
     '''
     # check parameters
-    if version == None:
-        raise sliderule.FatalError("Must supply version to CMR query")
-    elif short_name == None:
+    if short_name == None:
         raise sliderule.FatalError("Must supply short name to CMR query")
+
+    # attempt to fil in provider
+    if provider==None and short_name in DATASETS:
+        provider = DATASETS[short_name]["provider"]
+    else:
+        raise sliderule.FatalError("Unable to determine provider for CMR query")
+
+    # attempt to fil in provider
+    if version==None and short_name in DATASETS:
+        version = DATASETS[short_name]["version"]
+    else:
+        raise sliderule.FatalError("Unable to determine version for CMR query")
 
     # initialize return value
     resources = {} # [<url>] = <polygon>
@@ -324,7 +343,7 @@ def cmr(version=None, short_name=None, polygon=None, time_start='2018-01-01T00:0
 
             # call into NSIDC routines to make CMR request
             try:
-                urls,metadata = __cmr_search(short_name, version, time_start, time_end, polygon=polystr, return_metadata=return_metadata, name_filter=name_filter)
+                urls,metadata = __cmr_search(provider, short_name, version, time_start, time_end, polygon=polystr, return_metadata=return_metadata, name_filter=name_filter)
                 break # exit loop because cmr search was successful
             except urllib.error.HTTPError as e:
                 logger.error('HTTP Request Error: {}'.format(e.reason))

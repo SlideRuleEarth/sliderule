@@ -87,9 +87,9 @@ def __query_resources(parm, dataset, version, **kwargs):
 
     # Make CMR Request
     if kwargs['return_metadata']:
-        resources,metadata = earthdata.cmr(version, dataset, **kwargs)
+        resources,metadata = earthdata.cmr(short_name=dataset, version=version, **kwargs)
     else:
-        resources = earthdata.cmr(version, dataset, **kwargs)
+        resources = earthdata.cmr(short_name=dataset, version=version, **kwargs)
 
     # Check Resources are Under Limit
     if(len(resources) > earthdata.max_requested_resources):
