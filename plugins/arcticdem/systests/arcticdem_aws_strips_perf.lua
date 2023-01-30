@@ -12,8 +12,8 @@ json = require("json")
 local failedSamples = 0
 local verbose = false
 
-local  lon = -178.0
-local  lat =   51.7
+local  lon = -150.00
+local  lat = 66.34  -- Arctic Circle lat
 local _lon = lon
 local _lat = lat
 
@@ -74,8 +74,8 @@ print(string.format("\n%d points read, time: %f, failed reads: %d", maxPoints, d
 -- os.exit()
 
 failedSamples = 0
-maxPoints = 1000
-print(string.format("\n------------------\nTest: Reading %d different points in the same raster\n------------------\n", maxPoints))
+maxPoints = 100
+print(string.format("\n------------------\nTest: Reading %d different points in the same rasters\n------------------\n", maxPoints))
 lon = _lon
 lat = _lat
 starttime = time.latch();
@@ -105,7 +105,46 @@ do
         lat = lat + 0.01
     end
 
-    modulovalue = 100
+    modulovalue = 10
+    if (i % modulovalue == 0) then
+        midtime = time.latch();
+        dtime = midtime-intervaltime
+        print(string.format("Point: %d, (%.3f, %.3f), time: %.3f", i, lon, lat, dtime))
+        intervaltime = time.latch();
+    end
+end
+
+stoptime = time.latch();
+dtime = stoptime-starttime
+print(string.format("\n%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
+
+-- os.exit()
+
+failedSamples = 0
+maxPoints = 100
+print(string.format("\n------------------\nTest: Reading %d different points in different geocells \n------------------\n", maxPoints))
+lon = _lon
+lat = _lat
+starttime = time.latch();
+intervaltime = starttime
+
+for i = 1, maxPoints
+do
+    tbl, status = dem:sample(lon, lat)
+    if status ~= true then
+        failedSamples = failedSamples + 1
+        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
+    else
+        if verbose then
+            for i, v in ipairs(tbl) do
+                local el = v["value"]
+                local fname = v["file"]
+                print(string.format("(%02d) %20f     %s", i, el, fname))
+            end
+        end
+    end
+
+    modulovalue = 10
     if (i % modulovalue == 0) then
         midtime = time.latch();
         dtime = midtime-intervaltime
@@ -113,6 +152,7 @@ do
         intervaltime = time.latch();
     end
 
+    lon = lon + 0.5
 end
 
 stoptime = time.latch();

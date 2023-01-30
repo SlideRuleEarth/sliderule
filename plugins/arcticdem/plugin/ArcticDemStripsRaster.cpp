@@ -84,6 +84,7 @@ void ArcticDemStripsRaster::getRisFile(std::string& file, double lon, double lat
 
     int _lon = static_cast<int>(floor(lon));
     int _lat = static_cast<int>(floor(lat));
+
     file = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n" +
            std::to_string(_lat) +
            ((_lon < 0) ? "w" : "e") +
