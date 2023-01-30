@@ -88,21 +88,26 @@ void ArcticDemMosaicRaster::getRisFile(std::string& file, double lon, double lat
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
+bool ArcticDemMosaicRaster::getRasterDate(raster_info_t& rinfo)
 {
     /*
-     * For mosaics the GMT sample collection date is not in the tifFile name.
-     * There is a .json file in s3 bucket where tif file is located which contais date information.
+     * There is a metadata .json file in s3 bucket where raster is located.
+     * It contains two dates: 'start_date' and 'end_date'
+     *
+     * There isn't really a concept of a single date that applies to the mosaic tiles.
+     * The raster creation date is just the processing date and doesn't have anything to do with the date of the source pixels.
      */
 
-    std::string featureFile = tifFile;
-    int64_t gpsTime = 0;
+    std::string featureFile = rinfo.fileName;
+    bool foundDate = false;
 
     GDALDataset *dset = NULL;
 
     const std::string key       = "_reg_dem.tif";
-    const std::string fieldName = "end_datetime";
     const std::string fileType  = ".json";
+    const char* dateField       = "end_datetime";
+
+    bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
 
     try
     {
@@ -116,15 +121,14 @@ int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
         if (dset == NULL)
             throw RunTimeException(ERROR, RTE_ERROR, "Could not open %s file", featureFile.c_str());
 
-        /* For now assume the first layer has the feature we need */
         OGRLayer *layer = dset->GetLayer(0);
         if (layer == NULL)
             throw RunTimeException(ERROR, RTE_ERROR, "No layers found in feature file: %s", featureFile.c_str());
 
         layer->ResetReading();
-        while (OGRFeature* feature = layer->GetNextFeature())
+        if(OGRFeature* feature = layer->GetNextFeature())
         {
-            int i = feature->GetFieldIndex(fieldName.c_str());
+            int i = feature->GetFieldIndex(dateField);
             if (i != -1)
             {
                 int year, month, day, hour, minute, second, timeZone;
@@ -135,24 +139,19 @@ int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
                      */
                     if (timeZone == 100)
                     {
-                        TimeLib::gmt_time_t gmt;
-                        gmt.year = year;
-                        gmt.doy = TimeLib::dayofyear(year, month, day);
-                        gmt.hour = hour;
-                        gmt.minute = minute;
-                        gmt.second = second;
-                        gmt.millisecond = 0;
-                        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
+                        rinfo.gmtDate.year = year;
+                        rinfo.gmtDate.doy = TimeLib::dayofyear(year, month, day);
+                        rinfo.gmtDate.hour = hour;
+                        rinfo.gmtDate.minute = minute;
+                        rinfo.gmtDate.second = second;
+                        rinfo.gmtDate.millisecond = 0;
+                        foundDate = true;
                     }
+                    else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                 }
-                OGRFeature::DestroyFeature(feature);
-                break;
             }
             OGRFeature::DestroyFeature(feature);
         }
-
-        if (gpsTime == 0) throw RunTimeException(ERROR, RTE_ERROR, "Failed to find time");
-
     }
     catch (const RunTimeException &e)
     {
@@ -161,7 +160,7 @@ int64_t ArcticDemMosaicRaster::getRasterDate(std::string &tifFile)
 
     if (dset) GDALClose((GDALDatasetH)dset);
 
-    return gpsTime;
+    return foundDate;
 }
 
 

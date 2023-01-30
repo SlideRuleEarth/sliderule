@@ -74,6 +74,14 @@ GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling,
  *----------------------------------------------------------------------------*/
 void ArcticDemStripsRaster::getRisFile(std::string& file, double lon, double lat)
 {
+    /*
+     * Strip DEM ﬁles are distributed in folders according to the 1° x 1° geocell in which the geometric center resides.
+     * Geocell folder naming refers to the southwest degree corner coordinate
+     * (e.g., folder n72e129 will contain all ArcticDEM strip ﬁles with centroids within 72° to 73° north latitude, and 129° to 130° east longitude).
+     *
+     * https://www.pgc.umn.edu/guides/stereo-derived-elevation-models/pgcs-dem-products-arcticdem-rema-and-earthdem/#section-9
+     */
+
     int _lon = static_cast<int>(floor(lon));
     int _lat = static_cast<int>(floor(lat));
     file = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n" +
@@ -91,16 +99,16 @@ void ArcticDemStripsRaster::getRisFile(std::string& file, double lon, double lat
  *----------------------------------------------------------------------------*/
 void ArcticDemStripsRaster::getRisBbox(bbox_t &bbox, double lon, double lat)
 {
-    /* ArcticDEM scenes are 1x1 degree */
-    const double sceneSize = 1.0;
+    /* ArcticDEM geocells are 1x1 degree */
+    const double geocellSize = 1.0;
 
     lat = floor(lat);
     lon = floor(lon);
 
     bbox.lon_min = lon;
     bbox.lat_min = lat;
-    bbox.lon_max = lon + sceneSize;
-    bbox.lat_max = lat + sceneSize;
+    bbox.lon_max = lon + geocellSize;
+    bbox.lat_max = lat + geocellSize;
 }
 
 
@@ -109,14 +117,27 @@ void ArcticDemStripsRaster::getRisBbox(bbox_t &bbox, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
 {
+    /*
+     * Could get date from filename but will read from geojson index file instead.
+     * It contains two dates: 'start_date' and 'end_date'
+     *
+     * The date in the filename is the date of the earliest image of the stereo pair.
+     * For intrack pairs (pairs collected intended for stereo) the two images are acquired within a few minutes of each other.
+     * For cross-track images (opportunistic stereo pairs made from mono collects)
+     * the two images can be from up to 20 days apart.
+     *
+     */
+
     bool foundFile = false;
 
     const std::string fileToken = "arcticdem";
     const std::string vsisPath  = "/vsis3/pgc-opendata-dems/";
+    const char *demField  = "dem";
+    const char* dateField = "end_datetime";
 
     try
     {
-        tifList->clear();
+        rastersList->clear();
 
         /* For now assume the first layer has the feature we need */
         layer->ResetReading();
@@ -127,21 +148,21 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
 
             if(!geo->Contains(&p)) continue;
 
-            const char* demField = "dem";
-            const char *str = feature->GetFieldAsString(demField);
-            if (str)
+            const char *fname = feature->GetFieldAsString(demField);
+            if (fname)
             {
-                std::string fname(str);
-                std::size_t pos = fname.find(fileToken);
+                std::string fileName(fname);
+                std::size_t pos = fileName.find(fileToken);
                 if (pos == std::string::npos)
                     throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
 
-                fname = vsisPath + fname.substr(pos);
-                tifList->add(fname);
+                fileName = vsisPath + fileName.substr(pos);
                 foundFile = true; /* There may be more than one file.. */
-#if 0
+
+                raster_info_t rinfo = {fileName, {0}};
+
                 int year, month, day, hour, minute, second, timeZone;
-                int i = feature->GetFieldIndex(demField);
+                int i = feature->GetFieldIndex(dateField);
                 if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
                 {
                     /*
@@ -149,24 +170,23 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                      */
                     if (timeZone == 100)
                     {
-                        TimeLib::gmt_time_t gmt;
-                        gmt.year = year;
-                        gmt.doy = TimeLib::dayofyear(year, month, day);
-                        gmt.hour = hour;
-                        gmt.minute = minute;
-                        gmt.second = second;
-                        gmt.millisecond = 0;
-                        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
+                        rinfo.gmtDate.year = year;
+                        rinfo.gmtDate.doy = TimeLib::dayofyear(year, month, day);
+                        rinfo.gmtDate.hour = hour;
+                        rinfo.gmtDate.minute = minute;
+                        rinfo.gmtDate.second = second;
+                        rinfo.gmtDate.millisecond = 0;
                     }
+                    else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                 }
-#endif
+                rastersList->add(rinfo);
             }
             OGRFeature::DestroyFeature(feature);
         }
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error finding raster in vector index file: %s", e.what());
+        mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
     return foundFile;
@@ -174,63 +194,6 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
 
 
 
-/*----------------------------------------------------------------------------
- * getRasterDate
- *----------------------------------------------------------------------------*/
-int64_t ArcticDemStripsRaster::getRasterDate(std::string &tifFile)
-{
-    /*
-     * For strips the GMT sample collection date is in the tifFile name.
-     */
-
-    int64_t gpsTime = 0;
-
-    try
-    {
-        /* s2s041 is version number for Strips release. This code must be updated when version changes */
-        std::string key = "SETSM_s2s041_";
-
-        std::size_t pos = tifFile.rfind(key);
-        if (pos == std::string::npos)
-            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in filename", key.c_str());
-
-        std::string id = tifFile.substr(pos + key.length());
-
-        key = "_";
-        pos = id.find(key);
-        if (pos == std::string::npos)
-            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in filename", key.c_str());
-
-        std::string yearStr  = id.substr(pos + key.length(), 4);
-        std::string monthStr = id.substr(pos + key.length() + 4, 2);
-        std::string dayStr   = id.substr(pos + key.length() + 4 + 2, 2);
-
-        int year  = strtol(yearStr.c_str(), NULL, 10);
-        int month = strtol(monthStr.c_str(), NULL, 10);
-        int day   = strtol(dayStr.c_str(), NULL, 10);
-
-        /*
-         * Date included in tifFile name for strip rasters is in GMT
-         */
-        TimeLib::gmt_time_t gmt;
-        gmt.year = year;
-        gmt.doy = TimeLib::dayofyear(year, month, day);
-        gmt.hour = 0;
-        gmt.minute = 0;
-        gmt.second = 0;
-        gmt.millisecond = 0;
-        gpsTime = TimeLib::gmt2gpstime(gmt); // returns milliseconds from gps epoch to time specified in gmt_time
-
-        if (gpsTime == 0) throw RunTimeException(ERROR, RTE_ERROR, "Failed to find time");
-
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting time from strips tifFile name: %s", e.what());
-    }
-
-    return gpsTime;
-}
 
 
 /******************************************************************************

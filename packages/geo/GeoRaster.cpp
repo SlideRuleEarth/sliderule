@@ -228,7 +228,7 @@ GeoRaster::~GeoRaster(void)
     /* Close raster index data set and transform */
     if (ris.dset) GDALClose((GDALDatasetH)ris.dset);
     if (crsConverter.transf) OGRCoordinateTransformation::DestroyCT(crsConverter.transf);
-    if (tifList) delete tifList;
+    if (rastersList) delete rastersList;
 }
 
 /*----------------------------------------------------------------------------
@@ -318,8 +318,8 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     clearRis(false);
     clearTransform(false);
 
-    tifList = new List<std::string>;
-    tifList->clear();
+    rastersList = new List<raster_info_t>;
+    rastersList->clear();
     rasterDict.clear();
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
@@ -343,7 +343,7 @@ int GeoRaster::radius2pixels(double cellSize, int _radius)
     int csize = static_cast<int>(cellSize);
 
     if (_radius == 0) return 0;
-    if ( csize  == 0) csize = 1;
+    if (csize == 0) csize = 1;
 
     int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
     int radiusInPixels = radiusInMeters / csize;
@@ -403,9 +403,6 @@ void GeoRaster::processRaster(raster_t* raster, GeoRaster* obj)
             /* Get raster spatial reference */
             raster->sref = const_cast<OGRSpatialReference*>(raster->dset->GetSpatialRef());
             CHECKPTR(raster->sref);
-
-            /* Get raster date as gps time in seconds */
-            raster->gpsTime = static_cast<double>(obj->getRasterDate(raster->fileName) / 1000);
         }
 
 
@@ -964,17 +961,17 @@ void GeoRaster::invalidateCache(void)
  *----------------------------------------------------------------------------*/
 void GeoRaster::updateCache(OGRPoint& p)
 {
-    if (tifList->length() == 0)
+    if (rastersList->length() == 0)
         return;
 
     const char *key  = NULL;
     raster_t *raster = NULL;
 
     /* Check new tif file list against rasters in dictionary */
-    for (int i = 0; i < tifList->length(); i++)
+    for (int i = 0; i < rastersList->length(); i++)
     {
-        std::string& fileName = tifList->get(i);
-        key = fileName.c_str();
+        raster_info_t& rinfo = rastersList->get(i);
+        key = rinfo.fileName.c_str();
 
         if (rasterDict.find(key, &raster))
         {
@@ -992,7 +989,8 @@ void GeoRaster::updateCache(OGRPoint& p)
             raster->enabled = true;
             raster->point = p;
             raster->sample.value = INVALID_SAMPLE_VALUE;
-            raster->fileName = fileName;
+            raster->fileName = rinfo.fileName;
+            raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
             rasterDict.add(key, raster);
         }
     }

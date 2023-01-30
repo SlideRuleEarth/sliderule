@@ -72,6 +72,7 @@ class VrtRaster: public GeoRaster
         bool         openRis            (double lon=0, double lat=0);
         bool         transformCRS       (OGRPoint& p);
         virtual void getRisFile         (std::string& file, double lon=0, double lat=0) = 0;
+        virtual bool getRasterDate      (raster_info_t& rinfo) = 0;
         bool         readRisData        (OGRPoint* point, int srcWindowSize, int srcOffset,
                                          void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
 

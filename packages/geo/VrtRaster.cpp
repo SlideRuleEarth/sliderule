@@ -201,13 +201,14 @@ bool VrtRaster::transformCRS(OGRPoint &p)
 bool VrtRaster::findRasters(OGRPoint& p)
 {
     bool foundFile = false;
+    CPLXMLNode *root = NULL;
 
     try
     {
         const int32_t col = static_cast<int32_t>(floor(invGeot[0] + invGeot[1] * p.getX() + invGeot[2] * p.getY()));
         const int32_t row = static_cast<int32_t>(floor(invGeot[3] + invGeot[4] * p.getX() + invGeot[5] * p.getY()));
 
-        tifList->clear();
+        rastersList->clear();
 
         bool validPixel = (col >= 0) && (row >= 0) && (col < ris.dset->GetRasterXSize()) && (row < ris.dset->GetRasterYSize());
         if (!validPixel) return false;
@@ -218,7 +219,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
         const char *mdata = band->GetMetadataItem(str, "LocationInfo");
         if (mdata == NULL) return false; /* Pixel not in VRT file */
 
-        CPLXMLNode *root = CPLParseXMLString(mdata);
+        root = CPLParseXMLString(mdata);
         if (root == NULL) return false;  /* Pixel is in VRT file, but parser did not find its node  */
 
         if (root->psChild && (root->eType == CXT_Element) && EQUAL(root->pszValue, "LocationInfo"))
@@ -228,20 +229,39 @@ bool VrtRaster::findRasters(OGRPoint& p)
                 if ((psNode->eType == CXT_Element) && EQUAL(psNode->pszValue, "File") && psNode->psChild)
                 {
                     char *fname = CPLUnescapeString(psNode->psChild->pszValue, NULL, CPLES_XML);
-                    CHECKPTR(fname);
-                    tifList->add(fname);
-                    CPLFree(fname);
-                    foundFile = true;
-                    break; /* There should be only one raster with point of interest in VRT */
+                    if(fname)
+                    {
+                        raster_info_t rinfo;
+                        rinfo.fileName = fname;
+
+                        /* Get the date this raster was created */
+                        getRasterDate(rinfo);
+
+                        rastersList->add(rinfo);
+                        CPLFree(fname);
+                        foundFile = true;
+                        /*
+                         * VRT file can have many rasters in it with the same point of interest.
+                         * This is not how GDAL VRT is inteded to be used.
+                         * GDAL utilities in such a case use only one raster with POI (most likely the first found)
+                         * Do the same - if one raster has been found stop searching for more.
+                         *
+                         * NOTE: VRT dataset is used for resampling and zonal statistics.
+                         * Multiple raster threads are not allowed to read from the same dataset pointer.
+                         * Must break here so only one raster is sampled for given POI.
+                         */
+                        break;
+                    }
                 }
             }
         }
-        CPLDestroyXMLNode(root);
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error finding raster in VRT file: %s", e.what());
     }
+
+    if (root) CPLDestroyXMLNode(root);
 
     return foundFile;
 }
@@ -281,7 +301,6 @@ void VrtRaster::sampleRasters(void)
      */
     raster_t *raster = NULL;
     const char *key = rasterDict.first(&raster);
-    int i = 0;
     while (key != NULL)
     {
         assert(raster);

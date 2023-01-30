@@ -164,7 +164,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
     vrtFile    = "/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt";
 
     /* Initialize Class Data Members */
-    gpsTime = 0;
+    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
 
     validatedParams(file, filelength, _cellsize);
 
@@ -233,8 +233,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
 
         /* Store raster creation time */
-        TimeLib::gmt_time_t gmt = TimeLib::gettime();
-        gpsTime = TimeLib::gmt2gpstime(gmt);
+        gmtDate = TimeLib::gettime();
 
         /* Must close raster to flush it into file */
         GDALClose((GDALDatasetH)rasterDset);
@@ -280,10 +279,10 @@ void GeoJsonRaster::getRisFile(std::string &file, double lon, double lat)
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-int64_t GeoJsonRaster::getRasterDate(std::string &tifFile)
+bool GeoJsonRaster::getRasterDate(raster_info_t& rinfo)
 {
-    std::ignore = tifFile;
-    return gpsTime;
+    rinfo.gmtDate = gmtDate;
+    return true;
 }
 
 /******************************************************************************

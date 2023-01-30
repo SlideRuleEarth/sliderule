@@ -68,7 +68,6 @@ class ArcticDemStripsRaster: public VctRaster
         void    getRisFile            (std::string& file, double lon=0, double lat=0 );
         void    getRisBbox            (bbox_t& bbox, double lon=0, double lat=0);
         bool    findRasters           (OGRPoint &p);
-        int64_t getRasterDate         (std::string &tifFile);
 };
 
 #endif  /* __arcticdem_strips_raster__ */

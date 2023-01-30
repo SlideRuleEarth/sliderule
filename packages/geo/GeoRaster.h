@@ -38,6 +38,7 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
+#include "TimeLib.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
@@ -149,6 +150,12 @@ class GeoRaster: public LuaObject
 
 
         typedef struct {
+            std::string         fileName;
+            TimeLib::gmt_time_t gmtDate;
+        } raster_info_t;
+
+
+        typedef struct {
             bool            enabled;
             bool            sampled;
             GDALDataset*    dset;
@@ -206,7 +213,6 @@ class GeoRaster: public LuaObject
                         GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
         virtual bool    openRis               (double lon=0, double lat=0) = 0;
         virtual bool    findRasters           (OGRPoint &p) = 0;
-        virtual int64_t getRasterDate         (std::string& tifFile) = 0;
         virtual bool    transformCRS          (OGRPoint& p) = 0;
         bool            rasterContainsWindow  (int col, int row, int maxCol, int maxRow, int windowSize);
         bool            rasterContainsPoint   (raster_t *raster, OGRPoint &p);
@@ -228,7 +234,7 @@ class GeoRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        List<std::string>*    tifList;
+        List<raster_info_t>*  rastersList;
         ris_t                 ris;
         crs_converter_t       crsConverter;
         uint32_t              samplingRadius;
