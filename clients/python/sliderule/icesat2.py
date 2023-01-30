@@ -34,8 +34,8 @@ import warnings
 import numpy
 import geopandas
 import sliderule
-from sliderule import cmr as earthdata
-from sliderule import h5
+from sliderule import earthdata
+from sliderule import h5 as h5coro
 
 ###############################################################################
 # GLOBALS
@@ -390,16 +390,6 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
     '''
     sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, plugins=['icesat2'])
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
-
-#
-#  Common Metadata Repository
-#
-def cmr(version=DEFAULT_ICESAT2_SDP_VERSION, short_name='ATL03', **kwargs):
-    '''
-    Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters.
-    Wrapper for the `cmr.cmr(...) function </rtd/api_reference/cmr.html#cmr>`_.
-    '''
-    return earthdata.cmr(version=version, short_name=short_name, **kwargs)
 
 #
 #  ATL06
@@ -810,14 +800,24 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         return sliderule.emptyframe()
 
 #
+#  Common Metadata Repository
+#
+def cmr(version=DEFAULT_ICESAT2_SDP_VERSION, short_name='ATL03', **kwargs):
+    '''
+    DEPRECATED - use earthdata.cmr(...) instead
+    '''
+    warnings.warn('icesat2.{} is deprecated, please use earthdata.{} instead'.format(cmr.__name__, cmr.__name__), DeprecationWarning, stacklevel=2)
+    return earthdata.cmr(version=version, short_name=short_name, **kwargs)
+
+#
 #  H5
 #
-def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=h5.ALL_ROWS):
+def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=h5coro.ALL_ROWS):
     '''
     DEPRECATED - use h5.h5(...) instead
     '''
     warnings.warn('icesat2.{} is deprecated, please use h5.{} instead'.format(h5.__name__, h5.__name__), DeprecationWarning, stacklevel=2)
-    return h5.h5(dataset, resource, asset, datatype, col, startrow, numrows)
+    return h5coro.h5(dataset, resource, asset, datatype, col, startrow, numrows)
 
 #
 #  Parallel H5
@@ -827,7 +827,7 @@ def h5p (datasets, resource, asset=DEFAULT_ASSET):
     DEPRECATED - use h5.h5p(...) instead
     '''
     warnings.warn('icesat2.{} is deprecated, please use h5.{} instead'.format(h5p.__name__, h5p.__name__), DeprecationWarning, stacklevel=2)
-    return h5.h5p(datasets, resource, asset)
+    return h5coro.h5p(datasets, resource, asset)
 
 #
 # Format Region Specification

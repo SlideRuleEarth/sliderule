@@ -31,7 +31,7 @@ import time
 import datetime
 import logging
 import sliderule
-from sliderule import cmr as earthdata
+from sliderule import earthdata
 
 ###############################################################################
 # GLOBALS
@@ -60,7 +60,7 @@ GEDI_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 #
 #  Query Resources from CMR
 #
-def __query_resources(parm, version, **kwargs):
+def __query_resources(parm, dataset, version, **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -71,7 +71,6 @@ def __query_resources(parm, version, **kwargs):
         return []
 
     # Submission Arguments for CMR
-    kwargs['version'] = version
     kwargs.setdefault('return_metadata', False)
 
     # Pull Out Polygon
@@ -86,28 +85,11 @@ def __query_resources(parm, version, **kwargs):
     if "t1" in parm:
         kwargs['time_end'] = parm["t1"]
 
-    # Build Filters
-    name_filter_enabled = False
-    rgt_filter = '????'
-    if "rgt" in parm:
-        rgt_filter = f'{parm["rgt"]}'.zfill(4)
-        name_filter_enabled = True
-    cycle_filter = '??'
-    if "cycle" in parm:
-        cycle_filter = f'{parm["cycle"]}'.zfill(2)
-        name_filter_enabled = True
-    region_filter = '??'
-    if "region" in parm:
-        region_filter = f'{parm["region"]}'.zfill(2)
-        name_filter_enabled = True
-    if name_filter_enabled:
-        kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
-
     # Make CMR Request
     if kwargs['return_metadata']:
-        resources,metadata = earthdata.cmr(**kwargs)
+        resources,metadata = earthdata.cmr(version, dataset, **kwargs)
     else:
-        resources = earthdata.cmr(**kwargs)
+        resources = earthdata.cmr(version, dataset, **kwargs)
 
     # Check Resources are Under Limit
     if(len(resources) > earthdata.max_requested_resources):
@@ -149,16 +131,6 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
     '''
     sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, plugins=['gedi'])
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
-
-#
-#  Common Metadata Repository
-#
-def cmr(version=DEFAULT_GEDI_SDP_VERSION, short_name='GEDI02_B', **kwargs):
-    '''
-    Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters.
-    Wrapper for the `cmr.cmr(...) function </rtd/api_reference/cmr.html#cmr>`_.
-    '''
-    return earthdata.cmr(polygon=kwargs['polygon'], time_start=kwargs['time_start'], time_end=kwargs['time_end'], version=version, short_name=short_name)
 
 #
 #  GEDI L4A
@@ -231,7 +203,7 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, version=DEFAULT_GEDI_SDP_VERSION, callba
 
         # Get List of Resources from CMR (if not supplied)
         if resources == None:
-            resources = __query_resources(parm, version)
+            resources = __query_resources(parm, 'GEDI04_A', version)
 
         # Build ATL06 Request
         parm["asset"] = asset
