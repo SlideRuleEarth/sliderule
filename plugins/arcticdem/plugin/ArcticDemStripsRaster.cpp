@@ -189,6 +189,8 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
+    mlog(DEBUG, "Found %d rasters for lon: %.2lf, lat: %.2lf", rastersList->length(), p.getX(), p.getY());
+
     return foundFile;
 }
 

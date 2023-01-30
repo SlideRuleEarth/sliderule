@@ -169,7 +169,6 @@ bool VctRaster::transformCRS(OGRPoint &p)
 {
     /* Do not convert to target CRS. Vector files are in geographic coordinates */
     p.assignSpatialReference(&crsConverter.source);
-
     return (crsConverter.transf != NULL);
 }
 

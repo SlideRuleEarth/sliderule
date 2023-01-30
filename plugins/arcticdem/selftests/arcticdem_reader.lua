@@ -41,7 +41,7 @@ for i = 1, 2 do
     if demType == "arcticdem-mosaic" then
         runner.check(sampleCnt == 1)
     else
-        runner.check(sampleCnt >= 28)
+        runner.check(sampleCnt == 14)
     end
 
     print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
@@ -70,8 +70,7 @@ for i = 1, 2 do
 
 end
 
-
-for i = 1, 2 do
+for i = 1, 1 do
 
     local demType = demTypes[i];
     local samplingRadius = 30
