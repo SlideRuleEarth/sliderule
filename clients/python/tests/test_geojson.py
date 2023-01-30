@@ -12,7 +12,7 @@ class TestGeoJson:
     def test_atl06(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
         for testfile in ["data/grandmesa.geojson", "data/grandmesa.shp"]:
-            region = icesat2.toregion(os.path.join(TESTDIR, testfile))
+            region = sliderule.toregion(os.path.join(TESTDIR, testfile))
             parms = {
                 "poly": region["poly"],
                 "raster": region["raster"],

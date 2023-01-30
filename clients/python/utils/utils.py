@@ -108,7 +108,7 @@ def initialize_client(args):
 
     # Region of Interest
     if cfg["region"]:
-        region = icesat2.toregion(cfg["region"])
+        region = sliderule.toregion(cfg["region"])
         parms["poly"] = region['poly']
         if cfg["raster"]:
             parms["raster"] = region['raster']

@@ -20,7 +20,7 @@ class TestVrt:
     def test_nearestneighbour(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = icesat2.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "raster": region['raster'],
                   "cnf": "atl03_high",
@@ -42,7 +42,7 @@ class TestVrt:
     def test_zonal_stats(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = icesat2.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "raster": region['raster'],
                   "cnf": "atl03_high",

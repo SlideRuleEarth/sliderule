@@ -14,7 +14,7 @@ class TestRemote:
 
     def test_geo(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
-        region = icesat2.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
             "srt":              icesat2.SRT_LAND,
@@ -26,7 +26,7 @@ class TestRemote:
 
     def test_ph(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
-        region = icesat2.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
             "srt":              icesat2.SRT_LAND,

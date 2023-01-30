@@ -59,10 +59,13 @@ DATASETS = {
     "GEDI01_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},
     "GEDI02_A":                             {"provider": "LPDAAC_ECS",  "version": "002"},
     "GEDI02_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},
-    "GEDI_L3_LandSurface_Metrics_V2_1952":  {"provider": "ORNL_CLOUD",  "version": "2"},
-    "GEDI_L4A_AGB_Density_V2_1_2056":       {"provider": "ORNL_CLOUD",  "version": "2.1"},
-    "GEDI_L4B_Gridded_Biomass_2017":        {"provider": "ORNL_CLOUD",  "version": "2"}
+    "GEDI_L3_LandSurface_Metrics_V2_1952":  {"provider": "ORNL_CLOUD",  "version": None},
+    "GEDI_L4A_AGB_Density_V2_1_2056":       {"provider": "ORNL_CLOUD",  "version": None},
+    "GEDI_L4B_Gridded_Biomass_2017":        {"provider": "ORNL_CLOUD",  "version": None}
 }
+
+# page size for requests
+CMR_PAGE_SIZE = 2000
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -79,18 +82,6 @@ DATASETS = {
 # Software is furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
-
-def __build_version_query_params(version):
-    desired_pad_length = 3
-    if len(version) > desired_pad_length:
-        raise sliderule.FatalError('Version string too long: "{0}"'.format(version))
-    version = str(int(version))  # Strip off any leading zeros
-    query_params = ''
-    while len(version) <= desired_pad_length:
-        padded_version = version.zfill(desired_pad_length)
-        query_params += '&version={0}'.format(padded_version)
-        desired_pad_length -= 1
-    return query_params
 
 def __cmr_filter_urls(search_results):
     """Select only the desired data files from CMR response."""
@@ -184,7 +175,8 @@ def __cmr_search(provider, short_name, version, time_start, time_end, **kwargs):
     kwargs.setdefault('return_metadata',False)
     # build params
     params = '&short_name={0}'.format(short_name)
-    params += __build_version_query_params(version)
+    if version != None:
+        params += '&version={0}'.format(version)
     params += '&temporal[]={0},{1}'.format(time_start, time_end)
     if kwargs['polygon']:
         params += '&polygon={0}'.format(kwargs['polygon'])
@@ -192,7 +184,6 @@ def __cmr_search(provider, short_name, version, time_start, time_end, **kwargs):
         params += '&options[producer_granule_id][pattern]=true'
         params += '&producer_granule_id[]=' + kwargs['name_filter']
     CMR_URL = 'https://cmr.earthdata.nasa.gov'
-    CMR_PAGE_SIZE = 2000
     cmr_query_url = ('{0}/search/granules.json?provider={1}'
                      '&sort_key[]=start_date&sort_key[]=producer_granule_id'
                      '&scroll=true&page_size={2}'.format(CMR_URL, provider, CMR_PAGE_SIZE))
@@ -301,16 +292,18 @@ def cmr(provider=None, short_name=None, version=None, polygon=None, time_start='
         raise sliderule.FatalError("Must supply short name to CMR query")
 
     # attempt to fil in provider
-    if provider==None and short_name in DATASETS:
-        provider = DATASETS[short_name]["provider"]
-    else:
-        raise sliderule.FatalError("Unable to determine provider for CMR query")
+    if provider == None:
+        if short_name in DATASETS:
+            provider = DATASETS[short_name]["provider"]
+        else:
+            raise sliderule.FatalError("Unable to determine provider for CMR query")
 
     # attempt to fil in provider
-    if version==None and short_name in DATASETS:
-        version = DATASETS[short_name]["version"]
-    else:
-        raise sliderule.FatalError("Unable to determine version for CMR query")
+    if version == None:
+        if short_name in DATASETS:
+            version = DATASETS[short_name]["version"]
+        else:
+            raise sliderule.FatalError("Unable to determine version for CMR query")
 
     # initialize return value
     resources = {} # [<url>] = <polygon>

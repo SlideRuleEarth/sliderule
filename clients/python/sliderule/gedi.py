@@ -30,6 +30,8 @@
 import time
 import datetime
 import logging
+import numpy
+import geopandas
 import sliderule
 from sliderule import earthdata
 
@@ -47,7 +49,7 @@ profiles = {}
 DEFAULT_ASSET="ornldaac-s3"
 
 # default GEDI standard data product version
-DEFAULT_GEDI_SDP_VERSION = '002'
+DEFAULT_GEDI_SDP_VERSION = '2'
 
 # gps-based epoch for delta times
 GEDI_SDP_EPOCH = datetime.datetime(2018, 1, 1)
@@ -58,9 +60,113 @@ GEDI_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 ###############################################################################
 
 #
+#  Dictionary to GeoDataFrame
+#
+def __todataframe(columns, delta_time_key="delta_time", lon_key="longitude", lat_key="latitude", **kwargs):
+
+    # Latch Start Time
+    tstart = time.perf_counter()
+
+    # Set Default Keyword Arguments
+    kwargs['index_key'] = "time"
+    kwargs['crs'] = sliderule.EPSG_MERCATOR
+
+    # Check Empty Columns
+    if len(columns) <= 0:
+        return sliderule.emptyframe(**kwargs)
+
+    # Generate Time Column
+    delta_time = (columns[delta_time_key]*1e9).astype('timedelta64[ns]')
+    gedi_sdp_epoch = numpy.datetime64(GEDI_SDP_EPOCH)
+    columns['time'] = geopandas.pd.to_datetime(gedi_sdp_epoch + delta_time)
+
+    # Generate Geometry Column
+    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
+    del columns[lon_key]
+    del columns[lat_key]
+
+    # Create Pandas DataFrame object
+    if type(columns) == dict:
+        df = geopandas.pd.DataFrame(columns)
+    else:
+        df = columns
+
+    # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
+
+    # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
+    # Can do this during DataFrame creation, but this allows input argument for desired column
+    gdf.set_index(kwargs['index_key'], inplace=True)
+
+    # Sort values for reproducible output despite async processing
+    gdf.sort_index(inplace=True)
+
+    # Update Profile
+    profiles[__todataframe.__name__] = time.perf_counter() - tstart
+
+    # Return GeoDataFrame
+    return gdf
+
+#
+# Flatten Batches
+#
+def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
+
+    # Latch Start Time
+    tstart_flatten = time.perf_counter()
+
+    # Check for Output Options
+    if "output" in parm:
+        gdf = sliderule.procoutputfile(parm)
+        profiles["flatten"] = time.perf_counter() - tstart_flatten
+        return gdf
+
+    # Flatten Records
+    columns = {}
+    records = []
+    num_records = 0
+    if len(rsps) > 0:
+        # Sort Records
+        for rsp in rsps:
+            if rectype in rsp['__rectype']:
+                records += rsp,
+                num_records += len(rsp[batch_column])
+        # Build Columns
+        if num_records > 0:
+            # Initialize Columns
+            sample_record = records[0][batch_column][0]
+            for field in sample_record.keys():
+                fielddef = sliderule.get_definition(sample_record['__rectype'], field)
+                if len(fielddef) > 0:
+                    if type(sample_record[field]) == tuple:
+                        columns[field] = numpy.empty(num_records, dtype=object)
+                    else:
+                        columns[field] = numpy.empty(num_records, fielddef["nptype"])
+            # Populate Columns
+            cnt = 0
+            for record in records:
+                for batch in record[batch_column]:
+                    for field in columns:
+                        columns[field][cnt] = batch[field]
+                    cnt += 1
+    else:
+        logger.debug("No response returned")
+
+    # Build Initial GeoDataFrame
+    gdf = __todataframe(columns)
+
+    # Delete Extent ID Column
+    if len(gdf) > 0 and not keep_id:
+        del gdf["shot_number"]
+
+    # Return GeoDataFrame
+    profiles["flatten"] = time.perf_counter() - tstart_flatten
+    return gdf
+
+#
 #  Query Resources from CMR
 #
-def __query_resources(parm, dataset, version, **kwargs):
+def __query_resources(parm, dataset, **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -87,9 +193,9 @@ def __query_resources(parm, dataset, version, **kwargs):
 
     # Make CMR Request
     if kwargs['return_metadata']:
-        resources,metadata = earthdata.cmr(short_name=dataset, version=version, **kwargs)
+        resources,metadata = earthdata.cmr(short_name=dataset, **kwargs)
     else:
-        resources = earthdata.cmr(short_name=dataset, version=version, **kwargs)
+        resources = earthdata.cmr(short_name=dataset, **kwargs)
 
     # Check Resources are Under Limit
     if(len(resources) > earthdata.max_requested_resources):
@@ -158,7 +264,7 @@ def gedi04a (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL06
 #
-def gedi04ap(parm, asset=DEFAULT_ASSET, version=DEFAULT_GEDI_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
+def gedi04ap(parm, asset=DEFAULT_ASSET, callbacks={}, resources=None, keep_id=False):
     '''
     Performs subsetting in parallel on GEDI data and returns gridded footprints.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -170,8 +276,6 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, version=DEFAULT_GEDI_SDP_VERSION, callba
                         parameters used to configure subsetting process
         asset:          str
                         data source asset
-        version:        str
-                        the version of the ATL03 data to use for processing
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -203,7 +307,7 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, version=DEFAULT_GEDI_SDP_VERSION, callba
 
         # Get List of Resources from CMR (if not supplied)
         if resources == None:
-            resources = __query_resources(parm, 'GEDI04_A', version)
+            resources = __query_resources(parm, 'GEDI_L4A_AGB_Density_V2_1_2056')
 
         # Build ATL06 Request
         parm["asset"] = asset
@@ -216,8 +320,7 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, version=DEFAULT_GEDI_SDP_VERSION, callba
         rsps = sliderule.source("gedi04ap", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-#        gdf = __flattenbatches(rsps, 'gedi04arec', 'footprint', parm, keep_id)
-        gdf = sliderule.emptyframe()
+        gdf = __flattenbatches(rsps, 'gedi04arec', 'footprint', parm, keep_id)
 
         # Return Response
         profiles[gedi04ap.__name__] = time.perf_counter() - tstart

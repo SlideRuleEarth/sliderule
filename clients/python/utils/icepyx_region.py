@@ -61,7 +61,7 @@ if __name__ == '__main__':
     icesat2.init(scfg["url"], verbose=True, organization=scfg["organization"])
 
     # generate sliderule atl06 elevations
-    # parms["poly"] = icesat2.toregion(icfg["spatial_extent"])["poly"]
+    # parms["poly"] = sliderule.toregion(icfg["spatial_extent"])["poly"]
     atl06_sr = ipxapi.atl06p(iregion, parms, scfg["asset"])
 
     # create plot
