@@ -70,7 +70,7 @@ for i = 1, 2 do
 
 end
 
-for i = 1, 1 do
+for i = 1, 2 do
 
     local demType = demTypes[i];
     local samplingRadius = 30
