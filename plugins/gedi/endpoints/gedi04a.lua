@@ -27,7 +27,7 @@ local userlog = msg.publish(rspq)
 local rqst = json.decode(arg[1])
 local resource = rqst["resource"]
 local parms = rqst["parms"]
-local gedi_asset = parms["asset"] or "ornldaac-s3"
+local gedi_asset = parms["asset"] or "ornl-s3"
 local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
 
 -- Initialize Timeouts --

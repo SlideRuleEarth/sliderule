@@ -70,7 +70,7 @@ class SigView(QWidget):
     # Create Attribute Display #
     def createAttrDisplay(self):
         attr_display = QTextEdit(self)
-        attr_display.setFont(QFont('Consolas', 9)) 
+        attr_display.setFont(QFont('Consolas', 9))
         attr_display.setReadOnly(True)
         attr_display.setLineWrapColumnOrWidth(600)
         attr_display.setLineWrapMode(QTextEdit.FixedPixelWidth)
@@ -86,7 +86,7 @@ class SigView(QWidget):
             hist = self.histWorkingSet[index]
             # Basic Text
             basicText = """GPS: {}
-PCE:        {:11}          TXCNT:      {:8} shots    
+PCE:        {:11}          TXCNT:      {:8} shots
 MFC:        {:11}          SUM:        {:8} photons
 TYPE:       {:>11}          SIZE:       {:8} bins
 INTPERIOD:  {:11} mf       RWDROPOUT:  {:8}
@@ -159,8 +159,8 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
 """.format( hist["GPSSTR"],
             hist["PCE"]+1,
             hist["MFC"],
-            hist["CHCNT"][0], hist["CHCNT"][1], hist["CHCNT"][2], hist["CHCNT"][3], hist["CHCNT"][4], hist["CHCNT"][5], hist["CHCNT"][6], hist["CHCNT"][7], 
-            hist["CHBIAS"][0], hist["CHBIAS"][1], hist["CHBIAS"][2], hist["CHBIAS"][3], hist["CHBIAS"][4], hist["CHBIAS"][5], hist["CHBIAS"][6], hist["CHBIAS"][7], 
+            hist["CHCNT"][0], hist["CHCNT"][1], hist["CHCNT"][2], hist["CHCNT"][3], hist["CHCNT"][4], hist["CHCNT"][5], hist["CHCNT"][6], hist["CHCNT"][7],
+            hist["CHBIAS"][0], hist["CHBIAS"][1], hist["CHBIAS"][2], hist["CHBIAS"][3], hist["CHBIAS"][4], hist["CHBIAS"][5], hist["CHBIAS"][6], hist["CHBIAS"][7],
             hist["CHCNT"][8], hist["CHCNT"][9], hist["CHCNT"][10], hist["CHCNT"][11], hist["CHCNT"][12], hist["CHCNT"][13], hist["CHCNT"][14], hist["CHCNT"][15],
             hist["CHBIAS"][8], hist["CHBIAS"][9], hist["CHBIAS"][10], hist["CHBIAS"][11], hist["CHBIAS"][12], hist["CHBIAS"][13], hist["CHBIAS"][14], hist["CHBIAS"][15])
         except Exception as inst:
@@ -199,9 +199,9 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         self.pceNums = [1, 2, 3]
         self.altHist = rsps["AltHist"] if "AltHist" in rsps else []
         self.tagHist = rsps["TagHist"] if "TagHist" in rsps else []
-        self.histOriginalSet = self.altHist + self.tagHist 
+        self.histOriginalSet = self.altHist + self.tagHist
         self.histFullSet = self.histOriginalSet
-        self.histWorkingSet = self.histFullSet 
+        self.histWorkingSet = self.histFullSet
         self.numHists = len(self.histWorkingSet)
         self.histIntegration = 1
 
@@ -234,7 +234,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         sliderLayout.addWidget(sliderRight)
 
         # Filter
-        self.generateFilters()        
+        self.generateFilters()
         filterLayout = QVBoxLayout()
         selectAllLayout = QHBoxLayout()
         self.selectAllBox = QCheckBox("")
@@ -259,7 +259,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
                 self.filters[histType][pceNum].clicked.connect(self.on_click_filter)
                 typeLayout.addWidget(self.filters[histType][pceNum], 1)
             filterLayout.addLayout(typeLayout)
-        
+
         # Analysis
         analysisGbox = QGroupBox()
         analysisVbox = QVBoxLayout()
@@ -336,7 +336,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
                 self.filters[f][p].setChecked(select_all)
         # set working histograms
         if select_all:
-            self.histWorkingSet = self.histFullSet        
+            self.histWorkingSet = self.histFullSet
         else:
             self.histWorkingSet = []
             new_index = 0
@@ -352,7 +352,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
         curr_hist = self.histWorkingSet[index]
         new_index = 0
         curr_index = 0
-        self.histWorkingSet = []     
+        self.histWorkingSet = []
         for hist in self.histFullSet:
             if hist["TYPE"] in self.histMapping and hist["PCE"] >= 0 and hist["PCE"] <= 2:
                 histType = self.histMapping[hist["TYPE"]]
@@ -392,7 +392,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
             progressCnt = 0
             totalBins = 2000
             centerBin = 1000
-            self.histWorkingSet = []     
+            self.histWorkingSet = []
             for hist in self.histOriginalSet:
                 if hist["TYPE"] in self.histMapping and hist["PCE"] >= 0 and hist["PCE"] <= 2:
                     histType = self.histMapping[hist["TYPE"]]
@@ -428,16 +428,16 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
                             # sums
                             currHist["DLB0_TAGCNT"] += hist["DLB0_TAGCNT"]
                             currHist["DLB1_TAGCNT"] += hist["DLB1_TAGCNT"]
-                            currHist["DLB2_TAGCNT"] += hist["DLB2_TAGCNT"] 
+                            currHist["DLB2_TAGCNT"] += hist["DLB2_TAGCNT"]
                             currHist["DLB3_TAGCNT"] += hist["DLB3_TAGCNT"]
-                            currHist["MFC_ERRORS"]  += hist["MFC_ERRORS"] 
-                            currHist["HDR_ERRORS"]  += hist["HDR_ERRORS"] 
-                            currHist["FMT_ERRORS"]  += hist["FMT_ERRORS"] 
-                            currHist["DLB_ERRORS"]  += hist["DLB_ERRORS"] 
+                            currHist["MFC_ERRORS"]  += hist["MFC_ERRORS"]
+                            currHist["HDR_ERRORS"]  += hist["HDR_ERRORS"]
+                            currHist["FMT_ERRORS"]  += hist["FMT_ERRORS"]
+                            currHist["DLB_ERRORS"]  += hist["DLB_ERRORS"]
                             currHist["TAG_ERRORS"]  += hist["TAG_ERRORS"]
                             currHist["PKT_ERRORS"]  += hist["PKT_ERRORS"]
                             for c in range(20):
-                                currHist["CHCNT"][c]+= hist["CHCNT"][c]                                
+                                currHist["CHCNT"][c]+= hist["CHCNT"][c]
                             # min and max
                             if currHist["MIN_TAGS"] > hist["MIN_TAGS"]:
                                 currHist["MIN_TAGS"] = hist["MIN_TAGS"]
@@ -465,7 +465,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
                         if currHists[histType][pceNum]["TYPE"] == 4 or currHists[histType][pceNum]["TYPE"] == 5:
                             currHists[histType][pceNum]["AVG_TAGS"] /= self.histIntegration
                             for c in range(20):
-                                currHists[histType][pceNum]["CHBIAS"][c] /= self.histIntegration  
+                                currHists[histType][pceNum]["CHBIAS"][c] /= self.histIntegration
                         # append and reset
                         self.histWorkingSet.append(currHists[histType][pceNum])
                         currHists[histType][pceNum] = None
@@ -516,7 +516,7 @@ if __name__ == '__main__':
         url = sys.argv[2]
 
     # Initialize Icesat2 Package #
-    icesat2.init(url, True)
+    sliderule.init(url, True)
 
     # Execute SlideRule Algorithm
     rsps = atl00exec(parms)
