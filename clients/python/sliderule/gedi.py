@@ -30,11 +30,8 @@
 import time
 import datetime
 import logging
-import warnings
-import numpy
-import geopandas
 import sliderule
-import cmr
+from sliderule import cmr as earthdata
 
 ###############################################################################
 # GLOBALS
@@ -108,12 +105,12 @@ def __query_resources(parm, version, **kwargs):
 
     # Make CMR Request
     if kwargs['return_metadata']:
-        resources,metadata = cmr.cmr(**kwargs)
+        resources,metadata = earthdata.cmr(**kwargs)
     else:
-        resources = cmr.cmr(**kwargs)
+        resources = earthdata.cmr(**kwargs)
 
     # Check Resources are Under Limit
-    if(len(resources) > cmr.max_requested_resources):
+    if(len(resources) > earthdata.max_requested_resources):
         raise sliderule.FatalError('Exceeded maximum requested granules: {} (current max is {})\nConsider using icesat2.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(resources))
@@ -135,7 +132,7 @@ def __query_resources(parm, version, **kwargs):
 #
 #  Initialize
 #
-def init (url=sliderule.service_url, verbose=False, max_resources=cmr.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
+def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
     '''
     Initializes the Python client for use with SlideRule and should be called before other GEDI API calls.
     This function is a wrapper for the `sliderule.init(...) function </rtds/api_reference/sliderule.html#init>`_.
@@ -151,7 +148,7 @@ def init (url=sliderule.service_url, verbose=False, max_resources=cmr.DEFAULT_MA
         >>> gedi.init()
     '''
     sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, plugins=['gedi'])
-    cmr.set_max_resources(max_resources) # set maximum number of resources allowed per request
+    earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
 
 #
 #  Common Metadata Repository
@@ -161,7 +158,7 @@ def cmr(version=DEFAULT_GEDI_SDP_VERSION, short_name='GEDI02_B', **kwargs):
     Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters.
     Wrapper for the `cmr.cmr(...) function </rtd/api_reference/cmr.html#cmr>`_.
     '''
-    return cmr.cmr(polygon=kwargs['polygon'], time_start=kwargs['time_start'], time_end=kwargs['time_end'], version=version, short_name=short_name)
+    return earthdata.cmr(polygon=kwargs['polygon'], time_start=kwargs['time_start'], time_end=kwargs['time_end'], version=version, short_name=short_name)
 
 #
 #  GEDI L4A
@@ -248,7 +245,7 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, version=DEFAULT_GEDI_SDP_VERSION, callba
 
         # Flatten Responses
 #        gdf = __flattenbatches(rsps, 'gedi04arec', 'footprint', parm, keep_id)
-        gdf = sliderule.__emptyframe()
+        gdf = sliderule.emptyframe()
 
         # Return Response
         profiles[gedi04ap.__name__] = time.perf_counter() - tstart
@@ -257,4 +254,4 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, version=DEFAULT_GEDI_SDP_VERSION, callba
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return sliderule.__emptyframe()
+        return sliderule.emptyframe()

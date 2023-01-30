@@ -370,72 +370,6 @@ def __build_auth_header():
         headers = {'Authorization': 'Bearer ' + ps_access_token}
     return headers
 
-#
-# GeoDataFrame to Polygon
-#
-def __gdf2poly(gdf):
-
-    # latch start time
-    tstart = time.perf_counter()
-
-    # pull out coordinates
-    hull = gdf.unary_union.convex_hull
-    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
-
-    # determine winding of polygon #
-    #              (x2               -    x1)             *    (y2               +    y1)
-    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
-    if wind > 0:
-        # reverse direction (make counter-clockwise) #
-        ccw_poly = []
-        for i in range(len(polygon), 0, -1):
-            ccw_poly.append(polygon[i - 1])
-        # replace region with counter-clockwise version #
-        polygon = ccw_poly
-
-    # Update Profile
-    profiles[__gdf2poly.__name__] = time.perf_counter() - tstart
-
-    # return polygon
-    return polygon
-
-#
-#  Create Empty GeoDataFrame
-#
-def __emptyframe(**kwargs):
-    # set default keyword arguments
-    kwargs['crs'] = EPSG_MERCATOR
-    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
-
-#
-# Process Output File
-#
-def __procoutputfile(parm):
-    if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
-        # Return GeoParquet File as GeoDataFrame
-        return geopandas.read_parquet(parm["output"]["path"])
-    else:
-        # Return Parquet Filename
-        return parm["output"]["path"]
-
-#
-#  Get Values from Raw Buffer
-#
-def __get_values(data, dtype, size):
-    """
-    data:   tuple of bytes
-    dtype:  element of codedtype
-    size:   bytes in data
-    """
-
-    raw = bytes(data)
-    datatype = basictypes[codedtype2str[dtype]]["nptype"]
-    num_elements = int(size / numpy.dtype(datatype).itemsize)
-    slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
-    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
-
-    return values
-
 
 ###############################################################################
 # Default Record Processing
@@ -484,6 +418,77 @@ def __arrowrec(rec):
 #  Globals
 #
 __callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.meta': __arrowrec, 'arrowrec.data': __arrowrec }
+
+
+###############################################################################
+# INTERNAL APIs
+###############################################################################
+
+#
+# GeoDataFrame to Polygon
+#
+def gdf2poly(gdf):
+
+    # latch start time
+    tstart = time.perf_counter()
+
+    # pull out coordinates
+    hull = gdf.unary_union.convex_hull
+    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
+
+    # determine winding of polygon #
+    #              (x2               -    x1)             *    (y2               +    y1)
+    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
+    if wind > 0:
+        # reverse direction (make counter-clockwise) #
+        ccw_poly = []
+        for i in range(len(polygon), 0, -1):
+            ccw_poly.append(polygon[i - 1])
+        # replace region with counter-clockwise version #
+        polygon = ccw_poly
+
+    # Update Profile
+    profiles[gdf2poly.__name__] = time.perf_counter() - tstart
+
+    # return polygon
+    return polygon
+
+#
+#  Create Empty GeoDataFrame
+#
+def emptyframe(**kwargs):
+    # set default keyword arguments
+    kwargs['crs'] = EPSG_MERCATOR
+    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
+
+#
+# Process Output File
+#
+def procoutputfile(parm):
+    if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
+        # Return GeoParquet File as GeoDataFrame
+        return geopandas.read_parquet(parm["output"]["path"])
+    else:
+        # Return Parquet Filename
+        return parm["output"]["path"]
+
+#
+#  Get Values from Raw Buffer
+#
+def getvalues(data, dtype, size):
+    """
+    data:   tuple of bytes
+    dtype:  element of codedtype
+    size:   bytes in data
+    """
+
+    raw = bytes(data)
+    datatype = basictypes[codedtype2str[dtype]]["nptype"]
+    num_elements = int(size / numpy.dtype(datatype).itemsize)
+    slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
+    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
+
+    return values
 
 
 ###############################################################################
@@ -1125,7 +1130,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
                 gdf = gdf.simplify(tolerance)
 
         # generate polygon
-        polygon = __gdf2poly(gdf)
+        polygon = gdf2poly(gdf)
 
         # generate clusters
         clusters = []
@@ -1145,7 +1150,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
                 # build polygon for each cluster
                 for n in range(n_clusters):
                     c_gdf = gdf[gdf["cluster"] == n]
-                    c_poly = __gdf2poly(c_gdf)
+                    c_poly = gdf2poly(c_gdf)
                     clusters.append(c_poly)
             else:
                 raise FatalError("Clustering support not enabled; unable to import sklearn package")

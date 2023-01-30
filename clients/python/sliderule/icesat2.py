@@ -33,8 +33,9 @@ import logging
 import warnings
 import numpy
 import geopandas
-import cmr
 import sliderule
+from sliderule import cmr as earthdata
+from sliderule import h5
 
 ###############################################################################
 # GLOBALS
@@ -148,7 +149,7 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
 
     # Check Empty Columns
     if len(columns) <= 0:
-        return sliderule.__emptyframe(**kwargs)
+        return sliderule.emptyframe(**kwargs)
 
     # Generate Time Column
     delta_time = (columns[delta_time_key]*1e9).astype('timedelta64[ns]')
@@ -192,7 +193,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
 
     # Check for Output Options
     if "output" in parm:
-        gdf = sliderule.__procoutputfile(parm)
+        gdf = sliderule.procoutputfile(parm)
         profiles["flatten"] = time.perf_counter() - tstart_flatten
         return gdf
 
@@ -212,7 +213,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                 if field_name not in field_dictionary:
                     field_dictionary[field_name] = {'extent_id': [], field_name: []}
                 # Parse Ancillary Data
-                data = sliderule.__get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
+                data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
                 # Add Left Pair Track Entry
                 field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
                 field_dictionary[field_name][field_name] += data[LEFT_PAIR],
@@ -306,15 +307,13 @@ def __query_resources(parm, version, **kwargs):
     # Latch Start Time
     tstart = time.perf_counter()
 
+    # Submission Arguments for CMR
+    kwargs.setdefault('return_metadata', False)
+
     # Check Parameters are Valid
     if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
         logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
         return []
-
-    # Submission Arguments for CMR
-    kwargs['short_name'] = 'ATL03'
-    kwargs['version'] = version
-    kwargs.setdefault('return_metadata', False)
 
     # Pull Out Polygon
     if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
@@ -347,12 +346,12 @@ def __query_resources(parm, version, **kwargs):
 
     # Make CMR Request
     if kwargs['return_metadata']:
-        resources,metadata = cmr.cmr(**kwargs)
+        resources,metadata = earthdata.cmr(version, 'ATL03', **kwargs)
     else:
-        resources = cmr.cmr(**kwargs)
+        resources = earthdata.cmr(version, 'ATL03', **kwargs)
 
     # Check Resources are Under Limit
-    if(len(resources) > cmr.max_requested_resources):
+    if(len(resources) > earthdata.max_requested_resources):
         raise sliderule.FatalError('Exceeded maximum requested granules: {} (current max is {})\nConsider using cmr.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(resources))
@@ -374,7 +373,7 @@ def __query_resources(parm, version, **kwargs):
 #
 #  Initialize
 #
-def init (url=sliderule.service_url, verbose=False, max_resources=cmr.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
+def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
     '''
     Initializes the Python client for use with SlideRule and should be called before other ICESat-2 API calls.
     This function is a wrapper for the `sliderule.init(...) function </rtds/api_reference/sliderule.html#init>`_.
@@ -390,7 +389,7 @@ def init (url=sliderule.service_url, verbose=False, max_resources=cmr.DEFAULT_MA
         >>> icesat2.init()
     '''
     sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, plugins=['icesat2'])
-    cmr.set_max_resources(max_resources) # set maximum number of resources allowed per request
+    earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
 
 #
 #  Common Metadata Repository
@@ -400,7 +399,7 @@ def cmr(version=DEFAULT_ICESAT2_SDP_VERSION, short_name='ATL03', **kwargs):
     Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters.
     Wrapper for the `cmr.cmr(...) function </rtd/api_reference/cmr.html#cmr>`_.
     '''
-    return cmr.cmr(polygon=kwargs['polygon'], time_start=kwargs['time_start'], time_end=kwargs['time_end'], version=version, short_name=short_name)
+    return earthdata.cmr(version=version, short_name=short_name, **kwargs)
 
 #
 #  ATL06
@@ -512,7 +511,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return sliderule.__emptyframe()
+        return sliderule.emptyframe()
 
 #
 #  Subsetted ATL03
@@ -592,7 +591,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         # Check for Output Options
         if "output" in parm:
             profiles[atl03sp.__name__] = time.perf_counter() - tstart
-            return sliderule.__procoutputfile(parm)
+            return sliderule.procoutputfile(parm)
         else: # Native Output
             # Flatten Responses
             tstart_flatten = time.perf_counter()
@@ -622,7 +621,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         if extent_id not in extent_dictionary:
                             extent_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = sliderule.__get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
+                        data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
                         extent_dictionary[extent_id][field_name] = data
                     elif 'phrec' == rsp['__rectype']:
                         # Get Field Type
@@ -633,7 +632,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         if extent_id not in photon_dictionary:
                             photon_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
-                        data = sliderule.__get_values(rsp['data'], rsp['datatype'], len(rsp['data']))
+                        data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
                         photon_dictionary[extent_id][field_name] = data
                 # Build Elevation Columns
                 if num_photons > 0:
@@ -720,7 +719,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         logger.critical(e)
 
     # Error or No Data
-    return sliderule.__emptyframe()
+    return sliderule.emptyframe()
 
 #
 #  ATL08
@@ -808,12 +807,12 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return sliderule.__emptyframe()
+        return sliderule.emptyframe()
 
 #
 #  H5
 #
-def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
+def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=h5.ALL_ROWS):
     '''
     DEPRECATED - use h5.h5(...) instead
     '''
@@ -858,4 +857,4 @@ def set_max_resources (max_resources):
     DEPRECATED - use cmr.set_max_resources(...) instead
     '''
     warnings.warn('icesat2.{} is deprecated, please use cmr.{} instead'.format(set_max_resources.__name__, set_max_resources.__name__), DeprecationWarning, stacklevel=2)
-    return cmr.set_max_resources(max_resources)
+    return earthdata.set_max_resources(max_resources)

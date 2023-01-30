@@ -2,6 +2,7 @@
 # Imports
 #
 import sys
+import sliderule
 from sliderule import icesat2
 from utils import parse_command_line
 
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     parse_command_line(sys.argv, cfg)
 
     # Override region of interest
-    region = icesat2.toregion(cfg["region"], cfg["tolerance"])
+    region = sliderule.toregion(cfg["region"], cfg["tolerance"])
 
     # Query CMR for list of resources
     resources = icesat2.cmr(polygon=region["poly"], short_name=cfg["dataset"])

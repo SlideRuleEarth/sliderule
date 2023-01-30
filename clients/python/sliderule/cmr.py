@@ -27,7 +27,6 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
 import itertools
 import copy
 import json
@@ -130,7 +129,7 @@ def __cmr_filter_urls(search_results):
 def __cmr_granule_metadata(search_results):
     """Get the metadata for CMR returned granules"""
     # GeoDataFrame with granule metadata
-    granule_metadata = sliderule.__emptyframe()
+    granule_metadata = sliderule.emptyframe()
     # return empty dataframe if no CMR entries
     if 'feed' not in search_results or 'entry' not in search_results['feed']:
         return granule_metadata
@@ -198,7 +197,7 @@ def __cmr_search(short_name, version, time_start, time_end, **kwargs):
 
     urls = []
     # GeoDataFrame with granule metadata
-    metadata = sliderule.__emptyframe()
+    metadata = sliderule.emptyframe()
     while True:
         req = urllib.request.Request(cmr_query_url)
         if cmr_scroll_id:
@@ -254,7 +253,7 @@ def set_max_resources (max_resources):
 #
 #  Common Metadata Repository
 #
-def cmr(polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), version=None, short_name=None, return_metadata=False, name_filter=None):
+def cmr(version=None, short_name=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None):
     '''
     Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov/search>`_ for a list of data within temporal and spatial parameters
 
@@ -308,7 +307,7 @@ def cmr(polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datet
     # iterate through each polygon (or none if none supplied)
     for polygon in polygons:
         urls = []
-        metadata = sliderule.__emptyframe()
+        metadata = sliderule.emptyframe()
 
         # issue CMR request
         for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:

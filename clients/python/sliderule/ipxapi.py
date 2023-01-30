@@ -69,7 +69,7 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
         resources = ipx_region.avail_granules(ids=True)[0]
     except:
         logger.critical("must supply an icepyx query as region")
-        return icesat2.__emptyframe()
+        return icesat2.emptyframe()
     # try to get the subsetting region
     if ipx_region.extent_type in ('bbox','polygon'):
         parm.update({'poly': to_region(ipx_region)})
@@ -104,7 +104,7 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
         resources = ipx_region.avail_granules(ids=True)[0]
     except:
         logger.critical("must supply an icepyx query as region")
-        return icesat2.__emptyframe()
+        return icesat2.emptyframe()
     # try to get the subsetting region
     if ipx_region.extent_type in ('bbox','polygon'):
         parm.update({'poly': to_region(ipx_region)})

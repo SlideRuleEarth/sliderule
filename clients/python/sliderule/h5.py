@@ -183,7 +183,7 @@ def h5p (datasets, resource, asset):
     # Build Record Data
     results = {}
     for result in rsps:
-        results[result["dataset"]] = sliderule.__get_values(result["data"], result["datatype"], result["size"])
+        results[result["dataset"]] = sliderule.getvalues(result["data"], result["datatype"], result["size"])
 
     # Update Profiles
     profiles[h5p.__name__] = time.perf_counter() - tstart
