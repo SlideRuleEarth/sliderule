@@ -162,9 +162,9 @@ class Gedi04aReader: public LuaObject
 
                 H5Array<uint64_t>   shot_number;
                 H5Array<double>     delta_time;
-                H5Array<double>     agbd;
-                H5Array<double>     elev_lowestmode;
-                H5Array<double>     solar_elevation;
+                H5Array<float>      agbd;
+                H5Array<float>      elev_lowestmode;
+                H5Array<float>      solar_elevation;
                 H5Array<uint8_t>    degrade_flag;
                 H5Array<uint8_t>    l2_quality_flag;
                 H5Array<uint8_t>    l4_quality_flag;
