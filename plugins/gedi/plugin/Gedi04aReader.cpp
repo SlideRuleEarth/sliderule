@@ -246,7 +246,7 @@ Gedi04aReader::Region::Region (info_t* info):
 
     /* Initialize Region */
     first_footprint = 0;
-    num_footprints = -1;
+    num_footprints = H5Coro::ALL_ROWS;
 
     /* Determine Spatial Extent */
     if(info->reader->parms->raster != NULL)
@@ -259,7 +259,7 @@ Gedi04aReader::Region::Region (info_t* info):
     }
     else
     {
-        return; // early exit since no subsetting required
+        num_footprints = MIN(lat_lowestmode.size, lon_lowestmode.size);
     }
 
     /* Check If Anything to Process */
@@ -440,6 +440,27 @@ Gedi04aReader::Gedi04a::~Gedi04a (void)
 }
 
 /*----------------------------------------------------------------------------
+ * postRecordBatch
+ *----------------------------------------------------------------------------*/
+void Gedi04aReader::postRecordBatch (stats_t* local_stats)
+{
+    uint8_t* rec_buf = NULL;
+    int size = batchIndex * sizeof(footprint_t);
+    int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
+    int post_status = MsgQ::STATE_TIMEOUT;
+    while(active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
+    if(post_status > 0)
+    {
+        local_stats->footprints_sent += BATCH_SIZE;
+    }
+    else
+    {
+        mlog(ERROR, "Failed to post %s to stream %s: %d", batchRecord.getRecordType(), outQ->getName(), post_status);
+        local_stats->footprints_dropped += BATCH_SIZE;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
 void* Gedi04aReader::subsettingThread (void* parm)
@@ -451,7 +472,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -539,15 +560,8 @@ void* Gedi04aReader::subsettingThread (void* parm)
                 reader->batchIndex++;
                 if(reader->batchIndex >= BATCH_SIZE)
                 {
+                    reader->postRecordBatch(&local_stats);
                     reader->batchIndex = 0;
-                    if(reader->batchRecord.post(reader->outQ))
-                    {
-                        local_stats.footprints_sent += BATCH_SIZE;
-                    }
-                    else
-                    {
-                        local_stats.footprints_dropped += BATCH_SIZE;
-                    }
                 }
             }
             reader->threadMut.unlock();
@@ -562,6 +576,16 @@ void* Gedi04aReader::subsettingThread (void* parm)
     /* Handle Global Reader Updates */
     reader->threadMut.lock();
     {
+        /* Count Completion */
+        reader->numComplete++;
+
+        /* Send Final Record Batch */
+        if(reader->numComplete == reader->threadCount)
+        {
+            mlog(INFO, "Completed processing resource %s", info->reader->resource);
+            reader->postRecordBatch(&local_stats);
+        }
+
         /* Update Statistics */
         reader->stats.footprints_read += local_stats.footprints_read;
         reader->stats.footprints_filtered += local_stats.footprints_filtered;
@@ -569,24 +593,9 @@ void* Gedi04aReader::subsettingThread (void* parm)
         reader->stats.footprints_dropped += local_stats.footprints_dropped;
         reader->stats.footprints_retried += local_stats.footprints_retried;
 
-        /* Count Completion */
-        reader->numComplete++;
+        /* Indicate End of Data */
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", info->reader->resource);
-
-            /* Send Final Record Batch */
-            int size = reader->batchIndex * sizeof(footprint_t);
-            if(reader->batchRecord.post(reader->outQ, size))
-            {
-                local_stats.footprints_sent += reader->batchIndex;
-            }
-            else
-            {
-                local_stats.footprints_dropped += reader->batchIndex;
-            }
-
-            /* Indicate End of Data */
             if(reader->sendTerminator) reader->outQ->postCopy("", 0);
             reader->signalComplete();
         }

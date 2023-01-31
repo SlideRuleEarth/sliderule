@@ -123,7 +123,10 @@ GediParms::GediParms(lua_State* L, int index):
     degrade_filter              (DEGRADE_UNFILTERED),
     l2_quality_filter           (L2QLTY_UNFILTERED),
     l4_quality_filter           (L4QLTY_UNFILTERED),
-    surface_filter              (SURFACE_UNFILTERED)
+    surface_filter              (SURFACE_UNFILTERED),
+    rqst_timeout                (DEFAULT_RQST_TIMEOUT),
+    node_timeout                (DEFAULT_NODE_TIMEOUT),
+    read_timeout                (DEFAULT_READ_TIMEOUT)
 {
     bool provided = false;
 

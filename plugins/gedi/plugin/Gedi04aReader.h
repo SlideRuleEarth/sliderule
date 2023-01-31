@@ -198,9 +198,8 @@ class Gedi04aReader: public LuaObject
 
                             Gedi04aReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator=true);
                             ~Gedi04aReader          (void);
-
+        void                postRecordBatch         (stats_t* local_stats);
         static void*        subsettingThread        (void* parm);
-
         static int          luaStats                (lua_State* L);
 };
 

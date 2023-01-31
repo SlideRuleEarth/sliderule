@@ -314,9 +314,9 @@ Atl03Reader::Region::Region (info_t* info):
     for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
     {
         first_segment[t] = 0;
-        num_segments[t] = -1;
+        num_segments[t] = H5Coro::ALL_ROWS;
         first_photon[t] = 0;
-        num_photons[t] = -1;
+        num_photons[t] = H5Coro::ALL_ROWS;
     }
 
     /* Determine Spatial Extent */
