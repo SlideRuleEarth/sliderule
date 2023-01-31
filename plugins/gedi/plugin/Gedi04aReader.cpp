@@ -55,7 +55,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Gedi04aReader::fpRecType = "gedi04a.footprint";
+const char* Gedi04aReader::fpRecType = "gedi04arec.footprint";
 const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),     1,  NULL, NATIVE_FLAGS},
     {"delta_time",      RecordObject::DOUBLE,   offsetof(footprint_t, delta_time),      1,  NULL, NATIVE_FLAGS},
@@ -68,7 +68,7 @@ const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"flags",           RecordObject::UINT8,    offsetof(footprint_t, flags),           1,  NULL, NATIVE_FLAGS}
 };
 
-const char* Gedi04aReader::batchRecType = "gedi04a";
+const char* Gedi04aReader::batchRecType = "gedi04arec";
 const RecordObject::fieldDef_t Gedi04aReader::batchRecDef[] = {
     {"footprint",       RecordObject::USER,     offsetof(gedil4a_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
 };
@@ -448,15 +448,15 @@ void Gedi04aReader::postRecordBatch (stats_t* local_stats)
     int size = batchIndex * sizeof(footprint_t);
     int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
     int post_status = MsgQ::STATE_TIMEOUT;
-    while(active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
+    while( active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
     if(post_status > 0)
     {
-        local_stats->footprints_sent += BATCH_SIZE;
+        local_stats->footprints_sent += batchIndex;
     }
     else
     {
         mlog(ERROR, "Failed to post %s to stream %s: %d", batchRecord.getRecordType(), outQ->getName(), post_status);
-        local_stats->footprints_dropped += BATCH_SIZE;
+        local_stats->footprints_dropped += batchIndex;
     }
 }
 
@@ -487,7 +487,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         local_stats.footprints_read = region.num_footprints;
 
         /* Traverse All Footprints In Dataset */
-        for(long footprint = 0; reader->active && footprint > region.num_footprints; footprint++)
+        for(long footprint = 0; reader->active && footprint < region.num_footprints; footprint++)
         {
             /* Check Degrade Filter */
             if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)
@@ -583,7 +583,10 @@ void* Gedi04aReader::subsettingThread (void* parm)
         if(reader->numComplete == reader->threadCount)
         {
             mlog(INFO, "Completed processing resource %s", info->reader->resource);
-            reader->postRecordBatch(&local_stats);
+            if(reader->batchIndex > 0)
+            {
+                reader->postRecordBatch(&local_stats);
+            }
         }
 
         /* Update Statistics */
