@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 profiles = {}
 
 # default asset
-DEFAULT_ASSET="ornldaac-s3"
+DEFAULT_ASSET="ornl-s3"
 
 # default GEDI standard data product version
 DEFAULT_GEDI_SDP_VERSION = '2'
@@ -54,6 +54,8 @@ DEFAULT_GEDI_SDP_VERSION = '2'
 # gps-based epoch for delta times
 GEDI_SDP_EPOCH = datetime.datetime(2018, 1, 1)
 
+# gedi parameters
+ALL_BEAMS = -1
 
 ###############################################################################
 # LOCAL FUNCTIONS
