@@ -41,7 +41,7 @@ for i = 1, 2 do
     if demType == "arcticdem-mosaic" then
         runner.check(sampleCnt == 1)
     else
-        runner.check(sampleCnt >= 28)
+        runner.check(sampleCnt == 14)
     end
 
     print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
@@ -61,9 +61,14 @@ for i = 1, 2 do
     print(string.format("\n--------------------------------\nTest: %s cellsize\n--------------------------------", demType))
     local cellsize = dem:cell()
     print(string.format("cellsize: %d", cellsize))
-    runner.check(cellsize == 2.0)
-end
 
+    if demType == "arcticdem-mosaic" then
+        runner.check(cellsize == 2.0)
+    else
+        runner.check(cellsize == 0.0)
+    end
+
+end
 
 for i = 1, 2 do
 

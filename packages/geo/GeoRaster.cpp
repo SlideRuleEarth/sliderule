@@ -41,9 +41,7 @@
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 #include <gdal.h>
-#include <gdal_utils.h>
 #include <gdalwarper.h>
-#include <vrtdataset.h>
 #include <ogr_spatialref.h>
 #include <gdal_priv.h>
 #include <algorithm>
@@ -166,7 +164,7 @@ int GeoRaster::sample (double lon, double lat, List<sample_t> &slist, void* para
         /* Get samples */
         if (sample(lon, lat) > 0)
         {
-            raster_t *raster = NULL;
+            Raster *raster = NULL;
             const char *key = rasterDict.first(&raster);
             while (key != NULL)
             {
@@ -216,21 +214,17 @@ GeoRaster::~GeoRaster(void)
     delete [] rasterRreader;
 
     /* Close all rasters */
-    raster_t* raster = NULL;
+    Raster* raster = NULL;
     const char* key  = rasterDict.first(&raster);
     while (key != NULL)
     {
         assert(raster);
-        if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
         delete raster;
         raster = NULL;
         key = rasterDict.next(&raster);
     }
 
-    /* Close raster index data set and transform */
-    if (ris.dset) GDALClose((GDALDatasetH)ris.dset);
-    if (ris.transf) OGRCoordinateTransformation::DestroyCT(ris.transf);
-    if (tifList) delete tifList;
+    if (rastersList) delete rastersList;
 }
 
 /*----------------------------------------------------------------------------
@@ -238,44 +232,30 @@ GeoRaster::~GeoRaster(void)
  *----------------------------------------------------------------------------*/
 int GeoRaster::sample(double lon, double lat)
 {
-    invalidateRastersCache();
+    invalidateCache();
 
-    /* Initial call, open raster index file if not already opened */
-    if (ris.dset == NULL)
+    /* Initial call, open raster index data set if not already opened */
+    if (geoIndex.dset == NULL)
     {
-        if (!openRasterIndexSet(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index data set file for point lon: %lf, lat: %lf", lon, lat);
+        if (!openGeoIndex(lon, lat))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not openGeoIndex raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
     }
 
-    OGRPoint p = {lon, lat};
-    if (p.transform(ris.transf) != OGRERR_NONE)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "transform failed for point: lon: %lf, lat: %lf", lon, lat);
+    OGRPoint p(lon, lat);
+    if (!transformCRS(p))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
 
-    /* If point is not in current index dataset, open new one for this lon, lat */
-    if (!rasterIndexContainsPoint(p))
+    /* If point is not in current raster index data set, openGeoIndex new one */
+    if (!geoIndex.containsPoint(p))
     {
-        if (!openRasterIndexSet(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file data set for point lon: %lf, lat: %lf", lon, lat);
+        if (!openGeoIndex(lon, lat))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not openGeoIndex raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
     }
 
-    bool findNewTifFiles = true;
-
-    if( checkCacheFirst )
+    if (!findCachedRasters(p))
     {
-        raster_t *raster = NULL;
-        if (findCachedRasterWithPoint(p, &raster))
-        {
-            raster->enabled = true;
-            raster->point = p;
-
-            /* Found raster with point in cache, no need to look for new tif file */
-            findNewTifFiles = false;
-        }
-    }
-
-    if (findNewTifFiles && findRasterFilesWithPoint(p))
-    {
-        updateRastersCache(p);
+        if (findRasters(p))
+            updateCache(p);
     }
 
     sampleRasters();
@@ -296,25 +276,6 @@ const char* GeoRaster::getUUID(char *uuid_str)
 }
 
 
-/*----------------------------------------------------------------------------
- * buildVRT
- *----------------------------------------------------------------------------*/
-void GeoRaster::buildVRT(std::string& vrtFile, List<std::string>& rlist)
-{
-    GDALDataset* vrtDset = NULL;
-    std::vector<const char*> rasters;
-
-    for (int i = 0; i < rlist.length(); i++)
-    {
-        rasters.push_back(rlist[i].c_str());
-    }
-
-    vrtDset = (GDALDataset*) GDALBuildVRT(vrtFile.c_str(), rasters.size(), NULL, rasters.data(), NULL, NULL);
-    CHECKPTR(vrtDset);
-    GDALClose(vrtDset);
-    mlog(DEBUG, "Created %s", vrtFile.c_str());
-}
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -327,7 +288,6 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
 {
     CHECKPTR(dem_sampling);
 
-    allowIndexDataSetSampling = false;
     zonalStats = false;
     sampleAlg  = (GDALRIOResampleAlg) -1;
 
@@ -351,15 +311,12 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
 
     /* Initialize Class Data Members */
-    clearRasterIndexSet( &ris );
-
-    tifList = new List<std::string>;
-    tifList->clear();
+    rastersList = new List<raster_info_t>;
+    rastersList->clear();
     rasterDict.clear();
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
-    checkCacheFirst = false;
 }
 
 
@@ -379,7 +336,7 @@ int GeoRaster::radius2pixels(double cellSize, int _radius)
     int csize = static_cast<int>(cellSize);
 
     if (_radius == 0) return 0;
-    if ( csize  == 0) csize = 1;
+    if (csize == 0) csize = 1;
 
     int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
     int radiusInPixels = radiusInMeters / csize;
@@ -387,15 +344,155 @@ int GeoRaster::radius2pixels(double cellSize, int _radius)
 }
 
 
+/*----------------------------------------------------------------------------
+ * processRaster
+ * Thread-safe, can be called directly from main thread or reader thread
+ *----------------------------------------------------------------------------*/
+void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
+{
+    try
+    {
+        /* Open raster if first time reading from it */
+        if (raster->dset == NULL)
+        {
+            raster->dset = (GDALDataset *)GDALOpenEx(raster->fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+            if (raster->dset == NULL)
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to openGeoIndex raster: %s:", raster->fileName.c_str());
 
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
+            mlog(DEBUG, "Opened dataSet for %s", raster->fileName.c_str());
+
+            /* Store information about raster */
+            raster->cols = raster->dset->GetRasterXSize();
+            raster->rows = raster->dset->GetRasterYSize();
+
+            /* Get raster boundry box */
+            double geot[6] = {0};
+            CPLErr err = raster->dset->GetGeoTransform(geot);
+            CHECK_GDALERR(err);
+            raster->bbox.lon_min = geot[0];
+            raster->bbox.lon_max = geot[0] + raster->cols * geot[1];
+            raster->bbox.lat_max = geot[3];
+            raster->bbox.lat_min = geot[3] + raster->rows * geot[5];
+
+            raster->cellSize = geot[1];
+            raster->radiusInPixels = radius2pixels(raster->cellSize, samplingRadius);
+
+            /* Limit maximum sampling radius */
+            if (raster->radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR,
+                                       "Sampling radius is too big: %d: max allowed %d meters",
+                                       samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
+            }
+
+            /* Get raster block size */
+            raster->band = raster->dset->GetRasterBand(1);
+            CHECKPTR(raster->band);
+            raster->band->GetBlockSize(&raster->xBlockSize, &raster->yBlockSize);
+
+            /* Get raster data type */
+            raster->dataType = raster->band->GetRasterDataType();
+
+            /* Get raster spatial reference */
+            raster->sref = const_cast<OGRSpatialReference*>(raster->dset->GetSpatialRef());
+            CHECKPTR(raster->sref);
+        }
+
+
+        /* Make sure point of interest and raster are in the same CRS */
+        OGRSpatialReference *psref = raster->point.getSpatialReference();
+        CHECKPTR(psref);
+        if (!raster->sref->IsSame(psref))
+        {
+            if (cord.source.IsSame(psref) && !psref->IsProjected())
+            {
+                /* Transform point to raster's CRS */
+                double lon = raster->point.getX();
+                double lat = raster->point.getY();
+                if (raster->point.transform(cord.transf) != OGRERR_NONE)
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
+            }
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "POI and raster CRS are not the same");
+        }
+
+        /*
+         * Attempt to read raster only if it contains the point of interest.
+         */
+        if (!containsPoint(raster, raster->point))
+            return;
+
+        if (obj->sampleAlg == GRIORA_NearestNeighbour)
+            obj->readPixel(raster);
+        else
+            resamplePixel(raster, obj);
+
+        raster->sample.time = raster->gpsTime;
+        raster->sampled = true;
+
+        if (zonalStats)
+            computeZonalStats(raster, obj);
+
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error reading raster: %s", e.what());
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * sampleRasters
+ *----------------------------------------------------------------------------*/
+void GeoRaster::sampleRasters(void)
+{
+    /* Create additional reader threads if needed */
+    createThreads();
+
+    /* For each raster which is marked to be sampled, give it to the reader thread */
+    int signaledReaders = 0;
+    Raster *raster = NULL;
+    const char *key = rasterDict.first(&raster);
+    int i = 0;
+    while (key != NULL)
+    {
+        assert(raster);
+        if (raster->enabled)
+        {
+            reader_t *reader = &rasterRreader[i++];
+            reader->sync->lock();
+            {
+                reader->raster = raster;
+                reader->sync->signal(0, Cond::NOTIFY_ONE);
+                signaledReaders++;
+            }
+            reader->sync->unlock();
+        }
+        key = rasterDict.next(&raster);
+    }
+
+    /* Did not signal any reader threads, don't wait */
+    if (signaledReaders == 0) return;
+
+    /* Wait for all reader threads to finish sampling */
+    for (uint32_t j=0; j<readerCount; j++)
+    {
+        reader_t *reader = &rasterRreader[j];
+        raster = NULL;
+        do
+        {
+            reader->sync->lock();
+            {
+                raster = reader->raster;
+            }
+            reader->sync->unlock();
+        } while (raster != NULL);
+    }
+}
 
 /*----------------------------------------------------------------------------
  * RasterIoWithRetry
  *----------------------------------------------------------------------------*/
-void GeoRaster::RasterIoWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
+void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
 {
     /*
      * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
@@ -412,10 +509,16 @@ void GeoRaster::RasterIoWithRetry(GDALRasterBand *band, int col, int row, int co
     if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
 }
 
+
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
 /*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
-void GeoRaster::readPixel(raster_t *raster)
+void GeoRaster::readPixel(Raster *raster)
 {
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
@@ -509,7 +612,7 @@ void GeoRaster::readPixel(raster_t *raster)
         /* Done reading, release block lock */
         block->DropLock();
 
-        // mlog(DEBUG, "Value: %lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
+        // mlog(DEBUG, "Value: %.2lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
         //      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
     }
     catch (const RunTimeException &e)
@@ -520,9 +623,9 @@ void GeoRaster::readPixel(raster_t *raster)
 
 
 /*----------------------------------------------------------------------------
- * rasterContainsWindow
+ * containsWindow
  *----------------------------------------------------------------------------*/
-bool rasterContainsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
+bool GeoRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
 {
     if (col < 0 || row < 0)
         return false;
@@ -533,18 +636,79 @@ bool rasterContainsWindow(int col, int row, int maxCol, int maxRow, int windowSi
     return true;
 }
 
+/*----------------------------------------------------------------------------
+ * containsPoint
+ *----------------------------------------------------------------------------*/
+inline bool GeoRaster::containsPoint(Raster *raster, OGRPoint& p)
+{
+    return (raster && raster->dset &&
+            (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
+            (p.getY() >= raster->bbox.lat_min) && (p.getY() <= raster->bbox.lat_max));
+}
+
+/*----------------------------------------------------------------------------
+ * readGeoIndexData
+ *----------------------------------------------------------------------------*/
+bool GeoRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffset,
+                                 void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
+{
+    std::ignore = point;
+    std::ignore = srcWindowSize;
+    std::ignore = srcOffset;
+    std::ignore = data;
+    std::ignore = dstWindowSize;
+    std::ignore = args;
+    return false;
+}
+
+/*----------------------------------------------------------------------------
+ * containsPoint
+ *----------------------------------------------------------------------------*/
+inline bool GeoRaster::GeoIndex::containsPoint(OGRPoint& p)
+{
+    return (dset &&
+            (p.getX() >= bbox.lon_min) && (p.getX() <= bbox.lon_max) &&
+            (p.getY() >= bbox.lat_min) && (p.getY() <= bbox.lat_max));
+}
+
+/*----------------------------------------------------------------------------
+ * clear
+ *----------------------------------------------------------------------------*/
+void GeoRaster::GeoIndex::clear(bool close)
+{
+    if (close && dset) GDALClose((GDALDatasetH)dset);
+    dset = NULL;
+    fileName.clear();
+    rows = 0;
+    cols = 0;
+    cellSize = 0;
+    bzero(&bbox, sizeof(bbox_t));
+}
+
+/*----------------------------------------------------------------------------
+ * clear
+ *----------------------------------------------------------------------------*/
+void GeoRaster::CoordTransform::clear(bool close)
+{
+    if (close && transf) OGRCoordinateTransformation::DestroyCT(transf);
+    transf = NULL;
+    source.Clear();
+    target.Clear();
+}
+
+
 
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GeoRaster::resamplePixel(raster_t *raster, GeoRaster* obj)
+void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
 {
     try
     {
-        int col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
-        int row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
+        int col = static_cast<int>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
+        int row = static_cast<int>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
 
-        int _col, _row, windowSize;
+        int windowSize, offset;
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
         if (obj->samplingRadius == 0)
@@ -567,53 +731,41 @@ void GeoRaster::resamplePixel(raster_t *raster, GeoRaster* obj)
                 kernel = 6; /* No default kernel, pick something */
 
             windowSize = kernel + 1;    // Odd window size around pixel
-            _col = col - (kernel / 2);
-            _row = row - (kernel / 2);
+            offset = (kernel / 2);
         }
         else
         {
             windowSize = raster->radiusInPixels * 2 + 1;  // Odd window size around pixel
-            _col = col - raster->radiusInPixels;
-            _row = row - raster->radiusInPixels;
+            offset = raster->radiusInPixels;
         }
 
-        bool windowIsValid = rasterContainsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+        int _col = col - offset;
+        int _row = row - offset;
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = obj->sampleAlg;
-        double rbuf[1] = {INVALID_SAMPLE_VALUE};
+        double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
-        if (windowIsValid)
+        bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+        if (validWindow)
         {
-            RasterIoWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
+            readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
+        }
+        else
+        {
+            validWindow = readGeoIndexData(&raster->point, windowSize, offset, rbuf, 1, &args);
+        }
+
+        if(validWindow)
+        {
             raster->sample.value = rbuf[0];
-            return;
         }
-
-        if (allowIndexDataSetSampling)
+        else
         {
-             /* Use raster index data set instead of current raster */
-            col = static_cast<int32_t>(floor((raster->point.getX() - ris.bbox.lon_min) / ris.cellSize));
-            row = static_cast<int32_t>(floor((ris.bbox.lat_max - raster->point.getY()) / ris.cellSize));
-
-            windowSize = ris.radiusInPixels * 2 + 1;  // Odd window size around pixel
-            _col = col - ris.radiusInPixels;
-            _row = row - ris.radiusInPixels;
-
-            /* Make sure sampling window is valid for raster index data set */
-            windowIsValid = rasterContainsWindow(_col, _row, ris.cols, ris.rows, windowSize);
-
-            if (windowIsValid)
-            {
-                RasterIoWithRetry(ris.band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
-                raster->sample.value = rbuf[0];
-            }
-            return;
+            /* At least return pixel value if unable to resample raster and/or raster index data set */
+            obj->readPixel(raster);
         }
-
-        /* At least return pixel value if unable to resample raster and/or raster index data set */
-        obj->readPixel(raster);
     }
     catch (const RunTimeException &e)
     {
@@ -625,7 +777,7 @@ void GeoRaster::resamplePixel(raster_t *raster, GeoRaster* obj)
 /*----------------------------------------------------------------------------
  * zonalStats
  *----------------------------------------------------------------------------*/
-void GeoRaster::computeZonalStats(raster_t *raster, GeoRaster *obj)
+void GeoRaster::computeZonalStats(Raster *raster, GeoRaster *obj)
 {
     double *samplesArray = NULL;
 
@@ -635,13 +787,11 @@ void GeoRaster::computeZonalStats(raster_t *raster, GeoRaster *obj)
         int row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
 
         int radiusInPixels = raster->radiusInPixels;
-        int _col, _row, windowSize;
+        int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 
-        windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
-        _col = col - radiusInPixels;
-        _row = row - radiusInPixels;
+        int _col = col - radiusInPixels;
+        int _row = row - radiusInPixels;
 
-        bool windowIsValid = rasterContainsWindow(_col, _row, raster->cols, raster->rows, windowSize);
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
@@ -650,33 +800,17 @@ void GeoRaster::computeZonalStats(raster_t *raster, GeoRaster *obj)
         CHECKPTR(samplesArray);
 
         double noDataValue = raster->band->GetNoDataValue();
-
-        if (windowIsValid)
+        bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+        if (validWindow)
         {
-            RasterIoWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+            readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
         }
-        else if (allowIndexDataSetSampling)
+        else
         {
-             /* Use raster index data set instead of current raster */
-            col = static_cast<int32_t>(floor((raster->point.getX() - ris.bbox.lon_min) / ris.cellSize));
-            row = static_cast<int32_t>(floor((ris.bbox.lat_max - raster->point.getY()) / ris.cellSize));
-
-            radiusInPixels = ris.radiusInPixels;
-            _col = col - radiusInPixels;
-            _row = row - radiusInPixels;
-
-            /* Make sure sampling window is valid for raster index data set */
-            windowIsValid = rasterContainsWindow(_col, _row, ris.cols, ris.rows, windowSize);
-
-            if (windowIsValid)
-            {
-                /* Get nodata value from raster index data set, it shoudl be the same as raster but just in case it is not...*/
-                noDataValue = ris.band->GetNoDataValue();
-                RasterIoWithRetry(ris.band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
-            }
+            validWindow = readGeoIndexData(&raster->point, windowSize, radiusInPixels, samplesArray, windowSize, &args);
         }
 
-        if(windowIsValid)
+        if(validWindow)
         {
             /* One of the windows (raster or index data set) was valid. Compute zonal stats */
             double min = std::numeric_limits<double>::max();
@@ -772,54 +906,37 @@ void GeoRaster::computeZonalStats(raster_t *raster, GeoRaster *obj)
 
 
 /*----------------------------------------------------------------------------
- * clearRasterIndexSet
+ * clear
  *----------------------------------------------------------------------------*/
-void GeoRaster::clearRasterIndexSet(raster_index_set_t *iset)
+void GeoRaster::Raster::clear(bool close)
 {
-    iset->fileName.clear();
-    iset->dset = NULL;
-    iset->band = NULL;
-    bzero(iset->invGeot, sizeof(iset->invGeot));
-    iset->rows = 0;
-    iset->cols = 0;
-    iset->cellSize = 0;
-    bzero(&iset->bbox, sizeof(bbox_t));
-    iset->radiusInPixels = 0;
-    iset->transf = NULL;
-    iset->srcSrs.Clear();
-    iset->trgSrs.Clear();
+    if(close && dset) GDALClose((GDALDatasetH)dset);
+    dset = NULL;
+    band = NULL;
+    sref = NULL;
+    enabled = false;
+    sampled = false;
+    fileName.clear();
+    dataType = GDT_Unknown;
+
+    rows = 0;
+    cols = 0;
+    bzero(&bbox, sizeof(bbox_t));
+    cellSize = 0;
+    xBlockSize = 0;
+    yBlockSize = 0;
+    radiusInPixels = 0;
+    gpsTime = 0;
+    point.empty();
+    bzero(&sample, sizeof(sample_t));
 }
 
 /*----------------------------------------------------------------------------
- * clearRaster
+ * invaldiateCache
  *----------------------------------------------------------------------------*/
-void GeoRaster::clearRaster(raster_t *raster)
+void GeoRaster::invalidateCache(void)
 {
-    raster->enabled = false;
-    raster->sampled = false;
-    raster->dset = NULL;
-    raster->band = NULL;
-    raster->fileName.clear();
-    raster->dataType = GDT_Unknown;
-
-    raster->rows = 0;
-    raster->cols = 0;
-    bzero(&raster->bbox, sizeof(bbox_t));
-    raster->cellSize = 0;
-    raster->xBlockSize = 0;
-    raster->yBlockSize = 0;
-    raster->radiusInPixels = 0;
-    raster->gpsTime = 0;
-    raster->point.empty();
-    bzero(&raster->sample, sizeof(sample_t));
-}
-
-/*----------------------------------------------------------------------------
- * invaldiateAllRasters
- *----------------------------------------------------------------------------*/
-void GeoRaster::invalidateRastersCache(void)
-{
-    raster_t *raster = NULL;
+    Raster *raster = NULL;
     const char* key = rasterDict.first(&raster);
     while (key != NULL)
     {
@@ -834,21 +951,21 @@ void GeoRaster::invalidateRastersCache(void)
 }
 
 /*----------------------------------------------------------------------------
- * updateRastersCache
+ * updateCache
  *----------------------------------------------------------------------------*/
-void GeoRaster::updateRastersCache(OGRPoint& p)
+void GeoRaster::updateCache(OGRPoint& p)
 {
-    if (tifList->length() == 0)
+    if (rastersList->length() == 0)
         return;
 
     const char *key  = NULL;
-    raster_t *raster = NULL;
+    Raster *raster = NULL;
 
     /* Check new tif file list against rasters in dictionary */
-    for (int i = 0; i < tifList->length(); i++)
+    for (int i = 0; i < rastersList->length(); i++)
     {
-        std::string& fileName = tifList->get(i);
-        key = fileName.c_str();
+        raster_info_t& rinfo = rastersList->get(i);
+        key = rinfo.fileName.c_str();
 
         if (rasterDict.find(key, &raster))
         {
@@ -860,13 +977,13 @@ void GeoRaster::updateRastersCache(OGRPoint& p)
         else
         {
             /* Create new raster for this tif file since it is not in the dictionary */
-            raster = new raster_t;
+            raster = new Raster;
             assert(raster);
-            clearRaster(raster);
             raster->enabled = true;
             raster->point = p;
             raster->sample.value = INVALID_SAMPLE_VALUE;
-            raster->fileName = fileName;
+            raster->fileName = rinfo.fileName;
+            raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
             rasterDict.add(key, raster);
         }
     }
@@ -882,7 +999,6 @@ void GeoRaster::updateRastersCache(OGRPoint& p)
         if (!raster->enabled)
         {
             /* Main thread closing multiple rasters is OK */
-            if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
             rasterDict.remove(key);
             delete raster;
         }
@@ -892,9 +1008,9 @@ void GeoRaster::updateRastersCache(OGRPoint& p)
 
 
 /*----------------------------------------------------------------------------
- * createReaderThreads
+ * createThreads
  *----------------------------------------------------------------------------*/
-void GeoRaster::createReaderThreads(void)
+void GeoRaster::createThreads(void)
 {
     uint32_t threadsNeeded = rasterDict.length();
     if (threadsNeeded <= readerCount)
@@ -931,68 +1047,6 @@ void GeoRaster::createReaderThreads(void)
 
 
 /*----------------------------------------------------------------------------
- * sampleRasters
- *----------------------------------------------------------------------------*/
-void GeoRaster::sampleRasters(void)
-{
-    if (rasterDict.length() == 1)
-    {
-        /*
-         * Threaded raster reader code can read multiple rasters in parallel.
-         * For optimization, if there is only one raster in the dictionary use this thread to read it.
-         */
-        raster_t *raster = NULL;
-        rasterDict.first(&raster);
-        assert(raster);
-        if (raster->enabled) processRaster(raster, this);
-        return;
-    }
-
-    /* Create additional reader threads if needed */
-    createReaderThreads();
-
-    /* For each raster which is marked to be sampled, give it to the reader thread */
-    int signaledReaders = 0;
-    raster_t *raster = NULL;
-    const char *key = rasterDict.first(&raster);
-    int i = 0;
-    while (key != NULL)
-    {
-        assert(raster);
-        if (raster->enabled)
-        {
-            reader_t *reader = &rasterRreader[i++];
-            reader->sync->lock();
-            {
-                reader->raster = raster;
-                reader->sync->signal(0, Cond::NOTIFY_ONE);
-                signaledReaders++;
-            }
-            reader->sync->unlock();
-        }
-        key = rasterDict.next(&raster);
-    }
-
-    /* Did not signal any reader threads, don't wait */
-    if (signaledReaders == 0) return;
-
-    /* Wait for all reader threads to finish sampling */
-    for (uint32_t j=0; j<readerCount; j++)
-    {
-        reader_t *reader = &rasterRreader[j];
-        raster = NULL;
-        do
-        {
-            reader->sync->lock();
-            {
-                raster = reader->raster;
-            }
-            reader->sync->unlock();
-        } while (raster != NULL);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * readingThread
  *----------------------------------------------------------------------------*/
 void* GeoRaster::readingThread(void *param)
@@ -1025,120 +1079,6 @@ void* GeoRaster::readingThread(void *param)
 
 
 /*----------------------------------------------------------------------------
- * processRaster
- * Thread-safe, can be called directly from main thread or reader thread
- *----------------------------------------------------------------------------*/
-void GeoRaster::processRaster(raster_t* raster, GeoRaster* obj)
-{
-    try
-    {
-        /* Open raster if first time reading from it */
-        if (raster->dset == NULL)
-        {
-            raster->dset = (GDALDataset *)GDALOpenEx(raster->fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
-            if (raster->dset == NULL)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", raster->fileName.c_str());
-
-            mlog(DEBUG, "Opened dataSet for %s", raster->fileName.c_str());
-
-            /* Store information about raster */
-            raster->cols = raster->dset->GetRasterXSize();
-            raster->rows = raster->dset->GetRasterYSize();
-
-            /* Get raster boundry box */
-            double geot[6] = {0};
-            CPLErr err = raster->dset->GetGeoTransform(geot);
-            CHECK_GDALERR(err);
-            raster->bbox.lon_min = geot[0];
-            raster->bbox.lon_max = geot[0] + raster->cols * geot[1];
-            raster->bbox.lat_max = geot[3];
-            raster->bbox.lat_min = geot[3] + raster->rows * geot[5];
-
-            raster->cellSize = geot[1];
-            raster->radiusInPixels = radius2pixels(raster->cellSize, samplingRadius);
-
-            /* Get raster block size */
-            raster->band = raster->dset->GetRasterBand(1);
-            CHECKPTR(raster->band);
-            raster->band->GetBlockSize(&raster->xBlockSize, &raster->yBlockSize);
-            // mlog(DEBUG, "Raster xBlockSize: %d, yBlockSize: %d", raster->xBlockSize, raster->yBlockSize);
-
-            /* Get raster data type */
-            raster->dataType = raster->band->GetRasterDataType();
-
-            /* Get raster date as gps time in seconds */
-            raster->gpsTime = static_cast<double>(obj->getRasterDate(raster->fileName) / 1000);
-        }
-
-        /*
-         * Attempt to read raster only if it contains the point of interest.
-         */
-        if (!rasterContainsPoint(raster, raster->point))
-            return;
-
-        if (obj->sampleAlg == GRIORA_NearestNeighbour)
-            obj->readPixel(raster);
-        else
-            resamplePixel(raster, obj);
-
-        raster->sample.time = raster->gpsTime;
-        raster->sampled = true;
-
-        if (zonalStats)
-            computeZonalStats(raster, obj);
-
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error reading raster: %s", e.what());
-    }
-}
-
-
-/*----------------------------------------------------------------------------
- * rasterIndexContainsPoint
- *----------------------------------------------------------------------------*/
-inline bool GeoRaster::rasterIndexContainsPoint(OGRPoint& p)
-{
-    return (ris.dset &&
-           (p.getX() >= ris.bbox.lon_min) && (p.getX() <= ris.bbox.lon_max) &&
-           (p.getY() >= ris.bbox.lat_min) && (p.getY() <= ris.bbox.lat_max));
-}
-
-
-/*----------------------------------------------------------------------------
- * rasterContainsPoint
- *----------------------------------------------------------------------------*/
-inline bool GeoRaster::rasterContainsPoint(raster_t *raster, OGRPoint& p)
-{
-    return (raster && raster->dset &&
-           (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
-           (p.getY() >= raster->bbox.lat_min) && (p.getY() <= raster->bbox.lat_max));
-}
-
-
-/*----------------------------------------------------------------------------
- * findCachedRasterWithPoint
- *----------------------------------------------------------------------------*/
-bool GeoRaster::findCachedRasterWithPoint(OGRPoint& p, GeoRaster::raster_t** raster)
-{
-    bool foundRaster = false;
-    const char *key = rasterDict.first(raster);
-    while (key != NULL)
-    {
-        assert(*raster);
-        if (rasterContainsPoint(*raster, p))
-        {
-            foundRaster = true;
-            break; /* Only one raster with this point in mosaic rasters */
-        }
-        key = rasterDict.next(raster);
-    }
-    return foundRaster;
-}
-
-
-/*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
  *----------------------------------------------------------------------------*/
 int GeoRaster::luaDimensions(lua_State *L)
@@ -1152,8 +1092,8 @@ int GeoRaster::luaDimensions(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushinteger(L, lua_obj->ris.rows);
-        lua_pushinteger(L, lua_obj->ris.cols);
+        lua_pushinteger(L, lua_obj->geoIndex.rows);
+        lua_pushinteger(L, lua_obj->geoIndex.cols);
         num_ret += 2;
 
         /* Set Return Status */
@@ -1182,10 +1122,10 @@ int GeoRaster::luaBoundingBox(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->ris.bbox.lon_min);
-        lua_pushnumber(L, lua_obj->ris.bbox.lat_min);
-        lua_pushnumber(L, lua_obj->ris.bbox.lon_max);
-        lua_pushnumber(L, lua_obj->ris.bbox.lat_max);
+        lua_pushnumber(L, lua_obj->geoIndex.bbox.lon_min);
+        lua_pushnumber(L, lua_obj->geoIndex.bbox.lat_min);
+        lua_pushnumber(L, lua_obj->geoIndex.bbox.lon_max);
+        lua_pushnumber(L, lua_obj->geoIndex.bbox.lat_max);
         num_ret += 4;
 
         /* Set Return Status */
@@ -1214,7 +1154,7 @@ int GeoRaster::luaCellSize(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->ris.cellSize);
+        lua_pushnumber(L, lua_obj->geoIndex.cellSize);
         num_ret += 1;
 
         /* Set Return Status */
@@ -1235,7 +1175,7 @@ int GeoRaster::luaCellSize(lua_State *L)
  *----------------------------------------------------------------------------*/
 int GeoRaster::getSampledRastersCount(void)
 {
-    raster_t *raster = NULL;
+    Raster *raster = NULL;
     int cnt = 0;
 
     /* Not all rasters in dictionary were sampled, find out how many were */
@@ -1275,7 +1215,7 @@ int GeoRaster::luaSamples(lua_State *L)
         int sampledRasters = lua_obj->sample(lon, lat);
         if (sampledRasters > 0)
         {
-            raster_t   *raster = NULL;
+            Raster   *raster = NULL;
             const char *key    = NULL;
 
             /* Create return table */
@@ -1289,6 +1229,8 @@ int GeoRaster::luaSamples(lua_State *L)
                 assert(raster);
                 if (raster->enabled && raster->sampled)
                 {
+                    raster->fileName.erase(0, strlen("/vsis3/"));
+
                     lua_createtable(L, 0, 2);
                     LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
 

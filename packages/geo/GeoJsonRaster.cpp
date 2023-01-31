@@ -143,7 +143,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
 
     if (_cellsize <= 0.0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %lf:", _cellsize);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", _cellsize);
 }
 
 
@@ -164,7 +164,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
     vrtFile    = "/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt";
 
     /* Initialize Class Data Members */
-    gpsTime = 0;
+    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
 
     validatedParams(file, filelength, _cellsize);
 
@@ -203,15 +203,15 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         CHECKPTR(srcSrs);
 
         char *wkt;
-        srcSrs->exportToWkt(&wkt);
-        mlog(DEBUG, "geojson WKT: %s", wkt);
+        ogrerr = srcSrs->exportToWkt(&wkt);
+        CHECK_GDALERR(ogrerr);
         rasterDset->SetProjection(wkt);
         CPLFree(wkt);
 
         int bandInx = 1; /* Band index starts at 1, not 0 */
-        GDALRasterBand *band = rasterDset->GetRasterBand(bandInx);
-        CHECKPTR(band);
-        band->SetNoDataValue(RASTER_NODATA_VALUE);
+        GDALRasterBand *rb = rasterDset->GetRasterBand(bandInx);
+        CHECKPTR(rb);
+        rb->SetNoDataValue(RASTER_NODATA_VALUE);
 
         /*
          * Build params for GDALRasterizeLayers
@@ -233,8 +233,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
 
         /* Store raster creation time */
-        TimeLib::gmt_time_t gmt = TimeLib::gettime();
-        gpsTime = TimeLib::gmt2gpstime(gmt);
+        gmtDate = TimeLib::gettime();
 
         /* Must close raster to flush it into file */
         GDALClose((GDALDatasetH)rasterDset);
@@ -246,13 +245,10 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         buildVRT(vrtFile, rasterList);
 
         /* Open vrt. */
-        if (!openRasterIndexSet())
+        if (!openGeoIndex())
             throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
         /* Set base class sampling order */
-        setCheckCacheFirst(true);
-        setAllowIndexDataSetSampling(true);
-
         rasterCreated = true;
     }
     catch(const RunTimeException& e)
@@ -271,9 +267,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
 
 
 /*----------------------------------------------------------------------------
- * getRasterIndexFileName
+ * getIndexFile
  *----------------------------------------------------------------------------*/
-void GeoJsonRaster::getRasterIndexFileName(std::string &file, double lon, double lat)
+void GeoJsonRaster::getIndexFile(std::string &file, double lon, double lat)
 {
     std::ignore = lon;
     std::ignore = lat;
@@ -283,10 +279,10 @@ void GeoJsonRaster::getRasterIndexFileName(std::string &file, double lon, double
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-int64_t GeoJsonRaster::getRasterDate(std::string &tifFile)
+bool GeoJsonRaster::getRasterDate(raster_info_t& rinfo)
 {
-    std::ignore = tifFile;
-    return gpsTime;
+    rinfo.gmtDate = gmtDate;
+    return true;
 }
 
 /******************************************************************************

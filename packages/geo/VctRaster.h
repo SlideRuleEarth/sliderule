@@ -29,28 +29,37 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_mosaic_raster__
-#define __arcticdem_mosaic_raster__
+#ifndef __vct_raster__
+#define __vct_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "VrtRaster.h"
+#include "GeoRaster.h"
 
 /******************************************************************************
- * ARCTICDEM MOSAIC RASTER CLASS
+ * VCT (Vector) RASTER CLASS
  ******************************************************************************/
 
-class ArcticDemMosaicRaster: public VrtRaster
+class VctRaster: public GeoRaster
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static GeoRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
+        static void init    (void);
+        static void deinit  (void);
 
     protected:
 
@@ -58,9 +67,33 @@ class ArcticDemMosaicRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                ArcticDemMosaicRaster (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
-        void    getIndexFile          (std::string& file, double lon=0, double lat=0);
-        bool    getRasterDate         (raster_info_t& rinfo);
+
+                     VctRaster         (lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                        const bool zonal_stats, const int target_crs);
+
+        bool         openGeoIndex      (double lon=0, double lat=0);
+        bool         transformCRS      (OGRPoint& p);
+        virtual void getIndexFile      (std::string& file, double lon, double lat) = 0;
+        virtual void getIndexBbox      (bbox_t& bbox, double lon, double lat) = 0;
+        bool         findCachedRasters (OGRPoint &p);
+
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        OGRLayer *layer;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        int targetCrs;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
 };
 
-#endif  /* __arcticdem_mosaic_raster__ */
+#endif  /* __vct_raster__ */

@@ -35,8 +35,8 @@
 
 #include "core.h"
 #include "geo.h"
-#include "GeoJsonRaster.h"
 #include <gdal.h>
+#include <cpl_conv.h>
 
 /******************************************************************************
  * DEFINES
@@ -47,6 +47,78 @@
 /******************************************************************************
  * GEO FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Optimal configuration for cloud based COGs based on:
+ * https://developmentseed.org/titiler/advanced/performance_tuning/
+ *----------------------------------------------------------------------------*/
+static void configGDAL(void)
+{
+    /*
+     * When reading datasets with necessary external sidecar files, it's imperative to set FALSE.
+     * For example, the landsat-pds bucket on AWS S3 contains GeoTIFF images where overviews are in external .ovr files.
+     * If set to EMPTY_DIR, GDAL won't find the .ovr files.
+     * However, in all other cases, it's much better to set EMPTY_DIR because this prevents GDAL from making a LIST request.
+     */
+    CPLSetConfigOption("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR");
+
+    /*
+     * Default GDAL block cache. The value can be either in Mb, bytes or percent of the physical RAM
+     * Recommended 200Mb
+     */
+    CPLSetConfigOption("GDAL_CACHEMAX", "200");
+
+    /*
+     * A global least-recently-used cache shared among all downloaded content and may be reused after a file handle has been closed and reopen
+     * 200 Mb VSI Cache.
+     */
+    CPLSetConfigOption("CPL_VSIL_CURL_CACHE_SIZE", "20000000");
+
+    /*
+     * A global least-recently-used cache shared among all downloaded content and may be reused after a file handle has been closed and reopen
+     * Strongly recommended for s3
+     */
+    CPLSetConfigOption("VSI_CACHE", "TRUE");
+
+    /*
+     * The size of the above VSI cache in bytes per-file handle.
+     * If you open a VRT with 10 files and your VSI_CACHE_SIZE is 10 bytes, the total cache memory usage would be 100 bytes.
+     * The cache is RAM based and the content of the cache is discarded when the file handle is closed.
+     * Recommended: 5000000 (5Mb per file handle)
+     */
+    CPLSetConfigOption("VSI_CACHE_SIZE", "5000000");
+
+    /*
+     * GDAL Block Cache type: ARRAY or HASHSET. See:
+     * https://gdal.org/development/rfc/rfc26_blockcache.html
+     */
+    CPLSetConfigOption("GDAL_BAND_BLOCK_CACHE", "HASHSET");
+
+    /*
+     * Tells GDAL to merge consecutive range GET requests.
+     */
+    CPLSetConfigOption("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES", "YES");
+
+    /*
+     * When set to YES, this attempts to download multiple range requests in parallel, reusing the same TCP connection.
+     * Note this is only possible when the server supports HTTP2, which many servers don't yet support.
+     * There's no downside to setting YES here.
+     */
+    CPLSetConfigOption("GDAL_HTTP_MULTIPLEX", "YES");
+
+    /*
+     * Both Multiplex and HTTP_VERSION will only have impact if the files are stored in an environment which support HTTP 2 (e.g cloudfront).
+     */
+    CPLSetConfigOption("GDAL_HTTP_VERSION", "2");
+
+    /*
+     * Defaults to 100. Used by gcore/gdalproxypool.cpp
+     * Number of datasets that can be opened simultaneously by the GDALProxyPool mechanism (used by VRT for example).
+     * Can be increased to get better random I/O performance with VRT mosaics made of numerous underlying raster files.
+     * Be careful : on Linux systems, the number of file handles that can be opened by a process is generally limited to 1024.
+    */
+    CPLSetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "300");
+}
 
 /*----------------------------------------------------------------------------
  * geo_open
@@ -94,9 +166,13 @@ void initgeo (void)
     /* Register all gdal drivers */
     GDALAllRegister();
 
+    /* Custom GDAL configuration for cloud based COGs */
+    configGDAL();
+
     /* Initialize Modules */
     GeoRaster::init();
     VrtRaster::init();
+    VctRaster::init();
 
     /* Register GDAL custom error handler */
     void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
@@ -114,6 +190,7 @@ void initgeo (void)
 
 void deinitgeo (void)
 {
+    VctRaster::deinit();
     VrtRaster::deinit();
     GeoRaster::deinit();
     GDALDestroy();

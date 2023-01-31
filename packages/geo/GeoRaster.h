@@ -38,6 +38,7 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
+#include "TimeLib.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
@@ -68,18 +69,6 @@ do                                                                            \
 
 
 
-/* CRS used by ICESat2 pthotons */
-#define PHOTON_CRS 4326
-
-
-typedef struct
-{
-    double lon_min;
-    double lat_min;
-    double lon_max;
-    double lat_max;
-} bbox_t;
-
 
 /******************************************************************************
  * GEO RASTER CLASS
@@ -97,6 +86,7 @@ class GeoRaster: public LuaObject
         static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 10;
+        static const int   DEFAULT_EPSG = 4326;
 
         static const char* NEARESTNEIGHBOUR_ALGO;
         static const char* BILINEAR_ALGO;
@@ -117,6 +107,14 @@ class GeoRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
+            double lon_min;
+            double lat_min;
+            double lon_max;
+            double lat_max;
+        } bbox_t;
+
+
+        typedef struct {
             double value;
             double time;
 
@@ -132,28 +130,51 @@ class GeoRaster: public LuaObject
         } sample_t;
 
 
-        typedef struct {
-            std::string     fileName;
-            GDALDataset*    dset;
-            GDALRasterBand* band;
-            double          invGeot[6];
-            uint32_t        rows;
-            uint32_t        cols;
-            double          cellSize;
-            bbox_t          bbox;
-            uint32_t        radiusInPixels;
+        class GeoIndex
+        {
+        public:
+            std::string fileName;
+            GDALDataset *dset;
+            uint32_t rows;
+            uint32_t cols;
+            double cellSize;
+            bbox_t bbox;
 
+            void clear(bool close = true);
+            bool containsPoint(OGRPoint &p);
+
+            GeoIndex(void) { clear(false); }
+            virtual ~GeoIndex(void) { clear(); }
+        };
+
+
+        class CoordTransform
+        {
+        public:
             OGRCoordinateTransformation *transf;
-            OGRSpatialReference          srcSrs;
-            OGRSpatialReference          trgSrs;
-        } raster_index_set_t;
+            OGRSpatialReference source;
+            OGRSpatialReference target;
+
+            void clear(bool close = true);
+            CoordTransform(void) { clear(false); }
+            virtual ~CoordTransform(void) { clear(true); }
+        };
 
 
         typedef struct {
+            std::string         fileName;
+            TimeLib::gmt_time_t gmtDate;
+        } raster_info_t;
+
+
+        class Raster
+        {
+        public:
             bool            enabled;
             bool            sampled;
             GDALDataset*    dset;
             GDALRasterBand* band;
+            OGRSpatialReference* sref;
             std::string     fileName;
             GDALDataType    dataType;
 
@@ -170,13 +191,17 @@ class GeoRaster: public LuaObject
             /* Last sample information */
             OGRPoint        point;
             sample_t        sample;
-        } raster_t;
+
+            void clear(bool close = true);
+            Raster(void) { clear(false); }
+            virtual ~Raster (void) { clear(); }
+        };
 
 
         typedef struct {
             GeoRaster*      obj;
             Thread*         thread;
-            raster_t*       raster;
+            Raster*         raster;
             Cond*           sync;
             bool            run;
         } reader_t;
@@ -194,10 +219,7 @@ class GeoRaster: public LuaObject
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         inline bool    hasZonalStats   (void) { return zonalStats; }
-        inline void    setCheckCacheFirst(bool value) { checkCacheFirst = value; }
-        inline void    setAllowIndexDataSetSampling(bool value) { allowIndexDataSetSampling = value; }
         const char*    getUUID         (char* uuid_str);
-        void           buildVRT        (std::string& vrtFile, List<std::string>& rlist);
         virtual       ~GeoRaster       (void);
 
     protected:
@@ -206,19 +228,32 @@ class GeoRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster               (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
-        virtual bool    openRasterIndexSet      (double lon=0, double lat=0) = 0;
-        virtual bool    findRasterFilesWithPoint(OGRPoint &p) = 0;
-        virtual int64_t getRasterDate           (std::string& tifFile) = 0;
-        int             radius2pixels           (double cellSize, int _radius);
+                        GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
+        virtual bool    openGeoIndex          (double lon = 0, double lat = 0) = 0;
+        virtual bool    findRasters           (OGRPoint &p) = 0;
+        virtual bool    transformCRS          (OGRPoint& p) = 0;
+        bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
+        bool            containsPoint         (Raster *raster, OGRPoint &p);
+        virtual bool    findCachedRasters     (OGRPoint &p) = 0;
+        int             radius2pixels         (double cellSize, int _radius);
+        virtual void    sampleRasters         (void);
+        void            processRaster         (Raster* raster, GeoRaster* obj);
+        void            readRasterWithRetry   (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
+                                               void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+
+        virtual bool    readGeoIndexData      (OGRPoint *point, int srcWindowSize, int srcOffset,
+                                               void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        List<std::string>*    tifList;
-        raster_index_set_t    ris;
+        List<raster_info_t>*  rastersList;
+        GeoIndex              geoIndex;
+        CoordTransform        cord;
         uint32_t              samplingRadius;
+        GDALRIOResampleAlg    sampleAlg;
+        Dictionary<Raster*>   rasterDict;
 
     private:
 
@@ -229,16 +264,10 @@ class GeoRaster: public LuaObject
         static Mutex factoryMut;
         static Dictionary<factory_t> factories;
 
-        Mutex                 samplingMutex;
-        Dictionary<raster_t*> rasterDict;
-        reader_t*             rasterRreader;
-        uint32_t              readerCount;
-
-        GDALRIOResampleAlg    sampleAlg;
-        bool                  zonalStats;
-
-        bool                  checkCacheFirst;
-        bool                  allowIndexDataSetSampling;
+        Mutex        samplingMutex;
+        reader_t*    rasterRreader;
+        uint32_t     readerCount;
+        bool         zonalStats;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -251,23 +280,14 @@ class GeoRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        void    createReaderThreads      (void);
-        void    processRaster            (raster_t* raster, GeoRaster* obj);
-        void    updateRastersCache       (OGRPoint &p);
-        bool    rasterIndexContainsPoint (OGRPoint &p);
-        bool    rasterContainsPoint      (raster_t *raster, OGRPoint &p);
-        bool    findCachedRasterWithPoint(OGRPoint &p, raster_t **raster);
-        int     sample                   (double lon, double lat);
-        void    sampleRasters            (void);
-        void    invalidateRastersCache   (void);
-        int     getSampledRastersCount   (void);
-        void    clearRasterIndexSet      (raster_index_set_t* iset);
-        void    clearRaster              (raster_t *raster);
-        void    readPixel                (raster_t *raster);
-        void    resamplePixel            (raster_t *raster, GeoRaster *obj);
-        void    computeZonalStats        (raster_t *raster, GeoRaster* obj);
-        void    RasterIoWithRetry        (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
-                                          void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+        void    createThreads           (void);
+        void    updateCache             (OGRPoint &p);
+        int     sample                  (double lon, double lat);
+        void    invalidateCache         (void);
+        int     getSampledRastersCount  (void);
+        void    readPixel               (Raster *raster);
+        void    resamplePixel           (Raster *raster, GeoRaster *obj);
+        void    computeZonalStats       (Raster *raster, GeoRaster* obj);
 };
 
 
