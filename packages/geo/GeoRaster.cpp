@@ -1229,6 +1229,8 @@ int GeoRaster::luaSamples(lua_State *L)
                 assert(raster);
                 if (raster->enabled && raster->sampled)
                 {
+                    raster->fileName.erase(0, strlen("/vsis3/"));
+
                     lua_createtable(L, 0, 2);
                     LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
 
