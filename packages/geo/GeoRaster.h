@@ -143,9 +143,6 @@ class GeoRaster: public LuaObject
             void clear(bool close = true);
             bool containsPoint(OGRPoint &p);
 
-            virtual bool read(OGRPoint *point, int srcWindowSize, int srcOffset,
-                              void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
-
             GeoIndex(void) { clear(false); }
             virtual ~GeoIndex(void) { clear(); }
         };
@@ -235,14 +232,17 @@ class GeoRaster: public LuaObject
         virtual bool    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint &p) = 0;
         virtual bool    transformCRS          (OGRPoint& p) = 0;
-        bool            rasterContainsWindow  (int col, int row, int maxCol, int maxRow, int windowSize);
-        bool            rasterContainsPoint   (Raster *raster, OGRPoint &p);
+        bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
+        bool            containsPoint         (Raster *raster, OGRPoint &p);
         virtual bool    findCachedRasters     (OGRPoint &p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
         virtual void    sampleRasters         (void);
         void            processRaster         (Raster* raster, GeoRaster* obj);
-        void            RasterIoWithRetry     (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
+        void            readRasterWithRetry   (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
                                                void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+
+        virtual bool    readGeoIndexData      (OGRPoint *point, int srcWindowSize, int srcOffset,
+                                               void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
 
         /*--------------------------------------------------------------------
          * Data

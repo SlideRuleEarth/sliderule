@@ -418,7 +418,7 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
         /*
          * Attempt to read raster only if it contains the point of interest.
          */
-        if (!rasterContainsPoint(raster, raster->point))
+        if (!containsPoint(raster, raster->point))
             return;
 
         if (obj->sampleAlg == GRIORA_NearestNeighbour)
@@ -492,7 +492,7 @@ void GeoRaster::sampleRasters(void)
 /*----------------------------------------------------------------------------
  * RasterIoWithRetry
  *----------------------------------------------------------------------------*/
-void GeoRaster::RasterIoWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
+void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
 {
     /*
      * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
@@ -623,9 +623,9 @@ void GeoRaster::readPixel(Raster *raster)
 
 
 /*----------------------------------------------------------------------------
- * rasterContainsWindow
+ * containsWindow
  *----------------------------------------------------------------------------*/
-bool GeoRaster::rasterContainsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
+bool GeoRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
 {
     if (col < 0 || row < 0)
         return false;
@@ -637,9 +637,9 @@ bool GeoRaster::rasterContainsWindow(int col, int row, int maxCol, int maxRow, i
 }
 
 /*----------------------------------------------------------------------------
- * rasterContainsPoint
+ * containsPoint
  *----------------------------------------------------------------------------*/
-inline bool GeoRaster::rasterContainsPoint(Raster *raster, OGRPoint& p)
+inline bool GeoRaster::containsPoint(Raster *raster, OGRPoint& p)
 {
     return (raster && raster->dset &&
             (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
@@ -647,10 +647,10 @@ inline bool GeoRaster::rasterContainsPoint(Raster *raster, OGRPoint& p)
 }
 
 /*----------------------------------------------------------------------------
- * read
+ * readGeoIndexData
  *----------------------------------------------------------------------------*/
-bool GeoRaster::GeoIndex::read(OGRPoint *point, int srcWindowSize, int srcOffset,
-                               void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
+bool GeoRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffset,
+                                 void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
 {
     std::ignore = point;
     std::ignore = srcWindowSize;
@@ -747,14 +747,14 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
         args.eResampleAlg = obj->sampleAlg;
         double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
-        bool validWindow = rasterContainsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+        bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
         if (validWindow)
         {
-            RasterIoWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
+            readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
         }
         else
         {
-            validWindow = geoIndex.read(&raster->point, windowSize, offset, rbuf, 1, &args);
+            validWindow = readGeoIndexData(&raster->point, windowSize, offset, rbuf, 1, &args);
         }
 
         if(validWindow)
@@ -800,14 +800,14 @@ void GeoRaster::computeZonalStats(Raster *raster, GeoRaster *obj)
         CHECKPTR(samplesArray);
 
         double noDataValue = raster->band->GetNoDataValue();
-        bool validWindow = rasterContainsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+        bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
         if (validWindow)
         {
-            RasterIoWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+            readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
         }
         else
         {
-            validWindow = geoIndex.read(&raster->point, windowSize, radiusInPixels, samplesArray, windowSize, &args);
+            validWindow = readGeoIndexData(&raster->point, windowSize, radiusInPixels, samplesArray, windowSize, &args);
         }
 
         if(validWindow)

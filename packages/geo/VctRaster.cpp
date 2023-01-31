@@ -178,6 +178,10 @@ bool VctRaster::transformCRS(OGRPoint &p)
  *----------------------------------------------------------------------------*/
 bool VctRaster::findCachedRasters(OGRPoint& p)
 {
+    /*
+     * Cached rasters cannot be used at this point.
+     * Must get a list of all rasters for POI and only then check which are already cached.
+    */
     std::ignore = p;
     return false;
 }

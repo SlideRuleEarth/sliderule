@@ -181,7 +181,7 @@ bool VrtRaster::openGeoIndex(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * transformCrs
+ * transformCRS
  *----------------------------------------------------------------------------*/
 bool VrtRaster::transformCRS(OGRPoint &p)
 {
@@ -277,7 +277,7 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
     while (key != NULL)
     {
         assert(raster);
-        if (rasterContainsPoint(raster, p))
+        if (containsPoint(raster, p))
         {
             raster->enabled = true;
             raster->point = p;
@@ -313,20 +313,20 @@ void VrtRaster::sampleRasters(void)
     }
 }
 /*----------------------------------------------------------------------------
- * read
+ * readGeoIndexData
  *----------------------------------------------------------------------------*/
-bool VrtRaster::read(OGRPoint* point, int srcWindowSize, int srcOffset,
-                    void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
+bool VrtRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffset,
+                                 void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
 {
     int  col = static_cast<int>(floor((point->getX() - geoIndex.bbox.lon_min) / geoIndex.cellSize));
     int  row = static_cast<int>(floor((geoIndex.bbox.lat_max - point->getY()) / geoIndex.cellSize));
     int _col = col - srcOffset;
     int _row = row - srcOffset;
 
-    bool validWindow = rasterContainsWindow(_col, _row, geoIndex.cols, geoIndex.rows, srcWindowSize);
+    bool validWindow = containsWindow(_col, _row, geoIndex.cols, geoIndex.rows, srcWindowSize);
     if (validWindow)
     {
-        RasterIoWithRetry(band, _col, _row, srcWindowSize, srcWindowSize, data, dstWindowSize, dstWindowSize, args);
+        readRasterWithRetry(band, _col, _row, srcWindowSize, srcWindowSize, data, dstWindowSize, dstWindowSize, args);
     }
 
     return validWindow;
