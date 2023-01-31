@@ -75,41 +75,40 @@ VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_
 }
 
 /*----------------------------------------------------------------------------
- * openRis
+ * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool VrtRaster::openRis(double lon, double lat)
+bool VrtRaster::openGeoIndex(double lon, double lat)
 {
     bool objCreated = false;
     std::string newVrtFile;
 
-    getRisFile(newVrtFile, lon, lat);
+    getIndexFile(newVrtFile, lon, lat);
 
-    /* Is it already open vrt? */
-    if (ris.dset != NULL && ris.fileName == newVrtFile)
+    /* Is it already with the same file? */
+    if (geoIndex.dset != NULL && geoIndex.fileName == newVrtFile)
         return true;
 
     try
     {
-        /* Cleanup previous vrtDset */
-        if (ris.dset != NULL)
+        /* Cleanup previous */
+        if (geoIndex.dset != NULL)
         {
-            GDALClose((GDALDatasetH)ris.dset);
-            ris.dset = NULL;
+            GDALClose((GDALDatasetH)geoIndex.dset);
+            geoIndex.dset = NULL;
         }
 
-        /* Open new vrtDset */
-        ris.dset = (GDALDataset *)GDALOpenEx(newVrtFile.c_str(), GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
-        if (ris.dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT file: %s:", newVrtFile.c_str());
+        geoIndex.dset = (GDALDataset *)GDALOpenEx(newVrtFile.c_str(), GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
+        if (geoIndex.dset == NULL)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to openGeoIndex VRT file: %s:", newVrtFile.c_str());
 
 
-        ris.fileName = newVrtFile;
-        band = ris.dset->GetRasterBand(1);
+        geoIndex.fileName = newVrtFile;
+        band = geoIndex.dset->GetRasterBand(1);
         CHECKPTR(band);
 
         /* Get inverted geo transfer for vrt */
         double geot[6] = {0};
-        CPLErr err = GDALGetGeoTransform(ris.dset, geot);
+        CPLErr err = GDALGetGeoTransform(geoIndex.dset, geot);
         CHECK_GDALERR(err);
         if (!GDALInvGeoTransform(geot, invGeot))
         {
@@ -118,46 +117,46 @@ bool VrtRaster::openRis(double lon, double lat)
         }
 
         /* Store information about vrt raster */
-        ris.cols = ris.dset->GetRasterXSize();
-        ris.rows = ris.dset->GetRasterYSize();
+        geoIndex.cols = geoIndex.dset->GetRasterXSize();
+        geoIndex.rows = geoIndex.dset->GetRasterYSize();
 
         /* Get raster boundry box */
         bzero(geot, sizeof(geot));
-        err = ris.dset->GetGeoTransform(geot);
+        err = geoIndex.dset->GetGeoTransform(geot);
         CHECK_GDALERR(err);
-        ris.bbox.lon_min = geot[0];
-        ris.bbox.lon_max = geot[0] + ris.cols * geot[1];
-        ris.bbox.lat_max = geot[3];
-        ris.bbox.lat_min = geot[3] + ris.rows * geot[5];
-        ris.cellSize     = geot[1];
+        geoIndex.bbox.lon_min = geot[0];
+        geoIndex.bbox.lon_max = geot[0] + geoIndex.cols * geot[1];
+        geoIndex.bbox.lat_max = geot[3];
+        geoIndex.bbox.lat_min = geot[3] + geoIndex.rows * geot[5];
+        geoIndex.cellSize     = geot[1];
 
-        int radiusInPixels = radius2pixels(ris.cellSize, samplingRadius);
+        int radiusInPixels = radius2pixels(geoIndex.cellSize, samplingRadius);
 
         /* Limit maximum sampling radius */
         if (radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR,
                                    "Sampling radius is too big: %d: max allowed %d meters",
-                                   samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(ris.cellSize));
+                                   samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
         }
 
         /* Create coordinates transformation */
-        if (crsConverter.transf == NULL )
+        if (cord.transf == NULL )
         {
-            OGRErr ogrerr = crsConverter.source.importFromEPSG(DEFAULT_EPSG);
+            OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
             CHECK_GDALERR(ogrerr);
-            const char *projref = ris.dset->GetProjectionRef();
+            const char *projref = geoIndex.dset->GetProjectionRef();
             CHECKPTR(projref);
             mlog(DEBUG, "%s", projref);
-            ogrerr = crsConverter.target.importFromProj4(projref);
+            ogrerr = cord.target.importFromProj4(projref);
             CHECK_GDALERR(ogrerr);
 
             /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-            crsConverter.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-            crsConverter.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-            crsConverter.transf = OGRCreateCoordinateTransformation(&crsConverter.source, &crsConverter.target);
-            if (crsConverter.transf == NULL)
+            cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+            if (cord.transf == NULL)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinate transform");
         }
 
@@ -169,10 +168,10 @@ bool VrtRaster::openRis(double lon, double lat)
         mlog(e.level(), "Error creating new VRT dataset: %s", e.what());
     }
 
-    if (!objCreated && ris.dset)
+    if (!objCreated && geoIndex.dset)
     {
-        clearRis();
-        clearTransform();
+        geoIndex.clear();
+        cord.clear();
         bzero(invGeot, sizeof(invGeot));
         band = NULL;
     }
@@ -186,8 +185,8 @@ bool VrtRaster::openRis(double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool VrtRaster::transformCRS(OGRPoint &p)
 {
-    if (crsConverter.transf &&
-        (p.transform(crsConverter.transf) == OGRERR_NONE))
+    if (cord.transf &&
+        (p.transform(cord.transf) == OGRERR_NONE))
     {
         return true;
     }
@@ -210,7 +209,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
 
         rastersList->clear();
 
-        bool validPixel = (col >= 0) && (row >= 0) && (col < ris.dset->GetRasterXSize()) && (row < ris.dset->GetRasterYSize());
+        bool validPixel = (col >= 0) && (row >= 0) && (col < geoIndex.dset->GetRasterXSize()) && (row < geoIndex.dset->GetRasterYSize());
         if (!validPixel) return false;
 
         CPLString str;
@@ -272,7 +271,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
 bool VrtRaster::findCachedRasters(OGRPoint& p)
 {
     bool foundRaster = false;
-    raster_t *raster = NULL;
+    Raster *raster = NULL;
 
     const char *key = rasterDict.first(&raster);
     while (key != NULL)
@@ -299,7 +298,7 @@ void VrtRaster::sampleRasters(void)
     /*
      * For VRT based rasters (tiles/mosaics) there is only one raster for each POI.
      */
-    raster_t *raster = NULL;
+    Raster *raster = NULL;
     const char *key = rasterDict.first(&raster);
     while (key != NULL)
     {
@@ -314,17 +313,17 @@ void VrtRaster::sampleRasters(void)
     }
 }
 /*----------------------------------------------------------------------------
- * readRisData
+ * read
  *----------------------------------------------------------------------------*/
-bool VrtRaster::readRisData(OGRPoint* point, int srcWindowSize, int srcOffset,
-                            void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
+bool VrtRaster::read(OGRPoint* point, int srcWindowSize, int srcOffset,
+                    void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
 {
-    int  col = static_cast<int>(floor((point->getX() - ris.bbox.lon_min) / ris.cellSize));
-    int  row = static_cast<int>(floor((ris.bbox.lat_max - point->getY()) / ris.cellSize));
+    int  col = static_cast<int>(floor((point->getX() - geoIndex.bbox.lon_min) / geoIndex.cellSize));
+    int  row = static_cast<int>(floor((geoIndex.bbox.lat_max - point->getY()) / geoIndex.cellSize));
     int _col = col - srcOffset;
     int _row = row - srcOffset;
 
-    bool validWindow = rasterContainsWindow(_col, _row, ris.cols, ris.rows, srcWindowSize);
+    bool validWindow = rasterContainsWindow(_col, _row, geoIndex.cols, geoIndex.rows, srcWindowSize);
     if (validWindow)
     {
         RasterIoWithRetry(band, _col, _row, srcWindowSize, srcWindowSize, data, dstWindowSize, dstWindowSize, args);

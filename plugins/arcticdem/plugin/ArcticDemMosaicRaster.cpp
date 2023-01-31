@@ -62,7 +62,7 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
      * ArcticDemMosaicRaster uses one large mosaic VRT file (raster index file)
      * Open it.
      */
-    if (!openRis()) throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
+    if (!openGeoIndex()) throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
 
 }
 
@@ -76,9 +76,9 @@ GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling,
 
 
 /*----------------------------------------------------------------------------
- * getRisFile
+ * getIndexFile
  *----------------------------------------------------------------------------*/
-void ArcticDemMosaicRaster::getRisFile(std::string& file, double lon, double lat)
+void ArcticDemMosaicRaster::getIndexFile(std::string& file, double lon, double lat)
 {
     file = "/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt";
     mlog(DEBUG, "Using %s", file.c_str());

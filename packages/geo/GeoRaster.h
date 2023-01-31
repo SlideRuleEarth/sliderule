@@ -106,8 +106,7 @@ class GeoRaster: public LuaObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct
-        {
+        typedef struct {
             double lon_min;
             double lat_min;
             double lon_max;
@@ -131,22 +130,38 @@ class GeoRaster: public LuaObject
         } sample_t;
 
 
-        /* Raster Index Set (ris) */
-        typedef struct {
-            std::string     fileName;
-            GDALDataset*    dset;
-            uint32_t        rows;
-            uint32_t        cols;
-            double          cellSize;
-            bbox_t          bbox;
-        } ris_t;
+        class GeoIndex
+        {
+        public:
+            std::string fileName;
+            GDALDataset *dset;
+            uint32_t rows;
+            uint32_t cols;
+            double cellSize;
+            bbox_t bbox;
+
+            void clear(bool close = true);
+            bool containsPoint(OGRPoint &p);
+
+            virtual bool read(OGRPoint *point, int srcWindowSize, int srcOffset,
+                              void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
+
+            GeoIndex(void) { clear(false); }
+            virtual ~GeoIndex(void) { clear(); }
+        };
 
 
-        typedef struct {
+        class CoordTransform
+        {
+        public:
             OGRCoordinateTransformation *transf;
-            OGRSpatialReference          source;
-            OGRSpatialReference          target;
-        } crs_converter_t;
+            OGRSpatialReference source;
+            OGRSpatialReference target;
+
+            void clear(bool close = true);
+            CoordTransform(void) { clear(false); }
+            virtual ~CoordTransform(void) { clear(true); }
+        };
 
 
         typedef struct {
@@ -155,7 +170,9 @@ class GeoRaster: public LuaObject
         } raster_info_t;
 
 
-        typedef struct {
+        class Raster
+        {
+        public:
             bool            enabled;
             bool            sampled;
             GDALDataset*    dset;
@@ -177,13 +194,17 @@ class GeoRaster: public LuaObject
             /* Last sample information */
             OGRPoint        point;
             sample_t        sample;
-        } raster_t;
+
+            void clear(bool close = true);
+            Raster(void) { clear(false); }
+            virtual ~Raster (void) { clear(); }
+        };
 
 
         typedef struct {
             GeoRaster*      obj;
             Thread*         thread;
-            raster_t*       raster;
+            Raster*         raster;
             Cond*           sync;
             bool            run;
         } reader_t;
@@ -211,22 +232,15 @@ class GeoRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
                         GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
-        virtual bool    openRis               (double lon=0, double lat=0) = 0;
+        virtual bool    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint &p) = 0;
         virtual bool    transformCRS          (OGRPoint& p) = 0;
         bool            rasterContainsWindow  (int col, int row, int maxCol, int maxRow, int windowSize);
-        bool            rasterContainsPoint   (raster_t *raster, OGRPoint &p);
-        bool            risContainsPoint      (OGRPoint &p);
-        void            clearRis              (bool close=true);
-        void            clearTransform        (bool close=true);
-
+        bool            rasterContainsPoint   (Raster *raster, OGRPoint &p);
         virtual bool    findCachedRasters     (OGRPoint &p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
-        virtual bool    readRisData           (OGRPoint* point, int srcWindowSize, int srcOffset,
-                                               void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
-
         virtual void    sampleRasters         (void);
-        void            processRaster         (raster_t* raster, GeoRaster* obj);
+        void            processRaster         (Raster* raster, GeoRaster* obj);
         void            RasterIoWithRetry     (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
                                                void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
@@ -235,11 +249,11 @@ class GeoRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
         List<raster_info_t>*  rastersList;
-        ris_t                 ris;
-        crs_converter_t       crsConverter;
+        GeoIndex              geoIndex;
+        CoordTransform        cord;
         uint32_t              samplingRadius;
         GDALRIOResampleAlg    sampleAlg;
-        Dictionary<raster_t*> rasterDict;
+        Dictionary<Raster*>   rasterDict;
 
     private:
 
@@ -271,10 +285,9 @@ class GeoRaster: public LuaObject
         int     sample                  (double lon, double lat);
         void    invalidateCache         (void);
         int     getSampledRastersCount  (void);
-        void    clearRaster             (raster_t *raster);
-        void    readPixel               (raster_t *raster);
-        void    resamplePixel           (raster_t *raster, GeoRaster *obj);
-        void    computeZonalStats       (raster_t *raster, GeoRaster* obj);
+        void    readPixel               (Raster *raster);
+        void    resamplePixel           (Raster *raster, GeoRaster *obj);
+        void    computeZonalStats       (Raster *raster, GeoRaster* obj);
 };
 
 

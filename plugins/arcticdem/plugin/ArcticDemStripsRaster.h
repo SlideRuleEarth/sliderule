@@ -65,8 +65,8 @@ class ArcticDemStripsRaster: public VctRaster
          *--------------------------------------------------------------------*/
 
                 ArcticDemStripsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
-        void    getRisFile            (std::string& file, double lon=0, double lat=0 );
-        void    getRisBbox            (bbox_t& bbox, double lon=0, double lat=0);
+        void    getIndexFile          (std::string& file, double lon=0, double lat=0 );
+        void    getIndexBbox          (bbox_t& bbox, double lon=0, double lat=0);
         bool    findRasters           (OGRPoint &p);
 };
 

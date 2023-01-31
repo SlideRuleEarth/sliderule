@@ -89,7 +89,7 @@ class GeoJsonRaster: public VrtRaster
          *--------------------------------------------------------------------*/
 
                 GeoJsonRaster   (lua_State *L, const char *image, long imagelength, double _cellsize);
-        void    getRisFile      (std::string& file, double lon=0, double lat=0);
+        void    getIndexFile    (std::string& file, double lon=0, double lat=0);
         bool    getRasterDate   (raster_info_t& rinfo);
 
     private:

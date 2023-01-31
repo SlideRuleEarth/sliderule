@@ -74,17 +74,17 @@ VctRaster::VctRaster(lua_State *L, const char *dem_sampling, const int sampling_
 }
 
 /*----------------------------------------------------------------------------
- * openRis
+ * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool VctRaster::openRis(double lon, double lat)
+bool VctRaster::openGeoIndex(double lon, double lat)
 {
     bool objCreated = false;
     std::string newVctFile;
 
-    getRisFile(newVctFile, lon, lat);
+    getIndexFile(newVctFile, lon, lat);
 
-    /* Is it already open ? */
-    if (ris.dset != NULL && ris.fileName == newVctFile)
+    /* Is it already opened with the same file? */
+    if (geoIndex.dset != NULL && geoIndex.fileName == newVctFile)
         return true;
 
     try
@@ -94,49 +94,49 @@ bool VctRaster::openRis(double lon, double lat)
          * When individual rasters are opened their CRS is validated against this transform.
          * It is a critical error if they are different.
          */
-        if (crsConverter.transf == NULL )
+        if (cord.transf == NULL )
         {
-            OGRErr ogrerr = crsConverter.source.importFromEPSG(DEFAULT_EPSG);
+            OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
             CHECK_GDALERR(ogrerr);
-            ogrerr = crsConverter.target.importFromEPSG(targetCrs);
+            ogrerr = cord.target.importFromEPSG(targetCrs);
             CHECK_GDALERR(ogrerr);
 
             /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-            crsConverter.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-            crsConverter.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
             /* Create coordinates transformation */
-            crsConverter.transf = OGRCreateCoordinateTransformation(&crsConverter.source, &crsConverter.target);
-            if (crsConverter.transf == NULL)
+            cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+            if (cord.transf == NULL)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinate transform");
         }
 
-        /* Cleanup previous vctDset */
-        if (ris.dset != NULL)
+        /* Cleanup previous */
+        if (geoIndex.dset != NULL)
         {
-            GDALClose((GDALDatasetH)ris.dset);
-            ris.dset = NULL;
+            GDALClose((GDALDatasetH)geoIndex.dset);
+            geoIndex.dset = NULL;
         }
 
         /* Open new vector data set*/
-        ris.dset = (GDALDataset *)GDALOpenEx(newVctFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
-        if (ris.dset == NULL)
+        geoIndex.dset = (GDALDataset *)GDALOpenEx(newVctFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        if (geoIndex.dset == NULL)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open vector file: %s:", newVctFile.c_str());
 
-        ris.fileName = newVctFile;
-        layer = ris.dset->GetLayer(0);
+        geoIndex.fileName = newVctFile;
+        layer = geoIndex.dset->GetLayer(0);
         CHECKPTR(layer);
 
         OGRSpatialReference *sref = layer->GetSpatialRef();
         CHECKPTR(sref);
-        if(!crsConverter.source.IsSame(sref))
+        if(!cord.source.IsSame(sref))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Vector index file has wrong CRS: %s", newVctFile.c_str());
 
-        ris.cols = ris.dset->GetRasterXSize();
-        ris.rows = ris.dset->GetRasterYSize();
+        geoIndex.cols = geoIndex.dset->GetRasterXSize();
+        geoIndex.rows = geoIndex.dset->GetRasterYSize();
 
-        getRisBbox(ris.bbox, lon, lat);
-        ris.cellSize = 0;
+        getIndexBbox(geoIndex.bbox, lon, lat);
+        geoIndex.cellSize = 0;
 
         /*
          * For vector files cellSize is unknown. Cannot validate radiusInPixels
@@ -151,9 +151,9 @@ bool VctRaster::openRis(double lon, double lat)
         mlog(e.level(), "Error creating new vector index dataset: %s", e.what());
     }
 
-    if (!objCreated && ris.dset)
+    if (!objCreated && geoIndex.dset)
     {
-        clearRis();
+        geoIndex.clear();
         /* Do NOT clearTransform() - it is created once for all scenes */
         layer = NULL;
     }
@@ -168,8 +168,8 @@ bool VctRaster::openRis(double lon, double lat)
 bool VctRaster::transformCRS(OGRPoint &p)
 {
     /* Do not convert to target CRS. Vector files are in geographic coordinates */
-    p.assignSpatialReference(&crsConverter.source);
-    return (crsConverter.transf != NULL);
+    p.assignSpatialReference(&cord.source);
+    return (cord.transf != NULL);
 }
 
 

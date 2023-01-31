@@ -70,9 +70,9 @@ GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling,
 
 
 /*----------------------------------------------------------------------------
- * getRisFile
+ * getIndexFile
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getRisFile(std::string& file, double lon, double lat)
+void ArcticDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
     /*
      * Strip DEM ﬁles are distributed in folders according to the 1° x 1° geocell in which the geometric center resides.
@@ -98,7 +98,7 @@ void ArcticDemStripsRaster::getRisFile(std::string& file, double lon, double lat
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getRisBbox(bbox_t &bbox, double lon, double lat)
+void ArcticDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 {
     /* ArcticDEM geocells are 1x1 degree */
     const double geocellSize = 1.0;
