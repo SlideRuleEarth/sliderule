@@ -1,9 +1,7 @@
 """Tests for sliderule-python icesat2 api."""
 
 import pytest
-from requests.exceptions import ConnectTimeout, ConnectionError
 import sliderule
-from sliderule import icesat2
 
 @pytest.mark.network
 class TestProvisioning:

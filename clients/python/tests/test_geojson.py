@@ -3,6 +3,7 @@
 import pytest
 from pathlib import Path
 import os.path
+import sliderule
 from sliderule import icesat2
 
 TESTDIR = Path(__file__).parent

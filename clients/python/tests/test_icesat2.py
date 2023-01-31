@@ -1,7 +1,6 @@
 """Tests for sliderule-python icesat2 api."""
 
 import pytest
-from requests.exceptions import ConnectTimeout, ConnectionError
 import sliderule
 from sliderule import icesat2
 from pathlib import Path
@@ -23,8 +22,8 @@ def grandmesa():
 
 class TestLocal:
     def test_init_empty_raises(self):
-        with pytest.raises(TypeError, match=('url')):
-            icesat2.init()
+        with pytest.raises(TypeError):
+            icesat2.init(url=[])
 
     def test_toregion_empty_raises(self):
         with pytest.raises(TypeError, match=('source')):
@@ -44,7 +43,7 @@ class TestRemote:
 
     def test_get_version(self, domain, organization):
         icesat2.init(domain, organization=organization)
-        version = icesat2.get_version()
+        version = sliderule.get_version()
         assert isinstance(version, dict)
         assert {'icesat2', 'server', 'client'} <= version.keys()
 
