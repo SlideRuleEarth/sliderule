@@ -637,16 +637,6 @@ bool GeoRaster::containsWindow(int col, int row, int maxCol, int maxRow, int win
 }
 
 /*----------------------------------------------------------------------------
- * containsPoint
- *----------------------------------------------------------------------------*/
-inline bool GeoRaster::containsPoint(Raster *raster, OGRPoint& p)
-{
-    return (raster && raster->dset &&
-            (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
-            (p.getY() >= raster->bbox.lat_min) && (p.getY() <= raster->bbox.lat_max));
-}
-
-/*----------------------------------------------------------------------------
  * readGeoIndexData
  *----------------------------------------------------------------------------*/
 bool GeoRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffset,

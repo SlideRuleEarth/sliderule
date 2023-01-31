@@ -233,7 +233,6 @@ class GeoRaster: public LuaObject
         virtual bool    findRasters           (OGRPoint &p) = 0;
         virtual bool    transformCRS          (OGRPoint& p) = 0;
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
-        bool            containsPoint         (Raster *raster, OGRPoint &p);
         virtual bool    findCachedRasters     (OGRPoint &p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
         virtual void    sampleRasters         (void);
@@ -243,6 +242,13 @@ class GeoRaster: public LuaObject
 
         virtual bool    readGeoIndexData      (OGRPoint *point, int srcWindowSize, int srcOffset,
                                                void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
+
+        inline bool containsPoint (Raster *raster, OGRPoint &p)
+        {
+            return (raster && raster->dset &&
+                (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
+                (p.getY() >= raster->bbox.lat_min) && (p.getY() <= raster->bbox.lat_max));
+        }
 
         /*--------------------------------------------------------------------
          * Data
