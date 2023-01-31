@@ -999,7 +999,6 @@ void GeoRaster::updateCache(OGRPoint& p)
         if (!raster->enabled)
         {
             /* Main thread closing multiple rasters is OK */
-            if (raster->dset) GDALClose((GDALDatasetH)raster->dset);
             rasterDict.remove(key);
             delete raster;
         }
