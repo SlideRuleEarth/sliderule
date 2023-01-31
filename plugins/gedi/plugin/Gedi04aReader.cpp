@@ -335,7 +335,7 @@ void Gedi04aReader::Region::polyregion (info_t* info)
             first_footprint_found = true;
             first_footprint = footprint;
         }
-        else if(!last_footprint_found && !inclusion)
+        else if(first_footprint_found && !last_footprint_found && !inclusion)
         {
             /* Set Last Segment */
             last_footprint_found = true;
