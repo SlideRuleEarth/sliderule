@@ -55,17 +55,19 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
-    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, ARCTIC_DEM_EPSG)
+ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
+                                             const bool zonal_stats, const bool auxiliary_files):
+    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files, ARCTIC_DEM_EPSG)
 {
 }
 
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
+GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                         const bool zonal_stats, const bool auxiliary_files)
 {
-    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats);
+    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
 }
 
 
@@ -160,7 +162,9 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                 fileName = vsisPath + fileName.substr(pos);
                 foundFile = true; /* There may be more than one file.. */
 
-                raster_info_t rinfo = {fileName, {0}};
+                raster_info_t rinfo;
+                rinfo.fileName = fileName;
+                bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
 
                 int year, month, day, hour, minute, second, timeZone;
                 int i = feature->GetFieldIndex(dateField);

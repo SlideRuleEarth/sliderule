@@ -18,12 +18,14 @@ local  lat = 66.34  -- Arctic Circle lat
 local _lon = lon
 local _lat = lat
 
-local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 0)
+-- local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 0)
+local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 40, true)
+
 local tbl, status
 
-local lonIncrement  = 1.5
+local lonIncrement  = 0.5
 local failedSamples = 0
-local maxPoints     = 130
+local maxPoints     = 100
 
 print(string.format("\nMOSAIC, Walking Arctic Circle test"))
 

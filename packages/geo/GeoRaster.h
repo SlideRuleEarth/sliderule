@@ -209,7 +209,8 @@ class GeoRaster: public LuaObject
         } reader_t;
 
 
-        typedef GeoRaster* (*factory_t) (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
+        typedef GeoRaster* (*factory_t) (lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                         const bool zonal_stats, const bool auxiliary_files);
 
         /*--------------------------------------------------------------------
          * Methods
@@ -221,6 +222,7 @@ class GeoRaster: public LuaObject
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         inline bool    hasZonalStats   (void) { return zonalStats; }
+        inline bool    hasAuxiliary    (void) { return auxFiles; }
         const char*    getUUID         (char* uuid_str);
         virtual       ~GeoRaster       (void);
         inline const Dictionary<uint32_t>& fileDictGet(void) {return fileDict;}
@@ -231,7 +233,8 @@ class GeoRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
+                        GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                              const bool zonal_stats=false, const bool auxiliary_files=false);
         virtual bool    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
         virtual bool    transformCRS          (OGRPoint& p) = 0;
@@ -277,6 +280,7 @@ class GeoRaster: public LuaObject
         reader_t*    rasterRreader;
         uint32_t     readerCount;
         bool         zonalStats;
+        bool         auxFiles;
 
         Dictionary<uint32_t> fileDict;
 

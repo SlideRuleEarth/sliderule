@@ -107,6 +107,7 @@ int GeoRaster::luaCreate( lua_State* L )
         const char* dem_sampling    = getLuaString(L, 2, true, NEARESTNEIGHBOUR_ALGO);
         const int   sampling_radius = getLuaInteger(L, 3, true, 0);
         const int   zonal_stats     = getLuaBoolean(L, 4, true, false);
+        const int   auxiliary_files = getLuaBoolean(L, 5, true, false);
 
         /* Get Factory */
         factory_t _create = NULL;
@@ -120,7 +121,7 @@ int GeoRaster::luaCreate( lua_State* L )
         if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", raster_name);
 
         /* Create Raster */
-        GeoRaster* _raster = _create(L, dem_sampling, sampling_radius, zonal_stats);
+        GeoRaster* _raster = _create(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
         if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", raster_name);
 
         /* Return Object */
@@ -249,11 +250,15 @@ int GeoRaster::sample(double lon, double lat)
     if (!transformCRS(p))
         throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
 
-    /* If point is not in current raster index data set, openGeoIndex new one */
+    /* If point is not in current raster index data set, open new one */
     if (!geoIndex.containsPoint(p))
     {
         if (!openGeoIndex(lon, lat))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Could not openGeoIndex raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
+
+        /* Check against newly opened geoIndex */
+        if (!geoIndex.containsPoint(p))
+            return 0;
     }
 
     if (!findCachedRasters(p))
@@ -287,12 +292,12 @@ const char* GeoRaster::getUUID(char *uuid_str)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
+GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
+                     const bool zonal_stats, const bool auxiliary_files):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     CHECKPTR(dem_sampling);
 
-    zonalStats = false;
     sampleAlg  = (GDALRIOResampleAlg) -1;
 
     if      (!strcasecmp(dem_sampling, NEARESTNEIGHBOUR_ALGO)) sampleAlg = GRIORA_NearestNeighbour;
@@ -306,6 +311,7 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
 
+    auxFiles = auxiliary_files;
     zonalStats = zonal_stats;
 
     if (sampling_radius >= 0)

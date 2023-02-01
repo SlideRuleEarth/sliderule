@@ -55,8 +55,9 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
-    VrtRaster(L, dem_sampling, sampling_radius, zonal_stats)
+ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
+                                             const bool zonal_stats, const bool auxiliary_files):
+    VrtRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files)
 {
     /*
      * ArcticDemMosaicRaster uses one large mosaic VRT file (raster index file)
@@ -69,9 +70,10 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
+GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                         const bool zonal_stats, const bool auxiliary_files)
 {
-    return new ArcticDemMosaicRaster(L, dem_sampling, sampling_radius, zonal_stats);
+    return new ArcticDemMosaicRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
 }
 
 
