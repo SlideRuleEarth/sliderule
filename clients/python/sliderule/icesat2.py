@@ -202,6 +202,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
     records = []
     num_records = 0
     field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
+    file_dictionary = {} # [id] = "filename"
     if len(rsps) > 0:
         # Sort Records
         for rsp in rsps:
@@ -237,7 +238,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                     for field in field_names:
                         field_dictionary[field_set][field_set + "." + field] = []
                 # Populate dictionary for field set
-                field_dictionary[field_set]['extent_id'] += rsp['extent_id'],
+                field_dictionary[field_set]['extent_id'] += rsp['index'],
                 for field in field_names:
                     if as_numpy_array:
                         data = []
@@ -259,6 +260,8 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                         field_dictionary[field_set][field] += numpy.array(rsp[field]),
                     else:
                         field_dictionary[field_set][field] += rsp[field],
+            elif 'fileidrec' == rsp['__rectype']:
+                file_dictionary[rsp["file_id"]] = rsp["file_name"]
 
         # Build Columns
         if num_records > 0:
@@ -294,6 +297,10 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
     # Delete Extent ID Column
     if len(gdf) > 0 and not keep_id:
         del gdf["extent_id"]
+
+    # Attach Metadata
+    if len(file_dictionary) > 0:
+        gdf.attrs['file_directory'] = file_dictionary
 
     # Return GeoDataFrame
     profiles["flatten"] = time.perf_counter() - tstart_flatten
