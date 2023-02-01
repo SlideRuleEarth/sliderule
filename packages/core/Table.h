@@ -81,8 +81,8 @@ class Table
         T&          get         (K key, match_t match=MATCH_EXACTLY, bool resort=false);
         bool        find        (K key, match_t match, T* data, bool resort=false);
         bool        remove      (K key);
-        long        length      (void);
-        bool        isfull      (void);
+        long        length      (void) const;
+        bool        isfull      (void) const;
         void        clear       (void);
 
         K           first       (T* data);
@@ -481,7 +481,7 @@ bool Table<T,K>::remove(K key)
  * length
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-long Table<T,K>::length(void)
+long Table<T,K>::length(void) const
 {
     return num_entries;
 }
@@ -490,7 +490,7 @@ long Table<T,K>::length(void)
  * isfull
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Table<T,K>::isfull(void)
+bool Table<T,K>::isfull(void) const
 {
     return num_entries >= size;
 }

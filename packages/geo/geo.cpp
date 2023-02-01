@@ -128,6 +128,7 @@ int geo_open (lua_State* L)
     static const struct luaL_Reg geo_functions[] = {
         {"geojson",     GeoJsonRaster::luaCreate},
         {"raster",      GeoRaster::luaCreate},
+        {"sampler",     RasterSampler::luaCreate},
         {NULL,          NULL}
     };
 
@@ -173,6 +174,7 @@ void initgeo (void)
     GeoRaster::init();
     VrtRaster::init();
     VctRaster::init();
+    RasterSampler::init();
 
     /* Register GDAL custom error handler */
     void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;

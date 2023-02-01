@@ -47,22 +47,26 @@ const struct luaL_Reg RasterSampler::LuaMetaTable[] = {
 
 const char* RasterSampler::rsSampleRecType = "rsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::rsSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),  1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),   1,  NULL, NATIVE_FLAGS}
+    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),      1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),       1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT32,   offsetof(sample_t, file_id),    1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT32,   offsetof(sample_t, flags),      1,  NULL, NATIVE_FLAGS}
 };
 
-const char* RasterSampler::rsExtentRecType = "rsrec";
-const RecordObject::fieldDef_t RasterSampler::rsExtentRecDef[] = {
-    {"extent_id",       RecordObject::UINT64,   offsetof(rs_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
-    {"key",             RecordObject::STRING,   offsetof(rs_extent_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(rs_extent_t, num_samples),     1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(rs_extent_t, samples),         0,  rsSampleRecType, NATIVE_FLAGS} // variable length
+const char* RasterSampler::rsGeoRecType = "rsrec";
+const RecordObject::fieldDef_t RasterSampler::rsGeoRecDef[] = {
+    {"index",           RecordObject::UINT64,   offsetof(rs_geo_t, index),           1,  NULL, NATIVE_FLAGS},
+    {"key",             RecordObject::STRING,   offsetof(rs_geo_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(rs_geo_t, num_samples),     1,  NULL, NATIVE_FLAGS},
+    {"samples",         RecordObject::USER,     offsetof(rs_geo_t, samples),         0,  rsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* RasterSampler::zsSampleRecType = "zsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
     {"value",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, value),           1,  NULL, NATIVE_FLAGS},
     {"time",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, time),            1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT32,   offsetof(VrtRaster::sample_t, fileId),          1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, flags),           1,  NULL, NATIVE_FLAGS},
     {"count",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, stats.count),     1,  NULL, NATIVE_FLAGS},
     {"min",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.min),       1,  NULL, NATIVE_FLAGS},
     {"max",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.max),       1,  NULL, NATIVE_FLAGS},
@@ -72,12 +76,18 @@ const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
     {"mad",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.mad),       1,  NULL, NATIVE_FLAGS}
 };
 
-const char* RasterSampler::zsExtentRecType = "zsrec";
-const RecordObject::fieldDef_t RasterSampler::zsExtentRecDef[] = {
-    {"extent_id",       RecordObject::UINT64,   offsetof(zs_extent_t, extent_id),       1,  NULL, NATIVE_FLAGS},
-    {"key",             RecordObject::STRING,   offsetof(zs_extent_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(zs_extent_t, num_samples),     1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(zs_extent_t, samples),         0,  zsSampleRecType, NATIVE_FLAGS} // variable length
+const char* RasterSampler::zsGeoRecType = "zsrec";
+const RecordObject::fieldDef_t RasterSampler::zsGeoRecDef[] = {
+    {"index",           RecordObject::UINT64,   offsetof(zs_geo_t, index),           1,  NULL, NATIVE_FLAGS},
+    {"key",             RecordObject::STRING,   offsetof(zs_geo_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(zs_geo_t, num_samples),     1,  NULL, NATIVE_FLAGS},
+    {"samples",         RecordObject::USER,     offsetof(zs_geo_t, samples),         0,  zsSampleRecType, NATIVE_FLAGS} // variable length
+};
+
+const char* RasterSampler::fileIdRecType = "fileidrec";
+const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
+    {"file_id",         RecordObject::UINT32,   offsetof(file_directory_entry_t, file_id),      1,  NULL, NATIVE_FLAGS},
+    {"file_name",       RecordObject::STRING,   offsetof(file_directory_entry_t, file_name),    0,  NULL, NATIVE_FLAGS} // variable length
 };
 
 /******************************************************************************
@@ -85,7 +95,7 @@ const RecordObject::fieldDef_t RasterSampler::zsExtentRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :sampler(<vrt_raster>, <vrt_raster_index>, <outq name>, <rec_type>, <extent_key>, <lon_key>, <lat_key>)
+ * luaCreate - :sampler(<vrt_raster>, <vrt_raster_index>, <outq name>, <rec_type>, <index_key>, <lon_key>, <lat_key>)
  *----------------------------------------------------------------------------*/
 int RasterSampler::luaCreate (lua_State* L)
 {
@@ -97,12 +107,12 @@ int RasterSampler::luaCreate (lua_State* L)
         const char* raster_key  = getLuaString(L, 2);
         const char* outq_name   = getLuaString(L, 3);
         const char* rec_type    = getLuaString(L, 4);
-        const char* extent_key  = getLuaString(L, 5);
+        const char* index_key  = getLuaString(L, 5);
         const char* lon_key     = getLuaString(L, 6);
         const char* lat_key     = getLuaString(L, 7);
 
         /* Create Dispatch */
-        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, extent_key, lon_key, lat_key));
+        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, index_key, lon_key, lat_key));
     }
     catch(const RunTimeException& e)
     {
@@ -118,9 +128,10 @@ int RasterSampler::luaCreate (lua_State* L)
 void RasterSampler::init (void)
 {
     RECDEF(rsSampleRecType, rsSampleRecDef, sizeof(sample_t), NULL);
-    RECDEF(rsExtentRecType, rsExtentRecDef, sizeof(rs_extent_t), NULL);
+    RECDEF(rsGeoRecType,    rsGeoRecDef,    sizeof(rs_geo_t), NULL);
     RECDEF(zsSampleRecType, zsSampleRecDef, sizeof(VrtRaster::sample_t), NULL);
-    RECDEF(zsExtentRecType, zsExtentRecDef, sizeof(zs_extent_t), NULL);
+    RECDEF(zsGeoRecType,    zsGeoRecDef,    sizeof(zs_geo_t), NULL);
+    RECDEF(fileIdRecType,   fileIdRecDef,   sizeof(file_directory_entry_t), NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -137,7 +148,7 @@ void RasterSampler::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* extent_key, const char* lon_key, const char* lat_key):
+RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* index_key, const char* lon_key, const char* lat_key):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(_raster);
@@ -150,16 +161,16 @@ RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* rast
 
     outQ = new Publisher(outq_name);
 
-    extentSizeBytes = RecordObject::getRecordDataSize(rec_type);
-    if(extentSizeBytes <= 0)
+    recordSizeBytes = RecordObject::getRecordDataSize(rec_type);
+    if(recordSizeBytes <= 0)
     {
         mlog(CRITICAL, "Failed to get size of extent for record type: %s", rec_type);
     }
 
-    extentField = RecordObject::getDefinedField(rec_type, extent_key);
-    if(extentField.type == RecordObject::INVALID_FIELD)
+    indexField = RecordObject::getDefinedField(rec_type, index_key);
+    if(indexField.type == RecordObject::INVALID_FIELD)
     {
-        mlog(CRITICAL, "Failed to get field %s from record type: %s", extent_key, rec_type);
+        mlog(CRITICAL, "Failed to get field %s from record type: %s", index_key, rec_type);
     }
 
     lonField = RecordObject::getDefinedField(rec_type, lon_key);
@@ -188,7 +199,7 @@ RasterSampler::~RasterSampler(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *
- *  OUTPUT: one rs_extent_t record per extent_id
+ *  OUTPUT: one rs_geo_t record per index
  *  INPUT:  batch of atl06 extents
  *          each extent (up to 256 per record) will produce a single output record with one point
  *          that one point may have multiple samples associated with it
@@ -201,16 +212,16 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
 
     /* Determine Number of Rows in Record */
     int record_size_bytes = record->getAllocatedDataSize();
-    int num_extents = record_size_bytes / extentSizeBytes;
-    int left_over = record_size_bytes % extentSizeBytes;
+    int num_extents = record_size_bytes / recordSizeBytes;
+    int left_over = record_size_bytes % recordSizeBytes;
     if(left_over > 0)
     {
-        mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), record_size_bytes, extentSizeBytes);
+        mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), record_size_bytes, recordSizeBytes);
         return false;
     }
 
     /* Initialize Local Fields */
-    RecordObject::field_t extent_field = extentField;
+    RecordObject::field_t index_field = indexField;
     RecordObject::field_t lon_field = lonField;
     RecordObject::field_t lat_field = latField;
 
@@ -218,16 +229,16 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
     for(int extent = 0; extent < num_extents; extent++)
     {
         /* Get Extent Id */
-        uint64_t extent_id = (uint64_t)record->getValueInteger(extent_field);
-        extent_field.offset += (extentSizeBytes * 8);
+        uint64_t index = (uint64_t)record->getValueInteger(index_field);
+        index_field.offset += (recordSizeBytes * 8);
 
         /* Get Longitude */
         double lon_val = record->getValueReal(lon_field);
-        lon_field.offset += (extentSizeBytes * 8);
+        lon_field.offset += (recordSizeBytes * 8);
 
         /* Get Latitude */
         double lat_val = record->getValueReal(lat_field);
-        lat_field.offset += (extentSizeBytes * 8);
+        lat_field.offset += (recordSizeBytes * 8);
 
         /* Sample Raster */
         List<VrtRaster::sample_t> slist;
@@ -236,10 +247,10 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         if(raster->hasZonalStats())
         {
             /* Create and Post Sample Record */
-            int size_of_record = offsetof(zs_extent_t, samples) + (sizeof(VrtRaster::sample_t) * num_samples);
-            RecordObject stats_rec(zsExtentRecType, size_of_record);
-            zs_extent_t* data = (zs_extent_t*)stats_rec.getRecordData();
-            data->extent_id = extent_id;
+            int size_of_record = offsetof(zs_geo_t, samples) + (sizeof(VrtRaster::sample_t) * num_samples);
+            RecordObject stats_rec(zsGeoRecType, size_of_record);
+            zs_geo_t* data = (zs_geo_t*)stats_rec.getRecordData();
+            data->index = index;
             StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
             data->num_samples = num_samples;
             for(int i = 0; i < num_samples; i++)
@@ -254,16 +265,18 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         else
         {
             /* Create and Post Sample Record */
-            int size_of_record = offsetof(rs_extent_t, samples) + (sizeof(sample_t) * num_samples);
-            RecordObject sample_rec(rsExtentRecType, size_of_record);
-            rs_extent_t* data = (rs_extent_t*)sample_rec.getRecordData();
-            data->extent_id = extent_id;
+            int size_of_record = offsetof(rs_geo_t, samples) + (sizeof(sample_t) * num_samples);
+            RecordObject sample_rec(rsGeoRecType, size_of_record);
+            rs_geo_t* data = (rs_geo_t*)sample_rec.getRecordData();
+            data->index = index;
             StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
             data->num_samples = num_samples;
             for(int i = 0; i < num_samples; i++)
             {
                 data->samples[i].value = slist[i].value;
                 data->samples[i].time = slist[i].time;
+                data->samples[i].file_id = slist[i].fileId;
+                data->samples[i].flags = slist[i].flags;
             }
             if(!sample_rec.post(outQ))
             {
@@ -291,5 +304,17 @@ bool RasterSampler::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool RasterSampler::processTermination (void)
 {
+    Dictionary<uint32_t>::Iterator iterator(raster->fileDictGet());
+    for(int i = 0; i < iterator.length; i++)
+    {
+        /* Send File Directory Entry Record for each File in Raster Dictionary */
+        int file_name_len = StringLib::size(iterator[i].key) + 1;
+        int size = offsetof(file_directory_entry_t, file_name) + file_name_len;
+        RecordObject record(fileIdRecType, size);
+        file_directory_entry_t* entry = (file_directory_entry_t*)record.getRecordData();
+        entry->file_id = iterator[i].value;
+        StringLib::copy(entry->file_name, iterator[i].key, file_name_len);
+        record.post(outQ);
+    }
     return true;
 }

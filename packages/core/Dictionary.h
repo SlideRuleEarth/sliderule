@@ -38,6 +38,7 @@
  ******************************************************************************/
 
 #include "RTExcept.h"
+#include "OsApi.h"
 #include <climits>
 #include <assert.h>
 
@@ -54,11 +55,33 @@ class Dictionary
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int            MAX_KEY_SIZE            = 512;
         static const int            DEFAULT_HASH_TABLE_SIZE = 256;
         static const unsigned int   EMPTY_ENTRY             = 0; // must be 0 because hashTable initialized to 0's
         static const unsigned int   NULL_INDEX              = UINT_MAX;
         static const double         DEFAULT_HASH_TABLE_LOAD; // statically defined below
+
+        /*--------------------------------------------------------------------
+         * Iterator Subclass
+         *--------------------------------------------------------------------*/
+
+        typedef struct kv {
+            kv(const char* _key, const T& _value): key(_key), value(_value) {};
+            ~kv(void) {};
+            const char* key;
+            const T&    value;
+        } kv_t;
+
+        class Iterator
+        {
+            public:
+                                    Iterator    (const Dictionary& d);
+                                    ~Iterator   (void);
+                kv_t                operator[]  (int index) const;
+                const int           length;
+            private:
+                const T**           elements;
+                const char**        keys;
+        };
 
         /*--------------------------------------------------------------------
          * Methods
@@ -68,13 +91,13 @@ class Dictionary
         virtual     ~Dictionary     (void);
 
         bool        add             (const char* key, T& data, bool unique=false);
-        T&          get             (const char* key);
-        bool        find            (const char* key, T* data=NULL);
+        T&          get             (const char* key) const;
+        bool        find            (const char* key, T* data=NULL) const;
         bool        remove          (const char* key);
-        int         length          (void);
-        int         getHashSize     (void);
-        int         getMaxChain     (void);
-        int         getKeys         (char*** keys);
+        int         length          (void) const;
+        int         getHashSize     (void) const;
+        int         getMaxChain     (void) const;
+        int         getKeys         (char*** keys) const;
         void        clear           (void);
 
         const char* first           (T* data);
@@ -83,7 +106,7 @@ class Dictionary
         const char* last            (T* data);
 
         Dictionary& operator=       (const Dictionary& other);
-        T&          operator[]      (const char* key);
+        T&          operator[]      (const char* key) const;
 
     protected:
 
@@ -115,8 +138,8 @@ class Dictionary
          * Methods
          *--------------------------------------------------------------------*/
 
-        unsigned int    hashKey     (const char* key);  // returns unconstrained hash
-        unsigned int    getNode     (const char* key);  // returns index into hash table
+        unsigned int    hashKey     (const char* key) const;  // returns unconstrained hash
+        unsigned int    getNode     (const char* key) const;  // returns index into hash table
         void            addNode     (const char* key, T& data, unsigned int hash, bool rehashed=false);
         virtual void    freeNode    (unsigned int hash_index);
 };
@@ -134,6 +157,57 @@ class MgDictionary: public Dictionary<T>
     private:
         void freeNode (unsigned int hash_index);
 };
+
+/******************************************************************************
+ * ITERATOR METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+Dictionary<T>::Iterator::Iterator(const Dictionary& d):
+    length(d.numEntries)
+{
+    elements = new const T* [length];
+    keys = new const char* [length];
+    for(unsigned int i = 0, j = 0; i < d.hashSize; i++)
+    {
+        if(d.hashTable[i].chain != EMPTY_ENTRY)
+        {
+            elements[j] = &d.hashTable[i].data;
+            keys[j] = d.hashTable[i].key;
+            j++;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+Dictionary<T>::Iterator::~Iterator(void)
+{
+    delete [] elements;
+    delete [] keys;
+}
+
+/*----------------------------------------------------------------------------
+ * []
+ *----------------------------------------------------------------------------*/
+template <class T>
+typename Dictionary<T>::kv_t Dictionary<T>::Iterator::operator[](int index) const
+{
+    if( (index < length) && (index >= 0) )
+    {
+        Dictionary<T>::kv_t pair(keys[index], *elements[index]);
+        return pair;
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Dictionary::Iterator index out of range");
+    }
+}
 
 /******************************************************************************
  * PUBLIC STATIC DATA
@@ -265,7 +339,7 @@ bool Dictionary<T>::add(const char* key, T& data, bool unique)
  * get
  *----------------------------------------------------------------------------*/
 template <class T>
-T& Dictionary<T>::get(const char* key)
+T& Dictionary<T>::get(const char* key) const
 {
     unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
@@ -278,7 +352,7 @@ T& Dictionary<T>::get(const char* key)
  *  returns false if key not in dictionary, else returns true
  *----------------------------------------------------------------------------*/
 template <class T>
-bool Dictionary<T>::find(const char* key, T* data)
+bool Dictionary<T>::find(const char* key, T* data) const
 {
     bool found = false;
 
@@ -363,7 +437,7 @@ bool Dictionary<T>::remove(const char* key)
  * length
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::length(void)
+int Dictionary<T>::length(void) const
 {
     return numEntries;
 }
@@ -372,7 +446,7 @@ int Dictionary<T>::length(void)
  * getHashSize
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::getHashSize(void)
+int Dictionary<T>::getHashSize(void) const
 {
     return hashSize;
 }
@@ -381,7 +455,7 @@ int Dictionary<T>::getHashSize(void)
  * getMaxChain
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::getMaxChain(void)
+int Dictionary<T>::getMaxChain(void) const
 {
     return maxChain;
 }
@@ -390,7 +464,7 @@ int Dictionary<T>::getMaxChain(void)
  * getKeys
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::getKeys (char*** keys)
+int Dictionary<T>::getKeys (char*** keys) const
 {
     if (numEntries <= 0) return 0;
 
@@ -400,7 +474,7 @@ int Dictionary<T>::getKeys (char*** keys)
         if(hashTable[i].chain != EMPTY_ENTRY)
         {
             int len = 0;
-            while( (len < (MAX_KEY_SIZE - 1)) && (hashTable[i].key[len] != '\0') ) len++;
+            while( (len < (MAX_STR_SIZE - 1)) && (hashTable[i].key[len] != '\0') ) len++;
             char* new_key = new char[len + 1];
             for(int k = 0; k < len; k++) new_key[k] = hashTable[i].key[k];
             new_key[len] = '\0';
@@ -552,7 +626,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
             /* copy key */
             const char* key = other.hashTable[i].key;
             int len = 0;
-            while( (len < (MAX_KEY_SIZE - 1)) && (key[len] != '\0') ) len++;
+            while( (len < (MAX_STR_SIZE - 1)) && (key[len] != '\0') ) len++;
             char* tmp_key = new char[len + 1];
             for(int j = 0; j < len; j++) tmp_key[j] = key[j];
             tmp_key[len] = '\0';
@@ -573,7 +647,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
  *  indexed by key
  *----------------------------------------------------------------------------*/
 template <class T>
-T& Dictionary<T>::operator[](const char* key)
+T& Dictionary<T>::operator[](const char* key) const
 {
     return get(key);
 }
@@ -582,7 +656,7 @@ T& Dictionary<T>::operator[](const char* key)
  * hashKey
  *----------------------------------------------------------------------------*/
 template <class T>
-unsigned int Dictionary<T>::hashKey(const char *key)
+unsigned int Dictionary<T>::hashKey(const char *key) const
 {
     const char* ptr = key;
     int         h   = 0;
@@ -608,7 +682,7 @@ unsigned int Dictionary<T>::hashKey(const char *key)
  *  must be called from locked context
  *----------------------------------------------------------------------------*/
 template <class T>
-unsigned int Dictionary<T>::getNode(const char* key)
+unsigned int Dictionary<T>::getNode(const char* key) const
 {
     /* Check Pointer */
     if(key != NULL)
@@ -620,7 +694,7 @@ unsigned int Dictionary<T>::getNode(const char* key)
         while(index != NULL_INDEX && hashTable[index].chain != EMPTY_ENTRY)
         {
             /* Compare Hash Key to Key */
-            for(int i = 0; i < MAX_KEY_SIZE; i++)
+            for(int i = 0; i < MAX_STR_SIZE; i++)
             {
                 if(hashTable[index].key[i] != key[i])
                 {
@@ -658,7 +732,7 @@ void Dictionary<T>::addNode (const char* key, T& data, unsigned int hash, bool r
     else
     {
         int len = 0;
-        while( (len < (MAX_KEY_SIZE - 1)) && (key[len] != '\0') ) len++;
+        while( (len < (MAX_STR_SIZE - 1)) && (key[len] != '\0') ) len++;
         char* tmp_key = new char[len + 1];
         for(int i = 0; i < len; i++) tmp_key[i] = key[i];
         tmp_key[len] = '\0';

@@ -62,14 +62,17 @@ class RasterSampler: public DispatchObject
         static const char* rsSampleRecType;
         static const RecordObject::fieldDef_t rsSampleRecDef[];
 
-        static const char* rsExtentRecType;
-        static const RecordObject::fieldDef_t rsExtentRecDef[];
+        static const char* rsGeoRecType;
+        static const RecordObject::fieldDef_t rsGeoRecDef[];
 
         static const char* zsSampleRecType;
         static const RecordObject::fieldDef_t zsSampleRecDef[];
 
-        static const char* zsExtentRecType;
-        static const RecordObject::fieldDef_t zsExtentRecDef[];
+        static const char* zsGeoRecType;
+        static const RecordObject::fieldDef_t zsGeoRecDef[];
+
+        static const char* fileIdRecType;
+        static const RecordObject::fieldDef_t fileIdRecDef[];
 
         static const int RASTER_KEY_MAX_LEN = 16; // maximum number of characters to represent raster
 
@@ -81,23 +84,31 @@ class RasterSampler: public DispatchObject
         typedef struct {
             double              value;
             double              time;
+            uint32_t            file_id;
+            uint32_t            flags;
         } sample_t;
 
         /* Extent Sample Record */
         typedef struct {
-            uint64_t            extent_id;
+            uint64_t            index;
             char                raster_key[RASTER_KEY_MAX_LEN];
             uint32_t            num_samples;
             sample_t            samples[];
-        } rs_extent_t;
+        } rs_geo_t;
 
         /* Zonal Statistics Record */
         typedef struct {
-            uint64_t            extent_id;
+            uint64_t            index;
             char                raster_key[RASTER_KEY_MAX_LEN];
             uint32_t            num_samples;
             VrtRaster::sample_t samples[];
-        } zs_extent_t;
+        } zs_geo_t;
+
+        /* File Directory Entry Record */
+        typedef struct {
+            uint32_t            file_id;
+            char                file_name[];
+        } file_directory_entry_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -116,8 +127,8 @@ class RasterSampler: public DispatchObject
         VrtRaster*              raster;
         const char*             rasterKey;
         Publisher*              outQ;
-        int                     extentSizeBytes;
-        RecordObject::field_t   extentField;
+        int                     recordSizeBytes;
+        RecordObject::field_t   indexField;
         RecordObject::field_t   lonField;
         RecordObject::field_t   latField;
         bool                    useZonalStats;
@@ -126,7 +137,7 @@ class RasterSampler: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        RasterSampler           (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* extent_key, const char* lon_key, const char* lat_key);
+                        RasterSampler           (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* index_key, const char* lon_key, const char* lat_key);
                         ~RasterSampler          (void);
 
         bool            processRecord           (RecordObject* record, okey_t key) override;
