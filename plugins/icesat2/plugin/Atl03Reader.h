@@ -98,6 +98,8 @@ class Atl03Reader: public LuaObject
             double          distance;   // double[]: dist_ph_along
             float           height;     // float[]: h_ph
             float           relief;     // float[]: ATL08 ph_h
+            uint8_t         landcover;  // ATL08 land cover flags
+            uint8_t         snowcover;  // ATL08 snow cover flags
             uint8_t         atl08_class;// ATL08 classification
             int8_t          atl03_cnf;  // ATL03 confidence level
             int8_t          quality_ph; // ATL03 photon quality
@@ -117,6 +119,7 @@ class Atl03Reader: public LuaObject
             double          extent_length[RqstParms::NUM_PAIR_TRACKS]; // meters
             double          spacecraft_velocity[RqstParms::NUM_PAIR_TRACKS]; // meters per second
             double          background_rate[RqstParms::NUM_PAIR_TRACKS]; // PE per second
+            float           solar_elevation[RqstParms::NUM_PAIR_TRACKS];
             uint32_t        photon_count[RqstParms::NUM_PAIR_TRACKS];
             uint32_t        photon_offset[RqstParms::NUM_PAIR_TRACKS];
             photon_t        photons[]; // zero length field
@@ -216,6 +219,7 @@ class Atl03Reader: public LuaObject
                 GTArray<double>     segment_delta_time;
                 GTArray<int32_t>    segment_id;
                 GTArray<double>     segment_dist_x;
+                GTArray<float>      solar_elevation;
                 GTArray<float>      dist_ph_along;
                 GTArray<float>      h_ph;
                 GTArray<int8_t>     signal_conf_ph;
@@ -235,6 +239,11 @@ class Atl03Reader: public LuaObject
         {
             public:
 
+                /* Constants */
+                static const int NUM_ATL03_SEGS_IN_ATL08_SEG = 5;
+                static const uint8_t INVALID_FLAG = 0xFF;
+
+                /* Methods */
                 Atl08Class          (info_t* info);
                 ~Atl08Class         (void);
                 void classify       (info_t* info, Region& region, Atl03Data& atl03);
@@ -248,12 +257,19 @@ class Atl03Reader: public LuaObject
                 /* Generated Data */
                 uint8_t*            gt[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
                 float*              relief[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
+                uint8_t*            landcover[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
+                uint8_t*            snowcover[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
 
                 /* Read Data */
                 GTArray<int32_t>    atl08_segment_id;
                 GTArray<int32_t>    atl08_pc_indx;
                 GTArray<int8_t>     atl08_pc_flag;
+
+                /* PhoREAL - Read Data */
                 GTArray<float>      atl08_ph_h;
+                GTArray<int32_t>    segment_id_beg;
+                GTArray<int16_t>    segment_landcover;
+                GTArray<int8_t>     segment_snowcover;
         };
 
         /* YAPC Score Subclass */

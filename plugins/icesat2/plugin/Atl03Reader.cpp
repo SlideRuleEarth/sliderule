@@ -57,29 +57,34 @@
 
 const char* Atl03Reader::phRecType = "atl03rec.photons";
 const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
-    {"delta_time",  RecordObject::DOUBLE,   offsetof(photon_t, delta_time),     1,  NULL, NATIVE_FLAGS},
-    {"latitude",    RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS},
-    {"longitude",   RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS},
-    {"distance",    RecordObject::DOUBLE,   offsetof(photon_t, distance),       1,  NULL, NATIVE_FLAGS},
-    {"height",      RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS},
-    {"atl08_class", RecordObject::UINT8,    offsetof(photon_t, atl08_class),    1,  NULL, NATIVE_FLAGS},
-    {"atl03_cnf",   RecordObject::INT8,     offsetof(photon_t, atl03_cnf),      1,  NULL, NATIVE_FLAGS},
-    {"quality_ph",  RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS},
-    {"yapc_score",  RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS}
+    {"delta_time",      RecordObject::DOUBLE,   offsetof(photon_t, delta_time),     1,  NULL, NATIVE_FLAGS},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS},
+    {"distance",        RecordObject::DOUBLE,   offsetof(photon_t, distance),       1,  NULL, NATIVE_FLAGS},
+    {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS},
+    {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS},
+    {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS},
+    {"snowcover",       RecordObject::UINT8,    offsetof(photon_t, snowcover),      1,  NULL, NATIVE_FLAGS},
+    {"atl08_class",     RecordObject::UINT8,    offsetof(photon_t, atl08_class),    1,  NULL, NATIVE_FLAGS},
+    {"atl03_cnf",       RecordObject::INT8,     offsetof(photon_t, atl03_cnf),      1,  NULL, NATIVE_FLAGS},
+    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS},
+    {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl03Reader::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
-    {"track",       RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),           1,  NULL, NATIVE_FLAGS},
-    {"sc_orient",   RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation),         1,  NULL, NATIVE_FLAGS},
-    {"rgt",         RecordObject::UINT16,   offsetof(extent_t, reference_ground_track_start),   1,  NULL, NATIVE_FLAGS},
-    {"cycle",       RecordObject::UINT16,   offsetof(extent_t, cycle_start),                    1,  NULL, NATIVE_FLAGS},
-    {"extent_id",   RecordObject::UINT64,   offsetof(extent_t, extent_id),                      1,  NULL, NATIVE_FLAGS},
-    {"segment_id",  RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),                  2,  NULL, NATIVE_FLAGS},
-    {"segment_dist",RecordObject::DOUBLE,   offsetof(extent_t, segment_distance[0]),            2,  NULL, NATIVE_FLAGS}, // distance from equator
-    {"count",       RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),                2,  NULL, NATIVE_FLAGS},
-    {"photons",     RecordObject::USER,     offsetof(extent_t, photon_offset[0]),               2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
-    {"data",        RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),           1,  NULL, NATIVE_FLAGS},
+    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation),         1,  NULL, NATIVE_FLAGS},
+    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track_start),   1,  NULL, NATIVE_FLAGS},
+    {"cycle",           RecordObject::UINT16,   offsetof(extent_t, cycle_start),                    1,  NULL, NATIVE_FLAGS},
+    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),                      1,  NULL, NATIVE_FLAGS},
+    {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),                  2,  NULL, NATIVE_FLAGS},
+    {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance[0]),            2,  NULL, NATIVE_FLAGS}, // distance from equator
+    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate[0]),             2,  NULL, NATIVE_FLAGS},
+    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation[0]),             2,  NULL, NATIVE_FLAGS},
+    {"count",           RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),                2,  NULL, NATIVE_FLAGS},
+    {"photons",         RecordObject::USER,     offsetof(extent_t, photon_offset[0]),               2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
+    {"data",            RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* Atl03Reader::phFlatRecType = "flat03rec.photons";
@@ -548,6 +553,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     segment_delta_time  (info->reader->asset, info->reader->resource, info->track, "geolocation/delta_time",      &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_id          (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_id",      &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_dist_x      (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_dist_x",  &info->reader->context, 0, region.first_segment, region.num_segments),
+    solar_elevation     (info->reader->asset, info->reader->resource, info->track, "geolocation/solar_elevation", &info->reader->context, 0, region.first_segment, region.num_segments),
     dist_ph_along       (info->reader->asset, info->reader->resource, info->track, "heights/dist_ph_along",       &info->reader->context, 0, region.first_photon,  region.num_photons),
     h_ph                (info->reader->asset, info->reader->resource, info->track, "heights/h_ph",                &info->reader->context, 0, region.first_photon,  region.num_photons),
     signal_conf_ph      (info->reader->asset, info->reader->resource, info->track, "heights/signal_conf_ph",      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
@@ -600,6 +606,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_id.join(info->reader->read_timeout_ms, true);
     segment_dist_x.join(info->reader->read_timeout_ms, true);
+    solar_elevation.join(info->reader->read_timeout_ms, true);
     dist_ph_along.join(info->reader->read_timeout_ms, true);
     h_ph.join(info->reader->read_timeout_ms, true);
     signal_conf_ph.join(info->reader->read_timeout_ms, true);
@@ -650,10 +657,15 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     phoreal             (info->reader->parms->stages[RqstParms::STAGE_PHOREAL]),
     gt                  {NULL, NULL},
     relief              {NULL, NULL},
-    atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",   &info->reader->context08),
-    atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx", &info->reader->context08),
-    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag", &info->reader->context08),
-    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_h",            &info->reader->context08)
+    landcover           {NULL, NULL},
+    snowcover           {NULL, NULL},
+    atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",       &info->reader->context08),
+    atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx",     &info->reader->context08),
+    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag",     &info->reader->context08),
+    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_h",                &info->reader->context08),
+    segment_id_beg      (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "land_segments/segment_id_beg",       &info->reader->context08),
+    segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "land_segments/segment_landcover",    &info->reader->context08),
+    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "land_segments/segment_snowcover",    &info->reader->context08)
 {
 }
 
@@ -666,6 +678,8 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
     {
         if(gt[t]) delete [] gt[t];
         if(relief[t]) delete [] relief[t];
+        if(landcover[t]) delete [] landcover[t];
+        if(snowcover[t]) delete [] snowcover[t];
     }
 }
 
@@ -684,7 +698,13 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
     atl08_segment_id.join(info->reader->read_timeout_ms, true);
     atl08_pc_indx.join(info->reader->read_timeout_ms, true);
     atl08_pc_flag.join(info->reader->read_timeout_ms, true);
-    if(phoreal) atl08_ph_h.join(info->reader->read_timeout_ms, true);
+    if(phoreal)
+    {
+        atl08_ph_h.join(info->reader->read_timeout_ms, true);
+        segment_id_beg.join(info->reader->read_timeout_ms, true);
+        segment_landcover.join(info->reader->read_timeout_ms, true);
+        segment_snowcover.join(info->reader->read_timeout_ms, true);
+    }
 
     /* Rename Segment Photon Counts (to easily identify with ATL03) */
     GTArray<int32_t>* atl03_segment_ph_cnt = &region.segment_ph_cnt;
@@ -696,15 +716,42 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
         int num_photons = atl03.dist_ph_along[t].size;
         gt[t] = new uint8_t [num_photons];
 
-        /* Allocate ATL08 Relief Array */
-        if(phoreal) relief[t] = new float [num_photons];
+        /* Allocate PhoREAL Arrays */
+        if(phoreal)
+        {
+            relief[t] = new float [num_photons];
+            landcover[t] = new uint8_t [num_photons];
+            snowcover[t] = new uint8_t [num_photons];
+        }
 
         /* Populate ATL08 Classifications */
         int32_t atl03_photon = 0;
         int32_t atl08_photon = 0;
+        int32_t atl08_segment_index = 0;
         for(int atl03_segment_index = 0; atl03_segment_index < atl03.segment_id[t].size; atl03_segment_index++)
         {
             int32_t atl03_segment = atl03.segment_id[t][atl03_segment_index];
+
+            /* Get Land and Snow Flags */
+            uint8_t landcover_flag = INVALID_FLAG;
+            uint8_t snowcover_flag = INVALID_FLAG;
+            if(phoreal)
+            {
+                while( (atl08_segment_index < segment_id_beg[t].size) &&
+                       ((segment_id_beg[t][atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) <= atl03_segment) )
+                {
+                    atl08_segment_index++;
+                }
+
+                if( (segment_id_beg[t][atl08_segment_index] <= atl03_segment) &&
+                    ((segment_id_beg[t][atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) > atl03_segment) )
+                {
+                    landcover_flag = (uint8_t)segment_landcover[t][atl08_segment_index];
+                    snowcover_flag = (uint8_t)segment_snowcover[t][atl08_segment_index];
+                }
+            }
+
+            /* Get Per Photon Values */
             int32_t atl03_segment_count = atl03_segment_ph_cnt->gt[t][atl03_segment_index];
             for(int atl03_count = 1; atl03_count <= atl03_segment_count; atl03_count++)
             {
@@ -740,6 +787,16 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
                 {
                     /* Unclassified */
                     gt[t][atl03_photon] = RqstParms::ATL08_UNCLASSIFIED;
+
+                    /* Set ATL08 Relief to Zero */
+                    if(phoreal) relief[t][atl03_photon] = 0.0;
+                }
+
+                /* Populate ATL08 Flags */
+                if(phoreal)
+                {
+                    landcover[t][atl03_photon] = landcover_flag;
+                    snowcover[t][atl03_photon] = snowcover_flag;
                 }
 
                 /* Go To Next ATL03 Photon */
@@ -1313,20 +1370,6 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 }
                             }
 
-                            /* Check and Set Relief */
-                            float relief = 0.0;
-                            if(atl08.phoreal)
-                            {
-                                if(!parms->phoreal.use_abs_h)
-                                {
-                                    relief = atl08.relief[t][current_photon];
-                                }
-                                else
-                                {
-                                    relief = atl03.h_ph[t][current_photon];
-                                }
-                            }
-
                             /* Check and Set YAPC Score */
                             uint8_t yapc_score = 0;
                             if(yapc[t])
@@ -1347,6 +1390,27 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 }
                             }
 
+                            /* Set PhoREAL Fields */
+                            float relief = 0.0;
+                            uint8_t landcover_flag = Atl08Class::INVALID_FLAG;
+                            uint8_t snowcover_flag = Atl08Class::INVALID_FLAG;
+                            if(parms->stages[RqstParms::STAGE_PHOREAL])
+                            {
+                                /* Set Relief */
+                                if(!parms->phoreal.use_abs_h)
+                                {
+                                    relief = atl08.relief[t][current_photon];
+                                }
+                                else
+                                {
+                                    relief = atl03.h_ph[t][current_photon];
+                                }
+
+                                /* Set Flags */
+                                landcover_flag = atl08.landcover[t][current_photon];
+                                snowcover_flag = atl08.snowcover[t][current_photon];
+                            }
+
                             /* Add Photon to Extent */
                             photon_t ph = {
                                 .delta_time = atl03.delta_time[t][current_photon],
@@ -1355,6 +1419,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 .distance = along_track_distance - (state.extent_length / 2.0),
                                 .height = atl03.h_ph[t][current_photon],
                                 .relief = relief,
+                                .landcover = landcover_flag,
+                                .snowcover = snowcover_flag,
                                 .atl08_class = (uint8_t)atl08_class,
                                 .atl03_cnf = (int8_t)atl03_cnf,
                                 .quality_ph = (int8_t)quality_ph,
@@ -1613,6 +1679,7 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
         extent->extent_length[t]        = state.extent_length;
         extent->spacecraft_velocity[t]  = spacecraft_velocity;
         extent->background_rate[t]      = calculateBackground(t, state, atl03);
+        extent->solar_elevation[t]      = atl03.solar_elevation[t][state[t].extent_segment];
         extent->photon_count[t]         = state[t].extent_photons.length();
 
         /* Populate Photons */
