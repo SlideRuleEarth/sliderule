@@ -1125,7 +1125,6 @@ std::size_t GeoRaster::fileDictAdd(std::string& fileName)
     /* Add file to dictionary */
     fileDictMutex.lock();
     {
-        id = std::hash<std::string>{}(fileName);
         fileDict.add(std::to_string(id).c_str(), fileName);
     }
     fileDictMutex.unlock();
