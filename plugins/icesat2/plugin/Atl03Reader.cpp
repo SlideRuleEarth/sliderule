@@ -778,7 +778,25 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
                     gt[t][atl03_photon] = (uint8_t)atl08_pc_flag[t][atl08_photon];
 
                     /* Populate ATL08 Relief */
-                    if(phoreal) relief[t][atl03_photon] = atl08_ph_h[t][atl08_photon];
+                    if(phoreal)
+                    {
+                        relief[t][atl03_photon] = atl08_ph_h[t][atl08_photon];
+
+                        /* Run ABoVE Classifier (if specified) */
+                        if(info->reader->parms->phoreal.above_classifier && (gt[t][atl03_photon] != RqstParms::ATL08_TOP_OF_CANOPY))
+                        {
+                            uint8_t spot = RqstParms::getSpotNumber((RqstParms::sc_orient_t)(*info->reader->sc_orient)[0], (RqstParms::track_t)info->track, t);
+                            if( (atl03.solar_elevation[t][atl03_segment] <= 5.0) &&
+                                ((spot == 1) || (spot == 3) || (spot == 5)) &&
+                                (atl03.signal_conf_ph[t][atl03_photon] == RqstParms::CNF_SURFACE_HIGH) &&
+                                ((relief[t][atl03_photon] >= 0.0) && (relief[t][atl03_photon] < 35.0)) )
+                                /* TODO: check for valid ground photons in ATL08 segment */
+                            {
+                                /* Reassign Classification */
+                                gt[t][atl03_photon] = RqstParms::ATL08_TOP_OF_CANOPY;
+                            }
+                        }
+                    }
 
                     /* Go To Next ATL08 Photon */
                     atl08_photon++;

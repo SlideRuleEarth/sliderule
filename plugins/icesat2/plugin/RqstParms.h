@@ -102,6 +102,7 @@ class RqstParms: public LuaObject
         static const char* PHOREAL_GEOLOC;
         static const char* PHOREAL_USE_ABS_H;
         static const char* PHOREAL_WAVEFORM;
+        static const char* PHOREAL_ABOVE;
 
         static const int NUM_PAIR_TRACKS            = 2;
         static const int RPT_L                      = 0;
@@ -267,6 +268,7 @@ class RqstParms: public LuaObject
             phoreal_geoloc_t    geoloc;                         // how are geolocation stats calculated
             bool                use_abs_h;                      // use absolute heights
             bool                send_waveform;                  // include the waveform in the results
+            bool                above_classifier;               // use the ABoVE classification algorithm
         } phoreal_t;
 
         /*--------------------------------------------------------------------
