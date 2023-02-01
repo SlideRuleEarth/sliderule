@@ -233,6 +233,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
                     {
                         raster_info_t rinfo;
                         rinfo.fileName = fname;
+                        rinfo.auxFileName.clear();
 
                         /* Get the date this raster was created */
                         getRasterDate(rinfo);

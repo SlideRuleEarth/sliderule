@@ -174,7 +174,7 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
                 {
                     std::string fileName  = raster->fileName.substr(strlen("/vsis3/"));
                     raster->sample.fileId = fileDictAdd(fileName);
-                    raster->sample.flags  = std::numeric_limits<uint32_t>::max();  // Comming soon...
+                    raster->sample.flags  = raster->getAuxValue();
                     slist.add(raster->sample);
                 }
                 key = rasterDict.next(&raster);
@@ -527,6 +527,22 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * getAuxValue
+ *----------------------------------------------------------------------------*/
+uint32_t GeoRaster::Raster::getAuxValue(void)
+{
+    uint32_t auxValue = 0;
+
+    if (auxRaster && auxRaster->enabled && auxRaster->sampled)
+    {
+        auxValue = static_cast<uint32_t>(auxRaster->sample.value);
+        print2term("auxValue: %u, asDouble: %.2lf\n", auxValue, auxRaster->sample.value);
+    }
+
+    return auxValue;
+}
+
+/*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
 void GeoRaster::readPixel(Raster *raster)
@@ -566,6 +582,7 @@ void GeoRaster::readPixel(Raster *raster)
             {
                 uint8_t *p = (uint8_t *)data;
                 raster->sample.value = (double)p[offset];
+                // print2term("value: %.2lf, %s\n", raster->sample.value, raster->fileName.c_str());
             }
             break;
 
@@ -915,6 +932,7 @@ void GeoRaster::Raster::clear(bool close)
     dset = NULL;
     band = NULL;
     sref = NULL;
+    auxRaster = NULL;
     enabled = false;
     sampled = false;
     fileName.clear();
@@ -965,27 +983,48 @@ void GeoRaster::updateCache(OGRPoint& p)
     /* Check new tif file list against rasters in dictionary */
     for (int i = 0; i < rastersList->length(); i++)
     {
-        raster_info_t& rinfo = rastersList->get(i);
-        key = rinfo.fileName.c_str();
+        raster_info_t &rinfo = rastersList->get(i);
+        const char* rasterFile    = rinfo.fileName.c_str();
+        const char* auxFile = rinfo.auxFileName.c_str();;
 
-        if (rasterDict.find(key, &raster))
+        /* For now code supports only one auxiliary file */
+        const int MAX_RASTERS = auxFiles ? 2 : 1;
+        const char* keys[MAX_RASTERS] = {rasterFile, auxFile};
+
+        Raster* demRaster = NULL;
+        Raster* auxRaster = NULL;
+
+        for (int j = 0; j < MAX_RASTERS; j++)
         {
-            /* Update point to be sampled, mark raster enabled for next sampling */
-            assert(raster);
-            raster->enabled = true;
-            raster->point = p;
+            key = keys[j];
+            if(strlen(key) == 0) break;
+
+            if (rasterDict.find(key, &raster))
+            {
+                /* Update point to be sampled, mark raster enabled for next sampling */
+                assert(raster);
+                raster->enabled = true;
+                raster->point = p;
+            }
+            else
+            {
+                /* Create new raster for this tif file since it is not in the dictionary */
+                raster = new Raster;
+                assert(raster);
+                if(j == 0) demRaster = raster;
+                if(j == 1) auxRaster = raster;
+                raster->enabled = true;
+                raster->point = p;
+                raster->sample.value = INVALID_SAMPLE_VALUE;
+                raster->fileName = key;
+                raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
+                rasterDict.add(key, raster);
+            }
         }
-        else
+
+        if(demRaster)
         {
-            /* Create new raster for this tif file since it is not in the dictionary */
-            raster = new Raster;
-            assert(raster);
-            raster->enabled = true;
-            raster->point = p;
-            raster->sample.value = INVALID_SAMPLE_VALUE;
-            raster->fileName = rinfo.fileName;
-            raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
-            rasterDict.add(key, raster);
+            demRaster->auxRaster = auxRaster;
         }
     }
 
@@ -999,7 +1038,17 @@ void GeoRaster::updateCache(OGRPoint& p)
         assert(raster);
         if (!raster->enabled)
         {
-            /* Main thread closing multiple rasters is OK */
+            /* If the raster has auxuliary raster remove it as well */
+            if(raster->auxRaster)
+            {
+                const char* auxKey = raster->auxRaster->fileName.c_str();
+                if (rasterDict.find(auxKey, &raster->auxRaster))
+                {
+                    rasterDict.remove(auxKey);
+                    delete raster;
+                }
+            }
+
             rasterDict.remove(key);
             delete raster;
         }

@@ -166,6 +166,15 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                 rinfo.fileName = fileName;
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
 
+                const std::string endToken    = "_dem.tif";
+                const std::string newEndToken = "_bitmask.tif";
+                pos = fileName.rfind(endToken);
+                if (pos != std::string::npos)
+                {
+                    fileName.replace(pos, endToken.length(), newEndToken.c_str());
+                } else fileName.clear();
+                rinfo.auxFileName = fileName;
+
                 int year, month, day, hour, minute, second, timeZone;
                 int i = feature->GetFieldIndex(dateField);
                 if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))

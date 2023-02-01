@@ -85,7 +85,7 @@ class GeoRaster: public LuaObject
         static const int   INVALID_SAMPLE_VALUE = -1000000;
         static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
-        static const int   MAX_CACHED_RASTERS = 10;
+        static const int   MAX_CACHED_RASTERS = 50;
         static const int   DEFAULT_EPSG = 4326;
 
         static const char* NEARESTNEIGHBOUR_ALGO;
@@ -165,6 +165,7 @@ class GeoRaster: public LuaObject
 
         typedef struct {
             std::string         fileName;
+            std::string         auxFileName;
             TimeLib::gmt_time_t gmtDate;
         } raster_info_t;
 
@@ -179,6 +180,7 @@ class GeoRaster: public LuaObject
             OGRSpatialReference* sref;
             std::string     fileName;
             GDALDataType    dataType;
+            Raster*         auxRaster;
 
             uint32_t        rows;
             uint32_t        cols;
@@ -194,6 +196,7 @@ class GeoRaster: public LuaObject
             OGRPoint        point;
             sample_t        sample;
 
+            uint32_t getAuxValue(void);
             void clear(bool close = true);
             Raster(void) { clear(false); }
            ~Raster (void) { clear(); }
@@ -201,11 +204,11 @@ class GeoRaster: public LuaObject
 
 
         typedef struct {
-            GeoRaster*      obj;
-            Thread*         thread;
-            Raster*         raster;
-            Cond*           sync;
-            bool            run;
+            GeoRaster*  obj;
+            Thread*     thread;
+            Raster*     raster;
+            Cond*       sync;
+            bool        run;
         } reader_t;
 
 
