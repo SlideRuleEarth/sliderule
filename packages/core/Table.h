@@ -78,11 +78,11 @@ class Table
 
 
         bool        add         (K key, T& data, bool overwrite=false, bool with_delete=true);
-        T&          get         (K key, match_t match=MATCH_EXACTLY, bool resort=false);
-        bool        find        (K key, match_t match, T* data, bool resort=false);
+        T&          get         (K key, match_t match=MATCH_EXACTLY, bool resort=false) const;
+        bool        find        (K key, match_t match, T* data, bool resort=false) const;
         bool        remove      (K key);
-        long        length      (void);
-        bool        isfull      (void);
+        long        length      (void) const;
+        bool        isfull      (void) const;
         void        clear       (void);
 
         K           first       (T* data);
@@ -91,7 +91,7 @@ class Table
         K           prev        (T* data);
 
         Table&      operator=   (const Table& other);
-        T&          operator[]  (K key);
+        T&          operator[]  (K key) const;
 
     protected:
 
@@ -126,7 +126,7 @@ class Table
          * Methods
          *--------------------------------------------------------------------*/
 
-        static K        identity        (K key);
+        static K        identity        (K key) const;
         bool            writeNode       (K index, K key, T& data);
         bool            overwriteNode   (K index, K key, T& data, bool with_delete);
         void            makeNewest      (K index);
@@ -304,7 +304,7 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
  * get
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-T& Table<T,K>::get(K key, match_t match, bool resort)
+T& Table<T,K>::get(K key, match_t match, bool resort) const
 {
     K curr_index = hash(key) % size;
 
@@ -368,7 +368,7 @@ T& Table<T,K>::get(K key, match_t match, bool resort)
  * get
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Table<T,K>::find(K key, match_t match, T* data, bool resort)
+bool Table<T,K>::find(K key, match_t match, T* data, bool resort) const
 {
     try
     {
@@ -481,7 +481,7 @@ bool Table<T,K>::remove(K key)
  * length
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-long Table<T,K>::length(void)
+long Table<T,K>::length(void) const
 {
     return num_entries;
 }
@@ -490,7 +490,7 @@ long Table<T,K>::length(void)
  * isfull
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Table<T,K>::isfull(void)
+bool Table<T,K>::isfull(void) const
 {
     return num_entries >= size;
 }
@@ -647,7 +647,7 @@ Table<T,K>& Table<T,K>::operator=(const Table& other)
  *          and does not support re-sorting the returned node as the newest
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-T& Table<T,K>::operator[](K key)
+T& Table<T,K>::operator[](K key) const
 {
     return get(key);
 }
@@ -656,7 +656,7 @@ T& Table<T,K>::operator[](K key)
  * identity
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-K Table<T,K>::identity(K key)
+K Table<T,K>::identity(K key) const
 {
     return key;
 }

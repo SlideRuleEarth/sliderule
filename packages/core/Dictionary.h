@@ -61,6 +61,21 @@ class Dictionary
         static const double         DEFAULT_HASH_TABLE_LOAD; // statically defined below
 
         /*--------------------------------------------------------------------
+         * Iterator Subclass
+         *--------------------------------------------------------------------*/
+
+        class Iterator
+        {
+            public:
+                                    Iterator    (const Dictionary& d);
+                                    ~Iterator   (void);
+                const T&            operator[]  (int index) const;
+                const int           length;
+            private:
+                const T**           elements;
+        };
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -68,13 +83,13 @@ class Dictionary
         virtual     ~Dictionary     (void);
 
         bool        add             (const char* key, T& data, bool unique=false);
-        T&          get             (const char* key);
-        bool        find            (const char* key, T* data=NULL);
+        T&          get             (const char* key) const;
+        bool        find            (const char* key, T* data=NULL) const;
         bool        remove          (const char* key);
-        int         length          (void);
-        int         getHashSize     (void);
-        int         getMaxChain     (void);
-        int         getKeys         (char*** keys);
+        int         length          (void) const;
+        int         getHashSize     (void) const;
+        int         getMaxChain     (void) const;
+        int         getKeys         (char*** keys) const;
         void        clear           (void);
 
         const char* first           (T* data);
@@ -83,7 +98,7 @@ class Dictionary
         const char* last            (T* data);
 
         Dictionary& operator=       (const Dictionary& other);
-        T&          operator[]      (const char* key);
+        T&          operator[]      (const char* key) const;
 
     protected:
 
@@ -115,8 +130,8 @@ class Dictionary
          * Methods
          *--------------------------------------------------------------------*/
 
-        unsigned int    hashKey     (const char* key);  // returns unconstrained hash
-        unsigned int    getNode     (const char* key);  // returns index into hash table
+        unsigned int    hashKey     (const char* key) const;  // returns unconstrained hash
+        unsigned int    getNode     (const char* key) const;  // returns index into hash table
         void            addNode     (const char* key, T& data, unsigned int hash, bool rehashed=false);
         virtual void    freeNode    (unsigned int hash_index);
 };
@@ -134,6 +149,52 @@ class MgDictionary: public Dictionary<T>
     private:
         void freeNode (unsigned int hash_index);
 };
+
+/******************************************************************************
+ * ITERATOR METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+Dictionary<T>::Iterator::Iterator(const Dictionary& d):
+    length(d.numEntries)
+{
+    elements = new T* [length];
+    for(unsigned int i = 0, j = 0; i < hashSize; i++)
+    {
+        if(hashTable[i].chain != EMPTY_ENTRY)
+        {
+            elements[j++] = &hashTable[i].data;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+Dictionary<T>::Iterator::~Iterator(void)
+{
+    delete [] elements;
+}
+
+/*----------------------------------------------------------------------------
+ * []
+ *----------------------------------------------------------------------------*/
+template <class T>
+const T& Dictionary<T>::Iterator::operator[](int index) const
+{
+    if( (index < length) && (index >= 0) )
+    {
+        return elements[index];
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Dictionary::Iterator index out of range");
+    }
+}
 
 /******************************************************************************
  * PUBLIC STATIC DATA
@@ -265,7 +326,7 @@ bool Dictionary<T>::add(const char* key, T& data, bool unique)
  * get
  *----------------------------------------------------------------------------*/
 template <class T>
-T& Dictionary<T>::get(const char* key)
+T& Dictionary<T>::get(const char* key) const
 {
     unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
@@ -278,7 +339,7 @@ T& Dictionary<T>::get(const char* key)
  *  returns false if key not in dictionary, else returns true
  *----------------------------------------------------------------------------*/
 template <class T>
-bool Dictionary<T>::find(const char* key, T* data)
+bool Dictionary<T>::find(const char* key, T* data) const
 {
     bool found = false;
 
@@ -363,7 +424,7 @@ bool Dictionary<T>::remove(const char* key)
  * length
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::length(void)
+int Dictionary<T>::length(void) const
 {
     return numEntries;
 }
@@ -372,7 +433,7 @@ int Dictionary<T>::length(void)
  * getHashSize
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::getHashSize(void)
+int Dictionary<T>::getHashSize(void) const
 {
     return hashSize;
 }
@@ -381,7 +442,7 @@ int Dictionary<T>::getHashSize(void)
  * getMaxChain
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::getMaxChain(void)
+int Dictionary<T>::getMaxChain(void) const
 {
     return maxChain;
 }
@@ -390,7 +451,7 @@ int Dictionary<T>::getMaxChain(void)
  * getKeys
  *----------------------------------------------------------------------------*/
 template <class T>
-int Dictionary<T>::getKeys (char*** keys)
+int Dictionary<T>::getKeys (char*** keys) const
 {
     if (numEntries <= 0) return 0;
 
@@ -573,7 +634,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
  *  indexed by key
  *----------------------------------------------------------------------------*/
 template <class T>
-T& Dictionary<T>::operator[](const char* key)
+T& Dictionary<T>::operator[](const char* key) const
 {
     return get(key);
 }
@@ -582,7 +643,7 @@ T& Dictionary<T>::operator[](const char* key)
  * hashKey
  *----------------------------------------------------------------------------*/
 template <class T>
-unsigned int Dictionary<T>::hashKey(const char *key)
+unsigned int Dictionary<T>::hashKey(const char *key) const
 {
     const char* ptr = key;
     int         h   = 0;
@@ -608,7 +669,7 @@ unsigned int Dictionary<T>::hashKey(const char *key)
  *  must be called from locked context
  *----------------------------------------------------------------------------*/
 template <class T>
-unsigned int Dictionary<T>::getNode(const char* key)
+unsigned int Dictionary<T>::getNode(const char* key) const
 {
     /* Check Pointer */
     if(key != NULL)
