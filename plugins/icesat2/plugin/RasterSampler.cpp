@@ -80,6 +80,12 @@ const RecordObject::fieldDef_t RasterSampler::zsExtentRecDef[] = {
     {"samples",         RecordObject::USER,     offsetof(zs_extent_t, samples),         0,  zsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
+const char* RasterSampler::fileIdRecType = "fileidrec";
+const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
+    {"file_id",         RecordObject::UINT32,   offsetof(file_directory_entry_t, file_id),      1,  NULL, NATIVE_FLAGS},
+    {"file_name",       RecordObject::STRING,   offsetof(file_directory_entry_t, file_name),    0,  NULL, NATIVE_FLAGS} // variable length
+};
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -121,6 +127,7 @@ void RasterSampler::init (void)
     RECDEF(rsExtentRecType, rsExtentRecDef, sizeof(rs_extent_t), NULL);
     RECDEF(zsSampleRecType, zsSampleRecDef, sizeof(VrtRaster::sample_t), NULL);
     RECDEF(zsExtentRecType, zsExtentRecDef, sizeof(zs_extent_t), NULL);
+    RECDEF(fileIdRecType,   fileIdRecDef,   sizeof(file_directory_entry_t), NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -264,6 +271,8 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
             {
                 data->samples[i].value = slist[i].value;
                 data->samples[i].time = slist[i].time;
+                data->samples[i].fileId = slist[i].fileId;
+                data->samples[i].flags = slist[i].flags;
             }
             if(!sample_rec.post(outQ))
             {
@@ -291,5 +300,17 @@ bool RasterSampler::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool RasterSampler::processTermination (void)
 {
+    Dictionary<uint32_t>::Iterator iterator(raster->fileDictGet());
+    for(int i = 0; i < iterator.length; i++)
+    {
+        /* Send File Directory Entry Record for each File in Raster Dictionary */
+        int file_name_len = StringLib::size(iterator[i].key) + 1;
+        int size = offsetof(file_directory_entry_t, file_name) + file_name_len;
+        RecordObject record(fileIdRecType, size);
+        file_directory_entry_t* entry = (file_directory_entry_t*)record.getRecordData();
+        entry->file_id = iterator[i].value;
+        StringLib::copy(entry->file_name, iterator[i].key, file_name_len);
+        record.post(outQ);
+    }
     return true;
 }

@@ -71,6 +71,9 @@ class RasterSampler: public DispatchObject
         static const char* zsExtentRecType;
         static const RecordObject::fieldDef_t zsExtentRecDef[];
 
+        static const char* fileIdRecType;
+        static const RecordObject::fieldDef_t fileIdRecDef[];
+
         static const int RASTER_KEY_MAX_LEN = 16; // maximum number of characters to represent raster
 
         /*--------------------------------------------------------------------
@@ -81,6 +84,8 @@ class RasterSampler: public DispatchObject
         typedef struct {
             double              value;
             double              time;
+            uint32_t            fileId;
+            uint32_t            flags;
         } sample_t;
 
         /* Extent Sample Record */
@@ -98,6 +103,12 @@ class RasterSampler: public DispatchObject
             uint32_t            num_samples;
             VrtRaster::sample_t samples[];
         } zs_extent_t;
+
+        /* File Directory Entry Record */
+        typedef struct {
+            uint32_t            file_id;
+            char                file_name[];
+        } file_directory_entry_t;
 
         /*--------------------------------------------------------------------
          * Methods

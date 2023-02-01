@@ -38,6 +38,7 @@
  ******************************************************************************/
 
 #include "RTExcept.h"
+#include "OsApi.h"
 #include <climits>
 #include <assert.h>
 
@@ -54,7 +55,6 @@ class Dictionary
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int            MAX_KEY_SIZE            = 512;
         static const int            DEFAULT_HASH_TABLE_SIZE = 256;
         static const unsigned int   EMPTY_ENTRY             = 0; // must be 0 because hashTable initialized to 0's
         static const unsigned int   NULL_INDEX              = UINT_MAX;
@@ -64,15 +64,23 @@ class Dictionary
          * Iterator Subclass
          *--------------------------------------------------------------------*/
 
+        typedef struct kv {
+            kv(const char* _key, const T& _value): key(_key), value(_value) {};
+            ~kv(void) {};
+            const char* key;
+            const T&    value;
+        } kv_t;
+
         class Iterator
         {
             public:
                                     Iterator    (const Dictionary& d);
                                     ~Iterator   (void);
-                const T&            operator[]  (int index) const;
+                kv_t                operator[]  (int index) const;
                 const int           length;
             private:
                 const T**           elements;
+                const char**        keys;
         };
 
         /*--------------------------------------------------------------------
@@ -162,11 +170,14 @@ Dictionary<T>::Iterator::Iterator(const Dictionary& d):
     length(d.numEntries)
 {
     elements = new const T* [length];
+    keys = new const char* [length];
     for(unsigned int i = 0, j = 0; i < d.hashSize; i++)
     {
         if(d.hashTable[i].chain != EMPTY_ENTRY)
         {
-            elements[j++] = &d.hashTable[i].data;
+            elements[j] = &d.hashTable[i].data;
+            keys[j] = d.hashTable[i].key;
+            j++;
         }
     }
 }
@@ -178,17 +189,19 @@ template <class T>
 Dictionary<T>::Iterator::~Iterator(void)
 {
     delete [] elements;
+    delete [] keys;
 }
 
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
 template <class T>
-const T& Dictionary<T>::Iterator::operator[](int index) const
+typename Dictionary<T>::kv_t Dictionary<T>::Iterator::operator[](int index) const
 {
     if( (index < length) && (index >= 0) )
     {
-        return *elements[index];
+        Dictionary<T>::kv_t pair(keys[index], *elements[index]);
+        return pair;
     }
     else
     {
@@ -461,7 +474,7 @@ int Dictionary<T>::getKeys (char*** keys) const
         if(hashTable[i].chain != EMPTY_ENTRY)
         {
             int len = 0;
-            while( (len < (MAX_KEY_SIZE - 1)) && (hashTable[i].key[len] != '\0') ) len++;
+            while( (len < (MAX_STR_SIZE - 1)) && (hashTable[i].key[len] != '\0') ) len++;
             char* new_key = new char[len + 1];
             for(int k = 0; k < len; k++) new_key[k] = hashTable[i].key[k];
             new_key[len] = '\0';
@@ -613,7 +626,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
             /* copy key */
             const char* key = other.hashTable[i].key;
             int len = 0;
-            while( (len < (MAX_KEY_SIZE - 1)) && (key[len] != '\0') ) len++;
+            while( (len < (MAX_STR_SIZE - 1)) && (key[len] != '\0') ) len++;
             char* tmp_key = new char[len + 1];
             for(int j = 0; j < len; j++) tmp_key[j] = key[j];
             tmp_key[len] = '\0';
@@ -681,7 +694,7 @@ unsigned int Dictionary<T>::getNode(const char* key) const
         while(index != NULL_INDEX && hashTable[index].chain != EMPTY_ENTRY)
         {
             /* Compare Hash Key to Key */
-            for(int i = 0; i < MAX_KEY_SIZE; i++)
+            for(int i = 0; i < MAX_STR_SIZE; i++)
             {
                 if(hashTable[index].key[i] != key[i])
                 {
@@ -719,7 +732,7 @@ void Dictionary<T>::addNode (const char* key, T& data, unsigned int hash, bool r
     else
     {
         int len = 0;
-        while( (len < (MAX_KEY_SIZE - 1)) && (key[len] != '\0') ) len++;
+        while( (len < (MAX_STR_SIZE - 1)) && (key[len] != '\0') ) len++;
         char* tmp_key = new char[len + 1];
         for(int i = 0; i < len; i++) tmp_key[i] = key[i];
         tmp_key[len] = '\0';

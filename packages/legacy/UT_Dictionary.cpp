@@ -384,7 +384,7 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         Dictionary<long>::Iterator iterator(d1);
         for(int i = 0; i < iterator.length; i++)
         {
-            tsum += iterator[i];
+            tsum += iterator[i].value;
         }
     }
 
