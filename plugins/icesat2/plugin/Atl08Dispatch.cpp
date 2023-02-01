@@ -47,23 +47,25 @@
 
 const char* Atl08Dispatch::vegRecType = "atl08rec.vegetation";
 const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),          1, NULL, NATIVE_FLAGS},
-    {"segment_id",              RecordObject::UINT32,   offsetof(vegetation_t, segment_id),         1, NULL, NATIVE_FLAGS},
-    {"rgt",                     RecordObject::UINT16,   offsetof(vegetation_t, rgt),                1, NULL, NATIVE_FLAGS},
-    {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),              1, NULL, NATIVE_FLAGS},
-    {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),               1, NULL, NATIVE_FLAGS},
-    {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),                 1, NULL, NATIVE_FLAGS},
-    {"count",                   RecordObject::UINT32,   offsetof(vegetation_t, photon_count),       1, NULL, NATIVE_FLAGS},
-    {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),         1, NULL, NATIVE_FLAGS},
-    {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),           1, NULL, NATIVE_FLAGS},
-    {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),          1, NULL, NATIVE_FLAGS},
-    {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),           1, NULL, NATIVE_FLAGS},
-    {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),       1, NULL, NATIVE_FLAGS},
-    {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),       1, NULL, NATIVE_FLAGS},
-    {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),      1, NULL, NATIVE_FLAGS},
-    {"h_canopy",                RecordObject::FLOAT,    offsetof(vegetation_t, h_canopy),           1, NULL, NATIVE_FLAGS},
-    {"canopy_openness",         RecordObject::FLOAT,    offsetof(vegetation_t, canopy_openness),    1, NULL, NATIVE_FLAGS},
-    {"canopy_h_metrics",        RecordObject::FLOAT,    offsetof(vegetation_t, canopy_h_metrics),   NUM_PERCENTILES, NULL, NATIVE_FLAGS}
+    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),              1, NULL, NATIVE_FLAGS},
+    {"segment_id",              RecordObject::UINT32,   offsetof(vegetation_t, segment_id),             1, NULL, NATIVE_FLAGS},
+    {"rgt",                     RecordObject::UINT16,   offsetof(vegetation_t, rgt),                    1, NULL, NATIVE_FLAGS},
+    {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),                  1, NULL, NATIVE_FLAGS},
+    {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),                   1, NULL, NATIVE_FLAGS},
+    {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),                     1, NULL, NATIVE_FLAGS},
+    {"ph_count",                RecordObject::UINT32,   offsetof(vegetation_t, photon_count),           1, NULL, NATIVE_FLAGS},
+    {"gnd_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, ground_photon_count),    1, NULL, NATIVE_FLAGS},
+    {"veg_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, vegetation_photon_count),1, NULL, NATIVE_FLAGS},
+    {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),             1, NULL, NATIVE_FLAGS},
+    {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
+    {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
+    {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),               1, NULL, NATIVE_FLAGS},
+    {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS},
+    {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),           1, NULL, NATIVE_FLAGS},
+    {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),          1, NULL, NATIVE_FLAGS},
+    {"h_canopy",                RecordObject::FLOAT,    offsetof(vegetation_t, h_canopy),               1, NULL, NATIVE_FLAGS},
+    {"canopy_openness",         RecordObject::FLOAT,    offsetof(vegetation_t, canopy_openness),        1, NULL, NATIVE_FLAGS},
+    {"canopy_h_metrics",        RecordObject::FLOAT,    offsetof(vegetation_t, canopy_h_metrics),       NUM_PERCENTILES, NULL, NATIVE_FLAGS}
 };
 
 const char* Atl08Dispatch::batchRecType = "atl08rec";
@@ -312,6 +314,23 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     /* Determine Starting Photon and Number of Photons */
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
     long num_ph = extent->photon_count[t];
+
+    /* Determine Number of Ground and Vegetation Photons */
+    long gnd_cnt = 0;
+    long veg_cnt = 0;
+    for(long i = 0; i < num_ph; i++)
+    {
+        if(ph->atl08_class == RqstParms::ATL08_GROUND)
+        {
+            gnd_cnt++;
+        }
+        else if(ph->atl08_class == RqstParms::ATL08_CANOPY || ph->atl08_class == RqstParms::ATL08_TOP_OF_CANOPY)
+        {
+            veg_cnt++;
+        }
+    }
+    result[t].ground_photon_count = gnd_cnt;
+    result[t].vegetation_photon_count = veg_cnt;
 
     /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;
