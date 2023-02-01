@@ -93,6 +93,8 @@ class Atl08Dispatch: public DispatchObject
             uint8_t             spot;                   // 1 through 6, or 0 if unknown
             uint8_t             gt;                     // gt1l, gt1r, gt2l, gt2r, gt3l, gt3r
             uint32_t            photon_count;           // number of photons in segment
+            uint32_t            ground_photon_count;    // number of photons labeled as ground in segment
+            uint32_t            vegetation_photon_count;// number of photons labeled as canopy or top of canopy in segment
             double              delta_time;             // seconds from ATLAS SDP epoch
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent
