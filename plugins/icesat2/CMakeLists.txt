@@ -62,7 +62,6 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/CumulusIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/RasterSampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RqstParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp
@@ -105,7 +104,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/RasterSampler.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RqstParms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h

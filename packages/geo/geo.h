@@ -40,6 +40,7 @@
 #include "VrtRaster.h"
 #include "VctRaster.h"
 #include "GeoJsonRaster.h"
+#include "RasterSampler.h"
 
 /******************************************************************************
  * PROTOTYPES
