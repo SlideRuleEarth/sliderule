@@ -70,7 +70,7 @@ if samples then
     for key,raster in pairs(samples) do
         local robj = geo.raster(raster["asset"], raster["algorithm"], raster["radius"], raster["zonal_stats"])
         if robj then
-            local sampler = icesat2.sampler(robj, key, rspq, elevation_rec_type, "extent_id", "lon", "lat")
+            local sampler = geo.sampler(robj, key, rspq, elevation_rec_type, "extent_id", "lon", "lat")
             if sampler then
                 sampler_disp:attach(sampler, atl06_rec_type)
             else

@@ -30,6 +30,7 @@ local parms = rqst["parms"]
 local atl03_asset = parms["asset"] or rqst["atl03-asset"] or "nsidc-s3"
 parms["asset"] = atl03_asset -- backward compatibility layer
 local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
+local samples = parms["samples"]
 
 -- Initialize Timeouts --
 local duration = 0
@@ -59,6 +60,28 @@ atl08_disp:attach(except_pub, "extrec") -- ancillary records
 -- ATL08 Dispatch Algorithm --
 local atl08_algo = icesat2.atl08(rspq, rqst_parms)
 atl08_disp:attach(atl08_algo, "atl03rec")
+
+-- Raster Sampler --
+local sampler_disp = nil
+if samples then
+    local atl06_rec_type = parms["compact"] and "atl06rec-compact" or "atl06rec"
+    local elevation_rec_type = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation"
+    sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
+    for key,raster in pairs(samples) do
+        local robj = geo.raster(raster["asset"], raster["algorithm"], raster["radius"], raster["zonal_stats"])
+        if robj then
+            local sampler = geo.sampler(robj, key, rspq, elevation_rec_type, "extent_id", "lon", "lat")
+            if sampler then
+                sampler_disp:attach(sampler, atl06_rec_type)
+            else
+                userlog:sendlog(core.CRITICAL, string.format("request <%s> failed to create sampler %s for %s", rspq, key, resource))
+            end
+        else
+            userlog:sendlog(core.CRITICAL, string.format("request <%s> failed to create raster %s for %s", rspq, key, resource))
+        end
+    end
+    sampler_disp:run()
+end
 
 -- Run ATL08 Dispatcher --
 atl08_disp:run()
@@ -93,6 +116,20 @@ while (userlog:numsubs() > 0) and not atl08_disp:waiton(interval * 1000) do
         do return end
     end
     userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to process ATL03 records (after %d seconds)", rspq, duration))
+end
+
+-- Wait Until Sampler Dispatch Completion --
+if sampler_disp then
+    sampler_disp:aot() -- aborts on next timeout
+    while (userlog:numsubs() > 0) and not sampler_disp:waiton(interval * 1000) do
+        duration = duration + interval
+        -- Check for Timeout --
+        if timeout >= 0 and duration >= timeout then
+            userlog:sendlog(core.ERROR, string.format("request <%s> timed-out after %d seconds", rspq, duration))
+            do return end
+        end
+        userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to sample ATL06 records (after %d seconds)", rspq, duration))
+    end
 end
 
 -- Request Processing Complete

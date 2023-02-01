@@ -84,7 +84,7 @@ class RasterSampler: public DispatchObject
         typedef struct {
             double              value;
             double              time;
-            uint32_t            fileId;
+            uint32_t            file_id;
             uint32_t            flags;
         } sample_t;
 

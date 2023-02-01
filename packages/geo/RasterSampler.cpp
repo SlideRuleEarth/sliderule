@@ -47,8 +47,10 @@ const struct luaL_Reg RasterSampler::LuaMetaTable[] = {
 
 const char* RasterSampler::rsSampleRecType = "rsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::rsSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),  1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),   1,  NULL, NATIVE_FLAGS}
+    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),      1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),       1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT32,   offsetof(sample_t, file_id),    1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT32,   offsetof(sample_t, flags),      1,  NULL, NATIVE_FLAGS}
 };
 
 const char* RasterSampler::rsGeoRecType = "rsrec";
@@ -63,6 +65,8 @@ const char* RasterSampler::zsSampleRecType = "zsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
     {"value",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, value),           1,  NULL, NATIVE_FLAGS},
     {"time",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, time),            1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT32,   offsetof(VrtRaster::sample_t, fileId),          1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, flags),           1,  NULL, NATIVE_FLAGS},
     {"count",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, stats.count),     1,  NULL, NATIVE_FLAGS},
     {"min",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.min),       1,  NULL, NATIVE_FLAGS},
     {"max",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.max),       1,  NULL, NATIVE_FLAGS},
@@ -271,7 +275,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
             {
                 data->samples[i].value = slist[i].value;
                 data->samples[i].time = slist[i].time;
-                data->samples[i].fileId = slist[i].fileId;
+                data->samples[i].file_id = slist[i].fileId;
                 data->samples[i].flags = slist[i].flags;
             }
             if(!sample_rec.post(outQ))

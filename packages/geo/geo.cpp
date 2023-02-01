@@ -174,6 +174,7 @@ void initgeo (void)
     GeoRaster::init();
     VrtRaster::init();
     VctRaster::init();
+    RasterSampler::init();
 
     /* Register GDAL custom error handler */
     void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
