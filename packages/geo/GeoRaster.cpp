@@ -152,9 +152,9 @@ bool GeoRaster::registerRaster (const char* _name, factory_t create)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoRaster::sample (double lon, double lat, List<sample_t> &slist, void* param)
+int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param)
 {
-    std::ignore = param;  /* Keep compiler happy, param not used for now */
+    std::ignore = param;
     slist.clear();
 
     samplingMutex.lock(); /* Serialize sampling on the same object */
@@ -171,6 +171,8 @@ int GeoRaster::sample (double lon, double lat, List<sample_t> &slist, void* para
                 assert(raster);
                 if (raster->enabled && raster->sampled)
                 {
+                    raster->sample.flags  = std::numeric_limits<uint64_t>::max();  // Comming soon...
+                    raster->sample.fileId = fileDictAdd(raster->fileName);
                     slist.add(raster->sample);
                 }
                 key = rasterDict.next(&raster);
@@ -186,6 +188,25 @@ int GeoRaster::sample (double lon, double lat, List<sample_t> &slist, void* para
 
     return slist.length();
 }
+
+
+/*----------------------------------------------------------------------------
+ * fileDictGet
+ *----------------------------------------------------------------------------*/
+bool GeoRaster::fileDictGet(std::size_t id, std::string& fileName)
+{
+    bool foundFile = false;
+
+    fileDictMutex.lock();
+    {
+        std::string key = std::to_string(id);
+        foundFile = fileDict.find(key.c_str(), &fileName);
+    }
+    fileDictMutex.unlock();
+
+    return foundFile;
+}
+
 
 /*----------------------------------------------------------------------------
  * Destructor
@@ -314,9 +335,11 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     rastersList = new List<raster_info_t>;
     rastersList->clear();
     rasterDict.clear();
+    fileDict.clear();
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
+
 }
 
 
@@ -508,7 +531,6 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
 
     if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
 }
-
 
 
 /******************************************************************************
@@ -1067,6 +1089,49 @@ void* GeoRaster::readingThread(void *param)
 }
 
 
+/*----------------------------------------------------------------------------
+ * getSampledRastersCount
+ *----------------------------------------------------------------------------*/
+int GeoRaster::getSampledRastersCount(void)
+{
+    Raster *raster = NULL;
+    int cnt = 0;
+
+    /* Not all rasters in dictionary were sampled, find out how many were */
+    const char *key = rasterDict.first(&raster);
+    while (key != NULL)
+    {
+        assert(raster);
+        if (raster->enabled && raster->sampled) cnt++;
+        key = rasterDict.next(&raster);
+    }
+
+    return cnt;
+}
+
+
+/*----------------------------------------------------------------------------
+ * fileDictAdd
+ *----------------------------------------------------------------------------*/
+std::size_t GeoRaster::fileDictAdd(std::string& fileName)
+{
+    std::size_t id = std::hash<std::string>{}(fileName);
+    std::string file;
+
+    /* Is this file already in dictionary? */
+    if (fileDictGet(id, file))
+        return id;
+
+    /* Add file to dictionary */
+    fileDictMutex.lock();
+    {
+        id = std::hash<std::string>{}(fileName);
+        fileDict.add(std::to_string(id).c_str(), fileName);
+    }
+    fileDictMutex.unlock();
+
+    return id;
+}
 
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
@@ -1161,26 +1226,6 @@ int GeoRaster::luaCellSize(lua_State *L)
 
 
 /*----------------------------------------------------------------------------
- * getSampledRastersCount
- *----------------------------------------------------------------------------*/
-int GeoRaster::getSampledRastersCount(void)
-{
-    Raster *raster = NULL;
-    int cnt = 0;
-
-    /* Not all rasters in dictionary were sampled, find out how many were */
-    const char *key = rasterDict.first(&raster);
-    while (key != NULL)
-    {
-        assert(raster);
-        if (raster->enabled && raster->sampled) cnt++;
-        key = rasterDict.next(&raster);
-    }
-
-    return cnt;
-}
-
-/*----------------------------------------------------------------------------
  * luaSamples - :sample(lon, lat) --> in|out
  *----------------------------------------------------------------------------*/
 int GeoRaster::luaSamples(lua_State *L)
@@ -1255,5 +1300,3 @@ int GeoRaster::luaSamples(lua_State *L)
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);
 }
-
-

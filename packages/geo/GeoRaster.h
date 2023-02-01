@@ -115,8 +115,10 @@ class GeoRaster: public LuaObject
 
 
         typedef struct {
-            double value;
-            double time;
+            double      value;
+            double      time;
+            std::size_t fileId;
+            uint64_t    flags;
 
             struct {
                 uint32_t count;
@@ -141,10 +143,10 @@ class GeoRaster: public LuaObject
             bbox_t bbox;
 
             void clear(bool close = true);
-            bool containsPoint(OGRPoint &p);
+            inline bool containsPoint(OGRPoint& p);
 
             GeoIndex(void) { clear(false); }
-            virtual ~GeoIndex(void) { clear(); }
+           ~GeoIndex(void) { clear(); }
         };
 
 
@@ -157,7 +159,7 @@ class GeoRaster: public LuaObject
 
             void clear(bool close = true);
             CoordTransform(void) { clear(false); }
-            virtual ~CoordTransform(void) { clear(true); }
+           ~CoordTransform(void) { clear(true); }
         };
 
 
@@ -194,7 +196,7 @@ class GeoRaster: public LuaObject
 
             void clear(bool close = true);
             Raster(void) { clear(false); }
-            virtual ~Raster (void) { clear(); }
+           ~Raster (void) { clear(); }
         };
 
 
@@ -218,6 +220,7 @@ class GeoRaster: public LuaObject
         static int     luaCreate       (lua_State* L);
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
+        bool           fileDictGet     (std::size_t id, std::string& fileName);
         inline bool    hasZonalStats   (void) { return zonalStats; }
         const char*    getUUID         (char* uuid_str);
         virtual       ~GeoRaster       (void);
@@ -230,20 +233,20 @@ class GeoRaster: public LuaObject
 
                         GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats=false);
         virtual bool    openGeoIndex          (double lon = 0, double lat = 0) = 0;
-        virtual bool    findRasters           (OGRPoint &p) = 0;
+        virtual bool    findRasters           (OGRPoint& p) = 0;
         virtual bool    transformCRS          (OGRPoint& p) = 0;
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
-        virtual bool    findCachedRasters     (OGRPoint &p) = 0;
+        virtual bool    findCachedRasters     (OGRPoint& p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
         virtual void    sampleRasters         (void);
         void            processRaster         (Raster* raster, GeoRaster* obj);
-        void            readRasterWithRetry   (GDALRasterBand *band, int col, int row, int colSize, int rowSize,
-                                               void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+        void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
+                                               void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
-        virtual bool    readGeoIndexData      (OGRPoint *point, int srcWindowSize, int srcOffset,
-                                               void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
+        virtual bool    readGeoIndexData      (OGRPoint* point, int srcWindowSize, int srcOffset,
+                                               void* data, int dstWindowSize, GDALRasterIOExtraArg* args);
 
-        inline bool containsPoint (Raster *raster, OGRPoint &p)
+        inline bool containsPoint (Raster* raster, OGRPoint& p)
         {
             return (raster && raster->dset &&
                 (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
@@ -275,25 +278,30 @@ class GeoRaster: public LuaObject
         uint32_t     readerCount;
         bool         zonalStats;
 
+        Mutex                   fileDictMutex;
+        Dictionary<std::string> fileDict;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaDimensions(lua_State *L);
-        static int luaBoundingBox(lua_State *L);
-        static int luaCellSize(lua_State *L);
-        static int luaSamples(lua_State *L);
+        static int luaDimensions(lua_State* L);
+        static int luaBoundingBox(lua_State* L);
+        static int luaCellSize(lua_State* L);
+        static int luaSamples(lua_State* L);
 
         static void* readingThread (void *param);
 
-        void    createThreads           (void);
-        void    updateCache             (OGRPoint &p);
-        int     sample                  (double lon, double lat);
-        void    invalidateCache         (void);
-        int     getSampledRastersCount  (void);
-        void    readPixel               (Raster *raster);
-        void    resamplePixel           (Raster *raster, GeoRaster *obj);
-        void    computeZonalStats       (Raster *raster, GeoRaster* obj);
+        void        createThreads           (void);
+        void        updateCache             (OGRPoint& p);
+        int         sample                  (double lon, double lat);
+        void        invalidateCache         (void);
+        int         getSampledRastersCount  (void);
+        void        readPixel               (Raster* raster);
+        void        resamplePixel           (Raster* raster, GeoRaster* obj);
+        void        computeZonalStats       (Raster* raster, GeoRaster* obj);
+        std::size_t fileDictAdd             (std::string& fileName);
+
 };
 
 
