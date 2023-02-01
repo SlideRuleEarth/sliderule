@@ -78,8 +78,8 @@ class Table
 
 
         bool        add         (K key, T& data, bool overwrite=false, bool with_delete=true);
-        T&          get         (K key, match_t match=MATCH_EXACTLY, bool resort=false) const;
-        bool        find        (K key, match_t match, T* data, bool resort=false) const;
+        T&          get         (K key, match_t match=MATCH_EXACTLY, bool resort=false);
+        bool        find        (K key, match_t match, T* data, bool resort=false);
         bool        remove      (K key);
         long        length      (void) const;
         bool        isfull      (void) const;
@@ -91,7 +91,7 @@ class Table
         K           prev        (T* data);
 
         Table&      operator=   (const Table& other);
-        T&          operator[]  (K key) const;
+        T&          operator[]  (K key);
 
     protected:
 
@@ -126,7 +126,7 @@ class Table
          * Methods
          *--------------------------------------------------------------------*/
 
-        static K        identity        (K key) const;
+        static K        identity        (K key);
         bool            writeNode       (K index, K key, T& data);
         bool            overwriteNode   (K index, K key, T& data, bool with_delete);
         void            makeNewest      (K index);
@@ -304,7 +304,7 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
  * get
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-T& Table<T,K>::get(K key, match_t match, bool resort) const
+T& Table<T,K>::get(K key, match_t match, bool resort)
 {
     K curr_index = hash(key) % size;
 
@@ -368,7 +368,7 @@ T& Table<T,K>::get(K key, match_t match, bool resort) const
  * get
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Table<T,K>::find(K key, match_t match, T* data, bool resort) const
+bool Table<T,K>::find(K key, match_t match, T* data, bool resort)
 {
     try
     {
@@ -647,7 +647,7 @@ Table<T,K>& Table<T,K>::operator=(const Table& other)
  *          and does not support re-sorting the returned node as the newest
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-T& Table<T,K>::operator[](K key) const
+T& Table<T,K>::operator[](K key)
 {
     return get(key);
 }
@@ -656,7 +656,7 @@ T& Table<T,K>::operator[](K key) const
  * identity
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-K Table<T,K>::identity(K key) const
+K Table<T,K>::identity(K key)
 {
     return key;
 }

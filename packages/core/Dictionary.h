@@ -161,12 +161,12 @@ template <class T>
 Dictionary<T>::Iterator::Iterator(const Dictionary& d):
     length(d.numEntries)
 {
-    elements = new T* [length];
-    for(unsigned int i = 0, j = 0; i < hashSize; i++)
+    elements = new const T* [length];
+    for(unsigned int i = 0, j = 0; i < d.hashSize; i++)
     {
-        if(hashTable[i].chain != EMPTY_ENTRY)
+        if(d.hashTable[i].chain != EMPTY_ENTRY)
         {
-            elements[j++] = &hashTable[i].data;
+            elements[j++] = &d.hashTable[i].data;
         }
     }
 }
@@ -188,7 +188,7 @@ const T& Dictionary<T>::Iterator::operator[](int index) const
 {
     if( (index < length) && (index >= 0) )
     {
-        return elements[index];
+        return *elements[index];
     }
     else
     {

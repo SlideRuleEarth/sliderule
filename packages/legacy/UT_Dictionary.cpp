@@ -378,6 +378,23 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         failure = true;
     }
 
+    /* Iterate via Iterator Through Dictionary */
+    tsum = 0;
+    {
+        Dictionary<long>::Iterator iterator(d1);
+        for(int i = 0; i < iterator.length; i++)
+        {
+            tsum += iterator[i];
+        }
+    }
+
+    /* Check Iterator Iteration Results */
+    if(tsum != sum)
+    {
+        print2term("[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
+        failure = true;
+    }
+
     /* Return Status */
     if(failure) return -1;
     else        return 0;
