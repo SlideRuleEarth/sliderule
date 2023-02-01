@@ -180,7 +180,8 @@ class GeoRaster: public LuaObject
             OGRSpatialReference* sref;
             std::string     fileName;
             GDALDataType    dataType;
-            Raster*         auxRaster;
+            Raster*         peerRaster;
+            bool            isAuxuliary;
 
             uint32_t        rows;
             uint32_t        cols;

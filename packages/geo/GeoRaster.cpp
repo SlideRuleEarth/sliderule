@@ -170,7 +170,7 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
             while (key != NULL)
             {
                 assert(raster);
-                if (raster->enabled && raster->sampled)
+                if (!raster->isAuxuliary && raster->enabled && raster->sampled)
                 {
                     std::string fileName  = raster->fileName.substr(strlen("/vsis3/"));
                     raster->sample.fileId = fileDictAdd(fileName);
@@ -533,10 +533,10 @@ uint32_t GeoRaster::Raster::getAuxValue(void)
 {
     uint32_t auxValue = 0;
 
-    if (auxRaster && auxRaster->enabled && auxRaster->sampled)
+    if (peerRaster->enabled && peerRaster->sampled)
     {
-        auxValue = static_cast<uint32_t>(auxRaster->sample.value);
-        print2term("auxValue: %u, asDouble: %.2lf\n", auxValue, auxRaster->sample.value);
+        auxValue = static_cast<uint32_t>(peerRaster->sample.value);
+        print2term("auxValue: %u, asDouble: %.2lf\n", auxValue, peerRaster->sample.value);
     }
 
     return auxValue;
@@ -932,7 +932,8 @@ void GeoRaster::Raster::clear(bool close)
     dset = NULL;
     band = NULL;
     sref = NULL;
-    auxRaster = NULL;
+    peerRaster = NULL;
+    isAuxuliary = false;
     enabled = false;
     sampled = false;
     fileName.clear();
@@ -1011,8 +1012,18 @@ void GeoRaster::updateCache(OGRPoint& p)
                 /* Create new raster for this tif file since it is not in the dictionary */
                 raster = new Raster;
                 assert(raster);
-                if(j == 0) demRaster = raster;
-                if(j == 1) auxRaster = raster;
+
+                if(j == 0)
+                {
+                    raster->isAuxuliary = false;
+                    demRaster = raster;
+                }
+                else if(j == 1)
+                {
+                    raster->isAuxuliary = true;
+                    auxRaster = raster;
+                }
+
                 raster->enabled = true;
                 raster->point = p;
                 raster->sample.value = INVALID_SAMPLE_VALUE;
@@ -1022,9 +1033,11 @@ void GeoRaster::updateCache(OGRPoint& p)
             }
         }
 
-        if(demRaster)
+        /* Set up pointers between dem raster and auxuliary raster */
+        if(demRaster && auxRaster)
         {
-            demRaster->auxRaster = auxRaster;
+            demRaster->peerRaster = auxRaster;
+            auxRaster->peerRaster = demRaster;
         }
     }
 
@@ -1036,15 +1049,14 @@ void GeoRaster::updateCache(OGRPoint& p)
             break;
 
         assert(raster);
-        if (!raster->enabled)
+        if (raster->enabled)
         {
-            /* If the raster has auxuliary raster remove it as well */
-            if(raster->auxRaster)
+            if(raster->peerRaster)
             {
-                const char* auxKey = raster->auxRaster->fileName.c_str();
-                if (rasterDict.find(auxKey, &raster->auxRaster))
+                const char* peerKey = raster->peerRaster->fileName.c_str();
+                if (rasterDict.find(peerKey, &raster->peerRaster))
                 {
-                    rasterDict.remove(auxKey);
+                    rasterDict.remove(peerKey);
                     delete raster;
                 }
             }
