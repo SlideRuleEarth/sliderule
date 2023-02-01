@@ -115,10 +115,10 @@ class GeoRaster: public LuaObject
 
 
         typedef struct {
-            double      value;
-            double      time;
-            std::size_t fileId;
-            uint64_t    flags;
+            double    value;
+            double    time;
+            uint32_t  fileId;
+            uint32_t  flags;
 
             struct {
                 uint32_t count;
@@ -137,10 +137,10 @@ class GeoRaster: public LuaObject
         public:
             std::string fileName;
             GDALDataset *dset;
-            uint32_t rows;
-            uint32_t cols;
-            double cellSize;
-            bbox_t bbox;
+            uint32_t     rows;
+            uint32_t     cols;
+            double       cellSize;
+            bbox_t       bbox;
 
             void clear(bool close = true);
             inline bool containsPoint(OGRPoint& p);
@@ -220,10 +220,10 @@ class GeoRaster: public LuaObject
         static int     luaCreate       (lua_State* L);
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
-        bool           fileDictGet     (std::size_t id, std::string& fileName);
         inline bool    hasZonalStats   (void) { return zonalStats; }
         const char*    getUUID         (char* uuid_str);
         virtual       ~GeoRaster       (void);
+        inline const Dictionary<uint32_t>& fileDictGet(void) {return fileDict;}
 
     protected:
 
@@ -278,8 +278,7 @@ class GeoRaster: public LuaObject
         uint32_t     readerCount;
         bool         zonalStats;
 
-        Mutex                   fileDictMutex;
-        Dictionary<std::string> fileDict;
+        Dictionary<uint32_t> fileDict;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -292,15 +291,15 @@ class GeoRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        void        createThreads           (void);
-        void        updateCache             (OGRPoint& p);
-        int         sample                  (double lon, double lat);
-        void        invalidateCache         (void);
-        int         getSampledRastersCount  (void);
-        void        readPixel               (Raster* raster);
-        void        resamplePixel           (Raster* raster, GeoRaster* obj);
-        void        computeZonalStats       (Raster* raster, GeoRaster* obj);
-        std::size_t fileDictAdd             (std::string& fileName);
+        void       createThreads           (void);
+        void       updateCache             (OGRPoint& p);
+        int        sample                  (double lon, double lat);
+        void       invalidateCache         (void);
+        int        getSampledRastersCount  (void);
+        void       readPixel               (Raster* raster);
+        void       resamplePixel           (Raster* raster, GeoRaster* obj);
+        void       computeZonalStats       (Raster* raster, GeoRaster* obj);
+        uint32_t   fileDictAdd             (const std::string& fileName);
 
 };
 

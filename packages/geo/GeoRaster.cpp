@@ -171,8 +171,9 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
                 assert(raster);
                 if (raster->enabled && raster->sampled)
                 {
-                    raster->sample.flags  = std::numeric_limits<uint64_t>::max();  // Comming soon...
-                    raster->sample.fileId = fileDictAdd(raster->fileName);
+                    std::string fileName  = raster->fileName.substr(strlen("/vsis3/"));
+                    raster->sample.fileId = fileDictAdd(fileName);
+                    raster->sample.flags  = std::numeric_limits<uint32_t>::max();  // Comming soon...
                     slist.add(raster->sample);
                 }
                 key = rasterDict.next(&raster);
@@ -187,24 +188,6 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
     samplingMutex.unlock();
 
     return slist.length();
-}
-
-
-/*----------------------------------------------------------------------------
- * fileDictGet
- *----------------------------------------------------------------------------*/
-bool GeoRaster::fileDictGet(std::size_t id, std::string& fileName)
-{
-    bool foundFile = false;
-
-    fileDictMutex.lock();
-    {
-        std::string key = std::to_string(id);
-        foundFile = fileDict.find(key.c_str(), &fileName);
-    }
-    fileDictMutex.unlock();
-
-    return foundFile;
 }
 
 
@@ -1113,21 +1096,15 @@ int GeoRaster::getSampledRastersCount(void)
 /*----------------------------------------------------------------------------
  * fileDictAdd
  *----------------------------------------------------------------------------*/
-std::size_t GeoRaster::fileDictAdd(std::string& fileName)
+uint32_t GeoRaster::fileDictAdd(const std::string& fileName)
 {
-    std::size_t id = std::hash<std::string>{}(fileName);
-    std::string file;
+    uint32_t id;
 
-    /* Is this file already in dictionary? */
-    if (fileDictGet(id, file))
-        return id;
-
-    /* Add file to dictionary */
-    fileDictMutex.lock();
+    if(!fileDict.find(fileName.c_str(), &id))
     {
-        fileDict.add(std::to_string(id).c_str(), fileName);
+        id = fileDict.length();
+        fileDict.add(fileName.c_str(), id);
     }
-    fileDictMutex.unlock();
 
     return id;
 }
@@ -1263,10 +1240,10 @@ int GeoRaster::luaSamples(lua_State *L)
                 assert(raster);
                 if (raster->enabled && raster->sampled)
                 {
-                    raster->fileName.erase(0, strlen("/vsis3/"));
+                    std::string fileName = raster->fileName.substr(strlen("/vsis3/"));
 
                     lua_createtable(L, 0, 2);
-                    LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
+                    LuaEngine::setAttrStr(L, "file", fileName.c_str());
 
                     if (lua_obj->zonalStats) /* Include all zonal stats */
                     {
