@@ -60,6 +60,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
     {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),               1, NULL, NATIVE_FLAGS},
+    {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS},
     {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS},
     {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),           1, NULL, NATIVE_FLAGS},
     {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),          1, NULL, NATIVE_FLAGS},
@@ -320,11 +321,11 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     long veg_cnt = 0;
     for(long i = 0; i < num_ph; i++)
     {
-        if(ph->atl08_class == RqstParms::ATL08_GROUND)
+        if(isGround(ph) || parms->phoreal.use_abs_h)
         {
             gnd_cnt++;
         }
-        else if(ph->atl08_class == RqstParms::ATL08_CANOPY || ph->atl08_class == RqstParms::ATL08_TOP_OF_CANOPY)
+        else if(isVegetation(ph) || parms->phoreal.use_abs_h)
         {
             veg_cnt++;
         }
@@ -332,37 +333,57 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     result[t].ground_photon_count = gnd_cnt;
     result[t].vegetation_photon_count = veg_cnt;
 
+    /* Create Ground and Vegetation Photon Index Arrays */
+    long* gnd_index = new long [gnd_cnt];
+    long* veg_index = new long [veg_cnt];
+    long g = 0, v = 0;
+    for(long i = 0; i < num_ph; i++)
+    {
+        if(isGround(ph) || parms->phoreal.use_abs_h)
+        {
+            gnd_index[g++] = i;
+        }
+        else if(isVegetation(ph) || parms->phoreal.use_abs_h)
+        {
+            veg_index[v++] = i;
+        }
+    }
+
+    /* Sort Ground and Vegetation Photon Index Arrays */
+    quicksort(gnd_index, ph, 0, gnd_cnt - 1);
+    quicksort(veg_index, ph, 0, veg_cnt - 1);
+
     /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;
     double max_h = 0.0;
     double sum_h = 0.0;
-    for(long i = 0; i < num_ph; i++)
+    for(long i = 0; i < veg_cnt; i++)
     {
-        sum_h += ph[i].relief;
-        if(ph[i].relief > max_h)
+        sum_h += ph[veg_index[i]].relief;
+        if(ph[veg_index[i]].relief > max_h)
         {
-            max_h = ph[i].relief;
+            max_h = ph[veg_index[i]].relief;
         }
-        if(ph[i].relief < min_h)
+        if(ph[veg_index[i]].relief < min_h)
         {
-            min_h = ph[i].relief;
+            min_h = ph[veg_index[i]].relief;
         }
     }
     result[t].h_max_canopy = max_h;
     result[t].h_min_canopy = min_h;
-    result[t].h_mean_canopy = sum_h / (double)num_ph;
+    result[t].h_mean_canopy = sum_h / (double)veg_cnt;
 
     /* Calculate Stdev of Heights */
     double std_h = 0.0;
-    for(long i = 0; i < num_ph; i++)
+    for(long i = 0; i < veg_cnt; i++)
     {
-        double delta = (ph[i].relief - result[t].h_mean_canopy);
+        double delta = (ph[veg_index[i]].relief - result[t].h_mean_canopy);
         std_h += delta * delta;
     }
     result[t].canopy_openness = sqrt(std_h);
 
     /* Calculate Number of Bins */
-    int num_bins = (int)ceil(max_h / parms->phoreal.binsize);
+    int num_bins = (int)ceil((max_h - min_h) / parms->phoreal.binsize);
     if(num_bins > MAX_BINS)
     {
         mlog(WARNING, "Maximum number of bins truncated from %d to maximum allowed of %d", num_bins, MAX_BINS);
@@ -371,17 +392,17 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     }
     else if(num_bins <= 0)
     {
-        mlog(WARNING, "Number of bins (%lf/%lf) calculated was less than 1, setting to 1", max_h, parms->phoreal.binsize);
+        mlog(WARNING, "Number of bins (%lf/%lf) calculated was less than 1, setting to 1", max_h - min_h, parms->phoreal.binsize);
         result[t].pflags |= BIN_UNDERFLOW_FLAG;
         num_bins = 1;
     }
 
-    /* Bin All Photons */
+    /* Bin Photons */
     long* bins = new long[num_bins];
     LocalLib::set(bins, 0, num_bins * sizeof(long));
-    for(long i = 0; i < num_ph; i++)
+    for(long i = 0; i < veg_cnt; i++)
     {
-        int bin = (int)floor(ph[i].relief / parms->phoreal.binsize);
+        int bin = (int)floor((ph[veg_index[i]].relief - min_h) / parms->phoreal.binsize);
         if(bin < 0) bin = 0;
         else if(bin >= num_bins) bin = num_bins - 1;
         bins[bin]++;
@@ -411,6 +432,23 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         cbins[b] = cbins[b - 1] + bins[b];
     }
 
+    /* Find Median Terrain Height */
+    float h_te_median = 0.0;
+    if(gnd_cnt > 0)
+    {
+        if(gnd_cnt % 2 == 0) // even
+        {
+            long i0 = (gnd_cnt - 1) / 2;
+            long i1 = ((gnd_cnt - 1) / 2) + 1;
+            h_te_median = (ph[gnd_index[i0]].relief + ph[gnd_index[i1]].relief) / 2.0;
+        }
+        else // odd
+        {
+            long i0 = (gnd_cnt - 1) / 2;
+            h_te_median = ph[gnd_index[i0]].relief;
+        }
+    }
+
     /* Calculate Percentiles */
     {
         int b = 0; // bin index
@@ -418,10 +456,10 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         {
             while(b < num_bins)
             {
-                double percentage = ((double)cbins[b] / (double)num_ph) * 100.0;
+                double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
                 if(percentage >= PercentileInterval[p] && cbins[b] > 0)
                 {
-                    result[t].canopy_h_metrics[p] = ph[cbins[b] - 1].relief;
+                    result[t].canopy_h_metrics[p] = ph[veg_index[cbins[b] - 1]].relief;
                     break;
                 }
                 b++;
@@ -430,10 +468,10 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         /* Find 98th Percentile */
         while(b < num_bins)
         {
-            double percentage = ((double)cbins[b] / (double)num_ph) * 100.0;
+            double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
             if(percentage >= 98.0 && cbins[b] > 0)
             {
-                result[t].h_canopy = ph[cbins[b] - 1].relief;
+                result[t].h_canopy = ph[veg_index[cbins[b] - 1]].relief;
                 break;
             }
             b++;
@@ -441,6 +479,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     }
 
     /* Clean Up */
+    delete [] gnd_index;
+    delete [] veg_index;
     delete [] bins;
     delete [] cbins;
 }
@@ -474,4 +514,38 @@ void Atl08Dispatch::postResult (int t, vegetation_t* result)
         }
     }
     batchMutex.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * postResult
+ *----------------------------------------------------------------------------*/
+void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end)
+{
+    if(start < end)
+    {
+        int partition = quicksortpartition(index_array, ph_array, start, end);
+        quicksort(index_array, ph_array, start, partition);
+        quicksort(index_array, ph_array, partition + 1, end);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * postResult
+ *----------------------------------------------------------------------------*/
+int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end)
+{
+    double pivot = ph_array[index_array[(start + end) / 2]].relief;
+
+    start--;
+    end++;
+    while(true)
+    {
+        while (ph_array[index_array[++start]].relief < pivot);
+        while (ph_array[index_array[--end]].relief > pivot);
+        if (start >= end) return end;
+
+        long tmp = index_array[start];
+        index_array[start] = index_array[end];
+        index_array[end] = tmp;
+    }
 }

@@ -99,12 +99,13 @@ class Atl08Dispatch: public DispatchObject
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent
             double              distance;               // distance from the equator
-            float               h_max_canopy;           // maximum relief height
-            float               h_min_canopy;           // minimum relief height
-            float               h_mean_canopy;          // average relief height
-            float               h_canopy;               // 98th percentile relief height
-            float               canopy_openness;        // standard deviation of relief height
-            float               canopy_h_metrics[NUM_PERCENTILES];   // relief height at given percentile
+            float               h_te_median;            // median terrain height for ground photons
+            float               h_max_canopy;           // maximum relief height for canopy photons
+            float               h_min_canopy;           // minimum relief height for canopy photons
+            float               h_mean_canopy;          // average relief height for canopy photons
+            float               h_canopy;               // 98th percentile relief height for canopy photons
+            float               canopy_openness;        // standard deviation of relief height for canopy photons
+            float               canopy_h_metrics[NUM_PERCENTILES];   // relief height at given percentile for canopy photons
         } vegetation_t;
 
         /* ATL06 Record */
@@ -156,6 +157,22 @@ class Atl08Dispatch: public DispatchObject
         void            geolocateResult                 (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
         void            phorealAlgorithm                (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
         void            postResult                      (int t, vegetation_t* result);
+        static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end);
+        static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end);
+
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
+
+        inline bool isVegetation (Atl03Reader::photon_t* ph)
+        {
+            return (ph->atl08_class == RqstParms::ATL08_CANOPY || ph->atl08_class == RqstParms::ATL08_TOP_OF_CANOPY);
+        }
+
+        inline bool isGround (Atl03Reader::photon_t* ph)
+        {
+            return (ph->atl08_class == RqstParms::ATL08_GROUND);
+        }
 };
 
 #endif  /* __atl08_dispatch__ */
