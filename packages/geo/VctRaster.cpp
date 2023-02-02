@@ -121,7 +121,10 @@ bool VctRaster::openGeoIndex(double lon, double lat)
         /* Open new vector data set*/
         geoIndex.dset = (GDALDataset *)GDALOpenEx(newVctFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (geoIndex.dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open vector file: %s:", newVctFile.c_str());
+        {
+            mlog(DEBUG, "Failed to open vector file for lon: %.2lf, lat: %.2lf, file: %s:", lon, lat, newVctFile.c_str());
+            return false;
+        }
 
         geoIndex.fileName = newVctFile;
         layer = geoIndex.dset->GetLayer(0);

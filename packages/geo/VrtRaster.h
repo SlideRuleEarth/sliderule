@@ -77,7 +77,6 @@ class VrtRaster: public GeoRaster
         bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,
                                          void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
 
-        void         sampleRasters      (void);
         bool         findRasters        (OGRPoint &p);
         bool         findCachedRasters  (OGRPoint &p);
         void         buildVRT           (std::string& vrtFile, List<std::string>& rlist);

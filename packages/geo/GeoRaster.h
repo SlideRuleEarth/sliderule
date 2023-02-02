@@ -197,7 +197,7 @@ class GeoRaster: public LuaObject
             OGRPoint        point;
             sample_t        sample;
 
-            uint32_t getAuxValue(void);
+            uint32_t getPeerValue(void);
             void clear(bool close = true);
             Raster(void) { clear(false); }
            ~Raster (void) { clear(); }
@@ -226,7 +226,7 @@ class GeoRaster: public LuaObject
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         inline bool    hasZonalStats   (void) { return zonalStats; }
-        inline bool    hasAuxiliary    (void) { return auxFiles; }
+        inline bool    hasAuxiliary    (void) { return useAuxFiles; }
         const char*    getUUID         (char* uuid_str);
         virtual       ~GeoRaster       (void);
         inline const Dictionary<uint32_t>& fileDictGet(void) {return fileDict;}
@@ -284,7 +284,7 @@ class GeoRaster: public LuaObject
         reader_t*    rasterRreader;
         uint32_t     readerCount;
         bool         zonalStats;
-        bool         auxFiles;
+        bool         useAuxFiles;
 
         Dictionary<uint32_t> fileDict;
 

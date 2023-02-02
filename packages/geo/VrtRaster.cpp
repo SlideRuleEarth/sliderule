@@ -293,28 +293,6 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
 
 
 /*----------------------------------------------------------------------------
- * sampleRasters
- *----------------------------------------------------------------------------*/
-void VrtRaster::sampleRasters(void)
-{
-    /*
-     * For VRT based rasters (tiles/mosaics) there is only one raster for each POI.
-     */
-    Raster *raster = NULL;
-    const char *key = rasterDict.first(&raster);
-    while (key != NULL)
-    {
-        assert(raster);
-        if (raster->enabled)
-        {
-            /* Found the only raster with POI */
-            processRaster(raster, this);
-            break;
-        }
-        key = rasterDict.next(&raster);
-    }
-}
-/*----------------------------------------------------------------------------
  * readGeoIndexData
  *----------------------------------------------------------------------------*/
 bool VrtRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffset,
