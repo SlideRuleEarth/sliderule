@@ -455,7 +455,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* 
             /* Precalculate Next Iteration's Conditions (section 5.7, procedure 2h) */
             int32_t next_num_photons = 0;
             double x_min = DBL_MAX;
-            double x_max = DBL_MIN;
+            double x_max = -DBL_MAX;
             for(int p = 0; p < num_photons; p++)
             {
                 if(abs(result[t].photons[p].r) < window_spread)

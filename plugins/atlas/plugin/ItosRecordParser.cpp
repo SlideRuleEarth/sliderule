@@ -1657,11 +1657,11 @@ const char* ItosRecordParser::createPacketDetails (Packet* packet)
                     FloatField* ffield = (FloatField*)field;
                     const char* min_str = ffield->getProperty("minRange");
                     const char* max_str = ffield->getProperty("maxRange");
-                    double min_range = DBL_MIN;
+                    double min_range = -DBL_MAX;
                     double max_range = DBL_MAX;
                     StringLib::str2double(min_str, &min_range);
                     StringLib::str2double(max_str, &max_range);
-                    if(min_range != DBL_MIN) { snprintf(min_range_str, 128, "%.3lf", min_range); range_set = true; }
+                    if(min_range != -DBL_MAX) { snprintf(min_range_str, 128, "%.3lf", min_range); range_set = true; }
                     if(max_range != DBL_MAX) { snprintf(max_range_str, 128, "%.3lf", max_range); range_set = true; }
                 }
 

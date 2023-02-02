@@ -262,10 +262,10 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     if(parms->phoreal.geoloc == RqstParms::PHOREAL_CENTER)
     {
         /* Calculate Sums */
-        double delta_time_min = DBL_MAX, delta_time_max = DBL_MIN;
-        double latitude_min = DBL_MAX, latitude_max = DBL_MIN;
-        double longitude_min = DBL_MAX, longitude_max = DBL_MIN;
-        double distance_min = DBL_MAX, distance_max = DBL_MIN;
+        double delta_time_min = DBL_MAX, delta_time_max = -DBL_MAX;
+        double latitude_min = DBL_MAX, latitude_max = -DBL_MAX;
+        double longitude_min = DBL_MAX, longitude_max = -DBL_MAX;
+        double distance_min = DBL_MAX, distance_max = -DBL_MAX;
         for(int i = 0; i < num_ph; i++)
         {
             if(ph[i].delta_time < delta_time_min)   delta_time_min  = ph[i].delta_time;
@@ -347,11 +347,11 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     long veg_cnt = 0;
     for(long i = 0; i < num_ph; i++)
     {
-        if(isGround(ph) || parms->phoreal.use_abs_h)
+        if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
         {
             gnd_cnt++;
         }
-        else if(isVegetation(ph) || parms->phoreal.use_abs_h)
+        else if(isVegetation(&ph[i]) || parms->phoreal.use_abs_h)
         {
             veg_cnt++;
         }
@@ -365,11 +365,11 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     long g = 0, v = 0;
     for(long i = 0; i < num_ph; i++)
     {
-        if(isGround(ph) || parms->phoreal.use_abs_h)
+        if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
         {
             gnd_index[g++] = i;
         }
-        else if(isVegetation(ph) || parms->phoreal.use_abs_h)
+        else if(isVegetation(&ph[i]) || parms->phoreal.use_abs_h)
         {
             veg_index[v++] = i;
         }
@@ -381,19 +381,27 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 
     /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;
-    double max_h = 0.0;
+    double max_h = -DBL_MAX;
     double sum_h = 0.0;
-    for(long i = 0; i < veg_cnt; i++)
+    if(veg_cnt > 0)
     {
-        sum_h += ph[veg_index[i]].relief;
-        if(ph[veg_index[i]].relief > max_h)
+        for(long i = 0; i < veg_cnt; i++)
         {
-            max_h = ph[veg_index[i]].relief;
+            sum_h += ph[veg_index[i]].relief;
+            if(ph[veg_index[i]].relief > max_h)
+            {
+                max_h = ph[veg_index[i]].relief;
+            }
+            if(ph[veg_index[i]].relief < min_h)
+            {
+                min_h = ph[veg_index[i]].relief;
+            }
         }
-        if(ph[veg_index[i]].relief < min_h)
-        {
-            min_h = ph[veg_index[i]].relief;
-        }
+    }
+    else
+    {
+        max_h = 0.0;
+        min_h = 0.0;
     }
     result[t].h_max_canopy = max_h;
     result[t].h_min_canopy = min_h;
@@ -418,7 +426,6 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     }
     else if(num_bins <= 0)
     {
-        mlog(WARNING, "Number of bins (%lf/%lf) calculated was less than 1, setting to 1", max_h - min_h, parms->phoreal.binsize);
         result[t].pflags |= BIN_UNDERFLOW_FLAG;
         num_bins = 1;
     }
