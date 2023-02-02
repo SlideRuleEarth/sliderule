@@ -117,6 +117,8 @@ class RqstParms: public LuaObject
         static const int DEFAULT_NODE_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
         static const int DEFAULT_READ_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
 
+        static const uint8_t INVALID_FLAG           = 0xFF;
+
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];

@@ -95,6 +95,8 @@ class Atl08Dispatch: public DispatchObject
             uint32_t            photon_count;           // number of photons in segment
             uint32_t            ground_photon_count;    // number of photons labeled as ground in segment
             uint32_t            vegetation_photon_count;// number of photons labeled as canopy or top of canopy in segment
+            uint8_t             landcover;              // atl08 land_segments/segments_landcover
+            uint8_t             snowcover;              // atl08 land_segments/segments_snowcover
             double              delta_time;             // seconds from ATLAS SDP epoch
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent

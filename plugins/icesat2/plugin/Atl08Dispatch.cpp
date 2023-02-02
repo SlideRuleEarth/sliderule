@@ -56,6 +56,8 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"ph_count",                RecordObject::UINT32,   offsetof(vegetation_t, photon_count),           1, NULL, NATIVE_FLAGS},
     {"gnd_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, ground_photon_count),    1, NULL, NATIVE_FLAGS},
     {"veg_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, vegetation_photon_count),1, NULL, NATIVE_FLAGS},
+    {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS},
+    {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS},
     {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),             1, NULL, NATIVE_FLAGS},
     {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
@@ -256,17 +258,24 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
 
     /* Determine Starting Photon and Number of Photons */
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
-    int num_ph = extent->photon_count[t];
+    uint32_t num_ph = extent->photon_count[t];
 
     /* Calculate Geolocation Fields */
-    if(parms->phoreal.geoloc == RqstParms::PHOREAL_CENTER)
+    if(num_ph == 0)
+    {
+        result[t].delta_time = 0.0;
+        result[t].latitude = 0.0;
+        result[t].longitude = 0.0;
+        result[t].distance = extent->segment_distance[t];
+    }
+    else if(parms->phoreal.geoloc == RqstParms::PHOREAL_CENTER)
     {
         /* Calculate Sums */
         double delta_time_min = DBL_MAX, delta_time_max = -DBL_MAX;
         double latitude_min = DBL_MAX, latitude_max = -DBL_MAX;
         double longitude_min = DBL_MAX, longitude_max = -DBL_MAX;
         double distance_min = DBL_MAX, distance_max = -DBL_MAX;
-        for(int i = 0; i < num_ph; i++)
+        for(uint32_t i = 0; i < num_ph; i++)
         {
             if(ph[i].delta_time < delta_time_min)   delta_time_min  = ph[i].delta_time;
             if(ph[i].latitude   < latitude_min)     latitude_min    = ph[i].delta_time;
@@ -292,7 +301,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         double sum_latitude = 0.0;
         double sum_longitude = 0.0;
         double sum_distance = 0.0;
-        for(int i = 0; i < num_ph; i++)
+        for(uint32_t i = 0; i < num_ph; i++)
         {
             sum_delta_time += ph[i].delta_time;
             sum_latitude += ph[i].latitude;
@@ -308,7 +317,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     }
     else if(parms->phoreal.geoloc == RqstParms::PHOREAL_MEDIAN)
     {
-        int center_ph = num_ph / 2;
+        uint32_t center_ph = num_ph / 2;
         if(num_ph == 0) // No Photons
         {
             result[t].delta_time = ph[0].delta_time;
@@ -330,6 +339,30 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
             result[t].longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
             result[t].distance = ((ph[center_ph].distance + ph[center_ph - 1].distance) / 2) + extent->segment_distance[t];
         }
+    }
+
+    /* Land and Snow Cover Flags */
+    if(num_ph == 0)
+    {
+        result[t].landcover = RqstParms::INVALID_FLAG;
+        result[t].snowcover = RqstParms::INVALID_FLAG;
+    }
+    else
+    {
+        /* Find Center Ph */
+        uint32_t center_ph = 0;
+        double diff_min = DBL_MAX;
+        for(uint32_t i = 0; i < num_ph; i++)
+        {
+            double diff = abs(ph[i].delta_time - result[t].delta_time);
+            if(diff < diff_min)
+            {
+                diff_min = diff;
+                center_ph = i;
+            }
+        }
+        result[t].landcover = ph[center_ph].landcover;
+        result[t].snowcover = ph[center_ph].snowcover;
     }
 }
 
