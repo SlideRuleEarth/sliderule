@@ -10,12 +10,12 @@ json = require("json")
 -- Setup --
 
 local verbose = true       --Set to see elevation value and tif file name returned
-local verboseErrors = true --Set to see which sample reads failed
+local verboseErrors = false --Set to see which sample reads failed
 
 local zonalStats = false
 local qualityMask = true
 
-local maxPoints     = 100
+local maxPoints     = 1000
 
 local starttime = time.latch();
 local intervaltime = starttime

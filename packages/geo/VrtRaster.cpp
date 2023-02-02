@@ -187,7 +187,7 @@ void VrtRaster::transformCRS(OGRPoint &p)
         return;
     }
 
-    throw RunTimeException(WARNING, RTE_ERROR, "Coordinates Transform failed");
+    throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
 }
 
 /*----------------------------------------------------------------------------
