@@ -85,10 +85,10 @@ void ArcticDemStripsRaster::getIndexFile(std::string& file, double lon, double l
      *
      * NOTE: valid latitude strings are 'n59' and up. Nothing below 59. 'n' is always followed by two digits.
      *       valid longitude strings are 'e/w' followed by zero padded 3 digits.
-     *       example:  lat 61, lon -120  ->  n61w120
-     *                 lat 61, lon  -50  ->  n61w050
-     *                 lat 61, lon   -5  ->  n61w005
-     *                 lat 61, lon    5  ->  n61e005
+     *       example:  lat 61, lon -120.3  ->  n61w121
+     *                 lat 61, lon  -50.8  ->  n61w051
+     *                 lat 61, lon   -5    ->  n61w005
+     *                 lat 61, lon    5    ->  n61e005
      */
 
     /* Round to geocell location */
