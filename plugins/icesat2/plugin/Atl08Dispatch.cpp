@@ -259,7 +259,33 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     int num_ph = extent->photon_count[t];
 
     /* Calculate Geolocation Fields */
-    if(parms->phoreal.geoloc == RqstParms::PHOREAL_MEAN)
+    if(parms->phoreal.geoloc == RqstParms::PHOREAL_CENTER)
+    {
+        /* Calculate Sums */
+        double delta_time_min = DBL_MAX, delta_time_max = DBL_MIN;
+        double latitude_min = DBL_MAX, latitude_max = DBL_MIN;
+        double longitude_min = DBL_MAX, longitude_max = DBL_MIN;
+        double distance_min = DBL_MAX, distance_max = DBL_MIN;
+        for(int i = 0; i < num_ph; i++)
+        {
+            if(ph[i].delta_time < delta_time_min)   delta_time_min  = ph[i].delta_time;
+            if(ph[i].latitude   < latitude_min)     latitude_min    = ph[i].delta_time;
+            if(ph[i].longitude  < longitude_min)    longitude_min   = ph[i].delta_time;
+            if(ph[i].distance   < distance_min)     distance_min    = ph[i].delta_time;
+
+            if(ph[i].delta_time > delta_time_max)   delta_time_max  = ph[i].delta_time;
+            if(ph[i].latitude   > latitude_max)     latitude_max    = ph[i].delta_time;
+            if(ph[i].longitude  > longitude_max)    longitude_max   = ph[i].delta_time;
+            if(ph[i].distance   > distance_max)     distance_max    = ph[i].delta_time;
+        }
+
+        /* Calculate Averages */
+        result[t].delta_time = (delta_time_min + delta_time_max) / 2.0;
+        result[t].latitude = (latitude_min + latitude_max) / 2.0;
+        result[t].longitude = (longitude_min + longitude_max) / 2.0;
+        result[t].distance = ((distance_min + distance_max) / 2.0) + extent->segment_distance[t];
+    }
+    else if(parms->phoreal.geoloc == RqstParms::PHOREAL_MEAN)
     {
         /* Calculate Sums */
         double sum_delta_time = 0.0;
@@ -448,6 +474,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             h_te_median = ph[gnd_index[i0]].relief;
         }
     }
+    result[t].h_te_median = h_te_median;
 
     /* Calculate Percentiles */
     {

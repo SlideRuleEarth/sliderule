@@ -228,7 +228,8 @@ class RqstParms: public LuaObject
         typedef enum {
             PHOREAL_MEAN = 0,
             PHOREAL_MEDIAN = 1,
-            PHOREAL_UNSUPPORTED = 2
+            PHOREAL_CENTER = 2,
+            PHOREAL_UNSUPPORTED = 3
         } phoreal_geoloc_t;
 
         /* List of Strings */

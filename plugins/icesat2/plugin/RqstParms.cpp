@@ -531,6 +531,7 @@ RqstParms::phoreal_geoloc_t RqstParms::str2geoloc (const char* fmt_str)
 {
     if     (StringLib::match(fmt_str, "mean"))      return PHOREAL_MEAN;
     else if(StringLib::match(fmt_str, "median"))    return PHOREAL_MEDIAN;
+    else if(StringLib::match(fmt_str, "center"))    return PHOREAL_CENTER;
     else                                            return PHOREAL_UNSUPPORTED;
 }
 /*----------------------------------------------------------------------------
