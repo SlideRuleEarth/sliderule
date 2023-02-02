@@ -238,22 +238,17 @@ int GeoRaster::sample(double lon, double lat)
 
     /* Initial call, open raster index data set if not already opened */
     if (geoIndex.dset == NULL)
-    {
-        if (!openGeoIndex(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
-    }
+        openGeoIndex(lon, lat);
 
     OGRPoint p(lon, lat);
-    if (!transformCRS(p))
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
+    transformCRS(p);
 
-    /* If point is not in current raster index data set, open new one */
+    /* If point is not in current geoindex, find a new one */
     if (!geoIndex.containsPoint(p))
     {
-        if (!openGeoIndex(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
+        openGeoIndex(lon, lat);
 
-        /* Check against newly opened geoIndex */
+        /* Check against newly opened geoindex */
         if (!geoIndex.containsPoint(p))
             return 0;
     }
@@ -368,7 +363,7 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
             if (raster->dset == NULL)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened index raster: %s:", raster->fileName.c_str());
 
-            mlog(DEBUG, "Opened dataSet for %s", raster->fileName.c_str());
+            mlog(DEBUG, "Opened %s", raster->fileName.c_str());
 
             /* Store information about raster */
             raster->cols = raster->dset->GetRasterXSize();
@@ -407,7 +402,6 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
             CHECKPTR(raster->sref);
         }
 
-
         /* Make sure point of interest and raster are in the same CRS */
         OGRSpatialReference *psref = raster->point.getSpatialReference();
         CHECKPTR(psref);
@@ -419,7 +413,7 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
                 double lon = raster->point.getX();
                 double lat = raster->point.getY();
                 if (raster->point.transform(cord.transf) != OGRERR_NONE)
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", lon, lat);
             }
             else throw RunTimeException(CRITICAL, RTE_ERROR, "POI and raster CRS are not the same");
         }
@@ -1337,11 +1331,11 @@ int GeoRaster::luaSamples(lua_State *L)
 
             num_ret++;
             status = true;
-        }
+        } else mlog(DEBUG, "No samples read for (%.2lf, %.2lf)", lon, lat);
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error getting samples: %s", e.what());
+        mlog(e.level(), "Failed to read samples: %s", e.what());
     }
 
     if (lua_obj) lua_obj->samplingMutex.unlock();

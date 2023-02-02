@@ -174,7 +174,7 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                 std::string fileName(fname);
                 std::size_t pos = fileName.find(fileToken);
                 if (pos == std::string::npos)
-                    throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
+                    throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
 
                 fileName = vsisPath + fileName.substr(pos);
                 foundFile = true; /* There may be more than one file.. */
@@ -214,13 +214,12 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
             }
             OGRFeature::DestroyFeature(feature);
         }
+        mlog(DEBUG, "Found %d rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
-
-    mlog(DEBUG, "Found %d rasters for lon: %.2lf, lat: %.2lf", rastersList->length(), p.getX(), p.getY());
 
     return foundFile;
 }

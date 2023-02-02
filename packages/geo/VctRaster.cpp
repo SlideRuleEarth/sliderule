@@ -76,16 +76,15 @@ VctRaster::VctRaster(lua_State *L, const char *dem_sampling, const int sampling_
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool VctRaster::openGeoIndex(double lon, double lat)
+void VctRaster::openGeoIndex(double lon, double lat)
 {
-    bool objCreated = false;
     std::string newVctFile;
 
     getIndexFile(newVctFile, lon, lat);
 
     /* Is it already opened with the same file? */
     if (geoIndex.dset != NULL && geoIndex.fileName == newVctFile)
-        return true;
+        return;
 
     try
     {
@@ -121,10 +120,7 @@ bool VctRaster::openGeoIndex(double lon, double lat)
         /* Open new vector data set*/
         geoIndex.dset = (GDALDataset *)GDALOpenEx(newVctFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (geoIndex.dset == NULL)
-        {
-            mlog(DEBUG, "Failed to open vector file for lon: %.2lf, lat: %.2lf, file: %s:", lon, lat, newVctFile.c_str());
-            return false;
-        }
+            throw RunTimeException(DEBUG, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newVctFile.c_str());
 
         geoIndex.fileName = newVctFile;
         layer = geoIndex.dset->GetLayer(0);
@@ -145,34 +141,29 @@ bool VctRaster::openGeoIndex(double lon, double lat)
          * For vector files cellSize is unknown. Cannot validate radiusInPixels
          * Validation is performed when rasters are opened.
         */
-
-        objCreated = true;
-        mlog(DEBUG, "Opened dataSet for %s", newVctFile.c_str());
+        mlog(DEBUG, "Opened: %s", newVctFile.c_str());
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error creating new vector index dataset: %s", e.what());
+        if (geoIndex.dset)
+        {
+            geoIndex.clear();
+            /* Do NOT clearTransform() - it is created once for all scenes */
+            layer = NULL;
+        }
+        throw;
     }
-
-    if (!objCreated && geoIndex.dset)
-    {
-        geoIndex.clear();
-        /* Do NOT clearTransform() - it is created once for all scenes */
-        layer = NULL;
-    }
-
-    return objCreated;
 }
 
 
 /*----------------------------------------------------------------------------
  * transformCrs
  *----------------------------------------------------------------------------*/
-bool VctRaster::transformCRS(OGRPoint &p)
+void VctRaster::transformCRS(OGRPoint &p)
 {
     /* Do not convert to target CRS. Vector files are in geographic coordinates */
     p.assignSpatialReference(&cord.source);
-    return (cord.transf != NULL);
+    return;
 }
 
 

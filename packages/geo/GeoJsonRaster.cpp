@@ -244,11 +244,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, do
         rasterList.add(rasterFile);
         buildVRT(vrtFile, rasterList);
 
-        /* Open vrt. */
-        if (!openGeoIndex())
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
+        /* Open vrt as base class geoindex file. */
+        openGeoIndex();
 
-        /* Set base class sampling order */
         rasterCreated = true;
     }
     catch(const RunTimeException& e)

@@ -239,9 +239,9 @@ class GeoRaster: public LuaObject
 
                         GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius,
                                               const bool zonal_stats=false, const bool auxiliary_files=false);
-        virtual bool    openGeoIndex          (double lon = 0, double lat = 0) = 0;
+        virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
-        virtual bool    transformCRS          (OGRPoint& p) = 0;
+        virtual void    transformCRS          (OGRPoint& p) = 0;
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
