@@ -79,6 +79,10 @@ LEFT_PAIR = 0
 RIGHT_PAIR = 1
 SC_BACKWARD = 0
 SC_FORWARD = 1
+ATL08_WATER = 0
+ATL08_LAND = 1
+ATL08_SNOW = 2
+ATL08_ICE = 3
 
 # phoreal percentiles
 P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
