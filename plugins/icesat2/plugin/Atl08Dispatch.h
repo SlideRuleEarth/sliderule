@@ -101,6 +101,7 @@ class Atl08Dispatch: public DispatchObject
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent
             double              distance;               // distance from the equator
+            float               solar_elevation;        // atl03 solar elevation
             float               h_te_median;            // median terrain height for ground photons
             float               h_max_canopy;           // maximum relief height for canopy photons
             float               h_min_canopy;           // minimum relief height for canopy photons

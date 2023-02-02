@@ -62,6 +62,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
     {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),               1, NULL, NATIVE_FLAGS},
+    {"solar_elevation",         RecordObject::FLOAT,    offsetof(vegetation_t, solar_elevation),        1, NULL, NATIVE_FLAGS},
     {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS},
     {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS},
     {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),           1, NULL, NATIVE_FLAGS},
@@ -255,6 +256,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     result[t].spot = RqstParms::getSpotNumber(sc_orient, track, t);
     result[t].gt = RqstParms::getGroundTrack(sc_orient, track, t);
     result[t].photon_count = extent->photon_count[t];
+    result[t].solar_elevation = extent->solar_elevation[t];
 
     /* Determine Starting Photon and Number of Photons */
     Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
