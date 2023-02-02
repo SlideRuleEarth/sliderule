@@ -69,7 +69,7 @@ class VctRaster: public GeoRaster
 
 
                      VctRaster         (lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                        const bool zonal_stats, const int target_crs);
+                                        const bool zonal_stats, const bool auxiliary_files, const int target_crs);
 
         bool         openGeoIndex      (double lon=0, double lat=0);
         bool         transformCRS      (OGRPoint& p);

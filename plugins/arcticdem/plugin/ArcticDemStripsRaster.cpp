@@ -55,17 +55,19 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
-    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, ARCTIC_DEM_EPSG)
+ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
+                                             const bool zonal_stats, const bool auxiliary_files):
+    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files, ARCTIC_DEM_EPSG)
 {
 }
 
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats)
+GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                         const bool zonal_stats, const bool auxiliary_files)
 {
-    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats);
+    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
 }
 
 
@@ -80,15 +82,32 @@ void ArcticDemStripsRaster::getIndexFile(std::string& file, double lon, double l
      * (e.g., folder n72e129 will contain all ArcticDEM strip ﬁles with centroids within 72° to 73° north latitude, and 129° to 130° east longitude).
      *
      * https://www.pgc.umn.edu/guides/stereo-derived-elevation-models/pgcs-dem-products-arcticdem-rema-and-earthdem/#section-9
+     *
+     * NOTE: valid latitude strings are 'n59' and up. Nothing below 59. 'n' is always followed by two digits.
+     *       valid longitude strings are 'e/w' followed by zero padded 3 digits.
+     *       example:  lat 61, lon -120.3  ->  n61w121
+     *                 lat 61, lon  -50.8  ->  n61w051
+     *                 lat 61, lon   -5    ->  n61w005
+     *                 lat 61, lon    5    ->  n61e005
      */
 
+    /* Round to geocell location */
     int _lon = static_cast<int>(floor(lon));
     int _lat = static_cast<int>(floor(lat));
 
+    char lonBuf[32];
+    char latBuf[32];
+
+    sprintf(lonBuf, "%03d", abs(_lon));
+    sprintf(latBuf, "%02d", _lat);
+
+    std::string lonStr(lonBuf);
+    std::string latStr(latBuf);
+
     file = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n" +
-           std::to_string(_lat) +
+           latStr +
            ((_lon < 0) ? "w" : "e") +
-           std::to_string(abs(_lon)) +
+           lonStr +
            ".geojson";
 
     mlog(DEBUG, "Using %s", file.c_str());
@@ -160,7 +179,18 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                 fileName = vsisPath + fileName.substr(pos);
                 foundFile = true; /* There may be more than one file.. */
 
-                raster_info_t rinfo = {fileName, {0}};
+                raster_info_t rinfo;
+                rinfo.fileName = fileName;
+                bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
+
+                const std::string endToken    = "_dem.tif";
+                const std::string newEndToken = "_bitmask.tif";
+                pos = fileName.rfind(endToken);
+                if (pos != std::string::npos)
+                {
+                    fileName.replace(pos, endToken.length(), newEndToken.c_str());
+                } else fileName.clear();
+                rinfo.auxFileName = fileName;
 
                 int year, month, day, hour, minute, second, timeZone;
                 int i = feature->GetFieldIndex(dateField);

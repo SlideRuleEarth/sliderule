@@ -67,8 +67,9 @@ void VrtRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
-    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats)
+VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
+                     const bool zonal_stats, const bool auxiliary_files):
+    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files)
 {
     band = NULL;
     bzero(invGeot, sizeof(invGeot));
@@ -232,6 +233,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
                     {
                         raster_info_t rinfo;
                         rinfo.fileName = fname;
+                        rinfo.auxFileName.clear();
 
                         /* Get the date this raster was created */
                         getRasterDate(rinfo);
@@ -290,28 +292,6 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
 }
 
 
-/*----------------------------------------------------------------------------
- * sampleRasters
- *----------------------------------------------------------------------------*/
-void VrtRaster::sampleRasters(void)
-{
-    /*
-     * For VRT based rasters (tiles/mosaics) there is only one raster for each POI.
-     */
-    Raster *raster = NULL;
-    const char *key = rasterDict.first(&raster);
-    while (key != NULL)
-    {
-        assert(raster);
-        if (raster->enabled)
-        {
-            /* Found the only raster with POI */
-            processRaster(raster, this);
-            break;
-        }
-        key = rasterDict.next(&raster);
-    }
-}
 /*----------------------------------------------------------------------------
  * readGeoIndexData
  *----------------------------------------------------------------------------*/

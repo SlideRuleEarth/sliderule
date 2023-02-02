@@ -107,6 +107,7 @@ int GeoRaster::luaCreate( lua_State* L )
         const char* dem_sampling    = getLuaString(L, 2, true, NEARESTNEIGHBOUR_ALGO);
         const int   sampling_radius = getLuaInteger(L, 3, true, 0);
         const int   zonal_stats     = getLuaBoolean(L, 4, true, false);
+        const int   auxiliary_files = getLuaBoolean(L, 5, true, false);
 
         /* Get Factory */
         factory_t _create = NULL;
@@ -120,7 +121,7 @@ int GeoRaster::luaCreate( lua_State* L )
         if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", raster_name);
 
         /* Create Raster */
-        GeoRaster* _raster = _create(L, dem_sampling, sampling_radius, zonal_stats);
+        GeoRaster* _raster = _create(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
         if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", raster_name);
 
         /* Return Object */
@@ -169,11 +170,8 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
             while (key != NULL)
             {
                 assert(raster);
-                if (raster->enabled && raster->sampled)
+                if (!raster->isAuxuliary && raster->enabled && raster->sampled)
                 {
-                    std::string fileName  = raster->fileName.substr(strlen("/vsis3/"));
-                    raster->sample.fileId = fileDictAdd(fileName);
-                    raster->sample.flags  = std::numeric_limits<uint32_t>::max();  // Comming soon...
                     slist.add(raster->sample);
                 }
                 key = rasterDict.next(&raster);
@@ -242,18 +240,22 @@ int GeoRaster::sample(double lon, double lat)
     if (geoIndex.dset == NULL)
     {
         if (!openGeoIndex(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not openGeoIndex raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
     }
 
     OGRPoint p(lon, lat);
     if (!transformCRS(p))
         throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for point: lon: %.2lf, lat: %.2lf", lon, lat);
 
-    /* If point is not in current raster index data set, openGeoIndex new one */
+    /* If point is not in current raster index data set, open new one */
     if (!geoIndex.containsPoint(p))
     {
         if (!openGeoIndex(lon, lat))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not openGeoIndex raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Could not open raster index file for point lon: %.2lf, lat: %.2lf", lon, lat);
+
+        /* Check against newly opened geoIndex */
+        if (!geoIndex.containsPoint(p))
+            return 0;
     }
 
     if (!findCachedRasters(p))
@@ -287,12 +289,12 @@ const char* GeoRaster::getUUID(char *uuid_str)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_radius, const bool zonal_stats):
+GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
+                     const bool zonal_stats, const bool auxiliary_files):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     CHECKPTR(dem_sampling);
 
-    zonalStats = false;
     sampleAlg  = (GDALRIOResampleAlg) -1;
 
     if      (!strcasecmp(dem_sampling, NEARESTNEIGHBOUR_ALGO)) sampleAlg = GRIORA_NearestNeighbour;
@@ -306,6 +308,7 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     else
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
 
+    useAuxFiles = auxiliary_files;
     zonalStats = zonal_stats;
 
     if (sampling_radius >= 0)
@@ -363,7 +366,7 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
         {
             raster->dset = (GDALDataset *)GDALOpenEx(raster->fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
             if (raster->dset == NULL)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to openGeoIndex raster: %s:", raster->fileName.c_str());
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened index raster: %s:", raster->fileName.c_str());
 
             mlog(DEBUG, "Opened dataSet for %s", raster->fileName.c_str());
 
@@ -493,6 +496,19 @@ void GeoRaster::sampleRasters(void)
             reader->sync->unlock();
         } while (raster != NULL);
     }
+
+    /* Update dictionary of used raster files and auxualiary data */
+    key = rasterDict.first(&raster);
+    while (key != NULL)
+    {
+        if (!raster->isAuxuliary && raster->enabled && raster->sampled)
+        {
+            std::string fileName = raster->fileName.substr(strlen("/vsis3/"));
+            raster->sample.fileId = fileDictAdd(fileName);
+            raster->sample.flags = raster->getPeerValue();
+        }
+        key = rasterDict.next(&raster);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -519,6 +535,21 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * getPeerValue
+ *----------------------------------------------------------------------------*/
+uint32_t GeoRaster::Raster::getPeerValue(void)
+{
+    uint32_t peerValue = 0;
+
+    if (peerRaster && peerRaster->enabled && peerRaster->sampled)
+    {
+        peerValue = static_cast<uint32_t>(peerRaster->sample.value);
+    }
+
+    return peerValue;
+}
 
 /*----------------------------------------------------------------------------
  * readPixel
@@ -909,6 +940,8 @@ void GeoRaster::Raster::clear(bool close)
     dset = NULL;
     band = NULL;
     sref = NULL;
+    peerRaster = NULL;
+    isAuxuliary = false;
     enabled = false;
     sampled = false;
     fileName.clear();
@@ -959,27 +992,52 @@ void GeoRaster::updateCache(OGRPoint& p)
     /* Check new tif file list against rasters in dictionary */
     for (int i = 0; i < rastersList->length(); i++)
     {
-        raster_info_t& rinfo = rastersList->get(i);
-        key = rinfo.fileName.c_str();
+        raster_info_t &rinfo   = rastersList->get(i);
+        const char* rasterFile = rinfo.fileName.c_str();
+        const char* auxFile    = rinfo.auxFileName.c_str();;
 
-        if (rasterDict.find(key, &raster))
+        /* For now code supports only one auxiliary raster */
+        const char* keys[2] = {rasterFile, auxFile};
+        const int CNT = useAuxFiles ? 2 : 1;
+
+        Raster* demRaster = NULL;
+        Raster* auxRaster = NULL;
+
+        for (int j = 0; j < CNT; j++)
         {
-            /* Update point to be sampled, mark raster enabled for next sampling */
-            assert(raster);
-            raster->enabled = true;
-            raster->point = p;
+            key = keys[j];
+            if(strlen(key) == 0) break;
+
+            if (rasterDict.find(key, &raster))
+            {
+                /* Update point to be sampled, mark raster enabled for next sampling */
+                assert(raster);
+                raster->enabled = true;
+                raster->point = p;
+            }
+            else
+            {
+                /* Create new raster and add to dictionary */
+                raster = new Raster;
+                assert(raster);
+
+                if(j == 0) {demRaster = raster; raster->isAuxuliary = false;}
+                if(j == 1) {auxRaster = raster; raster->isAuxuliary = true; }
+
+                raster->enabled = true;
+                raster->point = p;
+                raster->sample.value = INVALID_SAMPLE_VALUE;
+                raster->fileName = key;
+                raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
+                rasterDict.add(key, raster);
+            }
         }
-        else
+
+        /* Set up pointers between dem and auxiliary rasters */
+        if(demRaster && auxRaster)
         {
-            /* Create new raster for this tif file since it is not in the dictionary */
-            raster = new Raster;
-            assert(raster);
-            raster->enabled = true;
-            raster->point = p;
-            raster->sample.value = INVALID_SAMPLE_VALUE;
-            raster->fileName = rinfo.fileName;
-            raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
-            rasterDict.add(key, raster);
+            demRaster->peerRaster = auxRaster;
+            auxRaster->peerRaster = demRaster;
         }
     }
 
@@ -991,9 +1049,19 @@ void GeoRaster::updateCache(OGRPoint& p)
             break;
 
         assert(raster);
-        if (!raster->enabled)
+        if (raster->enabled)
         {
-            /* Main thread closing multiple rasters is OK */
+            /* If raster has a peer, remove them both */
+            if(raster->peerRaster)
+            {
+                const char* peerKey = raster->peerRaster->fileName.c_str();
+                if (rasterDict.find(peerKey, &raster->peerRaster))
+                {
+                    rasterDict.remove(peerKey);
+                    delete raster->peerRaster;
+                }
+            }
+
             rasterDict.remove(key);
             delete raster;
         }
@@ -1238,7 +1306,7 @@ int GeoRaster::luaSamples(lua_State *L)
             while (key != NULL)
             {
                 assert(raster);
-                if (raster->enabled && raster->sampled)
+                if (!raster->isAuxuliary && raster->enabled && raster->sampled)
                 {
                     std::string fileName = raster->fileName.substr(strlen("/vsis3/"));
 
@@ -1254,6 +1322,11 @@ int GeoRaster::luaSamples(lua_State *L)
                         LuaEngine::setAttrNum(L, "max",   raster->sample.stats.max);
                         LuaEngine::setAttrNum(L, "min",   raster->sample.stats.min);
                         LuaEngine::setAttrNum(L, "count", raster->sample.stats.count);
+                    }
+
+                    if (lua_obj->useAuxFiles) /* Include auxuliary raster value (flags) */
+                    {
+                        LuaEngine::setAttrNum(L, "flags", raster->sample.flags);
                     }
 
                     LuaEngine::setAttrNum(L, "value", raster->sample.value);

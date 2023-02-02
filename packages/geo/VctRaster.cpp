@@ -66,8 +66,8 @@ void VctRaster::deinit (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 VctRaster::VctRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                     const bool zonal_stats, const int target_crs):
-    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats)
+                     const bool zonal_stats, const bool auxiliary_files, const int target_crs):
+    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files)
 {
     targetCrs = target_crs;
     layer = NULL;
@@ -121,7 +121,10 @@ bool VctRaster::openGeoIndex(double lon, double lat)
         /* Open new vector data set*/
         geoIndex.dset = (GDALDataset *)GDALOpenEx(newVctFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (geoIndex.dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open vector file: %s:", newVctFile.c_str());
+        {
+            mlog(DEBUG, "Failed to open vector file for lon: %.2lf, lat: %.2lf, file: %s:", lon, lat, newVctFile.c_str());
+            return false;
+        }
 
         geoIndex.fileName = newVctFile;
         layer = geoIndex.dset->GetLayer(0);

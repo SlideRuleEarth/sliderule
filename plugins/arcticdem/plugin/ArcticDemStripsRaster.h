@@ -56,7 +56,8 @@ class ArcticDemStripsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static GeoRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
+        static GeoRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                  const bool zonal_stats, const bool auxiliary_files);
 
     protected:
 
@@ -64,7 +65,9 @@ class ArcticDemStripsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                ArcticDemStripsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
+                ArcticDemStripsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                       const bool zonal_stats, const bool auxiliary_files);
+;
         void    getIndexFile          (std::string& file, double lon=0, double lat=0 );
         void    getIndexBbox          (bbox_t& bbox, double lon=0, double lat=0);
         bool    findRasters           (OGRPoint &p);

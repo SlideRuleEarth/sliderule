@@ -68,7 +68,8 @@ class VrtRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
 
-                     VrtRaster          (lua_State* L, const char* dem_sampling, const int sampling_radius, const bool zonal_stats);
+                     VrtRaster          (lua_State* L, const char* dem_sampling, const int sampling_radius,
+                                        const bool zonal_stats, const bool auxiliary_files);
         bool         openGeoIndex       (double lon=0, double lat=0);
         bool         transformCRS       (OGRPoint& p);
         virtual void getIndexFile       (std::string& file, double lon=0, double lat=0) = 0;
@@ -76,7 +77,6 @@ class VrtRaster: public GeoRaster
         bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,
                                          void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
 
-        void         sampleRasters      (void);
         bool         findRasters        (OGRPoint &p);
         bool         findCachedRasters  (OGRPoint &p);
         void         buildVRT           (std::string& vrtFile, List<std::string>& rlist);
