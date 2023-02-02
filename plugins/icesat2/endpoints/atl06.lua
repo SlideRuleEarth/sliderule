@@ -68,7 +68,7 @@ if samples then
     local elevation_rec_type = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation"
     sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
     for key,raster in pairs(samples) do
-        local robj = geo.raster(raster["asset"], raster["algorithm"], raster["radius"], raster["zonal_stats"])
+        local robj = geo.raster(raster["asset"], raster["algorithm"], raster["radius"], raster["zonal_stats"], raster["with_flags"])
         if robj then
             local sampler = geo.sampler(robj, key, rspq, elevation_rec_type, "extent_id", "lon", "lat")
             if sampler then

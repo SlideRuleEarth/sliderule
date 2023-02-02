@@ -107,7 +107,7 @@ int RasterSampler::luaCreate (lua_State* L)
         const char* raster_key  = getLuaString(L, 2);
         const char* outq_name   = getLuaString(L, 3);
         const char* rec_type    = getLuaString(L, 4);
-        const char* index_key  = getLuaString(L, 5);
+        const char* index_key   = getLuaString(L, 5);
         const char* lon_key     = getLuaString(L, 6);
         const char* lat_key     = getLuaString(L, 7);
 

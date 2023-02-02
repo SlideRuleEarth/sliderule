@@ -76,6 +76,7 @@ const char* RqstParms::RASTERS_ASSET                = "asset";
 const char* RqstParms::RASTERS_RADIUS               = "radius";
 const char* RqstParms::RASTERS_ALGORITHM            = "algorithm";
 const char* RqstParms::RASTERS_ZONAL_STATS          = "zonal_stats";
+const char* RqstParms::RASTERS_WITH_FLAGS           = "with_flags";
 const char* RqstParms::RQST_TIMEOUT                 = "rqst-timeout";
 const char* RqstParms::NODE_TIMEOUT                 = "node-timeout";
 const char* RqstParms::READ_TIMEOUT                 = "read-timeout";
@@ -1051,6 +1052,11 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
                 lua_getfield(L, -2, RqstParms::RASTERS_ZONAL_STATS);
                 rss.zonal_stats = LuaObject::getLuaBoolean(L, -1, true, false, &field_provided);
                 if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ZONAL_STATS, rss.zonal_stats ? "true" : "false", key);
+                lua_pop(L, 1);
+
+                lua_getfield(L, -2, RqstParms::RASTERS_WITH_FLAGS);
+                rss.with_flags = LuaObject::getLuaBoolean(L, -1, true, false, &field_provided);
+                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_WITH_FLAGS, rss.with_flags ? "true" : "false", key);
                 lua_pop(L, 1);
 
                 /* Add raster entry to list */

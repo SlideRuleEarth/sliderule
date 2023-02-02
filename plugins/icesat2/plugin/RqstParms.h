@@ -89,6 +89,7 @@ class RqstParms: public LuaObject
         static const char* RASTERS_RADIUS;
         static const char* RASTERS_ALGORITHM;
         static const char* RASTERS_ZONAL_STATS;
+        static const char* RASTERS_WITH_FLAGS;
         static const char* RQST_TIMEOUT;
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
@@ -243,6 +244,7 @@ class RqstParms: public LuaObject
             double              radius;
             SafeString          sampling_algorithm;
             bool                zonal_stats;
+            bool                with_flags;
         } rss_t;
 
         /* Rasters to Sample */
