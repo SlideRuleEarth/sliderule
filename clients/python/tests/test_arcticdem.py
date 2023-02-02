@@ -32,7 +32,7 @@ class TestVrt:
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
         assert len(gdf) == 964
-        assert len(gdf.keys()) == 18
+        assert len(gdf.keys()) == 20
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405240
@@ -54,7 +54,7 @@ class TestVrt:
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
         assert len(gdf) == 964
-        assert len(gdf.keys()) == 25
+        assert len(gdf.keys()) == 27
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405240

@@ -48,7 +48,7 @@ class TestParquet:
                   "output": { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, asset=asset, resources=[resource])
         assert len(gdf) == 194696
-        assert len(gdf.keys()) == 17
+        assert len(gdf.keys()) == 20
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405240
