@@ -60,10 +60,9 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
     VrtRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files)
 {
     /*
-     * ArcticDemMosaicRaster uses one large mosaic VRT file (raster index file)
-     * Open it.
+     * ArcticDemMosaicRaster uses one mosaics VRT file;
      */
-    if (!openGeoIndex()) throw RunTimeException(CRITICAL, RTE_ERROR, "Constructor %s failed", __FUNCTION__);
+    openGeoIndex();
 
 }
 

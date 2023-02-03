@@ -9,41 +9,34 @@ json = require("json")
 
 -- Setup --
 
--- local verbose = true
-local verbose = true  --Set to see elevation value and tif file name returned
+local verbose = true       --Set to see elevation value and tif file name returned
 local verboseErrors = false --Set to see which sample reads failed
-
-local  lon = -90.50
-local  lat = 66.34
-local _lon = lon
-local _lat = lat
 
 local zonalStats = false
 local qualityMask = true
 
-local tbl, status
+local maxPoints     = 1000
 
-local lonIncrement  = 1.0
-local failedSamples = 0
-local maxPoints     = 20
-
-print(string.format("\nMOSAIC, Quality Bitmask Test - Walking Arctic Circle"))
-
---[[
---]]
-starttime = time.latch();
-intervaltime = starttime
+local starttime = time.latch();
+local intervaltime = starttime
 
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 for d = 1, 2 do
-    local demType = demTypes[d];
-    local dem     = geo.raster(demType, "NearestNeighbour", 0, zonalStats, qualityMask)
+    local  lonIncrement  = 0.5
+    local  latIncrement  = 0.1
+    local  failedSamples = 0
+    local  lon = -100.50
+    local  lat = 76.34
+    -- local  lon = -65.50
+    -- local  lat = 83.29
+    local  demType = demTypes[d];
+    local  dem     = geo.raster(demType, "NearestNeighbour", 0, zonalStats, qualityMask)
 
-    print(string.format("\n------------------------------------------\nTest: %s BITMASK/FLAGS test\n------------------------------------------", demType))
+    print(string.format("\n-------------------------------------------------------------\nTest: %s BITMASK/FLAGS test reading %d points\n-------------------------------------------------------------", demType, maxPoints))
 
     for i = 1, maxPoints
     do
-        tbl, status = dem:sample(lon, lat)
+        local tbl, status = dem:sample(lon, lat)
         if status ~= true then
             failedSamples = failedSamples + 1
             if verboseErrors then
@@ -74,11 +67,12 @@ for d = 1, 2 do
         end
 
         lon = lon + lonIncrement
+        lat = lat + latIncrement
     end
 
     stoptime = time.latch();
     dtime = stoptime-starttime
-    print(string.format("%d points sampled, ExecTime: %f, failed: %d", maxPoints, dtime, failedSamples))
+    print(string.format("%d points sampled, ExecTime: %f, failed raster reads: %d", maxPoints, dtime, failedSamples))
 end
 
 os.exit()
