@@ -2008,11 +2008,11 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint8_t version         = (uint8_t)readField(1, &pos);
     uint8_t dimensionality  = (uint8_t)readField(1, &pos);
     uint8_t flags           = (uint8_t)readField(1, &pos);
-    pos += 5; // go past reserved bytes
+    pos += version == 1 ? 5 : 1; // go past reserved bytes
 
     if(errorChecking)
     {
-        if(version != 1)
+        if(version != 1 && version != 2)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid dataspace version: %d", (int)version);
         }
