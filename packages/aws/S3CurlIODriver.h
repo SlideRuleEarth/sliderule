@@ -74,6 +74,7 @@ class S3CurlIODriver: public Asset::IODriver
         static int          luaGet          (lua_State* L);
         static int          luaDownload     (lua_State* L);
         static int          luaRead         (lua_State* L);
+        static int          luaUpload       (lua_State* L);
 
     protected:
 

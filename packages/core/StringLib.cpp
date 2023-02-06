@@ -1073,6 +1073,36 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
 }
 
 /*----------------------------------------------------------------------------
+ * b16encode
+ *----------------------------------------------------------------------------*/
+char* StringLib::b16encode(const void* data, int size, bool lower_case, char* dst)
+{
+    assert(data);
+    assert(size > 0);
+
+    static const char* lower_digits = "0123456789abcdef";
+    static const char* upper_digits = "0123456789ABCDEF";
+
+    const char* digits;
+    if(lower_case) digits = lower_digits;
+    else digits = upper_digits;
+
+    int encoded_len = size * 2;
+    char* str = dst;
+    if(!str) str = new char [encoded_len + 1];
+    str[encoded_len] = '\0';
+
+    uint8_t* data_ptr = (uint8_t*)data;
+    for(int i = 0, j = 0; i < size; i++)
+    {
+        str[j++] = digits[data_ptr[i] >> 4];
+        str[j++] = digits[data_ptr[i] & 0x0F];
+    }
+
+    return str;
+}
+
+/*----------------------------------------------------------------------------
  * printify
  *----------------------------------------------------------------------------*/
 int StringLib::printify (char* buffer, int size)
