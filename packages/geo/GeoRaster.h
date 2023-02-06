@@ -246,7 +246,7 @@ class GeoRaster: public LuaObject
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
         virtual void    sampleRasters         (void);
-        void            processRaster         (Raster* raster, GeoRaster* obj);
+        void            processRaster         (Raster* raster);
         void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
@@ -305,8 +305,8 @@ class GeoRaster: public LuaObject
         void       invalidateCache         (void);
         int        getSampledRastersCount  (void);
         void       readPixel               (Raster* raster);
-        void       resamplePixel           (Raster* raster, GeoRaster* obj);
-        void       computeZonalStats       (Raster* raster, GeoRaster* obj);
+        void       resamplePixel           (Raster* raster);
+        void       computeZonalStats       (Raster* raster);
         uint32_t   fileDictAdd             (const std::string& fileName);
 
 };

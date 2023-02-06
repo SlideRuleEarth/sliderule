@@ -352,7 +352,7 @@ int GeoRaster::radius2pixels(double cellSize, int _radius)
  * processRaster
  * Thread-safe, can be called directly from main thread or reader thread
  *----------------------------------------------------------------------------*/
-void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
+void GeoRaster::processRaster(Raster* raster)
 {
     try
     {
@@ -424,16 +424,16 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
         if (!containsPoint(raster, raster->point))
             return;
 
-        if (obj->sampleAlg == GRIORA_NearestNeighbour)
-            obj->readPixel(raster);
+        if (sampleAlg == GRIORA_NearestNeighbour)
+            readPixel(raster);
         else
-            resamplePixel(raster, obj);
+            resamplePixel(raster);
 
         raster->sample.time = raster->gpsTime;
         raster->sampled = true;
 
         if (zonalStats)
-            computeZonalStats(raster, obj);
+            computeZonalStats(raster);
 
     }
     catch (const RunTimeException &e)
@@ -721,7 +721,7 @@ void GeoRaster::CoordTransform::clear(bool close)
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
+void GeoRaster::resamplePixel(Raster *raster)
 {
     try
     {
@@ -731,7 +731,7 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
         int windowSize, offset;
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
-        if (obj->samplingRadius == 0)
+        if (samplingRadius == 0)
         {
             int kernel = 0;
 
@@ -764,7 +764,7 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = obj->sampleAlg;
+        args.eResampleAlg = sampleAlg;
         double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
         bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
@@ -784,7 +784,7 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
         else
         {
             /* At least return pixel value if unable to resample raster and/or raster index data set */
-            obj->readPixel(raster);
+            readPixel(raster);
         }
     }
     catch (const RunTimeException &e)
@@ -797,7 +797,7 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
 /*----------------------------------------------------------------------------
  * zonalStats
  *----------------------------------------------------------------------------*/
-void GeoRaster::computeZonalStats(Raster *raster, GeoRaster *obj)
+void GeoRaster::computeZonalStats(Raster *raster)
 {
     double *samplesArray = NULL;
 
@@ -815,7 +815,7 @@ void GeoRaster::computeZonalStats(Raster *raster, GeoRaster *obj)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = obj->sampleAlg;
+        args.eResampleAlg = sampleAlg;
         samplesArray = new double[windowSize*windowSize];
         CHECKPTR(samplesArray);
 
@@ -1121,7 +1121,7 @@ void* GeoRaster::readingThread(void *param)
 
             if(reader->raster != NULL)
             {
-                reader->obj->processRaster(reader->raster, reader->obj);
+                reader->obj->processRaster(reader->raster);
                 reader->raster = NULL; /* Done with this raster */
             }
 
