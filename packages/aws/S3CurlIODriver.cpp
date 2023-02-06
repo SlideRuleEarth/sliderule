@@ -40,6 +40,7 @@
 #include <curl/curl.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <openssl/evp.h>
 
 
 /******************************************************************************
@@ -73,14 +74,17 @@ typedef size_t (*write_cb_t)(void*, size_t, size_t, void*);
 /*----------------------------------------------------------------------------
  * sha256hash
  *----------------------------------------------------------------------------*/
-#define SHA256_DIGEST_HEX_STR_SIZE ((SHA256_DIGEST_LENGTH * 2) + 1)
-static void sha256hash(const void* data, size_t len, char dst[SHA256_DIGEST_HEX_STR_SIZE])
+#define SHA256_HEX_STR_SIZE ((SHA256_DIGEST_LENGTH * 2) + 1)
+static void sha256hash(const void* data, size_t len, char* dst)
 {
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, data, len);
-    SHA256_Final(hash, &sha256);
+    unsigned int hash_size = 0;
+    EVP_MD_CTX* context = EVP_MD_CTX_new();
+    if(EVP_DigestInit_ex(context, EVP_sha256(), NULL))
+    if(EVP_DigestUpdate(context, data, len))
+    if(EVP_DigestFinal_ex(context, hash, &hash_size))
+    assert(hash_size == SHA256_DIGEST_LENGTH);
+    EVP_MD_CTX_free(context);
     StringLib::b16encode(hash, SHA256_DIGEST_LENGTH, true, dst);
 }
 
@@ -190,15 +194,15 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     SafeString timestamp("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
 
     /* Build Canonical Request */
-    char canonical_request_hash[SHA256_DIGEST_HEX_STR_SIZE];
+    char canonical_request_hash[SHA256_HEX_STR_SIZE];
     SafeString canonical_request("PUT\n/%s\n\ncontent-length:%ld\ndate:%s\nhost:%s.s3.amazonaws.com\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\n\ncontent-length;date;host;x-amz-content-sha256;x-amz-date\nUNSIGNED-PAYLOAD",
                                     key, content_length, timestamp.getString(), bucket, timestamp.getString());
-    sha256hash(canonical_request.getString(), canonical_request.getLength(), canonical_request_hash);
+    sha256hash(canonical_request.getString(), canonical_request.getLength() - 1, canonical_request_hash);
 
     /* Build String To Sign */
     SafeString date("%04d%02d%02d", gmt_date.year, gmt_date.month, gmt_date.day);
-    SafeString service("%s/s3/aws4_request", region);
-    SafeString str2sign("AWS4-HMAC-SHA256\n%s\n%s/%s\n%s", timestamp.getString(), date.getString(), service.getString(), canonical_request_hash);
+    SafeString scope("%s/%s/s3/aws4_request", date.getString(), region);
+    SafeString str2sign("AWS4-HMAC-SHA256\n%s\n%s\n%s", timestamp.getString(), scope.getString(), canonical_request_hash);
 
     /* Calculate Signature */
     SafeString secret_access_key_str2sign("AWS4%s", credentials->secretAccessKey);
@@ -223,7 +227,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     unsigned int signature_size = EVP_MAX_MD_SIZE; // set below with actual size
     HMAC(EVP_sha256(), signing_key, signing_key_size, (unsigned char*)str2sign.getString(), str2sign.getLength() - 1, signature, &signature_size);
 
-    char signature_hex[SHA256_DIGEST_HEX_STR_SIZE];
+    char signature_hex[SHA256_HEX_STR_SIZE];
     StringLib::b16encode(signature, signature_size, true, signature_hex);
 
     /* Initialize and Remove Unwanted Headers */
@@ -235,7 +239,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     headers = curl_slist_append(headers, date_hdr.getString());
     SafeString content_length_hdr("Content-Length: %ld", content_length);
     headers = curl_slist_append(headers, content_length_hdr.getString());
-    SafeString auth_hdr("AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,SignedHeaders=date;host;x-amz-content-sha256;x-amz-date,Signature=%s", credentials->accessKeyId, date.getString(), region, signature_hex);
+    SafeString auth_hdr("Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,SignedHeaders=content-length;date;host;x-amz-content-sha256;x-amz-date,Signature=%s", credentials->accessKeyId, date.getString(), region, signature_hex);
     headers = curl_slist_append(headers, auth_hdr.getString());
     SafeString amz_date_hdr("x-amz-date: %s", timestamp.getString());
     headers = curl_slist_append(headers, amz_date_hdr.getString());
@@ -245,7 +249,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     /* Return Headers */
     return headers;
 }
-// aws.s3upload("sliderule", "config/LICENSE", "LICENSE", "us-west-2")
+
 /*----------------------------------------------------------------------------
  * initializeReadRequest
  *----------------------------------------------------------------------------*/
