@@ -4,6 +4,7 @@ ARCTICDEM_BUILD = $(ROOT)/build/arcticdem
 ATLAS_BUILD = $(ROOT)/build/atlas
 ICESAT2_BUILD = $(ROOT)/build/icesat2
 GEDI_BUILD = $(ROOT)/build/gedi
+LANDSAT_BUILD = $(ROOT)/build/landsat
 
 # when using the llvm toolchain to build the source
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -155,6 +156,25 @@ install-gedi: ## install gedi plugin to system
 uninstall-gedi: ## uninstall most recent install of gedi plugin from system
 	xargs rm < $(GEDI_BUILD)/install_manifest.txt
 
+##########################
+# Landsat Plugin Targets
+##########################
+
+config-landsat-debug: prep ## configure make for landsat plugin
+	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/landsat
+
+config-landsat: prep ## configure make for landsat plugin
+	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/landsat
+
+landsat: ## build icesat2 plugin
+	make -j4 -C $(LANDSAT_BUILD)
+
+install-landsat: ## install icesat2 plugin to system
+	make -C $(LANDSAT_BUILD) install
+
+uninstall-landsat: ## uninstall most recent install of icesat2 plugin from system
+	xargs rm < $(LANDSAT_BUILD)/install_manifest.txt
+
 ########################
 # Development Targets
 ########################
@@ -205,6 +225,7 @@ prep: ## create necessary build directories
 	mkdir -p $(ATLAS_BUILD)
 	mkdir -p $(ICESAT2_BUILD)
 	mkdir -p $(GEDI_BUILD)
+	mkdir -p $(LANDSAT_BUILD)
 
 clean: ## clean last build
 	- make -C $(BUILD) clean
@@ -212,6 +233,7 @@ clean: ## clean last build
 	- make -C $(ATLAS_BUILD) clean
 	- make -C $(ICESAT2_BUILD) clean
 	- make -C $(GEDI_BUILD) clean
+	- make -C $(LANDSAT_BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
@@ -219,6 +241,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(ATLAS_BUILD)
 	- rm -Rf $(ICESAT2_BUILD)
 	- rm -Rf $(GEDI_BUILD)
+	- rm -Rf $(LANDSAT_BUILD)
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
