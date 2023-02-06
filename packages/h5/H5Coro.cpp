@@ -2912,6 +2912,10 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header continuation signature: 0x%llX", (unsigned long long)signature);
             }
         }
+        else
+        {
+            pos += 4;
+        }
 
         /* Read Continuation Header Messages */
         uint64_t end_of_chdr = hc_offset + hc_length - 4; // leave 4 bytes for checksum below
