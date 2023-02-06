@@ -39,3 +39,5 @@ stage/
 .cookies
 cscope.*
 *.log
+.clang*
+compile_commands.json
