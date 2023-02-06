@@ -178,8 +178,62 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
 }
 
 /*----------------------------------------------------------------------------
- * buildWriteHeadersV4
+ * buildWriteHeadersV2
  *----------------------------------------------------------------------------*/
+static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials, long content_length)
+{
+    (void)region;
+
+    /* Initial HTTP Header List */
+    struct curl_slist* headers = NULL;
+
+    /* Build Date String and Date Header */
+    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+    SafeString dateHeader("Date: %s", date.getString());
+    headers = curl_slist_append(headers, dateHeader.getString());
+
+    /* Content Headers */
+    SafeString contentType("application/octet-stream");
+    SafeString contentTypeHeader("Content-Type: %s", contentType.getString());
+    headers = curl_slist_append(headers, contentTypeHeader.getString());
+    SafeString contentLengthHeader("Content-Length: %ld", content_length);
+    headers = curl_slist_append(headers, contentLengthHeader.getString());
+
+    /* Initialize and Remove Unwanted Headers */
+    headers = curl_slist_append(headers, "Transfer-Encoding:");
+
+    if(credentials && credentials->provided)
+    {
+        /* Build SecurityToken Header */
+        SafeString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+        headers = curl_slist_append(headers, securityTokenHeader.getString());
+
+        /* Build Authorization Header */
+        SafeString stringToSign("PUT\n\n%s\n%s\n%s\n/%s/%s", contentType.getString(), date.getString(), securityTokenHeader.getString(), bucket, key);
+        unsigned char hash[EVP_MAX_MD_SIZE];
+        unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
+        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.getString(), stringToSign.getLength() - 1, hash, &hash_size);
+        SafeString encodedHash(64, hash, hash_size);
+        SafeString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash.getString());
+        headers = curl_slist_append(headers, authorizationHeader.getString());
+    }
+
+    /* Return */
+    return headers;
+}
+
+/*----------------------------------------------------------------------------
+ * buildWriteHeadersV4
+ *
+ * Does not work, the response from AWS is:
+ *  "The AWS Access Key Id you provided does not exist in our records."
+ *
+ * Looks like the issue is related to how to provide the session token
+ * when using temporary credentials
+ *----------------------------------------------------------------------------*/
+#if 0
 static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials, long content_length)
 {
     /* Must Supply Credentials */
@@ -195,8 +249,8 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
 
     /* Build Canonical Request */
     char canonical_request_hash[SHA256_HEX_STR_SIZE];
-    SafeString canonical_request("PUT\n/%s\n\ncontent-length:%ld\ndate:%s\nhost:%s.s3.amazonaws.com\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\n\ncontent-length;date;host;x-amz-content-sha256;x-amz-date\nUNSIGNED-PAYLOAD",
-                                    key, content_length, timestamp.getString(), bucket, timestamp.getString());
+    SafeString canonical_request("PUT\n/%s\n\ncontent-length:%ld\ndate:%s\nhost:%s.s3.amazonaws.com\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\ncontent-length;date;host;x-amz-content-sha256;x-amz-date;x-amz-security-token\nUNSIGNED-PAYLOAD",
+                                    key, content_length, timestamp.getString(), bucket, timestamp.getString(), credentials->sessionToken);
     sha256hash(canonical_request.getString(), canonical_request.getLength() - 1, canonical_request_hash);
 
     /* Build String To Sign */
@@ -239,9 +293,11 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     headers = curl_slist_append(headers, date_hdr.getString());
     SafeString content_length_hdr("Content-Length: %ld", content_length);
     headers = curl_slist_append(headers, content_length_hdr.getString());
-    SafeString auth_hdr("Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,SignedHeaders=content-length;date;host;x-amz-content-sha256;x-amz-date,Signature=%s", credentials->accessKeyId, date.getString(), region, signature_hex);
+    SafeString auth_hdr("Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,SignedHeaders=content-length;date;host;x-amz-content-sha256;x-amz-date;x-amz-security-token,Signature=%s", credentials->accessKeyId, date.getString(), region, signature_hex);
     headers = curl_slist_append(headers, auth_hdr.getString());
     SafeString amz_date_hdr("x-amz-date: %s", timestamp.getString());
+    headers = curl_slist_append(headers, amz_date_hdr.getString());
+    SafeString amz_token_hdr("x-amz-security-token: %s", credentials->sessionToken);
     headers = curl_slist_append(headers, amz_date_hdr.getString());
     SafeString amz_content_sha256_hdr("x-amz-content-sha256: %s", "UNSIGNED-PAYLOAD");
     headers = curl_slist_append(headers, amz_content_sha256_hdr.getString());
@@ -249,7 +305,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     /* Return Headers */
     return headers;
 }
-
+#endif
 /*----------------------------------------------------------------------------
  * initializeReadRequest
  *----------------------------------------------------------------------------*/
@@ -492,6 +548,13 @@ int S3CurlIODriver::luaUpload(lua_State* L)
 
         /* Get Credentials */
         CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+//        CredentialStore::Credential credentials;
+//        credentials.provided = true;
+//        credentials.accessKeyId = StringLib::duplicate("ASIA2ZSSFI2SAQ4QCNM2");
+//        credentials.secretAccessKey = StringLib::duplicate("RhlPSk3oU+KjG/MdIHo6Yi0mFce7sWLkNEi7aY/P");
+//        credentials.sessionToken = NULL;
+//        credentials.expiration = NULL;
+//        credentials.expirationGps = 0;
 
         /* Make Request */
         int64_t upload_size = put(filename, bucket, key, region, &credentials);
@@ -901,7 +964,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
         fseek(data.fd, 0L, SEEK_SET);
 
         /* Build Headers */
-        struct curl_slist* headers = buildWriteHeadersV4(bucket, key_ptr, region, credentials, content_length);
+        struct curl_slist* headers = buildWriteHeadersV2(bucket, key_ptr, region, credentials, content_length);
 
         /* Build URL */
         SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
