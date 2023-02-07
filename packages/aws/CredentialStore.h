@@ -72,6 +72,11 @@ class CredentialStore
         static const char* SESSION_TOKEN_STR1;
         static const char* EXPIRATION_STR1;
 
+        // AWS Credential File Keys
+        static const char* ACCESS_KEY_ID_STR2;
+        static const char* SECRET_ACCESS_KEY_STR2;
+        static const char* SESSION_TOKEN_STR2;
+
         /*--------------------------------------------------------------------
          * Typdefs
          *--------------------------------------------------------------------*/
@@ -113,7 +118,11 @@ class CredentialStore
                     if(lua_getfield(L, index, ACCESS_KEY_ID_STR) != LUA_TSTRING)
                     {
                         lua_pop(L, 1);
-                        lua_getfield(L, index, ACCESS_KEY_ID_STR1);
+                        if(lua_getfield(L, index, ACCESS_KEY_ID_STR1) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            lua_getfield(L, index, ACCESS_KEY_ID_STR2);
+                        }
                     }
                     const char* access_key_id_str = LuaObject::getLuaString(L, -1);
                     accessKeyId = StringLib::duplicate(access_key_id_str, MAX_KEY_SIZE);
@@ -123,7 +132,11 @@ class CredentialStore
                     if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR) != LUA_TSTRING)
                     {
                         lua_pop(L, 1);
-                        lua_getfield(L, index, SECRET_ACCESS_KEY_STR1);
+                        if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR1) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            lua_getfield(L, index, SECRET_ACCESS_KEY_STR2);
+                        }
                     }
                     const char* secret_access_key_str = LuaObject::getLuaString(L, -1);
                     secretAccessKey = StringLib::duplicate(secret_access_key_str, MAX_KEY_SIZE);
@@ -133,7 +146,11 @@ class CredentialStore
                     if(lua_getfield(L, index, SESSION_TOKEN_STR) != LUA_TSTRING)
                     {
                         lua_pop(L, 1);
-                        lua_getfield(L, index, SESSION_TOKEN_STR1);
+                        if(lua_getfield(L, index, SESSION_TOKEN_STR1) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            lua_getfield(L, index, SESSION_TOKEN_STR2);
+                        }
                     }
                     const char* session_token_str = LuaObject::getLuaString(L, -1);
                     sessionToken = StringLib::duplicate(session_token_str, MAX_KEY_SIZE);

@@ -60,6 +60,10 @@ const char* CredentialStore::SECRET_ACCESS_KEY_STR1 = "SecretAccessKey";
 const char* CredentialStore::SESSION_TOKEN_STR1 = "Token";
 const char* CredentialStore::EXPIRATION_STR1 = "Expiration";
 
+const char* CredentialStore::ACCESS_KEY_ID_STR2 = "aws_access_key_id";
+const char* CredentialStore::SECRET_ACCESS_KEY_STR2 = "aws_secret_access_key";
+const char* CredentialStore::SESSION_TOKEN_STR2 = "aws_session_token";
+
 /******************************************************************************
  * CREDENTIAL STORE CLASS
  ******************************************************************************/
