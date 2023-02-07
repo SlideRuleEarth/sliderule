@@ -46,6 +46,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "Asset.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -78,6 +79,8 @@ class ArrowParms: public LuaObject
         static const char* PATH;
         static const char* FORMAT;
         static const char* OPEN_ON_COMPLETE;
+        static const char* ASSET;
+        static const char* REGION;
         static const char* CREDENTIALS;
 
         static const char* OBJECT_TYPE;
@@ -91,8 +94,10 @@ class ArrowParms: public LuaObject
         const char*     path;                           // file system path to the file (includes filename)
         format_t        format;                         // format of the file
         bool            open_on_complete;               // flag to client to open file on completion
+        const char*     asset_name;
 
         #ifdef __aws__
+        const char*                 region;
         CredentialStore::Credential credentials;
         #endif
 

@@ -587,7 +587,7 @@ bool ParquetBuilder::processTermination (void)
        (parms->path[4] == '/'))
     {
         #ifdef __aws__
-        return send2S3();
+        return send2S3(&parms->path[5]);
         #else
         LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server not compiled with AWS support");
         #endif
@@ -602,17 +602,17 @@ bool ParquetBuilder::processTermination (void)
 /*----------------------------------------------------------------------------
  * send2S3
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::send2S3 (void)
+bool ParquetBuilder::send2S3 (const char* s3dst)
 {
     #ifdef __aws__
 
     bool status = true;
 
     /* Check Path */
-    if(!parms->path) return false;
+    if(!s3dst) return false;
 
     /* Get Bucket and Key */
-    char* bucket = StringLib::duplicate(parms->path);
+    char* bucket = StringLib::duplicate(s3dst);
     char* key = bucket;
     while(*key != '\0' && *key != '/') key++;
     if(*key == '/')
@@ -622,7 +622,7 @@ bool ParquetBuilder::send2S3 (void)
     else
     {
         status = false;
-        mlog(CRITICAL, "invalid S3 url: %s", parms->path);
+        mlog(CRITICAL, "invalid S3 url: %s", s3dst);
     }
     key++;
 
@@ -635,7 +635,7 @@ bool ParquetBuilder::send2S3 (void)
         try
         {
             /* Upload to S3 */
-            int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, NULL, &parms->credentials);
+            int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
 
             /* Send Successful Status */
             LuaEndpoint::generateExceptionStatus(RTE_INFO, INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);

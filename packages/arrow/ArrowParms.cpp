@@ -46,6 +46,8 @@ const char* ArrowParms::SELF                = "output";
 const char* ArrowParms::PATH                = "path";
 const char* ArrowParms::FORMAT              = "format";
 const char* ArrowParms::OPEN_ON_COMPLETE    = "open_on_complete";
+const char* ArrowParms::ASSET               = "asset";
+const char* ArrowParms::REGION              = "region";
 const char* ArrowParms::CREDENTIALS         = "credentials";
 
 const char* ArrowParms::OBJECT_TYPE = "ArrowParms";
@@ -93,7 +95,8 @@ ArrowParms::ArrowParms (lua_State* L, int index):
     LuaObject           (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     path                (NULL),
     format              (NATIVE),
-    open_on_complete    (false)
+    open_on_complete    (false),
+    asset_name          (NULL)
 
 {
     fromLua(L, index);
@@ -105,6 +108,8 @@ ArrowParms::ArrowParms (lua_State* L, int index):
 ArrowParms::~ArrowParms (void)
 {
     if(path) delete [] path;
+    if(asset_name) delete [] asset_name;
+    if(region) delete [] region;
 }
 
 /*----------------------------------------------------------------------------
@@ -135,13 +140,44 @@ void ArrowParms::fromLua (lua_State* L, int index)
         if(field_provided) mlog(DEBUG, "Setting %s to %d", OPEN_ON_COMPLETE, (int)open_on_complete);
         lua_pop(L, 1);
 
-        #ifdef __aws__
+        /* Asset */
+        lua_getfield(L, index, ASSET);
+        asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
+        if(field_provided) mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
+        lua_pop(L, 1);
+
+//        #ifdef __aws__
+        /* Region */
+        lua_getfield(L, index, REGION);
+        region = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
+        if(region)
+        {
+            mlog(DEBUG, "Setting %s to %s", REGION, region);
+        }
+        else if(asset_name != NULL)
+        {
+            Asset* asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
+            region = StringLib::duplicate(asset->getRegion());
+        }
+        lua_pop(L, 1);
+
         /* AWS Credentials */
         lua_getfield(L, index, CREDENTIALS);
         credentials.fromLua(L, -1);
-        if(credentials.provided) mlog(DEBUG, "Setting %s from user", CREDENTIALS);
+        if(credentials.provided)
+        {
+            mlog(DEBUG, "Setting %s from user", CREDENTIALS);
+        }
+        else if(asset_name != NULL)
+        {
+            credentials = CredentialStore::get(asset_name);
+            if(credentials.provided)
+            {
+                mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);
+            }
+        }
         lua_pop(L, 1);
-        #endif
+//        #endif
     }
 }
 
