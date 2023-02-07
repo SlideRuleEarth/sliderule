@@ -74,6 +74,7 @@ typedef size_t (*write_cb_t)(void*, size_t, size_t, void*);
 /*----------------------------------------------------------------------------
  * sha256hash
  *----------------------------------------------------------------------------*/
+#if 0
 #define SHA256_HEX_STR_SIZE ((SHA256_DIGEST_LENGTH * 2) + 1)
 static void sha256hash(const void* data, size_t len, char* dst)
 {
@@ -87,6 +88,7 @@ static void sha256hash(const void* data, size_t len, char* dst)
     EVP_MD_CTX_free(context);
     StringLib::b16encode(hash, SHA256_DIGEST_LENGTH, true, dst);
 }
+#endif
 
 /*----------------------------------------------------------------------------
  * curlWriteFixed
