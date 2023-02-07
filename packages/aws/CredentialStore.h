@@ -151,10 +151,6 @@ class CredentialStore
                     else            expirationGps = 0;
                     lua_pop(L, 1);
                 }
-                else
-                {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply table");
-                }
             };
 
             void toLua (lua_State* L)

@@ -53,7 +53,7 @@ const char* ArrowParms::LuaMetaName = "ArrowParms";
 const struct luaL_Reg ArrowParms::LuaMetaTable[] = {
     {"isnative",    luaIsNative},
     {"isfeather",   luaIsFeather},
-    {"isparque",    luaIsParquet},
+    {"isparquet",   luaIsParquet},
     {"iscsv",       luaIsCSV},
     {"path",        luaPath},
     {NULL,          NULL}
@@ -125,30 +125,7 @@ void ArrowParms::fromLua (lua_State* L, int index)
 
         /* Output Format */
         lua_getfield(L, index, FORMAT);
-        if(lua_isinteger(L, index))
-        {
-            format = (format_t)LuaObject::getLuaInteger(L, -1, true, format, &field_provided);
-            if(format < 0 || format >= UNSUPPORTED)
-            {
-                mlog(ERROR, "Output format is unsupported: %d", format);
-            }
-        }
-        else if(lua_isstring(L, index))
-        {
-            const char* output_fmt = LuaObject::getLuaString(L, -1, true, NULL, &field_provided);
-            if(field_provided)
-            {
-                format = str2outputformat(output_fmt);
-                if(format == UNSUPPORTED)
-                {
-                    mlog(ERROR, "Output format is unsupported: %s", output_fmt);
-                }
-            }
-        }
-        else if(!lua_isnil(L, index))
-        {
-            mlog(ERROR, "Output format must be provided as an integer or string");
-        }
+        format = str2outputformat(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
         if(field_provided) mlog(DEBUG, "Setting %s to %d", FORMAT, (int)format);
         lua_pop(L, 1);
 
@@ -173,7 +150,8 @@ void ArrowParms::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 ArrowParms::format_t ArrowParms::str2outputformat (const char* fmt_str)
 {
-    if     (StringLib::match(fmt_str, "native"))    return NATIVE;
+    if     (!fmt_str)                               return UNSUPPORTED;
+    else if(StringLib::match(fmt_str, "native"))    return NATIVE;
     else if(StringLib::match(fmt_str, "feather"))   return FEATHER;
     else if(StringLib::match(fmt_str, "parquet"))   return PARQUET;
     else if(StringLib::match(fmt_str, "csv"))       return CSV;

@@ -188,6 +188,10 @@ int CredentialStore::luaPut(lua_State* L)
         /* Get Credentials */
         Credential credential;
         credential.fromLua(L, 2);
+        if(!credential.provided)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for credentials");
+        }
 
         /* Put Credentials */
         status = CredentialStore::put(asset, credential);
