@@ -159,24 +159,7 @@ int CredentialStore::luaGet(lua_State* L)
         /* Return Credentials */
         if(credential.provided)
         {
-            lua_newtable(L);
-
-            lua_pushstring(L, ACCESS_KEY_ID_STR);
-            lua_pushstring(L, credential.accessKeyId);
-            lua_settable(L, -3);
-
-            lua_pushstring(L, SECRET_ACCESS_KEY_STR);
-            lua_pushstring(L, credential.secretAccessKey);
-            lua_settable(L, -3);
-
-            lua_pushstring(L, SESSION_TOKEN_STR);
-            lua_pushstring(L, credential.sessionToken);
-            lua_settable(L, -3);
-
-            lua_pushstring(L, EXPIRATION_STR);
-            lua_pushstring(L, credential.expiration);
-            lua_settable(L, -3);
-
+            credential.toLua(L);
             lua_pushboolean(L, true);
             return 2;
         }
@@ -203,62 +186,8 @@ int CredentialStore::luaPut(lua_State* L)
         const char* asset = LuaObject::getLuaString(L, 1);
 
         /* Get Credentials */
-        const char* access_key_id_str = NULL;
-        const char* secret_access_key_str = NULL;
-        const char* session_token_str = NULL;
-        const char* expiration_str = NULL;
-        int index = 2;
-        if(lua_type(L, index) == LUA_TTABLE)
-        {
-            /* Get Access Key */
-            if(lua_getfield(L, index, ACCESS_KEY_ID_STR) != LUA_TSTRING)
-            {
-                lua_pop(L, 1);
-                lua_getfield(L, index, ACCESS_KEY_ID_STR1);
-            }
-            access_key_id_str = LuaObject::getLuaString(L, -1);
-            lua_pop(L, 1);
-
-            /* Get Secret Access Key */
-            if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR) != LUA_TSTRING)
-            {
-                lua_pop(L, 1);
-                lua_getfield(L, index, SECRET_ACCESS_KEY_STR1);
-            }
-            secret_access_key_str = LuaObject::getLuaString(L, -1);
-            lua_pop(L, 1);
-
-            /* Get Session Token */
-            if(lua_getfield(L, index, SESSION_TOKEN_STR) != LUA_TSTRING)
-            {
-                lua_pop(L, 1);
-                lua_getfield(L, index, SESSION_TOKEN_STR1);
-            }
-            session_token_str = LuaObject::getLuaString(L, -1);
-            lua_pop(L, 1);
-
-            /* Get Expiration Date */
-            if(lua_getfield(L, index, EXPIRATION_STR) != LUA_TSTRING)
-            {
-                lua_pop(L, 1);
-                lua_getfield(L, index, EXPIRATION_STR1);
-            }
-            expiration_str  = LuaObject::getLuaString(L, -1);
-            lua_pop(L, 1);
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply table");
-        }
-
-        /* Populate Credentials */
         Credential credential;
-        credential.provided = true;
-        credential.accessKeyId = StringLib::duplicate(access_key_id_str, MAX_KEY_SIZE);
-        credential.secretAccessKey = StringLib::duplicate(secret_access_key_str, MAX_KEY_SIZE);
-        credential.sessionToken = StringLib::duplicate(session_token_str, MAX_KEY_SIZE);
-        credential.expiration = StringLib::duplicate(expiration_str, MAX_KEY_SIZE);
-        credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
+        credential.fromLua(L, 2);
 
         /* Put Credentials */
         status = CredentialStore::put(asset, credential);

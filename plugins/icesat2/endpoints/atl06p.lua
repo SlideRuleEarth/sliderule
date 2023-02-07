@@ -25,7 +25,6 @@ local resources = rqst["resources"]
 local parms = rqst["parms"]
 local timeout = parms["rqst-timeout"] or parms["timeout"] or icesat2.RQST_TIMEOUT
 local node_timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
-local output_parms = parms["output"]
 
 -- Initialize Timeouts --
 local duration = 0
@@ -37,15 +36,14 @@ local terminate_proxy_stream = false
 
 -- Handle Output Options --
 local output_dispatch = nil
-if output_parms then
-    local output_filename = output_parms["path"]
-    local output_format = output_parms["format"]
+if parms["output"] then
+    local output_parms = arrow.parms(parms["output"])
     -- Parquet Writer --
-    if output_format == "parquet" then
+    if output_parms:isparquet() then
         rsps_from_nodes = rspq .. "-parquet"
         terminate_proxy_stream = true
         local except_pub = core.publish(rspq)
-        local parquet_builder = arrow.parquet(output_filename, rspq, "atl06rec.elevation", rqstid, "lon", "lat")
+        local parquet_builder = arrow.parquet(output_parms, rspq, "atl06rec.elevation", rqstid, "lon", "lat")
         output_dispatch = core.dispatcher(rsps_from_nodes)
         output_dispatch:attach(parquet_builder, "atl06rec")
         output_dispatch:attach(except_pub, "exceptrec") -- exception records

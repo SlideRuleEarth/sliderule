@@ -170,10 +170,12 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
+    ArrowParms* parms = NULL;
+
     try
     {
         /* Get Parameters */
-        const char* filename        = getLuaString(L, 1);
+        parms                       = (ArrowParms*)getLuaObject(L, 1, ArrowParms::OBJECT_TYPE);
         const char* outq_name       = getLuaString(L, 2);
         const char* rec_type        = getLuaString(L, 3);
         const char* id              = getLuaString(L, 4);
@@ -201,10 +203,11 @@ int ParquetBuilder::luaCreate (lua_State* L)
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, filename, outq_name, rec_type, id, geo));
+        return createLuaObject(L, new ParquetBuilder(L, parms, outq_name, rec_type, id, geo));
     }
     catch(const RunTimeException& e)
     {
+        if(parms) parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
@@ -309,9 +312,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
  *----------------------------------------------------------------------------*/
 ParquetBuilder::~ParquetBuilder(void)
 {
+    parms->releaseLuaObject();
     delete [] fileName;
     delete outQ;
-    delete [] outFilePath;
     delete fieldIterator;
     delete pimpl;
 }
@@ -568,8 +571,6 @@ bool ParquetBuilder::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool ParquetBuilder::processTermination (void)
 {
-    bool status = true;
-
     /* Early Exit on No Writer */
     if(!pimpl->parquetWriter) return false;
 
@@ -577,17 +578,18 @@ bool ParquetBuilder::processTermination (void)
     (void)pimpl->parquetWriter->Close();
 
     /* Send File to User */
-    int file_path_len = StringLib::size(outFilePath);
+    int file_path_len = StringLib::size(parms->path);
     if((file_path_len > 5) &&
-       (outFilePath[0] == 's') &&
-       (outFilePath[0] == '3') &&
-       (outFilePath[0] == ':') &&
-       (outFilePath[0] == '/') &&
-       (outFilePath[0] == '/'))
+       (parms->path[0] == 's') &&
+       (parms->path[0] == '3') &&
+       (parms->path[0] == ':') &&
+       (parms->path[0] == '/') &&
+       (parms->path[0] == '/'))
     {
         #ifdef __aws__
-
+        return send2S3();
         #else
+        LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server not compiled with AWS support");
         #endif
     }
     else
@@ -597,14 +599,66 @@ bool ParquetBuilder::processTermination (void)
     }
 }
 
-
-int64_t      put             (const char* filename,
-                                             const char* bucket, const char* key, const char* region,
-                                             CredentialStore::Credential* credentials);
 /*----------------------------------------------------------------------------
  * send2S3
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::send2Client (void)
+bool ParquetBuilder::send2S3 (void)
+{
+    #ifdef __aws__
+
+    bool status = true;
+
+    /* Check Path */
+    if(!parms->path) return false;
+
+    /* Get Bucket and Key */
+    char* bucket = StringLib::duplicate(parms->path);
+    char* key = bucket;
+    while(*key != '\0' && *key != '/') key++;
+    if(*key == '/')
+    {
+        *key = '\0';
+    }
+    else
+    {
+        status = false;
+        mlog(CRITICAL, "invalid S3 url: %s", parms->path);
+    }
+    key++;
+
+    /* Put File */
+    if(status)
+    {
+        /* Send Initial Status */
+        LuaEndpoint::generateExceptionStatus(RTE_INFO, INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
+
+        try
+        {
+            /* Upload to S3 */
+            int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, NULL, &parms->credentials);
+
+            /* Send Successful Status */
+            LuaEndpoint::generateExceptionStatus(RTE_INFO, INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
+        }
+        catch(const RunTimeException& e)
+        {
+            status = false;
+
+            /* Send Error Status */
+            LuaEndpoint::generateExceptionStatus(RTE_ERROR, e.level(), outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s, error = %s", bucket, key, e.what());
+        }
+    }
+
+    /* Clean Up */
+    delete [] bucket;
+
+    /* Return Status */
+    return status;
+
+    #else
+    return false;
+    #endif
+}
 
 /*----------------------------------------------------------------------------
  * send2Client
@@ -627,7 +681,7 @@ bool ParquetBuilder::send2Client (void)
             /* Send Meta Record */
             RecordObject meta_record(metaRecType);
             arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
-            StringLib::copy(&meta->filename[0], outFilePath, FILE_NAME_MAX_LEN);
+            StringLib::copy(&meta->filename[0], parms->path, FILE_NAME_MAX_LEN);
             meta->size = file_size;
             if(!meta_record.post(outQ))
             {
@@ -641,7 +695,7 @@ bool ParquetBuilder::send2Client (void)
             {
                 RecordObject data_record(dataRecType, 0, false);
                 arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData();
-                StringLib::copy(&data->filename[0], outFilePath, FILE_NAME_MAX_LEN);
+                StringLib::copy(&data->filename[0], parms->path, FILE_NAME_MAX_LEN);
                 size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
                 if(!data_record.post(outQ, offsetof(arrow_file_data_t, data) + bytes_read))
                 {

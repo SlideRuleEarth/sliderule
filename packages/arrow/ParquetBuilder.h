@@ -150,6 +150,7 @@ class ParquetBuilder: public DispatchObject
         bool                processTimeout          (void) override;
         bool                processTermination      (void) override;
         bool                send2Client             (void);
+        bool                send2S3                 (void);
         const char*         buildGeoMetaData        (void);
 };
 

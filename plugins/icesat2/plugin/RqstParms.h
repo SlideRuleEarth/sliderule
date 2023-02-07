@@ -42,7 +42,6 @@
 #include "GeoJsonRaster.h"
 #include "List.h"
 #include "MathLib.h"
-#include "ArrowParms.h"
 
 /******************************************************************************
  * REQUEST PARAMETERS
@@ -294,7 +293,6 @@ class RqstParms: public LuaObject
         int                     rqst_timeout;                   // total time in seconds for request to be processed
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
-        ArrowParms             output;                         // output file parameters
         phoreal_t               phoreal;                        // phoreal algorithm settings
 
     private:

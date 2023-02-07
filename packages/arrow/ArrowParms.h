@@ -45,50 +45,79 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "LuaObject.h"
+
+#ifdef __aws__
+#include "aws.h"
+#endif
 
 /******************************************************************************
  * ARROW PARAMETERS CLASS
  ******************************************************************************/
 
-struct ArrowParms
+class ArrowParms: public LuaObject
 {
-    /*--------------------------------------------------------------------
-     * Typedefs
-     *--------------------------------------------------------------------*/
-    typedef enum {
-        NATIVE = 0,
-        FEATHER = 1,
-        PARQUET = 2,
-        CSV = 3,
-        UNSUPPORTED = 4
-    } format_t;
+    public:
 
-    /*--------------------------------------------------------------------
-     * Constants
-     *--------------------------------------------------------------------*/
+        /*--------------------------------------------------------------------
+        * Typedefs
+        *--------------------------------------------------------------------*/
+        typedef enum {
+            NATIVE = 0,
+            FEATHER = 1,
+            PARQUET = 2,
+            CSV = 3,
+            UNSUPPORTED = 4
+        } format_t;
 
-    static const char* SELF;
-    static const char* PATH;
-    static const char* FORMAT;
-    static const char* OPEN_ON_COMPLETE;
+        /*--------------------------------------------------------------------
+        * Constants
+        *--------------------------------------------------------------------*/
 
-    /*--------------------------------------------------------------------
-     * Data
-     *--------------------------------------------------------------------*/
+        static const char* SELF;
+        static const char* PATH;
+        static const char* FORMAT;
+        static const char* OPEN_ON_COMPLETE;
+        static const char* CREDENTIALS;
 
-    const char*     path;                           // file system path to the file (includes filename)
-    format_t        format;                         // format of the file
-    bool            open_on_complete;               // flag to client to open file on completion
+        static const char* OBJECT_TYPE;
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
 
-    /*--------------------------------------------------------------------
-     * Methods
-     *--------------------------------------------------------------------*/
+        /*--------------------------------------------------------------------
+        * Data
+        *--------------------------------------------------------------------*/
 
-                ArrowParms         (lua_State* L, int index);
-                ~ArrowParms        (void);
+        const char*     path;                           // file system path to the file (includes filename)
+        format_t        format;                         // format of the file
+        bool            open_on_complete;               // flag to client to open file on completion
 
-    bool        fromLua             (lua_State* L, int index);
-    format_t    str2outputformat    (const char* fmt_str);
+        #ifdef __aws__
+        CredentialStore::Credential credentials;
+        #endif
+
+        /*--------------------------------------------------------------------
+        * Methods
+        *--------------------------------------------------------------------*/
+
+        static int  luaCreate           (lua_State* L);
+
+    private:
+
+        /*--------------------------------------------------------------------
+        * Methods
+        *--------------------------------------------------------------------*/
+
+                    ArrowParms          (lua_State* L, int index);
+                    ~ArrowParms         (void);
+
+        void        fromLua             (lua_State* L, int index);
+        format_t    str2outputformat    (const char* fmt_str);
+        static int  luaIsNative         (lua_State* L);
+        static int  luaIsFeather        (lua_State* L);
+        static int  luaIsParquet        (lua_State* L);
+        static int  luaIsCSV            (lua_State* L);
+        static int  luaPath             (lua_State* L);
 };
 
 #endif  /* __arrow_parms__ */

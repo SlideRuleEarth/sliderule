@@ -53,6 +53,7 @@ int arrow_open (lua_State* L)
 {
     static const struct luaL_Reg arrow_functions[] = {
         {"parquet",     ParquetBuilder::luaCreate},
+        {"parms",       ArrowParms::luaCreate},
         {NULL,          NULL}
     };
 

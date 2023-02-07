@@ -415,12 +415,6 @@ RqstParms::RqstParms(lua_State* L, int index):
         if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::READ_TIMEOUT, read_timeout);
         lua_pop(L, 1);
 
-        /* Output */
-        lua_getfield(L, index, ArrowParms::SELF);
-        provided = output.fromLua(L, -1);
-        if(provided) mlog(DEBUG, "Setting %s by user", ArrowParms::SELF);
-        lua_pop(L, 1);
-
         /* PhoREAL */
         lua_getfield(L, index, RqstParms::PHOREAL);
         get_lua_phoreal(L, -1, &provided);
@@ -463,7 +457,6 @@ void RqstParms::cleanup (void)
     if(atl03_geo_fields) delete atl03_geo_fields;
     if(atl03_ph_fields) delete atl03_ph_fields;
     if(rasters_to_sample) delete rasters_to_sample;
-    if(output.path) delete [] output.path;
 }
 
 /*----------------------------------------------------------------------------
