@@ -581,10 +581,10 @@ bool ParquetBuilder::processTermination (void)
     int file_path_len = StringLib::size(parms->path);
     if((file_path_len > 5) &&
        (parms->path[0] == 's') &&
-       (parms->path[0] == '3') &&
-       (parms->path[0] == ':') &&
-       (parms->path[0] == '/') &&
-       (parms->path[0] == '/'))
+       (parms->path[1] == '3') &&
+       (parms->path[2] == ':') &&
+       (parms->path[3] == '/') &&
+       (parms->path[4] == '/'))
     {
         #ifdef __aws__
         return send2S3();
