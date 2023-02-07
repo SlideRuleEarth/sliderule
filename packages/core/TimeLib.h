@@ -116,6 +116,7 @@ class TimeLib
         static int          daysinmonth     (int year, int month);
         static int          getleapms       (int64_t current_time, int64_t start_time = TIME_GPS_EPOCH_START);
         static const char*  getMonthName    (int month); // [1..12] --> ["January".."December"]
+        static bool         gmtinrange      (const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end); // returns true if in range
 
     private:
 

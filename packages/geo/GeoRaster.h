@@ -241,6 +241,7 @@ class GeoRaster: public LuaObject
                                               const bool zonal_stats=false, const bool auxiliary_files=false);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
+        bool            filterRasters         (const raster_info_t& rinfo);
         virtual void    transformCRS          (OGRPoint& p) = 0;
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
@@ -285,6 +286,13 @@ class GeoRaster: public LuaObject
         uint32_t     readerCount;
         bool         zonalStats;
         bool         useAuxFiles;
+
+        bool         temporalFilter;
+        TimeLib::gmt_time_t startDate;
+        TimeLib::gmt_time_t endDate;
+
+        bool         urlFilter;
+        std::string  url;
 
         Dictionary<uint32_t> fileDict;
 
