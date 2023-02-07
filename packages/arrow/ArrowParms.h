@@ -29,11 +29,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __output_parms__
-#define __output_parms__
+#ifndef __arrow_parms__
+#define __arrow_parms__
 
 /*
- * OutputParms works on batches of records.  It expects the `rec_type` passed
+ * ArrowParms works on batches of records.  It expects the `rec_type` passed
  * into the constructor to be the type that defines each of the column headings,
  * then it expects to receive records that are arrays (or batches) of that record
  * type.  The field defined as an array is transparent to this class - it just
@@ -47,10 +47,10 @@
 #include "OsApi.h"
 
 /******************************************************************************
- * OUTPUT PARAMETERS CLASS
+ * ARROW PARAMETERS CLASS
  ******************************************************************************/
 
-struct OutputParms
+struct ArrowParms
 {
     /*--------------------------------------------------------------------
      * Typedefs
@@ -84,11 +84,11 @@ struct OutputParms
      * Methods
      *--------------------------------------------------------------------*/
 
-                OutputParms         (lua_State* L, int index);
-                ~OutputParms        (void);
+                ArrowParms         (lua_State* L, int index);
+                ~ArrowParms        (void);
 
     bool        fromLua             (lua_State* L, int index);
     format_t    str2outputformat    (const char* fmt_str);
 };
 
-#endif  /* __output_parms__ */
+#endif  /* __arrow_parms__ */

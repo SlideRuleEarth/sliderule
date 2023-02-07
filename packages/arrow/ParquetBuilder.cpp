@@ -45,7 +45,7 @@
 
 #include "core.h"
 #include "ParquetBuilder.h"
-#include "OutputParms.h"
+#include "ArrowParms.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -233,7 +233,7 @@ void ParquetBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, OutputParms* _parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo):
+ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(parms);

@@ -48,7 +48,7 @@
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "DispatchObject.h"
-#include "OutputParms.h"
+#include "ArrowParms.h"
 #include "OsApi.h"
 #include "MsgQ.h"
 
@@ -127,7 +127,7 @@ class ParquetBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        OutputParms*        parms;
+        ArrowParms*         parms;
         field_list_t        fieldList;
         field_iterator_t*   fieldIterator;
         Mutex               tableMut;
@@ -143,7 +143,7 @@ class ParquetBuilder: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, OutputParms* parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo);
+                            ParquetBuilder          (lua_State* L, ArrowParms* parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo);
                             ~ParquetBuilder         (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;

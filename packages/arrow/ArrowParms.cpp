@@ -35,17 +35,17 @@
 
 #include <lua.h>
 #include "core.h"
-#include "OutputParms.h"
+#include "ArrowParms.h"
 
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* OutputParms::SELF               = "output";
-const char* OutputParms::PATH               = "path";
-const char* OutputParms::FORMAT             = "format";
-const char* OutputParms::OPEN_ON_COMPLETE   = "open_on_complete";
+const char* ArrowParms::SELF               = "output";
+const char* ArrowParms::PATH               = "path";
+const char* ArrowParms::FORMAT             = "format";
+const char* ArrowParms::OPEN_ON_COMPLETE   = "open_on_complete";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -54,8 +54,7 @@ const char* OutputParms::OPEN_ON_COMPLETE   = "open_on_complete";
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-void OutputParms::OutputParms (lua_State* L, int index):
-    provided            (false),
+void ArrowParms::ArrowParms (lua_State* L, int index):
     path                (NULL),
     format              (NATIVE),
     open_on_complete    (false)
@@ -66,14 +65,14 @@ void OutputParms::OutputParms (lua_State* L, int index):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-void OutputParms::~OutputParms (void)
+void ArrowParms::~ArrowParms (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-bool OutputParms::fromLua (lua_State* L, int index)
+bool ArrowParms::fromLua (lua_State* L, int index)
 {
     bool provided = false;
 
@@ -133,7 +132,7 @@ bool OutputParms::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * str2outputformat
  *----------------------------------------------------------------------------*/
-OutputParms::format_t RqstParms::str2outputformat (const char* fmt_str)
+ArrowParms::format_t RqstParms::str2outputformat (const char* fmt_str)
 {
     if     (StringLib::match(fmt_str, "native"))    return NATIVE;
     else if(StringLib::match(fmt_str, "feather"))   return FEATHER;
