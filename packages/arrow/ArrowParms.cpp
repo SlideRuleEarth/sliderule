@@ -146,7 +146,7 @@ void ArrowParms::fromLua (lua_State* L, int index)
         if(field_provided) mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
         lua_pop(L, 1);
 
-//        #ifdef __aws__
+        #ifdef __aws__
         /* Region */
         lua_getfield(L, index, REGION);
         region = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
@@ -177,7 +177,7 @@ void ArrowParms::fromLua (lua_State* L, int index)
             }
         }
         lua_pop(L, 1);
-//        #endif
+        #endif
     }
 }
 
