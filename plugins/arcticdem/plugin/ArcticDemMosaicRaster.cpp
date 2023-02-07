@@ -134,6 +134,7 @@ bool ArcticDemMosaicRaster::getRasterDate(raster_info_t& rinfo)
             if (i != -1)
             {
                 int year, month, day, hour, minute, second, timeZone;
+                year = month = day = hour = minute = second = timeZone = 0;
                 if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
                 {
                     /*
