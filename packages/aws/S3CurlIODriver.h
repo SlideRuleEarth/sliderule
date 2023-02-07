@@ -71,6 +71,26 @@ class S3CurlIODriver: public Asset::IODriver
         static IODriver*    create          (const Asset* _asset, const char* resource);
         virtual int64_t     ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
 
+        // fixed GET - memory preallocated
+        static int64_t      get             (uint8_t* data, int64_t size, uint64_t pos,
+                                             const char* bucket, const char* key, const char* region,
+                                             CredentialStore::Credential* credentials);
+
+        // streaming GET - memory allocated and returned
+        static int64_t      get             (uint8_t** data,
+                                             const char* bucket, const char* key, const char* region,
+                                             CredentialStore::Credential* credentials);
+
+        // file GET - data written directly to file
+        static int64_t      get             (const char* filename,
+                                             const char* bucket, const char* key, const char* region,
+                                             CredentialStore::Credential* credentials);
+
+        // file PUT - data read directly from file
+        static int64_t      put             (const char* filename,
+                                             const char* bucket, const char* key, const char* region,
+                                             CredentialStore::Credential* credentials);
+
         static int          luaGet          (lua_State* L);
         static int          luaDownload     (lua_State* L);
         static int          luaRead         (lua_State* L);
@@ -82,29 +102,9 @@ class S3CurlIODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-                            S3CurlIODriver      (const Asset* _asset);
-                            S3CurlIODriver      (const Asset* _asset, const char* resource);
-        virtual             ~S3CurlIODriver     (void);
-
-        // fixed GET - memory preallocated
-        static int64_t      get                 (uint8_t* data, int64_t size, uint64_t pos,
-                                                 const char* bucket, const char* key, const char* region,
-                                                 CredentialStore::Credential* credentials);
-
-        // streaming GET - memory allocated and returned
-        static int64_t      get                 (uint8_t** data,
-                                                 const char* bucket, const char* key, const char* region,
-                                                 CredentialStore::Credential* credentials);
-
-        // file GET - data written directly to file
-        static int64_t      get                 (const char* filename,
-                                                 const char* bucket, const char* key, const char* region,
-                                                 CredentialStore::Credential* credentials);
-
-        // file PUT - data read directly from file
-        static int64_t      put                 (const char* filename,
-                                                 const char* bucket, const char* key, const char* region,
-                                                 CredentialStore::Credential* credentials);
+                            S3CurlIODriver  (const Asset* _asset);
+                            S3CurlIODriver  (const Asset* _asset, const char* resource);
+        virtual             ~S3CurlIODriver (void);
 
         /*--------------------------------------------------------------------
          * Data

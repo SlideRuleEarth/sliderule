@@ -397,243 +397,6 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 }
 
 /*----------------------------------------------------------------------------
- * luaGet - s3get(<bucket>, <key>, [<region>], [<asset>]) -> contents
- *----------------------------------------------------------------------------*/
-int S3CurlIODriver::luaGet(lua_State* L)
-{
-    bool status = false;
-    int num_rets = 1;
-
-    try
-    {
-        /* Get Parameters */
-        const char* bucket      = LuaObject::getLuaString(L, 1);
-        const char* key         = LuaObject::getLuaString(L, 2);
-        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
-
-        /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
-
-        /* Make Request */
-        uint8_t* rsps_data = NULL;
-        int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
-
-        /* Push Contents */
-        if(rsps_data)
-        {
-            lua_pushlstring(L, (char*)rsps_data, rsps_size);
-            delete [] rsps_data;
-            status = true;
-            num_rets++;
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error getting S3 object: %s", e.what());
-    }
-
-    /* Return Results */
-    lua_pushboolean(L, status);
-    return num_rets;
-}
-
-/*----------------------------------------------------------------------------
- * luaDownload - s3download(<bucket>, <key>, [<region>], [<asset>]) -> file
- *----------------------------------------------------------------------------*/
-int S3CurlIODriver::luaDownload(lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Parameters */
-        const char* bucket      = LuaObject::getLuaString(L, 1);
-        const char* key         = LuaObject::getLuaString(L, 2);
-        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
-        const char* filename    = LuaObject::getLuaString(L, 5, true, key);
-
-        /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
-
-        /* Make Request */
-        int64_t rsps_size = get(filename, bucket, key, region, &credentials);
-
-        /* Push Contents */
-        if(rsps_size > 0)   status = true;
-        else                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error getting S3 object: %s", e.what());
-    }
-
-    /* Return Results */
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaRead - s3read(<bucket>, <key>, <size>, <pos>, [<region>], [<asset>]) -> contents
- *----------------------------------------------------------------------------*/
-int S3CurlIODriver::luaRead(lua_State* L)
-{
-    bool status = false;
-    int num_rets = 1;
-
-    try
-    {
-        /* Get Parameters */
-        const char* bucket      = LuaObject::getLuaString(L, 1);
-        const char* key         = LuaObject::getLuaString(L, 2);
-        long size               = LuaObject::getLuaInteger(L, 3);
-        long pos                = LuaObject::getLuaInteger(L, 4);
-        const char* region      = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
-
-        /* Check Parameters */
-        if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid size: %ld", size);
-        else if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
-
-        /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
-
-        /* Make Request */
-        uint8_t* rsps_data = new uint8_t [size];
-        int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
-
-        /* Push Contents */
-        if(rsps_size > 0)
-        {
-            lua_pushlstring(L, (char*)rsps_data, rsps_size);
-            delete [] rsps_data;
-            status = true;
-            num_rets++;
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error getting S3 object: %s", e.what());
-    }
-
-    /* Return Results */
-    lua_pushboolean(L, status);
-    return num_rets;
-}
-
-/*----------------------------------------------------------------------------
- * luaUpload - s3upload(<bucket>, <key>, <filename>, [<region>], [<asset>])
- *----------------------------------------------------------------------------*/
-int S3CurlIODriver::luaUpload(lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Parameters */
-        const char* bucket      = LuaObject::getLuaString(L, 1);
-        const char* key         = LuaObject::getLuaString(L, 2);
-        const char* filename    = LuaObject::getLuaString(L, 3);
-        const char* region      = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
-
-        /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
-//        CredentialStore::Credential credentials;
-//        credentials.provided = true;
-//        credentials.accessKeyId = StringLib::duplicate("ASIA2ZSSFI2SAQ4QCNM2");
-//        credentials.secretAccessKey = StringLib::duplicate("RhlPSk3oU+KjG/MdIHo6Yi0mFce7sWLkNEi7aY/P");
-//        credentials.sessionToken = NULL;
-//        credentials.expiration = NULL;
-//        credentials.expirationGps = 0;
-
-        /* Make Request */
-        int64_t upload_size = put(filename, bucket, key, region, &credentials);
-
-        /* Push Contents */
-        if(upload_size > 0)
-        {
-            lua_pushnumber(L, upload_size);
-            status = true;
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to upload %s/%s", bucket, key);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error uploading S3 object: %s", e.what());
-    }
-
-    /* Return Results */
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * Constructor - for derived classes
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::S3CurlIODriver (const Asset* _asset):
-    asset(_asset)
-{
-    ioBucket = NULL;
-    ioKey = NULL;
-
-    /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getName());
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
-    asset(_asset)
-{
-    SafeString resourcepath("%s/%s", asset->getPath(), resource);
-
-    /* Allocate Memory */
-    ioBucket = StringLib::duplicate(resourcepath.getString());
-
-    /*
-    * Differentiate Bucket and Key
-    *  <bucket_name>/<path_to_file>/<filename>
-    *  |             |
-    * ioBucket      ioKey
-    */
-    ioKey = ioBucket;
-    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-    if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
-    ioKey++;
-
-    /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getName());
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::~S3CurlIODriver (void)
-{
-    /*
-     * Delete Memory Allocated for ioBucket
-     *  only ioBucket is freed because ioKey only points
-     *  into the memory allocated to ioBucket
-     */
-    if(ioBucket) delete [] ioBucket;
-}
-
-/*----------------------------------------------------------------------------
  * get - fixed
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
@@ -1037,4 +800,234 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
 
     /* Return Success */
     return data.size;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGet - s3get(<bucket>, <key>, [<region>], [<asset>]) -> contents
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaGet(lua_State* L)
+{
+    bool status = false;
+    int num_rets = 1;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+
+        /* Make Request */
+        uint8_t* rsps_data = NULL;
+        int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
+
+        /* Push Contents */
+        if(rsps_data)
+        {
+            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            delete [] rsps_data;
+            status = true;
+            num_rets++;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return num_rets;
+}
+
+/*----------------------------------------------------------------------------
+ * luaDownload - s3download(<bucket>, <key>, [<region>], [<asset>]) -> file
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaDownload(lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+        const char* filename    = LuaObject::getLuaString(L, 5, true, key);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+
+        /* Make Request */
+        int64_t rsps_size = get(filename, bucket, key, region, &credentials);
+
+        /* Push Contents */
+        if(rsps_size > 0)   status = true;
+        else                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaRead - s3read(<bucket>, <key>, <size>, <pos>, [<region>], [<asset>]) -> contents
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaRead(lua_State* L)
+{
+    bool status = false;
+    int num_rets = 1;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        long size               = LuaObject::getLuaInteger(L, 3);
+        long pos                = LuaObject::getLuaInteger(L, 4);
+        const char* region      = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* asset_name  = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+
+        /* Check Parameters */
+        if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid size: %ld", size);
+        else if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+
+        /* Make Request */
+        uint8_t* rsps_data = new uint8_t [size];
+        int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
+
+        /* Push Contents */
+        if(rsps_size > 0)
+        {
+            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            delete [] rsps_data;
+            status = true;
+            num_rets++;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return num_rets;
+}
+
+/*----------------------------------------------------------------------------
+ * luaUpload - s3upload(<bucket>, <key>, <filename>, [<region>], [<asset>])
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaUpload(lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* filename    = LuaObject::getLuaString(L, 3);
+        const char* region      = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* asset_name  = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+
+        /* Make Request */
+        int64_t upload_size = put(filename, bucket, key, region, &credentials);
+
+        /* Push Contents */
+        if(upload_size > 0)
+        {
+            lua_pushnumber(L, upload_size);
+            status = true;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to upload %s/%s", bucket, key);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error uploading S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor - for derived classes
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::S3CurlIODriver (const Asset* _asset):
+    asset(_asset)
+{
+    ioBucket = NULL;
+    ioKey = NULL;
+
+    /* Get Latest Credentials */
+    latestCredentials = CredentialStore::get(asset->getName());
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
+    asset(_asset)
+{
+    SafeString resourcepath("%s/%s", asset->getPath(), resource);
+
+    /* Allocate Memory */
+    ioBucket = StringLib::duplicate(resourcepath.getString());
+
+    /*
+    * Differentiate Bucket and Key
+    *  <bucket_name>/<path_to_file>/<filename>
+    *  |             |
+    * ioBucket      ioKey
+    */
+    ioKey = ioBucket;
+    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
+    if(*ioKey == '/') *ioKey = '\0';
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
+    ioKey++;
+
+    /* Get Latest Credentials */
+    latestCredentials = CredentialStore::get(asset->getName());
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::~S3CurlIODriver (void)
+{
+    /*
+     * Delete Memory Allocated for ioBucket
+     *  only ioBucket is freed because ioKey only points
+     *  into the memory allocated to ioBucket
+     */
+    if(ioBucket) delete [] ioBucket;
 }

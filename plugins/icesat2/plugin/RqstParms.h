@@ -42,6 +42,7 @@
 #include "GeoJsonRaster.h"
 #include "List.h"
 #include "MathLib.h"
+#include "ArrowParms.h"
 
 /******************************************************************************
  * REQUEST PARAMETERS
@@ -94,10 +95,6 @@ class RqstParms: public LuaObject
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
         static const char* GLOBAL_TIMEOUT; // sets all timeouts at once
-        static const char* OUTPUT;
-        static const char* OUTPUT_PATH;
-        static const char* OUTPUT_FORMAT;
-        static const char* OUTPUT_OPEN_ON_COMPLETE;
         static const char* PHOREAL;
         static const char* PHOREAL_BINSIZE;
         static const char* PHOREAL_GEOLOC;
@@ -218,15 +215,6 @@ class RqstParms: public LuaObject
             NUM_STAGES = 4
         } atl06_stages_t;
 
-        /* Output Formats */
-        typedef enum {
-            OUTPUT_FORMAT_NATIVE = 0,
-            OUTPUT_FORMAT_FEATHER = 1,
-            OUTPUT_FORMAT_PARQUET = 2,
-            OUTPUT_FORMAT_CSV = 3,
-            OUTPUT_FORMAT_UNSUPPORTED = 4
-        } output_format_t;
-
         /* PhoREAL Geolocation Modes */
         typedef enum {
             PHOREAL_MEAN = 0,
@@ -259,13 +247,6 @@ class RqstParms: public LuaObject
             double              win_h;                          // window height (overrides calculated value if non-zero)
             double              win_x;                          // window width
         } yapc_t;
-
-        /* Output Settings */
-        typedef struct {
-            const char*         path;                           // file system path to the file (includes filename)
-            output_format_t     format;                         // format of the file
-            bool                open_on_complete;               // flag to client to open file on completion
-        } output_file_t;
 
         /* PhoREAL Settings */
         typedef struct {
@@ -313,7 +294,7 @@ class RqstParms: public LuaObject
         int                     rqst_timeout;                   // total time in seconds for request to be processed
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
-        output_file_t           output;                         // output file parameters
+        ArrowParms             output;                         // output file parameters
         phoreal_t               phoreal;                        // phoreal algorithm settings
 
     private:
@@ -329,7 +310,6 @@ class RqstParms: public LuaObject
         signal_conf_t           str2atl03cnf            (const char* confidence_str);
         quality_ph_t            str2atl03quality        (const char* quality_ph_str);
         atl08_classification_t  str2atl08class          (const char* classifiction_str);
-        output_format_t         str2outputformat        (const char* fmt_str);
         phoreal_geoloc_t        str2geoloc              (const char* fmt_str);
         void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
@@ -339,7 +319,6 @@ class RqstParms: public LuaObject
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
         void                    get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
         void                    get_lua_rasters         (lua_State* L, int index, rasters_t** rasters_list, bool* provided);
-        void                    get_lua_output          (lua_State* L, int index, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
 };
 

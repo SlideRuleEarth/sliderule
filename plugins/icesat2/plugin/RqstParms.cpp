@@ -81,10 +81,6 @@ const char* RqstParms::RQST_TIMEOUT                 = "rqst-timeout";
 const char* RqstParms::NODE_TIMEOUT                 = "node-timeout";
 const char* RqstParms::READ_TIMEOUT                 = "read-timeout";
 const char* RqstParms::GLOBAL_TIMEOUT               = "timeout";
-const char* RqstParms::OUTPUT                       = "output";
-const char* RqstParms::OUTPUT_PATH                  = "path";
-const char* RqstParms::OUTPUT_FORMAT                = "format";
-const char* RqstParms::OUTPUT_OPEN_ON_COMPLETE      = "open_on_complete";
 const char* RqstParms::PHOREAL                      = "phoreal";
 const char* RqstParms::PHOREAL_BINSIZE              = "binsize";
 const char* RqstParms::PHOREAL_GEOLOC               = "geoloc";
@@ -253,9 +249,6 @@ RqstParms::RqstParms(lua_State* L, int index):
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
     read_timeout                (DEFAULT_READ_TIMEOUT),
-    output                      { .path             = NULL,
-                                  .format           = OUTPUT_FORMAT_NATIVE,
-                                  .open_on_complete = false },
     phoreal                     { .binsize          = 1.0,
                                   .geoloc           = PHOREAL_MEDIAN,
                                   .use_abs_h        = false,
@@ -423,9 +416,9 @@ RqstParms::RqstParms(lua_State* L, int index):
         lua_pop(L, 1);
 
         /* Output */
-        lua_getfield(L, index, RqstParms::OUTPUT);
-        get_lua_output(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s by user", RqstParms::OUTPUT);
+        lua_getfield(L, index, ArrowParms::SELF);
+        provided = output.fromLua(L, -1);
+        if(provided) mlog(DEBUG, "Setting %s by user", ArrowParms::SELF);
         lua_pop(L, 1);
 
         /* PhoREAL */
@@ -511,18 +504,6 @@ RqstParms::atl08_classification_t RqstParms::str2atl08class (const char* classif
     else if(StringLib::match(classifiction_str, "atl08_top_of_canopy")  || StringLib::match(classifiction_str, "top_of_canopy"))   return ATL08_TOP_OF_CANOPY;
     else if(StringLib::match(classifiction_str, "atl08_unclassified")   || StringLib::match(classifiction_str, "unclassified"))    return ATL08_UNCLASSIFIED;
     else                                                                                                                           return ATL08_INVALID_CLASSIFICATION;
-}
-
-/*----------------------------------------------------------------------------
- * str2outputformat
- *----------------------------------------------------------------------------*/
-RqstParms::output_format_t RqstParms::str2outputformat (const char* fmt_str)
-{
-    if     (StringLib::match(fmt_str, "native"))    return OUTPUT_FORMAT_NATIVE;
-    else if(StringLib::match(fmt_str, "feather"))   return OUTPUT_FORMAT_FEATHER;
-    else if(StringLib::match(fmt_str, "parquet"))   return OUTPUT_FORMAT_PARQUET;
-    else if(StringLib::match(fmt_str, "csv"))       return OUTPUT_FORMAT_CSV;
-    else                                            return OUTPUT_FORMAT_UNSUPPORTED;
 }
 
 /*----------------------------------------------------------------------------
@@ -1072,64 +1053,6 @@ void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_li
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "List of rasters must be provided as a table");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * get_lua_output
- *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_output (lua_State* L, int index, bool* provided)
-{
-    bool field_provided;
-
-    /* Reset Provided */
-    *provided = false;
-
-    /* Must be a Table */
-    if(lua_istable(L, index))
-    {
-        *provided = true;
-
-        /* Output Path */
-        lua_getfield(L, index, RqstParms::OUTPUT_PATH);
-        output.path = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, output.path, &field_provided));
-        if(field_provided) mlog(DEBUG, "Setting %s to %s", RqstParms::OUTPUT_PATH, output.path);
-        lua_pop(L, 1);
-
-        /* Output Format */
-        lua_getfield(L, index, RqstParms::OUTPUT_FORMAT);
-        if(lua_isinteger(L, index))
-        {
-            output.format = (output_format_t)LuaObject::getLuaInteger(L, -1, true, output.format, &field_provided);
-            if(output.format < 0 || output.format >= OUTPUT_FORMAT_UNSUPPORTED)
-            {
-                mlog(ERROR, "Output format is unsupported: %d", output.format);
-            }
-        }
-        else if(lua_isstring(L, index))
-        {
-            const char* output_fmt = LuaObject::getLuaString(L, -1, true, NULL, &field_provided);
-            if(field_provided)
-            {
-                output.format = str2outputformat(output_fmt);
-                if(output.format == OUTPUT_FORMAT_UNSUPPORTED)
-                {
-                    mlog(ERROR, "Output format is unsupported: %s", output_fmt);
-                }
-            }
-        }
-        else if(!lua_isnil(L, index))
-        {
-            mlog(ERROR, "Output format must be provided as an integer or string");
-        }
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::OUTPUT_FORMAT, (int)output.format);
-        lua_pop(L, 1);
-
-        /* Output Open on Complete */
-        lua_getfield(L, index, RqstParms::OUTPUT_OPEN_ON_COMPLETE);
-        output.open_on_complete = LuaObject::getLuaBoolean(L, -1, true, output.open_on_complete, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::OUTPUT_OPEN_ON_COMPLETE, (int)output.open_on_complete);
-        lua_pop(L, 1);
     }
 }
 
