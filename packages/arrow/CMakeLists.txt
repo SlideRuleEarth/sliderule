@@ -15,6 +15,7 @@ if (Arrow_FOUND AND Parquet_FOUND)
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/arrow.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/OutputParms.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ParquetBuilder.cpp
     )
 
@@ -27,6 +28,7 @@ if (Arrow_FOUND AND Parquet_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/arrow.h
+            ${CMAKE_CURRENT_LIST_DIR}/OutputParms.h
             ${CMAKE_CURRENT_LIST_DIR}/ParquetBuilder.h
         DESTINATION
             ${INCDIR}

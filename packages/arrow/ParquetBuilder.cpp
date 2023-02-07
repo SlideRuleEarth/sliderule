@@ -45,6 +45,11 @@
 
 #include "core.h"
 #include "ParquetBuilder.h"
+#include "OutputParms.h"
+
+#ifdef __aws__
+#include "aws.h"
+#endif
 
 using std::shared_ptr;
 using std::unique_ptr;
@@ -228,19 +233,19 @@ void ParquetBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo):
+ParquetBuilder::ParquetBuilder (lua_State* L, OutputParms* _parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
-    assert(filename);
+    assert(parms);
     assert(outq_name);
     assert(rec_type);
     assert(id);
 
+    /* Save Parms */
+    parms = _parms;
+
     /* Allocate Private Implementation */
     pimpl = new ParquetBuilder::impl;
-
-    /* Save Output Filename */
-    outFileName = StringLib::duplicate(filename);
 
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
@@ -306,7 +311,7 @@ ParquetBuilder::~ParquetBuilder(void)
 {
     delete [] fileName;
     delete outQ;
-    delete [] outFileName;
+    delete [] outFilePath;
     delete fieldIterator;
     delete pimpl;
 }
@@ -571,6 +576,43 @@ bool ParquetBuilder::processTermination (void)
     /* Close Parquet Writer */
     (void)pimpl->parquetWriter->Close();
 
+    /* Send File to User */
+    int file_path_len = StringLib::size(outFilePath);
+    if((file_path_len > 5) &&
+       (outFilePath[0] == 's') &&
+       (outFilePath[0] == '3') &&
+       (outFilePath[0] == ':') &&
+       (outFilePath[0] == '/') &&
+       (outFilePath[0] == '/'))
+    {
+        #ifdef __aws__
+
+        #else
+        #endif
+    }
+    else
+    {
+        /* Stream Back to Client */
+        return send2Client();
+    }
+}
+
+
+int64_t      put             (const char* filename,
+                                             const char* bucket, const char* key, const char* region,
+                                             CredentialStore::Credential* credentials);
+/*----------------------------------------------------------------------------
+ * send2S3
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::send2Client (void)
+
+/*----------------------------------------------------------------------------
+ * send2Client
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::send2Client (void)
+{
+    bool status = true;
+
     /* Reopen Parquet File to Stream Back as Response */
     FILE* fp = fopen(fileName, "r");
     if(fp)
@@ -585,7 +627,7 @@ bool ParquetBuilder::processTermination (void)
             /* Send Meta Record */
             RecordObject meta_record(metaRecType);
             arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
-            StringLib::copy(&meta->filename[0], outFileName, FILE_NAME_MAX_LEN);
+            StringLib::copy(&meta->filename[0], outFilePath, FILE_NAME_MAX_LEN);
             meta->size = file_size;
             if(!meta_record.post(outQ))
             {
@@ -599,7 +641,7 @@ bool ParquetBuilder::processTermination (void)
             {
                 RecordObject data_record(dataRecType, 0, false);
                 arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData();
-                StringLib::copy(&data->filename[0], outFileName, FILE_NAME_MAX_LEN);
+                StringLib::copy(&data->filename[0], outFilePath, FILE_NAME_MAX_LEN);
                 size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
                 if(!data_record.post(outQ, offsetof(arrow_file_data_t, data) + bytes_read))
                 {

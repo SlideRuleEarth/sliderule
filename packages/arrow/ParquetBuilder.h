@@ -48,6 +48,7 @@
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "DispatchObject.h"
+#include "OutputParms.h"
 #include "OsApi.h"
 #include "MsgQ.h"
 
@@ -126,13 +127,13 @@ class ParquetBuilder: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
+        OutputParms*        parms;
         field_list_t        fieldList;
         field_iterator_t*   fieldIterator;
         Mutex               tableMut;
         Publisher*          outQ;
         int                 rowSizeBytes;
         const char*         fileName; // used locally to build file
-        const char*         outFileName; // name to send back to client
         geo_data_t          geoData;
 
         struct impl; // arrow implementation
@@ -142,13 +143,13 @@ class ParquetBuilder: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, const char* filename, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo);
+                            ParquetBuilder          (lua_State* L, OutputParms* parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo);
                             ~ParquetBuilder         (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;
         bool                processTimeout          (void) override;
         bool                processTermination      (void) override;
-        bool                postRecord              (RecordObject* record, int data_size=0);
+        bool                send2Client             (void);
         const char*         buildGeoMetaData        (void);
 };
 
