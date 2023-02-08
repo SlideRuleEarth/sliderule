@@ -15,10 +15,10 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 # Core Framework Targets
 ########################
 
-all: default-build
-
 default-build: ## default build of sliderule
 	make -j4 -C $(BUILD)
+
+all: default-build atlas arcticdem gedi icesat2 ## build everything
 
 config: config-release ## configure make for default build
 
@@ -46,8 +46,12 @@ config-development-debug: prep ## configure make for debug version of sliderule 
 config-development-cicd: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_APACHE_ARROW_10_COMPAT=ON $(ROOT)
 
+config-all: config-development config-atlas config-arcticdem config-gedi config-icesat2 ## configure everything
+
 install: ## install sliderule to system
 	make -C $(BUILD) install
+
+install-all: install install-atlas install-arcticdem install-gedi install-icesat2 ## install everything
 
 uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(BUILD)/install_manifest.txt
