@@ -498,7 +498,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
              *  incur an additional mutex lock, whereas here it only occurs an aditional
              *  time when data isn't being cached (which is rare)
              */
-            ioContext->mut.unlock();
+            ioContext->mut.lock();
             {
                 ioContext->bytes_read += entry.size;
             }
