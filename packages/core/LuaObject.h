@@ -98,7 +98,7 @@ class LuaObject
         static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
 
         static LuaObject*   getLuaObjectByName  (const char* name, const char* object_type);
-        bool                releaseLuaObject    (void); // pairs with getLuaObject(...), returns whether object needs to be deleted
+        bool                releaseLuaObject    (void); // pairs with getLuaObject(..) and getLuaObjectByName(..), returns whether object was deleted
 
     protected:
 

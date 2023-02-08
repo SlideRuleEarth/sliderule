@@ -158,6 +158,7 @@ void ArrowParms::fromLua (lua_State* L, int index)
         {
             Asset* asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
             region = StringLib::duplicate(asset->getRegion());
+            asset->releaseLuaObject();
         }
         lua_pop(L, 1);
 
