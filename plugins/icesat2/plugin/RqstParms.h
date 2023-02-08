@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __rqst_parms__
-#define __rqst_parms__
+#ifndef __icesat2_parms__
+#define __icesat2_parms__
 
 /******************************************************************************
  * INCLUDES
@@ -47,7 +47,7 @@
  * REQUEST PARAMETERS
  ******************************************************************************/
 
-class RqstParms: public LuaObject
+class Icesat2Parms: public LuaObject
 {
     public:
 
@@ -301,8 +301,8 @@ class RqstParms: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                RqstParms               (lua_State* L, int index);
-                                ~RqstParms              (void);
+                                Icesat2Parms               (lua_State* L, int index);
+                                ~Icesat2Parms              (void);
 
         void                    cleanup                 (void);
         signal_conf_t           str2atl03cnf            (const char* confidence_str);
@@ -320,4 +320,4 @@ class RqstParms: public LuaObject
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
 };
 
-#endif  /* __rqst_parms__ */
+#endif  /* __icesat2_parms__ */

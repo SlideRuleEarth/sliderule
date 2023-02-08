@@ -107,12 +107,12 @@ const double Atl08Dispatch::PercentileInterval[NUM_PERCENTILES] = {
  *----------------------------------------------------------------------------*/
 int Atl08Dispatch::luaCreate (lua_State* L)
 {
-    RqstParms* parms = NULL;
+    Icesat2Parms* parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = (RqstParms*)getLuaObject(L, 2, RqstParms::OBJECT_TYPE);
+        parms = (Icesat2Parms*)getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE);
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl08Dispatch(L, outq_name, parms));
@@ -148,7 +148,7 @@ void Atl08Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, RqstParms* _parms):
+Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
@@ -187,15 +187,15 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
-    vegetation_t result[RqstParms::NUM_PAIR_TRACKS];
-    waveform_t* waveform[RqstParms::NUM_PAIR_TRACKS];
+    vegetation_t result[Icesat2Parms::NUM_PAIR_TRACKS];
+    waveform_t* waveform[Icesat2Parms::NUM_PAIR_TRACKS];
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Clear Results */
     LocalLib::set(result, 0, sizeof(result));
 
     /* Process Extent */
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Check Extent */
         if(extent->photon_count[t] <= 0)
@@ -207,7 +207,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
         geolocateResult(extent, t, result);
 
         /* Execute Algorithm Stages */
-        if(parms->stages[RqstParms::STAGE_PHOREAL])
+        if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
         {
             phorealAlgorithm(extent, t, result);
         }
@@ -245,16 +245,16 @@ bool Atl08Dispatch::processTermination (void)
 void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, vegetation_t* result)
 {
     /* Get Orbit Info */
-    RqstParms::sc_orient_t sc_orient = (RqstParms::sc_orient_t)extent->spacecraft_orientation;
-    RqstParms::track_t track = (RqstParms::track_t)extent->reference_pair_track;
+    Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
+    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->reference_pair_track;
 
     /* Extent Attributes */
-    result[t].extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;
+    result[t].extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
     result[t].segment_id = extent->segment_id[t];
     result[t].rgt = extent->reference_ground_track_start;
     result[t].cycle = extent->cycle_start;
-    result[t].spot = RqstParms::getSpotNumber(sc_orient, track, t);
-    result[t].gt = RqstParms::getGroundTrack(sc_orient, track, t);
+    result[t].spot = Icesat2Parms::getSpotNumber(sc_orient, track, t);
+    result[t].gt = Icesat2Parms::getGroundTrack(sc_orient, track, t);
     result[t].photon_count = extent->photon_count[t];
     result[t].solar_elevation = extent->solar_elevation[t];
 
@@ -270,7 +270,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         result[t].longitude = 0.0;
         result[t].distance = extent->segment_distance[t];
     }
-    else if(parms->phoreal.geoloc == RqstParms::PHOREAL_CENTER)
+    else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
     {
         /* Calculate Sums */
         double delta_time_min = DBL_MAX, delta_time_max = -DBL_MAX;
@@ -296,7 +296,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         result[t].longitude = (longitude_min + longitude_max) / 2.0;
         result[t].distance = ((distance_min + distance_max) / 2.0) + extent->segment_distance[t];
     }
-    else if(parms->phoreal.geoloc == RqstParms::PHOREAL_MEAN)
+    else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEAN)
     {
         /* Calculate Sums */
         double sum_delta_time = 0.0;
@@ -317,7 +317,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         result[t].longitude = sum_longitude / num_ph;
         result[t].distance = sum_distance / num_ph;
     }
-    else if(parms->phoreal.geoloc == RqstParms::PHOREAL_MEDIAN)
+    else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
     {
         uint32_t center_ph = num_ph / 2;
         if(num_ph == 0) // No Photons
@@ -346,8 +346,8 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
     {
-        result[t].landcover = RqstParms::INVALID_FLAG;
-        result[t].snowcover = RqstParms::INVALID_FLAG;
+        result[t].landcover = Icesat2Parms::INVALID_FLAG;
+        result[t].snowcover = Icesat2Parms::INVALID_FLAG;
     }
     else
     {
@@ -482,7 +482,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
         waveform_t* data = (waveform_t*)waverec.getRecordData();
-        data->extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;
+        data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;
         for(int b = 0; b < num_bins; b++)

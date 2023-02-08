@@ -47,7 +47,7 @@
 
 #include "GTArray.h"
 #include "GTDArray.h"
-#include "RqstParms.h"
+#include "Icesat2Parms.h"
 
 /******************************************************************************
  * ATL03 READER
@@ -108,20 +108,20 @@ class Atl03Reader: public LuaObject
 
         /* Extent Record */
         typedef struct {
-            bool            valid[RqstParms::NUM_PAIR_TRACKS];
+            bool            valid[Icesat2Parms::NUM_PAIR_TRACKS];
             uint8_t         reference_pair_track; // 1, 2, or 3
             uint8_t         spacecraft_orientation; // sc_orient_t
             uint16_t        reference_ground_track_start;
             uint16_t        cycle_start;
             uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
-            uint32_t        segment_id[RqstParms::NUM_PAIR_TRACKS];
-            double          segment_distance[RqstParms::NUM_PAIR_TRACKS];
-            double          extent_length[RqstParms::NUM_PAIR_TRACKS]; // meters
-            double          spacecraft_velocity[RqstParms::NUM_PAIR_TRACKS]; // meters per second
-            double          background_rate[RqstParms::NUM_PAIR_TRACKS]; // PE per second
-            float           solar_elevation[RqstParms::NUM_PAIR_TRACKS];
-            uint32_t        photon_count[RqstParms::NUM_PAIR_TRACKS];
-            uint32_t        photon_offset[RqstParms::NUM_PAIR_TRACKS];
+            uint32_t        segment_id[Icesat2Parms::NUM_PAIR_TRACKS];
+            double          segment_distance[Icesat2Parms::NUM_PAIR_TRACKS];
+            double          extent_length[Icesat2Parms::NUM_PAIR_TRACKS]; // meters
+            double          spacecraft_velocity[Icesat2Parms::NUM_PAIR_TRACKS]; // meters per second
+            double          background_rate[Icesat2Parms::NUM_PAIR_TRACKS]; // PE per second
+            float           solar_elevation[Icesat2Parms::NUM_PAIR_TRACKS];
+            uint32_t        photon_count[Icesat2Parms::NUM_PAIR_TRACKS];
+            uint32_t        photon_offset[Icesat2Parms::NUM_PAIR_TRACKS];
             photon_t        photons[]; // zero length field
         } extent_t;
 
@@ -142,7 +142,7 @@ class Atl03Reader: public LuaObject
             uint64_t        extent_id;
             uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
-            uint32_t        num_elements[RqstParms::NUM_PAIR_TRACKS];
+            uint32_t        num_elements[Icesat2Parms::NUM_PAIR_TRACKS];
             uint8_t         data[];
         } anc_photon_t;
 
@@ -197,13 +197,13 @@ class Atl03Reader: public LuaObject
                 GTArray<double>     segment_lon;
                 GTArray<int32_t>    segment_ph_cnt;
 
-                bool*               inclusion_mask[RqstParms::NUM_PAIR_TRACKS];
-                bool*               inclusion_ptr[RqstParms::NUM_PAIR_TRACKS];
+                bool*               inclusion_mask[Icesat2Parms::NUM_PAIR_TRACKS];
+                bool*               inclusion_ptr[Icesat2Parms::NUM_PAIR_TRACKS];
 
-                long                first_segment[RqstParms::NUM_PAIR_TRACKS];
-                long                num_segments[RqstParms::NUM_PAIR_TRACKS];
-                long                first_photon[RqstParms::NUM_PAIR_TRACKS];
-                long                num_photons[RqstParms::NUM_PAIR_TRACKS];
+                long                first_segment[Icesat2Parms::NUM_PAIR_TRACKS];
+                long                num_segments[Icesat2Parms::NUM_PAIR_TRACKS];
+                long                first_photon[Icesat2Parms::NUM_PAIR_TRACKS];
+                long                num_photons[Icesat2Parms::NUM_PAIR_TRACKS];
         };
 
         /* Atl03 Data Subclass */
@@ -255,10 +255,10 @@ class Atl03Reader: public LuaObject
                 SafeString          resource;
 
                 /* Generated Data */
-                uint8_t*            gt[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
-                float*              relief[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
-                uint8_t*            landcover[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
-                uint8_t*            snowcover[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
+                uint8_t*            gt[Icesat2Parms::NUM_PAIR_TRACKS]; // [num_photons]
+                float*              relief[Icesat2Parms::NUM_PAIR_TRACKS]; // [num_photons]
+                uint8_t*            landcover[Icesat2Parms::NUM_PAIR_TRACKS]; // [num_photons]
+                uint8_t*            snowcover[Icesat2Parms::NUM_PAIR_TRACKS]; // [num_photons]
 
                 /* Read Data */
                 GTArray<int32_t>    atl08_segment_id;
@@ -286,7 +286,7 @@ class Atl03Reader: public LuaObject
                 uint8_t* operator[] (int t);
 
                 /* Generated Data */
-                uint8_t*            gt[RqstParms::NUM_PAIR_TRACKS]; // [num_photons]
+                uint8_t*            gt[Icesat2Parms::NUM_PAIR_TRACKS]; // [num_photons]
         };
 
         /* Track State Subclass */
@@ -314,7 +314,7 @@ class Atl03Reader: public LuaObject
                 ~TrackState         (void);
                 track_state_t&      operator[] (int t);
 
-                track_state_t       gt[RqstParms::NUM_PAIR_TRACKS];
+                track_state_t       gt[Icesat2Parms::NUM_PAIR_TRACKS];
                 double              extent_length;
         };
 
@@ -329,7 +329,7 @@ class Atl03Reader: public LuaObject
          *--------------------------------------------------------------------*/
 
         bool                active;
-        Thread*             readerPid[RqstParms::NUM_TRACKS];
+        Thread*             readerPid[Icesat2Parms::NUM_TRACKS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
@@ -339,7 +339,7 @@ class Atl03Reader: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        RqstParms*          parms;
+        Icesat2Parms*          parms;
         bool                flatten;
         stats_t             stats;
 
@@ -355,7 +355,7 @@ class Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator=true, bool _flatten=false);
+                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true, bool _flatten=false);
                             ~Atl03Reader            (void);
 
         static void*        subsettingThread        (void* parm);
@@ -364,8 +364,8 @@ class Atl03Reader: public LuaObject
         uint32_t            calculateSegmentId      (int t, TrackState& state, Atl03Data& atl03);
         bool                sendExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
         bool                sendFlatRecord          (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
-        bool                sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
-        bool                sendAncillaryPhRecords  (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
+        bool                sendAncillaryPhRecords  (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
         bool                postRecord              (RecordObject* record, stats_t* local_stats);
         void                parseResource           (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

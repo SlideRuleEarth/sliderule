@@ -144,12 +144,12 @@ const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::luaCreate (lua_State* L)
 {
-    RqstParms* parms = NULL;
+    Icesat2Parms* parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = (RqstParms*)getLuaObject(L, 2, RqstParms::OBJECT_TYPE);
+        parms = (Icesat2Parms*)getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE);
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
@@ -187,7 +187,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, RqstParms* _parms):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(outq_name);
@@ -237,7 +237,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 {
     (void)key;
 
-    result_t result[RqstParms::NUM_PAIR_TRACKS];
+    result_t result[Icesat2Parms::NUM_PAIR_TRACKS];
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Bump Statistics */
@@ -245,7 +245,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
 
     /* Execute Algorithm Stages */
     initializationStage(extent, result); // allocates photons[]
-    if(parms->stages[RqstParms::STAGE_LSF]) iterativeFitStage(extent, result);
+    if(parms->stages[Icesat2Parms::STAGE_LSF]) iterativeFitStage(extent, result);
     postResult(result); // deallocates memory
 
     /* Return Status */
@@ -277,14 +277,14 @@ bool Atl06Dispatch::processTermination (void)
 void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t* result)
 {
     /* Clear Results */
-    LocalLib::set(result, 0, sizeof(result_t) * RqstParms::NUM_PAIR_TRACKS);
+    LocalLib::set(result, 0, sizeof(result_t) * Icesat2Parms::NUM_PAIR_TRACKS);
 
     /* Initialize Results */
     int first_photon = 0;
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Elevation Attributes */
-        result[t].elevation.extent_id = extent->extent_id | RqstParms::EXTENT_ID_ELEVATION | t;
+        result[t].elevation.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
         result[t].elevation.segment_id = extent->segment_id[t];
         result[t].elevation.rgt = extent->reference_ground_track_start;
         result[t].elevation.cycle = extent->cycle_start;
@@ -304,12 +304,12 @@ void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t
     }
 
     /* Calcualte Beam Numbers */
-    RqstParms::sc_orient_t sc_orient = (RqstParms::sc_orient_t)extent->spacecraft_orientation;
-    RqstParms::track_t track = (RqstParms::track_t)extent->reference_pair_track;
-    result[RqstParms::RPT_L].elevation.spot = RqstParms::getSpotNumber(sc_orient, track, RqstParms::RPT_L);
-    result[RqstParms::RPT_R].elevation.spot = RqstParms::getSpotNumber(sc_orient, track, RqstParms::RPT_R);
-    result[RqstParms::RPT_L].elevation.gt = RqstParms::getGroundTrack(sc_orient, track, RqstParms::RPT_L);
-    result[RqstParms::RPT_R].elevation.gt = RqstParms::getGroundTrack(sc_orient, track, RqstParms::RPT_R);
+    Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
+    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->reference_pair_track;
+    result[Icesat2Parms::RPT_L].elevation.spot = Icesat2Parms::getSpotNumber(sc_orient, track, Icesat2Parms::RPT_L);
+    result[Icesat2Parms::RPT_R].elevation.spot = Icesat2Parms::getSpotNumber(sc_orient, track, Icesat2Parms::RPT_R);
+    result[Icesat2Parms::RPT_L].elevation.gt = Icesat2Parms::getGroundTrack(sc_orient, track, Icesat2Parms::RPT_L);
+    result[Icesat2Parms::RPT_R].elevation.gt = Icesat2Parms::getGroundTrack(sc_orient, track, Icesat2Parms::RPT_R);
 }
 
 /*----------------------------------------------------------------------------
@@ -321,7 +321,7 @@ void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t
 void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* result)
 {
     /* Process Tracks */
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Check Valid Extent */
         if(extent->valid[t] && result[t].elevation.photon_count > 0)
@@ -544,7 +544,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* 
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::postResult (result_t* result)
 {
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Pull Out Elevation */
         elevation_t* elevation = NULL;

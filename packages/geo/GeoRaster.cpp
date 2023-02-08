@@ -327,14 +327,6 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     bzero(&endDate, sizeof(TimeLib::gmt_time_t));
     urlFilter = false;
     url.clear();
-
-#warning REMOVE ME, DEBUG ONLY TO BE GONE.........
-{
-    //  An example of raster filter URL for running arcticdem/syshests/arcticdem_aws_strips_perf.lua
-    // The code uses path: "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n66w150/SETSM_s2s041_WV01_20161024_1020010057121800_1020010055612A00_2m_lsf_seg1_dem.tif");
-    // Will search for substring
-}
-
 }
 
 
