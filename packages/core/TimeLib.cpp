@@ -38,6 +38,7 @@
 #include "EventLib.h"
 #include "List.h"
 #include "OsApi.h"
+#include <cmath>
 
 /******************************************************************************
  * STATIC DATA
@@ -671,7 +672,7 @@ int TimeLib::getleapms(int64_t current_time, int64_t start_time)
 }
 
 /*----------------------------------------------------------------------------
- * getleapms
+ * getMonthName
  *----------------------------------------------------------------------------*/
 const char* TimeLib::getMonthName (int month)
 {
@@ -684,6 +685,19 @@ const char* TimeLib::getMonthName (int month)
     {
         return NULL;
     }
+}
+
+
+/*----------------------------------------------------------------------------
+ * gmtinrange
+ *----------------------------------------------------------------------------*/
+bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end)
+{
+    double gpsTime  = static_cast<double>(TimeLib::gmt2gpstime(gmt_time));
+    double gpsStart = static_cast<double>(TimeLib::gmt2gpstime(gmt_start));
+    double gpsEnd   = static_cast<double>(TimeLib::gmt2gpstime(gmt_end));
+
+   return (std::isgreaterequal(gpsTime, gpsStart) && std::islessequal(gpsTime, gpsEnd));
 }
 
 /******************************************************************************

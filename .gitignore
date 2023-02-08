@@ -39,3 +39,4 @@ stage/
 .cookies
 cscope.*
 *.log
+.clangd/

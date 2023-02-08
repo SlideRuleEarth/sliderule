@@ -321,6 +321,20 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
 
+    /* To be set from params ...*/
+    temporalFilter = false;
+    bzero(&startDate, sizeof(TimeLib::gmt_time_t));
+    bzero(&endDate, sizeof(TimeLib::gmt_time_t));
+    urlFilter = false;
+    url.clear();
+
+#warning REMOVE ME, DEBUG ONLY TO BE GONE.........
+{
+    //  An example of raster filter URL for running arcticdem/syshests/arcticdem_aws_strips_perf.lua
+    // The code uses path: "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n66w150/SETSM_s2s041_WV01_20161024_1020010057121800_1020010055612A00_2m_lsf_seg1_dem.tif");
+    // Will search for substring
+}
+
 }
 
 
@@ -651,6 +665,20 @@ void GeoRaster::readPixel(Raster *raster)
     }
 }
 
+
+/*----------------------------------------------------------------------------
+ * filterRasters
+ *----------------------------------------------------------------------------*/
+bool GeoRaster::filterRasters(const raster_info_t& rinfo)
+{
+    if(temporalFilter && !TimeLib::gmtinrange(rinfo.gmtDate, startDate, endDate))
+        return false;
+
+    if(urlFilter && (rinfo.fileName.find(url) == std::string::npos))
+        return false;
+
+    return true;
+}
 
 /*----------------------------------------------------------------------------
  * containsWindow
@@ -989,6 +1017,8 @@ void GeoRaster::updateCache(OGRPoint& p)
         raster_info_t &rinfo   = rastersList->get(i);
         const char* rasterFile = rinfo.fileName.c_str();
         const char* auxFile    = rinfo.auxFileName.c_str();;
+
+        if(!filterRasters(rinfo)) continue;
 
         /* For now code supports only one auxiliary raster */
         const char* keys[2] = {rasterFile, auxFile};
