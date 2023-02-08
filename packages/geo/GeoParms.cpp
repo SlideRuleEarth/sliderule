@@ -116,8 +116,7 @@ GeoParms::GeoParms (lua_State* L, int index):
  *----------------------------------------------------------------------------*/
 GeoParms::~GeoParms (void)
 {
-    if(url_substring) delete [] url_substring;
-    if(asset) asset->releaseLuaObject();
+    cleanup();
 }
 
 /*----------------------------------------------------------------------------
@@ -125,99 +124,129 @@ GeoParms::~GeoParms (void)
  *----------------------------------------------------------------------------*/
 void GeoParms::fromLua (lua_State* L, int index)
 {
-    /* Must be a Table */
-    if(lua_istable(L, index))
+    /* Reset Object */
+    cleanup();
+
+    /* Populate Object */
+    try
     {
-        bool field_provided = false;
-
-        /* Sampling Algorithm */
-        lua_getfield(L, index, SAMPLING_ALGO);
-        const char* algo_str = LuaObject::getLuaString(L, -1, true, NULL);
-        if(algo_str)
+        /* Must be a Table */
+        if(lua_istable(L, index))
         {
-            sampling_algo = str2algo(algo_str);
-            mlog(DEBUG, "Setting %s to %d", SAMPLING_ALGO, sampling_algo);
+            bool field_provided = false;
+
+            /* Sampling Algorithm */
+            lua_getfield(L, index, SAMPLING_ALGO);
+            const char* algo_str = LuaObject::getLuaString(L, -1, true, NULL);
+            if(algo_str)
+            {
+                sampling_algo = str2algo(algo_str);
+                mlog(DEBUG, "Setting %s to %d", SAMPLING_ALGO, sampling_algo);
+            }
+            lua_pop(L, 1);
+
+            /* Sampling Radius */
+            lua_getfield(L, index, SAMPLING_RADIUS);
+            sampling_radius = (int)LuaObject::getLuaInteger(L, -1, true, sampling_radius, &field_provided);
+            if(sampling_radius < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid sampling radius: %d:", sampling_radius);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", SAMPLING_RADIUS, (int)sampling_radius);
+            lua_pop(L, 1);
+
+            /* Zonal Statistics */
+            lua_getfield(L, index, ZONAL_STATS);
+            zonal_stats = LuaObject::getLuaBoolean(L, -1, true, zonal_stats, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", ZONAL_STATS, (int)zonal_stats);
+            lua_pop(L, 1);
+
+            /* Auxiliary Files */
+            lua_getfield(L, index, AUXILIARY_FILES);
+            auxiliary_files = LuaObject::getLuaBoolean(L, -1, true, auxiliary_files, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", AUXILIARY_FILES, (int)auxiliary_files);
+            lua_pop(L, 1);
+
+            /* Start Time */
+            lua_getfield(L, index, START_TIME);
+            const char* t0_str = LuaObject::getLuaString(L, -1, true, NULL);
+            if(t0_str)
+            {
+                int64_t gps = TimeLib::str2gpstime(t0_str);
+                if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t0_str);
+                start_time = TimeLib::gps2gmttime(gps);
+                filter_time = true;
+                TimeLib::date_t start_date = TimeLib::gmt2date(start_time);
+                mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", START_TIME, start_date.year, start_date.month, start_date.day, start_time.hour, start_time.minute, start_time.second);
+            }
+            lua_pop(L, 1);
+
+            /* Stop Time */
+            lua_getfield(L, index, STOP_TIME);
+            const char* t1_str = LuaObject::getLuaString(L, -1, true, NULL);
+            if(t1_str)
+            {
+                int64_t gps = TimeLib::str2gpstime(t1_str);
+                if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t0_str);
+                stop_time = TimeLib::gps2gmttime(gps);
+                filter_time = true;
+                TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
+                mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
+            }
+            lua_pop(L, 1);
+
+            /* Start and Stop Time Special Cases */
+            if(t0_str && !t1_str) // only start time supplied
+            {
+                int64_t now = TimeLib::gettimems();
+                stop_time = TimeLib::gps2gmttime(now);
+                TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
+                mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
+            }
+            else if(!t0_str && t1_str) // only stop time supplied
+            {
+                int64_t gps_epoch = 0;
+                start_time = TimeLib::gps2gmttime(gps_epoch);
+                TimeLib::date_t start_date = TimeLib::gmt2date(start_time);
+                mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", START_TIME, start_date.year, start_date.month, start_date.day, start_time.hour, start_time.minute, start_time.second);
+            }
+
+            /* URL Substring Filter */
+            lua_getfield(L, index, URL_SUBSTRING);
+            url_substring = LuaObject::getLuaString(L, -1, true, NULL);
+            if(url_substring) mlog(DEBUG, "Setting %s to %s", URL_SUBSTRING, url_substring);
+            lua_pop(L, 1);
+
+            /* Asset */
+            lua_getfield(L, index, ASSET);
+            const char* asset_name = LuaObject::getLuaString(L, -1, true, NULL);
+            if(asset_name)
+            {
+                asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
+                mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
+            }
+            lua_pop(L, 1);
         }
-        lua_pop(L, 1);
+    }
+    catch(const RunTimeException& e)
+    {
+        cleanup();
+        throw;
+    }
+}
 
-        /* Sampling Radius */
-        lua_getfield(L, index, SAMPLING_RADIUS);
-        sampling_radius = (int)LuaObject::getLuaInteger(L, -1, true, sampling_radius, &field_provided));
-        if(sampling_radius < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid sampling radius: %d:", sampling_radius);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", SAMPLING_RADIUS, (int)sampling_radius);
-        lua_pop(L, 1);
+/*----------------------------------------------------------------------------
+ * cleanup
+ *----------------------------------------------------------------------------*/
+void GeoParms::cleanup (void)
+{
+    if(url_substring)
+    {
+        delete [] url_substring;
+        url_substring = NULL;
+    }
 
-        /* Zonal Statistics */
-        lua_getfield(L, index, ZONAL_STATS);
-        zonal_stats = LuaObject::getLuaBoolean(L, -1, true, zonal_stats, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", ZONAL_STATS, (int)zonal_stats);
-        lua_pop(L, 1);
-
-        /* Auxiliary Files */
-        lua_getfield(L, index, AUXILIARY_FILES);
-        auxiliary_files = LuaObject::getLuaBoolean(L, -1, true, auxiliary_files, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", AUXILIARY_FILES, (int)auxiliary_files);
-        lua_pop(L, 1);
-
-        /* Start Time */
-        lua_getfield(L, index, START_TIME);
-        const char* t0_str = LuaObject::getLuaString(L, -1, true, NULL);
-        if(t0_str)
-        {
-            int64_t gps = TimeLib::str2gpstime(t0_str);
-            if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t0_str);
-            start_time = TimeLib::gps2gmttime(gps);
-            filter_time = true;
-            TimeLib::date_t start_date = TimeLib::gmt2date(gmt);
-            mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", START_TIME, start_date.year, start_date.month, start_date.day, start_time.hour, start_time.minute, start_time.second);
-        }
-        lua_pop(L, 1);
-
-        /* Stop Time */
-        lua_getfield(L, index, STOP_TIME);
-        const char* t1_str = LuaObject::getLuaString(L, -1, true, NULL);
-        if(t1_str)
-        {
-            int64_t gps = TimeLib::str2gpstime(t1_str);
-            if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t0_str);
-            stop_time = TimeLib::gps2gmttime(gps);
-            filter_time = true;
-            TimeLib::date_t stop_date = TimeLib::gmt2date(gmt);
-            mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
-        }
-        lua_pop(L, 1);
-
-        /* Start and Stop Time Special Cases */
-        if(t0_str && !t1_str) // only start time supplied
-        {
-            int64_t now = TimeLib::gettimems();
-            stop_time = TimeLib::gps2gmttime(now);
-            TimeLib::date_t stop_date = TimeLib::gmt2date(gmt);
-            mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
-        }
-        else if(!t0_str && t1_str) // only stop time supplied
-        {
-            int64_t gps_epoch = 0;
-            start_time = TimeLib::gps2gmttime(gps_epoch);
-            TimeLib::date_t start_date = TimeLib::gmt2date(gmt);
-            mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", START_TIME, start_date.year, start_date.month, start_date.day, start_time.hour, start_time.minute, start_time.second);
-        }
-
-        /* URL Substring Filter */
-        lua_getfield(L, index, URL_SUBSTRING);
-        url_substring = LuaObject::getLuaString(L, -1, true, NULL);
-        if(url_substring) mlog(DEBUG, "Setting %s to %s", URL_SUBSTRING, url_substring);
-        lua_pop(L, 1);
-
-        /* Asset */
-        lua_getfield(L, index, ASSET);
-        const char* asset_name = LuaObject::getLuaString(L, -1, true, NULL);
-        if(asset_name)
-        {
-            asset = LuaObject::getLuaObjectByName(name, Asset::OBJECT_TYPE);
-            mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
-        }
-        lua_pop(L, 1);
+    if(asset)
+    {
+        asset->releaseLuaObject();
+        asset = NULL;
     }
 }
 

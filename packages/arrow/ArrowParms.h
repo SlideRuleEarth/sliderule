@@ -106,6 +106,9 @@ class ArrowParms: public LuaObject
         *--------------------------------------------------------------------*/
 
         static int  luaCreate           (lua_State* L);
+                    ArrowParms          (lua_State* L, int index);
+                    ~ArrowParms         (void);
+        void        fromLua             (lua_State* L, int index);
 
     private:
 
@@ -113,10 +116,7 @@ class ArrowParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-                    ArrowParms          (lua_State* L, int index);
-                    ~ArrowParms         (void);
-
-        void        fromLua             (lua_State* L, int index);
+        void        cleanup             (void);
         format_t    str2outputformat    (const char* fmt_str);
         static int  luaIsNative         (lua_State* L);
         static int  luaIsFeather        (lua_State* L);

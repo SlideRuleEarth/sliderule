@@ -96,7 +96,7 @@ int GeoRaster::luaCreate( lua_State* L )
     {
         /* Get Parameters */
         const char* raster_name = getLuaString(L, 1);
-                    _parms      = getLuaObject(L, 2, GeoParms::OBJECT_TYPE);
+                    _parms      = (GeoParms*)getLuaObject(L, 2, GeoParms::OBJECT_TYPE);
 
         /* Get Factory */
         factory_t _create = NULL;

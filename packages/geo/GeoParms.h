@@ -60,10 +60,6 @@ class GeoParms: public LuaObject
     public:
 
         /*--------------------------------------------------------------------
-        * Typedefs
-        *--------------------------------------------------------------------*/
-
-        /*--------------------------------------------------------------------
         * Constants
         *--------------------------------------------------------------------*/
 
@@ -109,7 +105,10 @@ class GeoParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        static int  luaCreate           (lua_State* L);
+        static int  luaCreate   (lua_State* L);
+                    GeoParms    (lua_State* L, int index);
+                    ~GeoParms   (void);
+        void        fromLua     (lua_State* L, int index);
 
     private:
 
@@ -117,10 +116,7 @@ class GeoParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-                            GeoParms    (lua_State* L, int index);
-                            ~GeoParms   (void);
-
-        void                fromLua     (lua_State* L, int index);
+        void                cleanup     (void);
         GDALRIOResampleAlg  str2algo    (const char* str);
 };
 
