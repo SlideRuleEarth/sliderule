@@ -39,6 +39,7 @@
 #include "LuaObject.h"
 #include "OsApi.h"
 #include "TimeLib.h"
+#include "GeoParms.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
@@ -87,16 +88,6 @@ class GeoRaster: public LuaObject
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 50;
         static const int   DEFAULT_EPSG = 4326;
-
-        static const char* NEARESTNEIGHBOUR_ALGO;
-        static const char* BILINEAR_ALGO;
-        static const char* CUBIC_ALGO;
-        static const char* CUBICSPLINE_ALGO;
-        static const char* LANCZOS_ALGO;
-        static const char* AVERAGE_ALGO;
-        static const char* MODE_ALGO;
-        static const char* GAUSS_ALGO;
-        static const char* ZONALSTATS_ALGO;
 
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
@@ -213,8 +204,7 @@ class GeoRaster: public LuaObject
         } reader_t;
 
 
-        typedef GeoRaster* (*factory_t) (lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                         const bool zonal_stats, const bool auxiliary_files);
+        typedef GeoRaster* (*factory_t) (lua_State* L, GeoParms* _parms);
 
         /*--------------------------------------------------------------------
          * Methods
@@ -225,8 +215,8 @@ class GeoRaster: public LuaObject
         static int     luaCreate       (lua_State* L);
         static bool    registerRaster  (const char* _name, factory_t create);
         int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
-        inline bool    hasZonalStats   (void) { return zonalStats; }
-        inline bool    hasAuxiliary    (void) { return useAuxFiles; }
+        inline bool    hasZonalStats   (void) { return parms->zonal_stats; }
+        inline bool    hasAuxiliary    (void) { return parms->auxiliary_files; }
         const char*    getUUID         (char* uuid_str);
         virtual       ~GeoRaster       (void);
         inline const Dictionary<uint32_t>& fileDictGet(void) {return fileDict;}
@@ -237,8 +227,7 @@ class GeoRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster             (lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                              const bool zonal_stats=false, const bool auxiliary_files=false);
+                        GeoRaster             (lua_State* L, GeoParms* _parms);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
         bool            filterRasters         (const raster_info_t& rinfo);
@@ -268,11 +257,17 @@ class GeoRaster: public LuaObject
         List<raster_info_t>*  rastersList;
         GeoIndex              geoIndex;
         CoordTransform        cord;
-        uint32_t              samplingRadius;
-        GDALRIOResampleAlg    sampleAlg;
+        GeoParms*             parms;
         Dictionary<Raster*>   rasterDict;
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int DATA_TO_SAMPLE = 0;
+        static const int DATA_SAMPLED = 1;
 
         /*--------------------------------------------------------------------
          * Data
@@ -284,15 +279,6 @@ class GeoRaster: public LuaObject
         Mutex        samplingMutex;
         reader_t*    rasterRreader;
         uint32_t     readerCount;
-        bool         zonalStats;
-        bool         useAuxFiles;
-
-        bool         temporalFilter;
-        TimeLib::gmt_time_t startDate;
-        TimeLib::gmt_time_t endDate;
-
-        bool         urlFilter;
-        std::string  url;
 
         Dictionary<uint32_t> fileDict;
 

@@ -67,9 +67,8 @@ void VrtRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                     const bool zonal_stats, const bool auxiliary_files):
-    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files)
+VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms):
+    GeoRaster(L, _parms)
 {
     band = NULL;
     bzero(invGeot, sizeof(invGeot));

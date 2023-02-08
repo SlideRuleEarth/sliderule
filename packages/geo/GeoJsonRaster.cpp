@@ -151,7 +151,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, double _cellsize):
-    VrtRaster(L, NEARESTNEIGHBOUR_ALGO, 0, false, false)
+    VrtRaster(L, _parms)
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool rasterCreated = false;
