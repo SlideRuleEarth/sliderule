@@ -18,7 +18,7 @@ local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 for i = 1, 2 do
 
     local demType = demTypes[i];
-    local dem = geo.raster(demType, geo.parms({algorithm="NearestNeighbour", radius=0}))
+    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
 
     runner.check(dem ~= nil)
 
@@ -74,7 +74,7 @@ for i = 1, 2 do
 
     local demType = demTypes[i];
     local samplingRadius = 30
-    local dem = geo.raster(demType, geo.parms({algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true}))
+    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true}))
 
     runner.check(dem ~= nil)
 

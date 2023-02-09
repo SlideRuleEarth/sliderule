@@ -446,25 +446,27 @@ void GeoRaster::sampleRasters(void)
     /* Wait and update each raster when it is done */
     for (int j=0; j<signaledReaders; j++)
     {
-        raster = NULL;
-
         /* Wait for reader to finish sampling */
         reader_t *reader = &rasterRreader[j];
         reader->sync->lock();
         {
             while (reader->raster != NULL)
                 reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
-            raster = reader->raster;
         }
         reader->sync->unlock();
+    }
 
-        /* Update dictionary of used raster files and auxualiary data */
+    /* Update dictionary of used raster files and auxualiary data */
+    key = rasterDict.first(&raster);
+    while (key != NULL)
+    {
         if (!raster->isAuxuliary && raster->enabled && raster->sampled)
         {
             std::string fileName = raster->fileName.substr(strlen("/vsis3/"));
             raster->sample.fileId = fileDictAdd(fileName);
             raster->sample.flags = raster->getPeerValue();
         }
+        key = rasterDict.next(&raster);
     }
 }
 
@@ -1062,7 +1064,7 @@ void GeoRaster::createThreads(void)
             reader_t *reader = &rasterRreader[readerCount];
             reader->raster = NULL;
             reader->run = true;
-            reader->sync = new Cond();
+            reader->sync = new Cond(NUM_SYNC_SIGNALS);
             reader->obj = this;
             reader->thread = new Thread(readingThread, reader);
             readerCount++;

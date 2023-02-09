@@ -268,6 +268,7 @@ class GeoRaster: public LuaObject
 
         static const int DATA_TO_SAMPLE = 0;
         static const int DATA_SAMPLED = 1;
+        static const int NUM_SYNC_SIGNALS = 2;
 
         /*--------------------------------------------------------------------
          * Data
