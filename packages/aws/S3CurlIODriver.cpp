@@ -39,6 +39,8 @@
 
 #include <curl/curl.h>
 #include <openssl/hmac.h>
+#include <openssl/sha.h>
+#include <openssl/evp.h>
 
 
 /******************************************************************************
@@ -68,6 +70,25 @@ typedef size_t (*write_cb_t)(void*, size_t, size_t, void*);
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * sha256hash
+ *----------------------------------------------------------------------------*/
+#if 0
+#define SHA256_HEX_STR_SIZE ((SHA256_DIGEST_LENGTH * 2) + 1)
+static void sha256hash(const void* data, size_t len, char* dst)
+{
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    unsigned int hash_size = 0;
+    EVP_MD_CTX* context = EVP_MD_CTX_new();
+    if(EVP_DigestInit_ex(context, EVP_sha256(), NULL))
+    if(EVP_DigestUpdate(context, data, len))
+    if(EVP_DigestFinal_ex(context, hash, &hash_size))
+    assert(hash_size == SHA256_DIGEST_LENGTH);
+    EVP_MD_CTX_free(context);
+    StringLib::b16encode(hash, SHA256_DIGEST_LENGTH, true, dst);
+}
+#endif
 
 /*----------------------------------------------------------------------------
  * curlWriteFixed
@@ -124,9 +145,9 @@ static size_t curlReadFile(void* buffer, size_t size, size_t nmemb, void *userp)
 }
 
 /*----------------------------------------------------------------------------
- * buildReadHeaders
+ * buildReadHeadersV2
  *----------------------------------------------------------------------------*/
-static headers_t buildReadHeaders (const char* bucket, const char* key, CredentialStore::Credential* credentials)
+static headers_t buildReadHeadersV2 (const char* bucket, const char* key, CredentialStore::Credential* credentials)
 {
     /* Initial HTTP Header List */
     struct curl_slist* headers = NULL;
@@ -159,24 +180,31 @@ static headers_t buildReadHeaders (const char* bucket, const char* key, Credenti
 }
 
 /*----------------------------------------------------------------------------
- * buildWriteHeaders
+ * buildWriteHeadersV2
  *----------------------------------------------------------------------------*/
-static headers_t buildWriteHeaders (const char* bucket, const char* key, CredentialStore::Credential* credentials)
+static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials, long content_length)
 {
+    (void)region;
+
     /* Initial HTTP Header List */
     struct curl_slist* headers = NULL;
 
-    /* Build Date String and Header */
+    /* Build Date String and Date Header */
     TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
     TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     SafeString dateHeader("Date: %s", date.getString());
     headers = curl_slist_append(headers, dateHeader.getString());
 
-    /* Build Content Type String and Header */
+    /* Content Headers */
     SafeString contentType("application/octet-stream");
     SafeString contentTypeHeader("Content-Type: %s", contentType.getString());
     headers = curl_slist_append(headers, contentTypeHeader.getString());
+    SafeString contentLengthHeader("Content-Length: %ld", content_length);
+    headers = curl_slist_append(headers, contentLengthHeader.getString());
+
+    /* Initialize and Remove Unwanted Headers */
+    headers = curl_slist_append(headers, "Transfer-Encoding:");
 
     if(credentials && credentials->provided)
     {
@@ -198,6 +226,88 @@ static headers_t buildWriteHeaders (const char* bucket, const char* key, Credent
     return headers;
 }
 
+/*----------------------------------------------------------------------------
+ * buildWriteHeadersV4
+ *
+ * Does not work, the response from AWS is:
+ *  "The AWS Access Key Id you provided does not exist in our records."
+ *
+ * Looks like the issue is related to how to provide the session token
+ * when using temporary credentials
+ *----------------------------------------------------------------------------*/
+#if 0
+static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials, long content_length)
+{
+    /* Must Supply Credentials */
+    if(!credentials || !credentials->provided)
+    {
+        return NULL;
+    }
+
+    /* Build Date String */
+    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    SafeString timestamp("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+
+    /* Build Canonical Request */
+    char canonical_request_hash[SHA256_HEX_STR_SIZE];
+    SafeString canonical_request("PUT\n/%s\n\ncontent-length:%ld\ndate:%s\nhost:%s.s3.amazonaws.com\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\ncontent-length;date;host;x-amz-content-sha256;x-amz-date;x-amz-security-token\nUNSIGNED-PAYLOAD",
+                                    key, content_length, timestamp.getString(), bucket, timestamp.getString(), credentials->sessionToken);
+    sha256hash(canonical_request.getString(), canonical_request.getLength() - 1, canonical_request_hash);
+
+    /* Build String To Sign */
+    SafeString date("%04d%02d%02d", gmt_date.year, gmt_date.month, gmt_date.day);
+    SafeString scope("%s/%s/s3/aws4_request", date.getString(), region);
+    SafeString str2sign("AWS4-HMAC-SHA256\n%s\n%s\n%s", timestamp.getString(), scope.getString(), canonical_request_hash);
+
+    /* Calculate Signature */
+    SafeString secret_access_key_str2sign("AWS4%s", credentials->secretAccessKey);
+
+    unsigned char date_key[EVP_MAX_MD_SIZE];
+    unsigned int date_key_size = EVP_MAX_MD_SIZE; // set below with actual size
+    HMAC(EVP_sha256(), secret_access_key_str2sign.getString(), secret_access_key_str2sign.getLength() - 1, (unsigned char*)date.getString(), date.getLength() - 1, date_key, &date_key_size);
+
+    unsigned char date_region_key[EVP_MAX_MD_SIZE];
+    unsigned int date_region_key_size = EVP_MAX_MD_SIZE; // set below with actual size
+    HMAC(EVP_sha256(), date_key, date_key_size, (unsigned char*)region, StringLib::size(region), date_region_key, &date_region_key_size);
+
+    unsigned char date_region_service_key[EVP_MAX_MD_SIZE];
+    unsigned int date_region_service_key_size = EVP_MAX_MD_SIZE; // set below with actual size
+    HMAC(EVP_sha256(), date_region_key, date_region_key_size, (unsigned char*)"s3", 2, date_region_service_key, &date_region_service_key_size);
+
+    unsigned char signing_key[EVP_MAX_MD_SIZE];
+    unsigned int signing_key_size = EVP_MAX_MD_SIZE; // set below with actual size
+    HMAC(EVP_sha256(), date_region_service_key, date_region_service_key_size, (unsigned char*)"aws4_request", 12, signing_key, &signing_key_size);
+
+    unsigned char signature[EVP_MAX_MD_SIZE];
+    unsigned int signature_size = EVP_MAX_MD_SIZE; // set below with actual size
+    HMAC(EVP_sha256(), signing_key, signing_key_size, (unsigned char*)str2sign.getString(), str2sign.getLength() - 1, signature, &signature_size);
+
+    char signature_hex[SHA256_HEX_STR_SIZE];
+    StringLib::b16encode(signature, signature_size, true, signature_hex);
+
+    /* Initialize and Remove Unwanted Headers */
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Transfer-Encoding:");
+
+    /* Build Headers */
+    SafeString date_hdr("Date: %s", timestamp.getString());
+    headers = curl_slist_append(headers, date_hdr.getString());
+    SafeString content_length_hdr("Content-Length: %ld", content_length);
+    headers = curl_slist_append(headers, content_length_hdr.getString());
+    SafeString auth_hdr("Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,SignedHeaders=content-length;date;host;x-amz-content-sha256;x-amz-date;x-amz-security-token,Signature=%s", credentials->accessKeyId, date.getString(), region, signature_hex);
+    headers = curl_slist_append(headers, auth_hdr.getString());
+    SafeString amz_date_hdr("x-amz-date: %s", timestamp.getString());
+    headers = curl_slist_append(headers, amz_date_hdr.getString());
+    SafeString amz_token_hdr("x-amz-security-token: %s", credentials->sessionToken);
+    headers = curl_slist_append(headers, amz_date_hdr.getString());
+    SafeString amz_content_sha256_hdr("x-amz-content-sha256: %s", "UNSIGNED-PAYLOAD");
+    headers = curl_slist_append(headers, amz_content_sha256_hdr.getString());
+
+    /* Return Headers */
+    return headers;
+}
+#endif
 /*----------------------------------------------------------------------------
  * initializeReadRequest
  *----------------------------------------------------------------------------*/
@@ -286,6 +396,412 @@ Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resour
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     return get(data, size, pos, ioBucket, ioKey, asset->getRegion(), &latestCredentials);
+}
+
+/*----------------------------------------------------------------------------
+ * get - fixed
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+{
+    bool status = false;
+
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
+    /* Build URL */
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+
+    /* Setup Buffer for Callback */
+    fixed_data_t info = {
+        .buffer = data,
+        .size = size,
+        .index = 0
+    };
+
+    /* Issue Get Request */
+    int attempts = ATTEMPTS_PER_REQUEST;
+    bool rqst_complete = false;
+    while(!rqst_complete && (attempts > 0))
+    {
+        /* Build Standard Headers */
+        struct curl_slist* headers = buildReadHeadersV2(bucket, key_ptr, credentials);
+
+        /* Build Range Header */
+        unsigned long start_byte = pos + info.index;
+        unsigned long end_byte = pos + size - info.index - 1;
+        SafeString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
+        headers = curl_slist_append(headers, rangeHeader.getString());
+
+        /* Initialize cURL Request */
+        CURL* curl = initializeReadRequest(url, headers, curlWriteFixed, &info);
+        if(curl)
+        {
+            while(!rqst_complete && (attempts-- > 0))
+            {
+                /* Perform Request */
+                CURLcode res = curl_easy_perform(curl);
+                if(res == CURLE_OK)
+                {
+                    /* Get HTTP Code */
+                    long http_code = 0;
+                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                    if(http_code < 300)
+                    {
+                        /* Request Succeeded */
+                        status = true;
+                    }
+                    else
+                    {
+                        /* Request Failed */
+                        StringLib::printify((char*)info.buffer, info.index);
+                        mlog(INFO, "%s", info.buffer);
+                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                    }
+
+                    /* Get Request Completed */
+                    rqst_complete = true;
+                }
+                else if(info.index > 0)
+                {
+                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
+                    rqst_complete = true;
+                }
+                else if(res == CURLE_OPERATION_TIMEDOUT)
+                {
+                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                }
+                else
+                {
+                    mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                    LocalLib::performIOTimeout();
+                }
+            }
+
+            /* Clean Up cURL */
+            curl_easy_cleanup(curl);
+        }
+        else
+        {
+            /* Decrement Attempts on Failed cURL Initialization */
+            attempts--;
+        }
+
+        /* Clean Up Headers */
+        curl_slist_free_all(headers);
+    }
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL fixed request to S3 failed");
+    }
+
+    /* Return Success */
+    return size;
+}
+
+/*----------------------------------------------------------------------------
+ * get - streaming
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+{
+    /* Initialize Function Parameters */
+    bool status = false;
+    int64_t rsps_size = 0;
+    *data = NULL;
+
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
+    /* Build Headers */
+    struct curl_slist* headers = buildReadHeadersV2(bucket, key_ptr, credentials);
+
+    /* Setup Streaming Data for Callback */
+    List<streaming_data_t> rsps_set;
+
+    /* Build URL */
+    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+
+    /* Initialize cURL Request */
+    bool rqst_complete = false;
+    int attempts = ATTEMPTS_PER_REQUEST;
+    CURL* curl = initializeReadRequest(url, headers, curlWriteStreaming, &rsps_set);
+    if(curl)
+    {
+        while(!rqst_complete && (attempts-- > 0))
+        {
+            /* Perform Request */
+            CURLcode res = curl_easy_perform(curl);
+            if(res == CURLE_OK)
+            {
+                /* Get Response Size */
+                for(int i = 0; i < rsps_set.length(); i++)
+                {
+                    rsps_size += rsps_set[i].size;
+                }
+
+                /* Allocate and Populate Response */
+                int rsps_index = 0;
+                *data = new uint8_t [rsps_size + 1];
+                uint8_t* rsps = *data; // reads easier below
+                for(int i = 0; i < rsps_set.length(); i++)
+                {
+                    LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
+                    rsps_index += rsps_set[i].size;
+                }
+                rsps[rsps_index] = '\0';
+
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code < 300)
+                {
+                    /* Request Succeeded */
+                    status = true;
+                }
+                else
+                {
+                    /* Request Failed */
+                    StringLib::printify((char*)rsps, rsps_size + 1);
+                    mlog(INFO, "%s", (const char*)rsps);
+                    delete [] *data; // clean up memory
+                    *data = NULL;
+                    mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                }
+
+                /* Request Completed */
+                rqst_complete = true;
+            }
+            else if(rsps_set.length() > 0)
+            {
+                mlog(CRITICAL, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
+                rqst_complete = true;
+            }
+            else if(res == CURLE_OPERATION_TIMEDOUT)
+            {
+                mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+            }
+            else
+            {
+                mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                LocalLib::performIOTimeout();
+            }
+        }
+
+        /* Clean Up cURL */
+        curl_easy_cleanup(curl);
+    }
+
+    /* Clean Up Headers */
+    curl_slist_free_all(headers);
+
+    /* Clean Up Response List */
+    for(int i = 0; i < rsps_set.length(); i++)
+    {
+        delete [] rsps_set[i].data;
+    }
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL streaming request to S3 failed");
+    }
+
+    /* Return Success */
+    return rsps_size;
+}
+
+/*----------------------------------------------------------------------------
+ * get - file
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+{
+    bool status = false;
+
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
+    /* Build Headers */
+    struct curl_slist* headers = buildReadHeadersV2(bucket, key_ptr, credentials);
+
+    /* Setup File Data for Callback */
+    file_data_t data;
+    data.size = 0;
+    data.fd = fopen(filename, "w");
+    if(data.fd)
+    {
+        /* Build URL */
+        SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+
+        /* Initialize cURL Request */
+        bool rqst_complete = false;
+        int attempts = ATTEMPTS_PER_REQUEST;
+        CURL* curl = initializeReadRequest(url, headers, curlWriteFile, &data);
+        if(curl)
+        {
+            while(!rqst_complete && (attempts-- > 0))
+            {
+                /* Perform Request */
+                CURLcode res = curl_easy_perform(curl);
+                if(res == CURLE_OK)
+                {
+                    /* Get HTTP Code */
+                    long http_code = 0;
+                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                    if(http_code < 300)
+                    {
+                        /* Request Succeeded */
+                        status = true;
+                    }
+                    else
+                    {
+                        /* Request Failed */
+                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                    }
+
+                    /* Request Completed */
+                    rqst_complete = true;
+                }
+                else if(data.size > 0)
+                {
+                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
+                    rqst_complete = true;
+                }
+                else if(res == CURLE_OPERATION_TIMEDOUT)
+                {
+                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                }
+                else
+                {
+                    mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                    LocalLib::performIOTimeout();
+                }
+            }
+
+            /* Clean Up cURL */
+            curl_easy_cleanup(curl);
+        }
+
+        /* Close File */
+        fclose(data.fd);
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, LocalLib::err2str(errno));
+    }
+
+    /* Clean Up Headers */
+    curl_slist_free_all(headers);
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL file request to S3 failed");
+    }
+
+    /* Return Success */
+    return data.size;
+}
+
+/*----------------------------------------------------------------------------
+ * put - file
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+{
+    bool status = false;
+
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
+    /* Setup File Data for Callback */
+    file_data_t data;
+    data.size = 0;
+    data.fd = fopen(filename, "r");
+    if(data.fd)
+    {
+        /* Get Size of File */
+        fseek(data.fd, 0L, SEEK_END);
+        long content_length = ftell(data.fd);
+        fseek(data.fd, 0L, SEEK_SET);
+
+        /* Build Headers */
+        struct curl_slist* headers = buildWriteHeadersV2(bucket, key_ptr, region, credentials, content_length);
+
+        /* Build URL */
+        SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+
+        /* Initialize cURL Request */
+        bool rqst_complete = false;
+        int attempts = ATTEMPTS_PER_REQUEST;
+        CURL* curl = initializeWriteRequest(url, headers, curlReadFile, &data);
+        if(curl)
+        {
+            while(!rqst_complete && (attempts-- > 0))
+            {
+                /* Perform Request */
+                CURLcode res = curl_easy_perform(curl);
+                if(res == CURLE_OK)
+                {
+                    /* Get HTTP Code */
+                    long http_code = 0;
+                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                    if(http_code < 300)
+                    {
+                        /* Request Succeeded */
+                        status = true;
+                    }
+                    else
+                    {
+                        /* Request Failed */
+                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                    }
+
+                    /* Request Completed */
+                    rqst_complete = true;
+                }
+                else if(data.size > 0)
+                {
+                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
+                    rqst_complete = true;
+                }
+                else if(res == CURLE_OPERATION_TIMEDOUT)
+                {
+                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                }
+                else
+                {
+                    mlog(CRITICAL, "cURL call failed (%d) for put request: %s", res, key_ptr);
+                    LocalLib::performIOTimeout();
+                }
+            }
+
+            /* Clean Up cURL */
+            curl_easy_cleanup(curl);
+        }
+
+        /* Clean Up Headers */
+        curl_slist_free_all(headers);
+
+        /* Close File */
+        fclose(data.fd);
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, LocalLib::err2str(errno));
+    }
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL file request to S3 failed");
+    }
+
+    /* Return Success */
+    return data.size;
 }
 
 /*----------------------------------------------------------------------------
@@ -423,6 +939,49 @@ int S3CurlIODriver::luaRead(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaUpload - s3upload(<bucket>, <key>, <filename>, [<region>], [<asset>])
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaUpload(lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* filename    = LuaObject::getLuaString(L, 3);
+        const char* region      = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* asset_name  = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+
+        /* Get Credentials */
+        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+
+        /* Make Request */
+        int64_t upload_size = put(filename, bucket, key, region, &credentials);
+
+        /* Push Contents */
+        if(upload_size > 0)
+        {
+            lua_pushnumber(L, upload_size);
+            status = true;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to upload %s/%s", bucket, key);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error uploading S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor - for derived classes
  *----------------------------------------------------------------------------*/
 S3CurlIODriver::S3CurlIODriver (const Asset* _asset):
@@ -473,405 +1032,4 @@ S3CurlIODriver::~S3CurlIODriver (void)
      *  into the memory allocated to ioBucket
      */
     if(ioBucket) delete [] ioBucket;
-}
-
-/*----------------------------------------------------------------------------
- * get - fixed
- *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
-{
-    bool status = false;
-
-    /* Massage Key */
-    const char* key_ptr = key;
-    if(key_ptr[0] == '/') key_ptr++;
-
-    /* Build URL */
-    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
-
-    /* Setup Buffer for Callback */
-    fixed_data_t info = {
-        .buffer = data,
-        .size = size,
-        .index = 0
-    };
-
-    /* Issue Get Request */
-    int attempts = ATTEMPTS_PER_REQUEST;
-    bool rqst_complete = false;
-    while(!rqst_complete && (attempts > 0))
-    {
-        /* Build Standard Headers */
-        struct curl_slist* headers = buildReadHeaders(bucket, key_ptr, credentials);
-
-        /* Build Range Header */
-        unsigned long start_byte = pos + info.index;
-        unsigned long end_byte = pos + size - info.index - 1;
-        SafeString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
-        headers = curl_slist_append(headers, rangeHeader.getString());
-
-        /* Initialize cURL Request */
-        CURL* curl = initializeReadRequest(url, headers, curlWriteFixed, &info);
-        if(curl)
-        {
-            while(!rqst_complete && (attempts-- > 0))
-            {
-                /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
-                if(res == CURLE_OK)
-                {
-                    /* Get HTTP Code */
-                    long http_code = 0;
-                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                    if(http_code < 300)
-                    {
-                        /* Request Succeeded */
-                        status = true;
-                    }
-                    else
-                    {
-                        /* Request Failed */
-                        StringLib::printify((char*)info.buffer, info.index);
-                        mlog(INFO, "%s", info.buffer);
-                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
-                    }
-
-                    /* Get Request Completed */
-                    rqst_complete = true;
-                }
-                else if(info.index > 0)
-                {
-                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
-                    rqst_complete = true;
-                }
-                else if(res == CURLE_OPERATION_TIMEDOUT)
-                {
-                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
-                }
-                else
-                {
-                    mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
-                    LocalLib::performIOTimeout();
-                }
-            }
-
-            /* Clean Up cURL */
-            curl_easy_cleanup(curl);
-        }
-        else
-        {
-            /* Decrement Attempts on Failed cURL Initialization */
-            attempts--;
-        }
-
-        /* Clean Up Headers */
-        curl_slist_free_all(headers);
-    }
-
-    /* Throw Exception on Failure */
-    if(!status)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL fixed request to S3 failed");
-    }
-
-    /* Return Success */
-    return size;
-}
-
-/*----------------------------------------------------------------------------
- * get - streaming
- *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
-{
-    /* Initialize Function Parameters */
-    bool status = false;
-    int64_t rsps_size = 0;
-    *data = NULL;
-
-    /* Massage Key */
-    const char* key_ptr = key;
-    if(key_ptr[0] == '/') key_ptr++;
-
-    /* Build Headers */
-    struct curl_slist* headers = buildReadHeaders(bucket, key_ptr, credentials);
-
-    /* Setup Streaming Data for Callback */
-    List<streaming_data_t> rsps_set;
-
-    /* Build URL */
-    SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
-
-    /* Initialize cURL Request */
-    bool rqst_complete = false;
-    int attempts = ATTEMPTS_PER_REQUEST;
-    CURL* curl = initializeReadRequest(url, headers, curlWriteStreaming, &rsps_set);
-    if(curl)
-    {
-        while(!rqst_complete && (attempts-- > 0))
-        {
-            /* Perform Request */
-            CURLcode res = curl_easy_perform(curl);
-            if(res == CURLE_OK)
-            {
-                /* Get Response Size */
-                for(int i = 0; i < rsps_set.length(); i++)
-                {
-                    rsps_size += rsps_set[i].size;
-                }
-
-                /* Allocate and Populate Response */
-                int rsps_index = 0;
-                *data = new uint8_t [rsps_size + 1];
-                uint8_t* rsps = *data; // reads easier below
-                for(int i = 0; i < rsps_set.length(); i++)
-                {
-                    LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
-                    rsps_index += rsps_set[i].size;
-                }
-                rsps[rsps_index] = '\0';
-
-                /* Get HTTP Code */
-                long http_code = 0;
-                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                if(http_code < 300)
-                {
-                    /* Request Succeeded */
-                    status = true;
-                }
-                else
-                {
-                    /* Request Failed */
-                    StringLib::printify((char*)rsps, rsps_size + 1);
-                    mlog(INFO, "%s", (const char*)rsps);
-                    delete [] *data; // clean up memory
-                    *data = NULL;
-                    mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
-                }
-
-                /* Request Completed */
-                rqst_complete = true;
-            }
-            else if(rsps_set.length() > 0)
-            {
-                mlog(CRITICAL, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
-                rqst_complete = true;
-            }
-            else if(res == CURLE_OPERATION_TIMEDOUT)
-            {
-                mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
-            }
-            else
-            {
-                mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
-                LocalLib::performIOTimeout();
-            }
-        }
-
-        /* Clean Up cURL */
-        curl_easy_cleanup(curl);
-    }
-
-    /* Clean Up Headers */
-    curl_slist_free_all(headers);
-
-    /* Clean Up Response List */
-    for(int i = 0; i < rsps_set.length(); i++)
-    {
-        delete [] rsps_set[i].data;
-    }
-
-    /* Throw Exception on Failure */
-    if(!status)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL streaming request to S3 failed");
-    }
-
-    /* Return Success */
-    return rsps_size;
-}
-
-/*----------------------------------------------------------------------------
- * get - file
- *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
-{
-    bool status = false;
-
-    /* Massage Key */
-    const char* key_ptr = key;
-    if(key_ptr[0] == '/') key_ptr++;
-
-    /* Build Headers */
-    struct curl_slist* headers = buildReadHeaders(bucket, key_ptr, credentials);
-
-    /* Setup File Data for Callback */
-    file_data_t data;
-    data.size = 0;
-    data.fd = fopen(filename, "w");
-    if(data.fd)
-    {
-        /* Build URL */
-        SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
-
-        /* Initialize cURL Request */
-        bool rqst_complete = false;
-        int attempts = ATTEMPTS_PER_REQUEST;
-        CURL* curl = initializeReadRequest(url, headers, curlWriteFile, &data);
-        if(curl)
-        {
-            while(!rqst_complete && (attempts-- > 0))
-            {
-                /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
-                if(res == CURLE_OK)
-                {
-                    /* Get HTTP Code */
-                    long http_code = 0;
-                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                    if(http_code < 300)
-                    {
-                        /* Request Succeeded */
-                        status = true;
-                    }
-                    else
-                    {
-                        /* Request Failed */
-                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
-                    }
-
-                    /* Request Completed */
-                    rqst_complete = true;
-                }
-                else if(data.size > 0)
-                {
-                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
-                    rqst_complete = true;
-                }
-                else if(res == CURLE_OPERATION_TIMEDOUT)
-                {
-                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
-                }
-                else
-                {
-                    mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
-                    LocalLib::performIOTimeout();
-                }
-            }
-
-            /* Clean Up cURL */
-            curl_easy_cleanup(curl);
-        }
-
-        /* Close File */
-        fclose(data.fd);
-    }
-    else
-    {
-        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, LocalLib::err2str(errno));
-    }
-
-    /* Clean Up Headers */
-    curl_slist_free_all(headers);
-
-    /* Throw Exception on Failure */
-    if(!status)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL file request to S3 failed");
-    }
-
-    /* Return Success */
-    return data.size;
-}
-
-/*----------------------------------------------------------------------------
- * put - file
- *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
-{
-    bool status = false;
-
-    /* Massage Key */
-    const char* key_ptr = key;
-    if(key_ptr[0] == '/') key_ptr++;
-
-    /* Build Headers */
-    struct curl_slist* headers = buildWriteHeaders(bucket, key_ptr, credentials);
-
-    /* Setup File Data for Callback */
-    file_data_t data;
-    data.size = 0;
-    data.fd = fopen(filename, "r");
-    if(data.fd)
-    {
-        /* Build URL */
-        SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
-
-        /* Initialize cURL Request */
-        bool rqst_complete = false;
-        int attempts = ATTEMPTS_PER_REQUEST;
-        CURL* curl = initializeWriteRequest(url, headers, curlReadFile, &data);
-        if(curl)
-        {
-            while(!rqst_complete && (attempts-- > 0))
-            {
-                /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
-                if(res == CURLE_OK)
-                {
-                    /* Get HTTP Code */
-                    long http_code = 0;
-                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                    if(http_code < 300)
-                    {
-                        /* Request Succeeded */
-                        status = true;
-                    }
-                    else
-                    {
-                        /* Request Failed */
-                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
-                    }
-
-                    /* Request Completed */
-                    rqst_complete = true;
-                }
-                else if(data.size > 0)
-                {
-                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
-                    rqst_complete = true;
-                }
-                else if(res == CURLE_OPERATION_TIMEDOUT)
-                {
-                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
-                }
-                else
-                {
-                    mlog(CRITICAL, "cURL call failed (%d) for put request: %s", res, key_ptr);
-                    LocalLib::performIOTimeout();
-                }
-            }
-
-            /* Clean Up cURL */
-            curl_easy_cleanup(curl);
-        }
-
-        /* Close File */
-        fclose(data.fd);
-    }
-    else
-    {
-        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, LocalLib::err2str(errno));
-    }
-
-    /* Clean Up Headers */
-    curl_slist_free_all(headers);
-
-    /* Throw Exception on Failure */
-    if(!status)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL file request to S3 failed");
-    }
-
-    /* Return Success */
-    return data.size;
 }

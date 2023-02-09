@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "RqstParms.h"
+#include "Icesat2Parms.h"
 
 /******************************************************************************
  * METRICS FOR PLUGIN
@@ -96,7 +96,7 @@ class PluginMetrics
 
         static bool         init            (void);
         static region_t*    region2struct   (regions_t region);
-        static bool         setRegion       (RqstParms* parms);
+        static bool         setRegion       (Icesat2Parms* parms);
         static bool         checkRegion     (MathLib::coord_t coord, regions_t r);
 
     private:

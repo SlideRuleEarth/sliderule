@@ -45,7 +45,7 @@
 
 #include "GTArray.h"
 #include "Atl03Reader.h"
-#include "RqstParms.h"
+#include "Icesat2Parms.h"
 
 #include <atomic>
 
@@ -185,14 +185,14 @@ class Atl06Dispatch: public DispatchObject
         Mutex               elevationMutex;
         int                 elevationIndex;
 
-        RqstParms*          parms;
+        Icesat2Parms*          parms;
         stats_t             stats;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06Dispatch                   (lua_State* L, const char* outq_name, RqstParms* _parms);
+                        Atl06Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parms* _parms);
                         ~Atl06Dispatch                  (void);
 
         bool            processRecord                   (RecordObject* record, okey_t key) override;

@@ -30,7 +30,7 @@ for d = 1, 2 do
     -- local  lon = -65.50
     -- local  lat = 83.29
     local  demType = demTypes[d];
-    local  dem     = geo.raster(demType, "NearestNeighbour", 0, zonalStats, qualityMask)
+    local  dem     = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, zonal_stats=zonalStats, with_flags=qualityMask}))
 
     print(string.format("\n-------------------------------------------------------------\nTest: %s BITMASK/FLAGS test reading %d points\n-------------------------------------------------------------", demType, maxPoints))
 

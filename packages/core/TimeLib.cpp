@@ -209,7 +209,7 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     unix_msecs         = TIME_GPS_TO_UNIX(unix_msecs);
     gps_msecs         -= getleapms(unix_msecs);
 
-    if(gps_msecs > 0)
+    if(gps_msecs >= 0)
     {
         gps_days += (int)(gps_msecs / TIME_MILLISECS_IN_A_DAY);
         gps_msecs = gps_msecs % TIME_MILLISECS_IN_A_DAY;
@@ -294,7 +294,7 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
  *
  *  returns date
  *----------------------------------------------------------------------------*/
-TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
+TimeLib::date_t TimeLib::gmt2date (const gmt_time_t& gmt_time)
 {
     TimeLib::date_t date;
 
@@ -330,7 +330,7 @@ TimeLib::date_t TimeLib::gmt2date (gmt_time_t gmt_time)
  *
  *  returns gps time in milliseconds
  *----------------------------------------------------------------------------*/
-int64_t TimeLib::gmt2gpstime (gmt_time_t gmt_time)
+int64_t TimeLib::gmt2gpstime (const gmt_time_t& gmt_time)
 {
     /* Check GMT Time Passed In */
     if( (gmt_time.year < 1980 || gmt_time.year > (1980 + MAX_GPS_YEARS)) ||
@@ -671,9 +671,9 @@ int TimeLib::getleapms(int64_t current_time, int64_t start_time)
 }
 
 /*----------------------------------------------------------------------------
- * getleapms
+ * getmonthname
  *----------------------------------------------------------------------------*/
-const char* TimeLib::getMonthName (int month)
+const char* TimeLib::getmonthname (int month)
 {
     int month_index = month - 1;
     if(month_index >= 0 && month_index < MONTHS_IN_YEAR)
@@ -684,6 +684,19 @@ const char* TimeLib::getMonthName (int month)
     {
         return NULL;
     }
+}
+
+
+/*----------------------------------------------------------------------------
+ * gmtinrange
+ *----------------------------------------------------------------------------*/
+bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end)
+{
+    int64_t gpsTime  = TimeLib::gmt2gpstime(gmt_time);
+    int64_t gpsStart = TimeLib::gmt2gpstime(gmt_start);
+    int64_t gpsEnd   = TimeLib::gmt2gpstime(gmt_end);
+
+   return ((gpsTime >= gpsStart) && (gpsTime <= gpsEnd));
 }
 
 /******************************************************************************

@@ -39,6 +39,8 @@
 #include "OsApi.h"
 #include "Dictionary.h"
 #include "LuaEngine.h"
+#include "LuaObject.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * AWS S3 LIBRARY CLASS
@@ -70,6 +72,11 @@ class CredentialStore
         static const char* SESSION_TOKEN_STR1;
         static const char* EXPIRATION_STR1;
 
+        // AWS Credential File Keys
+        static const char* ACCESS_KEY_ID_STR2;
+        static const char* SECRET_ACCESS_KEY_STR2;
+        static const char* SESSION_TOKEN_STR2;
+
         /*--------------------------------------------------------------------
          * Typdefs
          *--------------------------------------------------------------------*/
@@ -98,6 +105,105 @@ class CredentialStore
 
             ~Credential(void) {
                 cleanup();
+            };
+
+            void fromLua (lua_State* L, int index)
+            {
+                /* Reset State of Object */
+                cleanup();
+                zero();
+
+                /* Populate Object from Lua */
+                try
+                {
+                    if(lua_type(L, index) == LUA_TTABLE)
+                    {
+                        /* Set Provided */
+                        provided = true;
+
+                        /* Get Access Key */
+                        if(lua_getfield(L, index, ACCESS_KEY_ID_STR) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            if(lua_getfield(L, index, ACCESS_KEY_ID_STR1) != LUA_TSTRING)
+                            {
+                                lua_pop(L, 1);
+                                lua_getfield(L, index, ACCESS_KEY_ID_STR2);
+                            }
+                        }
+                        const char* access_key_id_str = LuaObject::getLuaString(L, -1);
+                        accessKeyId = StringLib::duplicate(access_key_id_str, MAX_KEY_SIZE);
+                        lua_pop(L, 1);
+
+                        /* Get Secret Access Key */
+                        if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR1) != LUA_TSTRING)
+                            {
+                                lua_pop(L, 1);
+                                lua_getfield(L, index, SECRET_ACCESS_KEY_STR2);
+                            }
+                        }
+                        const char* secret_access_key_str = LuaObject::getLuaString(L, -1);
+                        secretAccessKey = StringLib::duplicate(secret_access_key_str, MAX_KEY_SIZE);
+                        lua_pop(L, 1);
+
+                        /* Get Session Token */
+                        if(lua_getfield(L, index, SESSION_TOKEN_STR) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            if(lua_getfield(L, index, SESSION_TOKEN_STR1) != LUA_TSTRING)
+                            {
+                                lua_pop(L, 1);
+                                lua_getfield(L, index, SESSION_TOKEN_STR2);
+                            }
+                        }
+                        const char* session_token_str = LuaObject::getLuaString(L, -1);
+                        sessionToken = StringLib::duplicate(session_token_str, MAX_KEY_SIZE);
+                        lua_pop(L, 1);
+
+                        /* Get Expiration Date */
+                        if(lua_getfield(L, index, EXPIRATION_STR) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            lua_getfield(L, index, EXPIRATION_STR1);
+                        }
+                        const char* expiration_str  = LuaObject::getLuaString(L, -1, true, NULL);
+                        expiration = StringLib::duplicate(expiration_str, MAX_KEY_SIZE);
+                        if(expiration)  expirationGps = TimeLib::str2gpstime(expiration);
+                        else            expirationGps = 0;
+                        lua_pop(L, 1);
+                    }
+                }
+                catch(const RunTimeException& e)
+                {
+                    /* Clean Up from Failed Attempt */
+                    cleanup();
+                    zero();
+                    throw;
+                }
+            };
+
+            void toLua (lua_State* L)
+            {
+                lua_newtable(L);
+
+                lua_pushstring(L, ACCESS_KEY_ID_STR);
+                lua_pushstring(L, accessKeyId);
+                lua_settable(L, -3);
+
+                lua_pushstring(L, SECRET_ACCESS_KEY_STR);
+                lua_pushstring(L, secretAccessKey);
+                lua_settable(L, -3);
+
+                lua_pushstring(L, SESSION_TOKEN_STR);
+                lua_pushstring(L, sessionToken);
+                lua_settable(L, -3);
+
+                lua_pushstring(L, EXPIRATION_STR);
+                lua_pushstring(L, expiration);
+                lua_settable(L, -3);
             };
 
             private:

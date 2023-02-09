@@ -67,9 +67,8 @@ void VrtRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                     const bool zonal_stats, const bool auxiliary_files):
-    GeoRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files)
+VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms):
+    GeoRaster(L, _parms)
 {
     band = NULL;
     bzero(invGeot, sizeof(invGeot));
@@ -130,14 +129,14 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         geoIndex.bbox.lat_min = geot[3] + geoIndex.rows * geot[5];
         geoIndex.cellSize     = geot[1];
 
-        int radiusInPixels = radius2pixels(geoIndex.cellSize, samplingRadius);
+        int radiusInPixels = radius2pixels(geoIndex.cellSize, parms->sampling_radius);
 
         /* Limit maximum sampling radius */
         if (radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR,
                                    "Sampling radius is too big: %d: max allowed %d meters",
-                                   samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
+                                   parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
         }
 
         /* Create coordinates transformation */

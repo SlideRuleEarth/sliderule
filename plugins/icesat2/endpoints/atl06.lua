@@ -30,7 +30,6 @@ local parms = rqst["parms"]
 local atl03_asset = parms["asset"] or rqst["atl03-asset"] or "nsidc-s3"
 parms["asset"] = atl03_asset -- backward compatibility layer
 local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
-local samples = parms["samples"]
 
 -- Initialize Timeouts --
 local duration = 0
@@ -63,12 +62,12 @@ atl06_disp:attach(atl06_algo, "atl03rec")
 
 -- Raster Sampler --
 local sampler_disp = nil
-if samples then
+if parms[geo.PARMS] then
     local atl06_rec_type = parms["compact"] and "atl06rec-compact" or "atl06rec"
     local elevation_rec_type = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation"
-    sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required until VrtRaster is thread safe
-    for key,raster in pairs(samples) do
-        local robj = geo.raster(raster["asset"], raster["algorithm"], raster["radius"], raster["zonal_stats"], raster["with_flags"])
+    sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required because GeoRaster is not thread safe
+    for key,settings in pairs(parms[geo.PARMS]) do
+        local robj = geo.raster(geo.parms(settings))
         if robj then
             local sampler = geo.sampler(robj, key, rspq, elevation_rec_type, "extent_id", "lon", "lat")
             if sampler then

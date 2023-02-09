@@ -55,15 +55,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoRaster::NEARESTNEIGHBOUR_ALGO = "NearestNeighbour";
-const char* GeoRaster::BILINEAR_ALGO = "Bilinear";
-const char* GeoRaster::CUBIC_ALGO = "Cubic";
-const char* GeoRaster::CUBICSPLINE_ALGO = "CubicSpline";
-const char* GeoRaster::LANCZOS_ALGO = "Lanczos";
-const char* GeoRaster::AVERAGE_ALGO = "Average";
-const char* GeoRaster::MODE_ALGO = "Mode";
-const char* GeoRaster::GAUSS_ALGO = "Gauss";
-
 const char* GeoRaster::OBJECT_TYPE = "GeoRaster";
 const char* GeoRaster::LuaMetaName = "GeoRaster";
 const struct luaL_Reg GeoRaster::LuaMetaTable[] = {
@@ -100,35 +91,33 @@ void GeoRaster::deinit( void )
  *----------------------------------------------------------------------------*/
 int GeoRaster::luaCreate( lua_State* L )
 {
+    GeoParms* _parms = NULL;
     try
     {
         /* Get Parameters */
-        const char* raster_name     = getLuaString(L, 1);
-        const char* dem_sampling    = getLuaString(L, 2, true, NEARESTNEIGHBOUR_ALGO);
-        const int   sampling_radius = getLuaInteger(L, 3, true, 0);
-        const int   zonal_stats     = getLuaBoolean(L, 4, true, false);
-        const int   auxiliary_files = getLuaBoolean(L, 5, true, false);
+        _parms = (GeoParms*)getLuaObject(L, 1, GeoParms::OBJECT_TYPE);
 
         /* Get Factory */
         factory_t _create = NULL;
         factoryMut.lock();
         {
-            factories.find(raster_name, &_create);
+            factories.find(_parms->asset_name, &_create);
         }
         factoryMut.unlock();
 
         /* Check Factory */
-        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", raster_name);
+        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
 
         /* Create Raster */
-        GeoRaster* _raster = _create(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
-        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", raster_name);
+        GeoRaster* _raster = _create(L, _parms);
+        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", _parms->asset_name);
 
         /* Return Object */
         return createLuaObject(L, _raster);
     }
     catch(const RunTimeException& e)
     {
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
@@ -204,7 +193,7 @@ GeoRaster::~GeoRaster(void)
             {
                 reader->raster = NULL; /* No raster to read     */
                 reader->run = false;   /* Set run flag to false */
-                reader->sync->signal(0, Cond::NOTIFY_ONE);
+                reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
             }
             reader->sync->unlock();
 
@@ -227,6 +216,9 @@ GeoRaster::~GeoRaster(void)
     }
 
     if (rastersList) delete rastersList;
+
+    /* Release GeoParms LuaObject */
+    parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -284,34 +276,10 @@ const char* GeoRaster::getUUID(char *uuid_str)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                     const bool zonal_stats, const bool auxiliary_files):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    parms(_parms)
 {
-    CHECKPTR(dem_sampling);
-
-    sampleAlg  = (GDALRIOResampleAlg) -1;
-
-    if      (!strcasecmp(dem_sampling, NEARESTNEIGHBOUR_ALGO)) sampleAlg = GRIORA_NearestNeighbour;
-    else if (!strcasecmp(dem_sampling, BILINEAR_ALGO))         sampleAlg = GRIORA_Bilinear;
-    else if (!strcasecmp(dem_sampling, CUBIC_ALGO))            sampleAlg = GRIORA_Cubic;
-    else if (!strcasecmp(dem_sampling, CUBICSPLINE_ALGO))      sampleAlg = GRIORA_CubicSpline;
-    else if (!strcasecmp(dem_sampling, LANCZOS_ALGO))          sampleAlg = GRIORA_Lanczos;
-    else if (!strcasecmp(dem_sampling, AVERAGE_ALGO))          sampleAlg = GRIORA_Average;
-    else if (!strcasecmp(dem_sampling, MODE_ALGO))             sampleAlg = GRIORA_Mode;
-    else if (!strcasecmp(dem_sampling, GAUSS_ALGO))            sampleAlg = GRIORA_Gauss;
-    else
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", dem_sampling);
-
-    useAuxFiles = auxiliary_files;
-    zonalStats = zonal_stats;
-
-    if (sampling_radius >= 0)
-    {
-        samplingRadius = sampling_radius;
-    }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling radius: %d:", sampling_radius);
-
     /* Initialize Class Data Members */
     rastersList = new List<raster_info_t>;
     rastersList->clear();
@@ -320,7 +288,6 @@ GeoRaster::GeoRaster(lua_State *L, const char *dem_sampling, const int sampling_
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
-
 }
 
 
@@ -352,7 +319,7 @@ int GeoRaster::radius2pixels(double cellSize, int _radius)
  * processRaster
  * Thread-safe, can be called directly from main thread or reader thread
  *----------------------------------------------------------------------------*/
-void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
+void GeoRaster::processRaster(Raster* raster)
 {
     try
     {
@@ -379,14 +346,14 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
             raster->bbox.lat_min = geot[3] + raster->rows * geot[5];
 
             raster->cellSize = geot[1];
-            raster->radiusInPixels = radius2pixels(raster->cellSize, samplingRadius);
+            raster->radiusInPixels = radius2pixels(raster->cellSize, parms->sampling_radius);
 
             /* Limit maximum sampling radius */
             if (raster->radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR,
                                        "Sampling radius is too big: %d: max allowed %d meters",
-                                       samplingRadius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
+                                       parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
             }
 
             /* Get raster block size */
@@ -424,16 +391,16 @@ void GeoRaster::processRaster(Raster* raster, GeoRaster* obj)
         if (!containsPoint(raster, raster->point))
             return;
 
-        if (obj->sampleAlg == GRIORA_NearestNeighbour)
-            obj->readPixel(raster);
+        if (parms->sampling_algo == GRIORA_NearestNeighbour)
+            readPixel(raster);
         else
-            resamplePixel(raster, obj);
+            resamplePixel(raster);
 
         raster->sample.time = raster->gpsTime;
         raster->sampled = true;
 
-        if (zonalStats)
-            computeZonalStats(raster, obj);
+        if (parms->zonal_stats)
+            computeZonalStats(raster);
 
     }
     catch (const RunTimeException &e)
@@ -465,7 +432,7 @@ void GeoRaster::sampleRasters(void)
             reader->sync->lock();
             {
                 reader->raster = raster;
-                reader->sync->signal(0, Cond::NOTIFY_ONE);
+                reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
             reader->sync->unlock();
@@ -476,19 +443,17 @@ void GeoRaster::sampleRasters(void)
     /* Did not signal any reader threads, don't wait */
     if (signaledReaders == 0) return;
 
-    /* Wait for all reader threads to finish sampling */
-    for (uint32_t j=0; j<readerCount; j++)
+    /* Wait and update each raster when it is done */
+    for (int j=0; j<signaledReaders; j++)
     {
+        /* Wait for reader to finish sampling */
         reader_t *reader = &rasterRreader[j];
-        raster = NULL;
-        do
+        reader->sync->lock();
         {
-            reader->sync->lock();
-            {
-                raster = reader->raster;
-            }
-            reader->sync->unlock();
-        } while (raster != NULL);
+            while (reader->raster != NULL)
+                reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
+        }
+        reader->sync->unlock();
     }
 
     /* Update dictionary of used raster files and auxualiary data */
@@ -653,6 +618,20 @@ void GeoRaster::readPixel(Raster *raster)
 
 
 /*----------------------------------------------------------------------------
+ * filterRasters
+ *----------------------------------------------------------------------------*/
+bool GeoRaster::filterRaster(const raster_info_t& rinfo)
+{
+    if(parms->filter_time && !TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
+        return true;
+
+    if(parms->url_substring && (rinfo.fileName.find(parms->url_substring) == std::string::npos))
+        return true;
+
+    return false;
+}
+
+/*----------------------------------------------------------------------------
  * containsWindow
  *----------------------------------------------------------------------------*/
 bool GeoRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
@@ -721,7 +700,7 @@ void GeoRaster::CoordTransform::clear(bool close)
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
+void GeoRaster::resamplePixel(Raster *raster)
 {
     try
     {
@@ -731,23 +710,23 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
         int windowSize, offset;
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
-        if (obj->samplingRadius == 0)
+        if (parms->sampling_radius == 0)
         {
             int kernel = 0;
 
-            if (sampleAlg == GRIORA_Bilinear)
+            if (parms->sampling_algo == GRIORA_Bilinear)
                 kernel = 2; /* 2x2 kernel */
-            else if (sampleAlg == GRIORA_Cubic)
+            else if (parms->sampling_algo == GRIORA_Cubic)
                 kernel = 4; /* 4x4 kernel */
-            else if (sampleAlg == GRIORA_CubicSpline)
+            else if (parms->sampling_algo == GRIORA_CubicSpline)
                 kernel = 4; /* 4x4 kernel */
-            else if (sampleAlg == GRIORA_Lanczos)
+            else if (parms->sampling_algo == GRIORA_Lanczos)
                 kernel = 6; /* 6x6 kernel */
-            else if (sampleAlg == GRIORA_Average)
+            else if (parms->sampling_algo == GRIORA_Average)
                 kernel = 6; /* No default kernel, pick something */
-            else if (sampleAlg == GRIORA_Mode)
+            else if (parms->sampling_algo == GRIORA_Mode)
                 kernel = 6; /* No default kernel, pick something */
-            else if (sampleAlg == GRIORA_Gauss)
+            else if (parms->sampling_algo == GRIORA_Gauss)
                 kernel = 6; /* No default kernel, pick something */
 
             windowSize = kernel + 1;    // Odd window size around pixel
@@ -764,7 +743,7 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = obj->sampleAlg;
+        args.eResampleAlg = parms->sampling_algo;
         double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
         bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
@@ -784,7 +763,7 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
         else
         {
             /* At least return pixel value if unable to resample raster and/or raster index data set */
-            obj->readPixel(raster);
+            readPixel(raster);
         }
     }
     catch (const RunTimeException &e)
@@ -795,9 +774,9 @@ void GeoRaster::resamplePixel(Raster *raster, GeoRaster* obj)
 
 
 /*----------------------------------------------------------------------------
- * zonalStats
+ * parms->zonal_stats
  *----------------------------------------------------------------------------*/
-void GeoRaster::computeZonalStats(Raster *raster, GeoRaster *obj)
+void GeoRaster::computeZonalStats(Raster *raster)
 {
     double *samplesArray = NULL;
 
@@ -815,7 +794,7 @@ void GeoRaster::computeZonalStats(Raster *raster, GeoRaster *obj)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = obj->sampleAlg;
+        args.eResampleAlg = parms->sampling_algo;
         samplesArray = new double[windowSize*windowSize];
         CHECKPTR(samplesArray);
 
@@ -990,9 +969,11 @@ void GeoRaster::updateCache(OGRPoint& p)
         const char* rasterFile = rinfo.fileName.c_str();
         const char* auxFile    = rinfo.auxFileName.c_str();;
 
+        if(filterRaster(rinfo)) continue;
+
         /* For now code supports only one auxiliary raster */
         const char* keys[2] = {rasterFile, auxFile};
-        const int CNT = useAuxFiles ? 2 : 1;
+        const int CNT = parms->auxiliary_files ? 2 : 1;
 
         Raster* demRaster = NULL;
         Raster* auxRaster = NULL;
@@ -1083,13 +1064,9 @@ void GeoRaster::createThreads(void)
             reader_t *reader = &rasterRreader[readerCount];
             reader->raster = NULL;
             reader->run = true;
-            reader->sync = new Cond();
+            reader->sync = new Cond(NUM_SYNC_SIGNALS);
             reader->obj = this;
-            reader->sync->lock();
-            {
-                reader->thread = new Thread(readingThread, reader);
-            }
-            reader->sync->unlock();
+            reader->thread = new Thread(readingThread, reader);
             readerCount++;
         }
         else
@@ -1117,12 +1094,13 @@ void* GeoRaster::readingThread(void *param)
         {
             /* Wait for raster to work on */
             while ((reader->raster == NULL) && reader->run)
-                reader->sync->wait(0, SYS_TIMEOUT);
+                reader->sync->wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
 
             if(reader->raster != NULL)
             {
-                reader->obj->processRaster(reader->raster, reader->obj);
+                reader->obj->processRaster(reader->raster);
                 reader->raster = NULL; /* Done with this raster */
+                reader->sync->signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
             }
 
             run = reader->run;
@@ -1307,7 +1285,7 @@ int GeoRaster::luaSamples(lua_State *L)
                     lua_createtable(L, 0, 2);
                     LuaEngine::setAttrStr(L, "file", fileName.c_str());
 
-                    if (lua_obj->zonalStats) /* Include all zonal stats */
+                    if (lua_obj->parms->zonal_stats) /* Include all zonal stats */
                     {
                         LuaEngine::setAttrNum(L, "mad",   raster->sample.stats.mad);
                         LuaEngine::setAttrNum(L, "stdev", raster->sample.stats.stdev);
@@ -1318,7 +1296,7 @@ int GeoRaster::luaSamples(lua_State *L)
                         LuaEngine::setAttrNum(L, "count", raster->sample.stats.count);
                     }
 
-                    if (lua_obj->useAuxFiles) /* Include auxuliary raster value (flags) */
+                    if (lua_obj->parms->auxiliary_files) /* Include auxuliary raster value (flags) */
                     {
                         LuaEngine::setAttrNum(L, "flags", raster->sample.flags);
                     }

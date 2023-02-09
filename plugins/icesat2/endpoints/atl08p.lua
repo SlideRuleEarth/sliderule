@@ -34,6 +34,24 @@ local interval = 10 < timeout and 10 or timeout -- seconds
 local rsps_from_nodes = rspq
 local terminate_proxy_stream = false
 
+-- Handle Output Options --
+local output_dispatch = nil
+if parms[arrow.PARMS] then
+    local output_parms = arrow.parms(parms[arrow.PARMS])
+    -- Parquet Writer --
+    if output_parms:isparquet() then
+        rsps_from_nodes = rspq .. "-parquet"
+        terminate_proxy_stream = true
+        local except_pub = core.publish(rspq)
+        local parquet_builder = arrow.parquet(output_parms, rspq, "atl08rec.vegetation", rqstid, "lon", "lat")
+        output_dispatch = core.dispatcher(rsps_from_nodes)
+        output_dispatch:attach(parquet_builder, "atl08rec")
+        output_dispatch:attach(except_pub, "exceptrec") -- exception records
+        output_dispatch:attach(except_pub, "eventrec") -- event records
+        output_dispatch:run()
+    end
+end
+
 -- Proxy Request --
 local proxy = netsvc.proxy("atl08", resources, json.encode(parms), node_timeout, rsps_from_nodes, terminate_proxy_stream)
 
@@ -43,5 +61,16 @@ while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do
     if timeout >= 0 and duration >= timeout then
         userlog:sendlog(core.ERROR, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration))
         do return end
+    end
+end
+
+-- Wait Until Dispatch Completion --
+if terminate_proxy_stream then
+    while (userlog:numsubs() > 0) and not output_dispatch:waiton(interval * 1000) do
+        duration = duration + interval
+        if timeout >= 0 and duration >= timeout then
+            userlog:sendlog(core.ERROR, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))
+            do return end
+        end
     end
 end

@@ -55,19 +55,17 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                                             const bool zonal_stats, const bool auxiliary_files):
-    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files, ARCTIC_DEM_EPSG)
+ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, GeoParms* _parms):
+    VctRaster(L, _parms, ARCTIC_DEM_EPSG)
 {
 }
 
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                         const bool zonal_stats, const bool auxiliary_files)
+GeoRaster* ArcticDemStripsRaster::create(lua_State* L, GeoParms* _parms)
 {
-    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
+    return new ArcticDemStripsRaster(L, _parms);
 }
 
 
@@ -150,11 +148,11 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
 
     bool foundFile = false;
 
-    const std::string fileToken = "arcticdem";
-    const std::string vsisPath  = "/vsis3/pgc-opendata-dems/";
-    const char *demField  = "dem";
-    const char* dateField = "end_datetime";
-
+    const std::string fileToken  = "arcticdem";
+    const std::string vsisPath   = "/vsis3/pgc-opendata-dems/";
+    const char* demField         = "dem";
+    const int DATES_CNT          = 2;
+    const char* dates[DATES_CNT] = {"start_datetime", "end_datetime"};
     try
     {
         rastersList->clear();
@@ -192,24 +190,33 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                 } else fileName.clear();
                 rinfo.auxFileName = fileName;
 
-                int year, month, day, hour, minute, second, timeZone;
-                int i = feature->GetFieldIndex(dateField);
-                if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
+                double gpsTime = 0;
+                for(int i=0; i<DATES_CNT; i++)
                 {
-                    /*
-                     * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
-                     */
-                    if (timeZone == 100)
+                    TimeLib::gmt_time_t gmtDate;
+                    int year, month, day, hour, minute, second, timeZone;
+                    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
+                    year = month = day = hour = minute = second = timeZone = 0;
+
+                    int j = feature->GetFieldIndex(dates[i]);
+                    if(feature->GetFieldAsDateTime(j, &year, &month, &day, &hour, &minute, &second, &timeZone))
                     {
-                        rinfo.gmtDate.year = year;
-                        rinfo.gmtDate.doy = TimeLib::dayofyear(year, month, day);
-                        rinfo.gmtDate.hour = hour;
-                        rinfo.gmtDate.minute = minute;
-                        rinfo.gmtDate.second = second;
-                        rinfo.gmtDate.millisecond = 0;
+                        /* Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown */
+                        if(timeZone == 100)
+                        {
+                            gmtDate.year        = year;
+                            gmtDate.doy         = TimeLib::dayofyear(year, month, day);
+                            gmtDate.hour        = hour;
+                            gmtDate.minute      = minute;
+                            gmtDate.second      = second;
+                            gmtDate.millisecond = 0;
+                        }
+                        else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                     }
-                    else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
+                    /* mlog(DEBUG, "%d:%d:%d:%d:%d:%d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str()); */
+                    gpsTime += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
+                rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime/DATES_CNT));
                 rastersList->add(rinfo);
             }
             OGRFeature::DestroyFeature(feature);

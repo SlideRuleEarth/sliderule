@@ -92,18 +92,24 @@ int LuaObject::luaGetByName(lua_State* L)
 {
     try
     {
-        /* Get Name */
-        const char* name = getLuaString(L, 1);
+        LuaObject* lua_obj = NULL;
+        globalMut.lock();
+        {
+            /* Get Name */
+            const char* name = getLuaString(L, 1);
 
-        /* Get Self */
-        LuaObject* lua_obj = globalObjects.get(name);
+            /* Get Self */
+            lua_obj = globalObjects.get(name);
 
-        /* Return  Lua Object */
-        associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
+            /* Return  Lua Object */
+            associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
+        }
+        globalMut.unlock();
         return createLuaObject(L, lua_obj);
     }
     catch(const RunTimeException& e)
     {
+        globalMut.unlock();
         mlog(e.level(), "Failed to get Lua object by name: %s", e.what());
         lua_pushnil(L);
     }
@@ -221,6 +227,38 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
     }
 
     return num_obj_to_return;
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaObjectByName
+ *----------------------------------------------------------------------------*/
+LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_type)
+{
+    LuaObject* lua_obj;
+    try
+    {
+        globalMut.lock();
+        {
+            lua_obj = globalObjects.get(name);
+            if(StringLib::match(lua_obj->getType(), object_type))
+            {
+                lua_obj->referenceCount++;
+            }
+            else
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "mismatched type on request object (%s != %s)", lua_obj->getType(), object_type);
+            }
+        }
+        globalMut.unlock();
+    }
+    catch(const RunTimeException& e)
+    {
+        lua_obj = NULL;
+        globalMut.unlock();
+        mlog(e.level(), "Failed to get Lua object by name: %s", e.what());
+    }
+
+    return lua_obj;
 }
 
 /*----------------------------------------------------------------------------

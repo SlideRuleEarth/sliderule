@@ -45,7 +45,7 @@
 
 #include "GTArray.h"
 #include "Atl03Reader.h"
-#include "RqstParms.h"
+#include "Icesat2Parms.h"
 
 /******************************************************************************
  * ATL08 DISPATCH CLASS
@@ -144,13 +144,13 @@ class Atl08Dispatch: public DispatchObject
         Mutex               batchMutex;
         int                 batchIndex;
 
-        RqstParms*          parms;
+        Icesat2Parms*          parms;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl08Dispatch                   (lua_State* L, const char* outq_name, RqstParms* _parms);
+                        Atl08Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parms* _parms);
                         ~Atl08Dispatch                  (void);
 
         bool            processRecord                   (RecordObject* record, okey_t key) override;
@@ -169,12 +169,12 @@ class Atl08Dispatch: public DispatchObject
 
         inline bool isVegetation (Atl03Reader::photon_t* ph)
         {
-            return (ph->atl08_class == RqstParms::ATL08_CANOPY || ph->atl08_class == RqstParms::ATL08_TOP_OF_CANOPY);
+            return (ph->atl08_class == Icesat2Parms::ATL08_CANOPY || ph->atl08_class == Icesat2Parms::ATL08_TOP_OF_CANOPY);
         }
 
         inline bool isGround (Atl03Reader::photon_t* ph)
         {
-            return (ph->atl08_class == RqstParms::ATL08_GROUND);
+            return (ph->atl08_class == Icesat2Parms::ATL08_GROUND);
         }
 };
 

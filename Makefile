@@ -16,10 +16,10 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 # Core Framework Targets
 ########################
 
-all: default-build
-
 default-build: ## default build of sliderule
 	make -j4 -C $(BUILD)
+
+all: default-build atlas arcticdem gedi icesat2 ## build everything
 
 config: config-release ## configure make for default build
 
@@ -37,6 +37,7 @@ DEVCFG += -DUSE_H5_PACKAGE=ON
 DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
 DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
+DEVCFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 config-development: prep ## configure make for development version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
@@ -47,8 +48,12 @@ config-development-debug: prep ## configure make for debug version of sliderule 
 config-development-cicd: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_APACHE_ARROW_10_COMPAT=ON $(ROOT)
 
+config-all: config-development config-atlas config-arcticdem config-gedi config-icesat2 ## configure everything
+
 install: ## install sliderule to system
 	make -C $(BUILD) install
+
+install-all: install install-atlas install-arcticdem install-gedi install-icesat2 ## install everything
 
 uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(BUILD)/install_manifest.txt
@@ -88,10 +93,10 @@ config-library: prep ## configure make for shared library libsliderule.so
 ##########################
 
 config-arcticdem-debug: prep ## configure make for arcticdem plugin
-	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/arcticdem
+	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/arcticdem
 
 config-arcticdem: prep ## configure make for arcticdem plugin
-	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/arcticdem
+	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/arcticdem
 
 arcticdem: ## build icesat2 plugin
 	make -j4 -C $(ARCTICDEM_BUILD)
@@ -187,9 +192,10 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd $(BUILD); make
 
-ctags: config-development ## generate ctags
-	cd $(BUILD); cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)
-	mv -f $(BUILD)/compile_commands.json $(ROOT)/compile_commands.json
+ctags: config-arcticdem config-development ## generate ctags
+	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
+	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
+	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(ARCTICDEM_BUILD)/compile_commands.json > compile_commands.json
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
