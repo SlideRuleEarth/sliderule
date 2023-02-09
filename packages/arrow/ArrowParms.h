@@ -95,9 +95,9 @@ class ArrowParms: public LuaObject
         format_t        format;                         // format of the file
         bool            open_on_complete;               // flag to client to open file on completion
         const char*     asset_name;
+        const char*     region;
 
         #ifdef __aws__
-        const char*                 region;
         CredentialStore::Credential credentials;
         #endif
 

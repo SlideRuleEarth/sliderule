@@ -96,8 +96,8 @@ ArrowParms::ArrowParms (lua_State* L, int index):
     path                (NULL),
     format              (NATIVE),
     open_on_complete    (false),
-    asset_name          (NULL)
-
+    asset_name          (NULL),
+    region              (NULL)
 {
     fromLua(L, index);
 }
