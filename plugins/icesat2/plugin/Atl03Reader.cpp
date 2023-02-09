@@ -141,7 +141,7 @@ const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
 int Atl03Reader::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
-    RqstParms* parms = NULL;
+    Icesat2Parms* parms = NULL;
 
     try
     {
@@ -149,7 +149,7 @@ int Atl03Reader::luaCreate (lua_State* L)
         asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        parms = (RqstParms*)getLuaObject(L, 4, RqstParms::OBJECT_TYPE);
+        parms = (Icesat2Parms*)getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE);
         bool send_terminator = getLuaBoolean(L, 5, true, true);
         bool flatten = getLuaBoolean(L, 6, true, false);
 
@@ -181,7 +181,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, RqstParms* _parms, bool _send_terminator, bool _flatten):
+Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator, bool _flatten):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
@@ -234,12 +234,12 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         sc_orient->join(read_timeout_ms, true);
 
         /* Read ATL03 Track Data */
-        if(parms->track == RqstParms::ALL_TRACKS)
+        if(parms->track == Icesat2Parms::ALL_TRACKS)
         {
-            threadCount = RqstParms::NUM_TRACKS;
+            threadCount = Icesat2Parms::NUM_TRACKS;
 
             /* Create Readers */
-            for(int t = 0; t < RqstParms::NUM_TRACKS; t++)
+            for(int t = 0; t < Icesat2Parms::NUM_TRACKS; t++)
             {
                 info_t* info = new info_t;
                 info->reader = this;
@@ -283,7 +283,7 @@ Atl03Reader::~Atl03Reader (void)
 {
     active = false;
 
-    for(int t = 0; t < RqstParms::NUM_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_TRACKS; t++)
     {
         if(readerPid[t]) delete readerPid[t];
     }
@@ -316,7 +316,7 @@ Atl03Reader::Region::Region (info_t* info):
     segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
     /* Initialize Region */
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         first_segment[t] = 0;
         num_segments[t] = H5Coro::ALL_ROWS;
@@ -339,7 +339,7 @@ Atl03Reader::Region::Region (info_t* info):
     }
 
     /* Check If Anything to Process */
-    if(num_photons[RqstParms::RPT_L] <= 0 || num_photons[RqstParms::RPT_R] <= 0)
+    if(num_photons[Icesat2Parms::RPT_L] <= 0 || num_photons[Icesat2Parms::RPT_R] <= 0)
     {
         cleanup();
         throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
@@ -364,7 +364,7 @@ Atl03Reader::Region::~Region (void)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::Region::cleanup (void)
 {
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         if(inclusion_mask[t]) delete [] inclusion_mask[t];
     }
@@ -379,8 +379,8 @@ void Atl03Reader::Region::polyregion (info_t* info)
 
     /* Determine Best Projection To Use */
     MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(segment_lat[RqstParms::RPT_L][0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(segment_lat[RqstParms::RPT_L][0] < -70.0) projection = MathLib::SOUTH_POLAR;
+    if(segment_lat[Icesat2Parms::RPT_L][0] > 70.0) projection = MathLib::NORTH_POLAR;
+    else if(segment_lat[Icesat2Parms::RPT_L][0] < -70.0) projection = MathLib::SOUTH_POLAR;
 
     /* Project Polygon */
     List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
@@ -391,9 +391,9 @@ void Atl03Reader::Region::polyregion (info_t* info)
     }
 
     /* Find First Segment In Polygon */
-    bool first_segment_found[RqstParms::NUM_PAIR_TRACKS] = {false, false};
-    bool last_segment_found[RqstParms::NUM_PAIR_TRACKS] = {false, false};
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    bool first_segment_found[Icesat2Parms::NUM_PAIR_TRACKS] = {false, false};
+    bool last_segment_found[Icesat2Parms::NUM_PAIR_TRACKS] = {false, false};
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         int segment = 0;
         while(segment < segment_ph_cnt[t].size)
@@ -466,8 +466,8 @@ void Atl03Reader::Region::polyregion (info_t* info)
 void Atl03Reader::Region::rasterregion (info_t* info)
 {
     /* Find First Segment In Polygon */
-    bool first_segment_found[RqstParms::NUM_PAIR_TRACKS] = {false, false};
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    bool first_segment_found[Icesat2Parms::NUM_PAIR_TRACKS] = {false, false};
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Check Size */
         if(segment_ph_cnt[t].size <= 0)
@@ -563,11 +563,11 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     delta_time          (info->reader->asset, info->reader->resource, info->track, "heights/delta_time",          &info->reader->context, 0, region.first_photon,  region.num_photons),
     bckgrd_delta_time   (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/delta_time",     &info->reader->context),
     bckgrd_rate         (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/bckgrd_rate",    &info->reader->context),
-    anc_geo_data        (RqstParms::EXPECTED_NUM_FIELDS),
-    anc_ph_data         (RqstParms::EXPECTED_NUM_FIELDS)
+    anc_geo_data        (Icesat2Parms::EXPECTED_NUM_FIELDS),
+    anc_ph_data         (Icesat2Parms::EXPECTED_NUM_FIELDS)
 {
-    RqstParms::string_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
-    RqstParms::string_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
+    Icesat2Parms::string_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
+    Icesat2Parms::string_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
 
     /* Read Ancillary Geolocation Fields */
     if(geo_fields)
@@ -653,8 +653,8 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::Atl08Class (info_t* info):
-    enabled             (info->reader->parms->stages[RqstParms::STAGE_ATL08]),
-    phoreal             (info->reader->parms->stages[RqstParms::STAGE_PHOREAL]),
+    enabled             (info->reader->parms->stages[Icesat2Parms::STAGE_ATL08]),
+    phoreal             (info->reader->parms->stages[Icesat2Parms::STAGE_PHOREAL]),
     gt                  {NULL, NULL},
     relief              {NULL, NULL},
     landcover           {NULL, NULL},
@@ -674,7 +674,7 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::~Atl08Class (void)
 {
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         if(gt[t]) delete [] gt[t];
         if(relief[t]) delete [] relief[t];
@@ -689,7 +689,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
 void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[RqstParms::STAGE_ATL08])
+    if(!info->reader->parms->stages[Icesat2Parms::STAGE_ATL08])
     {
         return;
     }
@@ -710,7 +710,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
     GTArray<int32_t>* atl03_segment_ph_cnt = &region.segment_ph_cnt;
 
     /* Classify Photons */
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Allocate ATL08 Classification Array */
         int num_photons = atl03.dist_ph_along[t].size;
@@ -783,17 +783,17 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
                         relief[t][atl03_photon] = atl08_ph_h[t][atl08_photon];
 
                         /* Run ABoVE Classifier (if specified) */
-                        if(info->reader->parms->phoreal.above_classifier && (gt[t][atl03_photon] != RqstParms::ATL08_TOP_OF_CANOPY))
+                        if(info->reader->parms->phoreal.above_classifier && (gt[t][atl03_photon] != Icesat2Parms::ATL08_TOP_OF_CANOPY))
                         {
-                            uint8_t spot = RqstParms::getSpotNumber((RqstParms::sc_orient_t)(*info->reader->sc_orient)[0], (RqstParms::track_t)info->track, t);
+                            uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)(*info->reader->sc_orient)[0], (Icesat2Parms::track_t)info->track, t);
                             if( (atl03.solar_elevation[t][atl03_segment] <= 5.0) &&
                                 ((spot == 1) || (spot == 3) || (spot == 5)) &&
-                                (atl03.signal_conf_ph[t][atl03_photon] == RqstParms::CNF_SURFACE_HIGH) &&
+                                (atl03.signal_conf_ph[t][atl03_photon] == Icesat2Parms::CNF_SURFACE_HIGH) &&
                                 ((relief[t][atl03_photon] >= 0.0) && (relief[t][atl03_photon] < 35.0)) )
                                 /* TODO: check for valid ground photons in ATL08 segment */
                             {
                                 /* Reassign Classification */
-                                gt[t][atl03_photon] = RqstParms::ATL08_TOP_OF_CANOPY;
+                                gt[t][atl03_photon] = Icesat2Parms::ATL08_TOP_OF_CANOPY;
                             }
                         }
                     }
@@ -804,7 +804,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
                 else
                 {
                     /* Unclassified */
-                    gt[t][atl03_photon] = RqstParms::ATL08_UNCLASSIFIED;
+                    gt[t][atl03_photon] = Icesat2Parms::ATL08_UNCLASSIFIED;
 
                     /* Set ATL08 Relief to Zero */
                     if(phoreal) relief[t][atl03_photon] = 0.0;
@@ -839,7 +839,7 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
     gt {NULL, NULL}
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[RqstParms::STAGE_YAPC])
+    if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC])
     {
         return;
     }
@@ -864,7 +864,7 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::~YapcScore (void)
 {
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         if(gt[t]) delete [] gt[t];
     }
@@ -882,13 +882,13 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
     double nearest_neighbors[MAX_KNN];
 
     /* Shortcut to Settings */
-    RqstParms::yapc_t* settings = &info->reader->parms->yapc;
+    Icesat2Parms::yapc_t* settings = &info->reader->parms->yapc;
 
     /* Score Photons
      *
      *   CANNOT THROW BELOW THIS POINT
      */
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Allocate ATL08 Classification Array */
         int32_t num_photons = atl03.dist_ph_along[t].size;
@@ -1049,7 +1049,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
 void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& atl03)
 {
     /* YAPC Parameters */
-    RqstParms::yapc_t* settings = &info->reader->parms->yapc;
+    Icesat2Parms::yapc_t* settings = &info->reader->parms->yapc;
     const double hWX = settings->win_x / 2; // meters
     const double hWZ = settings->win_h / 2; // meters
 
@@ -1057,7 +1057,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
      *
      *   CANNOT THROW BELOW THIS POINT
      */
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         int32_t num_segments = atl03.segment_id[t].size;
         int32_t num_photons = atl03.dist_ph_along[t].size;
@@ -1189,31 +1189,31 @@ uint8_t* Atl03Reader::YapcScore::operator[] (int t)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
 {
-    gt[RqstParms::RPT_L].ph_in              = 0;
-    gt[RqstParms::RPT_L].seg_in             = 0;
-    gt[RqstParms::RPT_L].seg_ph             = 0;
-    gt[RqstParms::RPT_L].start_segment      = 0;
-    gt[RqstParms::RPT_L].start_distance     = atl03.segment_dist_x[RqstParms::RPT_L][0];
-    gt[RqstParms::RPT_L].seg_distance       = 0.0;
-    gt[RqstParms::RPT_L].start_seg_portion  = 0.0;
-    gt[RqstParms::RPT_L].track_complete     = false;
-    gt[RqstParms::RPT_L].bckgrd_in          = 0;
-    gt[RqstParms::RPT_L].photon_indices     = NULL;
-    gt[RqstParms::RPT_L].extent_segment     = 0;
-    gt[RqstParms::RPT_L].extent_valid       = true;
+    gt[Icesat2Parms::RPT_L].ph_in              = 0;
+    gt[Icesat2Parms::RPT_L].seg_in             = 0;
+    gt[Icesat2Parms::RPT_L].seg_ph             = 0;
+    gt[Icesat2Parms::RPT_L].start_segment      = 0;
+    gt[Icesat2Parms::RPT_L].start_distance     = atl03.segment_dist_x[Icesat2Parms::RPT_L][0];
+    gt[Icesat2Parms::RPT_L].seg_distance       = 0.0;
+    gt[Icesat2Parms::RPT_L].start_seg_portion  = 0.0;
+    gt[Icesat2Parms::RPT_L].track_complete     = false;
+    gt[Icesat2Parms::RPT_L].bckgrd_in          = 0;
+    gt[Icesat2Parms::RPT_L].photon_indices     = NULL;
+    gt[Icesat2Parms::RPT_L].extent_segment     = 0;
+    gt[Icesat2Parms::RPT_L].extent_valid       = true;
 
-    gt[RqstParms::RPT_R].ph_in             = 0;
-    gt[RqstParms::RPT_R].seg_in            = 0;
-    gt[RqstParms::RPT_R].seg_ph            = 0;
-    gt[RqstParms::RPT_R].start_segment     = 0;
-    gt[RqstParms::RPT_R].start_distance    = atl03.segment_dist_x[RqstParms::RPT_R][0];
-    gt[RqstParms::RPT_R].seg_distance      = 0.0;
-    gt[RqstParms::RPT_R].start_seg_portion = 0.0;
-    gt[RqstParms::RPT_R].track_complete    = false;
-    gt[RqstParms::RPT_R].bckgrd_in         = 0;
-    gt[RqstParms::RPT_R].photon_indices    = NULL;
-    gt[RqstParms::RPT_R].extent_segment    = 0;
-    gt[RqstParms::RPT_R].extent_valid      = true;
+    gt[Icesat2Parms::RPT_R].ph_in             = 0;
+    gt[Icesat2Parms::RPT_R].seg_in            = 0;
+    gt[Icesat2Parms::RPT_R].seg_ph            = 0;
+    gt[Icesat2Parms::RPT_R].start_segment     = 0;
+    gt[Icesat2Parms::RPT_R].start_distance    = atl03.segment_dist_x[Icesat2Parms::RPT_R][0];
+    gt[Icesat2Parms::RPT_R].seg_distance      = 0.0;
+    gt[Icesat2Parms::RPT_R].start_seg_portion = 0.0;
+    gt[Icesat2Parms::RPT_R].track_complete    = false;
+    gt[Icesat2Parms::RPT_R].bckgrd_in         = 0;
+    gt[Icesat2Parms::RPT_R].photon_indices    = NULL;
+    gt[Icesat2Parms::RPT_R].extent_segment    = 0;
+    gt[Icesat2Parms::RPT_R].extent_valid      = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -1221,8 +1221,8 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::~TrackState (void)
 {
-    if(gt[RqstParms::RPT_L].photon_indices) delete gt[RqstParms::RPT_L].photon_indices;
-    if(gt[RqstParms::RPT_R].photon_indices) delete gt[RqstParms::RPT_R].photon_indices;
+    if(gt[Icesat2Parms::RPT_L].photon_indices) delete gt[Icesat2Parms::RPT_L].photon_indices;
+    if(gt[Icesat2Parms::RPT_R].photon_indices) delete gt[Icesat2Parms::RPT_R].photon_indices;
 }
 
 /*----------------------------------------------------------------------------
@@ -1241,7 +1241,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
     Atl03Reader* reader = info->reader;
-    RqstParms* parms = reader->parms;
+    Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     uint32_t extent_counter = 0;
 
@@ -1270,17 +1270,17 @@ void* Atl03Reader::subsettingThread (void* parm)
         TrackState state(atl03);
 
         /* Increment Read Statistics */
-        local_stats.segments_read = (region.segment_ph_cnt[RqstParms::RPT_L].size + region.segment_ph_cnt[RqstParms::RPT_R].size);
+        local_stats.segments_read = (region.segment_ph_cnt[Icesat2Parms::RPT_L].size + region.segment_ph_cnt[Icesat2Parms::RPT_R].size);
 
         /* Calculate Length of Extent in Meters (used for distance) */
         state.extent_length = parms->extent_length;
         if(parms->dist_in_seg) state.extent_length *= ATL03_SEGMENT_LENGTH;
 
         /* Traverse All Photons In Dataset */
-        while( reader->active && (!state[RqstParms::RPT_L].track_complete || !state[RqstParms::RPT_R].track_complete) )
+        while( reader->active && (!state[Icesat2Parms::RPT_L].track_complete || !state[Icesat2Parms::RPT_R].track_complete) )
         {
             /* Select Photons for Extent from each Track */
-            for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+            for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
             {
                 /* Skip Completed Tracks */
                 if(state[t].track_complete)
@@ -1353,18 +1353,18 @@ void* Atl03Reader::subsettingThread (void* parm)
                         {
                             /* Check and Set Signal Confidence Level */
                             int8_t atl03_cnf = atl03.signal_conf_ph[t][current_photon];
-                            if(atl03_cnf < RqstParms::CNF_POSSIBLE_TEP || atl03_cnf > RqstParms::CNF_SURFACE_HIGH)
+                            if(atl03_cnf < Icesat2Parms::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parms::CNF_SURFACE_HIGH)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
                             }
-                            else if(!parms->atl03_cnf[atl03_cnf + RqstParms::SIGNAL_CONF_OFFSET])
+                            else if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
                             {
                                 break;
                             }
 
                             /* Check and Set ATL03 Photon Quality Level */
                             int8_t quality_ph = atl03.quality_ph[t][current_photon];
-                            if(quality_ph < RqstParms::QUALITY_NOMINAL || quality_ph > RqstParms::QUALITY_POSSIBLE_TEP)
+                            if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
                             }
@@ -1374,11 +1374,11 @@ void* Atl03Reader::subsettingThread (void* parm)
                             }
 
                             /* Check and Set ATL08 Classification */
-                            RqstParms::atl08_classification_t atl08_class = RqstParms::ATL08_UNCLASSIFIED;
+                            Icesat2Parms::atl08_classification_t atl08_class = Icesat2Parms::ATL08_UNCLASSIFIED;
                             if(atl08[t])
                             {
-                                atl08_class = (RqstParms::atl08_classification_t)atl08[t][current_photon];
-                                if(atl08_class < 0 || atl08_class >= RqstParms::NUM_ATL08_CLASSES)
+                                atl08_class = (Icesat2Parms::atl08_classification_t)atl08[t][current_photon];
+                                if(atl08_class < 0 || atl08_class >= Icesat2Parms::NUM_ATL08_CLASSES)
                                 {
                                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
                                 }
@@ -1412,7 +1412,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             float relief = 0.0;
                             uint8_t landcover_flag = Atl08Class::INVALID_FLAG;
                             uint8_t snowcover_flag = Atl08Class::INVALID_FLAG;
-                            if(parms->stages[RqstParms::STAGE_PHOREAL])
+                            if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
                             {
                                 /* Set Relief */
                                 if(!parms->phoreal.use_abs_h)
@@ -1514,7 +1514,7 @@ void* Atl03Reader::subsettingThread (void* parm)
             }
 
             /* Create Extent Record */
-            if(state[RqstParms::RPT_L].extent_valid || state[RqstParms::RPT_R].extent_valid || parms->pass_invalid)
+            if(state[Icesat2Parms::RPT_L].extent_valid || state[Icesat2Parms::RPT_R].extent_valid || parms->pass_invalid)
             {
                 /* Generate Extent ID */
                 uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
@@ -1522,7 +1522,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                                      ((uint64_t)reader->start_region << 32) |
                                      ((uint64_t)info->track << 30) |
                                      (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
-                                     RqstParms::EXTENT_ID_PHOTONS;
+                                     Icesat2Parms::EXTENT_ID_PHOTONS;
 
                 /* Build and Send Extent Record */
                 if(!reader->flatten)
@@ -1655,7 +1655,7 @@ uint32_t Atl03Reader::calculateSegmentId (int t, TrackState& state, Atl03Data& a
 bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
 {
     /* Calculate Extent Record Size */
-    int num_photons = state[RqstParms::RPT_L].extent_photons.length() + state[RqstParms::RPT_R].extent_photons.length();
+    int num_photons = state[Icesat2Parms::RPT_L].extent_photons.length() + state[Icesat2Parms::RPT_R].extent_photons.length();
     int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
     /* Allocate and Initialize Extent Record */
@@ -1669,7 +1669,7 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
 
     /* Populate Extent */
     uint32_t ph_out = 0;
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Calculate Spacecraft Velocity */
         int32_t sc_v_offset = state[t].extent_segment * 3;
@@ -1711,8 +1711,8 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
     }
 
     /* Set Photon Pointer Fields */
-    extent->photon_offset[RqstParms::RPT_L] = offsetof(extent_t, photons); // pointers are set to offset from start of record data
-    extent->photon_offset[RqstParms::RPT_R] = offsetof(extent_t, photons) + (sizeof(photon_t) * extent->photon_count[RqstParms::RPT_L]);
+    extent->photon_offset[Icesat2Parms::RPT_L] = offsetof(extent_t, photons); // pointers are set to offset from start of record data
+    extent->photon_offset[Icesat2Parms::RPT_R] = offsetof(extent_t, photons) + (sizeof(photon_t) * extent->photon_count[Icesat2Parms::RPT_L]);
 
     /* Post Segment Record */
     return postRecord(&record, local_stats);
@@ -1724,7 +1724,7 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
 bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
 {
     /* Calculate Extent Record Size */
-    int num_photons = state[RqstParms::RPT_L].extent_photons.length() + state[RqstParms::RPT_R].extent_photons.length();
+    int num_photons = state[Icesat2Parms::RPT_L].extent_photons.length() + state[Icesat2Parms::RPT_R].extent_photons.length();
     int extent_bytes = sizeof(flat_photon_t) * num_photons;
 
     /* Allocate and Initialize Extent Record */
@@ -1733,9 +1733,9 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
 
     /* Populate Extent */
     uint32_t ph_out = 0;
-    for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
-        uint8_t spot = RqstParms::getSpotNumber((RqstParms::sc_orient_t)(*sc_orient)[0], (RqstParms::track_t)track, t);
+        uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)(*sc_orient)[0], (Icesat2Parms::track_t)track, t);
         uint32_t segment_id = calculateSegmentId(t, state, atl03);
 
         /* Populate Photons */
@@ -1763,7 +1763,7 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
 /*----------------------------------------------------------------------------
  * sendAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1773,18 +1773,18 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::string
             GTDArray* array = field_dict->get((*field_list)[i].getString());
 
             /* Create Ancillary Record */
-            int record_size = offsetof(anc_extent_t, data) + array->gt[RqstParms::RPT_L].elementSize() + array->gt[RqstParms::RPT_R].elementSize();
+            int record_size = offsetof(anc_extent_t, data) + array->gt[Icesat2Parms::RPT_L].elementSize() + array->gt[Icesat2Parms::RPT_R].elementSize();
             RecordObject record(exAncRecType, record_size);
             anc_extent_t* data = (anc_extent_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
             data->field_index = i;
-            data->data_type = array->gt[RqstParms::RPT_L].elementType();
+            data->data_type = array->gt[Icesat2Parms::RPT_L].elementType();
 
             /* Populate Ancillary Data */
-            uint32_t num_elements[RqstParms::NUM_PAIR_TRACKS] = {1, 1};
-            int32_t start_element[RqstParms::NUM_PAIR_TRACKS] = {state[RqstParms::RPT_L].extent_segment, state[RqstParms::RPT_R].extent_segment};
+            uint32_t num_elements[Icesat2Parms::NUM_PAIR_TRACKS] = {1, 1};
+            int32_t start_element[Icesat2Parms::NUM_PAIR_TRACKS] = {state[Icesat2Parms::RPT_L].extent_segment, state[Icesat2Parms::RPT_R].extent_segment};
             array->serialize(&data->data[0], start_element, num_elements);
 
             /* Post Ancillary Record */
@@ -1801,7 +1801,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, RqstParms::string
 /*----------------------------------------------------------------------------
  * sendAncillaryPhRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, RqstParms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
 {
     if(field_list)
     {
@@ -1812,21 +1812,21 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, RqstParms::string_
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_photon_t, data) +
-                                (array->gt[RqstParms::RPT_L].elementSize() * state[RqstParms::RPT_L].photon_indices->length()) +
-                                (array->gt[RqstParms::RPT_R].elementSize() * state[RqstParms::RPT_R].photon_indices->length());
+                                (array->gt[Icesat2Parms::RPT_L].elementSize() * state[Icesat2Parms::RPT_L].photon_indices->length()) +
+                                (array->gt[Icesat2Parms::RPT_R].elementSize() * state[Icesat2Parms::RPT_R].photon_indices->length());
             RecordObject record(phAncRecType, record_size);
             anc_photon_t* data = (anc_photon_t*)record.getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
             data->field_index = i;
-            data->data_type = array->gt[RqstParms::RPT_L].elementType();
-            data->num_elements[RqstParms::RPT_L] = state[RqstParms::RPT_L].photon_indices->length();
-            data->num_elements[RqstParms::RPT_R] = state[RqstParms::RPT_R].photon_indices->length();
+            data->data_type = array->gt[Icesat2Parms::RPT_L].elementType();
+            data->num_elements[Icesat2Parms::RPT_L] = state[Icesat2Parms::RPT_L].photon_indices->length();
+            data->num_elements[Icesat2Parms::RPT_R] = state[Icesat2Parms::RPT_R].photon_indices->length();
 
             /* Populate Ancillary Data */
             uint64_t bytes_written = 0;
-            for(int t = 0; t < RqstParms::NUM_PAIR_TRACKS; t++)
+            for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
             {
                 for(int p = 0; p < state[t].photon_indices->length(); p++)
                 {
@@ -1964,16 +1964,16 @@ int Atl03Reader::luaParms (lua_State* L)
     {
         /* Create Parameter Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, RqstParms::SURFACE_TYPE,         lua_obj->parms->surface_type);
-        LuaEngine::setAttrNum(L, RqstParms::ALONG_TRACK_SPREAD,   lua_obj->parms->along_track_spread);
-        LuaEngine::setAttrInt(L, RqstParms::MIN_PHOTON_COUNT,     lua_obj->parms->minimum_photon_count);
-        LuaEngine::setAttrNum(L, RqstParms::EXTENT_LENGTH,        lua_obj->parms->extent_length);
-        LuaEngine::setAttrNum(L, RqstParms::EXTENT_STEP,          lua_obj->parms->extent_step);
-        lua_pushstring(L, RqstParms::ATL03_CNF);
+        LuaEngine::setAttrInt(L, Icesat2Parms::SURFACE_TYPE,         lua_obj->parms->surface_type);
+        LuaEngine::setAttrNum(L, Icesat2Parms::ALONG_TRACK_SPREAD,   lua_obj->parms->along_track_spread);
+        LuaEngine::setAttrInt(L, Icesat2Parms::MIN_PHOTON_COUNT,     lua_obj->parms->minimum_photon_count);
+        LuaEngine::setAttrNum(L, Icesat2Parms::EXTENT_LENGTH,        lua_obj->parms->extent_length);
+        LuaEngine::setAttrNum(L, Icesat2Parms::EXTENT_STEP,          lua_obj->parms->extent_step);
+        lua_pushstring(L, Icesat2Parms::ATL03_CNF);
         lua_newtable(L);
-        for(int i = RqstParms::CNF_POSSIBLE_TEP; i <= RqstParms::CNF_SURFACE_HIGH; i++)
+        for(int i = Icesat2Parms::CNF_POSSIBLE_TEP; i <= Icesat2Parms::CNF_SURFACE_HIGH; i++)
         {
-            lua_pushboolean(L, lua_obj->parms->atl03_cnf[i + RqstParms::SIGNAL_CONF_OFFSET]);
+            lua_pushboolean(L, lua_obj->parms->atl03_cnf[i + Icesat2Parms::SIGNAL_CONF_OFFSET]);
             lua_rawseti(L, -2, i);
         }
         lua_settable(L, -3);

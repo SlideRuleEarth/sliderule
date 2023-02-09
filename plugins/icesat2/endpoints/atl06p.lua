@@ -36,8 +36,8 @@ local terminate_proxy_stream = false
 
 -- Handle Output Options --
 local output_dispatch = nil
-if parms["output"] then
-    local output_parms = arrow.parms(parms["output"])
+if parms[arrow.PARMS] then
+    local output_parms = arrow.parms(parms[arrow.PARMS])
     -- Parquet Writer --
     if output_parms:isparquet() then
         rsps_from_nodes = rspq .. "-parquet"

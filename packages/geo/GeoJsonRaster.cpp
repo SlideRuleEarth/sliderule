@@ -101,8 +101,13 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
     double _cellsize = getLuaFloat(L, -1);
     lua_pop(L, 1);
 
+    /* Get Geo Parameters */
+    lua_getfield(L, index, GeoParms::SELF);
+    GeoParms* _parms = new GeoParms(L, index + 1);
+    lua_pop(L, 1);
+
     /* Create GeoJsonRaster */
-    return new GeoJsonRaster(L, file, filelength, _cellsize);
+    return new GeoJsonRaster(L, _parms, file, filelength, _cellsize);
 }
 
 
@@ -150,8 +155,8 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoJsonRaster::GeoJsonRaster(lua_State *L, const char *file, long filelength, double _cellsize):
-    VrtRaster(L, NEARESTNEIGHBOUR_ALGO, 0, false, false)
+GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double _cellsize):
+    VrtRaster(L, _parms)
 {
     char uuid_str[UUID_STR_LEN] = {0};
     bool rasterCreated = false;

@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "GeoRaster.h"
+#include "GeoParms.h"
 
 /******************************************************************************
  * VCT (Vector) RASTER CLASS
@@ -68,9 +69,7 @@ class VctRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
 
-                     VctRaster         (lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                        const bool zonal_stats, const bool auxiliary_files, const int target_crs);
-
+                     VctRaster         (lua_State* L, GeoParms* _parms, const int target_crs);
         void         openGeoIndex      (double lon=0, double lat=0);
         void         transformCRS      (OGRPoint& p);
         virtual void getIndexFile      (std::string& file, double lon, double lat) = 0;

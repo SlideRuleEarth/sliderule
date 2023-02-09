@@ -5,9 +5,7 @@
 --
 -- INPUT:       rqst
 --              {
---                  "dem-asset":          "<mosaic or strip>"
---                  "sampling-algorithm": "<NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss>"
---                  "sampling-radius":    <meters, 0 indicates resampling with 8 buffer pixels plus pixel of interest>
+--                  "samples": {<geoparms>}
 --                  "coordinates": [
 --                      [<longitude>, <latitude>],
 --                      [<longitude>, <latitude>]...
@@ -21,13 +19,10 @@ local json = require("json")
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
-local dem_asset = rqst["dem-asset"] or "arcticdem-mosaic"
-local sampling_alg = rqst["sampling-algorithm"] or geo.NearestNeighbour
-local sampling_radius = rqst["sampling-radius"] or 0
 local coord = rqst["coordinates"]
 
 -- Get Samples --
-local dem = geo.raster(dem_asset, sampling_alg, sampling_radius)
+local dem = geo.raster(geo.parms(rqst[geo.PARMS]))
 
 -- Build Table --
 local samples = {}

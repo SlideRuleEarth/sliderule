@@ -129,6 +129,7 @@ int geo_open (lua_State* L)
         {"geojson",     GeoJsonRaster::luaCreate},
         {"raster",      GeoRaster::luaCreate},
         {"sampler",     RasterSampler::luaCreate},
+        {"parms",       GeoParms::luaCreate},
         {NULL,          NULL}
     };
 
@@ -136,14 +137,15 @@ int geo_open (lua_State* L)
     luaL_newlib(L, geo_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr   (L, GeoRaster::NEARESTNEIGHBOUR_ALGO,   GeoRaster::NEARESTNEIGHBOUR_ALGO);
-    LuaEngine::setAttrStr   (L, GeoRaster::BILINEAR_ALGO,           GeoRaster::BILINEAR_ALGO);
-    LuaEngine::setAttrStr   (L, GeoRaster::CUBIC_ALGO,              GeoRaster::CUBIC_ALGO);
-    LuaEngine::setAttrStr   (L, GeoRaster::CUBICSPLINE_ALGO,        GeoRaster::CUBICSPLINE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoRaster::LANCZOS_ALGO,            GeoRaster::LANCZOS_ALGO);
-    LuaEngine::setAttrStr   (L, GeoRaster::AVERAGE_ALGO,            GeoRaster::AVERAGE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoRaster::MODE_ALGO,               GeoRaster::MODE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoRaster::GAUSS_ALGO,              GeoRaster::GAUSS_ALGO);
+    LuaEngine::setAttrStr   (L, "PARMS",                            GeoParms::SELF);
+    LuaEngine::setAttrStr   (L, GeoParms::NEARESTNEIGHBOUR_ALGO,    GeoParms::NEARESTNEIGHBOUR_ALGO);
+    LuaEngine::setAttrStr   (L, GeoParms::BILINEAR_ALGO,            GeoParms::BILINEAR_ALGO);
+    LuaEngine::setAttrStr   (L, GeoParms::CUBIC_ALGO,               GeoParms::CUBIC_ALGO);
+    LuaEngine::setAttrStr   (L, GeoParms::CUBICSPLINE_ALGO,         GeoParms::CUBICSPLINE_ALGO);
+    LuaEngine::setAttrStr   (L, GeoParms::LANCZOS_ALGO,             GeoParms::LANCZOS_ALGO);
+    LuaEngine::setAttrStr   (L, GeoParms::AVERAGE_ALGO,             GeoParms::AVERAGE_ALGO);
+    LuaEngine::setAttrStr   (L, GeoParms::MODE_ALGO,                GeoParms::MODE_ALGO);
+    LuaEngine::setAttrStr   (L, GeoParms::GAUSS_ALGO,               GeoParms::GAUSS_ALGO);
 
     return 1;
 }

@@ -31,7 +31,6 @@ local parms = rqst["parms"]
 local atl03_asset = parms["asset"] or rqst["atl03-asset"] or "nsidc-s3"
 parms["asset"] = atl03_asset -- backward compatibility layer
 local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
-local output_parms = parms["output"]
 
 -- Get Asset --
 local asset = core.getbyname(atl03_asset)
@@ -42,8 +41,9 @@ end
 
 -- Get Flatten Option --
 local flatten = false
-if output_parms then
-    if output_parms["format"] == "parquet" then
+if parms[arrow.PARMS] then
+    local output_parms = arrow.parms(parms[arrow.PARMS])
+    if output_parms:isparquet() then
         flatten = true
     end
 end

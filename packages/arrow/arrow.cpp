@@ -60,6 +60,9 @@ int arrow_open (lua_State* L)
     /* Set Library */
     luaL_newlib(L, arrow_functions);
 
+    /* Set Globals */
+    LuaEngine::setAttrStr(L, "PARMS", ArrowParms::SELF);
+
     return 1;
 }
 

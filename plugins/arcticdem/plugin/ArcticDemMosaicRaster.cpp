@@ -55,9 +55,8 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                                             const bool zonal_stats, const bool auxiliary_files):
-    VrtRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files)
+ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, GeoParms* _parms):
+    VrtRaster(L, _parms)
 {
     /*
      * ArcticDemMosaicRaster uses one mosaics VRT file;
@@ -69,10 +68,9 @@ ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, const char *dem_sampl
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                         const bool zonal_stats, const bool auxiliary_files)
+GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, GeoParms* _parms)
 {
-    return new ArcticDemMosaicRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
+    return new ArcticDemMosaicRaster(L, _parms);
 }
 
 
@@ -81,6 +79,7 @@ GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, const char* dem_sampling,
  *----------------------------------------------------------------------------*/
 void ArcticDemMosaicRaster::getIndexFile(std::string& file, double lon, double lat)
 {
+    std::ignore = lon = lat;
     file = "/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt";
     mlog(DEBUG, "Using %s", file.c_str());
 }
@@ -133,6 +132,7 @@ bool ArcticDemMosaicRaster::getRasterDate(raster_info_t& rinfo)
             if (i != -1)
             {
                 int year, month, day, hour, minute, second, timeZone;
+                year = month = day = hour = minute = second = timeZone = 0;
                 if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
                 {
                     /*

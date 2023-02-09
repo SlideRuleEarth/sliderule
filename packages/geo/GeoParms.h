@@ -29,11 +29,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_parms__
-#define __arrow_parms__
+#ifndef __geo_parms__
+#define __geo_parms__
 
 /*
- * ArrowParms works on batches of records.  It expects the `rec_type` passed
+ * GeoParms works on batches of records.  It expects the `rec_type` passed
  * into the constructor to be the type that defines each of the column headings,
  * then it expects to receive records that are arrays (or batches) of that record
  * type.  The field defined as an array is transparent to this class - it just
@@ -44,44 +44,44 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <gdal.h>
+
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "Asset.h"
-
-#ifdef __aws__
-#include "aws.h"
-#endif
+#include "TimeLib.h"
 
 /******************************************************************************
- * ARROW PARAMETERS CLASS
+ * GEO PARAMETERS CLASS
  ******************************************************************************/
 
-class ArrowParms: public LuaObject
+class GeoParms: public LuaObject
 {
     public:
-
-        /*--------------------------------------------------------------------
-        * Typedefs
-        *--------------------------------------------------------------------*/
-        typedef enum {
-            NATIVE = 0,
-            FEATHER = 1,
-            PARQUET = 2,
-            CSV = 3,
-            UNSUPPORTED = 4
-        } format_t;
 
         /*--------------------------------------------------------------------
         * Constants
         *--------------------------------------------------------------------*/
 
         static const char* SELF;
-        static const char* PATH;
-        static const char* FORMAT;
-        static const char* OPEN_ON_COMPLETE;
+        static const char* SAMPLING_ALGO;
+        static const char* SAMPLING_RADIUS;
+        static const char* ZONAL_STATS;
+        static const char* AUXILIARY_FILES;
+        static const char* START_TIME;
+        static const char* STOP_TIME;
+        static const char* URL_SUBSTRING;
         static const char* ASSET;
-        static const char* REGION;
-        static const char* CREDENTIALS;
+
+        static const char* NEARESTNEIGHBOUR_ALGO;
+        static const char* BILINEAR_ALGO;
+        static const char* CUBIC_ALGO;
+        static const char* CUBICSPLINE_ALGO;
+        static const char* LANCZOS_ALGO;
+        static const char* AVERAGE_ALGO;
+        static const char* MODE_ALGO;
+        static const char* GAUSS_ALGO;
+        static const char* ZONALSTATS_ALGO;
 
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
@@ -91,24 +91,25 @@ class ArrowParms: public LuaObject
         * Data
         *--------------------------------------------------------------------*/
 
-        const char*     path;                           // file system path to the file (includes filename)
-        format_t        format;                         // format of the file
-        bool            open_on_complete;               // flag to client to open file on completion
-        const char*     asset_name;
-        const char*     region;
-
-        #ifdef __aws__
-        CredentialStore::Credential credentials;
-        #endif
+        GDALRIOResampleAlg  sampling_algo;
+        int                 sampling_radius;
+        bool                zonal_stats;
+        bool                auxiliary_files;
+        bool                filter_time;
+        TimeLib::gmt_time_t start_time;
+        TimeLib::gmt_time_t stop_time;
+        const char*         url_substring;
+        const char*         asset_name;
+        Asset*              asset;
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        static int  luaCreate           (lua_State* L);
-                    ArrowParms          (lua_State* L, int index);
-                    ~ArrowParms         (void);
-        void        fromLua             (lua_State* L, int index);
+        static int  luaCreate   (lua_State* L);
+                    GeoParms    (lua_State* L, int index);
+                    ~GeoParms   (void);
+        void        fromLua     (lua_State* L, int index);
 
     private:
 
@@ -116,13 +117,10 @@ class ArrowParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        cleanup             (void);
-        format_t    str2outputformat    (const char* fmt_str);
-        static int  luaIsNative         (lua_State* L);
-        static int  luaIsFeather        (lua_State* L);
-        static int  luaIsParquet        (lua_State* L);
-        static int  luaIsCSV            (lua_State* L);
-        static int  luaPath             (lua_State* L);
+        void                cleanup         (void);
+        GDALRIOResampleAlg  str2algo        (const char* str);
+        static int          luaAssetName    (lua_State* L);
+        static int          luaAssetRegion  (lua_State* L);
 };
 
-#endif  /* __arrow_parms__ */
+#endif  /* __geo_parms__ */

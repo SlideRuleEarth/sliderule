@@ -63,6 +63,7 @@
 
 extern "C" {
 void initatlas (void);
+void deinitatlas (void);
 }
 
 #endif  /* __atlas__ */

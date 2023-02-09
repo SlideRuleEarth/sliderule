@@ -109,64 +109,79 @@ class CredentialStore
 
             void fromLua (lua_State* L, int index)
             {
-                if(lua_type(L, index) == LUA_TTABLE)
+                /* Reset State of Object */
+                cleanup();
+                zero();
+
+                /* Populate Object from Lua */
+                try
                 {
-                    /* Set Provided */
-                    provided = true;
-
-                    /* Get Access Key */
-                    if(lua_getfield(L, index, ACCESS_KEY_ID_STR) != LUA_TSTRING)
+                    if(lua_type(L, index) == LUA_TTABLE)
                     {
-                        lua_pop(L, 1);
-                        if(lua_getfield(L, index, ACCESS_KEY_ID_STR1) != LUA_TSTRING)
+                        /* Set Provided */
+                        provided = true;
+
+                        /* Get Access Key */
+                        if(lua_getfield(L, index, ACCESS_KEY_ID_STR) != LUA_TSTRING)
                         {
                             lua_pop(L, 1);
-                            lua_getfield(L, index, ACCESS_KEY_ID_STR2);
+                            if(lua_getfield(L, index, ACCESS_KEY_ID_STR1) != LUA_TSTRING)
+                            {
+                                lua_pop(L, 1);
+                                lua_getfield(L, index, ACCESS_KEY_ID_STR2);
+                            }
                         }
-                    }
-                    const char* access_key_id_str = LuaObject::getLuaString(L, -1);
-                    accessKeyId = StringLib::duplicate(access_key_id_str, MAX_KEY_SIZE);
-                    lua_pop(L, 1);
-
-                    /* Get Secret Access Key */
-                    if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR) != LUA_TSTRING)
-                    {
+                        const char* access_key_id_str = LuaObject::getLuaString(L, -1);
+                        accessKeyId = StringLib::duplicate(access_key_id_str, MAX_KEY_SIZE);
                         lua_pop(L, 1);
-                        if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR1) != LUA_TSTRING)
+
+                        /* Get Secret Access Key */
+                        if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR) != LUA_TSTRING)
                         {
                             lua_pop(L, 1);
-                            lua_getfield(L, index, SECRET_ACCESS_KEY_STR2);
+                            if(lua_getfield(L, index, SECRET_ACCESS_KEY_STR1) != LUA_TSTRING)
+                            {
+                                lua_pop(L, 1);
+                                lua_getfield(L, index, SECRET_ACCESS_KEY_STR2);
+                            }
                         }
-                    }
-                    const char* secret_access_key_str = LuaObject::getLuaString(L, -1);
-                    secretAccessKey = StringLib::duplicate(secret_access_key_str, MAX_KEY_SIZE);
-                    lua_pop(L, 1);
-
-                    /* Get Session Token */
-                    if(lua_getfield(L, index, SESSION_TOKEN_STR) != LUA_TSTRING)
-                    {
+                        const char* secret_access_key_str = LuaObject::getLuaString(L, -1);
+                        secretAccessKey = StringLib::duplicate(secret_access_key_str, MAX_KEY_SIZE);
                         lua_pop(L, 1);
-                        if(lua_getfield(L, index, SESSION_TOKEN_STR1) != LUA_TSTRING)
+
+                        /* Get Session Token */
+                        if(lua_getfield(L, index, SESSION_TOKEN_STR) != LUA_TSTRING)
                         {
                             lua_pop(L, 1);
-                            lua_getfield(L, index, SESSION_TOKEN_STR2);
+                            if(lua_getfield(L, index, SESSION_TOKEN_STR1) != LUA_TSTRING)
+                            {
+                                lua_pop(L, 1);
+                                lua_getfield(L, index, SESSION_TOKEN_STR2);
+                            }
                         }
-                    }
-                    const char* session_token_str = LuaObject::getLuaString(L, -1);
-                    sessionToken = StringLib::duplicate(session_token_str, MAX_KEY_SIZE);
-                    lua_pop(L, 1);
-
-                    /* Get Expiration Date */
-                    if(lua_getfield(L, index, EXPIRATION_STR) != LUA_TSTRING)
-                    {
+                        const char* session_token_str = LuaObject::getLuaString(L, -1);
+                        sessionToken = StringLib::duplicate(session_token_str, MAX_KEY_SIZE);
                         lua_pop(L, 1);
-                        lua_getfield(L, index, EXPIRATION_STR1);
+
+                        /* Get Expiration Date */
+                        if(lua_getfield(L, index, EXPIRATION_STR) != LUA_TSTRING)
+                        {
+                            lua_pop(L, 1);
+                            lua_getfield(L, index, EXPIRATION_STR1);
+                        }
+                        const char* expiration_str  = LuaObject::getLuaString(L, -1, true, NULL);
+                        expiration = StringLib::duplicate(expiration_str, MAX_KEY_SIZE);
+                        if(expiration)  expirationGps = TimeLib::str2gpstime(expiration);
+                        else            expirationGps = 0;
+                        lua_pop(L, 1);
                     }
-                    const char* expiration_str  = LuaObject::getLuaString(L, -1, true, NULL);
-                    expiration = StringLib::duplicate(expiration_str, MAX_KEY_SIZE);
-                    if(expiration)  expirationGps = TimeLib::str2gpstime(expiration);
-                    else            expirationGps = 0;
-                    lua_pop(L, 1);
+                }
+                catch(const RunTimeException& e)
+                {
+                    /* Clean Up from Failed Attempt */
+                    cleanup();
+                    zero();
+                    throw;
                 }
             };
 

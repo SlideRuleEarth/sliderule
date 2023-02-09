@@ -35,62 +35,56 @@
 
 #include "core.h"
 #include "geo.h"
-#include "RqstParms.h"
+#include "Icesat2Parms.h"
 
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* RqstParms::SURFACE_TYPE                 = "srt";
-const char* RqstParms::ATL03_CNF                    = "cnf";
-const char* RqstParms::YAPC                         = "yapc";
-const char* RqstParms::YAPC_SCORE                   = "score";
-const char* RqstParms::YAPC_KNN                     = "knn";
-const char* RqstParms::YAPC_MIN_KNN                 = "min_knn";
-const char* RqstParms::YAPC_WIN_H                   = "win_h";
-const char* RqstParms::YAPC_WIN_X                   = "win_x";
-const char* RqstParms::YAPC_VERSION                 = "version";
-const char* RqstParms::ATL08_CLASS                  = "atl08_class";
-const char* RqstParms::QUALITY                      = "quality_ph";
-const char* RqstParms::POLYGON                      = "poly";
-const char* RqstParms::RASTER                       = "raster";
-const char* RqstParms::TRACK                        = "track";
-const char* RqstParms::STAGES                       = "stages";
-const char* RqstParms::COMPACT                      = "compact";
-const char* RqstParms::LATITUDE                     = "lat";
-const char* RqstParms::LONGITUDE                    = "lon";
-const char* RqstParms::ALONG_TRACK_SPREAD           = "ats";
-const char* RqstParms::MIN_PHOTON_COUNT             = "cnt";
-const char* RqstParms::EXTENT_LENGTH                = "len";
-const char* RqstParms::EXTENT_STEP                  = "res";
-const char* RqstParms::MAX_ITERATIONS               = "maxi";
-const char* RqstParms::MIN_WINDOW                   = "H_min_win";
-const char* RqstParms::MAX_ROBUST_DISPERSION        = "sigma_r_max";
-const char* RqstParms::PASS_INVALID                 = "pass_invalid";
-const char* RqstParms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
-const char* RqstParms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
-const char* RqstParms::ATL03_PH_FIELDS              = "atl03_ph_fields";
-const char* RqstParms::RASTERS_TO_SAMPLE            = "samples";
-const char* RqstParms::RASTERS_ASSET                = "asset";
-const char* RqstParms::RASTERS_RADIUS               = "radius";
-const char* RqstParms::RASTERS_ALGORITHM            = "algorithm";
-const char* RqstParms::RASTERS_ZONAL_STATS          = "zonal_stats";
-const char* RqstParms::RASTERS_WITH_FLAGS           = "with_flags";
-const char* RqstParms::RQST_TIMEOUT                 = "rqst-timeout";
-const char* RqstParms::NODE_TIMEOUT                 = "node-timeout";
-const char* RqstParms::READ_TIMEOUT                 = "read-timeout";
-const char* RqstParms::GLOBAL_TIMEOUT               = "timeout";
-const char* RqstParms::PHOREAL                      = "phoreal";
-const char* RqstParms::PHOREAL_BINSIZE              = "binsize";
-const char* RqstParms::PHOREAL_GEOLOC               = "geoloc";
-const char* RqstParms::PHOREAL_USE_ABS_H            = "use_abs_h";
-const char* RqstParms::PHOREAL_WAVEFORM             = "send_waveform";
-const char* RqstParms::PHOREAL_ABOVE                = "above_classifier";
+const char* Icesat2Parms::SURFACE_TYPE                 = "srt";
+const char* Icesat2Parms::ATL03_CNF                    = "cnf";
+const char* Icesat2Parms::YAPC                         = "yapc";
+const char* Icesat2Parms::YAPC_SCORE                   = "score";
+const char* Icesat2Parms::YAPC_KNN                     = "knn";
+const char* Icesat2Parms::YAPC_MIN_KNN                 = "min_knn";
+const char* Icesat2Parms::YAPC_WIN_H                   = "win_h";
+const char* Icesat2Parms::YAPC_WIN_X                   = "win_x";
+const char* Icesat2Parms::YAPC_VERSION                 = "version";
+const char* Icesat2Parms::ATL08_CLASS                  = "atl08_class";
+const char* Icesat2Parms::QUALITY                      = "quality_ph";
+const char* Icesat2Parms::POLYGON                      = "poly";
+const char* Icesat2Parms::RASTER                       = "raster";
+const char* Icesat2Parms::TRACK                        = "track";
+const char* Icesat2Parms::STAGES                       = "stages";
+const char* Icesat2Parms::COMPACT                      = "compact";
+const char* Icesat2Parms::LATITUDE                     = "lat";
+const char* Icesat2Parms::LONGITUDE                    = "lon";
+const char* Icesat2Parms::ALONG_TRACK_SPREAD           = "ats";
+const char* Icesat2Parms::MIN_PHOTON_COUNT             = "cnt";
+const char* Icesat2Parms::EXTENT_LENGTH                = "len";
+const char* Icesat2Parms::EXTENT_STEP                  = "res";
+const char* Icesat2Parms::MAX_ITERATIONS               = "maxi";
+const char* Icesat2Parms::MIN_WINDOW                   = "H_min_win";
+const char* Icesat2Parms::MAX_ROBUST_DISPERSION        = "sigma_r_max";
+const char* Icesat2Parms::PASS_INVALID                 = "pass_invalid";
+const char* Icesat2Parms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
+const char* Icesat2Parms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
+const char* Icesat2Parms::ATL03_PH_FIELDS              = "atl03_ph_fields";
+const char* Icesat2Parms::RQST_TIMEOUT                 = "rqst-timeout";
+const char* Icesat2Parms::NODE_TIMEOUT                 = "node-timeout";
+const char* Icesat2Parms::READ_TIMEOUT                 = "read-timeout";
+const char* Icesat2Parms::GLOBAL_TIMEOUT               = "timeout";
+const char* Icesat2Parms::PHOREAL                      = "phoreal";
+const char* Icesat2Parms::PHOREAL_BINSIZE              = "binsize";
+const char* Icesat2Parms::PHOREAL_GEOLOC               = "geoloc";
+const char* Icesat2Parms::PHOREAL_USE_ABS_H            = "use_abs_h";
+const char* Icesat2Parms::PHOREAL_WAVEFORM             = "send_waveform";
+const char* Icesat2Parms::PHOREAL_ABOVE                = "above_classifier";
 
-const char* RqstParms::OBJECT_TYPE = "RqstParms";
-const char* RqstParms::LuaMetaName = "RqstParms";
-const struct luaL_Reg RqstParms::LuaMetaTable[] = {
+const char* Icesat2Parms::OBJECT_TYPE = "Icesat2Parms";
+const char* Icesat2Parms::LuaMetaName = "Icesat2Parms";
+const struct luaL_Reg Icesat2Parms::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
@@ -101,7 +95,7 @@ const struct luaL_Reg RqstParms::LuaMetaTable[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - create(<parameter table>)
  *----------------------------------------------------------------------------*/
-int RqstParms::luaCreate (lua_State* L)
+int Icesat2Parms::luaCreate (lua_State* L)
 {
     try
     {
@@ -112,7 +106,7 @@ int RqstParms::luaCreate (lua_State* L)
         }
 
         /* Return Request Parameter Object */
-        return createLuaObject(L, new RqstParms(L, 1));
+        return createLuaObject(L, new Icesat2Parms(L, 1));
     }
     catch(const RunTimeException& e)
     {
@@ -124,42 +118,42 @@ int RqstParms::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * getSpotNumber
  *----------------------------------------------------------------------------*/
-uint8_t RqstParms::getSpotNumber(sc_orient_t sc_orient, track_t track, int pair)
+uint8_t Icesat2Parms::getSpotNumber(sc_orient_t sc_orient, track_t track, int pair)
 {
     if(sc_orient == SC_BACKWARD)
     {
         if(track == RPT_1)
         {
-            if(pair == RqstParms::RPT_L) return SPOT_1;
-            else if(pair == RqstParms::RPT_R) return SPOT_2;
+            if(pair == Icesat2Parms::RPT_L) return SPOT_1;
+            else if(pair == Icesat2Parms::RPT_R) return SPOT_2;
         }
         else if(track == RPT_2)
         {
-            if(pair == RqstParms::RPT_L) return SPOT_3;
-            else if(pair == RqstParms::RPT_R) return SPOT_4;
+            if(pair == Icesat2Parms::RPT_L) return SPOT_3;
+            else if(pair == Icesat2Parms::RPT_R) return SPOT_4;
         }
         else if(track == RPT_3)
         {
-            if(pair == RqstParms::RPT_L) return SPOT_5;
-            else if(pair == RqstParms::RPT_R) return SPOT_6;
+            if(pair == Icesat2Parms::RPT_L) return SPOT_5;
+            else if(pair == Icesat2Parms::RPT_R) return SPOT_6;
         }
     }
     else if(sc_orient == SC_FORWARD)
     {
         if(track == RPT_1)
         {
-            if(pair == RqstParms::RPT_L) return SPOT_6;
-            else if(pair == RqstParms::RPT_R) return SPOT_5;
+            if(pair == Icesat2Parms::RPT_L) return SPOT_6;
+            else if(pair == Icesat2Parms::RPT_R) return SPOT_5;
         }
         else if(track == RPT_2)
         {
-            if(pair == RqstParms::RPT_L) return SPOT_4;
-            else if(pair == RqstParms::RPT_R) return SPOT_3;
+            if(pair == Icesat2Parms::RPT_L) return SPOT_4;
+            else if(pair == Icesat2Parms::RPT_R) return SPOT_3;
         }
         else if(track == RPT_3)
         {
-            if(pair == RqstParms::RPT_L) return SPOT_2;
-            else if(pair == RqstParms::RPT_R) return SPOT_1;
+            if(pair == Icesat2Parms::RPT_L) return SPOT_2;
+            else if(pair == Icesat2Parms::RPT_R) return SPOT_1;
         }
     }
 
@@ -169,42 +163,42 @@ uint8_t RqstParms::getSpotNumber(sc_orient_t sc_orient, track_t track, int pair)
 /*----------------------------------------------------------------------------
  * getGroundTrack
  *----------------------------------------------------------------------------*/
-uint8_t RqstParms::getGroundTrack (sc_orient_t sc_orient, track_t track, int pair)
+uint8_t Icesat2Parms::getGroundTrack (sc_orient_t sc_orient, track_t track, int pair)
 {
     if(sc_orient == SC_BACKWARD)
     {
         if(track == RPT_1)
         {
-            if(pair == RqstParms::RPT_L) return GT1L;
-            else if(pair == RqstParms::RPT_R) return GT1R;
+            if(pair == Icesat2Parms::RPT_L) return GT1L;
+            else if(pair == Icesat2Parms::RPT_R) return GT1R;
         }
         else if(track == RPT_2)
         {
-            if(pair == RqstParms::RPT_L) return GT2L;
-            else if(pair == RqstParms::RPT_R) return GT2R;
+            if(pair == Icesat2Parms::RPT_L) return GT2L;
+            else if(pair == Icesat2Parms::RPT_R) return GT2R;
         }
         else if(track == RPT_3)
         {
-            if(pair == RqstParms::RPT_L) return GT3L;
-            else if(pair == RqstParms::RPT_R) return GT3R;
+            if(pair == Icesat2Parms::RPT_L) return GT3L;
+            else if(pair == Icesat2Parms::RPT_R) return GT3R;
         }
     }
     else if(sc_orient == SC_FORWARD)
     {
         if(track == RPT_1)
         {
-            if(pair == RqstParms::RPT_L) return GT1L;
-            else if(pair == RqstParms::RPT_R) return GT1R;
+            if(pair == Icesat2Parms::RPT_L) return GT1L;
+            else if(pair == Icesat2Parms::RPT_R) return GT1R;
         }
         else if(track == RPT_2)
         {
-            if(pair == RqstParms::RPT_L) return GT2L;
-            else if(pair == RqstParms::RPT_R) return GT2R;
+            if(pair == Icesat2Parms::RPT_L) return GT2L;
+            else if(pair == Icesat2Parms::RPT_R) return GT2R;
         }
         else if(track == RPT_3)
         {
-            if(pair == RqstParms::RPT_L) return GT3L;
-            else if(pair == RqstParms::RPT_R) return GT3R;
+            if(pair == Icesat2Parms::RPT_L) return GT3L;
+            else if(pair == Icesat2Parms::RPT_R) return GT3R;
         }
     }
 
@@ -218,7 +212,7 @@ uint8_t RqstParms::getGroundTrack (sc_orient_t sc_orient, track_t track, int pai
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RqstParms::RqstParms(lua_State* L, int index):
+Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     LuaObject                   (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     surface_type                (SRT_LAND_ICE),
     pass_invalid                (false),
@@ -245,7 +239,6 @@ RqstParms::RqstParms(lua_State* L, int index):
     extent_step                 (20.0),
     atl03_geo_fields            (NULL),
     atl03_ph_fields             (NULL),
-    rasters_to_sample           (NULL),
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
     read_timeout                (DEFAULT_READ_TIMEOUT),
@@ -260,163 +253,157 @@ RqstParms::RqstParms(lua_State* L, int index):
     try
     {
         /* Surface Type */
-        lua_getfield(L, index, RqstParms::SURFACE_TYPE);
+        lua_getfield(L, index, Icesat2Parms::SURFACE_TYPE);
         surface_type = (surface_type_t)LuaObject::getLuaInteger(L, -1, true, surface_type, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::SURFACE_TYPE, (int)surface_type);
+        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::SURFACE_TYPE, (int)surface_type);
         lua_pop(L, 1);
 
         /* Confidence Level */
-        lua_getfield(L, index, RqstParms::ATL03_CNF);
+        lua_getfield(L, index, Icesat2Parms::ATL03_CNF);
         get_lua_atl03_cnf(L, -1, &provided);
         lua_pop(L, 1);
 
         /* Quality Flag */
-        lua_getfield(L, index, RqstParms::QUALITY);
+        lua_getfield(L, index, Icesat2Parms::QUALITY);
         get_lua_atl03_quality(L, -1, &provided);
         lua_pop(L, 1);
 
         /* YAPC */
-        lua_getfield(L, index, RqstParms::YAPC);
+        lua_getfield(L, index, Icesat2Parms::YAPC);
         get_lua_yapc(L, -1, &provided);
         if(provided) stages[STAGE_YAPC] = true;
         lua_pop(L, 1);
 
         /* Pass Invalid Flag */
-        lua_getfield(L, index, RqstParms::PASS_INVALID);
+        lua_getfield(L, index, Icesat2Parms::PASS_INVALID);
         pass_invalid = LuaObject::getLuaBoolean(L, -1, true, pass_invalid, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::PASS_INVALID, pass_invalid ? "true" : "false");
+        if(provided) mlog(DEBUG, "Setting %s to %s", Icesat2Parms::PASS_INVALID, pass_invalid ? "true" : "false");
         lua_pop(L, 1);
 
         /* Distance in Segments Flag */
-        lua_getfield(L, index, RqstParms::DISTANCE_IN_SEGMENTS);
+        lua_getfield(L, index, Icesat2Parms::DISTANCE_IN_SEGMENTS);
         dist_in_seg = LuaObject::getLuaBoolean(L, -1, true, dist_in_seg, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::DISTANCE_IN_SEGMENTS, dist_in_seg ? "true" : "false");
+        if(provided) mlog(DEBUG, "Setting %s to %s", Icesat2Parms::DISTANCE_IN_SEGMENTS, dist_in_seg ? "true" : "false");
         lua_pop(L, 1);
 
         /* ATL08 Classification */
-        lua_getfield(L, index, RqstParms::ATL08_CLASS);
+        lua_getfield(L, index, Icesat2Parms::ATL08_CLASS);
         get_lua_atl08_class(L, -1, &provided);
         if(provided) stages[STAGE_ATL08] = true;
         lua_pop(L, 1);
 
         /* Polygon */
-        lua_getfield(L, index, RqstParms::POLYGON);
+        lua_getfield(L, index, Icesat2Parms::POLYGON);
         get_lua_polygon(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d points", RqstParms::POLYGON, (int)polygon.length());
+        if(provided) mlog(DEBUG, "Setting %s to %d points", Icesat2Parms::POLYGON, (int)polygon.length());
         lua_pop(L, 1);
 
         /* Raster */
-        lua_getfield(L, index, RqstParms::RASTER);
+        lua_getfield(L, index, Icesat2Parms::RASTER);
         get_lua_raster(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s file for use", RqstParms::RASTER);
+        if(provided) mlog(DEBUG, "Setting %s file for use", Icesat2Parms::RASTER);
         lua_pop(L, 1);
 
         /* Track */
-        lua_getfield(L, index, RqstParms::TRACK);
+        lua_getfield(L, index, Icesat2Parms::TRACK);
         track = LuaObject::getLuaInteger(L, -1, true, track, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::TRACK, track);
+        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::TRACK, track);
         lua_pop(L, 1);
 
         /* Compact Flag */
-        lua_getfield(L, index, RqstParms::COMPACT);
+        lua_getfield(L, index, Icesat2Parms::COMPACT);
         compact = LuaObject::getLuaBoolean(L, -1, true, compact, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %s", RqstParms::COMPACT, compact ? "true" : "false");
+        if(provided) mlog(DEBUG, "Setting %s to %s", Icesat2Parms::COMPACT, compact ? "true" : "false");
         lua_pop(L, 1);
 
         /* Maximum Iterations */
-        lua_getfield(L, index, RqstParms::MAX_ITERATIONS);
+        lua_getfield(L, index, Icesat2Parms::MAX_ITERATIONS);
         max_iterations = LuaObject::getLuaInteger(L, -1, true, max_iterations, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::MAX_ITERATIONS, (int)max_iterations);
+        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::MAX_ITERATIONS, (int)max_iterations);
         lua_pop(L, 1);
 
         /* Along Track Spread */
-        lua_getfield(L, index, RqstParms::ALONG_TRACK_SPREAD);
+        lua_getfield(L, index, Icesat2Parms::ALONG_TRACK_SPREAD);
         along_track_spread = LuaObject::getLuaFloat(L, -1, true, along_track_spread, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::ALONG_TRACK_SPREAD, along_track_spread);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", Icesat2Parms::ALONG_TRACK_SPREAD, along_track_spread);
         lua_pop(L, 1);
 
         /* Minimum Photon Count */
-        lua_getfield(L, index, RqstParms::MIN_PHOTON_COUNT);
+        lua_getfield(L, index, Icesat2Parms::MIN_PHOTON_COUNT);
         minimum_photon_count = LuaObject::getLuaInteger(L, -1, true, minimum_photon_count, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::MIN_PHOTON_COUNT, minimum_photon_count);
+        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::MIN_PHOTON_COUNT, minimum_photon_count);
         lua_pop(L, 1);
 
         /* Minimum Window */
-        lua_getfield(L, index, RqstParms::MIN_WINDOW);
+        lua_getfield(L, index, Icesat2Parms::MIN_WINDOW);
         minimum_window = LuaObject::getLuaFloat(L, -1, true, minimum_window, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::MIN_WINDOW, minimum_window);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", Icesat2Parms::MIN_WINDOW, minimum_window);
         lua_pop(L, 1);
 
         /* Maximum Robust Dispersion */
-        lua_getfield(L, index, RqstParms::MAX_ROBUST_DISPERSION);
+        lua_getfield(L, index, Icesat2Parms::MAX_ROBUST_DISPERSION);
         maximum_robust_dispersion = LuaObject::getLuaFloat(L, -1, true, maximum_robust_dispersion, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::MAX_ROBUST_DISPERSION, maximum_robust_dispersion);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", Icesat2Parms::MAX_ROBUST_DISPERSION, maximum_robust_dispersion);
         lua_pop(L, 1);
 
         /* Extent Length */
-        lua_getfield(L, index, RqstParms::EXTENT_LENGTH);
+        lua_getfield(L, index, Icesat2Parms::EXTENT_LENGTH);
         extent_length = LuaObject::getLuaFloat(L, -1, true, extent_length, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::EXTENT_LENGTH, extent_length);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", Icesat2Parms::EXTENT_LENGTH, extent_length);
         lua_pop(L, 1);
 
         /* Extent Step */
-        lua_getfield(L, index, RqstParms::EXTENT_STEP);
+        lua_getfield(L, index, Icesat2Parms::EXTENT_STEP);
         extent_step = LuaObject::getLuaFloat(L, -1, true, extent_step, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %lf", RqstParms::EXTENT_STEP, extent_step);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", Icesat2Parms::EXTENT_STEP, extent_step);
         lua_pop(L, 1);
 
         /* ATL03 Geolocaiont and Physical Correction Fields */
-        lua_getfield(L, index, RqstParms::ATL03_GEO_FIELDS);
+        lua_getfield(L, index, Icesat2Parms::ATL03_GEO_FIELDS);
         get_lua_string_list (L, -1, &atl03_geo_fields, &provided);
         if(provided) mlog(DEBUG, "ATL03 geo field array supplied");
         lua_pop(L, 1);
 
         /* ATL03 Photon Fields */
-        lua_getfield(L, index, RqstParms::ATL03_PH_FIELDS);
+        lua_getfield(L, index, Icesat2Parms::ATL03_PH_FIELDS);
         get_lua_string_list (L, -1, &atl03_ph_fields, &provided);
         if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
         lua_pop(L, 1);
 
-        /* Rasters to Sample */
-        lua_getfield(L, index, RqstParms::RASTERS_TO_SAMPLE);
-        get_lua_rasters (L, -1, &rasters_to_sample, &provided);
-        if(provided) mlog(DEBUG, "Rasters to sample array supplied");
-        lua_pop(L, 1);
-
         /* Global Timeout */
-        lua_getfield(L, index, RqstParms::GLOBAL_TIMEOUT);
+        lua_getfield(L, index, Icesat2Parms::GLOBAL_TIMEOUT);
         int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
         if(provided)
         {
             rqst_timeout = global_timeout;
             node_timeout = global_timeout;
             read_timeout = global_timeout;
-            mlog(DEBUG, "Setting %s to %d", RqstParms::RQST_TIMEOUT, global_timeout);
-            mlog(DEBUG, "Setting %s to %d", RqstParms::NODE_TIMEOUT, global_timeout);
-            mlog(DEBUG, "Setting %s to %d", RqstParms::READ_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", Icesat2Parms::RQST_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", Icesat2Parms::NODE_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", Icesat2Parms::READ_TIMEOUT, global_timeout);
         }
         lua_pop(L, 1);
 
         /* Request Timeout */
-        lua_getfield(L, index, RqstParms::RQST_TIMEOUT);
+        lua_getfield(L, index, Icesat2Parms::RQST_TIMEOUT);
         rqst_timeout = LuaObject::getLuaInteger(L, -1, true, rqst_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::RQST_TIMEOUT, rqst_timeout);
+        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::RQST_TIMEOUT, rqst_timeout);
         lua_pop(L, 1);
 
         /* Node Timeout */
-        lua_getfield(L, index, RqstParms::NODE_TIMEOUT);
+        lua_getfield(L, index, Icesat2Parms::NODE_TIMEOUT);
         node_timeout = LuaObject::getLuaInteger(L, -1, true, node_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::NODE_TIMEOUT, node_timeout);
+        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::NODE_TIMEOUT, node_timeout);
         lua_pop(L, 1);
 
         /* Read Timeout */
-        lua_getfield(L, index, RqstParms::READ_TIMEOUT);
+        lua_getfield(L, index, Icesat2Parms::READ_TIMEOUT);
         read_timeout = LuaObject::getLuaInteger(L, -1, true, read_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", RqstParms::READ_TIMEOUT, read_timeout);
+        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::READ_TIMEOUT, read_timeout);
         lua_pop(L, 1);
 
         /* PhoREAL */
-        lua_getfield(L, index, RqstParms::PHOREAL);
+        lua_getfield(L, index, Icesat2Parms::PHOREAL);
         get_lua_phoreal(L, -1, &provided);
         if(provided)
         {
@@ -443,7 +430,7 @@ RqstParms::RqstParms(lua_State* L, int index):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-RqstParms::~RqstParms (void)
+Icesat2Parms::~Icesat2Parms (void)
 {
     cleanup();
 }
@@ -451,18 +438,17 @@ RqstParms::~RqstParms (void)
 /*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
-void RqstParms::cleanup (void)
+void Icesat2Parms::cleanup (void)
 {
     if(raster) delete raster;
     if(atl03_geo_fields) delete atl03_geo_fields;
     if(atl03_ph_fields) delete atl03_ph_fields;
-    if(rasters_to_sample) delete rasters_to_sample;
 }
 
 /*----------------------------------------------------------------------------
  * str2atl03cnf
  *----------------------------------------------------------------------------*/
-RqstParms::signal_conf_t RqstParms::str2atl03cnf (const char* confidence_str)
+Icesat2Parms::signal_conf_t Icesat2Parms::str2atl03cnf (const char* confidence_str)
 {
     if     (StringLib::match(confidence_str, "atl03_tep")               ||  StringLib::match(confidence_str, "tep"))            return CNF_POSSIBLE_TEP;
     else if(StringLib::match(confidence_str, "atl03_not_considered")    ||  StringLib::match(confidence_str, "not_considered")) return CNF_NOT_CONSIDERED;
@@ -477,7 +463,7 @@ RqstParms::signal_conf_t RqstParms::str2atl03cnf (const char* confidence_str)
 /*----------------------------------------------------------------------------
  * str2atl03quality
  *----------------------------------------------------------------------------*/
-RqstParms::quality_ph_t RqstParms::str2atl03quality (const char* quality_ph_str)
+Icesat2Parms::quality_ph_t Icesat2Parms::str2atl03quality (const char* quality_ph_str)
 {
     if     (StringLib::match(quality_ph_str, "atl03_quality_nominal")           || StringLib::match(quality_ph_str, "nominal"))             return QUALITY_NOMINAL;
     else if(StringLib::match(quality_ph_str, "atl03_quality_afterpulse")        || StringLib::match(quality_ph_str, "afterpulse"))          return QUALITY_POSSIBLE_AFTERPULSE;
@@ -489,7 +475,7 @@ RqstParms::quality_ph_t RqstParms::str2atl03quality (const char* quality_ph_str)
 /*----------------------------------------------------------------------------
  * str2atl08class
  *----------------------------------------------------------------------------*/
-RqstParms::atl08_classification_t RqstParms::str2atl08class (const char* classifiction_str)
+Icesat2Parms::atl08_classification_t Icesat2Parms::str2atl08class (const char* classifiction_str)
 {
     if     (StringLib::match(classifiction_str, "atl08_noise")          || StringLib::match(classifiction_str, "noise"))           return ATL08_NOISE;
     else if(StringLib::match(classifiction_str, "atl08_ground")         || StringLib::match(classifiction_str, "ground"))          return ATL08_GROUND;
@@ -502,7 +488,7 @@ RqstParms::atl08_classification_t RqstParms::str2atl08class (const char* classif
 /*----------------------------------------------------------------------------
  * str2geoloc
  *----------------------------------------------------------------------------*/
-RqstParms::phoreal_geoloc_t RqstParms::str2geoloc (const char* fmt_str)
+Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
 {
     if     (StringLib::match(fmt_str, "mean"))      return PHOREAL_MEAN;
     else if(StringLib::match(fmt_str, "median"))    return PHOREAL_MEDIAN;
@@ -513,7 +499,7 @@ RqstParms::phoreal_geoloc_t RqstParms::str2geoloc (const char* fmt_str)
 
  * get_lua_atl03_cnf
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
+void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -619,7 +605,7 @@ void RqstParms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_atl03_quality
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_atl03_quality (lua_State* L, int index, bool* provided)
+void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -725,7 +711,7 @@ void RqstParms::get_lua_atl03_quality (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_atl08_class
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
+void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -824,7 +810,7 @@ void RqstParms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_polygon
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_polygon (lua_State* L, int index, bool* provided)
+void Icesat2Parms::get_lua_polygon (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -845,12 +831,12 @@ void RqstParms::get_lua_polygon (lua_State* L, int index, bool* provided)
                 MathLib::coord_t coord;
 
                 /* Get longitude entry */
-                lua_getfield(L, index, RqstParms::LONGITUDE);
+                lua_getfield(L, index, Icesat2Parms::LONGITUDE);
                 coord.lon = LuaObject::getLuaFloat(L, -1);
                 lua_pop(L, 1);
 
                 /* Get latitude entry */
-                lua_getfield(L, index, RqstParms::LATITUDE);
+                lua_getfield(L, index, Icesat2Parms::LATITUDE);
                 coord.lat = LuaObject::getLuaFloat(L, -1);
                 lua_pop(L, 1);
 
@@ -866,7 +852,7 @@ void RqstParms::get_lua_polygon (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_raster
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_raster (lua_State* L, int index, bool* provided)
+void Icesat2Parms::get_lua_raster (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -889,7 +875,7 @@ void RqstParms::get_lua_raster (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_yapc
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_yapc (lua_State* L, int index, bool* provided)
+void Icesat2Parms::get_lua_yapc (lua_State* L, int index, bool* provided)
 {
     bool field_provided;
 
@@ -901,34 +887,34 @@ void RqstParms::get_lua_yapc (lua_State* L, int index, bool* provided)
     {
         *provided = true;
 
-        lua_getfield(L, index, RqstParms::YAPC_SCORE);
+        lua_getfield(L, index, Icesat2Parms::YAPC_SCORE);
         yapc.score = (uint8_t)LuaObject::getLuaInteger(L, -1, true, yapc.score, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::YAPC_SCORE, (int)yapc.score);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::YAPC_SCORE, (int)yapc.score);
         lua_pop(L, 1);
 
-        lua_getfield(L, index, RqstParms::YAPC_VERSION);
+        lua_getfield(L, index, Icesat2Parms::YAPC_VERSION);
         yapc.version = (int)LuaObject::getLuaInteger(L, -1, true, yapc.version, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::YAPC_VERSION, (int)yapc.version);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::YAPC_VERSION, (int)yapc.version);
         lua_pop(L, 1);
 
-        lua_getfield(L, index, RqstParms::YAPC_KNN);
+        lua_getfield(L, index, Icesat2Parms::YAPC_KNN);
         yapc.knn = (int)LuaObject::getLuaInteger(L, -1, true, yapc.knn, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::YAPC_KNN, (int)yapc.knn);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::YAPC_KNN, (int)yapc.knn);
         lua_pop(L, 1);
 
-        lua_getfield(L, index, RqstParms::YAPC_MIN_KNN);
+        lua_getfield(L, index, Icesat2Parms::YAPC_MIN_KNN);
         yapc.min_knn = (int)LuaObject::getLuaInteger(L, -1, true, yapc.min_knn, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::YAPC_MIN_KNN, (int)yapc.min_knn);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::YAPC_MIN_KNN, (int)yapc.min_knn);
         lua_pop(L, 1);
 
-        lua_getfield(L, index, RqstParms::YAPC_WIN_H);
+        lua_getfield(L, index, Icesat2Parms::YAPC_WIN_H);
         yapc.win_h = LuaObject::getLuaFloat(L, -1, true, yapc.win_h, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %.3lf", RqstParms::YAPC_WIN_H, yapc.win_h);
+        if(field_provided) mlog(DEBUG, "Setting %s to %.3lf", Icesat2Parms::YAPC_WIN_H, yapc.win_h);
         lua_pop(L, 1);
 
-        lua_getfield(L, index, RqstParms::YAPC_WIN_X);
+        lua_getfield(L, index, Icesat2Parms::YAPC_WIN_X);
         yapc.win_x = LuaObject::getLuaFloat(L, -1, true, yapc.win_x, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %.3lf", RqstParms::YAPC_WIN_X, yapc.win_x);
+        if(field_provided) mlog(DEBUG, "Setting %s to %.3lf", Icesat2Parms::YAPC_WIN_X, yapc.win_x);
         lua_pop(L, 1);
     }
 }
@@ -936,7 +922,7 @@ void RqstParms::get_lua_yapc (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_string_list
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_string_list (lua_State* L, int index, string_list_t** string_list, bool* provided)
+void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t** string_list, bool* provided)
 {
     /* Reset provided */
     *provided = false;
@@ -982,77 +968,9 @@ void RqstParms::get_lua_string_list (lua_State* L, int index, string_list_t** st
 }
 
 /*----------------------------------------------------------------------------
- * get_lua_rasters
- *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_list, bool* provided)
-{
-    /* Reset provided */
-    *provided = false;
-
-    /* Must be table of tables */
-    if(lua_istable(L, index))
-    {
-        /* Allocate raster list */
-        *rasters_list = new rasters_t(EXPECTED_NUM_FIELDS);
-        *provided = true;
-
-        /* Iterate over rasters in list */
-        lua_pushnil(L); // -1 => nil; -2 => table
-        while (lua_next(L, -2)) // -1 => value; -2 => key; -3 => table
-        {
-            /* Get raster entry */
-            lua_pushvalue(L, -2); // -1 => key; -2 => value; -3 => key; -4 => table
-            const char* key = getLuaString(L, -1);
-            if(lua_istable(L, -2))
-            {
-                rss_t rss;
-                bool field_provided;
-
-                lua_getfield(L, -2, RqstParms::RASTERS_ASSET);
-                rss.asset = LuaObject::getLuaString(L, -1);
-                mlog(DEBUG, "Sampling %s for %s", rss.asset.getString(), key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, RqstParms::RASTERS_RADIUS);
-                rss.radius = LuaObject::getLuaFloat(L, -1, true, 0.0, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %lf for %s", RqstParms::RASTERS_RADIUS, rss.radius, key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, RqstParms::RASTERS_ALGORITHM);
-                rss.sampling_algorithm = LuaObject::getLuaString(L, -1, true, VrtRaster::NEARESTNEIGHBOUR_ALGO, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ALGORITHM, rss.sampling_algorithm.getString(), key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, RqstParms::RASTERS_ZONAL_STATS);
-                rss.zonal_stats = LuaObject::getLuaBoolean(L, -1, true, false, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_ZONAL_STATS, rss.zonal_stats ? "true" : "false", key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, RqstParms::RASTERS_WITH_FLAGS);
-                rss.with_flags = LuaObject::getLuaBoolean(L, -1, true, false, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", RqstParms::RASTERS_WITH_FLAGS, rss.with_flags ? "true" : "false", key);
-                lua_pop(L, 1);
-
-                /* Add raster entry to list */
-                (*rasters_list)->add(key, rss);
-            }
-            else
-            {
-                mlog(ERROR, "Invalid raster entry specified - must be a table");
-            }
-            lua_pop(L, 2); // -1 => key; -2 => table
-        } // -1 => table
-    }
-    else if(!lua_isnil(L, index))
-    {
-        mlog(ERROR, "List of rasters must be provided as a table");
-    }
-}
-
-/*----------------------------------------------------------------------------
  * get_lua_phoreal
  *----------------------------------------------------------------------------*/
-void RqstParms::get_lua_phoreal (lua_State* L, int index, bool* provided)
+void Icesat2Parms::get_lua_phoreal (lua_State* L, int index, bool* provided)
 {
     bool field_provided;
 
@@ -1065,17 +983,17 @@ void RqstParms::get_lua_phoreal (lua_State* L, int index, bool* provided)
         *provided = true;
 
         /* Binsize */
-        lua_getfield(L, index, RqstParms::PHOREAL_BINSIZE);
+        lua_getfield(L, index, Icesat2Parms::PHOREAL_BINSIZE);
         phoreal.binsize = LuaObject::getLuaFloat(L, -1, true, phoreal.binsize, &field_provided);
         if(field_provided)
         {
             if(phoreal.binsize <= 0.0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid binsize provided to phoreal algorithm: %lf", phoreal.binsize);
-            mlog(DEBUG, "Setting %s to %lf", RqstParms::PHOREAL_BINSIZE, phoreal.binsize);
+            mlog(DEBUG, "Setting %s to %lf", Icesat2Parms::PHOREAL_BINSIZE, phoreal.binsize);
         }
         lua_pop(L, 1);
 
         /* Geolocation */
-        lua_getfield(L, index, RqstParms::PHOREAL_GEOLOC);
+        lua_getfield(L, index, Icesat2Parms::PHOREAL_GEOLOC);
         const char* geoloc_str = LuaObject::getLuaString(L, -1, true, NULL, &field_provided);
         if(field_provided)
         {
@@ -1083,27 +1001,27 @@ void RqstParms::get_lua_phoreal (lua_State* L, int index, bool* provided)
             if(geoloc != PHOREAL_UNSUPPORTED)
             {
                 phoreal.geoloc = geoloc;
-                mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_GEOLOC, (int)phoreal.geoloc);
+                mlog(DEBUG, "Setting %s to %d", Icesat2Parms::PHOREAL_GEOLOC, (int)phoreal.geoloc);
             }
         }
         lua_pop(L, 1);
 
         /* Use Absolute Heights */
-        lua_getfield(L, index, RqstParms::PHOREAL_USE_ABS_H);
+        lua_getfield(L, index, Icesat2Parms::PHOREAL_USE_ABS_H);
         phoreal.use_abs_h = LuaObject::getLuaBoolean(L, -1, true, phoreal.use_abs_h, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_USE_ABS_H, (int)phoreal.use_abs_h);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::PHOREAL_USE_ABS_H, (int)phoreal.use_abs_h);
         lua_pop(L, 1);
 
         /* Send Waveforms */
-        lua_getfield(L, index, RqstParms::PHOREAL_WAVEFORM);
+        lua_getfield(L, index, Icesat2Parms::PHOREAL_WAVEFORM);
         phoreal.send_waveform = LuaObject::getLuaBoolean(L, -1, true, phoreal.send_waveform, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_WAVEFORM, (int)phoreal.send_waveform);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::PHOREAL_WAVEFORM, (int)phoreal.send_waveform);
         lua_pop(L, 1);
 
         /* Use ABoVE Classifier */
-        lua_getfield(L, index, RqstParms::PHOREAL_ABOVE);
+        lua_getfield(L, index, Icesat2Parms::PHOREAL_ABOVE);
         phoreal.above_classifier = LuaObject::getLuaBoolean(L, -1, true, phoreal.above_classifier, &field_provided);
-        if(field_provided) mlog(DEBUG, "Setting %s to %d", RqstParms::PHOREAL_ABOVE, (int)phoreal.above_classifier);
+        if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::PHOREAL_ABOVE, (int)phoreal.above_classifier);
         lua_pop(L, 1);
     }
 }

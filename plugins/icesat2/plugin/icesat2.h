@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "RqstParms.h"
+#include "Icesat2Parms.h"
 #include "Atl03Reader.h"
 #include "Atl03Indexer.h"
 #include "Atl06Dispatch.h"
@@ -45,7 +45,7 @@
 #include "GTArray.h"
 #include "GTDArray.h"
 #include "PluginMetrics.h"
-#include "RqstParms.h"
+#include "Icesat2Parms.h"
 #include "UT_Atl03Reader.h"
 #include "UT_Atl06Dispatch.h"
 

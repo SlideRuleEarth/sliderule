@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __rqst_parms__
-#define __rqst_parms__
+#ifndef __icesat2_parms__
+#define __icesat2_parms__
 
 /******************************************************************************
  * INCLUDES
@@ -47,7 +47,7 @@
  * REQUEST PARAMETERS
  ******************************************************************************/
 
-class RqstParms: public LuaObject
+class Icesat2Parms: public LuaObject
 {
     public:
 
@@ -84,12 +84,6 @@ class RqstParms: public LuaObject
         static const char* DISTANCE_IN_SEGMENTS;
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
-        static const char* RASTERS_TO_SAMPLE;
-        static const char* RASTERS_ASSET;
-        static const char* RASTERS_RADIUS;
-        static const char* RASTERS_ALGORITHM;
-        static const char* RASTERS_ZONAL_STATS;
-        static const char* RASTERS_WITH_FLAGS;
         static const char* RQST_TIMEOUT;
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
@@ -225,18 +219,6 @@ class RqstParms: public LuaObject
         /* List of Strings */
         typedef List<SafeString, EXPECTED_NUM_FIELDS> string_list_t;
 
-        /* Raster Sampling Settings */
-        typedef struct {
-            SafeString          asset;
-            double              radius;
-            SafeString          sampling_algorithm;
-            bool                zonal_stats;
-            bool                with_flags;
-        } rss_t;
-
-        /* Rasters to Sample */
-        typedef Dictionary<rss_t> rasters_t;
-
         /* YAPC Settings */
         typedef struct {
             uint8_t             score;                          // minimum allowed weight of photon using yapc algorithm
@@ -289,7 +271,6 @@ class RqstParms: public LuaObject
         double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
         string_list_t*          atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
         string_list_t*          atl03_ph_fields;                // list of per-photon fields to associate with an extent
-        rasters_t*              rasters_to_sample;              // list of rasters to sample
         int                     rqst_timeout;                   // total time in seconds for request to be processed
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
@@ -301,8 +282,8 @@ class RqstParms: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                RqstParms               (lua_State* L, int index);
-                                ~RqstParms              (void);
+                                Icesat2Parms               (lua_State* L, int index);
+                                ~Icesat2Parms              (void);
 
         void                    cleanup                 (void);
         signal_conf_t           str2atl03cnf            (const char* confidence_str);
@@ -316,8 +297,7 @@ class RqstParms: public LuaObject
         void                    get_lua_raster          (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
         void                    get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
-        void                    get_lua_rasters         (lua_State* L, int index, rasters_t** rasters_list, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
 };
 
-#endif  /* __rqst_parms__ */
+#endif  /* __icesat2_parms__ */
