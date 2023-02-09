@@ -213,6 +213,7 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                         }
                         else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                     }
+                    /* mlog(DEBUG, "%d:%d:%d:%d:%d:%d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str()); */
                     gpsTime += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
                 rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime/DATES_CNT));

@@ -209,7 +209,7 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     unix_msecs         = TIME_GPS_TO_UNIX(unix_msecs);
     gps_msecs         -= getleapms(unix_msecs);
 
-    if(gps_msecs > 0)
+    if(gps_msecs >= 0)
     {
         gps_days += (int)(gps_msecs / TIME_MILLISECS_IN_A_DAY);
         gps_msecs = gps_msecs % TIME_MILLISECS_IN_A_DAY;
