@@ -103,7 +103,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 
     /* Get Geo Parameters */
     lua_getfield(L, index, GeoParms::SELF);
-    GeoParms* _parms = new GeoParms(L, -1);
+    GeoParms* _parms = new GeoParms(L, index + 1);
     lua_pop(L, 1);
 
     /* Create GeoJsonRaster */
