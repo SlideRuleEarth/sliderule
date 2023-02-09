@@ -55,19 +55,17 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                                             const bool zonal_stats, const bool auxiliary_files):
-    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files, ARCTIC_DEM_EPSG)
+ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, GeoParms* _parms):
+    VctRaster(L, _parms, ARCTIC_DEM_EPSG)
 {
 }
 
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemStripsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                         const bool zonal_stats, const bool auxiliary_files)
+GeoRaster* ArcticDemStripsRaster::create(lua_State* L, GeoParms* _parms)
 {
-    return new ArcticDemStripsRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
+    return new ArcticDemStripsRaster(L, _parms);
 }
 
 

@@ -71,12 +71,6 @@ const char* Icesat2Parms::PASS_INVALID                 = "pass_invalid";
 const char* Icesat2Parms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
 const char* Icesat2Parms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* Icesat2Parms::ATL03_PH_FIELDS              = "atl03_ph_fields";
-const char* Icesat2Parms::RASTERS_TO_SAMPLE            = "samples";
-const char* Icesat2Parms::RASTERS_ASSET                = "asset";
-const char* Icesat2Parms::RASTERS_RADIUS               = "radius";
-const char* Icesat2Parms::RASTERS_ALGORITHM            = "algorithm";
-const char* Icesat2Parms::RASTERS_ZONAL_STATS          = "zonal_stats";
-const char* Icesat2Parms::RASTERS_WITH_FLAGS           = "with_flags";
 const char* Icesat2Parms::RQST_TIMEOUT                 = "rqst-timeout";
 const char* Icesat2Parms::NODE_TIMEOUT                 = "node-timeout";
 const char* Icesat2Parms::READ_TIMEOUT                 = "read-timeout";
@@ -245,7 +239,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     extent_step                 (20.0),
     atl03_geo_fields            (NULL),
     atl03_ph_fields             (NULL),
-    rasters_to_sample           (NULL),
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
     read_timeout                (DEFAULT_READ_TIMEOUT),
@@ -377,12 +370,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
         lua_pop(L, 1);
 
-        /* Rasters to Sample */
-        lua_getfield(L, index, Icesat2Parms::RASTERS_TO_SAMPLE);
-        get_lua_rasters (L, -1, &rasters_to_sample, &provided);
-        if(provided) mlog(DEBUG, "Rasters to sample array supplied");
-        lua_pop(L, 1);
-
         /* Global Timeout */
         lua_getfield(L, index, Icesat2Parms::GLOBAL_TIMEOUT);
         int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
@@ -456,7 +443,6 @@ void Icesat2Parms::cleanup (void)
     if(raster) delete raster;
     if(atl03_geo_fields) delete atl03_geo_fields;
     if(atl03_ph_fields) delete atl03_ph_fields;
-    if(rasters_to_sample) delete rasters_to_sample;
 }
 
 /*----------------------------------------------------------------------------
@@ -978,74 +964,6 @@ void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t**
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "Lists must be provided as a table");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * get_lua_rasters
- *----------------------------------------------------------------------------*/
-void Icesat2Parms::get_lua_rasters (lua_State* L, int index, rasters_t** rasters_list, bool* provided)
-{
-    /* Reset provided */
-    *provided = false;
-
-    /* Must be table of tables */
-    if(lua_istable(L, index))
-    {
-        /* Allocate raster list */
-        *rasters_list = new rasters_t(EXPECTED_NUM_FIELDS);
-        *provided = true;
-
-        /* Iterate over rasters in list */
-        lua_pushnil(L); // -1 => nil; -2 => table
-        while (lua_next(L, -2)) // -1 => value; -2 => key; -3 => table
-        {
-            /* Get raster entry */
-            lua_pushvalue(L, -2); // -1 => key; -2 => value; -3 => key; -4 => table
-            const char* key = getLuaString(L, -1);
-            if(lua_istable(L, -2))
-            {
-                rss_t rss;
-                bool field_provided;
-
-                lua_getfield(L, -2, Icesat2Parms::RASTERS_ASSET);
-                rss.asset = LuaObject::getLuaString(L, -1);
-                mlog(DEBUG, "Sampling %s for %s", rss.asset.getString(), key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, Icesat2Parms::RASTERS_RADIUS);
-                rss.radius = LuaObject::getLuaFloat(L, -1, true, 0.0, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %lf for %s", Icesat2Parms::RASTERS_RADIUS, rss.radius, key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, Icesat2Parms::RASTERS_ALGORITHM);
-                rss.sampling_algorithm = LuaObject::getLuaString(L, -1, true, VrtRaster::NEARESTNEIGHBOUR_ALGO, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", Icesat2Parms::RASTERS_ALGORITHM, rss.sampling_algorithm.getString(), key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, Icesat2Parms::RASTERS_ZONAL_STATS);
-                rss.zonal_stats = LuaObject::getLuaBoolean(L, -1, true, false, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", Icesat2Parms::RASTERS_ZONAL_STATS, rss.zonal_stats ? "true" : "false", key);
-                lua_pop(L, 1);
-
-                lua_getfield(L, -2, Icesat2Parms::RASTERS_WITH_FLAGS);
-                rss.with_flags = LuaObject::getLuaBoolean(L, -1, true, false, &field_provided);
-                if(field_provided) mlog(DEBUG, "Setting %s to %s for %s", Icesat2Parms::RASTERS_WITH_FLAGS, rss.with_flags ? "true" : "false", key);
-                lua_pop(L, 1);
-
-                /* Add raster entry to list */
-                (*rasters_list)->add(key, rss);
-            }
-            else
-            {
-                mlog(ERROR, "Invalid raster entry specified - must be a table");
-            }
-            lua_pop(L, 2); // -1 => key; -2 => table
-        } // -1 => table
-    }
-    else if(!lua_isnil(L, index))
-    {
-        mlog(ERROR, "List of rasters must be provided as a table");
     }
 }
 

@@ -95,23 +95,22 @@ int GeoRaster::luaCreate( lua_State* L )
     try
     {
         /* Get Parameters */
-        const char* raster_name = getLuaString(L, 1);
-                    _parms      = (GeoParms*)getLuaObject(L, 2, GeoParms::OBJECT_TYPE);
+        _parms = (GeoParms*)getLuaObject(L, 1, GeoParms::OBJECT_TYPE);
 
         /* Get Factory */
         factory_t _create = NULL;
         factoryMut.lock();
         {
-            factories.find(raster_name, &_create);
+            factories.find(_parms->asset_name, &_create);
         }
         factoryMut.unlock();
 
         /* Check Factory */
-        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", raster_name);
+        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
 
         /* Create Raster */
         GeoRaster* _raster = _create(L, _parms);
-        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", raster_name);
+        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", _parms->asset_name);
 
         /* Return Object */
         return createLuaObject(L, _raster);
@@ -445,9 +444,9 @@ void GeoRaster::sampleRasters(void)
     if (signaledReaders == 0) return;
 
     /* Wait and update each raster when it is done */
-    for (uint32_t j=0; j<signaledReaders; j++)
+    for (int j=0; j<signaledReaders; j++)
     {
-        GeoRaster::Raster* raster = NULL;
+        raster = NULL;
 
         /* Wait for reader to finish sampling */
         reader_t *reader = &rasterRreader[j];

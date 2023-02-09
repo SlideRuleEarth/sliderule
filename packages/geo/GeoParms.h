@@ -99,6 +99,7 @@ class GeoParms: public LuaObject
         TimeLib::gmt_time_t start_time;
         TimeLib::gmt_time_t stop_time;
         const char*         url_substring;
+        const char*         asset_name;
         Asset*              asset;
 
         /*--------------------------------------------------------------------
@@ -116,8 +117,10 @@ class GeoParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        void                cleanup     (void);
-        GDALRIOResampleAlg  str2algo    (const char* str);
+        void                cleanup         (void);
+        GDALRIOResampleAlg  str2algo        (const char* str);
+        static int          luaAssetName    (lua_State* L);
+        static int          luaAssetRegion  (lua_State* L);
 };
 
 #endif  /* __geo_parms__ */

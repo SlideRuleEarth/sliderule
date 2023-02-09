@@ -1,6 +1,4 @@
 local runner = require("test_executive")
-local json = require("json")
-local console = require("console")
 local td = runner.rootdir(arg[0])
 
 -- Setup --

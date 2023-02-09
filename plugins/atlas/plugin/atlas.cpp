@@ -65,4 +65,8 @@ void initatlas (void)
     /* Display Status */
     print2term("atlas plugin initialized (%s)\n", BINID);
 }
+
+void deinitatlas (void)
+{
+}
 }

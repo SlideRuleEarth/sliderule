@@ -44,10 +44,10 @@
  ******************************************************************************/
 
 const char* GeoParms::SELF                  = "samples";
-const char* GeoParms::SAMPLING_ALGO         = "algo";
+const char* GeoParms::SAMPLING_ALGO         = "algorithm";
 const char* GeoParms::SAMPLING_RADIUS       = "radius";
-const char* GeoParms::ZONAL_STATS           = "zonal";
-const char* GeoParms::AUXILIARY_FILES       = "aux";
+const char* GeoParms::ZONAL_STATS           = "zonal_stats";
+const char* GeoParms::AUXILIARY_FILES       = "with_flags";
 const char* GeoParms::START_TIME            = "t0";
 const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
@@ -65,6 +65,8 @@ const char* GeoParms::GAUSS_ALGO            = "Gauss";
 const char* GeoParms::OBJECT_TYPE           = "GeoParms";
 const char* GeoParms::LuaMetaName           = "GeoParms";
 const struct luaL_Reg GeoParms::LuaMetaTable[] = {
+    {"name",        luaAssetName},
+    {"region",      luaAssetRegion},
     {NULL,          NULL}
 };
 
@@ -106,6 +108,7 @@ GeoParms::GeoParms (lua_State* L, int index):
     auxiliary_files     (false),
     filter_time         (false),
     url_substring       (NULL),
+    asset_name          (NULL),
     asset               (NULL)
 {
     fromLua(L, index);
@@ -216,12 +219,9 @@ void GeoParms::fromLua (lua_State* L, int index)
 
             /* Asset */
             lua_getfield(L, index, ASSET);
-            const char* asset_name = LuaObject::getLuaString(L, -1, true, NULL);
-            if(asset_name)
-            {
-                asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
-                mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
-            }
+            asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
+            mlog(DEBUG, "Setting %s to %s", asset ? ASSET : "name", asset_name);
             lua_pop(L, 1);
         }
     }
@@ -241,6 +241,12 @@ void GeoParms::cleanup (void)
     {
         delete [] url_substring;
         url_substring = NULL;
+    }
+
+    if(asset_name)
+    {
+        delete [] asset_name;
+        asset_name = NULL;
     }
 
     if(asset)
@@ -265,4 +271,40 @@ GDALRIOResampleAlg GeoParms::str2algo (const char* str)
     else if (StringLib::match(str, MODE_ALGO))              return GRIORA_Mode;
     else if (StringLib::match(str, GAUSS_ALGO))             return GRIORA_Gauss;
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
+}
+
+/*----------------------------------------------------------------------------
+ * luaAssetName
+ *----------------------------------------------------------------------------*/
+int GeoParms::luaAssetName (lua_State* L)
+{
+    try
+    {
+        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        if(lua_obj->asset_name) lua_pushstring(L, lua_obj->asset_name);
+        else lua_pushnil(L);
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaAssetRegion
+ *----------------------------------------------------------------------------*/
+int GeoParms::luaAssetRegion (lua_State* L)
+{
+    try
+    {
+        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getName());
+        else lua_pushnil(L);
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
 }
