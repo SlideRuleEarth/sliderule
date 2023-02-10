@@ -71,6 +71,7 @@ class GeoParms: public LuaObject
         static const char* START_TIME;
         static const char* STOP_TIME;
         static const char* URL_SUBSTRING;
+        static const char* CLOSEST_TIME;
         static const char* ASSET;
 
         static const char* NEARESTNEIGHBOUR_ALGO;
@@ -99,6 +100,8 @@ class GeoParms: public LuaObject
         TimeLib::gmt_time_t start_time;
         TimeLib::gmt_time_t stop_time;
         const char*         url_substring;
+        bool                filter_closest_time;
+        TimeLib::gmt_time_t closest_time;
         const char*         asset_name;
         Asset*              asset;
 
