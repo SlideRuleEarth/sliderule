@@ -213,7 +213,7 @@ void GeoParms::fromLua (lua_State* L, int index)
 
             /* URL Substring Filter */
             lua_getfield(L, index, URL_SUBSTRING);
-            url_substring = LuaObject::getLuaString(L, -1, true, NULL);
+            url_substring = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL));
             if(url_substring) mlog(DEBUG, "Setting %s to %s", URL_SUBSTRING, url_substring);
             lua_pop(L, 1);
 
