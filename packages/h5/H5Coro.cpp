@@ -498,7 +498,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
              *  incur an additional mutex lock, whereas here it only occurs an aditional
              *  time when data isn't being cached (which is rare)
              */
-            ioContext->mut.unlock();
+            ioContext->mut.lock();
             {
                 ioContext->bytes_read += entry.size;
             }
@@ -1968,18 +1968,19 @@ int H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos,
 {
     switch(msg_type)
     {
-        case DATASPACE_MSG:     return readDataspaceMsg(pos, hdr_flags, dlvl);
-        case LINK_INFO_MSG:     return readLinkInfoMsg(pos, hdr_flags, dlvl);
-        case DATATYPE_MSG:      return readDatatypeMsg(pos, hdr_flags, dlvl);
-        case FILL_VALUE_MSG:    return readFillValueMsg(pos, hdr_flags, dlvl);
-        case LINK_MSG:          return readLinkMsg(pos, hdr_flags, dlvl);
-        case DATA_LAYOUT_MSG:   return readDataLayoutMsg(pos, hdr_flags, dlvl);
-        case FILTER_MSG:        return readFilterMsg(pos, hdr_flags, dlvl);
+        case DATASPACE_MSG:       return readDataspaceMsg(pos, hdr_flags, dlvl);
+        case LINK_INFO_MSG:       return readLinkInfoMsg(pos, hdr_flags, dlvl);
+        case DATATYPE_MSG:        return readDatatypeMsg(pos, hdr_flags, dlvl);
+        case FILL_VALUE_MSG:      return readFillValueMsg(pos, hdr_flags, dlvl);
+        case LINK_MSG:            return readLinkMsg(pos, hdr_flags, dlvl);
+        case DATA_LAYOUT_MSG:     return readDataLayoutMsg(pos, hdr_flags, dlvl);
+        case FILTER_MSG:          return readFilterMsg(pos, hdr_flags, dlvl);
 #ifdef H5CORO_ATTRIBUTE_SUPPORT
-        case ATTRIBUTE_MSG:     return readAttributeMsg(pos, hdr_flags, dlvl, size);
+        case ATTRIBUTE_MSG:       return readAttributeMsg(pos, hdr_flags, dlvl, size);
+        case ATTRIBUTE_INFO_MSG:  return readAttributeInfoMsg(pos, hdr_flags, dlvl);
 #endif
-        case HEADER_CONT_MSG:   return readHeaderContMsg(pos, hdr_flags, dlvl);
-        case SYMBOL_TABLE_MSG:  return readSymbolTableMsg(pos, hdr_flags, dlvl);
+        case HEADER_CONT_MSG:     return readHeaderContMsg(pos, hdr_flags, dlvl);
+        case SYMBOL_TABLE_MSG:    return readSymbolTableMsg(pos, hdr_flags, dlvl);
 
         default:
         {
@@ -2008,11 +2009,11 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint8_t version         = (uint8_t)readField(1, &pos);
     uint8_t dimensionality  = (uint8_t)readField(1, &pos);
     uint8_t flags           = (uint8_t)readField(1, &pos);
-    pos += 5; // go past reserved bytes
+    pos += version == 1 ? 5 : 1; // go past reserved bytes
 
     if(errorChecking)
     {
-        if(version != 1)
+        if(version != 1 && version != 2)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid dataspace version: %d", (int)version);
         }
@@ -2807,6 +2808,73 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 }
 
 /*----------------------------------------------------------------------------
+ * readAttributeInfoMsg
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
+{
+    static const int MAX_CREATE_PRESENT_BIT     = 0x01;
+    static const int CREATE_ORDER_PRESENT_BIT   = 0x02;
+
+    uint64_t starting_position = pos;
+
+    uint64_t version = readField(1, &pos);
+    uint64_t flags = readField(1, &pos);
+
+    if(errorChecking)
+    {
+        if(version != 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link info version: %d", (int)version);
+        }
+    }
+
+    if(verbose)
+    {
+        print2term("\n----------------\n");
+        print2term("Attribute Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("----------------\n");
+    }
+
+    /* Read Maximum Creation Index (number of elements in group) */
+    if(flags & MAX_CREATE_PRESENT_BIT)
+    {
+        uint16_t max_create_index = readField(2, &pos);
+        if(verbose)
+        {
+            print2term("Maximum Creation Index:                                          %u\n", (unsigned short)max_create_index);
+        }
+    }
+
+    /* Read Heap and Name Offsets */
+    uint64_t heap_address = readField(metaData.offsetsize, &pos);
+    uint64_t name_index = readField(metaData.offsetsize, &pos);
+    if(verbose)
+    {
+        print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
+        print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
+    }
+
+    if(flags & CREATE_ORDER_PRESENT_BIT)
+    {
+        uint64_t create_order_index = readField(metaData.offsetsize, &pos);
+        if(verbose)
+        {
+            print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+        }
+    }
+
+    /* Follow Heap Address if Provided */
+    if((int)heap_address != -1)
+    {
+        readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl);
+    }
+
+    /* Return Bytes Read */
+    uint64_t ending_position = pos;
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
  * readHeaderContMsg
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
@@ -2843,6 +2911,10 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header continuation signature: 0x%llX", (unsigned long long)signature);
             }
+        }
+        else
+        {
+            pos += 4;
         }
 
         /* Read Continuation Header Messages */
