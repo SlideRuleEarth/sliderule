@@ -146,8 +146,6 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
      *
      */
 
-    bool foundFile = false;
-
     const std::string fileToken  = "arcticdem";
     const std::string vsisPath   = "/vsis3/pgc-opendata-dems/";
     const char* demField         = "dem";
@@ -175,7 +173,6 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                     throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
 
                 fileName = vsisPath + fileName.substr(pos);
-                foundFile = true; /* There may be more than one file.. */
 
                 raster_info_t rinfo;
                 rinfo.fileName = fileName;
@@ -213,7 +210,7 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
                         }
                         else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                     }
-                    /* mlog(DEBUG, "%d:%d:%d:%d:%d:%d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str()); */
+                    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
                     gpsTime += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
                 rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime/DATES_CNT));
@@ -228,7 +225,7 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return foundFile;
+    return (rastersList->length() > 0);
 }
 
 

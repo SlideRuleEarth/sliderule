@@ -230,7 +230,6 @@ class GeoRaster: public LuaObject
                         GeoRaster             (lua_State* L, GeoParms* _parms);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
-        bool            filterRaster          (const raster_info_t& rinfo);
         virtual void    transformCRS          (OGRPoint& p) = 0;
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
@@ -294,6 +293,7 @@ class GeoRaster: public LuaObject
 
         static void* readingThread (void *param);
 
+        bool       filterRasters           (void);
         void       createThreads           (void);
         void       updateCache             (OGRPoint& p);
         int        sample                  (double lon, double lat);
